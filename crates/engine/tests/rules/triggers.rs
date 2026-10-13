@@ -1,27 +1,18 @@
 //! The event registry, the trigger queue and the resolution loop of SPEC §10.3 (BUILD M3-T2).
 //!
 //! The §10.3 diagram is the subject: apply → emit → traps fire immediately → queue the other
-//! triggers in R68's order → state check → repeat. Each acceptance item of BUILD M3-T2 has one
-//! named test here:
+//! triggers in R68's order → state check → repeat. One named test per acceptance item:
 //!
 //!   * R68 — two end-of-turn triggers on one side resolve in lane order;
 //!   * §10.3 — a trap fires before a queued trigger, because a trap is a response;
-//!   * R62 — except in the end-of-turn trap window, the one scheduled exception, which comes after
-//!     the end-of-turn triggers;
+//!   * R62 — except in the end-of-turn trap window, which comes after the end-of-turn triggers;
 //!   * R59 — the state check never runs between two hits of one effect;
-//!   * §10.3 — a trap that prompts its owner during the opponent's turn pauses the loop, and the
-//!     opponent's action with it, until the prompt is answered;
+//!   * §10.3 — a trap that prompts its owner during the opponent's turn pauses the loop until answered;
 //!   * R1 — `CRY_ON_PLAY_ONLY` makes `summon` never fire Cry while `play` does, and R70's casts
 //!     (Cast on draw, a Call to Chaos cast) do fire it.
 //!
-//! The Echo third of that last acceptance line — "Cast on draw, Echo and Call to Chaos casts do fire
-//! it" — lives in `echo.test.ts` ("§6.3 Echo 1 re-resolves the played card once"), since the repeat
-//! queue is that file's whole subject and SPEC puts the repeats in `state.echoQueue`.
-//!
-//! Every fixture here is its own: defs are prefixed `tg-` and indexed above 1400, so they cannot
-//! collide with another test file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/triggers.test.ts`.
+//! Echo's repeats live in `echo.test.ts` (`state.echoQueue`). Fixtures are this file's own: `tg-`
+//! defs indexed above 1400 (BUILD §0).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -30,11 +21,8 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 use crate::rules::fixtures::scripts::double_edge;
 
-// ---------------------------------------------------------------------------
-// The sink: TS `sinkFor(state)`, a sink whose rng starts at the state's cursor, as reduce does.
-// Rust's `EngineSink` borrows the state, so the event list and the rng live here and each call
-// borrows the state again; the state is read between calls as TS read `state`.
-// ---------------------------------------------------------------------------
+// The sink starts its rng at the state's cursor, as reduce does. `EngineSink` borrows the state, so
+// the event list and rng live here and each call borrows the state again.
 
 struct SinkFor {
     events: Vec<GameEvent>,
@@ -54,7 +42,6 @@ impl SinkFor {
     }
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn controlled_by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -62,15 +49,11 @@ fn controlled_by(player: PlayerId) -> HookOptions {
     }
 }
 
-/// TS `JSON.parse(JSON.stringify(x))`.
 fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
     serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
-// ---------------------------------------------------------------------------
-// Fixtures. TS numbered them from a module counter starting at 1400; each def's index is written
-// out here in the order TS created them.
-// ---------------------------------------------------------------------------
+// Fixtures.
 
 fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
     let mut literal = json!({
@@ -94,7 +77,6 @@ fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
     json_as(literal)
 }
 
-/// TS `unit(name, attack = 2, health = 4, extra = {})`.
 fn unit(name: &str, index: u32) -> CardDef {
     let (attack, health) = (2, 4);
     def(
@@ -159,9 +141,7 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // The note log: what fired, in the order it fired.
-// ---------------------------------------------------------------------------
 
 const NOTE_LANE: usize = 5;
 
@@ -339,9 +319,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 /// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
@@ -359,10 +337,8 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's module-level `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// `body` is the TS `ActionInput` literal; the nonce is added here.
 fn act_result(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
@@ -410,12 +386,11 @@ fn only<T>(items: Vec<T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// TS `handCard(state, defId, player = "p1")`.
 fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     only(in_hand(state, def_id, player, 1))
 }
 
-/// `Number(id.slice(1))`: an instance id's number (NaN when it has none, as in TS).
+/// An instance id's number (NaN when it has none).
 fn id_number(id: &str) -> f64 {
     id.get(1..)
         .and_then(|digits| digits.parse::<f64>().ok())
@@ -439,8 +414,6 @@ fn cost_paid_of_plays(events: &[GameEvent]) -> Vec<i32> {
 fn prompt_is_open(error: Option<&str>) -> bool {
     error.is_some_and(|text| text.contains("a prompt is open"))
 }
-
-// ---------------------------------------------------------------------------
 
 mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
     use super::*;
@@ -721,9 +694,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
         );
         assert_eq!(played.error, None);
 
-        // p1's play emitted the summon, so p2's trap holds the game before p1 can act again — and it
-        // holds it inside §10.5, between step 4's `summoned` and step 5's Cry, because a trap is a
-        // response and answers the play event first (§10.3, R17).
+        // p2's trap holds the game inside §10.5, between step 4's `summoned` and step 5's Cry: a trap
+        // answers the play event first (§10.3, R17).
         let mut paused = played.state;
         assert_eq!(paused.pending.as_ref().map(|p| p.player_id), Some(PlayerId::P2));
         assert!(notes(&paused).is_empty());
@@ -742,10 +714,8 @@ mod events_triggers_and_the_s10_3_resolution_loop_m3_t2 {
             .as_deref()
         ));
 
-        // Once p2 answers, p1's turn carries on: the trap's continuation ran, then the interrupted play
-        // resumed at the step after the one that paused, so the Cry fires — once, after the trap, and
-        // never dropped (§10.5 step 5, R1, R113's "a work item that cannot be resumed is a lost
-        // sequence"). Nothing is pending and nothing is still owed.
+        // Once p2 answers, the trap's continuation runs, then the interrupted play resumes at the step
+        // after the pause, so the Cry fires once and is never dropped (§10.5 step 5, R1, R113).
         let choice_id = paused.pending.as_ref().map(|p| p.id.clone()).unwrap_or_default();
         let answered = act(
             &paused,

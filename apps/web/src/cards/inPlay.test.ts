@@ -70,17 +70,19 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 });
 
 describe("Call to Chaos in play", () => {
-  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95 and the Classic+ Edition #73", () => {
+  it("conceals exactly the cards that carry the Call to Chaos tag: Core #95, the Classic+ Edition #73 and the Meditative Edition #95", () => {
     const concealed = Object.values(CATALOG).filter((def) => concealedInPlay(def.tags));
-    expect(concealed.map((def) => def.id)).toEqual(["core-095", "classicplus-073"]);
+    expect(concealed.map((def) => def.id)).toEqual(["core-095", "classicplus-073", "meditative-095"]);
     expect(CATALOG["core-095"]?.tags).toContain(CONCEALED_TAG);
   });
 
-  it("reads ??? in play, and the Classic+ Edition's Radiant face its designer's !!!", () => {
+  it("reads ??? in play, and the Classic+ and Meditative Editions' Radiant faces the designer's !!!", () => {
     expect(concealedText("core-095", false)).toBe("???");
     expect(concealedText("core-095", true)).toBe("???");
     expect(concealedText("classicplus-073", false)).toBe("???");
     expect(concealedText("classicplus-073", true)).toBe(CONCEALED_TEXT_LOUD);
+    expect(concealedText("meditative-095", false)).toBe("???");
+    expect(concealedText("meditative-095", true)).toBe(CONCEALED_TEXT_LOUD);
     expect(CONCEALED_TEXT_LOUD).toBe("!!!");
   });
 });

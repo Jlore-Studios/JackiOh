@@ -10,10 +10,9 @@ ones (the same, plus its modes `squishy:oneshot`, `squishy:split`, `squishy:spli
 Open an issue through one of the forms **New issue** lists (`.github/ISSUE_TEMPLATE/`: Patch, Micro
 patch, Bug, Architecture or CI, Night bot): each starts the title, puts on the type labels and asks
 for what a builder needs. Its Difficulty, Priority and Who does it dropdowns become the
-`difficulty:*`, `priority:*` and `method:*` labels a person would set by hand (`triage.yml`'s `form`
-job), and a method starts triage at once, which gives the issue its type (Task, Bug or Feature), its
-labels, title and assignees, and queues a `method:use-bot` one for the night bot. "Decide later"
-leaves the method label to you, as before. A pull request starts from
+`difficulty:*` and `priority:*` labels and `bot:build` (the night bot) or `human` (people), as a
+person would set them by hand, and triage gives the issue its type (Task, Bug or Feature) as it
+opens (`triage.yml`). "Decide later" leaves who does it to you. A pull request starts from
 `.github/pull_request_template.md` ([Pull requests](#pull-requests)). `CONTRIBUTING.md` is the short
 version of this page for people and agents.
 
@@ -24,11 +23,9 @@ Every issue carries at least one type label:
 | Label | For |
 |---|---|
 | `patch` | A numbered release of the game: cards, rules, the client, the server's features |
-| `large patch` | A big patch, always with `patch`: a new expansion or set, or a change to many cards at once (a pass over every card's text or numbers) |
 | `major version` | A `vX.Y.0` release that changes the game or the codebase broadly enough to bump the minor or major version (v0.2.0, v0.3.0, v1.0.0), and each of its parts |
 | `architecture` | The repository, tooling, CI, deploys and agent setup |
 | `night bot` | The night bot and Squishy themselves: `bot/`, `.harness/`, `.squishy/` and their workflows |
-| `Info` | For the record, nothing to build: migrations, statistics, the night bot's status |
 | `production merge` | The countdown issue `promote-production.yml` keeps open (`Merging to production in N hours`) and the pull requests that merge main into production. The workflow opens, retitles and closes them and finds the open one by this label, so leave it on, and leave its titles to the workflow. It also labels them `human` and assigns both people. Comments `/hold`, `/resume`, `/delay 3h` and `/fast-forward` steer it (`docs/deploy-cloudflare.md`, section 2.3) |
 
 The types can combine. A major version that changes the game is `major version` and `patch`, and a
@@ -36,22 +33,18 @@ patch whose work is all tooling (the codebase pass) is `patch` and `architecture
 `difficulty:*` labels (`easy`, `medium`, `hard`: the weakest model tier that may build it; `hard`
 is Claude Opus's alone), `human` (people do it, such as a decision or any change to `bot/`,
 `.harness/` or `.github/`; the bot never queues, plans, builds or labels it), the `priority:*`
-labels (the bot's pickup order), the `method:*` labels and the `bot:*` labels are separate. Never
-add `bot:build` while retitling or relabelling, because it queues a build.
+labels (the bot's pickup order) and the `bot:*` labels are separate. Never add `bot:build` while
+retitling or relabelling, because it queues a build.
 
 Every label, with its colour and description, is listed once, in `bot/harness/config.py`'s
-`LABELS`: the sweep creates one the repository lacks, and `harness setup` also restores a changed one.
+`LABELS`: the sweep creates one the repository lacks and deletes one it retired
+(`RETIRED_LABELS`), and `harness setup` also restores a changed one.
 
-**Who does an issue: the method labels.** An issue is triaged only once a person labels it
-`method:manual` or `method:use-bot` (#307). Two minutes after the label goes on, so a person can
-set a difficulty and a priority first, triage reads it again: `method:manual` adds `human` and
-assigns MaxGoetzmann and jgoetzmann (unassigning the bot); `method:use-bot` adds `bot:build`, a
-priority and its type labels, and assigns the bot (unassigning both people). An issue labelled
-`human` never goes to the bot. A suggestion the bot opened (`bot:suggestion`) is approved with
-`bot:approved`, which triage treats as `method:use-bot`; the bot builds no suggestion without it.
-Once triage has done this it takes the method label off (with `bot:approved` and `bot:suggestion`,
-and for `method:manual` the bot's queue labels) and comments that it classified the issue, so the
-labels left say who does it and what it is, not how it was handed on.
+**Who does an issue: one label each.** `bot:build` hands an issue to the night bot, which queues it;
+so does assigning the bot or commenting `/harness build`. `human` hands it to people: triage
+assigns MaxGoetzmann and jgoetzmann, unassigns the bot and takes the bot's queue labels off, and
+the bot never touches it again (#664). A suggestion the bot opened (`bot:suggestion`) is approved
+the same way: queue it, and `bot:suggestion` comes off; close it to say no.
 
 **How hard it is.** A person may set a `difficulty:*` label, and the bot never changes it.
 Otherwise the night bot's planner rates the issue when it plans it, and it counts as medium until
@@ -60,7 +53,10 @@ touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfac
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
 is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
-gives no difficulty. Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
+gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
+(#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
+issue's label (or medium); an issue still waiting for its plan is left to the planner. An agent
+that opens an issue labels it itself (`CLAUDE.md` rule 11). Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
 strikes and the step up).
 
 ## Issue type
@@ -92,7 +88,7 @@ A pull request has no type.
 A pull request takes the same titles ([Pull requests](#pull-requests)).
 Keep a version number as it was given; #290's renames (R743) were not carried into older titles.
 `ci-duration.yml` finds its open issue by its exact title, so leave that title alone. Night bot
-suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you accept it.
+suggestions (`bot:suggestion`) are asked for conventional titles; retitle one that arrives without.
 
 ## Version numbers
 
@@ -152,8 +148,8 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
   for players. Code nothing reaches yet is fine. A changed card, rule or screen waits for the last
   part. The alternative is the one v0.2.0 used: build on an integration branch named after the
   version, keep a draft PR to main open, and land the whole thing as the last part. A new set may
-  instead be built on main behind the release gate (R1420), as the Meditative set is (#496,
-  `docs/meditative-set.md` M3). Its cards are in the catalog but in no pool, deck, list or patch
+  instead be built on main behind the release gate (R1420), as the Meditative set was (#496,
+  `docs/meditative-set.md` M3, shipped by #553). Its cards are in the catalog but in no pool, deck, list or patch
   until its last part adds the set to `SHIPPED_SETS`, so its parts need no fragment, move no golden
   trace and can merge in any order. Work under the same tracker that players should see as soon as
   it lands is a patch of its own, titled without `(part n of m)`, and goes live when it merges.
@@ -162,6 +158,39 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
   nothing for players. A change for players after that is a revision (`vX.Y.Zb`).
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
+
+## Patch notes players read
+
+- **Players see the note, never the record (R724000, R724001).** A patch's `title`, `sources` and
+  `notes` are the history's: they may name issues, rulings and commits. The Patch notes page shows
+  its `player` note instead: `{ title, new, balance, changes, text, fixes }`.
+- **Write it by hand in the fragment.** `cargo jackioh patches …` has no flag for it: open
+  `pending/<version>.json` and fill in `player`. Running the command again (when the cards change)
+  keeps the note, `patches ship` carries it onto the shipped patch, and `patches check` fails until
+  it has a title and at least one line, and on a blank line, a line over 200 characters, or a
+  ruling (`R656`), an issue or card number (`#88`) or a `§`.
+- **The title** is a short phrase with no version, which the page shows beside it: "Gary the Gambler
+  buffed", not "Patch v0.2.Y: Buff Gary the Gambler".
+- **One fact per line, under its heading.**
+  - `new`: the cards, tokens, keywords and tags the patch brings.
+  - `balance`: a cost, stat, number or rarity, written from and to ("Hit Job costs (3), up from
+    (2).").
+  - `changes`: how a card or a rule plays.
+  - `text`: wording only, nothing plays differently.
+  - `fixes`: what was broken and now works.
+- **Only what that patch changed.** Take it from the patch's snapshot diff (the cards behind its
+  toggle) and its change, never from a pull request's title, and never say what the game does not
+  do yet.
+- **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
+  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
+- **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
+  (`apps/web/src/patches/releases.ts`), with `first` set to its first card patch, a summary and
+  its technical changes. The page shows one bubble per line, newest open.
+- **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
+  the engine, sound) adds one line to the `technical` of its major version's line, the newest, in its
+  own pull request, in the style of the lines there ("Background music and a main menu theme."). A
+  major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
+  is Meditative's.
 
 ## Pull requests
 
@@ -183,24 +212,32 @@ suggestions (`bot:suggestion`) arrive with plain titles, so retitle one when you
 
 ## Ruling numbers
 
-A ruling the spec does not make yet takes the next free number (CLAUDE.md rule 3): the last row of
-`spec/INDEX.md` on `main` plus one, as `spec/rulings/R<nnnn>.md`. A number is taken once it is on
-`main`; until then a branch only holds it, and its pull request names it (the template's rulings
-line), so a second branch can see it is in use and take the one after.
+A ruling the spec does not make yet takes the lowest number free in its issue's block (CLAUDE.md
+rule 3, R690000): issue N owns the thousand numbers R(N×1000) to R(N×1000+999), so issue #690 owns
+R690000–R690999 and issue #900 owns R900000–R900999. A sub-issue (a fullsend part, a tracker's
+part) uses its own number's block, not its parent's, and a pull request with no issue uses its own
+number's; GitHub numbers issues and pull requests in one sequence, so no two blocks overlap. The
+note is `spec/rulings/R<n>.md`, zero-padded to four digits at least (`R690000.md`). Branches on
+different issues never take the same number, so merging `main` in never renumbers one. The numbers
+taken before R690000 are sequential and below R2000: a branch that took one under the old rule
+(the last row of `spec/INDEX.md` on `main` plus one) keeps it, and issue #1, whose block would
+overlap them, has none.
 
-When two open pull requests take the same number anyway (#357 and #360 both took R744), the one that
-merges second renumbers before it merges, as #360 did to R745: it merges `main` in, moves its note to
-the next free number (the file name and its `id`), renames its proving tests (`fn r<n>_…`,
-`it("R<n> …")`) and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index`
-again for its index row. The clash shows as a conflict on the note and on `spec/INDEX.md`, and
-`cargo jackioh spec check` fails on whatever the renumbering missed: two notes with one `id`, a test
-or a citation with no note, a link to nothing. Numbers on `main` are never reused or renumbered
-(`spec/README.md`).
+Two branches can still take one number when they work on one issue. The one that merges second
+renumbers before it merges: it merges `main` in, moves its note to the next number free in its
+issue's block (the file name and its `id`), renames its proving tests (`fn r<n>_…`, `it("R<n> …")`)
+and every `R<n>` and `[[R<n>]]` its change cites, and runs `cargo jackioh spec index` again for its
+index row. The clash shows as a conflict on the note, and `cargo jackioh spec check` fails on
+whatever the renumbering missed: two notes with one `id`, a test or a citation with no note, a link
+to nothing. A conflict on `spec/INDEX.md` or `spec/11-rulings.md` alone is no clash: two branches'
+rows or paragraphs met, and `cargo jackioh spec index` rewrites the index with both, renumbering
+nothing. Numbers on `main` are never reused or renumbered (`spec/README.md`). Under the old rule
+this happened on nearly every merge (#357 and #360 both took R744, and #360 moved to R745).
 
-A tracker whose parts build side by side may hold a block of numbers for each part, so its parts
-never clash with each other. Its foundation takes the top block, so once the foundation is on `main`
-the next free number is above every block. A held number counts as in use: other work never takes
-one, and a part that needs more than its block takes the next free number. Held now:
+Before R690000, a tracker whose parts built side by side could hold a block of sequential numbers
+for each part, so its parts never clashed with each other; a part now takes its own sub-issue's
+block, and nothing new is held. A held number counts as in use: other work never takes one. Held
+now:
 
 | Tracker | Numbers | Blocks |
 | --- | --- | --- |

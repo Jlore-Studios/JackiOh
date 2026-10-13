@@ -1,22 +1,14 @@
-//! Port of `packages/engine/test/viewFor.test.ts`.
-//!
 //! `viewFor(state, playerId)` — the one window a player has onto a match (SPEC §10.8, BUILD M3-T6).
 //!
 //! The centrepiece is the hidden-information proof: a board where p2 holds a full hand, a full
 //! library and face-down traps, serialized for p1, must name none of it. The forbidden list is
-//! derived from the state itself rather than written out here, so the proof cannot quietly stop
-//! proving anything when the fixtures change.
+//! derived from the state itself, so the proof cannot quietly stop proving when fixtures change.
 //!
-//! The rest of §10.8 is the positive half — own hand in full, the opponent's as a count, both
-//! libraries as counts, Field Spells public, graveyards and exile in full, the viewer's own prompt
-//! options only, mana, health, armor, the clock and the last N events — plus R33's two halves: a
-//! face-down trap follows its *controller*, and a Field Trap that has fired is public to both.
-//!
-//! R97 is here too: the event stream is filtered like the zones it reports on — redacted to the
-//! `"hidden"` sentinel, never truncated, and judged by where a card sits *now*.
-//!
-//! The Trap, Field Trap and "secret" definitions this file needs live here rather than in a shared
-//! fixture, as effects-swap.test.ts does for its own Trap (BUILD §0, CLAUDE.md).
+//! The rest of §10.8 is the positive half, plus R33's two halves: a face-down trap follows its
+//! *controller*, and a Field Trap that has fired is public to both. R97: the event stream is
+//! filtered like the zones it reports on, redacted to `"hidden"`, never truncated, and judged by
+//! where a card sits *now*. The Trap, Field Trap and "secret" definitions live here, not in a
+//! shared fixture (BUILD §0, CLAUDE.md).
 
 use jackioh_engine::effects::steal::steal;
 use jackioh_engine::testkit::*;
@@ -24,15 +16,12 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------
 
-/// TS's module `let nextIndex = 1300`: every definition below takes the next index, in the order
-/// the TS module built them.
+/// Every definition below takes the next index from here.
 const FIRST_INDEX: i32 = 1300;
 
-/// `{ ...base, ...extra }` on two JSON objects: `extra`'s keys replace `base`'s (TS's spread).
+/// `extra`'s keys replace `base`'s.
 fn spread(base: &mut Value, extra: Value) {
     if let (Some(base), Value::Object(extra)) = (base.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -74,7 +63,6 @@ fn pad(n: i32) -> String {
     if n < 10 { format!("0{n}") } else { n.to_string() }
 }
 
-/// This file's definitions, built in TS's module order (so each takes TS's index).
 struct Defs {
     /// §9.1's hidden zones, each with definitions of its own, so a leak names its own zone.
     secret_hand: Vec<CardDef>,
@@ -133,7 +121,6 @@ fn defs() -> Defs {
 }
 
 impl Defs {
-    /// TS's `DEFS`.
     fn all(&self) -> Vec<CardDef> {
         let mut all: Vec<CardDef> = Vec::new();
         all.extend(self.secret_hand.iter().cloned());
@@ -161,8 +148,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's `sinkFor(state)` for one call: a sink whose rng starts at the state's cursor, as reduce
-/// does. The cursor is not written back, as TS's callers of a bare `sinkFor` did not.
+/// A sink whose rng starts at the state's cursor, as reduce does; the cursor is not written back.
 fn with_sink<T>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> T) -> T {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events: Vec<GameEvent> = Vec::new();
@@ -170,13 +156,12 @@ fn with_sink<T>(state: &mut GameState, f: impl FnOnce(&mut EngineSink<'_>) -> T)
     f(&mut sink)
 }
 
-/// Apply one effect the way `resolve.ts` does (effects-swap.test.ts's helper).
+/// Apply one effect, the controller defaulting to p1.
 fn run(state: &mut GameState, effect: &Effect, options: HookOptions) {
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
     let mut events: Vec<GameEvent> = Vec::new();
     {
         let mut sink = EngineSink::new(state, &mut events, &mut rng);
-        // TS `{ controller: "p1", ...options }`.
         let options = HookOptions {
             controller: options.controller.or(Some(PlayerId::P1)),
             ..options
@@ -187,7 +172,6 @@ fn run(state: &mut GameState, effect: &Effect, options: HookOptions) {
     state.rng_cursor = rng.cursor();
 }
 
-/// The card under this id as it stands in the state (TS held the live object).
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
@@ -200,7 +184,6 @@ fn to_json(value: impl serde::Serialize) -> Value {
     serde_json::to_value(value).expect("a view serialises")
 }
 
-/// TS's `JSON.stringify(view)`.
 fn serialized(view: &PlayerView) -> String {
     serde_json::to_string(view).expect("a view serialises")
 }
@@ -209,8 +192,7 @@ fn quoted(id: &str) -> String {
     format!("\"{id}\"")
 }
 
-/// `expect(actual).toMatchObject(expected)`: every key `expected` names has a matching value in
-/// `actual` (objects recursively), and arrays match element by element at the same length.
+/// Every key `expected` names matches in `actual` (objects recursively); arrays match element by element.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -234,7 +216,7 @@ fn expect_match(actual: &Value, expected: Value) {
     );
 }
 
-/// `Object.keys(value)` of a serialised object (absent fields are absent keys, as TS's `undefined`).
+/// The keys of a serialised object (an absent field is an absent key).
 fn keys_of(value: &Value) -> Vec<String> {
     value
         .as_object()
@@ -242,7 +224,6 @@ fn keys_of(value: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// A TS event literal.
 fn event(literal: Value) -> GameEvent {
     json_as(literal)
 }
@@ -302,8 +283,6 @@ fn mode_option(option: &str) -> PromptOption {
         radiant: None,
     }
 }
-
-// ---------------------------------------------------------------------------
 
 mod view_for_10_8_m3_t6 {
     use super::*;
@@ -506,8 +485,7 @@ mod view_for_10_8_m3_t6 {
             their_library.len() as i32
         );
         // Library order is hidden from *both* players, the owner included: no instance id ships. The
-        // owner's own library also travels as a list without order (R310, ownLibrary.test.ts), and the
-        // opponent's contents never do.
+        // owner's own library also travels as a list without order (R310); the opponent's never does.
         for card in &my_library {
             assert!(!mine.contains(&quoted(&card.id)));
             assert!(!theirs.contains(&quoted(&card.id)));
@@ -784,8 +762,7 @@ mod view_for_10_8_m3_t6 {
             json!({ "faceDown": true, "cost": 1 })
         );
 
-        // §10.1 reserves `faceUp` for exactly this ("a Field Trap that has fired, R33"); `traps.ts`
-        // sets it when the trap fires, and R33's half that lives here is what the view does with it.
+        // §10.1 reserves `faceUp` for a fired Field Trap (R33); here the view reads it.
         live_mut(&mut state, &fired.id).face_up = Some(true);
 
         expect_match(
@@ -1001,9 +978,8 @@ mod view_for_10_8_m3_t6 {
         let mut state = game("burst");
 
         // §10.8's window is the client's only animation channel (BUILD M5-T4), so an action longer
-        // than `VIEW_EVENT_LIMIT` must not lose its front. #96 My Pawn's cancel plus the §10.7 AI turn
-        // it hands over is 38 events in one `reduce`, and `attackDeclared` / `trapFired` /
-        // `attackCancelled` — the three the cancel is made of — are the first three of them.
+        // than `VIEW_EVENT_LIMIT` must not lose its front: #96 My Pawn's cancel plus the §10.7 AI turn
+        // is 38 events in one `reduce`, and the cancel's three are the first three.
         let head: Vec<GameEvent> = vec![
             event(
                 json!({ "type": "attackDeclared", "attackerId": "atk", "targetId": "hero-p2", "forced": false }),
@@ -1221,15 +1197,12 @@ mod view_for_10_8_m3_t6 {
     }
 }
 
-/* ----------------------------------------------------------------------------------------- *
- * R169: the player modifiers (§10.1 `mods`) in the view
- * ----------------------------------------------------------------------------------------- */
+// R169: the player modifiers (§10.1 `mods`) in the view
 
 mod r169_view_for_player_modifiers_10_1_10_3_modifier_changed {
     use super::*;
 
-    /// Installs a modifier the way a card script does, so the id is the engine's own. `literal` is
-    /// TS's `DistributiveOmit<PlayerModifier, "id">`: its `expiry` and, beside it, the kind's fields.
+    /// Installs a modifier the way a card script does, so the id is the engine's own.
     fn install(state: &mut GameState, player: PlayerId, literal: Value) -> PlayerModifier {
         let mut kind = literal;
         let expiry = kind

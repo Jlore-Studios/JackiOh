@@ -1,10 +1,7 @@
-//! Fixture cards for a kill credited to another unit (R42, R412: `effects/killCredit.ts`) and for
-//! `isCastOnDraw` (R58: `castOnDrawNow.ts`), shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser
-//! and #26 Tommy Tempo. The engine never imports `packages/cards` (CLAUDE.md). Ids `kc-…`, indexed from
-//! 5800 so they collide with no other fixture file.
-//!
-//! Port of `packages/engine/test/fixtures/killCredit.ts`. TS's module counter (`nextIndex`, from 5800,
-//! one per `unit` call in file order) is each def's stated index.
+//! Fixture cards for a kill credited to another unit (R42, R412) and for `isCastOnDraw` (R58),
+//! shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser and #26 Tommy Tempo. The engine never
+//! imports `crates/cards` (CLAUDE.md). Ids `kc-…`, indexed from 5800 so they collide with no other
+//! fixture file.
 
 #![allow(non_upper_case_globals)]
 
@@ -15,7 +12,6 @@ use jackioh_engine::effects::{
 };
 use jackioh_engine::testkit::*;
 
-/// TS `unit(name, attack, health)`: a Core Common Unit at cost 0, both faces alike.
 fn unit(name: &str, index: i32, attack: i32, health: i32) -> CardDef {
     let face = json!({ "attack": attack, "health": health, "keywords": [], "text": name });
     json_as(json!({
@@ -40,7 +36,6 @@ pub static jungle: LazyLock<CardDef> = LazyLock::new(|| unit("jungle", 5802, 5, 
 /// Classic+ #26's shape: it casts itself on draw and remembers whether its Cry ran as that cast.
 pub static tempo: LazyLock<CardDef> = LazyLock::new(|| unit("tempo", 5803, 1, 1));
 
-/// Each `bot` of the controller's with the enemy Unit across from it.
 fn across_from_bots(state: &GameState, controller: PlayerId) -> Vec<KillCredit> {
     slots_of(controller, Row::Units)
         .into_iter()

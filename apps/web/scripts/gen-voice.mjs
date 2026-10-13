@@ -61,8 +61,8 @@ const FFMPEG_ENCODE = [
 const TRIM_THRESHOLD_DB = -50;
 /** A SAPI render's loudest sample after normalising, in dBFS (Core's `say` files peak near -5). */
 const PEAK_TARGET_DB = -4;
-/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501). */
-const BUDGET_BYTES = 6 * 1024 * 1024;
+/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448). */
+const BUDGET_BYTES = 12 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 /** The mode every rendered file is written with. */
 const FILE_MODE = 0o644;
@@ -73,7 +73,7 @@ const JOBS = 2;
 /** Lines one PowerShell process renders before the next starts. */
 const SAPI_BATCH = 60;
 /** SPEC §10.11: the lines every card of a kind has. */
-const LINES_BY_KIND = { unit: ["play", "death"], spell: ["cast"], trap: ["cast"] };
+const LINES_BY_KIND = { unit: ["play", "attack", "death"], spell: ["cast"], trap: ["cast"] };
 const KIND_OF_TYPE = { Unit: "unit", Spell: "spell", "Field Spell": "spell", Trap: "trap", "Field Trap": "trap" };
 // R644's hero-portrait emotes (issue §3): the `emotes` section of card-audio.json5, one entry per
 // portrait id, each with the five voice lines below. Files are keyed `emote-<portrait>-<line>`.
@@ -220,18 +220,28 @@ function expectedKeys(table, problems) {
         problems.push(`${key}: voice ${assignment.voice} cannot render`);
         continue;
       }
-      const text = assignment.text;
-      if (typeof text !== "string" || text.trim() === "") {
-        problems.push(`${key}: no text for its voice`);
-        continue;
-      }
+      // R1088: a trigger lists its lines: one expected `${defId}-trigger${n}` key per line.
+      const spoken =
+        hook === "trigger"
+          ? (Array.isArray(assignment.lines) ? assignment.lines : []).map((text, i) => ({
+              key: `${defId}-trigger${i + 1}`,
+              line: `trigger${i + 1}`,
+              text,
+            }))
+          : [{ key, line: hook, text: assignment.text }];
       const backend = backendOf(voice);
-      if (backend === "say") {
-        const values = { say: voice.say, rate: voice.rate, pbas: voice.pbas, pmod: voice.pmod, text };
-        expected.set(key, { defId, line: hook, backend, ...values, hash: voiceHash(values) });
-      } else {
-        const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
-        expected.set(key, { defId, line: hook, backend, ...values, hash: sapiHash(values) });
+      for (const { key: lineKey, line: lineName, text } of spoken) {
+        if (typeof text !== "string" || text.trim() === "") {
+          problems.push(`${lineKey}: no text for its voice`);
+          continue;
+        }
+        if (backend === "say") {
+          const values = { say: voice.say, rate: voice.rate, pbas: voice.pbas, pmod: voice.pmod, text };
+          expected.set(lineKey, { defId, line: lineName, backend, ...values, hash: voiceHash(values) });
+        } else {
+          const values = { voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text };
+          expected.set(lineKey, { defId, line: lineName, backend, ...values, hash: sapiHash(values) });
+        }
       }
     }
   }

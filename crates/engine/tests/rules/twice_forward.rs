@@ -1,10 +1,8 @@
-//! C+ #74 Twice Forward One Step Backwards' Field Trap (subsystems/twiceForward.ts, R425): it counts the
-//! opponent's plays from when it is set, and on every second one, once that card has resolved, fuses it
-//! (Radiant: a Radiant copy of it) into itself (R77, R102) and gains Brittle (R385); with nothing left to
-//! fuse it gains the Brittle face-down; it turns face-up at its first fuse (R33). Through fixture scripts
-//! (fixtures/twiceForward.ts); the real card's test covers the same cases again.
-//!
-//! Port of `packages/engine/test/twiceForward.test.ts`.
+//! C+ #74 Twice Forward One Step Backwards' Field Trap (R425): it counts the opponent's plays from
+//! when it is set, and on every second one, once that card has resolved, fuses it (Radiant: a Radiant
+//! copy of it) into itself (R77, R102) and gains Brittle (R385); with nothing left to fuse it gains the
+//! Brittle face-down; it turns face-up at its first fuse (R33). Through fixture scripts; the real
+//! card's test covers the same cases again.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -17,7 +15,6 @@ use crate::rules::fixtures::twice_forward::{
     turner, twice_forward_catalog,
 };
 
-/// TS's module-level `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 /// What `act` hands back: the state and the events of the action.
@@ -26,7 +23,7 @@ struct Acted {
     events: Vec<GameEvent>,
 }
 
-/// `body` is the TS `ActionInput` literal; the nonce is added here.
+/// `body` is the action literal; the nonce is added here.
 fn act(state: &GameState, body: Value) -> Acted {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
@@ -49,7 +46,6 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-/// `opponentsTurn`'s answer.
 struct OpponentsTurn {
     state: GameState,
     trap_id: String,
@@ -106,7 +102,7 @@ struct Played {
     card: CardInstance,
 }
 
-/// TS `play(state, player, defId, zone?)`: the card goes into `player`'s hand and is played.
+/// The card goes into `player`'s hand and is played.
 fn play(mut state: GameState, player: PlayerId, def_id: &str, zone: Option<(Row, i32)>) -> Played {
     let card = in_hand(&mut state, def_id, player, 1)
         .into_iter()
@@ -128,12 +124,12 @@ fn trap_of<'a>(state: &'a GameState, trap_id: &str) -> &'a CardInstance {
     find_instance(state, trap_id).expect("the trap is gone")
 }
 
-/// The trap, to write through as TS wrote through the live object `trapOf` handed back.
+/// The trap, to write through.
 fn trap_of_mut<'a>(state: &'a mut GameState, trap_id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, trap_id).expect("the trap is gone")
 }
 
-/// `eventsOfType(events, "fused")[0]?.instanceIds`.
+/// The first `fused` event's instance ids.
 fn first_fused_ids(events: &[GameEvent]) -> Option<Vec<String>> {
     events_of_type(events, GameEventType::Fused)
         .iter()
@@ -143,7 +139,7 @@ fn first_fused_ids(events: &[GameEvent]) -> Option<Vec<String>> {
         })
 }
 
-/// `eventsOfType(events, "cardPlayed")` as `(defId, instanceId)` pairs.
+/// The `cardPlayed` events as `(defId, instanceId)` pairs.
 fn plays_of(events: &[GameEvent]) -> Vec<(String, String)> {
     events_of_type(events, GameEventType::CardPlayed)
         .iter()
@@ -156,7 +152,7 @@ fn plays_of(events: &[GameEvent]) -> Vec<(String, String)> {
         .collect()
 }
 
-/// `types.indexOf(type)`: -1 when absent, as in TS.
+/// The index of `type`, -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -164,7 +160,7 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .map_or(-1, |index| index as i64)
 }
 
-/// TS `JSON.parse(JSON.stringify(x))`.
+/// A value through a JSON round trip.
 fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
     serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }

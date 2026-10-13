@@ -1,11 +1,13 @@
 # `jackioh-server`
 
-The authority for everything that is not presentation: identity and the invite gate, the collection
-ledger, saved decks and trios, an active account's tutorial progress (R320) and settings (R633), each
-profile's last board (R417), matchmaking in three modes, the Conquest series, the ranked ladder, and
-the match itself: one actor per match holding the `GameState` in memory, one WebSocket per player,
-`reduce` on every action and `view_for` pushed to each player after every change (spec §9.1–§9.5,
-§10.8). Every match that ends leaves a game record for the card statistics (§9.11, R376–R378).
+The authority for everything that is not presentation: identity, usernames (R1432–R1436) and the
+invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
+(R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
+Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
+(R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
+`GameState` in memory, one WebSocket per player, `reduce` on every action and `view_for` pushed to
+each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
+for the card statistics (§9.11, R376–R378).
 
 The client sends intent and renders `view_for`; it never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7). Deployment, the schema, RLS and the env contract are in
@@ -20,7 +22,8 @@ browser ──WSS────▶ match actor     ──▶ jackioh-engine (reduc
 ```
 
 The browser authenticates against Supabase Auth directly and sends the access token, which this
-server verifies (JWKS, or the HS256 fallback). It never brokers a password outside E2E mode.
+server verifies (JWKS, or the HS256 fallback). It never brokers a password outside E2E mode, except
+a sign-in by username, which it makes with the account's address and answers without it (R1443).
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
@@ -30,6 +33,8 @@ server verifies (JWKS, or the HS256 fallback). It never brokers a password outsi
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, and the pool (R1453, R641000, R1454, R1452) |
+| Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -40,7 +45,8 @@ tx.commit().await?`.
 (`create_game`, `begin_game`, `reduce`, `legal_actions`, `view_for`, `fold`) and deals All Random's
 decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the newest set that ships
 when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); it calls
-`jackioh_cards::register_all()` first. The
+`jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
+(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. The catalog and its version are compiled in from `crates/cards`.
 
@@ -74,6 +80,13 @@ target/release/jackioh-server                   # 4. serve (the default subcomma
   creates one: the plaintext goes to stdout once, the database stores its keyed hash. It validates
   the whole environment, because a `CODE_PEPPER` that differs from the running server's mints a code
   nobody can redeem.
+- **Invite clusters.** `invite-clusters [--window=<seconds>] [--min-accounts=<N>]` is SPEC §9.8's
+  watch for accounts sharing an IP hash: it reads `code_attempts` (`DATABASE_URL`) and prints a
+  Markdown table of every hash that at least N distinct accounts (default `INVITE_CLUSTER_MIN_ACCOUNTS`,
+  6) made an attempt from in the window (default `INVITE_CLUSTER_WINDOW_SECONDS`, a week; at most the 30
+  days the table is kept), with its account and attempt counts. It is read-only and advisory: nothing
+  is banned or disabled, since a campus or a carrier's NAT puts many honest players behind one hash,
+  and a hash is printed shortened to `INVITE_CLUSTER_HASH_PREFIX_LEN` characters.
 - **Seasons.** `season-start --dry-run` walks R609's season open and soft reset and rolls it back,
   printing the report; without the flag it commits. Re-running is safe.
 
@@ -98,10 +111,11 @@ placeholders (`app::load_server_env`).
 | `E2E` | no | BUILD M8's test-server mode: fixture auth, accounts and codes, the in-memory store |
 | `TRUSTED_PROXY_HOPS` | no | R190's `X-Forwarded-For` entries the deployment's proxies append, 0 to 5, default 0 |
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
+| `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
-`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import` and `stats-export` read
-`DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
+`balance-watch`, `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -115,8 +129,12 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series |
+| `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, and the caller's `username: { name, nextChangeAt, promptOwed }` (R1435) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
+| `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
+| `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
+| `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match or series |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption |
@@ -126,16 +144,16 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave |
-| `GET` | `/api/queue/population` | user | open tickets, in total and per mode |
+| `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
-| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks (R604, R612) |
+| `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |
-| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder (R608, R612) |
+| `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged |
-| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics (R654) |
+| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
-| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept; one seat's steps of one (R768) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -149,6 +167,9 @@ the client sends `hello` and `action`, the server sends `hello`, `view`, `ack`, 
 never part of an action or a view. The `portraits` frame also carries the receiving account's own emote
 hand, eight of the pool dealt from the match seed (R1341, R1342), and the actor drops an emote outside
 the sender's hand as silently as a rate-limited one. A frame over `MAX_FRAME_BYTES` closes the socket with 1009.
+The pump pings every `WS_PING_INTERVAL_SECONDS` and drops a socket that has sent no frame for
+`WS_IDLE_TIMEOUT_SECONDS`, which starts its seat's grace; a socket's outgoing queue holds
+`WS_OUTBOX_MAX_FRAMES` frames, and the one that overflows it is closed (R1441).
 
 What the actor holds, each with a test named after it:
 
@@ -165,6 +186,12 @@ What the actor holds, each with a test named after it:
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
   once when the match is ranked (R604); a voided game writes none (R679).
+- A seat a ladder bot holds has no socket: the actor plays it itself (`drive_bots`), its moves
+  server actions with `srv-bot-<seq>` nonces through the same path a client's take, its seat never
+  disconnected and so never given a grace, and its persona's emotes relayed as a player's are (R1452).
+  It counts as attached as the actor arms, so a person who has not opened the match is away from
+  then (R744), and it reads as present (`presence`) until the game ends. As for any match, a
+  restart's actor is rebuilt when the person's socket comes back.
 
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
@@ -173,7 +200,7 @@ engine's `summarize_game`) under the match's mode and the compiled-in newest pat
 ## Card statistics (§9.11, R376–R378)
 
 ```
-target/release/jackioh-server stats-cards                                   # live games of every mode, patch and pilot
+target/release/jackioh-server stats-cards                                   # live games of every mode and patch, their human seats
 target/release/jackioh-server stats-cards --mode=random --patch=v0.2.5 --pilot=human
 target/release/jackioh-server stats-cards --card=core-002 --json
 cargo jackioh stats --patch v0.2.5 --out v0.2.5-dev.jsonl                   # a pre-release AI run
@@ -184,7 +211,10 @@ cargo jackioh stats report live.jsonl --json                                # th
 ```
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
-`--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`.
+`--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
+counts the human seats when it reads live data alone and every seat when it reads development data,
+so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified`, or with `--source=all`,
+which counts every seat of both sources unless a pilot is named (R1451).
 
 `stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
 one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
@@ -194,6 +224,155 @@ writes, so `cargo jackioh stats report` reads it, `analysis/` loads it and `stat
 only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
+
+`balance-watch --patch=<version> [--source=live|all]` is the offline, advisory outlier watch whose
+Markdown pastes into #699: per card it prints the in-deck win rate with its games, z-score against
+50% and played delta, flagging too-strong and too-weak bands (`BALANCE_WATCH_Z_THRESHOLD`, 2.5, at
+`BALANCE_WATCH_MIN_GAMES`, 40 games) and large played deltas (`BALANCE_WATCH_PLAYED_DELTA_THRESHOLD`,
+15 points). Cards under `CARD_STATS_MIN_SAMPLE` games are listed as not enough games and never
+flagged. Below `PUBLIC_STATS_MIN_LIVE_GAMES` live games the report says provisional; seat counting
+matches the public endpoint (live records count human seats only, development runs every seat,
+R1451). It reads `DATABASE_URL`, changes no card and files nothing.
+
+```
+target/release/jackioh-server balance-watch --patch=v0.3.6
+```
+
+## Play telemetry (§9.11, R1442)
+
+```
+target/release/jackioh-server timing-backfill   # the action logs still held, folded into action_timings
+target/release/jackioh-server timing-fit        # human think times and habits fitted, rows to paste into config
+```
+
+Once a live match's result commits, the actor writes how it was played in one transaction
+(`actor::telemetry`): `action_timings` (each person's move, its think time from the push that made
+it the seat's move, the clock left, the rank bucket), `emote_events` and `match_signals` (concedes,
+draws, rematches and timeouts), each keyed by match and seat with no profile id and no client grant
+(migration 0029). A failure is logged as `telemetry.write_failed` and the result stands.
+
+`timing-backfill` folds every finished match whose log `match_actions` still holds and that has no
+action timing yet, the way a rebuilt actor replays it, into the rows the live path writes, less the
+clock and the rank bucket the log does not hold; a match today's engine no longer folds whole is
+skipped. `timing-fit` groups the human moves (`pilot = 'ai'` left out) by rank bucket, action kind
+and first move of the turn, fits each bucket of at least `TIMING_FIT_MIN_SAMPLES` with a log-normal
+and prints one `ThinkTimeFit` row per bucket (with its moves' mean `ln(legal_count)`), to paste by
+hand into `config.rs`'s `THINK_TIME_FITS`, as `cargo jackioh sweep` prints its rows. It then prints
+the ladder bots' other rows (R639000), from people's timings, emotes and signals beside their
+matches' results (`play_telemetry_emotes`, `play_telemetry_outcomes`): the complexity slope and the
+lethal shift a think time grows by, the concession, draw-answer, timeout and rematch rates, the two
+emote delay windows and the persona weights, each a `pub const` to paste over the row of its name,
+or a comment keeping the hand-set prior when fewer than `TIMING_FIT_MIN_SAMPLES` observations back
+it. Neither takes an option.
+
+## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000)
+
+With `LADDER_BOTS=on`, a ranked ticket of any mode that has waited past its fallback time (15–40 s,
+drawn from its id and a key the server keeps to itself) with no person inside its window is seated
+against a ladder bot, which this process plays itself: in a match for Best of 1 and All Random, in a
+series for Conquest. Off, no bot is seated and the pool is never sized; a bot already seated in a
+series still makes its picks.
+
+- `bots::fallback` is pure but for that key: which waiting ticket may have a bot (`fallback_due`)
+  and which bot it gets (`choose_bot`: in the pool, on its schedule, in no match and a side of no
+  series that is not over, not one of the player's last `BOT_RECENT_OPPONENTS`, for Best of 1
+  holding decks and for Conquest a trio dealt for this catalog, the closest in rating; none for a
+  player rated above every bot). The queue's sweep (`api/queue.rs`, `try_pair`) pairs every two
+  people it can first, then claims a ticket and its bot in one statement (`tickets_claim_for_bot`,
+  single-shot like a pair's claim) and starts the match, ranked, the person p1 and first to act as
+  the older ticket of a pair is (R1453); a start that fails lets both go. A Conquest ticket and its
+  bot (R641000) are claimed and made a series in one transaction (`start_bot_series`:
+  `tickets_claim_for_bot_series`, which puts the bot in no match, then `start_series`): between
+  games the series is what holds the bot, so every bot claim checks, after it locks the bot, that
+  it is a side of no series that is not over (`lock_free_bot` in `db/pg.rs`, a statement of its own
+  so it reads what an earlier claim committed). The person is series p1; the series is ranked and
+  rated once as it ends, the bot's side as the bot it is (`plan_series_rating`).
+- `bots::pick` is a bot's Conquest pick (R641000), which the series sweeper makes (`sweep_series`,
+  `bot_picked`) once `pick_due_at` has come: `BOT_PICK_DELAY_MIN_MS` to `BOT_PICK_DELAY_MAX_MS` after
+  the pick phase opened, before the clock runs out. The pick (`pick_slot`) follows the rule
+  (`rule_slot`: the fastest deck by mean cost on the play, the slowest on the draw, of those that have
+  not won) `BOT_PICK_RULE_SHARE` of the time and is uniform otherwise, and goes through `pick_deck`,
+  sealed as a person's. Its streams are `{seed_base}:bot-pick-delay:{seat}:{game}` and
+  `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
+  its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
+- `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
+  budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
+  think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
+  acting clock, the search's deadline too; a move whose write failed is decided again
+  `BOT_WRITE_RETRY_MS` later. A move decided before the person acted still goes while
+  it is the same turn and the engine takes it, so the person's own actions never hold it back. Its streams (`{seed}:bot-ai:{home}`, `{seed}:bot-timing:{home}`) are the server's
+  own, never the match rng, so a match with a bot replays from `(seed, log)` like any other, and a
+  rebuilt actor resumes the bot's seat with its streams started again (R1452). R639000: the think
+  time also grows with the move's legal actions (`THINK_COMPLEXITY_SLOPE`) and on a lethal decision
+  (`THINK_LETHAL_SHIFT`), and a mulligan, a draw answer and a concession have priors of their own
+  (`BOT_THINK_PRIORS`); at the start of its own turn the bot may concede, and it answers a draw
+  offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
+  (`never_played`). A rebuild reads the turn each bot last moved in off the log
+  (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
+  turn again.
+- `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
+  on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
+  `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
+  concession temper (`BOT_CONCEDE_FIT`, by turn and its deficit, only while it trails), a draw answer
+  (`BOT_DRAW_ANSWER_FIT`, only while it trails), an idle turn its clock times out
+  (`BOT_TIMEOUT_FIT`), its plan once a ranked match ends (`BOT_REMATCH_FIT`: how long it stays, whether it offers and whether
+  it meets an offer, and when) and its aim's lead. Where it stands (`standing`) is read through
+  `redact` on one `determinize`d world (`{seed}:bot-standing:{home}:{turn}`), since the evaluation
+  cannot look up a face-down placeholder: the deficit on R1442's scale, which the concession's
+  threshold is fitted on, and how far it trails its opponent, centred on an even board, which both
+  guards read.
+- `bots::aim` is the server's mirror of the web's aim (`apps/web/src/game/aim/aim.ts`): the aim a
+  person's client would show for a targeted play, Activate, hero power or attack. The actor relays it
+  through R738's relay (`receive_aim`, judged by `aim_is_public`) `aim_lead_ms` before the move and
+  takes it down after.
+- Once a ranked match a bot played ends, the bot reads as present (`presence`) until its plan's
+  linger ends (the plan is drawn under the lock that ends the game, so there is no gap while the
+  result is written), offers a normal rematch when its plan says once the result has landed, and
+  meets a person's offer at their stakes when its plan accepts and it is still there, staying until
+  its answer lands (`MatchActor::on_rematch_offer`, told by `api/rematch.rs`'s `offer_as` through
+  `Registry::get`); its offers go through the route's own path (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
+  and not retired, whatever its schedule) and lets it go if the start fails.
+- `bots::persona` is the server's port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
+  which stays for practice), its tables `config.rs`'s `AI_PERSONAS` and `AI_EMOTE`, drawing as the
+  web's does on its own stream (`{seed}:bot-persona:{home}`) and within the bot seat's dealt hand
+  (R645, R1344). A ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and
+  waits out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
+  (`EmotePersona::with_delays`), the rows `timing-fit` refits; the caps and R643's rate limit are
+  unchanged (R639000).
+- `bots::pool` sizes the pool as the server boots and every `BOT_POOL_REFRESH_INTERVAL_SECONDS`
+  (`run_bot_pool`): `clamp(BOT_POOL_MIN, round(BOT_POOL_PER_WEEKLY_ACTIVE × weekly active people),
+  BOT_POOL_MAX)` active bots, retiring the youngest accounts and reinstating the most recently
+  retired first.
+  A new bot draws a strength (its R610 rating seeded from it), a speed, a persona, a schedule, an
+  account age and a username or the default `Player#n`; its two or three Best-of-1 decks are the
+  patch's human Best-of-1 decklists, then decks dealt as All Random deals a player's
+  (`deal_random_deck`: no shadow ban, no soft gate), each checked legal, and they are dealt
+  again when the catalog version changes (R1454). Its Conquest trio (`draw_trio`, R641000) is its
+  own decks that share no card, in order, then decks dealt with the cards taken left out
+  (`deal_random_deck_excluding`), checked as a trio (`validate_trio`), and dealt again with them. The queue's sweeper lets go a bot whose claimed
+  match was still unstarted `BOT_STALE_START_SECONDS` after the claim, with its player
+  (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
+  `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
+  open-row sweep (R1450) would delete the skeleton.
+
+Migration 0032 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
+it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,
+decks and when it retired; RLS on with no policy and no client grant), and swaps the profile's
+foreign key to `auth.users` for triggers: inserting a person's profile still needs its auth user
+and deleting an auth user still deletes its profile, but a bot's profile needs none; and it limits
+the launch collection's backfill (`app.grant_launch_collection_all`, which every catalog stamp
+runs) to people, since a bot owns no collection. A bot's rating
+is a `bot_ratings` row (0022, R610), and its rank a `season_ranks` row its ranked games move as a
+person's move theirs, read against people's ratings alone (R640000). Nothing a client reads carries
+a profile's `kind`, a seat's pilot or a bot's nonces: `GET /api/leaderboard` and
+`GET /api/matches/:matchId/ranks` show a bot's row as a player's, and Jlorious and the percentiles
+read people's rows only, so a bot that would qualify stays Mythic Grape (R640000, R1452). The human
+side of a bot game counts in every statistic like any live game's; the bot side is filed as `ai`,
+with its bot id in `rated_games`, and is read only when a query asks for it (R1451).
+
+Migration 0033 adds `bots.trio` and `bots.trio_catalog_version`: the Conquest trio the pool dealt
+the bot, frozen as a ticket's is, and the catalog it was dealt for (R641000). The table stays
+server-only.
 
 ## Tests
 
@@ -205,7 +384,7 @@ sh crates/server/tests/db/run.sh                      # the store contract again
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-`tests/server.rs` is one binary over `tests/{api,actor,store,support}/`. `support/deps.rs` builds a
+`tests/server.rs` is one binary over `tests/{api,actor,bots,store,support}/`. `support/deps.rs` builds a
 test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; time is

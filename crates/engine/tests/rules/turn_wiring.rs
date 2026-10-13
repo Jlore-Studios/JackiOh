@@ -1,23 +1,13 @@
-//! The turn stages patch v0.2.0 adds to R62's order (docs/classic-sets.md B3.1, B3.3; SPEC §2.2): the
-//! Brittle tick right after the mana refresh, the "Animated on your turn" cards stepping into their
-//! unit zones after it and before the delayed effects, and those cards going home as cleanup's last
-//! step. The bodies are `brittle.ts`'s and `animated.ts`'s; what is proved here is the wiring — where
-//! each stage runs, that each settles before the next, and that a stage which asks something parks the
-//! rest of the turn on `state.work` (R113, R117) so each later stage runs exactly once, through a JSON
-//! round trip and a replay.
+//! Turn stages in R62's order (docs/classic-sets.md B3.1, B3.3; SPEC §2.2): the Brittle tick right
+//! after the mana refresh, the "Animated on your turn" cards stepping into their unit zones after it
+//! and before the delayed effects, and those cards going home as cleanup's last step. What is proved
+//! is the wiring: where each stage runs, that each settles before the next, and that a stage which
+//! asks something parks the rest of the turn on `state.work` (R113, R117) so each later stage runs
+//! exactly once, through a JSON round trip and a replay.
 //!
-//! So the two modules are replaced by test doubles for this file only (`vi.mock`): a double that
-//! records when it ran, and in some tests asks its player something or emits an event, exactly as a
-//! Brittle crumble's Death hook or an arrival's trap would. Their real behaviour is their own tests'.
-//!
-//! Port of `packages/engine/test/turn-wiring.test.ts`. Rust has no module mocking, so the doubles go
-//! in through the testkit's thread-local stage doubles (the seam this file asks part 31 for, in the
-//! spirit of SURFACE §8's thread-local registries): `mock_brittle_tick`, `mock_animate_at_turn_start`
-//! and `mock_return_at_cleanup` replace `brittle::brittle_tick`, `animated::animate_at_turn_start` and
-//! `animated::return_at_cleanup` for the calling thread (each `#[test]` is its own thread, so a double
-//! never leaks into another test, as `vi.mock` stays inside its file). Only the three stage bodies are
-//! doubled: every other function of the two modules stays the real one. `vi.fn`'s call record is a
-//! channel the recording doubles send each call's player down.
+//! The three stage bodies are replaced by the testkit's thread-local doubles (`mock_brittle_tick`,
+//! `mock_animate_at_turn_start`, `mock_return_at_cleanup`); each `#[test]` is its own thread, so a
+//! double never leaks. Surface contract: docs/v0.3.0/SURFACE.md §8.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
@@ -71,14 +61,13 @@ fn ask(sink: &mut EngineSink<'_>, player: PlayerId, step: &str) {
     );
 }
 
-/// `vi.mocked(stage).mock.calls`, by the player each call was handed (the two stages a test reads).
+/// The player each call of the two stages a test reads was handed.
 struct StageCalls {
     brittle: mpsc::Receiver<PlayerId>,
     returned: mpsc::Receiver<PlayerId>,
 }
 
-/// What each stage does unless a test says otherwise: note that it ran, with what it can see. (TS's
-/// `beforeEach(recordingDoubles)`: every test calls it first.)
+/// What each stage does unless a test says otherwise: note that it ran, with what it can see.
 fn recording_doubles() -> StageCalls {
     let (brittle_tx, brittle) = mpsc::channel();
     let (return_tx, returned) = mpsc::channel();
@@ -183,7 +172,7 @@ fn since(state: &GameState, from: usize) -> Vec<String> {
     notes(state).into_iter().skip(from).collect()
 }
 
-/// The entries that are not p2's (`!entry.includes("p2")`).
+/// The entries that are not p2's.
 fn without_p2(entries: Vec<String>) -> Vec<String> {
     entries
         .into_iter()
@@ -191,7 +180,6 @@ fn without_p2(entries: Vec<String>) -> Vec<String> {
         .collect()
 }
 
-/// `work.map((item) => [item.resume.hook, item.resume.step])`.
 fn work_steps(state: &GameState) -> Vec<(String, String)> {
     state
         .work
@@ -200,7 +188,7 @@ fn work_steps(state: &GameState) -> Vec<(String, String)> {
         .collect()
 }
 
-/// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
+/// Every key of `expected` is in `actual` with a matching value.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -515,7 +503,6 @@ mod r62_s_cleanup_with_the_animated_return_as_its_last_step_b3_1 {
         assert_eq!(hash_state(&answer(&copy).0), hash_state(&live));
     }
 
-    /// TS's `step` and `answerOpen` closures over `state` and `log`.
     struct Played {
         state: GameState,
         log: Vec<Action>,

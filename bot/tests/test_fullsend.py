@@ -433,10 +433,11 @@ class AdoptTests(unittest.TestCase):
         self.assertTrue(world.has(TRACKER_ONTO, "src/batch1.txt"))
         self.assertFalse(world.has("main", "src/batch1.txt"))
         self.assertEqual(world.gh.get_issue(PLANNED)["state"], "closed")
-        # The unplanned medium part is no medium model's to plan: claude-1 plans it in its run.
+        # The unplanned medium part goes to the lane's weakest seat that meets its floor:
+        # Muse plans it first in its own run (#695).
         planned = world.claim()
-        self.assertEqual((planned["number"], planned["provider"]), (UNQUEUED, "claude-1"))
-        self.assertEqual(planned["seats"]["plan"]["tier"], "strong")
+        self.assertEqual((planned["number"], planned["provider"]), (UNQUEUED, "muse"))
+        self.assertEqual(planned["seats"]["plan"]["tier"], "medium")
 
 
 class PartBuilderTests(unittest.TestCase):
@@ -452,7 +453,7 @@ class PartBuilderTests(unittest.TestCase):
             "a fullsend part, built on medium from its plan: its tree's reconcile checks and "
             "reviews it")))
         self.assertEqual(who([claude], "hard", True), (("claude-3", "strong"), ""))
-        self.assertEqual(who([claude, muse], "medium", False)[0], ("claude-3", "medium"))
+        self.assertEqual(who([claude, muse], "medium", False)[0], ("muse", "medium"))
         self.assertEqual(who([claude, muse], "medium", True), (("muse", "medium"), ""))
         self.assertEqual(who([devin], "hard", True), (None, ""))  # never under PART_FLOOR
 

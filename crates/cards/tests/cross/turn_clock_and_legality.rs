@@ -1,15 +1,8 @@
 //! The clock, the draw offer, Heroic Power's action, and "this turn" on the opponent's turn: what
 //! `legalActions` offers and `reduce` accepts must agree with SPEC and with each other (§2.3, §2.5,
-//! §9.3, §10.2, R36, R43, R79, R103). Found by the polish-4 edge-case hunt
-//! (docs/polish/4-edge-cases.md, lenses L8 and L9, and in round 4 the engine-invariants lens, which
-//! found two target options sharing one key, and in round 5 a play naming a lane between two lanes,
-//! and in round 6 an answer listed in an order no offered answer has, R221, and in round 8 a play's
-//! Tribute pick that names a unit the play keeps, R123, and a play's picks listed in an order no
-//! offered play has, R221); every case here but the known gap failed before its fix. No Core card
-//! declares a Tribute with an amount or one declaration whose two picks are made in a public order,
-//! so round 8's cases build the card as a fixture.
-//!
-//! Port of `packages/cards/test/turn-clock-and-legality.test.ts` (SURFACE §4.1, §8).
+//! §8 #98, §9.3, §10.2, R36, R43, R79, R103, R123, R221). Found by the polish-4 edge-case hunt
+//! (docs/polish/4-edge-cases.md). No Core card declares a Tribute with an amount or one declaration
+//! whose two picks are made in a public order, so those cases build the card as a fixture.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -368,9 +361,9 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
         g.play(QUICKSTRIKER, json!({}));
         g.play(VANILLA, json!({}));
         assert_eq!(g.state().players.p2.hero.health, 29);
-        // p2's turn begins: Moths makes the 5/4 Panther attack it, the Panther destroys it and survives,
-        // so it draws 2 for p1 on p2's turn (R426) — Hinder first, which casts itself and counts as a card
-        // p1 played this turn.
+        // p2's turn begins: Moths makes the 5/4 Panther attack it (a forced attack spends no exertion,
+        // §4.1), the Panther destroys it and survives (§4.3), so it draws 2 for p1 on p2's turn (R426) —
+        // Hinder first, which casts itself and counts as a card p1 played this turn.
         g.end_turn();
         assert_eq!(g.state().active, PlayerId::P2);
         assert!(
@@ -411,9 +404,8 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
                 .count(),
             2
         );
-        // The view's contract (`PendingOption.key` in packages/shared/src/view.ts) is that the key is
-        // what the client sends back, so one key names one option; two options sharing a key leave one
-        // of them unpickable (the web client maps picked keys back to options through a Map).
+        // `PendingOption.key` is what the client sends back, so one key names one option; two options
+        // sharing a key leave one of them unpickable.
         let keys: Vec<String> = pending.options.iter().map(|option| option.key.clone()).collect();
         let distinct: IndexSet<String> = keys.iter().cloned().collect();
         assert_eq!(distinct.len(), keys.len());
@@ -424,10 +416,9 @@ mod s9_1_legal_actions_and_a_face_down_trap_s_instance_id {
     use super::*;
 
     // R177's last channel, closed by R227: an instance id is the only handle the action protocol has
-    // for a face-down target (a play's targets, a prompt option, `activatePower`), so `legalActions`
-    // names one whenever a card may target a face-down trap. A card set face-down takes a fresh id, so
-    // a player who saw the id while the card was public (here, in p2's graveyard) finds it nowhere
-    // once the card is set again: not in the actions, not in the view, not in the events.
+    // for a face-down target, so `legalActions` names one whenever a card may target a face-down trap.
+    // A card set face-down takes a fresh id, so an id seen while the card was public (here, in p2's
+    // graveyard) names nothing once the card is set again: not in the actions, the view or the events.
     #[test]
     fn r227_r177_legal_actions_never_names_a_face_down_trap_by_an_id_its_viewer_saw_while_the_card_was_public()
      {
@@ -509,13 +500,9 @@ mod s3_2_9_3_a_play_s_zone_is_one_of_the_row_s_lanes {
             });
         assert!(!offered);
 
-        // …and §9.3 has `reduce` refuse what is illegal itself. Lane 2.5 passed the range check and read
-        // as an empty, unlocked zone, so the play was accepted: the mana was spent and the card written to
-        // `units[1.5]`, a property no lane reads, which the next JSON clone dropped — in no zone at all.
-        //
-        // A lane is an integer on the Rust wire (`ZoneChoice.lane: i32`, SURFACE §4.3), so the play is
-        // refused where the action is read, before `reduce` could accept it: the same JSON the TS case
-        // sends does not parse into an `Action`, and nothing is spent.
+        // …and §9.3 has `reduce` refuse what is illegal itself. A lane is an integer on the wire
+        // (`ZoneChoice.lane: i32`), so a play naming lane 2.5 is refused where the action is read,
+        // before `reduce` could accept it: it does not parse into an `Action`, and nothing is spent.
         let sent = json!({
             "type": "play",
             "playerId": "p1",
@@ -535,9 +522,8 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
     #[test]
     fn r221_r16_r60_radiant_26_glowy_jelly_bean_s_two_echo_picks_listed_the_other_way_round_mean_the_same_as_the_answer_legal_actions_offers()
      {
-        // #80 Zao Gao's chosen discard was this test's two-pick prompt until patch v0.1.1 made that
-        // discard random (R354). A radiant Glowy Jelly Bean under #79 Twinspell asks the same shape:
-        // its Echo repeat reopens its hand pick as a prompt for two cards (§10.6).
+        // #80 Zao Gao's discard is random (R354), so a radiant Glowy Jelly Bean under #79 Twinspell
+        // supplies the two-pick prompt: its Echo repeat reopens its hand pick for two cards (§10.6).
         let mut s = scenario(json!({
             "p1": {
                 "hand": [TWINSPELL, { "def": JELLY_BEAN, "radiant": true }, RENO, VANILLA, BIG_FELINOR, GARY],
@@ -609,13 +595,10 @@ mod r221_10_2_10_6_every_answer_reduce_accepts_is_one_legal_actions_offers {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Round 8 (lens "legality-agreement"): a play's own choices, as legalActions offers them
-// ---------------------------------------------------------------------------------------------
+// A play's own choices, as legalActions offers them
 
 const EDGE_VANILLA: &str = "core-008";
 
-/// `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
 fn register_fixture_script(id: &str, script: Script) {
     let mut scripts = registered_scripts().clone();
     scripts.insert(
@@ -658,7 +641,7 @@ fn in_hand(s: &mut Scenario, def_id: &str, player: PlayerId) -> CardInstance {
     card
 }
 
-/// The plays `legalActions` offers for `card` (TS `PlayBody[]`).
+/// The plays `legalActions` offers for `card`.
 fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBody> {
     legal_actions(s.state(), player)
         .into_iter()
@@ -666,7 +649,6 @@ fn plays_of(s: &Scenario, player: PlayerId, card: &CardInstance) -> Vec<ActionBo
         .collect()
 }
 
-/// `play.targets ?? []`.
 fn targets_of(play: &ActionBody) -> Vec<Selection> {
     match play {
         ActionBody::Play { targets, .. } => targets.clone().unwrap_or_default(),
@@ -674,7 +656,6 @@ fn targets_of(play: &ActionBody) -> Vec<Selection> {
     }
 }
 
-/// `play.tributes ?? []`.
 fn tributes_of(play: &ActionBody) -> Vec<String> {
     match play {
         ActionBody::Play { tributes, .. } => tributes.clone().unwrap_or_default(),
@@ -722,9 +703,8 @@ mod r123_a_declared_tribute_names_the_same_units_in_targets_and_tributes {
                 })
             })
             .collect();
-        // Offered before the fix: tributes [a] with the pick b, and tributes [b] with the pick a — the unit
+        // Mismatched: tributes [a] with the pick b, and tributes [b] with the pick a — the unit
         // sacrificed and the unit the script is told it sacrificed are two different units.
-        // (TS `expect.soft`: a soft assertion lets the rest run; this one stops the test, a stricter form.)
         assert_eq!(
             mismatched
                 .iter()

@@ -1,14 +1,10 @@
-//! Port of `packages/cards/test/costs-and-mana.test.ts` (part 27.1).
-//!
 //! What a card costs outside play, and what the refresh gives (SPEC §2.3, §6.3 Cost and Mana, R24,
 //! R48, R65, R66, R78). Found by the polish-4 edge-case hunt, round 4 (docs/polish/4-edge-cases.md,
-//! lenses "keywords and layers" and L8); every case here failed before its fix.
+//! lenses "keywords and layers" and L8).
 //!
-//!  - R65 is one cost calculation for an instance, and it applies outside play too ("library, hand,
-//!    GY, pools, filters, comparisons"): #69's Recruit filter and #51's brackets read it off the
-//!    library card, as #30 Archivist and #94 Genn's Greed already did (R24, R66), so a `costMod` —
-//!    kept in every zone, R78 — moves a card between them. Two live Professor Curvatures both test the
-//!    cost the flat discounts leave, and neither reads what the other has already lowered.
+//!  - R65 is one cost calculation for an instance, in play and out: #69's Recruit filter and #51's
+//!    brackets read it off the library card, as #30 Archivist and #94 Genn's Greed already did (R24,
+//!    R66), so a `costMod`, kept in every zone (R78), moves a card between them.
 //!  - §2.3: max mana is min(turns, 4) plus persistent modifiers. The next refresh's one-shot rider
 //!    (#24's next-turn mana, #21's lower refresh) moves current mana only, as #6 Mana Well's gain does.
 //!  - Round 9, lens "keywords and layers". R65 (amended): a player's discounts (#35, #77, #78) are
@@ -33,8 +29,8 @@ const CALL_TO_ARMS: &str = "core-069";
 const CURVATURE: &str = "core-077";
 const LIBRARY: [&str; 4] = [VANILLA, VANILLA, VANILLA, VANILLA];
 
-/// The harness with the real catalog and every card script registered (TS's `_harness.ts` import
-/// ran `registerAll()`; the engine's testkit cannot name the cards crate, so the cards test does).
+/// The harness with the real catalog and every card script registered (the engine's testkit cannot
+/// name the cards crate, so the cards test does).
 fn setup(opts: Value) -> Scenario {
     jackioh_cards::register_all();
     scenario(opts)
@@ -193,9 +189,7 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: a play-time discount is not a library or graveyard card's cost (R65, R48, §8 #35, #77, #78)
-// ---------------------------------------------------------------------------
 
 const RAPID_REPLENISH: &str = "core-010"; // Spell, 0
 const SEVEN_SEVEN: &str = "core-025"; // Unit, 4
@@ -261,7 +255,7 @@ mod a_play_time_discount_is_not_a_library_or_graveyard_cards_cost {
      {
         let mut g = setup(json!({
             "p1": {
-                // The Radiant /fullsend, the face that still grants "Combo: Draw 1" (patch v0.1.1).
+                // The Radiant /fullsend, the face that grants "Combo: Draw 1".
                 "hand": [{ "def": FULLSEND, "radiant": true }, GREED],
                 // A unit that can still switch keeps §2.5's auto-end from passing the turn mid-test.
                 "field": [VANILLA],

@@ -43,15 +43,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #22 Blood Moon — SPEC §8.7 row 22, BUILD M9 Classic+ row C+ 22: "Face-down Trap in the "would be
-// healed" replacement: it fires when an enemy (the other player's hero or one of their Units) would be
-// healed, by a heal, Lifesteal, "heal up to" or "heal to full"; the heal that sets it off is converted
-// too (R413), and every heal of X on an enemy for the rest of the turn becomes X Pierce damage from
-// Blood Moon (Armor skipped, Divine Shield and caps still apply, no Spell Damage), the modifier ending
-// at cleanup while the trap lies in the graveyard; Set health is no heal; a friendly heal never fires
-// it and the opponent learns nothing of it until it fires (R33, R97); radiant its face is a Field Trap,
-// in hand too (pools and filters read Field Trap), it stays face-up once fired and converts every
-// enemy heal for as long as it is on the field".
+// C+ #22 Blood Moon (SPEC §8.7 row 22): fires when an enemy would be healed. The triggering heal is
+// converted too (R413), and every enemy heal this turn becomes Pierce damage. The opponent learns
+// nothing until it fires (R33, R97). Radiant face is a Field Trap that stays face-up once fired and
+// converts every enemy heal while on the field.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -75,7 +70,6 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// TS `{ ...defaults, ...overrides }` on a side setup: every key of `overrides` replaces the default's.
     fn spread(defaults: Value, overrides: &Value) -> Value {
         let mut out = defaults;
         if let (Some(into), Some(from)) = (out.as_object_mut(), overrides.as_object()) {
@@ -124,7 +118,6 @@ mod tests {
             .collect()
     }
 
-    /// The two Figs in p2's hand (TS `const [first, second] = …`).
     fn two_figs(s: &Scenario) -> (CardInstance, CardInstance) {
         let figs: Vec<CardInstance> = s.hand(P2).into_iter().filter(|card| card.def_id == FIG).collect();
         match (figs.first(), figs.get(1)) {

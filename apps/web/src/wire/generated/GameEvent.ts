@@ -3,17 +3,22 @@ import type { CardType } from "./CardType";
 import type { ControlHow } from "./ControlHow";
 import type { CounterKind } from "./CounterKind";
 import type { CounteredTo } from "./CounteredTo";
+import type { EmoteId } from "./EmoteId";
+import type { FengShuiOutcome } from "./FengShuiOutcome";
 import type { GameOverReason } from "./GameOverReason";
 import type { GlitchOutcome } from "./GlitchOutcome";
 import type { Keyword } from "./Keyword";
 import type { LibraryOverflowOutcome } from "./LibraryOverflowOutcome";
+import type { ManaSpentFor } from "./ManaSpentFor";
 import type { PlayedFrom } from "./PlayedFrom";
 import type { PlayerId } from "./PlayerId";
 import type { Position } from "./Position";
+import type { PredictOutcome } from "./PredictOutcome";
 import type { PromptKind } from "./PromptKind";
 import type { RedirectWhat } from "./RedirectWhat";
 import type { RotationDirection } from "./RotationDirection";
 import type { Row } from "./Row";
+import type { SecretChoice } from "./SecretChoice";
 import type { SwapWhat } from "./SwapWhat";
 import type { TuningChange } from "./TuningChange";
 import type { Winner } from "./Winner";
@@ -57,6 +62,10 @@ exitsFrom?: number, } | { "type": "summoned", player: PlayerId, instanceId: stri
  */
 formerId?: string, 
 /**
+ * R1088: the card whose effect summoned it, for the client; no rule reads it.
+ */
+sourceId?: string, 
+/**
  * R119: on a played card's step-4 `summoned`, as on its `cardPlayed`. A view never forwards it.
  */
 arrivedDuring?: Array<string>, 
@@ -98,7 +107,17 @@ emptied?: true, } | { "type": "addedToHand", player: PlayerId, instanceId: strin
  * knock-down takes for the rest of the turn, which a unit already in Attack Position would
  * otherwise lose with no event (§10.3, R91). Absent on a grant. Only ever `Some(true)`.
  */
-lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, } | { "type": "attackCancelled", attackerId: string, targetId: string, byInstanceId: string, } | { "type": "manaChanged", player: PlayerId, current: number, max: number, } | { "type": "turnStarted", player: PlayerId, turn: number, } | { "type": "turnEnded", player: PlayerId, turn: number, unspentMana: number, } | { "type": "turnAutoEnded", player: PlayerId, turn: number, } | { "type": "promptOpened", player: PlayerId, choiceId: string, kind: PromptKind, } | { "type": "promptAnswered", player: PlayerId, choiceId: string, } | { "type": "drawOffered", player: PlayerId, } | { "type": "drawAnswered", player: PlayerId, accept: boolean, } | { "type": "gameOver", winner: Winner, reason: GameOverReason, } | { "type": "cardAnnounced", player: PlayerId, instanceId: string, defId: string, cardType: CardType, costPaid: number, targets: Array<string>, row?: Row, lane?: number, 
+lost?: true, } | { "type": "counterChanged", instanceId: string, counter: CounterKind, value: number, placed?: number, } | { "type": "costChanged", instanceId: string, cost: number, hiddenFrom?: Array<PlayerId>, } | { "type": "modifierChanged", player: PlayerId, modifierId: string, added: boolean, } | { "type": "radiantSet", instanceId: string, defId: string, zone: Zone, } | { "type": "transformed", instanceId: string, fromDefId: string, toDefId: string, newInstanceId: string, hiddenFrom?: Array<PlayerId>, } | { "type": "fused", instanceIds: Array<string>, resultInstanceId: string, defId: string, } | { "type": "positionSwitched", instanceId: string, position: Position, } | { "type": "controlChanged", instanceId: string, controller: PlayerId, row: Row, lane: number, formerId?: string, how?: ControlHow, } | { "type": "rotated", direction: RotationDirection, } | { "type": "swapped", what: SwapWhat, } | { "type": "locked", player: PlayerId, row: Row, lane: number, } | { "type": "trapFired", instanceId: string, defId: string, controller: PlayerId, row: Row, lane: number, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+/**
+ * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
+ * when a summoned substitute makes it. Absent otherwise.
+ */
+insteadOf?: string, } | { "type": "attackCancelled", attackerId: string, targetId: string, byInstanceId: string, } | { "type": "manaChanged", player: PlayerId, current: number, max: number, } | { "type": "turnStarted", player: PlayerId, turn: number, 
+/**
+ * R845 (Meditative #19.1): set on an extra turn's banner turn. Only ever `Some(true)`,
+ * so a normal turn serialises exactly as before.
+ */
+extra?: true, } | { "type": "turnEnded", player: PlayerId, turn: number, unspentMana: number, } | { "type": "turnAutoEnded", player: PlayerId, turn: number, } | { "type": "promptOpened", player: PlayerId, choiceId: string, kind: PromptKind, } | { "type": "promptAnswered", player: PlayerId, choiceId: string, } | { "type": "drawOffered", player: PlayerId, } | { "type": "drawAnswered", player: PlayerId, accept: boolean, } | { "type": "emoted", player: PlayerId, emote: EmoteId, } | { "type": "gameOver", winner: Winner, reason: GameOverReason, } | { "type": "cardAnnounced", player: PlayerId, instanceId: string, defId: string, cardType: CardType, costPaid: number, targets: Array<string>, row?: Row, lane?: number, 
 /**
  * Only ever `Some(true)`.
  */
@@ -114,4 +133,4 @@ carried?: true, } | { "type": "deanimated", player: PlayerId, instanceId: string
 /**
  * Always "field".
  */
-zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, };
+zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, };

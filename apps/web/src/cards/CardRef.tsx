@@ -1,19 +1,6 @@
-// A name in a card's text that points at another card (SPEC §10.10, R279).
-//
-// Every such name is marked (`.cf-ref`, a dotted underline), and carries the id and face it points
-// at (`data-ref`, `data-ref-face`). Where the surface makes references controls (`RefsInteractive`:
-// the collection's detail view, the touch inspect sheet), it is also focusable, and it shows the
-// named card's printed face in a tooltip beside it: after a mouse or pen rests on it for
-// REF_HOVER_DELAY_MS, at once when the keyboard focuses it, on a click, and on a tap on a touch
-// screen. The tooltip is a portal at the end of <body> with `role="tooltip"`, and the reference is
-// `aria-describedby` it while it is open. Leaving, blurring, Escape, a press anywhere else, or
-// tapping it again closes it; a scroll or a resize moves it with its reference. Escape closes the
-// tooltip alone: the detail view and the sheet leave their own Escape to an open reference
-// (`inspect/store.ts`).
-//
-// Elsewhere — a face inside a button, the hover preview, a small board face — the mark is all it
-// is, and the hover preview lists the named cards beside the face instead (References.tsx).
-// Presentation only: the tooltip shows a printed catalog face, public by §5.1 (CLAUDE.md rule 7).
+// Card-text references (SPEC §10.10, R279) open their printed, public catalog face in interactive views.
+// They never reveal card state (§5.1; CLAUDE.md rule 7).
+// Escape closes only the tooltip; the detail view and sheet retain their own handling (inspect/store.ts).
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -28,12 +15,10 @@ import { RefsInteractive, useRefsInteractive } from "./refContext.tsx";
 
 export type CardRefProps = { def: CardDef; radiant: boolean; children: ReactNode };
 
-/** A test id for the tooltip a reference opens, by the id it names. */
 export const REF_TOOLTIP_TESTID = "card-ref-tooltip";
 
 type Timer = ReturnType<typeof setTimeout>;
 
-/** The press a click belongs to: a touch toggles, anything else opens. */
 type Press = { touch: boolean; wasOpen: boolean };
 
 function rectOf(element: Element): Rect {
@@ -88,8 +73,7 @@ export function CardRef({ def, radiant, children }: CardRefProps): ReactElement 
 
   useEffect(() => clearTimer, []);
 
-  // While open: Escape or a press anywhere else closes it, and a scroll or a resize moves it with
-  // its reference (focusing a reference can scroll the dialog it is in, and must not close it).
+  // Scroll moves an open tooltip: focusing a reference may scroll its dialog without closing it.
   const isOpen = anchor !== null;
   useLayoutEffect(() => {
     if (!isOpen) return undefined;
@@ -144,16 +128,13 @@ export function CardRef({ def, radiant, children }: CardRefProps): ReactElement 
           close();
         }}
         onPointerDown={(event) => {
-          // Read before the press focuses the reference, which opens it: the click that ends this
-          // press must know whether it was already open.
+          // Record state before focus opens it so a touch tap can close an already-open tooltip.
           press.current = { touch: event.pointerType === "touch", wasOpen: anchor !== null };
         }}
         onFocus={open}
         onBlur={close}
         onClick={(event) => {
-          // A click opens it (the press's focus may already have); a tap on a touch screen that
-          // finds it open closes it. The click never reaches a card underneath, which would
-          // otherwise take it as a pick.
+          // Stop the card underneath receiving a pick; a touch tap toggles.
           event.stopPropagation();
           const pressed = press.current;
           press.current = null;

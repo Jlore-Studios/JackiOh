@@ -78,9 +78,7 @@ afterEach(() => {
   releaseRecoverySession();
 });
 
-// ---------------------------------------------------------------------------------------------
 // parseAuthRedirect
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 parseAuthRedirect", () => {
   it("R193 a URL with no auth parameters is none", () => {
@@ -199,9 +197,7 @@ describe("R193 parseAuthRedirect", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // consumeAuthRedirect
-// ---------------------------------------------------------------------------------------------
 
 describe("R193 a link's address is a claim", () => {
   it("R193 the email and the user id are read from a payload nobody has verified", () => {
@@ -295,9 +291,7 @@ describe("R193 consumeAuthRedirect", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the recovery session: memory only
-// ---------------------------------------------------------------------------------------------
+// The recovery session: memory only
 
 describe("R193 B30 the recovery session", () => {
   it("R193 is held for this tab only: memory and sessionStorage, never localStorage", () => {

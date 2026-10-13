@@ -1,30 +1,6 @@
-// Game settings kept on the account as well as on the device (SPEC §9.1, R633, R634).
-//
-// The device's stores (`groups.ts`) are the ones the game reads, and they stay authoritative for the
-// session: nothing here ever waits on the network before a setting takes effect, and no failure
-// reaches the game. For an ACTIVE account (a pending one has only the code screen, §9.4, and the
-// routes answer it 403), this module keeps the account's copy level with the device:
-//
-//   1. On load it reads the account's copy (`GET /api/settings`) and, group by group, takes the
-//      newer side: a group the account holds with a later time than this device last changed it is
-//      applied to the device's store; a group this device changed later than the account holds is
-//      sent up (`PUT /api/settings`), which the server merges by the same rule.
-//   2. After that, every change on the device (a switch, a slider, another tab's change, a reset) is
-//      stamped with the time it was made and sent up, a moment later so a slider being dragged is one
-//      request, and the server's answer is reconciled again.
-//
-// A group is one store (gameplay, audio, effects, card display); its time is the device's clock when
-// it last changed here, kept in `localStorage` beside the stores (`SETTINGS_SYNC_STORAGE_KEY`). A
-// group no change was ever made to on this device has no time, so the account's copy always wins over
-// it: a new device takes up the account's settings, and a device that changed one while signed out
-// brings that change to the account if no one has changed it since. Signing in on a device adds its
-// later changes to the account, as R321 does for the tutorial: settings belong to the device as much
-// as to the account.
-//
-// A request that fails, or never answers, is dropped: the device keeps what it has, and the next
-// change, the next load, coming back online or a retry sends what is owed. At most one request is in
-// flight; changes made meanwhile are sent together once it answers. Signed out, there is no account
-// to sync, so nothing is sent at all.
+// Account/device settings sync (SPEC §9.1, §9.4; R321, R633, R634).
+// A per-group timestamp chooses the newer side without delaying the game; one request at a time
+// reconciles changes, while failed requests leave device settings intact for a later retry.
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
@@ -50,9 +26,7 @@ export const settingsAccountApi: SettingsAccountApi = {
   save: putPlayerSettings,
 };
 
-// ---------------------------------------------------------------------------------------------
-// The sync status (kept in module state; the dialog shows no tab for it since #303)
-// ---------------------------------------------------------------------------------------------
+// Sync status
 
 /** `signedOut`: nothing is syncing (no active account on this screen); the rest are the account's copy. */
 export type SettingsSyncPhase = "signedOut" | "syncing" | "saved" | "error";
@@ -89,14 +63,11 @@ export function useSettingsSyncState(): SettingsSyncState {
   return useSyncExternalStore(subscribeSettingsSyncState, readSettingsSyncState, readSettingsSyncState);
 }
 
-/** A retry: the running sync loads or sends again. Does nothing signed out. */
 export function retrySettingsSync(): void {
   activeSync?.retry();
 }
 
-// ---------------------------------------------------------------------------------------------
-// The device's clock per group
-// ---------------------------------------------------------------------------------------------
+// Device clock per group
 
 function readClock(): Record<string, number> {
   try {
@@ -116,8 +87,7 @@ function writeClock(clock: Record<string, number>): void {
   try {
     window.localStorage.setItem(SETTINGS_SYNC_STORAGE_KEY, JSON.stringify(clock));
   } catch {
-    // Blocked or full storage: the time lives in memory for this page, and the next one starts from
-    // the account's copy.
+    // Keep the in-memory clock when storage is unavailable.
   }
 }
 
@@ -141,9 +111,7 @@ function accountCopy(raw: unknown): PlayerSettingsAccountCopy {
   return copy;
 }
 
-// ---------------------------------------------------------------------------------------------
-// The sync
-// ---------------------------------------------------------------------------------------------
+// Sync
 
 export type SettingsAccountSync = {
   /** Stop listening; an answer still in flight is ignored. */
@@ -172,21 +140,18 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
 
   let stopped = false;
   let loaded = false;
-  /** True while a group's store is being written with the account's values, so that is not a change here. */
+  /** Avoid restamping a group while applying its account value. */
   let applying = false;
-  /** The groups this device holds a later change of than the account (as far as this page knows). */
+  /** Groups this device has changed later than the account. */
   const owed = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | null = null;
   let running: Promise<void> | null = null;
   let again = false;
 
-  /** Groups whose time this sync just lowered to the server's, which another tab's higher entry must not undo. */
+  /** Clock entries intentionally lowered to the server's time. */
   const lowered = new Set<string>();
 
-  /**
-   * Writes the clock. Another tab of this device may have stamped a group since this page read it,
-   * so a higher time already stored for a group wins, except where this page lowered it on purpose.
-   */
+  /** Another tab's higher timestamp wins unless this sync intentionally lowered it. */
   const persist = (): void => {
     for (const [id, at] of Object.entries(readClock())) {
       if (!lowered.has(id) && at > (clock[id] ?? 0)) clock[id] = at;
@@ -195,7 +160,6 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     writeClock(clock);
   };
 
-  /** Takes the account's group into the device's store, at the account's time. */
   const adopt = (group: SettingsGroup, held: PlayerSettingsGroup): void => {
     applying = true;
     try {
@@ -208,7 +172,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     persist();
   };
 
-  /** Group by group, the newer side wins: adopt the account's, or owe the device's. */
+  /** Reconcile each group by timestamp. */
   const reconcile = (copy: PlayerSettingsAccountCopy): void => {
     for (const group of groups) {
       const held = copy.groups[group.id];
@@ -218,7 +182,6 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     }
   };
 
-  /** One PUT of the groups owed, and the answer reconciled. Throws if the request fails. */
   const send = async (): Promise<void> => {
     if (owed.size === 0) {
       setState({ phase: "saved", savedAt: state.savedAt ?? now() });
@@ -238,9 +201,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
       throw cause;
     }
     if (stopped) return;
-    // The server takes a time after its own clock as now. A group it kept, with our values, at an
-    // earlier time is ours as the server timed it: take that time, or a device whose clock runs
-    // ahead would send the same group again for as long as its clock stays ahead.
+    // Use the server's lower timestamp for unchanged values, or a fast device resends forever.
     for (const [id, mine] of Object.entries(sent)) {
       const held = answer.groups[id];
       if (held !== undefined && held.at < mine.at && sameValues(held.values, mine.values)) {
@@ -262,7 +223,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     await send();
   };
 
-  /** Runs `first`, then sends again for as long as a change arrived meanwhile. Never rejects. */
+  /** Sends again for changes that arrive during a request; never rejects. */
   const run = (first: () => Promise<void>): void => {
     running = (async () => {
       try {
@@ -305,7 +266,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     clock[id] = Math.max(now(), (clock[id] ?? 0) + 1);
     persist();
     owed.add(id);
-    // Before the first load answers, `reconcile` finds the change newer than the account's anyway.
+    // `reconcile` preserves changes made before the first load returns.
     if (!loaded) return;
     clearTimer();
     timer = setTimeout(() => {
@@ -320,7 +281,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
     }),
   );
 
-  // Leaving the page, or the tab going to the background: send what is owed without waiting.
+  // Flush owed settings before the page hides.
   const flushNow = (): void => {
     if (owed.size === 0 || !loaded) return;
     clearTimer();
@@ -364,9 +325,7 @@ export function startSettingsAccountSync(options: SettingsAccountSyncOptions): S
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// One sync for the page, however many screens ask
-// ---------------------------------------------------------------------------------------------
+// Shared page sync
 
 type Shared = {
   profileId: string;
@@ -424,11 +383,7 @@ function attach(profileId: string, token: () => string, api: () => SettingsAccou
   };
 }
 
-/**
- * R634 for a screen: syncs while `account` is an active signed-in account, and does nothing (sends
- * nothing) otherwise. One sync serves every screen in turn; it restarts when the account changes to
- * another profile, and a renewed token for the same profile is simply used for the next request.
- */
+/** R634: active screens share one sync; changing profiles restarts it, while renewed tokens are reused. */
 export function useSettingsAccountSync(account: Account, api: SettingsAccountApi = settingsAccountApi): void {
   const active = account.kind === "ready" && account.me.profile.status === "active";
   const profileId = active ? account.me.profile.id : null;
@@ -447,7 +402,6 @@ export function useSettingsAccountSync(account: Account, api: SettingsAccountApi
   }, [profileId]);
 }
 
-/** Test seam: stops any running sync and forgets the status. */
 export function __resetSettingsSyncForTests(): void {
   if (shared?.stopTimer !== null && shared?.stopTimer !== undefined) clearTimeout(shared.stopTimer);
   shared?.sync.stop();

@@ -1,8 +1,6 @@
 //! The two cost-changing effects (BUILD M3-T1). R65 owns the order the inputs combine and
 //! `effectiveCost` is the only thing that reads them; these tests assert that order rather than
 //! recomputing it, plus R78's rule that both inputs travel with the card between zones.
-//!
-//! Port of `packages/engine/test/effects-cost.test.ts`.
 
 use jackioh_engine::effects::{PlayerModifierSpec, set_cost_mod, set_cost_override};
 use jackioh_engine::testkit::*;
@@ -12,9 +10,8 @@ use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::x_bolt;
 
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+/// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
+/// borrows all three, so they live here and `sink()` lends them out.
 struct Bench<'a> {
     state: &'a mut GameState,
     events: Vec<GameEvent>,
@@ -36,7 +33,6 @@ fn sink_for(state: &mut GameState) -> Bench<'_> {
     }
 }
 
-/// TS `run`'s options: `{ self?: CardInstance | null; controller?: PlayerId; targets?: Selection[] }`.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<CardInstance>,
@@ -44,8 +40,8 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// TS `effect.apply(makeContext(sink, self, rest))`. TS handed over the live card object; the card
-/// is looked up again by id, so the context sees it as it stands now.
+/// Applies `effect` in a context built over `sink`. The card is looked up again by id, so the
+/// context sees it as it stands now.
 fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     let RunOptions {
         self_,
@@ -65,8 +61,7 @@ fn run(sink: &mut EngineSink<'_>, effect: Effect, options: RunOptions) {
     (effect.apply)(&mut ctx);
 }
 
-/// TS `addModifier(sink, player, { kind, ..., expiry })`: the id-less modifier as TS's object literal,
-/// split into the `expiry` and `kind` the engine's `add_modifier` takes.
+/// The id-less modifier, split into the `expiry` and `kind` the engine's `add_modifier` takes.
 fn add_modifier_spec(
     sink: &mut EngineSink<'_>,
     player: PlayerId,
@@ -87,7 +82,7 @@ fn on_instance(instance: &CardInstance) -> Vec<Selection> {
     }]
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
@@ -96,7 +91,7 @@ fn json_of<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// `eventsOfType(events, "costChanged").map((e) => e.cost)`.
+/// The `cost` of every `costChanged` event, in order.
 fn costs(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CostChanged)
         .iter()

@@ -1,40 +1,20 @@
-//! The second of R17's two trap moments: `cardResolved` (SPEC §10.3's event list, §10.5 step 7;
-//! R17, R61, R100, R119).
+//! R17's second trap moment, step 7's `cardResolved` (SPEC §10.3, §10.5 step 7; R17, R61, R100, R119).
 //!
-//! R17 splits trap timing in two. Sheepish answers step 4's `summoned`/`cardPlayed` pair, before the
-//! Cry, and costs the card its Cry. Bear Honeypot, Unstable Clone Machine and Unlicensed
-//! Experimentation fire "after the card resolves", which is step 7's `cardResolved` — emitted once
-//! per play or cast, after the Cry and after step 6 has drained every Echo repeat, carrying
-//! `permanent: true` when the card is still in play (R61's "played permanents only").
+//!   * R17: a trap whose trigger names `cardResolved` is offered it and resolves to completion there.
+//!   * R61: `permanent: true` marks a card still in play.
+//!   * R100: `cardResolved` is not a `TRAP_WINDOW_EVENTS` member, so the end-of-turn window never
+//!     delivers it.
+//!   * R119: a trap does not answer the arrival event that names it (step 4 or its own step 7).
 //!
-//! What this file pins about the trap side of that event:
-//!
-//!   * R17 — a trap whose trigger names `cardResolved` is offered it, and the trap resolves to
-//!     completion there, like any other immediate response (§10.3).
-//!   * R100 — `cardResolved` travels the immediate path and not the scheduled one: it is not a
-//!     `TRAP_WINDOW_EVENTS` member, so the end-of-turn window never delivers it and the two paths
-//!     stay disjoint.
-//!   * R119 — a trap is itself a card someone played, so it does not answer the arrival event that
-//!     names it: not `cardPlayed` or `summoned` at step 4, and not its own `cardResolved` at step 7.
-//!     It stays armed and face-down for the next play instead.
-//!
-//! The events here are built by hand rather than played out, because the step-7 emission is
-//! `playSteps.ts`'s and lands separately (`echo.landAfterResolution` is written and not yet called).
-//! That is the point of the seam: the trap side is complete against the declared event.
-//!
-//! Fixtures are this file's own: defs are prefixed `tr-` and indexed from 2300 (BUILD §0).
-//!
-//! Port of `packages/engine/test/trap-cardresolved.test.ts`.
+//! The events are built by hand: the step-7 emission lands separately, and the trap side is tested
+//! against the declared event. Fixtures are this file's own: `tr-` defs indexed from 2300 (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// The sink: TS `sinkFor(state)`, a sink whose rng starts at the state's cursor, as reduce does.
-// Rust's `EngineSink` borrows the state, so the event list and the rng live here and each call
-// borrows the state again.
-// ---------------------------------------------------------------------------
+// The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
+// so the event list and the rng live here and each call borrows the state again.
 
 struct SinkFor {
     events: Vec<GameEvent>,
@@ -54,10 +34,7 @@ impl SinkFor {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Fixtures. TS numbered them from a module counter starting at 2300; each def's index is written
-// out here in the order TS created them.
-// ---------------------------------------------------------------------------
+// Fixtures.
 
 fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
     let mut literal = json!({
@@ -88,11 +65,11 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// #60's shape: a Trap that answers the moment a played card has resolved (R17).
+/// A Trap that answers the moment a played card has resolved (R17).
 fn after_trap() -> CardDef {
     def("after", 2301, "Trap", json!({}))
 }
-/// #85's shape: the same moment, but only for a card still in play — R61's `permanent` flag.
+/// The same moment, but only for a card still in play — R61's `permanent` flag.
 fn permanent_trap() -> CardDef {
     def("permanent", 2302, "Trap", json!({}))
 }
@@ -163,9 +140,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 fn game(seed: &str) -> GameState {
     let state = new_game(seed, None);
@@ -205,9 +180,8 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// §10.5 step 7's event, as `echo.landAfterResolution` builds it. `costPaid` repeats what step 2
-/// charged (0 for a cast, R70) and is carried on the event rather than looked up, per R89 — #60
-/// reads it for "costing 1 or less". Nothing here turns on the amount, so it defaults to 0.
+/// §10.5 step 7's event. `costPaid` repeats what step 2 charged (0 for a cast, R70), carried on the
+/// event rather than looked up (R89). Nothing here turns on the amount, so it defaults to 0.
 fn resolved(instance: &CardInstance, permanent: bool) -> GameEvent {
     resolved_for(instance, permanent, 0)
 }
@@ -240,8 +214,6 @@ fn trap_fired_ids(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
-
 mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
     use super::*;
 
@@ -261,9 +233,7 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             json!({}),
         );
 
-        // The event type is declared, so nothing here is reaching ahead of the engine (§10.3's list).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::CardResolved));
-        // Matching needs no list of its own: a trigger that names the type is woken by it.
         let watching: Vec<String> = traps_watching(&state, &resolved(&played, true))
             .iter()
             .map(|matched| matched.trap.id.clone())
@@ -299,8 +269,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         );
         let before = enemy_health(&state);
 
-        // A card that has left play by now reports `permanent: false`: the trap declines and stays
-        // armed, which is R99's "a condition that must leave the trap armed belongs in `when`".
+        // A card that has left play reports `permanent: false`: the trap declines and stays armed
+        // (R99: a condition that must leave the trap armed belongs in `when`).
         let mut spent = sink_for(&state);
         assert_eq!(
             fire_traps_for(&mut spent.on(&mut state), &resolved(&played, false)).fired,
@@ -316,7 +286,6 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             Some(true)
         );
 
-        // Still in play, so the trap fires.
         let mut kept = sink_for(&state);
         assert_eq!(
             fire_traps_for(&mut kept.on(&mut state), &resolved(&played, true)).fired,
@@ -342,11 +311,9 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         );
         let event = resolved(&played, true);
 
-        // The two paths are disjoint, and only the window's events are withheld from the immediate one.
         assert!(!TRAP_WINDOW_EVENTS.contains(&GameEventType::CardResolved));
         assert!(!is_trap_window_event(&event));
 
-        // The window's own event still fires nothing here: this trap does not watch a turn end.
         let mut window = sink_for(&state);
         let turn_ended = GameEvent::TurnEnded {
             player: PlayerId::P1,
@@ -359,7 +326,6 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         );
         assert!(state.work.is_empty());
 
-        // And the immediate check delivers `cardResolved`, which is the only path that does.
         let mut immediate = sink_for(&state);
         assert_eq!(
             fire_traps_for(&mut immediate.on(&mut state), &event).fired.len(),
@@ -384,8 +350,8 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
         );
         let before = enemy_health(&state);
 
-        // Step 7, the subtle case: a trap played this turn is on the field when its own `cardResolved`
-        // is dispatched, so only R119 keeps it from answering its own arrival.
+        // Step 7: a trap played this turn is on the field when its own `cardResolved` is dispatched,
+        // so only R119 keeps it from answering its own arrival.
         let mut own = sink_for(&state);
         assert!(traps_watching(&state, &resolved(&after, true)).is_empty());
         assert_eq!(
@@ -393,7 +359,7 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             Vec::<String>::new()
         );
 
-        // Step 4's half of the same rule: a trap does not answer the `cardPlayed` that named it.
+        // Step 4's half: a trap does not answer the `cardPlayed` that named it.
         let play = GameEvent::CardPlayed {
             player: PlayerId::P2,
             instance_id: arrival.id.clone(),
@@ -413,7 +379,6 @@ mod the_card_resolved_trap_moment_s10_5_step_7_r17_r61_r100_r119 {
             Vec::<String>::new()
         );
 
-        // Nothing fired, nothing was spent, and both traps are still armed and face-down.
         assert_eq!(enemy_health(&state), before);
         assert_eq!(
             card_at(&state, slot(PlayerId::P2, Row::Backrow, 1)).map(|c| c.id.clone()),

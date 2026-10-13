@@ -1,20 +1,15 @@
 //! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1.",
-//! radiant "Cast on draw: Your opponent has 2 less mana next turn." — patch v0.2.0 (R431) gives the
-//! base face its discard and leaves the Radiant face as it was, without one.
+//! radiant "Cast on draw: Your opponent has 2 less mana next turn." Only the base face discards (R431).
 //!
-//! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that, and
-//! `drawOne` (engine/src/draw.ts) casts it, repeats the draw and stops at CAST_ON_DRAW_CHAIN_CAP
-//! (R58), while `castCard` makes the cast free and counts it as a card played (R40, R70).
+//! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The
+//! engine casts it, repeats the draw up to CAST_ON_DRAW_CHAIN_CAP (R58) and counts the free cast as a
+//! card played (R40, R70). The floor is not this card's either: `nextTurnMana` moves
+//! `mana.nextTurnMod`, which the refresh adds to §2.3's max, floors at 0 and clears; max mana is untouched.
 //!
-//! The floor is not this card's either: `nextTurnMana` moves `mana.nextTurnMod`, and `refreshMana`
-//! fills current mana to §2.3's max plus that one-shot rider, floored at 0, then clears it. So a −2
-//! against a 1-mana refresh is 0, not −1, and max mana itself is untouched (§2.3).
-//!
-//! THE DISCARD (R431, R682, R70). "Discard 1" names no "of your choice", so the discard is random
-//! from the caster's hand (R682) — no declaration travels in the play action (R81), and a cast, on a
-//! draw, which is how Hinder almost always resolves, asks nothing as it begins (R70): no hand prompt
-//! pauses the draw. With an empty hand there is nothing to discard, and the mana clause still lands.
-//! The discard comes second, after the mana clause, as the text reads.
+//! THE DISCARD (R431, R682, R70). "Discard 1" names no "of your choice", so it is random from the
+//! caster's hand (R682): no declaration travels in the play action (R81) and a cast on a draw asks
+//! nothing as it begins (R70), so no prompt pauses the draw. It comes second, after the mana clause;
+//! with an empty hand there is nothing to discard and the mana clause still lands.
 
 use jackioh_engine::prelude::*;
 
@@ -56,21 +51,15 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: "Auto-casts on draw and draws again; opponent's next
-// refresh −1 floored at 0; counts as played (R40, R70); radiant −2", and patch v0.2.0's discard
-// (R431): the base face's caster discards 1 at random (R682), with no prompt; nothing with an empty
-// hand; the Radiant face is unchanged and discards nothing. R635 keeps it out of the opening deal
-// and the mulligan, so the "real game" below proves the deal, not a question.
+// #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: auto-casts on draw and draws again; the opponent's next
+// refresh −1 floored at 0; counts as played (R40, R70); radiant −2. The base face's caster discards 1
+// at random with no prompt, nothing with an empty hand (R431, R682); the Radiant face discards nothing.
+// R635 keeps it out of the opening deal and the mulligan, so the "real game" below proves the deal.
 //
-// The harness default board is turn 9 with p1 active, so both sides sit at MAX_MANA (4/4) and the
-// refresh Hinder lowers is a concrete number: 4 − 1 = 3 base, 4 − 2 = 2 radiant. The floor needs a
-// refresh smaller than 2, which only the opening turns have, so that fixture starts at turn 1 and
-// uses `startTurn()` to take p1's draw before p2 has ever refreshed: p2's first refresh is 1, and
-// 1 − 2 floors at 0 rather than going negative (§2.3 `refreshMana`). Hinder lowers the refresh, not
-// max mana: §2.3's max is min(turns, 4) plus persistent modifiers, and the one-shot rider is not one.
-//
-// Both sides keep a unit on the board and a card in hand throughout, or the engine's "nothing
-// meaningful left" rule would auto-end turns the fixture means to take (harness header).
+// The default board is turn 9 with p1 active, both sides at MAX_MANA (4/4): 4 − 1 = 3 base, 4 − 2 = 2
+// radiant. The floor needs a refresh below 2, so that fixture starts at turn 1 and p2's first refresh
+// is 1: 1 − 2 floors at 0 (§2.3). Hinder lowers the refresh, not max mana.
+// Both sides keep a unit on the board and a card in hand, or the engine would auto-end the turns.
 #[cfg(test)]
 mod tests {
     use super::script;
@@ -321,11 +310,9 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
     // A real game: setup deals no Hinder (R635), so both mulligans open at once over hands that
     // hold none; turn 1's draw is what meets it, discarding at random with no prompt (R682), and
     // the log folds back to the same game (§9.3).
-    // ---------------------------------------------------------------------------
 
     /// Twenty legal Core cards with no other cast-on-draw card among them, Hinder first.
     const DECK: [&str; 20] = [
@@ -334,7 +321,7 @@ mod tests {
         "core-044", "core-053", "core-055",
     ];
 
-    /// Apply one action with the next nonce (TS's file-wide `let nonce`), refusing loudly, and log it.
+    /// Apply one action with the next nonce, refusing loudly, and log it.
     fn act(state: &GameState, body: ActionBody, player: PlayerId, nonce: &mut u32, log: &mut Vec<Action>) -> GameState {
         *nonce += 1;
         let action = Action::new(body, player, format!("hinder-game-{nonce}"));

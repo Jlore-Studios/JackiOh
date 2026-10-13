@@ -198,7 +198,8 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// deck-builder needs the registered catalog, and this module is the one path to it.
 ///
 /// R1372: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
-/// (R1370); `None` deals the deck R258 always dealt for that seed.
+/// (R1370); `None` deals the deck R258 always dealt for that seed. A player's deck is dealt from every
+/// set, the AI's soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
     registered();
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
@@ -209,6 +210,23 @@ pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
         &AiDeckOptions {
             banned: Some(vec![]),
             lean_set: lean,
+            gated_sets: Some(vec![]),
+            ..AiDeckOptions::default()
+        },
+    )
+}
+
+/// R641000: `deal_random_deck`'s deal with no lean and none of `excluded`'s cards in it: how the bot
+/// pool deals a ladder bot's trio a deck that shares no card with the decks it holds already (R253).
+pub fn deal_random_deck_excluding(seed: &str, excluded: &[String]) -> Vec<String> {
+    registered();
+    build_ai_deck(
+        &mut Rng::new(seed, 0),
+        DECK_SIZE,
+        &AiDeckOptions {
+            banned: Some(excluded.to_vec()),
+            lean_set: None,
+            gated_sets: Some(vec![]),
             ..AiDeckOptions::default()
         },
     )

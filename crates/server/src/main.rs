@@ -1,11 +1,7 @@
-//! `jackioh-server`: the server binary and its command-line tools (SURFACE §11.1), replacing
-//! `apps/server/package.json`'s scripts. `serve` is the default; `release` is what the Docker
-//! image runs on Render (migrate, seed the catalog, serve). Every other subcommand is one of the
-//! TS `main()`s under `apps/server/src/db/`, handed the arguments after its name, so each keeps
-//! its own argument parser (`parseMintArgs`, `parseCardStatsArgs`, …) exactly as TS has it.
-//!
-//! A failure prints its message on stderr and exits 1, as every TS `main().catch` did; bad usage
-//! exits 2 (clap).
+//! `jackioh-server`: the server binary and its command-line tools (Surface contract:
+//! docs/v0.3.0/SURFACE.md §11.1). `serve` is the default; `release` is what the Docker image runs on
+//! Render (migrate, seed the catalog, serve). Every other subcommand hands its tool the arguments
+//! after its name. A failure prints on stderr and exits 1; bad usage exits 2 (clap).
 
 use std::process::ExitCode;
 
@@ -41,10 +37,18 @@ enum Command {
     SeasonStart(Rest),
     /// Card win rates off the game records (TS `stats:cards`).
     StatsCards(Rest),
+    /// Flag outlier card win rates as Markdown to paste into #699 (SPEC §9.11): advisory, nothing changed.
+    BalanceWatch(Rest),
     /// Load an `ai:stats` development run's game records (TS `stats:import`).
     StatsImport(Rest),
     /// Write the game records `stats-cards` reads to a JSONL file.
     StatsExport(Rest),
+    /// Watch for clusters of accounts sharing an IP hash (SPEC §9.8): an advisory report, nothing changed.
+    InviteClusters(Rest),
+    /// Fold the action logs still held into the play telemetry's action timings (R1442).
+    TimingBackfill(Rest),
+    /// Print log-normal fits of human think times to paste into config (R1442).
+    TimingFit(Rest),
 }
 
 /// The arguments after the subcommand, passed through untouched to the tool's own parser.
@@ -66,8 +70,12 @@ async fn main() -> ExitCode {
         Command::SeedAccounts(rest) => cli::seed_accounts::run(rest.args).await,
         Command::SeasonStart(rest) => cli::season_start::run(rest.args).await,
         Command::StatsCards(rest) => cli::card_stats::run(rest.args).await,
+        Command::BalanceWatch(rest) => cli::balance_watch::run(rest.args).await,
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
         Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
+        Command::InviteClusters(rest) => cli::invite_clusters::run(rest.args).await,
+        Command::TimingBackfill(rest) => cli::timing_backfill::run(rest.args).await,
+        Command::TimingFit(rest) => cli::timing_fit::run(rest.args).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -78,15 +86,14 @@ async fn main() -> ExitCode {
     }
 }
 
-/// TS `start(loadServerEnv())`: the environment as `index.ts` reads it (E2E placeholders applied
-/// when `E2E` asks), then boot.
+/// Boot from the process environment (E2E placeholders applied when `E2E` asks).
 async fn serve() -> anyhow::Result<()> {
     let source: indexmap::IndexMap<String, String> = std::env::vars().collect();
     let env = app::load_server_env(&source)?;
     app::serve(env).await
 }
 
-/// Render's release: every migration, the catalog, then the server (SURFACE §11.3).
+/// Render's release: every migration, the catalog, then the server (Surface contract: docs/v0.3.0/SURFACE.md §11.3).
 async fn release() -> anyhow::Result<()> {
     db::migrate::run(Vec::new()).await?;
     cli::seed_catalog::run(Vec::new()).await?;

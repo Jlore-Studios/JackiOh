@@ -1,13 +1,17 @@
-//! Fuzz-level invariants for summoning sickness, exertion, game over and hidden information (SPEC §4.1,
-//! §4.2, §10.3, §10.8, R53, R83, R171; docs/polish/4-edge-cases.md "Fuzz invariants"). `cargo jackioh
-//! fuzz` runs one monitor per game (SURFACE §8, §12), and the edge-case hunters reuse it.
+//! Fuzz-level invariants for summoning sickness, exertion, game over, hidden information and owed
+//! work (SPEC §4.1, §4.2, §9.3, §10.3, §10.8, R53, R83, R113, R171; docs/polish/4-edge-cases.md
+//! "Fuzz invariants"). `cargo jackioh fuzz` runs one monitor per game (SURFACE §8, §12), and the
+//! edge-case hunters reuse it.
 //!
 //! THE MONITOR IS AN ORACLE, NOT THE FIX RESTATED. It never reads `summonedTurn` to decide who is
 //! sick. It keeps a shadow built only from the event stream:
-//!   - `turn`, from `turnStarted`;
+//!   - `turn` and the player whose turn it is, from `turnStarted`;
 //!   - `entered`, the turn of each instance's latest entry, and `stint`, how many entries it has had.
 //!     An entry event is `cardPlayed`, `summoned`, `controlChanged`, `animated` (an Animated card
-//!     stepping from its backrow zone into a unit zone enters it on that turn, R383), or a
+//!     stepping from its backrow zone into a unit zone enters it on that turn, R383, except an
+//!     "Animated on your turn" card animating at its controller's start of turn that has been on
+//!     that side since the turn began: that enters nothing, R1062; one animating on the other
+//!     player's turn, as Pareto Optimality's attack animates The Cane, R1126, enters), or a
 //!     `transformed` whose new instance differs from the old. `fused` keeps the target's entry (R77), and a move along one
 //!     side or a Stack card resuming emits nothing and changes nothing;
 //!   - `lastAttack`, the turn and stint of each instance's latest declared (not forced) attack;
@@ -16,7 +20,7 @@
 //!     then `transformed` (Classic+ #73.1 Classic Golem) passes "may attack again this turn" to the new
 //!     instance, so that instance is not sick (I1) and carries no `summonedTurn` (I4a) for that stint.
 //!
-//! The six checks:
+//! The seven checks:
 //!   I1 no sick attack is ever offered (§4.1, §6.1, R83, R171). In the main phase with no prompt
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
@@ -54,12 +58,21 @@
 //!        - Echo's `copies` (R399) names the definition of the card it copied (read off the copier);
 //!        - `swapsBook.from` (R671) names the Book a swap took the text from (read off the card).
 //!      A card in no pile that has no successor (no Transform or Fuse made it another, R177) reads only
-//!      when it is a token (R11); a Glitch's reset or boards (R676, R678) takes the rest unseen, and
-//!      the first oracle excused it, which was the engine's own R97 rule restated: R764 fixed it.
+//!      when it is a token (R11), judged by the definition its leaving named (a Fuse and then R419's
+//!      Rollback can turn a token into a fused card and back, fuzz seed 119), or a card a full library refused before it existed that copies nothing
+//!      (R316, fuzz seed 5967 of the handicapped wave, #562); a Glitch's reset or boards (R676, R678)
+//!      takes the rest unseen, and the first oracle excused it, which was the engine's own R97 rule
+//!      restated: R764 fixed it.
 //!      Judging former ids by the log found a sixth, fuzz seed 992: R419's Rollback recreated a
 //!      face-down trap #83 had transformed away, and the `formerId` it carries goes with the card
 //!      (R227) once that card is public, R177's mark on the old id notwithstanding.
 //!      `I6_GATE_STRIDE` is how often the 1,000-seed gate runs it.
+//!   I7 no orphaned work (§9.3, §10.3, R113). After every action, setup's included, a live game with no
+//!      prompt open (neither `pending` nor the mulligans, §10.6, R265) owes nothing: the resolution loop
+//!      has drained every paused sequence, so `work` is empty and `work_cursor` is back at 0. A game that
+//!      ended mid-sequence keeps what it owed (`settle` stops at the result, and nothing runs after it,
+//!      I5), so a game over is not checked: the fuzz reaches such game overs (Classic #52 Final
+//!      Gambit's `afterRedirect`, Classic #56 Spell Tyrant's `resolve`).
 //!
 //! Every message leads with its id, names the instance, its def and the turn, and cites the SPEC
 //! reference, so the fuzz report's `signatureOf` groups one bug into one entry.
@@ -195,14 +208,24 @@ struct Lineage {
     next: IndexMap<String, String>,
     /// R177: an id that ceased to exist where this viewer could not read it (`transformed.hiddenFrom`).
     unread: IndexSet<String>,
+    /// R316: an id a full library refused before it existed (`libraryOverflow`, `notCreated`) that copies
+    /// nothing. It was never in any pile, so it reads openly to both seats.
+    never_made: IndexSet<String>,
     /// Each id, and the definitions the engine's own events pair with it.
     ties: IndexMap<String, IndexSet<String>>,
+    /// R11, R97: the definition each id last left a zone as (`destroyed`, `exiled`, `burned`,
+    /// `discarded`, `bounced`), which is what a card that ceased to exist was as it went. A card's
+    /// definition can change and change back (R77's Fuse, then R419's Rollback restoring the token
+    /// it was, fuzz seed 119), so its leaving names it better than every definition it ever wore.
+    gone_as: IndexMap<String, String>,
 }
 
 fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
     let mut next: IndexMap<String, String> = IndexMap::new();
     let mut unread: IndexSet<String> = IndexSet::new();
+    let mut never_made: IndexSet<String> = IndexSet::new();
     let mut ties: IndexMap<String, IndexSet<String>> = IndexMap::new();
+    let mut gone_as: IndexMap<String, String> = IndexMap::new();
     let tie =
         |ties: &mut IndexMap<String, IndexSet<String>>, id: Option<&Value>, values: &[Option<&Value>]| {
             let Some(id) = id.and_then(Value::as_str) else {
@@ -241,6 +264,13 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             let Some(id) = id.and_then(Value::as_str) else {
                 return;
             };
+            if let (Some(kind), Some(def)) = (
+                object.get("type").and_then(Value::as_str),
+                object.get("defId").and_then(Value::as_str),
+            ) && LEAVING_EVENTS.contains(&kind)
+            {
+                gone_as.insert(id.to_string(), def.to_string());
+            }
             let former = object.get("formerId").and_then(Value::as_str);
             // R419: Classic+ #35 Rollback recreates a card transformed away under a fresh id whose
             // `formerId` is the old one, so the card exists again and R177's mark is spent: its old id
@@ -251,6 +281,10 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
             if let Some(copy_of) = object.get("copyOf").and_then(Value::as_str) {
                 next.insert(id.to_string(), copy_of.to_string());
+            } else if object.get("type").and_then(Value::as_str) == Some("libraryOverflow")
+                && object.get("outcome").and_then(Value::as_str) == Some("notCreated")
+            {
+                never_made.insert(id.to_string());
             }
             let fresh = object.get("newInstanceId").and_then(Value::as_str);
             if object.get("type").and_then(Value::as_str) == Some("transformed")
@@ -276,8 +310,17 @@ fn lineage_of(state: &GameState, viewer: PlayerId) -> Lineage {
             }
         }
     }
-    Lineage { next, unread, ties }
+    Lineage {
+        next,
+        unread,
+        never_made,
+        ties,
+        gone_as,
+    }
 }
+
+/// The events that take a card out of a zone and name the definition it left as (`Lineage::gone_as`).
+const LEAVING_EVENTS: [&str; 5] = ["destroyed", "exiled", "burned", "discarded", "bounced"];
 
 /// Where a card an id names stands for one viewer (`standing_of`'s answer).
 struct Standing {
@@ -287,7 +330,8 @@ struct Standing {
 
 /// Whether this viewer reads the card an id names, judged by where the card is now: a card the state
 /// holds reads unless the hidden set has it, and a vanished one by its successor. A vanished card with
-/// none reads only when every definition the log pairs with it is a token's: R11's tokens go public
+/// none reads when a full library refused it before it existed and it copies nothing (R316), and
+/// otherwise only when every definition the log pairs with it is a token's: R11's tokens go public
 /// (leaving the field, discarded, burned), where any other card in no pile went unseen, out of a
 /// Glitch's reset or boards (R676, R678), and stays as hidden as it was. An id neither the state nor
 /// the log knows vouches for nothing.
@@ -320,13 +364,23 @@ fn standing_of(
             });
         }
         let Some(successor) = lineage.next.get(id) else {
+            // R316: a card a full library refused before it existed, copying nothing, was never hidden.
+            if lineage.never_made.contains(id) {
+                return Some(Standing {
+                    reads: true,
+                    where_: "no pile (it was never created)".to_string(),
+                });
+            }
             let defs = lineage.ties.get(id)?;
             // R11: a token that ceased to exist (it left the field, was discarded or burned) was public when
-            // it went. Any other card in no pile went unseen (a Glitch's reset or boards, R676, R678) and
-            // stays as hidden as it was.
-            let token = defs
-                .iter()
-                .all(|def| crate::catalog::def_of(Some(&*state), def).token);
+            // it went, judged by what it left as. Any other card in no pile went unseen (a Glitch's reset
+            // or boards, R676, R678), named by no leaving, and stays as hidden as every definition it wore.
+            let token = match lineage.gone_as.get(id) {
+                Some(def) => crate::catalog::def_of(Some(state), def).token,
+                None => defs
+                    .iter()
+                    .all(|def| crate::catalog::def_of(Some(&*state), def).token),
+            };
             return Some(Standing {
                 reads: token,
                 where_: "no pile (it ceased to exist)".to_string(),
@@ -701,6 +755,25 @@ pub fn hidden_information_violations(
             report("definition", "legalActions", def, offer, where_);
         }
     }
+    // R860: the opponent's unrevealed choices reach neither seat's view of the other side. A
+    // `choice: Some` on the opponent's entry of the view, while its record is not revealed, is
+    // the choice leaking through `secret_views`.
+    if let Some(records) = &state.secrets {
+        let hidden: Vec<&str> = records
+            .iter()
+            .filter(|secret| secret.owner != viewer && secret.revealed != Some(true))
+            .map(|secret| secret.id.as_str())
+            .collect();
+        for entry in view.opponent.secrets.iter().flatten() {
+            if entry.choice.is_some() && hidden.contains(&entry.id.as_str()) {
+                found.push(format!(
+                    "I6 hidden choice in the view: {viewer} is sent a choice for secret \"{}\" on turn {} (§9.1, §10.8, R860)",
+                    entry.id,
+                    state.turn,
+                ));
+            }
+        }
+    }
     found
 }
 
@@ -742,10 +815,12 @@ fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<crate::wire::Keyw
 
 /// TS `InvariantMonitor`, made by `create_invariant_monitor`: the shadow of this file's header and
 /// the checks run against it. `before` is I1 and I3, `after` feeds one action's events into the
-/// shadow and runs I2, I4 and I5, and `hidden` is I6 for both seats.
+/// shadow and runs I2, I4, I5 and I7, and `hidden` is I6 for both seats.
 #[derive(Clone, Debug)]
 pub struct InvariantMonitor {
     turn: i32,
+    /// The player whose turn it is, from `turnStarted`: R1062's start-of-turn animation is theirs.
+    active: PlayerId,
     entered: IndexMap<String, i32>,
     stint: IndexMap<String, i32>,
     last_attack: IndexMap<String, AttackMark>,
@@ -772,6 +847,7 @@ impl InvariantMonitor {
     pub fn new(start: &GameState) -> InvariantMonitor {
         InvariantMonitor {
             turn: start.turn,
+            active: start.active,
             entered: IndexMap::new(),
             stint: IndexMap::new(),
             last_attack: IndexMap::new(),
@@ -804,6 +880,19 @@ impl InvariantMonitor {
         let stint = self.stint_of(id) + 1;
         self.stint.insert(id.to_string(), stint);
         self.readied.shift_remove(id);
+    }
+
+    /// R1062: an "Animated on your turn" card whose latest entry was on an earlier turn enters nothing as it
+    /// animates at its controller's start of turn. Read off the shadow and the card's keywords, never `summonedTurn`.
+    /// `side` is the side it animated on: on the other player's turn (R1126's Cane) it is an entry, R383's.
+    fn on_its_side_before_this_turn(&self, id: &str, side: PlayerId, state: &GameState) -> bool {
+        if side != self.active {
+            return false;
+        }
+        let (Some(at), Some(card)) = (self.entered.get(id).copied(), find_instance(state, id)) else {
+            return false;
+        };
+        at < self.turn && has_keyword(&keywords_now(state, card), KeywordKind::AnimatedOnYourTurn)
     }
 
     /// I1 for one unit and one would-be target set.
@@ -902,7 +991,7 @@ impl InvariantMonitor {
         found
     }
 
-    /// Feeds one action's events into the shadow, then I2, I4 and I5 against the resulting state.
+    /// Feeds one action's events into the shadow, then I2, I4, I5 and I7 against the resulting state.
     pub fn after(&mut self, events: &[GameEvent], state: &GameState) -> Vec<String> {
         let mut found: Vec<String> = Vec::new();
         // R424: the Golem's transform follows its combat inside the one attack action, so an attack the
@@ -928,8 +1017,9 @@ impl InvariantMonitor {
 
         for event in events {
             match event {
-                GameEvent::TurnStarted { turn, .. } => {
+                GameEvent::TurnStarted { player, turn, .. } => {
                     self.turn = *turn;
+                    self.active = *player;
                     self.attack = None;
                 }
                 GameEvent::CardPlayed { instance_id, .. }
@@ -938,12 +1028,27 @@ impl InvariantMonitor {
                     self.enter(instance_id);
                 }
                 GameEvent::Animated {
-                    instance_id, carried, ..
+                    player,
+                    instance_id,
+                    carried,
+                    ..
                 } => {
                     // R383: moving into the unit row is entering it on that turn; a carried Unit stepping
                     // down off its carrier (C+ #33, carriers.rs) was a Unit on the field all along and enters nothing.
-                    if *carried != Some(true) {
-                        self.enter(instance_id);
+                    // ME-ALTPLAY, R1041: a set Unit keeps its set turn as `summonedTurn`, so its reveal
+                    // animation enters nothing either. R1062: nor does an "Animated on your turn" card
+                    // animating at its controller's start of turn that has been on that side since the
+                    // turn began; on the other player's turn (R1126) it enters, as R383 has it.
+                    if *carried != Some(true)
+                        && !self.on_its_side_before_this_turn(instance_id, *player, state)
+                    {
+                        let is_unit_def = find_instance(state, instance_id).is_some_and(|card| {
+                            crate::catalog::def_of(Some(state), &card.def_id).type_
+                                == crate::wire::CardType::Unit
+                        });
+                        if !is_unit_def {
+                            self.enter(instance_id);
+                        }
                     }
                 }
                 GameEvent::Transformed {
@@ -991,14 +1096,19 @@ impl InvariantMonitor {
                     attacker_id,
                     target_id,
                     forced,
+                    instead_of,
                 } => {
                     // R53: a forced attack is not a declaration and spends nothing (nor readies, R424).
                     self.attack = None;
                     if *forced {
                         continue;
                     }
-                    let current = self.stint_of(attacker_id);
-                    let previous = self.last_attack.get(attacker_id).copied();
+                    // R1202: a substitute's declaration spends its declarer's attack, not its own —
+                    // Windfast's exertion, Windfast's Windfury count — while the strike itself is the
+                    // substitute's to answer for.
+                    let declarer = instead_of.as_deref().unwrap_or(attacker_id);
+                    let current = self.stint_of(declarer);
+                    let previous = self.last_attack.get(declarer).copied();
                     let repeat = previous
                         .is_some_and(|previous| previous.turn == self.turn && previous.stint == current);
                     let mark = AttackMark {
@@ -1009,14 +1119,14 @@ impl InvariantMonitor {
                             _ => 1,
                         },
                     };
-                    let allowed = if self.windfury.get(attacker_id) == Some(&current) {
+                    let allowed = if self.windfury.get(declarer) == Some(&current) {
                         WINDFURY_ATTACKS
                     } else {
                         1
                     };
                     if mark.count > allowed {
-                        let who = match find_instance(state, attacker_id) {
-                            None => attacker_id.clone(),
+                        let who = match find_instance(state, declarer) {
+                            None => declarer.to_string(),
                             Some(unit) => name_of(unit),
                         };
                         found.push(format!(
@@ -1025,7 +1135,7 @@ impl InvariantMonitor {
                             mark.count, self.turn
                         ));
                     }
-                    self.last_attack.insert(attacker_id.clone(), mark);
+                    self.last_attack.insert(declarer.to_string(), mark);
                     self.attack = Some(ShadowAttack {
                         attacker_id: attacker_id.clone(),
                         target_id: target_id.clone(),
@@ -1038,7 +1148,9 @@ impl InvariantMonitor {
 
         self.note_windfury(state);
 
-        // I4: the engine's bookkeeping agrees with the shadow.
+        // I4: the engine's bookkeeping agrees with the shadow. R1202: an attacker whose replacement's
+        // hand pick is open spent its exertion on a declaration the stream reports after the answer.
+        let picking = crate::attack_summon::open_pick_attacker(state);
         for card in field_cards(state) {
             // I3 reports a card with no entry before the next action.
             let Some(at) = self.entered.get(&card.id).copied() else {
@@ -1056,7 +1168,7 @@ impl InvariantMonitor {
                     state.turn
                 ));
             }
-            if card.exertion.attacked {
+            if card.exertion.attacked && picking.as_deref() != Some(card.id.as_str()) {
                 let mark = self.last_attack.get(&card.id);
                 if mark.is_none_or(|mark| mark.stint != self.stint_of(&card.id)) {
                     found.push(format!(
@@ -1067,6 +1179,32 @@ impl InvariantMonitor {
                     ));
                 }
             }
+        }
+
+        // I7: a live game with no prompt open owes no paused sequence (§9.3, §10.3, R113).
+        if state.result.is_none()
+            && state.pending.is_none()
+            && state.mulligan.is_none()
+            && (!state.work.is_empty() || state.work_cursor != 0)
+        {
+            let owed: Vec<String> = state
+                .work
+                .iter()
+                .map(|item| {
+                    format!(
+                        "{} ({}, {}, {})",
+                        item.id, item.resume.def_id, item.resume.hook, item.resume.step
+                    )
+                })
+                .collect();
+            found.push(format!(
+                "I7 orphaned work: {} item(s) owed [{}] with work cursor {} on turn {} and no prompt open \
+                 (§9.3, §10.3, R113)",
+                state.work.len(),
+                owed.join(", "),
+                state.work_cursor,
+                state.turn
+            ));
         }
 
         found

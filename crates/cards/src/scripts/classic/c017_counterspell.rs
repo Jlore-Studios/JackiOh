@@ -51,16 +51,19 @@ fn counter_it(ctx: &EffectContext<'_>, announced: &Announced, copy: bool) -> Vec
     if !copy {
         return vec![countered];
     }
-    // Read before the counter moves it: the copy keeps the countered card's face (R57).
-    let radiant = find_instance(ctx.state, &announced.instance_id).is_some_and(|card| card.radiant);
-    vec![
-        countered,
-        add_to_hand(json_as(json!({
-            "defId": announced.def_id,
-            "radiant": radiant,
-            "costOverride": param(ctx, "setCost"),
-        }))),
-    ]
+    // Read before the counter moves it: the copy keeps the countered card's face (R57) and, a copy of a
+    // Chinese card being Chinese, its language (R1300).
+    let countered_card = find_instance(ctx.state, &announced.instance_id);
+    let radiant = countered_card.is_some_and(|card| card.radiant);
+    let mut args = json!({
+        "defId": announced.def_id,
+        "radiant": radiant,
+        "costOverride": param(ctx, "setCost"),
+    });
+    if countered_card.is_some_and(|card| card.chinese == Some(true)) {
+        args["chinese"] = json!(true);
+    }
+    vec![countered, add_to_hand(json_as(args))]
 }
 
 fn counterspell(copy: bool) -> TriggerDef {
@@ -357,6 +360,21 @@ mod tests {
             s.play(STOCKPILE, json!({}));
 
             assert_eq!(copy_in_hand(&s, P1).map(|card| card.radiant), Some(true));
+        }
+
+        #[test]
+        fn r1300_a_copy_of_a_chinese_card_is_chinese() {
+            for chinese in [true, false] {
+                let mut s = setup(json!({}), json!({}), true);
+                let spell = s.card(STOCKPILE).id.clone();
+                if chinese && let Some(card) = find_instance_mut(s.state_mut(), &spell) {
+                    card.chinese = Some(true);
+                }
+
+                s.play(STOCKPILE, json!({}));
+
+                assert_eq!(copy_in_hand(&s, P1).and_then(|card| card.chinese), chinese.then_some(true));
+            }
         }
 
         #[test]

@@ -1,45 +1,8 @@
-// The music player (SPEC §10.11 "Music", R631): plays one track at a time into the engine's music
-// bus, and moves between tracks musically.
-//
-//   voice gain ─┐
-//   voice gain ─┴─▶ bed ─▶ turn low-pass ─▶ turn gain ─▶ focus gain ─▶ engine music bus ─▶ duck ─▶ master
-//                                           intro gain ─┘
-//
-// A REQUEST NAMES WHAT SHOULD PLAY, never when. Asking for the track already playing does nothing,
-// so a Mythic played again while its theme runs does not restart it. A change waits for the playing
-// track's next bar line (at most MUSIC_BAR_WAIT_MAX_S away), then the new track fades in over
-// MUSIC_FADE_S while the old one fades out, with no hard cut. A track that opens on a sting (a
-// result, a Mythic theme, a station's match start) comes in at once rather than fading, so its
-// first note lands. A sting hands off to the next track on its own last bar line, and a change that
-// arrives while a sting plays replaces the track it hands off to, never the sting. A station's own
-// tracks pick up within a match where they left off, on a bar line.
-//
-// The opponent's turn is a mix, not a track: a low-pass and a little less level, ramped. Losing
-// focus (the page hidden, or the window blurred) fades the music out unless the player turned on
-// `playMusicInBackground`. Muted, or with the music at zero, nothing new loads or starts; the music picks up the moment
-// it can be heard again.
-//
-// A CARD'S INTRO (R1350, R1351) is a clip that plays once on top of whatever plays: a Legendary's or
-// a Mythic's few bars, asked for at its card's moment. It goes straight into the focus gain, so it
-// follows the music volume, the mute and the page's focus but not the opponent's-turn low-pass, and
-// while its music runs (to its last bar line, the manifest's `handoff`) the bed it sits on ducks to
-// MUSIC_INTRO_DUCK_GAIN and comes back. The bed is every track: a change asked for meanwhile (the
-// theme the card brings) is made as ever, on a bar line, and comes in ducked until the intro's music
-// ends. Another card's intro cuts it with a MUSIC_INTRO_CUT_FADE_S fade, as `stopIntro` does, and
-// the same intro asked for again while its music runs (copies of one card arriving together)
-// changes nothing, as a theme asked for again does not restart; one
-// whose file is not ready MUSIC_INTRO_LATE_S after it was asked for is dropped. An intro asked for is
-// fetched at once even while the board animates (it is the card's moment, like a voice line), and
-// `preloadIntros` fetches ahead between bursts. Intro files have caches of their own, so they never
-// push a track's bytes out.
-//
-// Like the engine, nothing is scheduled on a context that is not running, and the player never
-// throws. A turn or focus change that arrives while the context is suspended is applied the moment
-// it runs again. A track's file is fetched once (MUSIC_BYTES_MAX kept, compressed) and decoded only
-// to play (MUSIC_DECODED_MAX kept); one that cannot be fetched or decoded is tried again when a
-// request next names it or at the next turn boundary, never at every idle. No file is fetched
-// or decoded while the board animates (B58): a preload fetches bytes only, and both wait for the
-// burst to end. A sting whose file cannot be had is skipped, never waited on.
+// The music player (SPEC §10.11 "Music", R631) keeps requests idempotent and changes tracks on bar
+// lines; stings hand off there and station tracks resume where they left off. The opponent's turn is
+// a mix, not a track; focus, mute or zero volume prevent new playback.
+// Card intros (R1350, R1351) play above and duck the bed, take precedence over themes, and use their
+// own cache. Nothing fetches or decodes during animation (B58); failures retry on a later request.
 
 import {
   MUSIC_BAR_WAIT_MAX_S,

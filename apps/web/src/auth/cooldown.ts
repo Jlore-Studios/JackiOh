@@ -1,12 +1,7 @@
 // A wait counted on the clock, not in timer ticks (R192's per-address mail interval, the gate's
-// stated waits).
-//
-// WHY THE CLOCK. A countdown that took one second off per `setInterval` tick was wrong exactly when
-// it mattered: a background tab's timers are frozen (iOS Safari) or throttled (desktop browsers),
-// so a player who switched to the mail app for two minutes came back to "You can send another in
-// 59 s", one coalesced tick later, just when they had found nothing in the inbox. So a wait is a
-// DEADLINE (epoch ms), and the seconds left are read from the clock at every render. The interval
-// only asks for a re-render once a second, and the page coming back into view asks for one at once.
+// stated waits). A countdown of one second per `setInterval` tick is wrong in a background tab,
+// whose timers are frozen (iOS Safari) or throttled, so a wait is a DEADLINE (epoch ms) and the
+// seconds left are read from the clock at every render; the interval only asks for a re-render.
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -25,10 +20,8 @@ export function deadlineAfter(seconds: number, from: number): number {
 }
 
 /**
- * The whole seconds left until `deadline`, read from the clock at every render. While the deadline
- * lies ahead the component re-renders once a second, and at once when the page is shown again
- * (`visibilitychange`, `pageshow`, `focus`), so a wait that ran out while the tab slept is over the
- * moment the player looks.
+ * The whole seconds left until `deadline`, read from the clock at every render: once a second while
+ * it lies ahead, and at once when the page is shown again (`visibilitychange`, `pageshow`, `focus`).
  */
 export function useSecondsUntil(deadline: number | null): number {
   const [, rerender] = useState(0);
@@ -71,9 +64,8 @@ export type AddressCooldown = {
 };
 
 /**
- * R192: the provider's per-address mail interval, for the one address last mailed. A corrected
- * address can be sent to at once. `initial` is an interval already running when the screen opens
- * (a send this browser remembered before a reload, or one another device started).
+ * R192: the provider's per-address mail interval, for the one address last mailed (a corrected
+ * address can be sent to at once). `initial` is one already running when the screen opens.
  */
 export function useAddressCooldown(initial: { address: string; deadline: number } | null = null): AddressCooldown {
   const [state, setState] = useState<{ key: string; deadline: number } | null>(() =>

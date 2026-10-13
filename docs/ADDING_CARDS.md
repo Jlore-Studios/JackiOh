@@ -27,16 +27,17 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 | 10 | a pinned pool, when the card joins one | `tests/cross/query.rs` names the pools the spec pins down card by card (the KY pool, the (1) Cost Traps, R35's Legendaries, …) | `tests/cross/query.rs` |
 | 11 | `crates/cards/patches/pending/<version>.json` | the fragment, `cargo jackioh patches …` ([§3](#3-the-patch-and-its-order)); the shipped history and the version sites move at promotion, not here | `patches check` |
 | 12 | a Legendary or Mythic, or a token printed so: `apps/web/scripts/music/tracks.mjs`, `apps/web/src/audio/music-cards.json`, `assets/music/LICENSES.md` | its intro (R1352): an `INTRO_CARDS` row (its facts, and a `tune` if it is hand-tuned), its `"intro": "intro-<id>"` entry, `pnpm --filter @jackioh/web gen:music` (FluidSynth and ffmpeg, Linux included) with the rendered file and manifest row committed, and its licence row | `music-assets.test.ts` (the daily audio run) |
+| 13 | `crates/cards/chinese.json` | the card's Chinese entry (R1303): `{ name, base, radiant }` in Simplified Chinese, each face keeping exactly its English face's `{key}`s, plus `previews` exactly where the script declares `preview`; it is not card data, so no fragment claims it | `tests/cross/chinese.rs` |
 
 The catalog and pool counts elsewhere (the web's deck builder, Almanac and patch tests, the e2e component specs) count
 `catalog.json` and `patches.json` themselves and need no edit for a new card. The patch-list tests pin only the history shipped
 before yours, so a pending-claimed card needs no edit there (R646). What stays hand-kept is the proof: `catalog.rs`'s rows,
 `RARITY_COUNTS` and `SET_SIZES`, and the tools' `sets()` and tag counts.
 
-Also grep the Markdown for the stated totals (`268 cards`, `318`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
+Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) and update them: the READMEs, `BUILD.md`, `REVIEW.md`, `CLAUDE.md`,
 `spec/`, `docs/architecture.md`.
 
-**A card of a set that has not shipped** (the Meditative set while issue #496 builds it, R1420) differs in five places:
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and a set held the same way later is one too) differs in five places, the Meditative paths below standing for its own:
 - Its script goes in `src/scripts/meditative/`.
 - Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
   `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build
@@ -153,8 +154,13 @@ cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --note
 ```
 
 It writes or updates `crates/cards/patches/pending/<version>.json`, containing the version, title,
-sources, notes and every catalog id the patch changes. It never changes the shipped history, its
-snapshots or the catalog version. `cargo jackioh patches check` must pass before the branch merges.
+sources, notes, the player note and every catalog id the patch changes. It never changes the shipped
+history, its snapshots or the catalog version. The player note, `player` (R724001), is what the Patch
+notes page shows of the patch: no flag sets it, so write it into the fragment by hand, a short title
+and one fact per line under `new`, `balance`, `changes`, `text` and `fixes`
+([issues-and-patches.md](issues-and-patches.md), Patch notes players read); running the command again
+keeps it. `cargo jackioh patches check` must pass before the branch merges, and fails while the note
+is empty.
 The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`: it snapshots the
 catalog at the fragment's first-parent commit, appends the shipped patch and bumps the catalog version
 wherever it is written; the binaries compile it in from `patches.json`.
@@ -224,7 +230,8 @@ No escalation step.
 
 Every card needs its voice lines **rendered**: `apps/web/src/audio/voice-assets.test.ts` (B35, B36, B37, R501) expects an `.m4a` per line in
 `apps/web/public/audio/voice/` and a manifest entry. `pnpm --filter @jackioh/web gen:voice` renders them with macOS `say` and `afconvert` or
-Windows SAPI and ffmpeg, and has no Linux backend, so a card added from Linux or CI fails about twenty tests there until a person renders them.
-`node apps/web/scripts/gen-voice.mjs --check` lists what is missing. Write the `card-audio.json5` entry (the text needs no tool) and say in the
-PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
+Windows SAPI and ffmpeg, and has no Linux backend. From Linux, write the `card-audio.json5` entry (the text needs no tool; a Unit has a play,
+an attack and a death line, R1448) and push a commit whose message holds `[gen:voice]`: the `voice` workflow renders the lines on GitHub's
+macOS and Windows runners, commits them back to the branch, and runs `node apps/web/scripts/gen-voice.mjs --check` (R1448). Its commits start
+no CI, so push once more afterwards. Without it, say in the PR that the audio is owed. A hook that is only an effect renders nothing, so it is never owed. The asset tests run in the daily super run, not
 on a pull request.

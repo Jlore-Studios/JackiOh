@@ -1,6 +1,6 @@
 //! Who may be targeted, and what targeting costs (docs/classic-sets.md B5 E5, E35; R450): the pure
-//! reads the declarations (`playChoices.legalSelectionsFor`), the target prompts
-//! (`targetingPoint.ts`) and the attack's interception (§4.2 step 2) all ask, so a picker's greyed-out
+//! reads the declarations (`play_choices::legal_selections_for`), the target prompts
+//! (`targeting_point.rs`) and the attack's interception (§4.2 step 2) all ask, so a picker's greyed-out
 //! option and the reducer's refusal are one rule (§10.2).
 //!
 //! "Targeting" is choosing (R450): a play's, a cast's or an activation's declared target of kind
@@ -9,10 +9,9 @@
 //! text that makes a card harder to target (Classic #89) or answers its targeting (Classic #33, from a
 //! hand) is read from there.
 //!
-//! Port of `packages/engine/src/targeting.ts` (part 3, SURFACE §4). A card's script is looked up
-//! through the state here (`scripts::script_of(state, def_id)` composes a fused card's on lookup,
-//! SURFACE §6.6), so the two reads TS made off the instance alone (`interposesFromHand`, R651's
-//! source check) take the state too.
+//! A card's script is looked up through the state (`scripts::script_of` composes a fused card's on
+//! lookup, SURFACE §6.6), so `interposes_from_hand` and the source check (R651) take the state too
+//! (SURFACE §4).
 
 use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, TargetedReplacement};
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
@@ -113,7 +112,7 @@ fn hand_interpositions(state: &GameState, card: &CardInstance) -> Vec<TargetedRe
 
 /// Classic #33 Joro, R450: whether a card answers the targeting of a friendly unit from its owner's
 /// hand — its script declares the replacement `{ on: "targeted", where: "hand" }` (`Script.replacements`),
-/// the one declaration the attack half (§4.2 step 2) reads too. A Vanilla card has no text (`scriptOf`).
+/// the one declaration the attack half (§4.2 step 2) reads too. A Vanilla card has no text.
 pub fn interposes_from_hand(state: &GameState, card: &CardInstance) -> bool {
     !hand_interpositions(state, card).is_empty()
 }
@@ -127,7 +126,7 @@ fn answers_source(state: &GameState, card: &CardInstance, source: Option<CardTyp
 }
 
 /// Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted` — the first card in
-/// the targeted unit's controller's hand that `interposesFromHand` and answers this source (R651),
+/// the targeted unit's controller's hand that `interposes_from_hand` and answers this source (R651),
 /// when the targeted card is a unit of the chooser's opponent acting on the field and that player
 /// has an open unit zone to summon it into (with none, nothing happens). Null when nothing answers.
 pub fn interceptor_for<'a>(
@@ -176,13 +175,10 @@ pub fn targeting_discards_for(
     total
 }
 
-/// R450, R682: whether the player can pay a targeting cost of `required` discards — that many cards
-/// held outside `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card
-/// the same play picks), or null when they can. The discards themselves are random at pay time
-/// (R682: a discard is its player's choice only when the card says "of your choice"); nothing lists
-/// or chooses them, so there are no paying sets to enumerate.
-///
-/// TS answered the refusal text or null; here `Err` carries that text verbatim (SURFACE §4.4.9).
+/// R450, R682: whether the player can pay `required` targeting discards: that many cards held outside
+/// `keep` (the card a play is taking out of that hand, §10.5 step 1, and any hand card the same play
+/// picks); `Err` is the refusal text (SURFACE §4.4.9). The discards are random at pay time (R682: a discard is its
+/// player's choice only when the card says "of your choice"), so no paying sets are enumerated.
 pub fn why_targeting_discards_unpayable(
     state: &GameState,
     player: PlayerId,

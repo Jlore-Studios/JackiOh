@@ -156,6 +156,12 @@ on this list during Waves 1–3.
 | thiserror | 2.0.21 | — | server |
 | clap | 4.6.7 | derive | server (main), tools |
 | rayon | 1.12.0 | — | tools (parallel games) |
+| caseless | 0.2.2 | — | server (username checks, R1432–R1434) |
+| unicode-normalization | 0.1.25 | — | server (username checks, R1432–R1434) |
+| unicode-properties | 0.1.4 | — | server (username checks, R1432–R1434) |
+| unicode-script | 0.5.8 | — | server (username checks, R1432–R1434) |
+| unicode-segmentation | 1.13.3 | — | server (username checks, R1432–R1434) |
+| mlua | =0.12.2 | luau, serde (default-features = false) | luau (#442 L3; nothing depends on the crate yet) |
 
 Crate edges (path dependencies; every crate also takes the third-party crates its rows above name):
 
@@ -167,6 +173,7 @@ Crate edges (path dependencies; every crate also takes the third-party crates it
 | `jackioh-wasm` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | — |
 | `jackioh-server` | `jackioh-engine`, `jackioh-cards`, `jackioh-ai` | `jackioh-engine` with `testkit` |
 | `jackioh-tools` | `jackioh-engine` with `testkit` (fuzz's invariant monitor), `jackioh-cards`, `jackioh-ai` | — |
+| `jackioh-luau` | `jackioh-engine` (no crate depends on it yet, #558) | `jackioh-engine` with `testkit` |
 
 The engine's own integration tests run with `cargo test -p jackioh-engine --features testkit`. A dev-dependency
 on a crate that depends on you is legal for integration tests (`tests/`), which link the normal library.
@@ -754,6 +761,8 @@ keeps behind its opaque `EngineState` brand.
     // §10.7's random policy (subsystems::ai_policy::choose_action); answers { action: ActionBody | null, rngCursor }
 #[wasm_bindgen] pub fn engine_tables() -> String;
     // { chaosEffects: [{label}], chaosPlusEffects: [{label}], heroPowerNames: [..], heroPowers: [{name, x, title, radiantTitle, label, radiantLabel}] }
+#[wasm_bindgen] pub fn craft_preview(recipe_json: &str, cost: f64) -> String;
+    // ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost, a CraftPreview; a malformed recipe throws, an invalid one is a verdict with valid: false
 ```
 
 ### 10.2 Build
@@ -879,7 +888,8 @@ impl Tx<'_> {
     pub async fn commit(self) -> Result<(), StoreError>;
     // one method per TS Store method, named <substore>_<method> snake_cased, TS's argument order:
     //   profiles_get_by_id, profiles_get_by_user_id, profiles_get_many, profiles_create, profiles_set_status,
-    //   profiles_set_glicko, profiles_set_display_name, profiles_set_in_match, profiles_remove,
+    //   profiles_set_glicko, profiles_set_in_match, profiles_remove,
+    //   profiles_username_tag_for, profiles_claim_username, profiles_answer_username_prompt (R1434, R1435),
     //   codes_insert, codes_find_by_hash, codes_claim, codes_log_attempt, …,
     //   matches_create, matches_get, matches_append_actions, matches_actions, matches_set_clocks, matches_finish,
     //   matches_live, matches_mode_of, matches_discard_open, matches_forget_voided, …,
@@ -890,7 +900,7 @@ impl Tx<'_> {
 // TS's ProfileStore.setRating (no caller) is not ported.
 
 // actor/registry.rs (part 19)
-pub struct Registry { /* live actors by match id; finished actors stay until the reaper or a restart */ }
+pub struct Registry { /* live actors by match id; a finished one stays until reap_finished drops it after its rematch window, or a restart */ }
 impl Registry {
     pub fn new() -> Registry;
     pub async fn start(&self, app: &std::sync::Arc<App>, input: StartMatchInput) -> Result<(), api::http::ApiError>;
@@ -898,6 +908,7 @@ impl Registry {
     pub fn has(&self, match_id: &str) -> bool;
     pub async fn stop(&self, match_id: &str);
     pub fn presence_of(&self, match_id: &str) -> Option<PerPlayer<bool>>;
+    pub async fn reap_finished(&self, now: i64) -> Vec<String>;
 }
 // actor/ws_server.rs (part 19)
 pub async fn handle(app: std::sync::Arc<App>, req: axum::extract::Request) -> axum::response::Response;  // the /ws/match upgrade
@@ -966,7 +977,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
   deals none and shows its default hand (`apps/web/src/emotes/hand.ts`); hotseat and practice deal
   both seats through the `deal_emote_hand` binding.
 - **Kept on purpose**: E2E mode (fixture tokens and codes are a contract with `e2e/support/config.ts`),
-  rematch offers held in memory, finished actors kept in memory, the `vanilla` portrait default for
+  rematch offers held in memory, finished actors kept in memory through their rematch window (`Registry::reap_finished`), the `vanilla` portrait default for
   old rows, `matches.mode` fallbacks for old rows, the retired `loadouts` tables.
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
@@ -1074,17 +1085,20 @@ cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh>
 `source: "dev"`, `mode: "random"`, `pilots` naming the two agents) to `--out` (default
 `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout).
 
-`promote` plays `TRAINING_GAMES` (100) games against `random` (SPEC §10.7's policy,
-`jackioh_ai::random_action`) and `TRAINING_GAMES` against the parent, seats alternating (candidate
-`p1` on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src`
-(so committing `generation.json` does not change the seeds), the same seeds against both opponents,
-each seat's deck `build_ai_deck` over all three sets minus **its own** AI's shadow-ban list, no
-handicap (Easy both). It promotes when:
+`promote` plays `TRAINING_GAMES` (100) games against the parent, seats alternating (candidate `p1`
+on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
+committing `generation.json` does not change the seeds), each seat's deck `build_ai_deck` over every
+set that ships minus **its own** AI's shadow-ban list, no handicap (Easy both). It promotes when:
 
-| Lane | vs random | vs parent | shadow bans |
-|---|---|---|---|
-| `improve` | ≥ `TRAINING_IMPROVE.vs_random` = 90 | ≥ `TRAINING_IMPROVE.vs_parent` = 85 | — |
-| `unban` | ≥ `TRAINING_UNBAN.vs_random` = 90 | ≥ `TRAINING_UNBAN.vs_parent` = 75 | strictly fewer than the parent's |
+| Lane | vs parent | shadow bans |
+|---|---|---|
+| `improve` | ≥ `TRAINING_IMPROVE.vs_parent` = 65 | — |
+| `unban` | ≥ `TRAINING_UNBAN.vs_parent` = 60 | strictly fewer than the parent's |
+
+It played `TRAINING_GAMES` more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
+needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
+90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
+The daily quality gates (`cargo jackioh gate --full`) still play random.
 
 A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` are constants in
 `crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9; part 1 writes them). Without

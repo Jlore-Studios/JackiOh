@@ -12,6 +12,7 @@ mod catalog;
 mod fuzz;
 mod gate;
 mod golden;
+mod luau;
 mod patches;
 mod promote;
 mod replay;
@@ -19,6 +20,7 @@ mod spec;
 mod stats;
 mod sweep;
 mod trace;
+mod winrates;
 
 use std::process::ExitCode;
 
@@ -51,8 +53,12 @@ enum Command {
     Sweep(sweep::Args),
     /// R378's development run for the card statistics (part 22).
     Stats(stats::Args),
-    /// Golden traces: `golden check`, `golden bless` (part 23).
+    /// The compiled card win-rate table for M #50 CN Tech (part 17, ME-STATS).
+    Winrates(winrates::Args),
+    /// Golden traces: `golden check`, `golden bless`, `golden record` (part 23).
     Golden(golden::Args),
+    /// Two builds compared: `luau diff`, `luau bench` (v0.4.0's proofs, #442).
+    Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
     /// The training arena (part 29).
@@ -75,7 +81,9 @@ fn main() -> ExitCode {
         Command::Gate(args) => gate::run(args),
         Command::Sweep(args) => sweep::run(args),
         Command::Stats(args) => stats::run(args),
+        Command::Winrates(args) => winrates::run(args),
         Command::Golden(args) => golden::run(args),
+        Command::Luau(args) => luau::run(args),
         Command::Spec(args) => spec::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),

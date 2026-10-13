@@ -1,0 +1,138 @@
+/* ME-MARKET (Meditative #42, R1000–R1002): the night market's stall. A dark stall under swaying red
+ * lanterns, a gold purse and gold price tags. index.css stills the sway under reduced motion. */
+
+.prompt.market {
+  background: radial-gradient(ellipse at top, #2a1410 0%, #120a0c 70%);
+  border: 2px solid #8c2a1e;
+  color: #f6e7c8;
+  max-width: min(56rem, 100%);
+}
+
+.market-header {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.market-lanterns {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.market-lantern {
+  width: 1rem;
+  height: 1.4rem;
+  border-radius: 45% 45% 40% 40%;
+  background: radial-gradient(circle at 50% 40%, #ffcf6b 0%, #e2412a 55%, #8c1d12 100%);
+  box-shadow: 0 0 0.9rem 0.2rem rgba(255, 120, 60, 0.55);
+  transform-origin: top center;
+  animation: market-sway 3.2s ease-in-out infinite alternate;
+}
+
+.market-lantern:nth-child(even) {
+  animation-delay: -1.6s;
+}
+
+@keyframes market-sway {
+  from {
+    transform: rotate(-6deg);
+  }
+  to {
+    transform: rotate(6deg);
+  }
+}
+
+.market-title {
+  margin: 0;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+}
+
+.market-purse,
+.market-price {
+  color: #ffd56b;
+  font-weight: 700;
+}
+
+.market-purse {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.market-stall,
+.market-barter-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.market-stall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem;
+}
+
+.market-barter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.market-barters h3 {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 1rem;
+}
+
+.market-deal,
+.market-leave {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 0.5rem;
+  border: 1px solid #8c2a1e;
+  background: rgba(40, 18, 14, 0.85);
+  color: inherit;
+  cursor: pointer;
+}
+
+.market-deal {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  width: 100%;
+  padding: 0.5rem;
+}
+
+.market-deal:focus-visible,
+.market-leave:focus-visible {
+  outline: 3px solid #ffd56b;
+  outline-offset: 2px;
+}
+
+.market-caption {
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.market-empty {
+  text-align: center;
+  opacity: 0.85;
+}
+
+.market-leave {
+  display: block;
+  margin: 0.9rem auto 0;
+  padding: 0 1.5rem;
+}
+
+/* The phone and a short landscape screen (prompt.css's breakpoint): a bottom sheet, two lots a row. */
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .prompt.market {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .market-stall {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

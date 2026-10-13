@@ -1,35 +1,9 @@
-// The effects layer (docs/polish/1-animations.md, S9): a fixed, click-through overlay that listens to
-// the animation runner and decorates whatever entry it has in flight.
-//
-// It paces nothing (R200). The runner decides when an entry starts and ends and when the board
-// swaps views; this component only hears about it through `subscribeSignals` and never calls
-// `schedule`, `drain` or anything else that would change the runner's timing. The one thing it
-// writes outside itself, besides the board shake, is `--anim-squeeze` on its parent: the ratio of
-// the duration the runner actually gave an entry (after the speed setting and the burst budget,
-// R201) to the table's duration, so the CSS keyframes play their whole motion in the time they got.
-//
-// The subscription is a LAYOUT effect on purpose. `Game` enqueues a view's events in its own layout
-// effect, and child layout effects run before the parent's, so the listener is in place before the
-// first entry of the first burst starts. A passive effect would miss it.
-//
-// It reads only the redacted stream (R202): the entry's events, the view the runner planned them
-// against, and the public catalog, looked up by a `defId` the viewer can read ("hidden" never is).
-//
-// Under reduced motion (the media query or the viewer's setting) or with intensity "off", it renders
-// the empty root with `data-fx="off"`: no canvas, no director, no cues. `--anim-squeeze` is still
-// kept, because a speed-scaled entry still needs its keyframes squeezed. The viewer's reduce setting
-// also writes `--anim-scale: 0` on the parent, exactly what index.css does under the media query, so
-// the CSS-only motion (the result overlay's fade, the board's transitions) stops with it too.
-//
-// A finished game drains the runner (Game.tsx settles at once), which would clear the killing blow
-// before it drew. The layer keeps the entries the drain cut short and replays the lethal one ahead of
-// the game-over sequence (`planLethal`).
-//
-// R502: `latest` is the newest view (Game's `view`), which the planner reads for a number the events
-// do not carry (how far #21 Hinder lowered the next refresh, `env.next`). The same view marks the
-// crystals that refresh will not fill (`manaMarks.ts`) from the moment the runner reaches the
-// `modifierChanged` that lays or spends the rider, and the shown view keeps the mark after that. The
-// mark is information, so it is drawn whether or not the layer is on, still under reduced motion.
+// The fixed effects overlay (docs/polish/1-animations.md, S9) decorates the runner's in-flight entry
+// but never paces it (R200). `--anim-squeeze` preserves the runner's actual duration (R201).
+// Its layout-effect subscription exists before `Game` enqueues the first entry; it reads only the
+// redacted stream (R202), and reduced motion or intensity "off" leaves an empty root.
+// A drain clears the killing blow before it draws, so cut entries replay lethal ahead of game-over.
+// R502: `latest` supplies #21 Hinder's `env.next` and marks the next refresh's empty crystals.
 
 import {
   useContext,
@@ -133,7 +107,7 @@ function catalogFacts(lookup: CardLookup | null, defId: string): FxCardFacts | u
   if (defId === "hidden" || lookup === null) return undefined;
   const info = lookup(defId, false);
   if (info === undefined) return undefined;
-  // Issue #124: the card's family lends its look to the effects (looks.ts); the catalog is public.
+  // The card's family lends its look to the effects (looks.ts); the catalog is public.
   return { rarity: info.rarity, attack: info.attack, health: info.health, type: info.type, tags: info.tags };
 }
 
@@ -150,8 +124,7 @@ function removeSqueeze(root: HTMLElement | null): void {
 
 export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerProps): ReactElement {
   const [settings] = useFxSettings();
-  // The settings panel's "Reduce motion" is read through its hook so a change re-renders the layer;
-  // `reducedMotionNow` reads the same switch for callers outside React.
+  // The panel's "Reduce motion" is read through its hook so a change re-renders the layer.
   const panelReduces = useSetting("reduceMotion");
   const enabled = !panelReduces && !reducedMotionNow(settings) && settings.intensity !== "off";
   const settingReduces = settings.motion === "reduce" || panelReduces;
@@ -165,8 +138,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
   const memory = useRef<FxMemory | null>(null);
   if (memory.current === null) memory.current = createFxMemory();
 
-  // What the runner's listener reads when a signal arrives. It is a ref, not a dependency, so the
-  // subscription is made once per queue and never torn down between two entries of one burst.
+  // What the runner's listener reads: a ref, so the subscription is made once per queue and never
+  // torn down between two entries of one burst.
   const live = useRef({ enabled, intensity, lookup, seams, view, latest: latest ?? view });
   live.current = { enabled, intensity, lookup, seams, view, latest: latest ?? view };
 
@@ -181,7 +154,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     };
   };
 
-  /** R502: the sides whose next-refresh rider the runner has reached in this burst (see the header). */
+  /** R502: the sides whose next-refresh rider the runner has reached in this burst. */
   const riderReached = useRef(new Set<Side>());
   const markMana = (): void => {
     const current = live.current;
@@ -221,8 +194,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     else director.current?.resume();
   }, [paused]);
 
-  // The reduce setting behaves exactly like the media query (R200): index.css zeroes --anim-scale
-  // on :root under the query, and this zeroes it on the game root under the setting.
+  // The reduce setting acts like the media query (R200): index.css zeroes --anim-scale on :root,
+  // this zeroes it on the game root.
   useLayoutEffect(() => {
     const parent = rootRef.current?.parentElement ?? null;
     if (parent === null || !settingReduces) return undefined;
@@ -248,7 +221,7 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
           const table = ANIMATIONS[entry.type].durationMs;
           const parent = root?.parentElement ?? null;
           if (parent !== null) {
-            // #185: a slam's anticipation is a wait before the motion, not a slower motion.
+            // A slam's anticipation is a wait before the motion, not a slower motion.
             const motionMs = entry.durationMs - (entry.slam?.anticipationMs ?? 0);
             parent.style.setProperty(SQUEEZE, (motionMs / table).toFixed(3));
           }
@@ -294,17 +267,16 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     // `planEnv` reads refs only, so the subscription depends on the queue alone.
   }, [queue]);
 
-  // A newer view on the board ends every stage effect (stage.ts): the stand-ins give way to the cards
-  // they stood in for, and the hidden cards are gone from the view anyway. A LAYOUT effect, so the
-  // swap and the release land in the same paint and no frame shows both, or neither.
+  // A newer view on the board ends every stage effect (stage.ts). A LAYOUT effect, so the swap and
+  // the release land in the same paint and no frame shows both, or neither.
   const releasedFor = useRef<PlayerView | null>(null);
   useLayoutEffect(() => {
     if (releasedFor.current !== null && releasedFor.current !== view) director.current?.release();
     releasedFor.current = view;
   }, [view]);
 
-  // R502: the crystals the next refresh will not fill, from the view the board now shows. A LAYOUT
-  // effect, after the board has drawn that view's trays, so the mark and the crystals land together.
+  // R502: the crystals the next refresh will not fill, from the shown view. A LAYOUT effect, after
+  // the board has drawn that view's trays, so the mark and the crystals land together.
   useLayoutEffect(() => {
     riderReached.current.clear();
     markMana();
@@ -320,9 +292,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     [],
   );
 
-  // The turn banner says its piece until the player acts: the first pointer down anywhere, or a
-  // prompt opening for the viewer, takes it (and its rays) away, so it never sits over the zones a
-  // play is asking about or behind a Discover sheet (integration QA).
+  // The turn banner stays until the player acts: the first pointer down, or a prompt opening for the
+  // viewer, takes it away, so it never sits over a prompt's zones or behind a Discover sheet.
   useEffect(() => {
     const onDown = (): void => {
       director.current?.dismissBanner();
@@ -337,9 +308,8 @@ export function FxLayer({ queue, view, latest, paused = false, seams }: FxLayerP
     if (promptForViewer) director.current?.dismissBanner();
   }, [promptForViewer]);
 
-  // The game-over sequence and the hot-seat hand-over banner run off the shown view, not an entry:
-  // `gameOver` is a zero-duration row the runner never plays, and a seat change drains the runner.
-  // `undefined` means "no view seen yet", so a mount that is already finished plays nothing.
+  // The game-over sequence and the hand-over banner run off the shown view, not an entry: `gameOver`
+  // is a zero-duration row the runner never plays. `undefined` = no view seen yet.
   const lastResult = useRef<PlayerView["result"] | undefined>(undefined);
   const lastViewer = useRef<PlayerId | undefined>(undefined);
   useEffect(() => {

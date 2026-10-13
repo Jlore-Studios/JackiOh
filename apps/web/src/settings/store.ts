@@ -1,41 +1,19 @@
-// The player's client-side preferences (polish task 7, docs/polish/7-mobile-ux.md S8, B19–B22).
-//
-// One module-level store read through `useSyncExternalStore`, so no React context is needed and
-// code outside React (the drag layer's `pointerdown`) can call `readSettings()` directly. These
-// are input and display preferences, and none of them is a rule (CLAUDE.md rule 7). One reaches
-// the engine: `autoEndTurn` is the player's intent for R82, which `Game.tsx` sends as the
-// `setAutoEndTurn` action (R345) for the engine to apply.
-//
-// `localStorage` is untrusted and may be missing. Private windows, blocked site data and
-// sandboxed frames make it throw on access, and a hand-edited value can hold anything. Every
-// access sits in try/catch: a failed read means "nothing stored", and a failed write keeps the
-// in-memory value, so a player without storage still gets working toggles for the session.
+// Client-side preferences (docs/polish/7-mobile-ux.md S8, B19–B22).
+// They never enforce rules (CLAUDE.md rule 7); `autoEndTurn` is player intent for R82 and R345.
+// Storage is untrusted, so failed access uses in-memory or default settings.
 
 import { useSyncExternalStore } from "react";
 
 export type Settings = {
-  /** Gameplay. Drag cards and units to act. Off: tap to select, then the Prompt pickers. */
   dragToPlay: boolean;
-  /**
-   * Gameplay. Ask before ending the turn while a card is playable or a unit can attack. Default
-   * false, and it must stay false: every e2e spec ends its turns with one click.
-   */
+  /** Gameplay; stays false because e2e specs end turns with one click. */
   confirmEndTurn: boolean;
-  /**
-   * Gameplay. R82: end the turn by itself once nothing but ending it is left. Default true, the
-   * rule's own default; off, the turn waits for End turn (R345).
-   */
+  /** R82/R345: default true auto-ends only when ending is left. */
   autoEndTurn: boolean;
-  /** Gameplay. Hovering a hand card with a fine pointer lifts it; task 6's hover inspect reads it. */
   hoverPreviews: boolean;
-  /** Visuals. Force reduced motion on top of the OS preference (`--anim-scale: 0`). */
   reduceMotion: boolean;
-  /**
-   * Audio/social. R644: mute every opponent's emotes in every match — they are never drawn and
-   * never heard. Default off, stored per device like the rest of this file (issue §5).
-   */
+  /** R644 (§5): mute opponents' emotes, default off per device. */
   muteOpponentEmotes: boolean;
-  /** Privacy. Share player statistics on the public stats page. Default true. */
   publicStats: boolean;
 };
 
@@ -64,13 +42,11 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "publicStats",
 ];
 
-/** `<html data-reduce-motion="true">`; settings.css maps it to `--anim-scale: 0` (B22). */
+/** B22: settings.css maps this <html> attribute to the reduced-motion scale. */
 const REDUCE_MOTION_ATTRIBUTE = "data-reduce-motion";
 
-/** The cached snapshot. `null` until the first read, and again after `__resetSettingsForTests`. */
 let snapshot: Settings | null = null;
 
-/** One entry per subscription, so subscribing the same function twice unsubscribes cleanly. */
 const subscriptions = new Set<() => void>();
 
 let storageListening = false;
@@ -79,10 +55,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * Tolerant: unknown keys dropped, wrong-typed or missing values replaced by the default. A JSON
- * string is parsed first, so the raw storage value can be passed straight in. Never throws.
- */
+/** Tolerant storage parser: invalid values use defaults and never throw. */
 export function parseSettings(raw: unknown): Settings {
   const next: Settings = { ...DEFAULT_SETTINGS };
   try {
@@ -113,7 +86,6 @@ function storageOrNull(): Storage | null {
   }
 }
 
-/** What storage holds now, as a frozen snapshot. Anything unreadable reads as the defaults. */
 function loadStored(): Settings {
   try {
     const storage = storageOrNull();
@@ -130,7 +102,7 @@ function persist(settings: Settings): void {
   try {
     storageOrNull()?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch {
-    // Quota, private mode or blocked storage: the in-memory value stays in force.
+    // Keep in-memory settings when storage fails.
   }
 }
 
@@ -148,10 +120,7 @@ function notify(): void {
   for (const subscription of [...subscriptions]) subscription();
 }
 
-/**
- * Install `next` as the snapshot. The object is kept when nothing changed, because
- * `useSyncExternalStore` re-renders on identity; every subscriber is still told once per write.
- */
+/** Preserve identity when unchanged to avoid a useSyncExternalStore re-render; always notify writes. */
 function commit(next: Settings): Settings {
   const current = readSettings();
   const settled = sameSettings(current, next) ? current : Object.freeze({ ...next });
@@ -162,7 +131,6 @@ function commit(next: Settings): Settings {
   return settled;
 }
 
-/** The current snapshot. Same object until something changes. Loads storage on first call. */
 export function readSettings(): Settings {
   if (snapshot === null) {
     snapshot = loadStored();
@@ -171,7 +139,6 @@ export function readSettings(): Settings {
   return snapshot;
 }
 
-/** Merge, persist (try/catch), re-apply <html> attributes, notify each subscriber once. */
 export function writeSettings(patch: Partial<Settings>): Settings {
   const next: Settings = { ...readSettings() };
   for (const key of SETTING_KEYS) {
@@ -185,10 +152,6 @@ export function resetSettings(): Settings {
   return commit({ ...DEFAULT_SETTINGS });
 }
 
-/**
- * Another tab wrote the key (or cleared storage, which reports `key === null`). The event's
- * `newValue` is used when it carries one; otherwise storage is read again.
- */
 function onStorage(event: StorageEvent): void {
   if (typeof event.key === "string" && event.key !== SETTINGS_STORAGE_KEY) return;
   const next =
@@ -200,7 +163,6 @@ function onStorage(event: StorageEvent): void {
   notify();
 }
 
-/** The `storage` listener is on `window` only while at least one subscriber exists. */
 export function subscribeSettings(listener: () => void): () => void {
   const subscription = (): void => {
     listener();
@@ -228,7 +190,6 @@ export function useSetting<K extends SettingKey>(key: K): Settings[K] {
   return useSyncExternalStore(subscribeSettings, read, read);
 }
 
-/** Test seam: forget the cached snapshot so the next read re-parses storage. */
 export function __resetSettingsForTests(): void {
   snapshot = null;
   document.documentElement.removeAttribute(REDUCE_MOTION_ATTRIBUTE);

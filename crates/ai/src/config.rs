@@ -6,10 +6,18 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
-use jackioh_engine::KeywordKind;
+use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
-use crate::types::SearchBudget;
+use crate::types::{AiStyle, SearchBudget};
+
+/// The style that always plays the best line it found and never passes over lethal (R1452):
+/// `decide`'s own, which takes no draw for it. The ladder bots set their own (the server's
+/// `BOT_STRENGTHS`).
+pub const AI_STYLE_EXACT: AiStyle = AiStyle {
+    temperature: 0.0,
+    missed_lethal_chance: 0.0,
+};
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
@@ -49,6 +57,8 @@ pub struct AiSearch {
     pub lines_per_action: i32,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
+    /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
+    pub tribute_sets: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -59,6 +69,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_width: 60,
     lines_per_action: 2,
     probe_seed: "ai:probe",
+    tribute_sets: 120,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
@@ -142,6 +153,10 @@ pub struct EvalWeights {
     pub enemy_health: f64,
     /// Share of a printed Taunt and a point of Armor that Defense Position's grants are worth (§4.1).
     pub position_grants: f64,
+    /// Whether Defense Position's discount (`position_grants`) leaves a unit's own Taunt alone and
+    /// takes its Armor off only when Armor is on the body. Off, it takes a Taunt unit's Taunt and a
+    /// point of Armor off whatever the Taunt's source, as the frozen baseline did.
+    pub defense_own_taunt_kept: bool,
     /// Per point of heroArmorOf.
     pub hero_armor: f64,
     /// Per point of unitView.attack.
@@ -169,6 +184,12 @@ pub struct EvalWeights {
     pub hand_cost_cap: f64,
     /// Added per own Radiant hand card.
     pub radiant_in_hand: f64,
+    /// Per Plague Counter on a unit (§10.1, R454: Fed Fauci's stored mana engine, a Corpse
+    /// Plantation's unspent price), on top of the body's worth and outside its Brittle share.
+    pub plague_counter: f64,
+    /// Per grade step a readable backrow card's counter has climbed past E (§10.1, R27/R62:
+    /// Combo-Index's cascade), plus one for a rise this turn's plays already arm.
+    pub grade_counter: f64,
     /// B3.4, R65: taken off an own hand card per crystal its `costMod` (a Degrade's +1, an Upgrade's −1)
     /// moves its cost; a cheaper card gains it.
     pub hand_cost_delta: f64,
@@ -184,6 +205,9 @@ pub struct EvalWeights {
     pub library_comfort: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
+    /// R1224: per mana owed on the coming refreshes (Jlarna's credit line) — a debt is coming
+    /// turns' mana spent early.
+    pub owed_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's hero health.
@@ -209,6 +233,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hero_health: 1.0,
     enemy_health: 1.0,
     position_grants: 0.0,
+    defense_own_taunt_kept: true,
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
@@ -241,6 +266,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    plague_counter: 0.5,
+    grade_counter: 1.5,
     hand_cost_delta: 0.5,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
@@ -249,6 +276,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // R1224: a debt counts the way unspent mana does — coming turns' mana, spent early.
+    owed_mana: 0.8,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -268,6 +297,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hero_health: 1.0,
     enemy_health: 1.0,
     position_grants: 0.0,
+    // The baseline is frozen: it discounted a Taunt unit's own Taunt in Defense Position, as it did.
+    defense_own_taunt_kept: false,
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
@@ -301,6 +332,10 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hand_per_cost: 0.3,
     hand_cost_cap: 6.0,
     radiant_in_hand: 0.5,
+    // The counter terms came after the gates were fixed, so the frozen baseline gives each nothing,
+    // as it did.
+    plague_counter: 0.0,
+    grade_counter: 0.0,
     hand_cost_delta: 0.0,
     opponent_hand_cost: 2.0,
     backrow_base: 1.5,
@@ -309,6 +344,9 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     library_card: 0.1,
     library_comfort: 10.0,
     unspent_mana: 0.8,
+    // The baseline is frozen: a debt counted nothing when the gates were fixed, as everything after
+    // them did.
+    owed_mana: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -371,6 +409,16 @@ pub struct AiDeterminize {
 pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
     exclude_def_ids: &["core-098"],
 };
+
+/// R1390: the soft gate. The sets the AI's randomized decks are never dealt from, whatever ships or a
+/// thread previews (R1420): `build_ai_deck`'s default `gated_sets`, so the AI's own decks (practice,
+/// the quality gates, the sweep's AI seat, the arena, development runs) hold none of their cards,
+/// while a player's random deck (`gated_sets: Some(vec![])`, beside `banned: Some(vec![])`) is dealt
+/// from every set. A lean on a gated set leans on the newest set that ships and is not gated instead.
+/// The list is empty since issue #732 measured the AI on the Meditative set (MN08 of #496), which it
+/// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
+/// before the AI is trained on it is listing it here.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[];
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,

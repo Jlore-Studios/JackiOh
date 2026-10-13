@@ -3,18 +3,13 @@
 //! R275's standard has two halves. The stat half is mechanical, and this file holds every Unit face
 //! to it: a Radiant Unit's attack and health are each at least twice its base face's, a 0 staying 0
 //! (#1 Big D-fender, #65.1 Spikey Pillow), and a token summoned X/X (the Bread Token's printed 0/0)
-//! passing on its printed face because the card that summons it scales X itself. A card allowed
-//! below it is named in `STAT_EXCEPTIONS` with its reason: none remain, since patch v0.2.10 doubled
-//! the two v0.2.0 exceptions (Joro 2/2, BOOM! Big Max 13/8 → 26/16). A "[3X/3X]" face (Classic+
-//! #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half — 100–150%
-//! stronger, a broader scope, or an added rider — is a judgement, recorded card by card in
+//! passing on its printed face because the card that summons it scales X itself. A "[3X/3X]" face
+//! (Classic+ #69 Buff Billy, B2.7) is held to the same factor on its X multiples. The effect half —
+//! 100–150% stronger, a broader scope, or an added rider — is a judgement, recorded card by card in
 //! docs/radiant-audit.md, and this file proves that document covers every entry.
 //!
-//! R276: every entry's Radiant face changes it, in its text, its stats or its keywords, so no Make
-//! Radiant is spent on a card that becoming Radiant leaves as it was.
-//!
-//! Port of `packages/cards/test/radiant-standard.test.ts`. The audit is read at compile time
-//! (`include_str!`, SURFACE §3: a pure crate's tests read no files), by index and name only.
+//! R276: every entry's Radiant face changes it, so no Make Radiant is spent on a card it leaves as it was.
+//! The audit is read at compile time (`include_str!`, SURFACE §3: a pure crate's tests read no files).
 
 use jackioh_cards::CATALOG;
 use jackioh_engine::{AttackHealth, CardDef, CardType, FaceKind, GLITCH_DEF_ID, fill_params};
@@ -26,9 +21,8 @@ fn entries() -> Vec<&'static CardDef> {
 /// R275: the factor a Radiant Unit's attack and health are held to.
 const STAT_FACTOR: i32 = 2;
 
-/// R275's named exceptions to the stat half, by id, with the reason. Core has none, and since patch
-/// v0.2.10 (issue #88) neither does Classic nor Classic+: Joro is 2/2 and BOOM! Big Max is 13/8 →
-/// 26/16, both doubling exactly, so the v0.2.0 exceptions are gone and the record stays empty.
+/// R275's named exceptions to the stat half, by id, with the reason. None remain, so the record
+/// stays empty.
 const STAT_EXCEPTIONS: &[(&str, &str)] = &[];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.

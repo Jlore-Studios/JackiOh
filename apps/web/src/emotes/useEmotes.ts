@@ -1,19 +1,10 @@
-// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state —
-// what shows, who is muted, when the shared gate admits a send — and this hook adds the three
-// things a component tree needs that must not live in the pure half:
-//
-//   1. Re-rendering. The session's `subscribe` bumps a counter; `visible`/`gate`/`muted` read it
-//      live, so a show lands in the same render that asked for it.
-//   2. Expiry. Each show schedules the timeout that calls `expire`; a newer show's different key
-//      makes an old timer a no-op, which is what "a new emote replaces the current one
-//      immediately" (issue §5) costs in code.
-//   3. Sound. `playEmote` (play.ts) runs on a shown emote: the voice channel for a voice line,
-//      the effects channel for an emoji. A muted or gate-dropped emote returns before this.
-//
-// Every route uses it the same way: `send` for the local seat (admit → show → play → emit), the
-// peer's relay through `receive`, `mute` from the opponent portrait's menu, and `portraitOf` and
-// `handOf` from the server's portraits frame (or the practice/hotseat route's own deal). A send
-// outside the seat's hand is dropped before the gate, as the server's relay drops it (R1342).
+// useEmotes: the React half of the emote session (R643, R644). session.ts holds the pure state;
+// this hook adds what a component tree needs that must not live there:
+//   1. Re-rendering: the session's `subscribe` bumps a counter that `visible`/`gate`/`muted` read live.
+//   2. Expiry: each show schedules the timeout that calls `expire`; a newer show's different key
+//      makes an old timer a no-op ("a new emote replaces the current one immediately", issue §5).
+//   3. Sound: `playEmote` (play.ts) runs on a shown emote; a muted or gate-dropped one returns first.
+// A send outside the seat's hand is dropped before the gate, as the server's relay drops it (R1342).
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
@@ -113,8 +104,6 @@ export function useEmotes(opts: {
     [armExpiry, engine, portraitOf, session],
   );
 
-  // `send`/`receive` wrap the session: it decides admit/show; the hook then reads the show back,
-  // arms its expiry and plays its sound.
   const send = useCallback(
     (player: PlayerId, emote: EmoteId): boolean => {
       // R1342: only the seat's own hand goes out — the menu offers nothing else, and the server
@@ -149,9 +138,8 @@ export function useEmotes(opts: {
     [session],
   );
 
-  // The device setting (issue §5): turning it on mid-match silences everyone but the local seat,
-  // including a bubble already on screen. Turning it off only stops muting NEW emotes — a player
-  // muted through the menu stays muted for the match (the session owns that).
+  // The device setting (issue §5): on mid-match it silences everyone but the local seat, a bubble
+  // on screen included. Off only stops muting NEW emotes; a menu mute lasts the match.
   useEffect(() => {
     if (!globalMute) return;
     for (const player of ["p1", "p2"] as const) {

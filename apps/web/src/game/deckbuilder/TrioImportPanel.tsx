@@ -1,23 +1,20 @@
 // The trio import panel: paste a trio code, see what it holds, and make it three new decks and a
 // trio (SPEC §9.4, R339–R341).
 //
-// Like a deck import it never overwrites work: every deck the code carries becomes a NEW deck, and
-// the trio a new trio naming them. The preview is live and says everything the decoder did, deck by
-// deck: the name, the count, what it had to leave out and why, and the cards the player does not
-// own, which are KEPT and only flagged (judged at queue, R253). Cards two of the decks share are
-// allowed too — a trio is a draft (R252) — and the preview says so; the trio editor marks each one.
+// Like a deck import it never overwrites work: every deck becomes a NEW deck, the trio a new trio.
+// Unowned cards are KEPT and flagged (judged at queue, R253), and so are cards two decks share, since
+// a trio is a draft (R252); the trio editor marks each one.
 //
-// THE CAPS (R340). The shared validator's `checkImportRoom` says, before anything is sent, how many
-// deck and trio slots the import needs and how many the player has; short of either, Import is off
-// with that sentence beside it and nothing is made. The server checks the same again and writes
-// the decks and the trio in one transaction, so an import is all or nothing (R341). A refusal is
-// shown in the server's words, and the pasted code stays in the box.
+// THE CAPS (R340). `checkImportRoom` says before anything is sent how many deck and trio slots the
+// import needs; short of either, Import is off with that sentence beside it. The server checks again
+// and writes the decks and the trio in one transaction, so an import is all or nothing (R341).
 
 import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "react";
 
 import { checkImportRoom, trioConflicts, type CatalogSnapshot, type Collection } from "@jackioh/validator";
 
 import { TRIO_CODE_VERSION } from "@jackioh/server-config";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { droppedLines } from "./ImportPanel.tsx";
 import type { TrioImport, TrioImportResult, WorkshopLimits } from "./sync.ts";
@@ -34,6 +31,7 @@ import {
   trioImportSlotId,
 } from "./testids.ts";
 import { TRIO_CODE_PREFIX, decodeTrioCode } from "./trioCode.ts";
+import { cardNames, cardsWord } from "./workshop.ts";
 
 export type TrioImportPanelProps = {
   catalog: CatalogSnapshot;
@@ -48,20 +46,9 @@ export type TrioImportPanelProps = {
   onCancel: () => void;
 };
 
-/** "1 card", "3 cards". */
-function cardsWord(count: number): string {
-  return `${String(count)} ${count === 1 ? "card" : "cards"}`;
-}
-
-/** Card names, as the preview lists them: "Bigot, Fruit Bat and Coin Toss". */
-function namesOf(ids: readonly string[], catalog: CatalogSnapshot): string {
-  const names = ids.map((id) => catalog.cards[id]?.name ?? id);
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
-}
-
 export default function TrioImportPanel(props: TrioImportPanelProps): ReactElement {
   const { catalog, collection, saved, limits, onImport, onImported, onCancel } = props;
+  useLocale();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -119,17 +106,17 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
     <section className="ws-editor ws-import" data-testid={TRIO_IMPORT} aria-labelledby={titleId}>
       <div className="ws-editor-head">
         <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onCancel}>
-          ← All decks
+          {t("← All decks")}
         </button>
         <h2 className="ws-import-title" id={titleId}>
-          Import a trio
+          {t("Import a trio")}
         </h2>
       </div>
       <p className="ws-hint">
-        Paste a trio code someone shared. Its decks become new decks and the trio a new trio; nothing you have is changed.
+        {t("Paste a trio code someone shared. Its decks become new decks and the trio a new trio; nothing you have is changed.")}
       </p>
       <label className="ws-field-label" htmlFor={inputId}>
-        Trio code
+        {t("Trio code")}
       </label>
       <textarea
         ref={input}
@@ -158,9 +145,9 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
           <>
             <p className="ws-import-name">
               <strong>{decoded.name}</strong>
-              {` · ${String(filled)} ${filled === 1 ? "deck" : "decks"}`}
+              {` · ${filled === 1 ? t("{count} deck", { count: filled }) : t("{count} decks", { count: filled })}`}
             </p>
-            {decoded.nameFellBack ? <p>The code’s trio name couldn’t be used, so the trio gets this one. You can rename it.</p> : null}
+            {decoded.nameFellBack ? <p>{t("The code’s trio name couldn’t be used, so the trio gets this one. You can rename it.")}</p> : null}
             <ol className="ws-import-slots">
               {decoded.slots.map((slot, at) => (
                 <li
@@ -170,16 +157,16 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
                   data-count={slot === null ? undefined : String(slot.cards.length)}
                 >
                   {slot === null ? (
-                    <span className="ws-import-name">{`Deck ${String(at + 1)}: empty slot`}</span>
+                    <span className="ws-import-name">{t("Deck {number}: empty slot", { number: at + 1 })}</span>
                   ) : (
                     <>
                       <span className="ws-import-name">
                         <strong>{slot.name}</strong>
-                        {` · ${String(slot.cards.length)}/${String(DECK_SIZE)} cards`}
+                        {` · ${t("{count}/{size} cards", { count: slot.cards.length, size: DECK_SIZE })}`}
                       </span>
                       <ul className="ws-import-notes">
                         {slot.nameFellBack ? (
-                          <li data-kind="dropped">The code’s name for this deck couldn’t be used, so it gets this one.</li>
+                          <li data-kind="dropped">{t("The code’s name for this deck couldn’t be used, so it gets this one.")}</li>
                         ) : null}
                         {droppedLines(slot.dropped, catalog).map((line) => (
                           <li key={line} data-kind="dropped">
@@ -188,7 +175,15 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
                         ))}
                         {slot.unowned.length === 0 ? null : (
                           <li data-kind="unowned">
-                            {`${cardsWord(slot.unowned.length)} you don’t own yet ${slot.unowned.length === 1 ? "is" : "are"} kept: ${namesOf(slot.unowned, catalog)}.`}
+                            {slot.unowned.length === 1
+                              ? t("{cards} you don’t own yet is kept: {names}.", {
+                                  cards: cardsWord(slot.unowned.length),
+                                  names: cardNames(slot.unowned, catalog),
+                                })
+                              : t("{cards} you don’t own yet are kept: {names}.", {
+                                  cards: cardsWord(slot.unowned.length),
+                                  names: cardNames(slot.unowned, catalog),
+                                })}
                           </li>
                         )}
                       </ul>
@@ -199,28 +194,33 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
             </ol>
             {shared.length === 0 ? null : (
               <p className="ws-import-shared" data-testid={TRIO_IMPORT_SHARED} data-count={String(shared.length)}>
-                {`${cardsWord(shared.length)} ${shared.length === 1 ? "is" : "are"} in more than one of these decks: ${namesOf(
-                  shared.map((conflict) => conflict.cardId),
-                  catalog,
-                )}. They’re kept, and the trio editor marks each one; the trio can’t queue Conquest until every card is in one deck only.`}
+                {shared.length === 1
+                  ? t(
+                      "{cards} is in more than one of these decks: {names}. They’re kept, and the trio editor marks each one; the trio can’t queue Conquest until every card is in one deck only.",
+                      { cards: cardsWord(shared.length), names: cardNames(shared.map((conflict) => conflict.cardId), catalog) },
+                    )
+                  : t(
+                      "{cards} are in more than one of these decks: {names}. They’re kept, and the trio editor marks each one; the trio can’t queue Conquest until every card is in one deck only.",
+                      { cards: cardsWord(shared.length), names: cardNames(shared.map((conflict) => conflict.cardId), catalog) },
+                    )}
               </p>
             )}
           </>
         ) : (
           <p className="notice" role="alert">
-            {decoded.message}
+            {t(decoded.message)}
           </p>
         )}
       </div>
 
       {room !== null && !room.ok ? (
         <p className="ws-cap-note" id={reasonId} data-testid={TRIO_IMPORT_CAP_REASON} data-decks-short={String(room.decksShort)} data-trios-short={String(room.triosShort)}>
-          {room.message}
+          {t(room.message)}
         </p>
       ) : null}
       {refusal === null ? null : (
         <p className="notice" role="alert" data-testid={TRIO_IMPORT_ERROR}>
-          {refusal}
+          {t(refusal)}
         </p>
       )}
 
@@ -234,10 +234,10 @@ export default function TrioImportPanel(props: TrioImportPanelProps): ReactEleme
           aria-describedby={room !== null && !room.ok ? reasonId : undefined}
           onClick={submit}
         >
-          {busy ? "Importing…" : "Import as new trio"}
+          {busy ? t("Importing…") : t("Import as new trio")}
         </button>
         <button type="button" className="ws-action" data-testid={TRIO_IMPORT_CANCEL} onClick={onCancel}>
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </section>

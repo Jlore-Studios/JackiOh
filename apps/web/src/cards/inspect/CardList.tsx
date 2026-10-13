@@ -1,31 +1,12 @@
-// A list of cards to look through: what a graveyard or an exile pile holds (both public, §10.8),
-// or what is left in the viewer's own library (R310, R313). The caller hands the entries over in
-// the order to show them (the board: a pile newest first, the library in the view's order) and says
-// what that order is (`order`), and renders these through `useInspectTrigger`'s `render`, so they
-// take the one inspect slot like a card's preview and sheet do (B23).
-//
-// An entry is one face and how many cards it stands for (`count`, "×2" on the face when above 1: a
-// library's list is grouped, R310), or a card back (`face: null`) for cards the viewer was never
-// shown (R312). A back names nothing and opens nothing. The count in the header is the cards'.
-//
-// - `CardListPreview`: what a resting mouse opens. The title, the count and up to LIST_PREVIEW_MAX
-//   faces, fixed beside the pile, click-through and hidden from assistive tech, like HoverPreview;
-//   past the cap it says how many more there are and that a click shows them all.
-// - `CardListSheet`: what a click, a tap, a long-press or Enter opens. A modal dialog with every
-//   face in a scrolling grid; a face opens large with its glossary, and Back returns to the grid.
-//   Focus moves to Close on open and back on close, Tab stays inside, and Escape, the scrim and
-//   Close all close it (useModalOverlay).
-//
-// B5 E11: while a permission lets the viewer play cards from their graveyard, `legalActions` lists
-// a `play` for each such card, and the board hands this list an entry's `play` for exactly those
-// (game/Board.tsx reads `Highlight.legal`; this file decides nothing, CLAUDE.md rule 7). Such a
-// face carries a "Play" button under it, in the grid and in the face opened large; pressing it
-// reports the play to the board, which builds it as it builds a hand card's (zone, targets, the
-// Plague Counters paying it), and closes the sheet so the board can be seen.
+// Lists display public graveyards/exile piles or the viewer's library (§10.8; R310, R313) in caller
+// order, using inspect's sole slot (B23). Entries are faces/counts or unopened backs (R312).
+// B5 E11: the board supplies `play` only for `legalActions`; this client reports it and closes the
+// sheet (CLAUDE.md rule 7).
 
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardBack } from "../CardBack.tsx";
 import { CardFace } from "../CardFace.tsx";
 import { FACE_ASPECT } from "../constants.ts";
@@ -58,21 +39,12 @@ import {
 import "./inspect.css";
 import "./list-play.css";
 
-/**
- * One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows (a
- * pile card's instance id, a library entry's definition and face). `count` is how many cards it
- * stands for, 1 when absent.
- */
+/** One face in the list, or a card back (`face: null`, R312). `key` is stable for what it shows; `count` is 1 when absent. */
 export type CardListEntry = { key: string; face: FaceModel | null; count?: number; play?: CardListPlay };
 
-/**
- * B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`,
- * game/contract.ts), `glow` whether the board's green glow is on it, and `onPlay` what pressing it
- * reports. The caller hands one over only for a card `legalActions` lists a play for.
- */
+/** B5 E11: a card the viewer may play from this pile now. `testId` is the button's (`pile-play-<id>`, game/contract.ts). */
 export type CardListPlay = { testId: string; glow: boolean; onPlay: () => void };
 
-/** The word on the button, and what a screen reader hears before the card's name. */
 const PLAY_WORD = "Play";
 
 export type CardListProps = {
@@ -90,7 +62,7 @@ const DEFAULT_ORDER = "Newest first";
 const UNKNOWN_NAME = "Unknown card";
 
 function cardsWord(count: number): string {
-  return count === 1 ? "1 card" : `${String(count)} cards`;
+  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
 }
 
 function countOf(entry: CardListEntry): number {
@@ -101,18 +73,15 @@ function totalOf(entries: readonly CardListEntry[]): number {
   return entries.reduce((sum, entry) => sum + countOf(entry), 0);
 }
 
-/** The entry's name, for a label: a back names nothing but what it is. */
 function nameOf(entry: CardListEntry): string {
-  return entry.face?.name ?? UNKNOWN_NAME;
+  return entry.face?.name ?? t(UNKNOWN_NAME);
 }
 
-/** "2 × Bigot", "Bigot", "3 × Unknown card". */
 function entryLabel(entry: CardListEntry): string {
   const count = countOf(entry);
   return count > 1 ? `${String(count)} × ${nameOf(entry)}` : nameOf(entry);
 }
 
-/** The face, or a back, with its count on it when it stands for more than one card. */
 function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   const count = countOf(entry);
   return (
@@ -127,7 +96,7 @@ function EntryFace({ entry }: { entry: CardListEntry }): ReactElement {
   );
 }
 
-/** B5 E11: "Play" under a face the viewer may play from the pile; the sheet closes as it reports. */
+/** B5 E11: "Play" under a face the viewer may play from the pile. */
 function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: CardListPlay; onClose: () => void }): ReactElement {
   return (
     <button
@@ -136,13 +105,13 @@ function PlayButton({ entry, play, onClose }: { entry: CardListEntry; play: Card
       data-testid={play.testId}
       data-legal="true"
       data-glow={play.glow ? "ready" : undefined}
-      aria-label={`${PLAY_WORD} ${nameOf(entry)}`}
+      aria-label={t("Play {name}", { name: nameOf(entry) })}
       onClick={() => {
         play.onPlay();
         onClose();
       }}
     >
-      {PLAY_WORD}
+      {t(PLAY_WORD)}
     </button>
   );
 }
@@ -172,6 +141,7 @@ export function CardListPreview({
   anchor,
   prefer = "beside",
 }: CardListProps & { anchor: Rect; prefer?: PreviewPrefer }): ReactElement {
+  useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const shown = entries.slice(0, LIST_PREVIEW_MAX);
   const total = totalOf(entries);
@@ -203,11 +173,11 @@ export function CardListPreview({
       {...OVERLAY_ROOT_PROPS}
     >
       <span className="inspect-list-head">
-        <span className="inspect-list-title">{title}</span>
+        <span className="inspect-list-title">{t(title)}</span>
         <span className="inspect-list-count" data-testid={INSPECT_LIST_COUNT} data-count={total}>
           {cardsWord(total)}
         </span>
-        <span className="inspect-list-order">{order}</span>
+        <span className="inspect-list-order">{t(order)}</span>
       </span>
       <span className="inspect-list-grid">
         {shown.map((entry) => (
@@ -225,7 +195,7 @@ export function CardListPreview({
       </span>
       {more > 0 ? (
         <span className="inspect-list-more" data-testid={INSPECT_LIST_MORE}>
-          +{more} more · click to see them all
+          {t("+{more} more · click to see them all", { more })}
         </span>
       ) : null}
     </div>,
@@ -233,10 +203,7 @@ export function CardListPreview({
   );
 }
 
-/**
- * One face in the sheet's grid: a button that opens it large, and, for a card the viewer may play
- * from the pile (B5 E11), the "Play" under it. Without a play it is exactly the face button.
- */
+/** B5 E11: a grid face opens large, with "Play" when permitted. */
 function FaceTile({
   entry,
   face,
@@ -256,7 +223,7 @@ function FaceTile({
       data-def-name={face.name}
       data-count={countOf(entry)}
       data-entry-key={entry.key}
-      aria-label={`${entryLabel(entry)}: show it large`}
+      aria-label={t("{label}: show it large", { label: entryLabel(entry) })}
       onClick={onOpen}
     >
       <EntryFace entry={entry} />
@@ -277,11 +244,11 @@ export function CardListSheet({
   order = DEFAULT_ORDER,
   onClose,
 }: CardListProps & { onClose: () => void }): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const backButton = useRef<HTMLButtonElement>(null);
   const grid = useRef<HTMLUListElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
-  /** The face opened large, by its key; null shows the grid. */
   const [open, setOpen] = useState<string | null>(null);
   // A back opens nothing: it has no face to show large.
   const openedEntry = open === null ? undefined : entries.find((entry) => entry.key === open);
@@ -289,11 +256,10 @@ export function CardListSheet({
   // B5 E11: the face opened large keeps its "Play" while it is listed.
   const openedPlay = opened === undefined ? undefined : openedEntry?.play;
   const total = totalOf(entries);
-  /** The face last opened, so Back puts focus on it again rather than dropping it on <body>. */
+  /** The face last opened, so Back refocuses it rather than dropping focus on <body>. */
   const returnTo = useRef<string | null>(null);
 
-  // The button that had focus leaves the DOM on both switches, so focus is moved on purpose: to
-  // Back when a face opens, and to that face's tile when Back returns to the grid.
+  // Changing views removes the focused button, so move focus to Back or its returning tile.
   useLayoutEffect(() => {
     if (opened !== undefined) {
       backButton.current?.focus({ preventScroll: true });
@@ -311,13 +277,13 @@ export function CardListSheet({
   return createPortal(
     <div className="inspect-layer inspect-layer--list" {...OVERLAY_ROOT_PROPS}>
       <div className="inspect-scrim" data-testid={INSPECT_SCRIM} aria-hidden="true" {...modal.dismissProps} />
-      <div className="inspect-list-sheet" data-testid={INSPECT_LIST_SHEET} role="dialog" aria-modal="true" aria-label={title}>
+      <div className="inspect-list-sheet" data-testid={INSPECT_LIST_SHEET} role="dialog" aria-modal="true" aria-label={t(title)}>
         <header className="inspect-list-head">
-          <h2 className="inspect-list-title">{title}</h2>
+          <h2 className="inspect-list-title">{t(title)}</h2>
           <span className="inspect-list-count" data-testid={INSPECT_LIST_COUNT} data-count={total}>
             {cardsWord(total)}
           </span>
-          <span className="inspect-list-order">{order}</span>
+          <span className="inspect-list-order">{t(order)}</span>
         </header>
 
         {opened === undefined ? (
@@ -367,11 +333,11 @@ export function CardListSheet({
                 setOpen(null);
               }}
             >
-              All cards
+              {t("All cards")}
             </button>
           ) : null}
           <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

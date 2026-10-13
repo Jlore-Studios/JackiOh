@@ -1,46 +1,16 @@
 //! #78 /fullsend (SPEC §8.3, R62, R65, R364, §2.2, §2.3, §10.5 step 5, §10.1).
 //!
-//! Base: "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand."
-//! Radiant: "Refresh 3 mana. Your cards cost (1) less and gain "Combo: Draw 1" this turn. End of
-//! turn: Exile your hand." Patch v0.1.1 made the mana a Refresh of 3 instead of a gain of 4 on both
-//! faces, took the Combo draw off the base face, and set the Radiant discount back to 1, so the
-//! Combo draw is the Radiant face's rider.
-//!
-//! §8's Engine cell: "Turn-scoped player modifiers plus an end-of-turn delayed exile." The effects:
-//!
-//!  1. `refreshMana({ amount: 3 })` — §6.3's Refresh (R364): up to 3 spent mana back, never past max,
-//!     so unlike the old temporary gain it cannot take current above MAX_MANA.
-//!  2. a `costDiscount` with `{ until: "thisTurn", turn }`. The text says "your CARDS", not "your
-//!     spells", so there is no `onlyType` and no `minCurrentCost`: it is the flat discount R65
-//!     applies before Curvature. R65 also settles the X-cost case with no help from this card: "An
-//!     X-cost card being played costs exactly X: `costMod` and discounts don't change it", and
-//!     `mana.effectiveCost` returns early for an X card, so /fullsend never cheapens an X card.
-//!  3. the Radiant face only: a `comboDraw` modifier with the same expiry. §10.5 step 5 resolves
-//!     "Combo checks, Quickstriker, /fullsend's Combo draw, then the card's own … script", so this is
-//!     a PLAYER-scoped rider that the play pipeline reads once per card played this turn.
-//!  4. a delayed effect at `{ phase: "end", player: controller }` whose hook exiles the hand.
-//!
-//! R62 places that last one precisely: "… → end-of-turn triggers → end-of-turn trap window (Bread and
-//! Butter and Intern Stimmy on both sides, in R68 order) → end-of-turn delayed effects → cleanup".
-//! `turn.ts` matches for the two neighbours it has (`endOfTurn` hooks, then `runDelayed(sink, "end",
-//! player)`, then `cleanup`), so the exile lands AFTER the traps have had their window — a Bread and
-//! Butter token still reaches the hand and is then exiled with it — and BEFORE cleanup, so the
-//! modifiers above are still live while the exile runs. The trap window itself is not in `endTurn`
-//! yet (see the report).
-//!
-//! The continuation is one entry in this card's `resume` step table, named by the `delay` that
-//! schedules it (`hook: RESUME_HOOK`). R126: `turn.runDelayed` re-enters a delayed effect through
-//! `prompts.runResume`, the one reader that resolves either shape — a `Hook` on the script or a step
-//! table — so a card registers its continuation once and never twice. /fullsend is a Spell, so by
-//! the time the step runs the instance is in the graveyard; the stored `Resume` names the script and
-//! the face, and its `radiant` flag persists in every zone (R78), so the radiant face's step is the
-//! one that runs — and R127 has it run even if there were no instance left to find at all.
-//!
-//! THE GLOW (R662). /fullsend is gone to the graveyard by the time its grant counts, so the cards
-//! that glow are the ones in its controller's hand: while the Radiant face's `comboDraw` rider is live
-//! and a card has been played this turn (which /fullsend itself is), the next play draws, and
-//! `condition.ts` lights every hand card (`query.grantedComboLive`). The base face grants a discount
-//! and no condition (its cost is on the faces, R280), so it lights nothing. No `conditionMet` here.
+//! Base: "Refresh 3 mana. Your cards cost (1) less this turn. End of turn: Exile your hand." Radiant adds
+//! "gain 'Combo: Draw 1'" to the discount. §8's Engine cell: "Turn-scoped player modifiers plus an
+//! end-of-turn delayed exile": `refreshMana` (§6.3 Refresh, R364: spent mana back, never past max); a
+//! `costDiscount` for this turn ("your CARDS", so no `onlyType`), flat before Curvature and leaving an
+//! X-cost card at exactly X (R65); on Radiant a PLAYER-scoped `comboDraw` rider read once per card
+//! played (§10.5 step 5); and a delayed effect at the controller's end phase that exiles the hand, after
+//! the end-of-turn trap window (R68 order) and before cleanup, so the modifiers are still live (R62).
+//! Its `resume` step is the one registration (R126); the stored `Resume` names the script and the face
+//! (`radiant` persists in every zone, R78) and re-enters even with no instance left (R127). R662: the
+//! Radiant rider lights every hand card once a card was played this turn; the base face grants a
+//! discount, not a condition (cost is on the faces, R280).
 
 use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};
 use jackioh_engine::prelude::*;
@@ -51,7 +21,7 @@ pub const ID: &str = "core-078";
 // past max); `discount`, "Your cards cost (1) less this turn" on both faces; and `comboDraw`, the
 // Radiant face's "gain 'Combo: Draw 1'" — one card per play.
 
-/// The step name the delayed effect carries; `turn.ts` labels the pause with it.
+/// The step name the delayed effect carries; it labels the pause.
 const EXILE_STEP: &str = "exileHand";
 
 /// R62: the end-of-turn delayed effect. It runs after the trap window and before cleanup, and it
@@ -115,15 +85,11 @@ pub fn script() -> CardScripts {
 // #78 /fullsend — SPEC §8.3, R62, R65, R364, §2.3, §10.5 step 5.
 //
 // BUILD M4-T4: "Refresh 3 mana (R364); −1 cost this turn; hand exiled at end of turn; radiant also
-// draws 1 for each card played this turn" (patch v0.1.1).
+// draws 1 for each card played this turn".
 //
-// The discount is read off the hand's own cost, which `viewFor` computes with `mana.effectiveCost`
-// (§10.8), and confirmed by paying. R65's X-cost clause is proved by playing an X card for exactly
-// X while the discount is live. R62's position for the delayed exile is proved by the event order:
-// the exile lands before `turnEnded`, which `turn.ts` emits immediately before cleanup.
-//
-// R662's yellow glow: the Radiant face's "Combo: draw 1" lights its controller's hand for the rest of
-// the turn (`condition.ts`); the base face lights nothing. Both at the end of this file.
+// The discount is read off the hand's own cost (`viewFor`, §10.8) and confirmed by paying; R65's X-cost
+// clause by playing an X card for exactly X. R62's place for the exile is proved by the event order.
+// R662's yellow glow (Radiant lights the hand, base lights nothing) is tested at the end of this file.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,9 +105,8 @@ mod tests {
     const COST_4: &str = "core-025"; // 4-mana 7/7
     const X_CARD: &str = "core-074"; // Adaptive UI, printed cost X
 
-    /// R81: #74 Adaptive UI declares one target with its play ("Deal X damage to a target"), so the
-    /// `play` action has to carry it or the engine refuses the play. It is not part of what this file
-    /// is about — the enemy hero is always a legal pick and takes the X damage off to one side.
+    /// R81: #74 Adaptive UI declares one target with its play, so the `play` action must carry it. The
+    /// enemy hero is always a legal pick, and the X damage lands off to one side.
     fn at_enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }
@@ -152,7 +117,7 @@ mod tests {
 
     use crate::matches_object;
 
-    /// TS `indexOf`/`findIndex`: the position, or -1 when there is none.
+    /// The position, or -1 when there is none.
     fn index_of(found: Option<usize>) -> i64 {
         found.map_or(-1, |index| index as i64)
     }
@@ -168,7 +133,7 @@ mod tests {
         }
     }
 
-    /// Harness gap (reported): no `mods()` accessor, so the test reads `state` — B1.7 covers `src` only.
+    /// No `mods()` accessor, so the test reads `state` — B1.7 covers `src` only.
     fn mods_of(s: &Scenario, kind: &str) -> Vec<Value> {
         s.state()
             .players
@@ -330,11 +295,10 @@ mod tests {
             expected.sort();
             assert_eq!(exiled, expected);
 
-            // R62 places the exile between the trap window and cleanup, and the log says so — but not by
-            // straddling `turnEnded`. `turn.ts` emits that event at the TOP of the window rather than at
-            // cleanup, because the window's traps read it (#18 Bread and Butter answers
-            // `event.unspentMana`). So the exile comes after `turnEnded`, and cleanup comes after the exile —
-            // cleanup being visible as the `modifierChanged` that retires /fullsend's own "this turn" discount.
+            // R62 puts the exile between the trap window and cleanup. `turnEnded` is emitted at the TOP of
+            // the window, because its traps read it (#18 Bread and Butter answers `event.unspentMana`), so
+            // the exile follows it and cleanup follows the exile, visible as the `modifierChanged` that
+            // retires /fullsend's own "this turn" discount.
             let types: Vec<GameEventType> = s.events().iter().map(GameEvent::event_type).collect();
             let window_opened = index_of(types.iter().position(|kind| *kind == GameEventType::TurnEnded));
             let last_exile = index_of(types.iter().rposition(|kind| *kind == GameEventType::Exiled));

@@ -6,16 +6,20 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
-use crate::effects::targets::{BoardScope, cards_in_scope};
+use crate::effects::targets::{BoardScope, cards_in_scope_aimed};
 use crate::layers::unit_view;
 use crate::prelude::json_as;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState};
 use crate::wire::opponent_of;
 
-/// "Still standing": above 0 health and not marked destroyed, so the check will not collect it (§4.5).
+/// "Still standing": above 0 health and neither marked destroyed nor marked exiled, so the
+/// check will not collect it (§4.5). A unit marked for exile (MD-D31, R1124) falls with the
+/// destroyed, though no death collects it.
 fn standing(state: &GameState, unit: &CardInstance) -> bool {
-    unit_view(state, unit).health > 0 && unit.marked_destroyed != Some(true)
+    unit_view(state, unit).health > 0
+        && unit.marked_destroyed != Some(true)
+        && unit.marked_exiled != Some(true)
 }
 
 /// `damageSplit`'s `among`: every enemy (the hero included), or the enemy Units only.
@@ -55,7 +59,10 @@ pub fn damage_split(args: DamageSplitArgs) -> Effect {
             if ctx.state.result.is_some() {
                 return;
             }
-            let units: Vec<CardInstance> = cards_in_scope(ctx, &scope).into_iter().collect();
+            // MD-B1, R940: a harmful walk — an immune card in a tribal scope is passed by.
+            let units: Vec<CardInstance> = cards_in_scope_aimed(ctx, &scope, crate::wire::TargetAim::Harm)
+                .into_iter()
+                .collect();
             let mut pool: Vec<DamageTarget> = Vec::new();
             for instance in units {
                 if standing(ctx.state, &instance) {

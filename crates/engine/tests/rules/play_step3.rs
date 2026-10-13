@@ -1,5 +1,3 @@
-//! Port of `packages/engine/test/play-step3.test.ts`.
-//!
 //! §10.5 step 3's two v0.2.0 rules (R449): a play replaced by another card (Classic #23 Devil's Pact)
 //! and plays made Radiant by tag (Classic+ #68 Organic Produce: R213's rule by tag, read at step 1 as
 //! R214 reads Gifted Program).
@@ -16,7 +14,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
-/// TS's module `let nonce`: unique across the tests, which run on parallel threads.
+/// Unique across the tests, which run on parallel threads.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn game(seed: &str) -> GameState {
@@ -36,7 +34,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// TS `must`: `body` is the TS `ActionBody` literal; the player and a fresh nonce are added.
+/// `body` is the action literal; the player and a fresh nonce are added.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
@@ -49,7 +47,7 @@ fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     result
 }
 
-/// TS `one`: a card put in `player`'s hand with the face asked for; answers its copy as it stands.
+/// A card put in `player`'s hand with the face asked for; answers its copy as it stands.
 fn one(state: &mut GameState, player: PlayerId, def_id: &str, radiant: bool) -> CardInstance {
     let card = in_hand(state, def_id, player, 1)
         .into_iter()
@@ -84,7 +82,7 @@ fn values(events: &[GameEvent]) -> Vec<Value> {
         .collect()
 }
 
-/// TS `eventsOfType`, over JSON.
+/// Events of one type, as JSON.
 fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
     values(events)
         .into_iter()
@@ -92,7 +90,7 @@ fn of_type(events: &[GameEvent], kind: &str) -> Vec<Value> {
         .collect()
 }
 
-/// `eventsOfType(events, kind)[0]?.[field]`: `Null` when there is no such event.
+/// The field of the first event of a type: `Null` when there is no such event.
 fn first_field(events: &[GameEvent], kind: &str, field: &str) -> Value {
     of_type(events, kind)
         .first()
@@ -100,12 +98,12 @@ fn first_field(events: &[GameEvent], kind: &str, field: &str) -> Value {
         .unwrap_or(Value::Null)
 }
 
-/// `events.map((e) => e[field])` over JSON.
+/// One field of each event, as JSON.
 fn pluck(events: &[Value], field: &str) -> Vec<Value> {
     events.iter().map(|event| event[field].clone()).collect()
 }
 
-/// TS `toMatchObject`: every key `expected` names matches, objects by subset, arrays element by
+/// Every key `expected` names matches, objects by subset, arrays element by
 /// element and of the same length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
@@ -131,8 +129,8 @@ fn pending_id(state: &GameState) -> String {
         .unwrap_or_default()
 }
 
-/// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does, lent with the
-/// state to one engine call at a time. Nothing writes the cursor back, as TS did not.
+/// A sink whose rng starts at the state's cursor, as reduce does, lent with the
+/// state to one engine call at a time. Nothing writes the cursor back.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -152,7 +150,7 @@ impl Sink {
     }
 }
 
-/// `castCard(sink, card); settle(sink);`
+/// Cast the card, then settle.
 fn cast_and_settle(state: &mut GameState, card: &CardInstance) -> Vec<GameEvent> {
     let mut sink = Sink::for_state(state);
     sink.with(state, |s| {

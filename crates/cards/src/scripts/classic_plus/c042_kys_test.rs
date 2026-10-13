@@ -2,10 +2,10 @@
 //!   Offer an Easy, a Medium and a Hard problem, each showing a random reward from its list; choose one
 //!   and answer it; if you're right, gain its reward. Radiant: the same, and the reward cards are Radiant.
 //!
-//! The whole card is the engine's question-bank subsystem (`subsystems/kyTest.ts`, E31): the reward
-//! rolls, the two prompts, the Easy generator (R580) and the grade. This file hands it the bank of
-//! Medium and Hard problems, which is card data (`../../kyTestBank.ts`). Both faces run the same script:
-//! the grade step reads the face that asked, so the Radiant face's reward cards are Radiant.
+//! The whole card is the engine's question-bank subsystem (E31): the reward rolls, the two prompts,
+//! the Easy generator (R580) and the grade. This file hands it the bank of Medium and Hard problems,
+//! which is card data (`crate::ky_test_bank`). Both faces run the same script: the grade step reads
+//! the face that asked, so the Radiant face's reward cards are Radiant.
 
 use jackioh_engine::prelude::*;
 
@@ -24,10 +24,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #42 KY's Test — SPEC §8.7 row 42, R420, R465, R580, BUILD M9 row C+ 42. The machinery is the
-// engine's question bank (`subsystems/kyTest.ts`, proved with a fixture bank in
-// packages/engine/test/kyTest.test.ts); this file proves the real card, the real bank and the real
-// reward pools again.
+// C+ #42 KY's Test — SPEC §8.7 row 42, R420, R465, R580, BUILD M9 row C+ 42. The engine proves the
+// machinery with a fixture bank; this file proves the real card, bank and reward pools again.
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -48,7 +46,6 @@ mod tests {
 
     use crate::scenario;
 
-    /// TS `type Difficulty = "Easy" | "Medium" | "Hard"`, read as the config's difficulty.
     fn difficulty_of(name: &str) -> KyTestDifficulty {
         match name {
             "Easy" => KyTestDifficulty::Easy,
@@ -57,7 +54,6 @@ mod tests {
         }
     }
 
-    /// `KY_TEST_REWARDS[difficulty]`.
     fn rewards(name: &str) -> &'static [KyTestReward] {
         KY_TEST_REWARDS.of(difficulty_of(name))
     }
@@ -271,7 +267,7 @@ mod tests {
         fn r580_an_easy_choice_asks_a_generated_a_b_with_both_addends_from_10_to_99() {
             let mut s = cast("kys-test-easy", false, &[FILLER]);
             s.answer(json!("Easy"));
-            // TS /^(\d+) \+ (\d+) = \?$/, by hand (no regex crate in the pure crates).
+            // Parsed by hand: no regex crate in the pure crates.
             let digits = |text: &str| !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit());
             let prompt = pending_prompt(&s);
             let parsed = prompt

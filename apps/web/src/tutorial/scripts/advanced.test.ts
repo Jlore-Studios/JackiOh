@@ -1,11 +1,4 @@
-// Lesson "advanced" (SPEC §9.10, R293): the coach's own line wins and shows every step, the lesson's
-// tricks come up on it (the mulligan, The Coin, tribes and tokens, Radiant, Tribute, the yellow
-// glow) without ever asking for more than two "Got it"s in a row, a beginner who plays only what the
-// coach names wins, a beginner who ignores the coach still wins, here and on other deals of the same
-// decks, a player who does anything at all never stalls or breaks the coach, and the whole game
-// replays from its seed.
-//
-// Played through the REAL practice core (harness.ts): the engine, the card scripts and the AI.
+// Advanced tutorial contract (SPEC §9.10, R293), exercised through the practice core.
 
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -21,34 +14,13 @@ import { lessonById } from "../lessons.ts";
 import { script } from "./advanced.ts";
 
 const LESSON = "advanced";
-/** The coach's line wins on the player's 7th turn; the lesson is meant to take 6 to 8. */
 const COACH_TURNS_MAX = 8;
-/** A beginner who plays only what the coach names plays the coach's line: the 7th turn too. */
 const PASSIVE_TURNS_MAX = 8;
-/** The autopilot wins on its 7th turn too. */
 const AUTOPILOT_TURNS_MAX = 9;
-/**
- * "Comfortably": the lowest the player's hero goes on the lesson's seed, whoever plays it. The
- * coach's line bottoms out at 22 and the autopilot's at 23, so half the hero's health is margin.
- */
 const HEALTH_FLOOR = HERO_HEALTH / 2;
-/** The most "Got it" bubbles the coach shows in a row, with no move of the player's between them. */
 const GOT_IT_RUN_MAX = 2;
-/**
- * Other deals of the same two decks (seeds `<lesson seed>:deal:<n>`), for how forgiving the lesson's
- * decks are to a player whose game goes some other way: the autopilot, who reads nothing the coach
- * says, wins at least ALT_WINS_MIN of ALT_DEALS. Measured: 6 of the first 10, and 15 of the first
- * 20, as on the engine before patch v0.2.0. Ten deals, not twenty, since that patch nearly doubled
- * what a game costs (harness.ts); the share asked for is the same. Most of the deals it loses are ones
- * where it plays Friend of Felinors on its first turn, and the Felinor Tokens filling its board keep
- * its real units in hand for turns.
- */
 const ALT_DEALS = 10;
 const ALT_WINS_MIN = 6;
-/**
- * Policy seeds for the player who ignores the coach. The harness gives the AI a small budget under
- * the random policy, so each of these games costs less than a lesson game (harness.ts).
- */
 const RANDOM_RUNS = 6;
 
 const COIN = "core-t-coin";
@@ -63,10 +35,8 @@ const RENO = "core-053";
 const lesson = lessonById(LESSON);
 if (lesson === undefined) throw new Error(`no lesson "${LESSON}"`);
 
-/** One accepted action of the game and everything it emitted, unredacted, with the states around it. */
 type Step = { action: Action; events: GameEvent[]; before: GameState; after: GameState };
 
-/** Fold the run's log one action at a time, keeping every event (the test may read what the page may not). */
 function stepsOf(run: LessonRun): Step[] {
   const { seed, decks, handicaps, log } = run.debug;
   let state = beginGame(createGame({ seed, decks, handicaps })).state;
@@ -80,19 +50,13 @@ function stepsOf(run: LessonRun): Step[] {
   return steps;
 }
 
-/** The lowest the human's hero health went in the run. */
 function lowestHealth(run: LessonRun): number {
   const { seed, decks, handicaps } = run.debug;
   const start = beginGame(createGame({ seed, decks, handicaps })).state.players[run.humanSeat].hero.health;
   return Math.min(start, ...stepsOf(run).map((step) => step.after.players[run.humanSeat].hero.health));
 }
 
-/**
- * Every run of "Got it" bubbles the coach showed on this line, in order: tips and info steps, with
- * no move of the player's and no step asking for one between them. Rebuilt by folding the run's
- * log and reading each snapshot the way the harness's coach did (the page's own reads: the human's
- * view, legal actions and whether the AI owes a move), which the tips it saw prove.
- */
+/** Rebuild consecutive coach bubbles from the snapshots used by the harness. */
 function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } {
   const { seed, decks, handicaps, log } = run.debug;
   const human = run.humanSeat;
@@ -150,7 +114,6 @@ describe("R293 lesson advanced", () => {
   const human: PlayerId = lesson.humanSeat;
   const ai: PlayerId = opponentOf(human);
 
-  /** The step whose human action played the card of this definition. */
   const playedStep = (defId: string): Step | undefined =>
     steps.find(
       (step) =>
@@ -173,25 +136,22 @@ describe("R293 lesson advanced", () => {
     const shown = coach.shown.map((entry) => entry.id);
     for (const step of script.steps) {
       expect(shown, `${step.id} shows`).toContain(step.id);
-      // The last step ends with the game, so the coach never retires it: the game ends on it.
+      // The final action ends the game before the coach can retire it.
       if (step.final === true) expect(coach.outcomes[step.id], `${step.id} is still up when the game ends`).toBeUndefined();
       else expect(coach.outcomes[step.id], `${step.id} is done`).toBe("done");
     }
     expect(shown, "every step shows in the script's order").toEqual(script.steps.map((step) => step.id));
 
-    // The coach asked for every move the player made, and the engine took each one.
     expect(coach.humanActions.filter((entry) => !entry.byCoach).map((entry) => entry.action.type)).toEqual([]);
     expect(coach.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
   });
 
   it("R293 advanced: the lesson's mechanics come up on the coach line", () => {
-    // Hero health: 30 for the player, 20 for the tutorial's enemy hero.
     const start = beginGame(createGame({ seed: coach.debug.seed, decks: coach.debug.decks, handicaps: coach.debug.handicaps })).state;
     expect(start.players[human].hero.health, "the player's hero starts at 30").toBe(HERO_HEALTH);
     expect(start.players[ai].hero.health, "the enemy hero starts at 20").toBe(AI_TUTORIAL.heroHealth);
 
-    // The mulligan: the human sends the 4-mana 7/7 back, draws a replacement, and the 7/7 is
-    // shuffled into the library (§2.1 step 3).
+    // Mulligan returns the 7/7 to the library (§2.1 step 3).
     const mulligan = steps.find((step) => step.action.playerId === human && step.action.type === "mulligan");
     expect(mulligan, "the human answers the mulligan").toBeDefined();
     if (mulligan !== undefined && mulligan.action.type === "mulligan") {
@@ -208,8 +168,7 @@ describe("R293 lesson advanced", () => {
       ).toBe(true);
     }
 
-    // The Coin: the human, going second, is dealt it after the mulligans, plays it on their first
-    // turn, and spends the extra mana on a 2-cost card that same turn (R244, R245).
+    // The Coin enables a 2-cost play on turn one (R244, R245).
     const dealt = steps.find((step) =>
       step.events.some((event) => event.type === "addedToHand" && event.player === human && event.defId === COIN),
     );
@@ -226,8 +185,7 @@ describe("R293 lesson advanced", () => {
       ).toBe(true);
     }
 
-    // Tokens and tribes: Friend of Felinors fills the board with Felinor Tokens, and Felinor Fiender
-    // counts them (§7, #62, #92).
+    // Tokens and tribes (§7, #62, #92).
     const friendPlay = playedStep(FRIEND_OF_FELINORS);
     expect(friendPlay, "Tokens: the human plays Friend of Felinors").toBeDefined();
     if (friendPlay !== undefined) {
@@ -240,7 +198,7 @@ describe("R293 lesson advanced", () => {
       expect(fienderAfter?.health ?? 0, "Tribes: its health grows too").toBeGreaterThan(fienderBefore?.health ?? 0);
     }
 
-    // Radiant: Glowy Jelly Bean makes The Rock in hand Radiant, and its face gets stronger (§5.2, #26).
+    // Radiant (§5.2, #26).
     const beanPlay = playedStep(GLOWY_JELLY_BEAN);
     expect(beanPlay, "Radiant: the human plays Glowy Jelly Bean").toBeDefined();
     if (beanPlay !== undefined) {
@@ -255,7 +213,7 @@ describe("R293 lesson advanced", () => {
       expect(rockAfter?.attack ?? 0, "Radiant: stronger stats").toBeGreaterThan(rockBefore?.attack ?? 0);
     }
 
-    // Tribute: The Rock is played with a Felinor Token as its Tribute, which is sacrificed (§6.3, #66).
+    // Tribute (§6.3, #66).
     const rockPlay = playedStep(THE_ROCK);
     expect(rockPlay, "Tribute: the human plays The Rock").toBeDefined();
     if (rockPlay !== undefined) {
@@ -272,8 +230,7 @@ describe("R293 lesson advanced", () => {
       );
     }
 
-    // The yellow glow: Reno glows in hand while the hero is hurt (R195), the coach asks for it on a
-    // turn the mana allows, and its Cry sets the hero back to 30 (#53).
+    // Yellow glow restores the hurt hero (R195, #53).
     const renoPlay = playedStep(RENO);
     expect(renoPlay, "Yellow glow: the human plays Reno").toBeDefined();
     if (renoPlay !== undefined) {
@@ -283,16 +240,13 @@ describe("R293 lesson advanced", () => {
     }
     expect(coach.outcomes["play-reno"], "Yellow glow: the coach asked for Reno").toBe("done");
 
-    // A token dies, and the coach says Felinor Fiender shrank with it.
     expect(coach.tips, "tip fewer-felinors shows").toContain("fewer-felinors");
   });
 
   it('R293 advanced: the coach never shows more than two "Got it"s in a row on its line', () => {
     const { runs, tips } = gotItRuns(coach);
-    // The fold reads the same snapshots the harness's coach read.
     expect(tips, "the rebuilt line shows the tips the coach showed").toEqual(coach.tips);
     for (const run of runs) expect(run.length, `"Got it" ${run.join(" -> ")}`).toBeLessThanOrEqual(GOT_IT_RUN_MAX);
-    // The lesson ends on the coach's next-move advice, not on a bubble to dismiss.
     expect(script.steps.at(-1)?.kind, "the last step asks for moves").toBe("act");
   });
 
@@ -305,7 +259,6 @@ describe("R293 lesson advanced", () => {
       expect(run.humanTurns, "within the lesson's turns").toBeLessThanOrEqual(PASSIVE_TURNS_MAX);
       expect(lowestHealth(run), "comfortably").toBeGreaterThanOrEqual(HEALTH_FLOOR);
       expect(run.coach.finished).toBe(true);
-      // Every card this beginner played, the coach named.
       expect(run.humanActions.filter((entry) => entry.action.type === "play" && !entry.byCoach)).toEqual([]);
       expect(run.humanActions.filter((entry) => entry.refused !== null)).toEqual([]);
     },

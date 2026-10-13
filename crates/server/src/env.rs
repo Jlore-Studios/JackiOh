@@ -80,6 +80,11 @@ pub struct Env {
     /// when a push leaves the catalog as it was. Only a hex string is kept, since it is echoed into a
     /// header.
     pub deployed_commit: Option<String>,
+    /// R1453: `LADDER_BOTS=on` seats a ladder bot in a ranked match (or, for Conquest, series,
+    /// R641000) whose ticket has waited past its fallback time with no person to pair with, and keeps
+    /// the bot pool (R1454). Off unless it is set to `on`: the bots decide in this process (SPEC §9.12), which
+    /// wants a host with room for the AI's search.
+    pub ladder_bots: bool,
 }
 
 impl std::fmt::Debug for Env {
@@ -102,6 +107,7 @@ impl std::fmt::Debug for Env {
             .field("catalog_version", &self.catalog_version)
             .field("trusted_proxy_hops", &self.trusted_proxy_hops)
             .field("deployed_commit", &self.deployed_commit)
+            .field("ladder_bots", &self.ladder_bots)
             .finish()
     }
 }
@@ -143,6 +149,8 @@ pub const PUBLIC_ENV_VARS: &[&str] = &[
     "VITE_SUPABASE_PUBLISHABLE_KEY",
     "VITE_SERVER_HTTP_URL",
     "VITE_SERVER_WS_URL",
+    // #696: the address the bundle is served from, which its canonical links and sitemap name.
+    "VITE_SITE_ORIGIN",
     "VITE_CATALOG_VERSION",
     // R666: which OAuth providers the sign-in screen offers, by name only (no client id, no secret).
     "VITE_AUTH_OAUTH_PROVIDERS",
@@ -164,6 +172,7 @@ pub const SERVER_ONLY_ENV_VARS: &[&str] = &[
     "CATALOG_VERSION",
     "TRUSTED_PROXY_HOPS",
     "RENDER_GIT_COMMIT",
+    "LADDER_BOTS",
 ];
 
 const MIN_CODE_PEPPER_LENGTH: usize = 32;
@@ -304,6 +313,23 @@ fn parse_trusted_proxy_hops(value: Option<&str>, problems: &mut Vec<String>) -> 
     }
 }
 
+fn parse_ladder_bots(value: Option<&str>, problems: &mut Vec<String>) -> bool {
+    let Some(raw) = value.filter(|text| is_non_empty(Some(text))) else {
+        return false;
+    };
+    match js_trim(raw) {
+        "on" => true,
+        "off" => false,
+        _ => {
+            problems.push(format!(
+                "LADDER_BOTS: whether a ranked ticket that waits past its fallback time with no one to pair with is seated against a ladder bot (R1453, R641000), which this server plays itself. Must be 'on' or 'off' (got {}). Optional; defaults to 'off'.",
+                quoted(raw)
+            ));
+            false
+        }
+    }
+}
+
 /// Optional, and never a problem: anything that is not a git SHA is simply not reported.
 fn parse_deployed_commit(value: Option<&str>) -> Option<String> {
     let trimmed = js_trim(value?).to_lowercase();
@@ -426,6 +452,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
     let e2e = parse_e2e(read("E2E"), &mut problems);
     let public_origins = parse_public_origins(read("PUBLIC_ORIGINS"), &mut problems);
     let trusted_proxy_hops = parse_trusted_proxy_hops(read("TRUSTED_PROXY_HOPS"), &mut problems);
+    let ladder_bots = parse_ladder_bots(read("LADDER_BOTS"), &mut problems);
 
     if e2e && node_env == NodeEnv::Production {
         problems.push(
@@ -463,6 +490,7 @@ pub fn load_env(source: &IndexMap<String, String>) -> Result<Env, EnvError> {
         catalog_version,
         trusted_proxy_hops,
         deployed_commit: parse_deployed_commit(read("RENDER_GIT_COMMIT")),
+        ladder_bots,
     })
 }
 

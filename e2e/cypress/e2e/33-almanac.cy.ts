@@ -1,18 +1,5 @@
-// Spec 33 — the Card Almanac (issue #54; SPEC §10.10, R630), on the landing page and `/almanac`,
-// against `build:e2e` with no server.
-//
-// BUILD M8's key assertions for this row: "the footer's "Card almanac" link opens `/almanac`;
-// filtering by a cost keeps only cards of that cost; a card's detail view opens with no add action
-// and closes; no API call except the public stats block (R654) is made on the page; Back returns
-// to the landing page". Issue #54 asks for the same walk: signed out, the landing page, the
-// footer's link, a cost, a card's detail closed again, and Back. Also asserted, off the DOM: the
-// link sits right after Patch notes, and the almanac is the deck builder's browse pane, read-only
-// (no "Owned only", no "+", no draggable card).
-//
-// Run it:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5173 --strictPort
-//   pnpm --dir e2e exec cypress run --spec cypress/e2e/33-almanac.cy.ts
+// Spec 33 (SPEC §10.10, R630): signed-out landing-page access to read-only `/almanac`.
+// BUILD M8 permits only its public statistics request (R654) in this serverless scenario.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { seedFor } from "../../support/config.ts";
@@ -36,18 +23,15 @@ import {
 const COST = "1";
 const COST_WORDS = `(${COST}) Cost`;
 
-/** Every `/api/…` path the page asked for, in order. */
 const apiCalls: string[] = [];
 
 describe("Spec 33 — the Card Almanac (R630)", () => {
-  // BUILD M8: every spec sets a seed. No game is started here, so the seed pins the scenario's
-  // identity and lets CI re-run the file with `--expose seed=`.
+  // BUILD M8: the seed identifies this serverless scenario for CI re-runs.
   const seed = seedFor("33-almanac");
 
   beforeEach(() => {
     apiCalls.length = 0;
-    // No server: the landing page's account check gets a plain "signed out", and every call is
-    // recorded so the almanac can be shown to make none.
+    // No server: record the signed-out landing page's calls.
     cy.intercept({ url: /\/api\// }, (request) => {
       apiCalls.push(new URL(request.url).pathname);
       request.reply({ statusCode: 401, body: { code: "unauthenticated", message: "signed out" } });
@@ -60,7 +44,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.visit("/");
     cy.get(ts(landingTestid.root)).should("be.visible");
 
-    // The link sits right after Patch notes in the footer.
     cy.get(ts(SITE_FOOTER))
       .find(ts(SITE_FOOTER_ALMANAC))
       .should("have.attr", "href", "/almanac")
@@ -77,13 +60,11 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.title().should("eq", "Almanac · JackiOh");
     cy.get(ts(ALMANAC)).should("be.visible");
 
-    // The deck builder's browse pane, read-only.
     cy.get(ts(CARD_POOL)).find(".db-card").should("have.length.greaterThan", 0);
     cy.get(ts(DB_FILTER_OWNED)).should("not.exist");
     cy.get(ts(CARD_POOL)).find(".db-add").should("not.exist");
     cy.get(ts(CARD_POOL)).find('.db-card[draggable="true"]').should("not.exist");
 
-    // Filter by a cost: fewer cards, each of that cost.
     cy.get(ts(DB_RESULT_COUNT))
       .invoke("attr", "data-count")
       .then((all) => {
@@ -96,7 +77,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
         expect($card.attr("aria-label"), $card.attr("data-card")).to.contain(COST_WORDS);
       });
 
-    // A card's detail view: both faces, Close, and no way to add the card anywhere.
     cy.get(ts(CARD_POOL))
       .find(".db-card")
       .first()
@@ -109,8 +89,7 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
     cy.get(ts(INSPECT_CLOSE)).click();
     cy.get(ts(INSPECT_DETAIL)).should("not.exist");
 
-    // The almanac asked the server nothing except the public card aggregates (R654):
-    // the detail view's statistics block reads `/api/stats/*`, which is public and cacheable.
+    // R654: `/api/stats/*` is public and cacheable; all other almanac calls are forbidden.
     cy.then(() => {
       const calls = apiCalls.slice(callsBefore);
       const nonStats = calls.filter((path) => !path.startsWith("/api/stats/"));
@@ -118,7 +97,6 @@ describe("Spec 33 — the Card Almanac (R630)", () => {
       for (const path of apiCalls) expect(path).to.not.match(/\/api\/(catalog|collection|decks)/u);
     });
 
-    // Back returns to the landing page.
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
     cy.get(ts(landingTestid.root)).should("be.visible");

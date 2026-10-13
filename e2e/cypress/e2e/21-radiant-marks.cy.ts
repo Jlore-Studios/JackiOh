@@ -1,28 +1,6 @@
-// Spec 21 — the Radiant pass's three marks on a card in play (SPEC §10.10, R277, R279, R280).
-//
-// What it proves, in a real browser against `pnpm build:e2e` + `vite preview` and no server, on
-// `/dev/hotseat`:
-//
-//   * a computed value (R280): #31 KY's Math Equation in hand carries what its formula comes to now
-//     in the view (`CardView.preview`), and its face prints it in braces after the formula —
-//     "Fib(times played + 1) {1}" before its first play (R429) — in the hover preview a resting
-//     mouse opens;
-//   * a reference (R279): #65 Masochism Mask's text names Spikey Pillow. Resting on the Mask shows
-//     the Pillow's face in the preview's "Mentions" column, and in the touch sheet a long press
-//     opens the name is a control: tapping it shows the Pillow's face in a tooltip;
-//   * a Radiant face's gold (R277): #26 Glowy Jelly Bean makes the Math Equation Radiant in hand,
-//     and its face then prints "Fib(times played + 3)" with the `3` marked (gold, bold, underlined)
-//     and the value its Radiant formula comes to, {3}.
-//
-// House rules (BUILD M8): the seed comes from `seedFor`, there is no fixed `cy.wait(ms)` (a long
-// press is held until the sheet is asserted open, a retried assertion), and every selector comes
-// from support/testids.ts.
-//
-// Run it with:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5182 --strictPort
-//   E2E_BASE_URL=http://localhost:5182 pnpm --dir e2e exec cypress run --browser chrome \
-//     --spec cypress/e2e/21-radiant-marks.cy.ts
+// Spec 21: computed values, card references, and Radiant marks (SPEC §10.10; R277, R279, R280).
+// R429: Math Equation's first displayed value is its current formula result.
+// BUILD M8: use a seeded hotseat game, retried assertions, and test ids.
 
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
@@ -40,10 +18,7 @@ import {
   ts,
 } from "../../support/testids.ts";
 
-/**
- * Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. With 21-marks-163, player 1
- * holds #31, #26 and #65 on its first turn and has 3 mana on its third (e2e/fixtures/decks/21-marks-a.json).
- */
+/** This seed deals #31, #26, and #65 and gives player 1 three mana on turn three. */
 const SEED = seedFor("21-marks-163");
 const DECK_A = "21-marks-a";
 const DECK_B = "08-do-nothing-b";
@@ -55,7 +30,6 @@ const SPIKEY_PILLOW = "core-065-1";
 /** Player 1's third turn: 3 mana, what #26 costs (§2.3). */
 const THIRD_TURN = 5;
 
-/** A shown hand card of `defId`, by the attribute the board puts on its root. */
 const inHand = (defId: string): string => `[data-testid^="hand-card-"][data-def-id="${defId}"]`;
 
 function restOn(selector: string): void {
@@ -86,7 +60,6 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
   });
 
   it("R279 Masochism Mask names Spikey Pillow: its face is beside the preview, and the sheet's reference opens it", () => {
-    // Resting on the Mask: the preview lists the card its text names.
     restOn(inHand(MASOCHISM_MASK));
     cy.get(`${ts(INSPECT_HOVER)} ${ts(INSPECT_REFS)}`, { timeout: timeouts.view })
       .should("be.visible")
@@ -96,10 +69,8 @@ describe("21 — a card's marks in play: a computed value, a reference and a Rad
       .should("have.text", "Spikey Pillow");
     leave(inHand(MASOCHISM_MASK));
 
-    // A long press opens the sheet, where the name is a control.
     cy.get(inHand(MASOCHISM_MASK)).trigger("pointerdown", { pointerType: "touch", pointerId: 7, button: 0 });
     cy.get(ts(INSPECT_SHEET), { timeout: timeouts.view }).should("be.visible");
-    // The finger lifts off the card the sheet now covers.
     cy.get(inHand(MASOCHISM_MASK)).trigger("pointerup", { pointerType: "touch", pointerId: 7, button: 0, force: true });
     cy.get(`${ts(INSPECT_SHEET)} ${CARD_REF}[data-ref="${SPIKEY_PILLOW}"]`)
       .first()

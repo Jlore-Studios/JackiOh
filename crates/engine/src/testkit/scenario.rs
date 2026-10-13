@@ -153,7 +153,7 @@ use crate::state::{
 };
 use crate::wire::{
     Action, ActionBody, AttackHealth, CardDef, CardDefs, CardType, Counters, GameEvent, PLAYER_IDS, Phase,
-    PlayerId, PlayerView, Position, Row, Selection, Zone, ZoneChoice, opponent_of,
+    PlayerId, PlayerView, Position, RevealAt, Row, Selection, Zone, ZoneChoice, opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveResult, MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions, ZoneSlot,
@@ -175,6 +175,8 @@ thread_local! {
     static CATALOG_OVERRIDE: Cell<Option<&'static CardDefs>> = const { Cell::new(None) };
     static CATALOG_VERSION_OVERRIDE: Cell<Option<&'static str>> = const { Cell::new(None) };
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
+    static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
+        const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -213,12 +215,25 @@ pub fn scripts_override() -> Option<&'static IndexMap<String, CardScripts>> {
     SCRIPTS_OVERRIDE.with(Cell::get)
 }
 
+/// ME-STATS: the win-rate table this thread registered, if any: what
+/// `catalog::registered_win_rates()` answers first. A leaked `&'static`, like the catalog's.
+pub fn register_win_rates(table: crate::win_rates::WinRateTable) {
+    let table: &'static crate::win_rates::WinRateTable = Box::leak(Box::new(table));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(Some(table)));
+}
+
+/// The win-rate table this thread registered, if any.
+pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
+    WIN_RATES_OVERRIDE.with(Cell::get)
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {
     CATALOG_OVERRIDE.with(|cell| cell.set(None));
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
+    WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -338,6 +353,10 @@ pub struct PileEntry {
     pub cost: CostSetup,
     #[serde(default)]
     pub radiant: Option<bool>,
+    /// MD-B6, R943: opt a setup card into Created (`new_instance` mints Created; the setup
+    /// defaults to dealt, so only `created: true` keeps the mark).
+    #[serde(default)]
+    pub created: Option<bool>,
 }
 
 /// TS `PileSetup = string | (DefRef & CostSetup & { radiant? })`.
@@ -384,6 +403,9 @@ pub struct FieldEntry {
     /// §10.4 layer 1 / R41: a token summoned X/X.
     #[serde(default)]
     pub stats_override: Option<AttackHealth>,
+    /// MD-B6, R943: opt a setup card into Created (as on `PileEntry`).
+    #[serde(default)]
+    pub created: Option<bool>,
 }
 
 /// TS `FieldSetup = string | FieldEntry`.
@@ -433,6 +455,9 @@ pub struct PlayOptions {
     pub x: Option<i32>,
     #[serde(default)]
     pub embiggen: Option<bool>,
+    /// R1086: play this Magnetic card onto the zone's host Unit.
+    #[serde(default)]
+    pub magnetic: Option<bool>,
     #[serde(default)]
     pub targets: Option<Vec<Selection>>,
     #[serde(default)]
@@ -440,6 +465,9 @@ pub struct PlayOptions {
     /// Units sacrificed for a Tribute cost; each entry is any card reference on the field.
     #[serde(default)]
     pub tributes: Option<Vec<String>>,
+    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    #[serde(default)]
+    pub face_down: Option<RevealAt>,
 }
 
 /// B3.2, R384: an Activate ability's choices travel in the action as a play's do (R81): `ability`
@@ -849,6 +877,8 @@ fn place_one(sink: &mut EngineSink<'_>, player: PlayerId, entry: &Placement) -> 
     if entry.entry.radiant == Some(true) {
         card.radiant = true;
     }
+    // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+    card.created = entry.entry.created.filter(|created| *created);
     if let Some(stats) = entry.entry.stats_override {
         card.stats_override = Some(stats);
     }
@@ -907,9 +937,13 @@ fn place_pile(
     for (at, entry) in refs.iter().enumerate() {
         let at_ = format!("{label}[{at}]");
         let def_id = setup_def_id(sink.state, &ref_of(pile_ref(entry), &at_)?, &at_)?;
-        let (radiant, cost) = match entry {
-            PileSetup::Name(_) => (false, None),
-            PileSetup::Entry(fields) => (fields.radiant == Some(true), Some(&fields.cost)),
+        let (radiant, cost, created) = match entry {
+            PileSetup::Name(_) => (false, None, None),
+            PileSetup::Entry(fields) => (
+                fields.radiant == Some(true),
+                Some(&fields.cost),
+                fields.created.filter(|created| *created),
+            ),
         };
 
         if zone == OffFieldZone::Hand {
@@ -919,6 +953,8 @@ fn place_pile(
                 if radiant {
                     card.radiant = true;
                 }
+                // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+                card.created = created;
                 apply_cost_setup(card, cost);
             }
             continue;
@@ -928,6 +964,8 @@ fn place_pile(
         if radiant {
             card.radiant = true;
         }
+        // MD-B6, R943: the setup defaults to dealt; only `created: true` keeps the mark.
+        card.created = created;
         apply_cost_setup(&mut card, cost);
         let id = card.id.clone();
         // `position: "bottom"` keeps list order, so `library[0]` is the next card drawn (draw.rs).
@@ -1403,7 +1441,8 @@ impl Scenario {
 
     // --- steps ----------------------------------------------------------------------------------
 
-    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "targets"?, "modes"?, "tributes"? })`.
+    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "magnetic"?, "targets"?, "modes"?,
+    /// "tributes"?, "faceDown"? })`.
     pub fn play(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: PlayOptions = options_of(opts, "play");
         let id = or_fail(self.resolve(&card.into(), Where::Hand, "play"));
@@ -1413,7 +1452,7 @@ impl Scenario {
 
         let mut zone: Option<ZoneChoice> = None;
         if let Some(lane) = opts.zone {
-            if def.type_ == CardType::Spell {
+            if def.type_ == CardType::Spell && opts.face_down.is_none() {
                 panic!("{what}: a Spell takes no zone, and zone {lane} was given");
             }
             let row = opts.row.unwrap_or(if def.type_ == CardType::Unit {
@@ -1449,10 +1488,12 @@ impl Scenario {
                 zone,
                 x: opts.x,
                 embiggen: opts.embiggen,
+                magnetic: opts.magnetic,
                 tributes,
                 targets: opts.targets,
                 modes: opts.modes,
                 plague: None,
+                face_down: opts.face_down,
             },
             inst.controller,
             &what,
@@ -1513,6 +1554,13 @@ impl Scenario {
             who,
             &what,
         );
+        self
+    }
+
+    /// A raw engine action, for the actions with no step helper — the `Emote` action (MD-D29,
+    /// R1127). Panics when `reduce` refuses it, like every other step.
+    pub fn act(&mut self, body: ActionBody, player: PlayerId, what: &str) -> &mut Scenario {
+        self.action(body, player, what);
         self
     }
 

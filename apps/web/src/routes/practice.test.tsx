@@ -1,10 +1,4 @@
-// `/practice`: B32 and B33 of docs/polish/3-ai.md, in jsdom.
-//
-// The route is rendered with every seam injected — the account, the saved-deck reader, the host that
-// would otherwise start a worker, and the e2e pacing — so nothing here needs a server, a session,
-// a worker or the engine. The host is a scripted fake that answers `start` with a fixture view for
-// whichever seat the route asked to play, which is what lets these tests read the seat, the
-// difficulty and the deck the route chose straight off the request it sent.
+// `/practice`: B32 and B33 (docs/polish/3-ai.md).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,7 +55,7 @@ import { tutorialTestid } from "../tutorial/testids.ts";
 import PracticeRoute, { readPracticeParams } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
 
-/** The Surface's testids, spelled out: e2e/support/testids.ts mirrors these exact strings. */
+/** e2e/support/testids.ts mirrors these exact Surface testids. */
 const T = {
   setup: "practice-setup",
   easy: "practice-difficulty-easy",
@@ -102,14 +96,11 @@ const SAVED_DECKS: string[][] = [
   Array.from({ length: 20 }, (_, i) => `core-${String(i + 41).padStart(3, "0")}`),
 ];
 
-/** The saved decks' names, as `GET /api/decks` lists them. */
 const SAVED_NAMES = ["Humans Rising", "Burn Pile", "Big Guys"] as const;
 
 const SAVED: PracticeSavedDeck[] = SAVED_DECKS.map((cards, i) => ({ name: SAVED_NAMES[i] ?? "", cards }));
 
-// ---------------------------------------------------------------------------------------------
-// accounts and saved decks
-// ---------------------------------------------------------------------------------------------
+// Accounts and saved decks.
 
 const ANONYMOUS: Account = { kind: "anonymous" };
 
@@ -127,7 +118,7 @@ function signedIn(status: "active" | "pending" | "banned"): Account {
   };
 }
 
-/** `GET /api/decks` for these decks, oldest first (R250); null is a profile that has saved none. */
+/** Saved decks are listed oldest first (R250); null has none. */
 function decksResponse(decks: readonly PracticeSavedDeck[] | null): DecksResponse {
   return {
     catalogVersion: "v1",
@@ -145,28 +136,19 @@ function decksResponse(decks: readonly PracticeSavedDeck[] | null): DecksRespons
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// the scripted host
-// ---------------------------------------------------------------------------------------------
+// The scripted host.
 
 type HostOptions = {
-  /** How `start` is answered: at once, with `failed`, or held until `releaseStart()`. */
   start?: "started" | "failed" | "hold";
   failure?: string;
-  /** The started snapshot's `aiToAct`. */
   aiToAct?: boolean;
-  /** Hold every `aiStep` until `releaseAiStep()`. */
   holdAiSteps?: boolean;
-  /** How the setup's `catalog` request is answered: with FAKE_DEFS (the default) or `failed`. */
   catalog?: "answer" | "fail";
-  /** R668: how `resume` is answered: as `started` (the default), or `failed` when the save does not fold. */
+  /** R668: a failed resume cannot fold the saved game. */
   resume?: "started" | "failed";
 };
 
-/**
- * The catalog the fake host answers `catalog` with: every preset's and saved deck's card, named
- * after its id and costing its id's last digit (so `core-014` costs 4 and `core-100` costs 0).
- */
+/** Fake definitions cost each card by its id's final digit. */
 const FAKE_DEFS: CardDefs = Object.fromEntries(
   [...new Set([...PRACTICE_PRESETS.flatMap((preset) => preset.cards), ...SAVED_DECKS.flat()])].map((id) => [
     id,
@@ -213,7 +195,7 @@ function snapshotFor(human: PlayerId, aiToAct: boolean): PracticeSnapshot {
   };
 }
 
-/** The game after the human concedes: the AI has won (§2.5). */
+/** §2.5: conceding gives the AI the game. */
 function concededSnapshot(human: PlayerId): PracticeSnapshot {
   const base = snapshotFor(human, false);
   return { ...base, view: { ...base.view, result: { winner: opponentOf(human), reason: "concede" } }, legal: [] };
@@ -316,9 +298,7 @@ function routeHost(options: HostOptions = {}): RouteHost {
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// rendering
-// ---------------------------------------------------------------------------------------------
+// Rendering.
 
 function renderRoute(
   host: RouteHost,
@@ -348,16 +328,13 @@ function savedOptions(): string[] {
   return deckOptions().filter((value) => value.startsWith("saved:"));
 }
 
-/**
- * The board's Concede control asks "Concede this game?" first (game/ConfirmConcede.tsx); only the
- * dialog's Concede sends the action.
- */
+/** Only the confirmation dialog's Concede sends the action. */
 function concedeOnBoard(): void {
   fireEvent.click(screen.getByTestId("concede"));
   fireEvent.click(screen.getByTestId("concede-confirm"));
 }
 
-/** Let the route's effects and the fake host's promises run. */
+/** Settle route effects and fake-host promises. */
 async function settle(): Promise<void> {
   await act(async () => {
     for (let i = 0; i < 10; i += 1) await Promise.resolve();
@@ -372,7 +349,7 @@ beforeEach(() => {
   try {
     window.localStorage.clear();
   } catch {
-    // A storage that refuses is one of the cases under test; nothing to clear.
+    // Storage may refuse.
   }
   fetchSpy = vi.fn<() => Promise<never>>(() => Promise.reject(new Error("practice needs no server")));
   vi.stubGlobal("fetch", fetchSpy);
@@ -397,14 +374,12 @@ afterEach(() => {
   try {
     window.localStorage.clear();
   } catch {
-    // see beforeEach
+    // Storage may refuse.
   }
   window.history.replaceState(null, "", "/");
 });
 
-// ---------------------------------------------------------------------------------------------
-// B32: setup, for anyone
-// ---------------------------------------------------------------------------------------------
+// B32: setup for anyone.
 
 describe("B32 /practice shows setup to anyone", () => {
   it("B32 renders with no account, session or server: three difficulty radios on easy and random plus every preset", async () => {
@@ -514,7 +489,6 @@ describe("B32 /practice shows setup to anyone", () => {
     expect(first).toBeDisabled();
     expect(first?.textContent).toBe(`Half Built (12 of ${String(SAVED_DECKS[0]?.length ?? 0)} cards, not complete)`);
     expect(Array.from(select.options).find((option) => option.value === "saved:2")).not.toBeDisabled();
-    // The remembered choice names the incomplete deck, so the picker falls back to random.
     expect(select.value).toBe("random");
     expect(deckChoiceFromValue("saved:1", [short])).toBeNull();
   });
@@ -599,9 +573,7 @@ describe("B32 /practice shows setup to anyone", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the saved-deck hint: why no saved deck is offered, worded for the account the page has
-// ---------------------------------------------------------------------------------------------
+// Saved-deck hints.
 
 describe("the deck hint says why no saved deck is offered, and never tells a signed-in player to sign in", () => {
   function hint(): string | null {
@@ -676,9 +648,7 @@ describe("the deck hint says why no saved deck is offered, and never tells a sig
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the deck preview: the chosen deck's name, identity, curve and cards before Start
-// ---------------------------------------------------------------------------------------------
+// Deck preview.
 
 describe("the setup previews the chosen deck", () => {
   function preview(): HTMLElement {
@@ -726,13 +696,11 @@ describe("the setup previews the chosen deck", () => {
       expect([...previewedIds()].sort()).toEqual([...preset.cards].sort());
       const bars = curve();
       expect(Object.values(bars).reduce((sum, count) => sum + count, 0)).toBe(preset.cards.length);
-      // FAKE_DEFS: an id's last digit is its cost.
       const expectedAtTwo = preset.cards.filter((id) => id.endsWith("2")).length;
       expect(bars["2"]).toBe(expectedAtTwo);
     }
   });
 
-  // Integration: task 6's hover preview on task 3's deck list, as the deck builder's list has it.
   it("resting the pointer on a previewed card shows the whole card", async () => {
     renderRoute(routeHost());
     await settle();
@@ -853,9 +821,7 @@ describe("B32 URL parameters", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B33: starting a game
-// ---------------------------------------------------------------------------------------------
+// B33: starting a game.
 
 describe("B33 starting renders the game under the practice HUD", () => {
   it("B33 practice-start sends the chosen setup and renders <Game> for the human seat", async () => {
@@ -893,7 +859,6 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(toggle).not.toBeChecked();
     expect(toggle.closest("label")).toHaveTextContent(`More cards from the newest set (${newestShippedSet()})`);
     fireEvent.click(toggle);
-    // Beside the Random deck only.
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     expect(screen.queryByTestId(practiceTestid.leanNewest)).toBeNull();
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
@@ -902,7 +867,6 @@ describe("B33 starting renders the game under the practice HUD", () => {
     await screen.findByTestId(T.hud);
 
     expect(host.starts()[0]?.deck).toEqual({ kind: "random", leanNewest: true });
-    // Remembered with the setup, for the next visit.
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
       difficulty: "easy",
       deck: "random",
@@ -1068,8 +1032,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(indicator).toHaveAttribute("role", "status");
     expect(indicator).toHaveTextContent("AI is thinking…");
     expect(screen.getByTestId(T.hud)).toHaveAttribute("data-thinking", "true");
-    // The practice table (`.practice-table`, practice.css) wraps the board and carries the same flag,
-    // which is what lights the AI's hero while it thinks.
+    // The practice table carries the flag that lights the AI hero.
     const table = screen.getByTestId("game").closest(".practice-table");
     expect(table).not.toBeNull();
     expect(table).toHaveAttribute("data-thinking", "true");
@@ -1092,13 +1055,12 @@ describe("B33 starting renders the game under the practice HUD", () => {
   it("the AI's next step waits while anything on the board carries data-animating", async () => {
     visit("?seed=gate1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
-    // Long enough that the mark lands before the first gap runs out even on a loaded machine; the
-    // wait below is longer still, so a step that ignored the mark would have been sent.
+    // Let the mark arrive before a step that would otherwise be sent.
     const gap = 400;
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await screen.findByTestId(T.hud);
 
-    // An animation in flight, as the runner marks one (game/animations.ts).
+    // Runner in-flight marker (game/animations.ts).
     const board = screen.getByTestId("game");
     const busy = document.createElement("span");
     busy.setAttribute("data-animating", "summoned");
@@ -1118,12 +1080,12 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=voice1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
     const gap = 40;
-    // Marked before the game starts, so the very first gap already waits for it.
+    // Mark before rendering so the first gap waits.
     document.body.setAttribute("data-speaking", "core-011-play");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await screen.findByTestId(T.hud);
 
-    // The audio layer's contract: any element marks a line while it plays.
+    // Any element marks an active voice line.
     try {
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, gap * 5));
@@ -1168,7 +1130,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     visit("?seed=show1&difficulty=easy&deck=random&seat=p1");
     const host = routeHost({ aiToAct: true });
     const gap = 40;
-    // game/showcase/CardShowcase.tsx marks the showcase while the AI's played card is up.
+    // CardShowcase marks a held AI card.
     document.body.setAttribute("data-showcase", "played");
     renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
     await screen.findByTestId(T.hud);
@@ -1233,7 +1195,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
     fireEvent.click(screen.getByTestId(T.newGame));
     const leave = await screen.findByTestId(T.leave);
     expect(leave).toHaveAttribute("role", "alertdialog");
-    // Staying is the default: it has the focus, so Enter on a stray tap keeps the game.
+    // Stay is the focused default.
     expect(screen.getByTestId(T.leaveStay)).toHaveFocus();
     expect(screen.getByTestId("game")).toBeInTheDocument();
 
@@ -1345,9 +1307,7 @@ describe("B33 starting renders the game under the practice HUD", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R668: a free game in progress comes back after a reload
-// ---------------------------------------------------------------------------------------------
+// R668: a free game resumes after reload.
 
 describe("R668 resuming a practice game after a reload", () => {
   const LEFT: PracticeStartConfig = { seed: "resume1", difficulty: "hard", humanSeat: "p2", deck: { kind: "random" } };
@@ -1417,14 +1377,11 @@ describe("R668 resuming a practice game after a reload", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R765: Save and leave, Leave without saving, and the banners atop the practice menu
-// ---------------------------------------------------------------------------------------------
+// R765: saving, leaving, and practice-menu banners.
 
 describe("R765 leaving a practice game: Save and leave, or Leave without saving", () => {
   const KEPT: PracticeStartConfig = { seed: "kept1", difficulty: "medium", humanSeat: "p1", deck: { kind: "random" } };
 
-  /** What the device holds: the setup, and `saved` when it was left with Save and leave. */
   function keep(config: PracticeStartConfig, saved: boolean): void {
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(saved ? { ...config, saved: true } : config));
   }
@@ -1445,7 +1402,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     const leave = await askToLeave("newGame");
     expect(leave).toHaveAttribute("data-can-save", "true");
     expect(leave).toHaveTextContent("practice menu");
-    // Staying is still the default.
+    // Stay is the focused default.
     expect(screen.getByTestId(T.leaveStay)).toHaveFocus();
     expect(screen.getByTestId(T.leaveSave)).toHaveTextContent("Save and leave");
     expect(screen.getByTestId(T.leaveConfirm)).toHaveTextContent("Leave without saving");
@@ -1479,7 +1436,6 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(readPracticeResumeState()).toEqual({ config: kept, saved: true });
     cleanup();
 
-    // The next visit, a reload included, shows the menu with the banner and asks the worker nothing.
     visit("");
     const next = routeHost();
     renderRoute(next);
@@ -1501,7 +1457,6 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(hud).toHaveAttribute("data-human-seat", "p1");
     expect(resumes(host)).toEqual([KEPT]);
     expect(host.starts()).toEqual([]);
-    // Back in the game: a reload now picks it up without the menu.
     expect(readPracticeResumeState()).toEqual({ config: KEPT, saved: false });
     cleanup();
 
@@ -1561,7 +1516,6 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     expect(host.starts()).toHaveLength(1);
     const started = host.starts()[0];
     expect(started?.seed).not.toBe(KEPT.seed);
-    // The new game is the one kept now, with the player in it.
     expect(readPracticeResumeState()).toEqual({
       config: { seed: started?.seed, difficulty: started?.difficulty, humanSeat: started?.humanSeat, deck: started?.deck },
       saved: false,
@@ -1600,7 +1554,7 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
   it("R765 Back while a resume is still folding keeps the game, saved for the banner; Back from a new game's deal gives it up", async () => {
     keep(KEPT, false);
     const hold: RouteHost = routeHost();
-    // A resume that never answers: the loading screen's Back is the way out.
+    // A pending resume can return to setup.
     hold.factory.mockImplementation(() => ({
       request: (body) =>
         body.type === "resume" ? new Promise<PracticeResponse>(() => {}) : routeHost().factory().request(body),
@@ -1670,9 +1624,7 @@ describe("R765 the practice menu offers the way back into a live online game", (
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the end of a game
-// ---------------------------------------------------------------------------------------------
+// Game end.
 
 describe("the result dialog", () => {
   async function concede(search: string): Promise<RouteHost> {
@@ -1698,7 +1650,7 @@ describe("the result dialog", () => {
     expect(dialog).toHaveTextContent("Medium");
     expect(screen.getByTestId(T.playAgain)).toHaveFocus();
     expect(screen.getByTestId(T.outcome)).toHaveAttribute("data-outcome", "loss");
-    // The board's own overlay still renders under the dialog, for every other consumer of Game.
+    // Game's overlay remains for its other consumers.
     expect(screen.getByTestId("result-overlay")).toHaveTextContent("Loss");
   });
 
@@ -1742,9 +1694,7 @@ describe("the result dialog", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the dev handle spec 13 drives (B40)
-// ---------------------------------------------------------------------------------------------
+// B40: dev handle.
 
 describe("B40 the dev handle", () => {
   it("B40 window.__jackiohPractice names the AI seat and the view, and snapshot() is the core's debug", async () => {
@@ -1770,9 +1720,7 @@ describe("B40 the dev handle", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// §Surface: the remembered setup, and the pacing the route picks when none is injected
-// ---------------------------------------------------------------------------------------------
+// §Surface: remembered setup and default pacing.
 
 describe("Surface: the setup is remembered, and the pacing follows ?pace and reduced motion", () => {
   it("starting a game stores its difficulty and deck under jackioh.practice.setup, and the next visit opens on them", async () => {
@@ -1788,7 +1736,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
       deck: "preset:humans",
     });
 
-    // Leave the game, so the next visit opens on the setup rather than resuming it (R668).
+    // End the game so the next visit opens setup rather than resumes (R668).
     fireEvent.click(screen.getByTestId(T.newGame));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
     cleanup();
@@ -1855,9 +1803,7 @@ describe("Surface: the setup is remembered, and the pacing follows ?pace and red
   }
 });
 
-// ---------------------------------------------------------------------------------------------
-// Integration (docs/polish/reference.md): practice gets everything the other boards get
-// ---------------------------------------------------------------------------------------------
+// Practice-board integration.
 
 describe("practice plays on the full board, with sound and settings", () => {
   afterEach(() => {
@@ -1866,7 +1812,7 @@ describe("practice plays on the full board, with sound and settings", () => {
     vi.useRealTimers();
   });
 
-  /** An audio engine that speaks when told to: the one thing practice needs from it. */
+  /** Audio engine that marks spoken lines for practice. */
   function speakingEngine(): { engine: AudioEngine; say(on: boolean): void } {
     let speaking = false;
     const listeners = new Set<() => void>();
@@ -2005,7 +1951,7 @@ describe("practice plays on the full board, with sound and settings", () => {
 
   it("the board is the one hotseat and online play show: faces, both glows, drag, effects, sound and the gear", async () => {
     visit("?seed=board1&difficulty=easy&deck=random&seat=p1");
-    // The worker's view carries the engine's R195 flag on a hand card, and its legal list a play of it.
+    // R195: worker view and legal list expose the playable hand card.
     const view = baseView({
       viewer: "p1",
       turn: 3,
@@ -2052,12 +1998,10 @@ describe("practice plays on the full board, with sound and settings", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R265: both mulligans are open at once, against the real core
-// ---------------------------------------------------------------------------------------------
+// R265: both mulligans open at once against the real core.
 
 describe("R265 the practice mulligan: the human and the AI answer in either order", () => {
-  /** The real engine, cards and AI in this thread, at the quality gates' budget and a frozen clock. */
+  /** Real core at a quality-gate budget and frozen clock. */
   function realHost(): PracticeHost {
     return createPracticeHost({ forceInThread: true, env: { now: () => 0, budget: AI_GATE_BUDGET } });
   }
@@ -2090,7 +2034,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     const picker = await mulliganPicker();
     expect(picker).toHaveAttribute("data-prompt-kind", "mulligan");
 
-    // The AI's step goes out without waiting on the human, and the human's picker says so.
+    // The AI steps before the human answers.
     await screen.findByTestId("mulligan-opponent-ready", {}, BOOT);
     expect(screen.getByTestId("mulligan-opponent-status")).toHaveAttribute("data-ready", "true");
     expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "mulligan");
@@ -2103,7 +2047,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
 
   it("R265 the human answers first, waits with its hand marked, and the AI's answer starts the game", { timeout: 60_000 }, async () => {
     visit("?seed=r265-human-first&difficulty=easy&deck=random&seat=p2");
-    // A voice line holds the AI's step (the route's data-speaking hold), so the human is first for sure.
+    // A voice line holds the AI step so the human is first.
     document.body.setAttribute("data-speaking", "held-for-the-test");
     render(
       <PracticeRoute
@@ -2118,7 +2062,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     expect(screen.getByTestId("mulligan-opponent-status")).toHaveAttribute("data-ready", "false");
     expect(screen.queryByTestId("mulligan-opponent-ready")).toBeNull();
 
-    // Send the first card back, keep the rest, and say Ready.
+    // Return the first card and submit.
     const options = screen.getAllByTestId(/^prompt-option-/);
     const first = options[0];
     if (first === undefined) throw new Error("the mulligan offered no card");
@@ -2138,7 +2082,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
   });
 
   it("R668 a reload in the middle of a free game picks it up on the same state, against the real core", { timeout: 60_000 }, async () => {
-    // The worker's IndexedDB outlives the page; here one store outlives the first host.
+    // One in-memory store stands in for IndexedDB across hosts.
     const saves = memorySaveStore();
     const host = (): PracticeHost =>
       createPracticeHost({ forceInThread: true, env: { now: () => 0, budget: AI_GATE_BUDGET, saves } });
@@ -2152,7 +2096,7 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
         />,
       );
 
-    // The human goes first, so once the mulligans are in nobody owes the AI a step and the state holds still.
+    // Human first leaves no pending AI step after both mulligans.
     visit("?seed=r658-reload&difficulty=medium&deck=random&seat=p1");
     route();
     await mulliganPicker();
@@ -2161,7 +2105,6 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
     const before = await window.__jackiohPractice?.snapshot();
     expect(before?.log.map((action) => action.type), "both mulligans are in").toEqual(["mulligan", "mulligan"]);
 
-    // The reload: the page is gone, and comes back to /practice with no params.
     cleanup();
     visit("");
     route();
@@ -2175,14 +2118,12 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// R321: the tutorial's progress on an active account
-// ---------------------------------------------------------------------------------------------
+// R321: tutorial progress on an active account.
 
 describe("R321 /practice keeps an active account's tutorial progress level with the device's", () => {
   const [first, second] = TUTORIAL_LESSONS.map((each) => each.id);
 
-  /** An account holding `completed`, merging a write as `PUT /api/tutorial` does (R320). */
+  /** R320: account progress merges completed lessons as `PUT /api/tutorial` does. */
   function tutorialAccount(completed: string[]): TutorialAccountApi & { load: Mock; save: Mock } {
     let stored: TutorialAccountProgress = { completed, hiddenChoice: null };
     return {

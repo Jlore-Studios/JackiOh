@@ -14,7 +14,7 @@ fn felinor_units() -> Value {
 
 /// A declared attack (a forced one opens no window, R121) by an enemy Unit on this trap's controller's hero.
 fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
-    let GameEvent::AttackDeclared { attacker_id, target_id, forced } = event else {
+    let GameEvent::AttackDeclared { attacker_id, target_id, forced, .. } = event else {
         return false;
     };
     if *forced {
@@ -101,9 +101,24 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) 4/4.
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
-    /// Every non-token Felinor-tagged Unit of the three sets (R405, R380).
-    const FELINOR_UNITS: &[&str] =
-        &["core-012", "core-043", "core-086", "classic-047", "classicplus-030", "classicplus-046"];
+    /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,
+    /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet). Re-pinned for
+    /// v0.3.5: the Meditative set joins the pool.
+    const FELINOR_UNITS: &[&str] = &[
+        "core-012",
+        "core-043",
+        "core-086",
+        "classic-047",
+        "classicplus-030",
+        "classicplus-046",
+        "meditative-025",
+        "meditative-030",
+        "meditative-067",
+        "meditative-087",
+        "meditative-093",
+        "meditative-094",
+        "meditative-102",
+    ];
 
     use crate::merged;
 

@@ -1,12 +1,4 @@
-//! Public card and player statistics page API (SPEC §9.11, R654). Port of
-//! `apps/server/src/api/stats.ts`.
-//!
-//! Exposes:
-//!  - GET /api/stats/cards: public card win rates, provisional gate at 1000 live games (R654).
-//!  - GET /api/stats/cards/:id: card drill-down (patches, turn played, co-played cards).
-//!  - GET /api/stats/player: caller's full stats (auth: `Active`).
-//!  - PUT /api/stats/player: caller's stats upsert (auth: `Active`).
-//!  - GET /api/stats/players: public player summaries (auth: `None`).
+//! Public card and player statistics page API (SPEC §9.11, R654).
 
 use std::cmp::Ordering;
 use std::sync::Arc;
@@ -19,9 +11,10 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 
 use jackioh_engine::wire::stats::{
-    CardStatsFilter, GameMode, GameRecord, GameSource, PilotFilter, SourceFilter, Tally, card_stats, win_rate,
+    CardStats, CardStatsFilter, CardStatsReport, GameMode, GameRecord, GameSource, PilotFilter, SourceFilter,
+    Tally, card_stats, win_rate,
 };
-use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Winner};
+use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Pilot, Winner};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
@@ -161,7 +154,7 @@ fn cached_ok(body: Value, max_age_seconds: i64) -> Response {
     response
 }
 
-/// R654: tutorial games are never counted. No game mode is `tutorial` today; the guard is TS's.
+/// R654: tutorial games are never counted. No game mode is `tutorial` today.
 fn is_tutorial(record: &GameRecord) -> bool {
     serde_json::to_value(record.mode)
         .ok()
@@ -179,8 +172,7 @@ fn numeric_cost(def: &CardDef) -> i32 {
     }
 }
 
-/// TS `a.name.localeCompare(b.name)`, approximated without a collator: case-insensitive first,
-/// then as written.
+/// Name order without a collator: case-insensitive first, then as written.
 fn locale_compare(a: &str, b: &str) -> Ordering {
     a.to_lowercase().cmp(&b.to_lowercase()).then_with(|| a.cmp(b))
 }
@@ -212,16 +204,83 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
     Ok(records)
 }
 
-// TS's `createStatsRoutes()`, in its order, is five rows of `app.rs`'s `ROUTES`:
-//   GET /api/stats/cards → get_cards (None);      GET /api/stats/cards/:id → get_card (None);
-//   GET /api/stats/player → get_player (Active);  PUT /api/stats/player → put_player (Active);
-//   GET /api/stats/players → get_players (None).
+/// R1451: the seats of a record the public figures count: a live game's people only, so a ladder
+/// bot's side (`ai`, R1452) is read only by a query that asks for it, and both seats of an AI
+/// development game (R378).
+fn counted_pilot(source: GameSource) -> PilotFilter {
+    match source {
+        GameSource::Live => PilotFilter::Human,
+        GameSource::Dev => PilotFilter::Unified,
+    }
+}
 
-/// GET /api/stats/cards
-/// Public card win-rate data. Applies R654 publication gate:
-/// - AI games pad the stats until the current patch has logged 1000 live games.
-/// - At and above 1000 live games, live games only, AI games ignored.
-/// - Minimum sample threshold: below 20 games, hasEnoughGames is false.
+fn sum_tally(a: &Tally, b: &Tally) -> Tally {
+    Tally {
+        games: a.games + b.games,
+        wins: a.wins + b.wins,
+        draws: a.draws + b.draws,
+    }
+}
+
+/// R1451: the public report over `records` for `source`: the live records' report counting their
+/// people (`counted_pilot`) and the development records' counting both seats, summed card by card,
+/// in catalog-id order as `card_stats` lists them.
+fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> CardStatsReport {
+    let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
+        source,
+        mode: None,
+        patch: Some(patch.to_string()),
+        pilot,
+    };
+    let mut parts: Vec<CardStatsReport> = Vec::new();
+    if matches!(source, SourceFilter::Live | SourceFilter::All) {
+        parts.push(card_stats(
+            records,
+            &filter(SourceFilter::Live, counted_pilot(GameSource::Live)),
+        ));
+    }
+    if matches!(source, SourceFilter::Dev | SourceFilter::All) {
+        parts.push(card_stats(
+            records,
+            &filter(SourceFilter::Dev, counted_pilot(GameSource::Dev)),
+        ));
+    }
+    let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
+    let (mut games, mut decks) = (0, 0);
+    for part in parts {
+        games += part.games;
+        decks += part.decks;
+        for stat in part.cards {
+            match by_card.get_mut(&stat.card) {
+                None => {
+                    by_card.insert(stat.card.clone(), stat);
+                }
+                Some(held) => {
+                    held.in_deck = sum_tally(&held.in_deck, &stat.in_deck);
+                    held.opening_hand = sum_tally(&held.opening_hand, &stat.opening_hand);
+                    held.going_first = sum_tally(&held.going_first, &stat.going_first);
+                    held.going_second = sum_tally(&held.going_second, &stat.going_second);
+                    held.played = sum_tally(&held.played, &stat.played);
+                    held.drawn_not_played = sum_tally(&held.drawn_not_played, &stat.drawn_not_played);
+                }
+            }
+        }
+    }
+    let mut cards: Vec<CardStats> = by_card.into_values().collect();
+    cards.sort_by(|a, b| a.card.cmp(&b.card));
+    CardStatsReport {
+        filter: filter(source, PilotFilter::Unified),
+        games,
+        decks,
+        cards,
+    }
+}
+
+/// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
+/// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
+/// R1451: a ladder bot's game counts toward the gate like any live game, and its people's side
+/// toward the figures; the bot's side never does (`public_report`). That a bot game adds one deck
+/// where a person's adds two is a tell R1452 records and keeps.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
@@ -234,10 +293,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         _ => None,
     };
 
-    // Query all records for the requested patch
     let patch_records = records_for(app, SourceFilter::All, &requested_patch).await?;
 
-    // Filter live games (tutorial games excluded per R654)
     let live_records: Vec<GameRecord> = patch_records
         .iter()
         .filter(|record| record.source == GameSource::Live && !is_tutorial(record))
@@ -245,7 +302,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         .collect();
     let live_games_count = live_records.len() as i64;
 
-    // R654 publication gate: exactly 1000 live games required to clear the gate
+    // R654 publication gate.
     let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES;
 
     let (source, source_label, records_to_count): (PublicStatsSource, &str, Vec<GameRecord>) = if cleared {
@@ -273,18 +330,14 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         )
     };
 
-    let report = card_stats(
+    let report = public_report(
         &records_to_count,
-        &CardStatsFilter {
-            source: match source {
-                PublicStatsSource::Live => SourceFilter::Live,
-                PublicStatsSource::Dev => SourceFilter::Dev,
-                PublicStatsSource::Provisional => SourceFilter::All,
-            },
-            mode: None,
-            patch: Some(requested_patch.clone()),
-            pilot: PilotFilter::Unified,
+        match source {
+            PublicStatsSource::Live => SourceFilter::Live,
+            PublicStatsSource::Dev => SourceFilter::Dev,
+            PublicStatsSource::Provisional => SourceFilter::All,
         },
+        &requested_patch,
     );
 
     let stats_map: IndexMap<&str, _> = report
@@ -379,7 +432,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         });
     }
 
-    // Sort cards by win rate desc, then games desc, then name
     cards.sort_by(|a, b| {
         if a.has_enough_games && !b.has_enough_games {
             return Ordering::Less;
@@ -397,7 +449,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             .then_with(|| locale_compare(&a.name, &b.name))
     });
 
-    // Best and worst card above sample threshold
     let qualifying: Vec<&PublicCardStat> = cards
         .iter()
         .filter(|card| card.has_enough_games && card.win_rate.is_some())
@@ -444,11 +495,7 @@ struct Count {
     wins: i64,
 }
 
-/// GET /api/stats/cards/:id
-/// Card drill-down:
-/// - Win rate by cleared patch over time.
-/// - Win rate by turn played.
-/// - Co-played synergy cards.
+/// GET /api/stats/cards/:id: win rate by cleared patch and by turn played, and co-played cards.
 pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
     let def = if card_id.is_empty() {
@@ -473,15 +520,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             .filter(|record| !is_tutorial(record))
             .collect();
         if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
-            let report = card_stats(
-                &records,
-                &CardStatsFilter {
-                    source: SourceFilter::Live,
-                    mode: None,
-                    patch: Some(version.clone()),
-                    pilot: PilotFilter::Unified,
-                },
-            );
+            let report = public_report(&records, SourceFilter::Live, version);
             let stat = report.cards.iter().find(|stat| stat.card == card_id);
             patch_history.push(PatchRate {
                 patch: version.clone(),
@@ -491,7 +530,6 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         }
     }
 
-    // Use active patch or all records for turn and co-play metrics
     let current_patch = app.catalog.version.clone();
     let all_records = records_for(app, SourceFilter::All, &current_patch).await?;
     let live_records: Vec<&GameRecord> = all_records
@@ -504,13 +542,15 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         all_records.iter().filter(|record| !is_tutorial(record)).collect()
     };
 
-    // By turn played
     let mut turn_tallies: IndexMap<i32, Count> = IndexMap::new();
-    // Co-played cards
     let mut co_played_tallies: IndexMap<String, Count> = IndexMap::new();
 
     for record in &records_to_count {
         for seat in PLAYER_IDS {
+            // R1451: as `public_report` counts them, a live game's people only.
+            if counted_pilot(record.source) == PilotFilter::Human && record.pilots[seat] != Pilot::Human {
+                continue;
+            }
             let summary = &record.game.seats[seat];
             if !summary.deck.contains(&card_id) {
                 continue;
@@ -518,7 +558,6 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
             let won = record.game.winner == Winner::from(seat);
 
-            // Check turns on which this card was played (from recorded playedTurns)
             let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
             if let Some(played_turns) = summary
                 .played_turns
@@ -542,7 +581,6 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
                 }
             }
 
-            // Co-played cards in the same deck
             let distinct: IndexSet<&String> = summary.deck.iter().collect();
             for other_id in distinct {
                 if *other_id == card_id {
@@ -606,8 +644,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
-/// GET /api/stats/player
-/// Signed-in player reads their own tracked statistics and privacy setting.
+/// GET /api/stats/player: the caller's tracked statistics and privacy setting.
 pub async fn get_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let mut tx = app.db.begin(Some(&profile.id)).await?;
@@ -622,14 +659,12 @@ pub async fn get_player(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&body)
 }
 
-/// GET /api/stats/player's body length as TS measured it: `JSON.stringify(body).length`, in UTF-16
-/// code units.
+/// The body's length as `JSON.stringify(body).length`: UTF-16 code units.
 fn stringified_length(body: &Value) -> usize {
     body.to_string().encode_utf16().count()
 }
 
-/// PUT /api/stats/player
-/// Signed-in player updates their tracked statistics and privacy setting.
+/// PUT /api/stats/player: the caller updates their statistics and privacy setting.
 pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     if stringified_length(&req.body) > PLAYER_STATS_BYTES_MAX {
@@ -660,9 +695,7 @@ pub async fn put_player(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&json!({ "stats": Value::Object(stats_json), "isPrivate": is_private, "updatedAt": now }))
 }
 
-/// GET /api/stats/players
-/// Public player summaries (games, win rate, favourite cards, fun stats).
-/// Excludes private players. Keeps Elo and rankings separate.
+/// GET /api/stats/players: public player summaries, private players excluded.
 pub async fn get_players(app: &Arc<App>, req: Req) -> ApiResult {
     let search = query_trimmed(&req, "search");
     let page: u64 = match req.query.get("page") {

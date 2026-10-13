@@ -4,20 +4,18 @@
 //!
 //! "Draw your deck" is R58's "draw your whole library": as many draws as the library holds when the
 //! effect starts, each an ordinary §2.4 draw — a cast-on-draw card is cast (R58), a card past the hand
-//! cap of 10 burns into the graveyard (R4, R317), and a draw a draw limit stops does not happen at all
-//! (§2.4). An empty library means no draws, so no fatigue.
-//!
-//! Then a delayed effect (§10.1, `discardHandAtTurnEnd`) discards the whole hand, with no prompt (there
-//! is nothing to choose), in the end-of-turn delayed-effect step (R62): at the end of this turn on the
-//! base face, at the end of its controller's next turn on the Radiant face, taking the hand held then.
-//! It is a discard (§6.3), so C #64 Malzahar's Recycler sees each card. By design a fatigue clock.
+//! cap of 10 burns (R4, R317), and a draw a draw limit stops does not happen (§2.4). An empty library
+//! means no draws, so no fatigue.
+//! Then a delayed effect (§10.1, `discardHandAtTurnEnd`) discards the whole hand, with no prompt, in
+//! the end-of-turn delayed-effect step (R62): at the end of this turn on the base face, of its
+//! controller's next turn on the Radiant face, taking the hand held then. It is a discard (§6.3), so
+//! C #64 Malzahar's Recycler sees each card. By design a fatigue clock.
 
 use jackioh_engine::prelude::*;
 use jackioh_engine::effects::{discard_hand_at_turn_end, draw};
 
 pub const ID: &str = "classic-037";
 
-/// `turn`: TS `"this" | "next"`.
 fn last_hurrah(turn: &'static str) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -38,16 +36,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: "Draws your whole deck, as many
-// draws as its size when the effect starts (R58), the cards past 10 burning (§2.4, R317) and a draw
-// limit stopping the rest; an empty deck draws nothing and takes no fatigue; then at the end of this
-// turn, in the end-of-turn delayed-effect step (R62), your whole hand is discarded with no prompt, a
-// discard (C #64 sees it); the drawn cards are never named in the opponent's view; radiant: the discard
-// comes at the end of your next turn instead, taking the hand you hold then, and nothing is discarded
-// at this turn's end; no tuned numbers".
-//
-// The draw-limit case uses C #4 Palantir's aura ("your opponent can't draw more than 1 card each
-// turn"), whose own test file proves the limit in full.
+// C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
+// cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
+// fatigue; the hand is discarded at the end of this turn (R62), a discard (C #64 sees it); radiant:
+// at the end of your next turn instead, nothing at this turn's end; no tuned numbers. The draw-limit
+// case uses C #4 Palantir's aura, whose own test file proves the limit in full.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -67,7 +60,7 @@ mod tests {
 
     use crate::js;
 
-    /// `{ ...base, ...over }`: the TS object spread, the override's keys winning.
+    /// `over`'s keys win over `base`'s.
     fn spread(mut base: Value, over: Value) -> Value {
         if let (Some(into), Some(from)) = (base.as_object_mut(), over.as_object()) {
             for (key, value) in from {
@@ -77,7 +70,7 @@ mod tests {
         base
     }
 
-    /// `p1`, `p2`: TS `SideSetup` overrides (`json!({})` for none); `radiant_face` defaults to false in TS.
+    /// `p1`, `p2` override each side's setup (`json!({})` for none).
     fn setup(p1: Value, p2: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
             "p1": spread(json!({ "hand": [{ "def": HURRAH, "radiant": radiant_face }, "core-010"], "library": DECK }), p1),
@@ -89,17 +82,16 @@ mod tests {
         events.iter().map(js).filter(|event| event["type"] == type_).count()
     }
 
-    /// TS `expect(have).toEqual(expect.arrayContaining(want))`.
     fn contains_all(have: &[String], want: &[String]) -> bool {
         want.iter().all(|item| have.contains(item))
     }
 
-    /// TS `Array.prototype.indexOf`: the first position, or -1.
+    /// The first position, or -1.
     fn index_of(types: &[String], type_: &str) -> i64 {
         types.iter().position(|t| t == type_).map_or(-1, |at| at as i64)
     }
 
-    /// TS `Array.prototype.lastIndexOf`: the last position, or -1.
+    /// The last position, or -1.
     fn last_index_of(types: &[String], type_: &str) -> i64 {
         types.iter().rposition(|t| t == type_).map_or(-1, |at| at as i64)
     }

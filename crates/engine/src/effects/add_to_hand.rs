@@ -9,13 +9,14 @@
 //!
 //! Port of `packages/engine/src/effects/addToHand.ts`.
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_generated, query};
-use crate::config::HAND_CAP;
 use crate::script::{Effect, EffectContext};
-use crate::state::{CardInstance, find_instance_mut, new_instance};
+use crate::state::{CardInstance, find_instance, find_instance_mut, new_instance};
 use crate::wire::{Keyword, Zone, ZoneName};
 
 /// The riders a card reaches a hand with. R65 starts the cost from `costOverride` IN PLACE OF the
@@ -33,6 +34,13 @@ struct HandRiders {
     cost_mod: Option<i32>,
     /// R637: the card is Temporary (a granted keyword) while it is in a hand.
     temporary: Option<bool>,
+    /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
+    chinese: Option<bool>,
+    /// R1438: the card is given Lucky X (a granted keyword) as it reaches the hand.
+    lucky: Option<i32>,
+    /// ME-SECRET, R862: what the new card remembers from the start (Mind Games' link rides the
+    /// Fortify Mind it hands the opponent).
+    memory: Option<IndexMap<String, Value>>,
 }
 
 /// `costMod` ADDS (R65 sums it); `costOverride` and `radiant` replace.
@@ -45,6 +53,17 @@ struct HandRiders {
 fn apply_radiant_rider(card: &mut CardInstance, riders: &HandRiders) {
     if riders.radiant == Some(true) {
         card.radiant = true;
+    }
+    // ME-SECRET, R862: the link rides the instance from the start, so the card remembers its secret
+    // wherever it lands — even burned into the graveyard, where a full hand puts it (§2.4, R4).
+    if let Some(memory) = &riders.memory {
+        for (key, value) in memory {
+            card.memory.insert(key.clone(), value.clone());
+        }
+    }
+    // ME-CN, R1300: what the card is shown in, like what face it wears, so a burned card keeps it too.
+    if riders.chinese == Some(true) {
+        card.chinese = Some(true);
     }
 }
 
@@ -64,6 +83,14 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
     {
         card.granted_keywords.push(Keyword::Temporary);
     }
+    // R1438: given Lucky is the card's own from the hand on, so it goes on with the prices, once it is
+    // there (a burned card gets none), and adds to any Lucky the card has: Lucky sums (§6.1). The view
+    // shows it to the hand's owner alone (B5 E38), and no event says it.
+    if let Some(n) = riders.lucky
+        && n > 0
+    {
+        card.granted_keywords.push(Keyword::Lucky { n });
+    }
 }
 
 /// §2.4's pipeline, with the riders applied around it as `apply_radiant_rider` explains.
@@ -71,14 +98,15 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
 /// TS wrote the riders through the live card object. Here `card` is the card as found (or the fresh
 /// instance), so the radiant rider goes on it before it moves, and on the card in its pile too when
 /// it already is in one; the cost riders go on the card where the move put it. Whether it reaches the
-/// hand is `crate::draw::add_to_hand`'s own test, read as it reads it: the owner's hand below
-/// HAND_CAP (§2.4, R4) — else it is burned and takes no price.
+/// hand is `crate::draw::add_to_hand`'s own test, read as it reads it: the owner's hand below their
+/// hand cap (§2.4, R4, R1143, `hand_cap_of`) — else it is burned and takes no price.
 fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders: &HandRiders) {
     apply_radiant_rider(&mut card, riders);
     if let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_radiant_rider(live, riders);
     }
-    let reaches_hand = (ctx.state.players[card.owner].hand.len() as i32) < HAND_CAP;
+    let reaches_hand =
+        (ctx.state.players[card.owner].hand.len() as i32) < crate::query::hand_cap_of(ctx.state, card.owner);
     let _ = crate::draw::add_to_hand(ctx, &mut card);
     if reaches_hand && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id) {
         apply_cost_riders(live, riders);
@@ -92,6 +120,17 @@ fn create_in_hand(ctx: &mut EffectContext<'_>, def_id: &str, riders: &HandRiders
     let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
     let card = new_instance(&mut *ctx.state, def_id, player, Zone::Hand { player });
     put_in_hand_with(ctx, card, riders);
+}
+
+/// R57, R1242: what a copy made into a hand carries of the card copied, as `library_copies`'s do.
+fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
+    copy.radiant = source.radiant;
+    // ME-CN, R1300: a copy of a Chinese card is Chinese.
+    copy.chinese = source.chinese;
+    // MD-B15, R923: a copy keeps the granted tags of the card copied.
+    copy.granted_tags = source.granted_tags.clone();
+    copy.stats_override = source.stats_override;
+    copy.tuning = source.tuning.clone();
 }
 
 /// `add_to_hand`'s arguments (TS's inline object).
@@ -112,6 +151,21 @@ pub struct AddToHandArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// ME-CN, R1300: the card made is a copy of a Chinese card (T-AI-5, Counterspell, Recycling
+    /// Initiative), so it is Chinese too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
+    /// R1438: give the card Lucky X once it is in the hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
+    /// R1242: create a copy of this instance instead (Meditative #95's fused card), a fresh card of
+    /// its definition carrying R57's riders: the radiant flag, the `chinese` flag, granted tags,
+    /// `statsOverride` and `tuning`. The card copied stays where it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_of: Option<String>,
+    /// ME-SECRET, R862: what the new card remembers from the start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<IndexMap<String, Value>>,
 }
 
 impl AddToHandArgs {
@@ -122,6 +176,9 @@ impl AddToHandArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
+            chinese: self.chinese,
+            lucky: self.lucky,
+            memory: self.memory.clone(),
         }
     }
 }
@@ -136,11 +193,24 @@ impl AddToHandArgs {
 /// always goes to its owner's hand, library, graveyard or exile", which is what `crate::draw`'s
 /// pipeline does. `player` therefore names the hand only on the creation path.
 ///
+/// With `copyOf`, create a copy of that instance (R1242) with R57's riders, into `player`'s hand, the
+/// card copied staying where it is; it names no card, nothing happens.
+///
 /// `bounce` is the neighbouring verb and deliberately not this one: it returns a card from the FIELD
 /// and resets the instance (§6.3, R78), which would throw away exactly the riders this verb keeps.
 pub fn add_to_hand(args: AddToHandArgs) -> Effect {
     Effect::new("addToHand", move |ctx| {
         let riders = args.riders();
+        if let Some(source_id) = &args.copy_of {
+            let Some(source) = find_instance(ctx.state, source_id).cloned() else {
+                return;
+            };
+            let player = player_of(ctx, riders.player.unwrap_or(PlayerSpec::SelfSide));
+            let mut copy = new_instance(&mut *ctx.state, &source.def_id, player, Zone::Hand { player });
+            copy_riders(&mut copy, &source);
+            put_in_hand_with(ctx, copy, &riders);
+            return;
+        }
         if let Some(spec) = &args.instance {
             let Some(card) = instance_of(ctx, spec) else {
                 return;
@@ -191,6 +261,12 @@ pub struct AddRandomFromCatalogArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chinese: Option<bool>,
+    /// R1438: give each card added Lucky X once it is in the hand (Meditative #101 Gachaholic).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lucky: Option<i32>,
 }
 
 impl AddRandomFromCatalogArgs {
@@ -201,6 +277,9 @@ impl AddRandomFromCatalogArgs {
             cost_override: self.cost_override,
             cost_mod: self.cost_mod,
             temporary: self.temporary,
+            chinese: self.chinese,
+            lucky: self.lucky,
+            memory: None,
         }
     }
 }

@@ -3,4 +3,4 @@
 /**
  * How a game ended (`gameOver.reason`).
  */
-export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided";
+export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect";

@@ -1,17 +1,9 @@
-// The tutorial (SPEC §9.10) as specs 22 and 23 drive it: the lesson URL, progress seeded before the
-// page boots, the dev handles `/practice` exposes in a non-production build, and a driver that
-// follows the coach through the real UI.
+// Tutorial e2e driver (SPEC §9.10; specs 22 and 23).
 //
-// THE DRIVER NEVER DISPATCHES. `window.__jackiohTutorial.suggested` names what the coach's showing
-// step asks for (the first of the human's legal actions its `expect` accepts, tutorial/devHandle.ts)
-// and the driver performs it with clicks, as a player following the coach would: a mulligan through
-// the picker's toggles and Confirm, a play as a hand click and then the zone or target the action
-// names, an attack as the attacker and then its target, End turn as End turn. The engine accepts or
-// refuses each exactly as in any game. `__jackiohPractice.view` is read only to know that the page
-// has received the snapshot an action produced, and to find where a card sits on the board.
+// The driver never dispatches; it performs the coach's suggested legal actions through the UI and
+// only reads the practice view to await snapshots and locate cards.
 //
-// Every wait is an assertion Cypress retries (BUILD M8): `waitForMoment` waits for the board to
-// settle, the coach to catch up with it and either a bubble to read or a move for the human.
+// Cypress-retried waits observe the board and coach settling (BUILD M8).
 
 import { timeouts, TUTORIAL_PROGRESS_KEY } from "./config.ts";
 import {
@@ -38,31 +30,22 @@ import {
 } from "./testids.ts";
 import type { Action, ActionBody, Lane, PlayerId, Row, Selection, Side } from "./types.ts";
 
-// ---------------------------------------------------------------------------------------------
-// constants
-// ---------------------------------------------------------------------------------------------
+// Constants
 
-/** The practice route the lesson path and every lesson live on. */
 export const PRACTICE_PATH = "/practice";
 
-/** The module worker loads the engine, the card scripts and the AI before its first answer. */
+/** The module worker loads the engine, card scripts, and AI before its first answer. */
 export const TUTORIAL_BOOT_TIMEOUT = 60_000;
 
-/**
- * How long the driver waits for the human's next moment. It can span a whole AI turn: the AI takes
- * one step each time the board has caught up with the last one, and a coach tip may hold it.
- */
+/** This can span an AI turn and a coach tip. */
 export const MOMENT_TIMEOUT = 90_000;
 
-/** How long an action may take to come back from the worker as a new snapshot. */
 export const SNAPSHOT_TIMEOUT = 20_000;
 
-/** A play needs at most one pick per R81 choice kind (X, embiggen, Tribute, targets, modes, zone), plus slack. */
+/** R81: one pick per choice kind, plus slack. */
 const PLAY_PICK_BUDGET = 10;
 
-// ---------------------------------------------------------------------------------------------
-// the handles (routes/practice.tsx and tutorial/devHandle.ts, dev builds only)
-// ---------------------------------------------------------------------------------------------
+// Development handles
 
 /** Structural subsets of the `@jackioh/shared` view types (crates/engine/src/wire/view.rs). */
 export type CardLike = { instanceId: string; defId: string };
@@ -156,12 +139,10 @@ export function tutorialHandle(): Cypress.Chainable<TutorialHandleLike> {
     .then((win) => handlesOf(win).__jackiohTutorial as TutorialHandleLike);
 }
 
-/** The newest snapshot's view, as the page holds it; null before the first. */
 export function currentView(win: Window): PlayerViewLike | null {
   return handlesOf(win).__jackiohPractice?.view ?? null;
 }
 
-/** The debug record of the game on screen: seed, decks, handicaps, log, state and hash. */
 export function debugSnapshot(): Cypress.Chainable<PracticeDebugLike> {
   return practiceHandle().then((handle) => cy.wrap(handle.snapshot(), { log: false, timeout: timeouts.task }));
 }
@@ -170,26 +151,18 @@ export function handOf(view: PlayerViewLike): CardLike[] {
   return Array.isArray(view.you.hand) ? view.you.hand : [];
 }
 
-// ---------------------------------------------------------------------------------------------
-// visiting, progress and motion
-// ---------------------------------------------------------------------------------------------
+// Visiting, progress, and motion
 
-/** `/practice?lesson=<id>&pace=fast`: the lesson starts at once on its own seed and seat. */
 export function lessonUrl(lessonId: string): string {
   const params = new URLSearchParams({ lesson: lessonId, pace: "fast" });
   return `${PRACTICE_PATH}?${params.toString()}`;
 }
 
 export type TutorialVisit = {
-  /**
-   * What `localStorage[TUTORIAL_PROGRESS_KEY]` holds as the page boots: absent or null removes it
-   * (no progress), a string is written verbatim (so a corrupt value can be seeded), anything else
-   * is written as JSON.
-   */
+  /** Seed progress before boot; strings remain raw so corrupt storage can be tested. */
   progress?: unknown;
   /** `prefers-reduced-motion: reduce`, as spec 13's Hard game uses it. */
   reducedMotion?: boolean;
-  /** More setup, run after the above and before the page's own scripts. */
   onBeforeLoad?: (win: Cypress.AUTWindow) => void;
 };
 
@@ -230,7 +203,6 @@ export function visitTutorial(path: string, options: TutorialVisit = {}): void {
   });
 }
 
-/** What the page has stored, parsed; null when nothing is. */
 export function storedProgress(): Cypress.Chainable<unknown> {
   return cy.window({ log: false }).then((win) => {
     const raw = win.localStorage.getItem(TUTORIAL_PROGRESS_KEY);
@@ -238,18 +210,11 @@ export function storedProgress(): Cypress.Chainable<unknown> {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// the coach and the HUD, as the DOM shows them
-// ---------------------------------------------------------------------------------------------
+// Coach and HUD
 
 export type StepCounter = { step: number; of: number };
 
-/**
- * The HUD's "Step k of n", or null when it is not shown (the lesson is over). The counter carries a
- * long form and a short one ("k/n") side by side, one of them hidden by the layout, so the text of
- * the whole element runs them together ("Step 1 of 181/18"): each element inside it is read on its
- * own, the long form first.
- */
+/** Read each child because responsive long and short forms concatenate at the root. */
 export function stepCounterIn(doc: Document): StepCounter | null {
   const root = doc.querySelector(ts(TUTORIAL_STEP));
   if (root === null) return null;
@@ -274,7 +239,6 @@ export function stepCounter(): Cypress.Chainable<StepCounter> {
     .then(() => found as StepCounter);
 }
 
-/** What the coach bubble shows: its mode and step (or tip) id, or null when there is no bubble. */
 export type CoachMark = { mode: string; step: string | null };
 
 export function coachMarkIn(doc: Document): CoachMark | null {
@@ -287,21 +251,14 @@ function sameMark(a: CoachMark | null, b: CoachMark | null): boolean {
   return a === null || b === null ? a === b : a.mode === b.mode && a.step === b.step;
 }
 
-// ---------------------------------------------------------------------------------------------
-// moments: when the human has something to do
-// ---------------------------------------------------------------------------------------------
+// Moments when the human has something to do
 
 export type Moment =
-  /** The lesson is over and its result dialog is up. */
   | { kind: "over"; outcome: string | null }
-  /** The coach shows "Got it" (a tip or an info step). */
   | { kind: "ack"; coach: CoachMark | null; counter: StepCounter | null }
-  /** A prompt the human must answer is open. */
   | { kind: "prompt"; promptKind: string; coach: CoachMark | null; counter: StepCounter | null; suggested: ActionBody | null }
-  /** The human's own main phase, nothing open. */
   | { kind: "turn"; coach: CoachMark | null; counter: StepCounter | null; suggested: ActionBody | null };
 
-/** Why there is no moment yet, for the timeout message. */
 type Waiting = { waiting: string };
 
 function momentIn(win: Window): Moment | Waiting {
@@ -339,10 +296,7 @@ function momentIn(win: Window): Moment | Waiting {
   return { waiting: "neither the human's turn nor a prompt for the human" };
 }
 
-/**
- * Wait for the next moment the human acts in: the board settled, the coach caught up with it, and
- * then a bubble to read, a prompt to answer, the human's own main phase, or the lesson's end.
- */
+/** Wait until the human has a stable action to take. */
 export function waitForMoment(timeout = MOMENT_TIMEOUT): Cypress.Chainable<Moment> {
   let found: Moment | Waiting = { waiting: "not looked yet" };
   return cy
@@ -354,11 +308,8 @@ export function waitForMoment(timeout = MOMENT_TIMEOUT): Cypress.Chainable<Momen
     .then(() => found as Moment);
 }
 
-// ---------------------------------------------------------------------------------------------
-// acting through the UI
-// ---------------------------------------------------------------------------------------------
+// Acting through the UI
 
-/** Any `prompt-option-<key>`. */
 const ANY_PROMPT_OPTION = `[data-testid^="${promptOptionId("")}"]`;
 
 function optionKey($option: JQuery<HTMLElement>): string {
@@ -372,7 +323,7 @@ function isPicked($option: JQuery<HTMLElement>): boolean {
   return element.attr("aria-pressed") === "true" || element.attr("data-selected") === "true";
 }
 
-/** `selectionKey` (apps/web/src/game/actions.ts): how a play picker keys a declared target. */
+/** Matches `selectionKey` in apps/web/src/game/actions.ts. */
 function selectionKey(selection: Selection): string {
   switch (selection.pick) {
     case "instance":
@@ -392,7 +343,6 @@ function sideOf(view: PlayerViewLike, player: PlayerId): Side {
   return player === view.viewer ? "you" : "opponent";
 }
 
-/** Where a declared target sits on the board (`selectionTestid`), or null for a mode or "none". */
 function boardTestidOf(view: PlayerViewLike, selection: Selection): string | null {
   switch (selection.pick) {
     case "instance":
@@ -409,7 +359,6 @@ function boardTestidOf(view: PlayerViewLike, selection: Selection): string | nul
   }
 }
 
-/** The testid an attack's `targetId` names: `hero-<player>` is a hero, anything else a unit. */
 function attackTargetTestid(view: PlayerViewLike, targetId: string): string {
   for (const side of [view.you, view.opponent]) {
     if (targetId === `hero-${side.player}`) return heroId(sideOf(view, side.player));
@@ -417,7 +366,7 @@ function attackTargetTestid(view: PlayerViewLike, targetId: string): string {
   return cardId(targetId);
 }
 
-/** The engine prompt option an `answer` selection names (`selectionForOption`, read backwards). */
+/** Reverse mapping for `selectionForOption`. */
 function optionFor(options: readonly PendingOptionLike[], selection: Selection): PendingOptionLike | undefined {
   return options.find((option) => {
     switch (selection.pick) {
@@ -435,12 +384,7 @@ function optionFor(options: readonly PendingOptionLike[], selection: Selection):
   });
 }
 
-/**
- * A player can click this element: its centre is not under something else (the coach's bubble, a
- * picker). A zone or a target is clicked on the board when it is; otherwise it is picked in the
- * play picker, which lists every zone and target the play may take and is the other way a player
- * makes the same choice.
- */
+/** Prefer a reachable board target; otherwise use the picker. */
 function reachable(element: Element): boolean {
   const box = element.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return false;
@@ -448,7 +392,6 @@ function reachable(element: Element): boolean {
   return hit !== null && (hit === element || element.contains(hit));
 }
 
-/** Confirm a picker that is still open after its picks (a multi-select, or the mulligan). */
 function submitIfStillOpen(root: string): void {
   cy.get("body", { log: false }).then(($body) => {
     const submit = $body.find(`${root} ${ts(PROMPT_SUBMIT)}`);
@@ -456,7 +399,7 @@ function submitIfStillOpen(root: string): void {
   });
 }
 
-/** R9 through the picker: toggle every card so exactly `keep` is kept, check it, then Confirm. */
+/** R9: toggle exactly the requested keep set, then confirm. */
 export function mulliganThroughUi(keep: readonly string[]): void {
   const wanted = [...keep].sort();
   cy.get(promptOf("mulligan"), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
@@ -477,7 +420,6 @@ export function mulliganThroughUi(keep: readonly string[]): void {
   });
 }
 
-/** Answer an engine prompt with the options an `answer` action names, then Confirm if it waits. */
 function answerThroughUi(action: Extract<ActionBody, { type: "answer" }>): void {
   cy.window({ log: false }).then((win) => {
     const pending = currentView(win)?.pending ?? null;
@@ -492,11 +434,9 @@ function answerThroughUi(action: Extract<ActionBody, { type: "answer" }>): void 
   });
 }
 
-/** Answer whatever prompt is open with its first option (the harness's autopilot), confirming if it waits. */
 export function answerFirstOption(): void {
   cy.get("body", { log: false }).then(($body) => {
     if ($body.find(promptOf("mulligan")).length > 0) {
-      // The autopilot keeps the whole hand: every card marked Keep, then Confirm.
       cy.get(promptOf("mulligan")).within(() => {
         cy.get(ANY_PROMPT_OPTION).each(($option) => {
           if (!isPicked($option)) cy.wrap($option, { log: false }).click();
@@ -512,12 +452,7 @@ export function answerFirstOption(): void {
 
 type PlayAction = Extract<ActionBody, { type: "play" }>;
 
-/**
- * The picks a play still owes after its hand card was clicked (R81), made one at a time in the
- * order the client asks for them: whatever the play picker shows next, answered with the value the
- * action carries — a zone or a declared target clicked on the board where it can be, else in the
- * picker. Done once the hand card is no longer selected: the client has sent the play.
- */
+/** R81: complete play picks in client order, preferring reachable board targets. */
 function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): void {
   cy.get("body", { log: false }).then(($body) => {
     const card = $body.find(ts(handCardId(play.instanceId)));
@@ -553,7 +488,7 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         break;
       case "target":
       case "hand": {
-        // One target at a time, on the board where it is drawn and clickable; the picker otherwise.
+        // Prefer a reachable board target to a picker option.
         const next = (play.targets ?? []).find((selection) => {
           const where = boardTestidOf(view, selection);
           return where === null || $body.find(`${ts(where)}[data-selected="true"]`).length === 0;
@@ -568,8 +503,6 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         }
         break;
       }
-      // A play's mode of at most five options is drawn as a Discover pop-up (#88), the only
-      // Discover a play picker draws.
       case "discover":
       case "mode":
       case "direction":
@@ -577,7 +510,6 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
         submitIfStillOpen(`${PROMPT}[data-prompt-source="play"]`);
         break;
       default:
-        // No picker drawn yet: read the board again.
         break;
     }
     finishPlay(play, view, remaining - 1);
@@ -585,14 +517,9 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
 }
 
 export type PerformHooks = {
-  /** Called after a play's hand card is picked up and before its zone or target is chosen. */
   afterPickUp?: (play: PlayAction) => void;
 };
 
-/**
- * Perform one action through the UI. Nothing is dispatched: every action is the clicks a player
- * makes, and an action the spec cannot make with clicks fails the spec rather than being sent.
- */
 export function performThroughUi(action: ActionBody, hooks: PerformHooks = {}): void {
   cy.window({ log: false }).then((win) => {
     const view = currentView(win);
@@ -630,11 +557,6 @@ export function performThroughUi(action: ActionBody, hooks: PerformHooks = {}): 
   });
 }
 
-/**
- * When the coach asks for nothing on the human's turn: attack the enemy hero with the first unit
- * that glows ready and may hit it, else end the turn. (An attacker that may not reach the hero,
- * behind a Taunt, is put back down.)
- */
 export function fallbackTurn(): void {
   cy.get("body", { log: false }).then(($body) => {
     const attackers = $body
@@ -659,17 +581,10 @@ export function fallbackTurn(): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-// one step of the driver
-// ---------------------------------------------------------------------------------------------
+// One step of the driver
 
 export type Taken = "ack" | "coach" | "fallback";
 
-/**
- * Take one moment: "Got it" on a bubble that shows it; the coach's suggested action through the
- * UI; or, when the coach asks for nothing, the fallback. Then wait for proof that it landed — the
- * bubble moved on after "Got it", a new snapshot after an action — and for no refusal.
- */
 export function takeMoment(moment: Exclude<Moment, { kind: "over" }>, hooks: PerformHooks = {}): Cypress.Chainable<Taken> {
   if (moment.kind === "ack") {
     const before = moment.coach;

@@ -1,17 +1,7 @@
-// No dead ends in the shell (docs/polish/5-sign-in.md, B40). The gate's error panel offers a retry
-// that re-reads `/api/auth/me` without a reload, a way home and a way to sign out. The banned panel
-// offers home and sign-out, and the 404 panel offers home.
-//
-// Asserted through the real modules, as routes/gate.test.tsx does: `App` and `Gated` from
-// `main.tsx` (loaded with `await import`, because main.tsx mounts itself outside vitest), a session
-// in localStorage, `/api/auth/me` over a stubbed `fetch`, and the URL and storage as the answer.
-//
-// Every session here is an e2e fixture session with no refresh token, so no renewal (R194) runs
-// and the gate's panels are what the server's answer alone decides.
-//
-// A home exit may be a link (`<a href="/">`) or a button that navigates. Both are a way home, and
-// jsdom follows neither a link's default action nor `location.assign`, so `expectLeadsTo` accepts
-// either shape and checks where it goes.
+// B40: gate errors offer retry, home and sign-out; banned and 404 panels offer home.
+// Tests import self-mounting `main.tsx`, stub `fetch`, and assert URL and storage outcomes.
+// Fixture sessions omit refresh tokens, so R194 renewal cannot determine these panels.
+// `expectLeadsTo` handles links and navigation buttons because jsdom follows neither.
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,16 +17,13 @@ const SUPABASE_URL = "https://project.supabase.co";
 const SUPABASE_KEY = "sb_publishable_test";
 const TOKEN = "e2e-token-shell";
 
-/** A lazily loaded route plus a stubbed round trip can outrun the 1 s default under load. */
+/** Lazy routes and stubbed requests can exceed Vitest's default timeout. */
 const SLOW = { timeout: 5_000 } as const;
 
-// ---------------------------------------------------------------------------------------------
-// the stubbed server
-// ---------------------------------------------------------------------------------------------
+// The stubbed server
 
 type MeAnswer = "active" | "pending" | "banned" | "unauthorized" | "failing" | "unreachable";
 
-/** What `/api/auth/me` answers right now. A test flips it before pressing retry. */
 let meAnswer: MeAnswer = "active";
 let meCalls = 0;
 
@@ -100,7 +87,7 @@ function serve(): void {
       if (url.endsWith("/api/collection")) {
         return Promise.resolve(jsonResponse(200, { catalogVersion: "v1", entries: [] }));
       }
-      // Sign-out revokes at the provider (B34); it must never reach a real network.
+      // B34: sign-out revokes at the provider and must never reach a real network.
       if (url.startsWith(`${SUPABASE_URL}/auth/v1/`)) return Promise.resolve(jsonResponse(204));
       return Promise.resolve(
         jsonResponse(404, { error: { code: "not_found", message: `no stub for ${url}` } }),
@@ -117,7 +104,6 @@ function at(path: string): void {
   window.history.replaceState(null, "", path);
 }
 
-/** A gated screen that says so when the gate opens. */
 function renderGated(): void {
   render(
     <Gated>
@@ -126,10 +112,7 @@ function renderGated(): void {
   );
 }
 
-/**
- * The exit goes to `path`: either it is a link whose href is that path, or pressing it moves the
- * URL there.
- */
+/** Assert a link's href or a navigation button's resulting URL; jsdom omits native navigation. */
 async function expectLeadsTo(element: HTMLElement, path: string): Promise<void> {
   const link = element.closest("a");
   if (link !== null && link.hasAttribute("href")) {
@@ -159,9 +142,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// ---------------------------------------------------------------------------------------------
-// the gate's error panel
-// ---------------------------------------------------------------------------------------------
+// The gate's error panel
 
 describe("B40 the gate's error panel", () => {
   it.each([
@@ -192,7 +173,6 @@ describe("B40 the gate's error panel", () => {
     expect((await screen.findByTestId("opened", undefined, SLOW)).textContent).toBe(TOKEN);
     expect(meCalls).toBeGreaterThan(before);
     expect(screen.queryByTestId(shellTestid.error)).toBeNull();
-    // Re-read in place: the URL has not moved and the session is the one it was.
     expect(window.location.pathname).toBe(paths.decks);
     expect(window.localStorage.getItem(E2E_SESSION_STORAGE_KEY)).not.toBeNull();
   });
@@ -286,9 +266,7 @@ describe("B40 the gate's error panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the banned panel
-// ---------------------------------------------------------------------------------------------
+// The banned panel
 
 describe("B40 the banned panel", () => {
   it("B40 offers gate-home and gate-sign-out, and never opens the gate", async () => {
@@ -325,9 +303,7 @@ describe("B40 the banned panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the 404 panel
-// ---------------------------------------------------------------------------------------------
+// The 404 panel
 
 describe("B40 the 404 panel", () => {
   it.each(["/nope", "/decks/extra", "/login/again"])(
@@ -359,7 +335,7 @@ describe("B40 the 404 panel", () => {
 
     const home = await screen.findByTestId(shellTestid.notFoundHome, undefined, SLOW);
     const link = home.closest("a");
-    // A link is followed by the browser, which jsdom does not do; do what the browser would.
+    // Emulate link navigation, which jsdom omits.
     if (link !== null && link.hasAttribute("href")) at(new URL(link.href).pathname);
     fireEvent.click(home);
     if (link !== null && link.hasAttribute("href")) window.dispatchEvent(new PopStateEvent("popstate"));
@@ -369,9 +345,7 @@ describe("B40 the 404 panel", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the ids
-// ---------------------------------------------------------------------------------------------
+// The IDs
 
 describe("B40 test ids", () => {
   it("B40 main.tsx re-exports shellTestid exactly as auth/testids.ts defines it", () => {

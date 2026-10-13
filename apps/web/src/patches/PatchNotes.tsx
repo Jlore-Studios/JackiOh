@@ -1,34 +1,25 @@
-// The Patch notes page's body (brief B4.2 item 5, R388, R507): every patch, newest first, with its
-// version, date, title, source and notes, and the cards it touched.
-//
-// - The newest PATCHES_OPEN_ON_LOAD patches show their cards on arrival; every other patch shows
-//   its counts and a "Show the cards" control, and loads its snapshot and the one before it only
-//   when opened, so the page never downloads a snapshot nobody asked to see.
-// - A patch's cards, filtered by name: the changed cards whose faces print the change as faces from
-//   that patch's snapshot, each with what changed marked (ChangeList); the changed cards whose every
-//   change lies in data a face does not print (lines of code, the cards a text names) as names with
-//   a line saying what changed; the added cards as names grouped by set, each set's tokens apart, so
-//   a patch that adds hundreds of cards is a list to scan and not hundreds of faces; and the removed
-//   cards as names.
-// - Every name and face opens the card as it stands now in the collection's detail view, with its
-//   History section open.
-//
-// It reads the patch source and nothing else, and decides nothing (CLAUDE.md rule 7).
+// Patch notes (brief B4.2 item 5; R388, R507) lazy-load opened snapshots and limit faces in large additions.
+// Patches sit in their release line, one bubble per set, the newest open (R724000), and each shows its
+// player note, never its record's source or notes (R724001). They read public patch data only (CLAUDE.md
+// rule 7).
 
 import { useId, useState, type ReactElement } from "react";
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
 
+import { listSeparator, readerName } from "../cards/chinese.ts";
 import { isGlitch } from "../cards/glitch.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { CardDefsProvider } from "../cards/refContext.tsx";
+import { formatDay, t } from "../i18n/i18n.ts";
 import { ChangeList, changeSummary } from "./ChangeList.tsx";
-import { PATCHES_OPEN_ON_LOAD } from "./constants.ts";
+import { PATCHES_OPEN_ON_LOAD, RELEASES_OPEN_ON_LOAD } from "./constants.ts";
 import { useLoaded, usePatchSource, type Loaded } from "./context.tsx";
 import { faceShown, type CardDelta } from "./diff.ts";
 import { currentDef, nameMatches, newestFirst, patchCards, versionBefore, type PatchCards } from "./history.ts";
 import { PatchFace } from "./PatchFace.tsx";
-import type { Patch } from "./source.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, type Release } from "./releases.ts";
+import type { Patch, PlayerNote } from "./source.ts";
 import { patchTestid } from "./testids.ts";
 
 import "./patches.css";
@@ -37,24 +28,26 @@ type OpenCard = (id: string) => void;
 
 const NO_DEFS: CardDefs = {};
 
-/** "1 card", "206 cards". */
 function cards(count: number): string {
-  return `${String(count)} ${count === 1 ? "card" : "cards"}`;
+  return count === 1 ? t("1 card") : t("{n} cards", { n: count });
 }
 
-/** "206 added · 111 changed", from the patch's own record; nothing for a kind it has none of. */
+function patchCount(count: number): string {
+  return count === 1 ? t("1 patch") : t("{n} patches", { n: count });
+}
+
 export function countsLine(patch: Patch): string {
   // R674: Glitch is not counted, as it is not listed (history.ts `patchCards`).
   const count = (kind: Patch["changes"][number]["kind"]): number =>
     patch.changes.filter((change) => change.kind === kind && !isGlitch(change.id)).length;
   const parts = [
-    [count("added"), "added"],
-    [count("changed"), "changed"],
-    [count("removed"), "removed"],
+    [count("added"), (n: number) => t("{cards} added", { cards: cards(n) })],
+    [count("changed"), (n: number) => t("{cards} changed", { cards: cards(n) })],
+    [count("removed"), (n: number) => t("{cards} removed", { cards: cards(n) })],
   ] as const;
   return parts
     .filter(([n]) => n > 0)
-    .map(([n, word]) => `${cards(n)} ${word}`)
+    .map(([n, line]) => line(n))
     .join(" · ");
 }
 
@@ -73,7 +66,7 @@ function NameButton({ def, onOpen }: { def: CardDef; onOpen: OpenCard }): ReactE
         onOpen(def.id);
       }}
     >
-      {def.name}
+      {readerName(def)}
     </button>
   );
 }
@@ -91,9 +84,9 @@ function ChangedCard({ delta, onOpen }: { delta: Extract<CardDelta, { kind: "cha
         <PatchFace def={delta.def} face={faceShown(delta)} />
       </div>
       <div className="patch-card__body">
-        <h4 className="patch-card__name">
+        <h5 className="patch-card__name">
           <NameButton def={delta.def} onOpen={onOpen} />
-        </h4>
+        </h5>
         <ChangeList delta={delta} />
       </div>
     </li>
@@ -104,17 +97,16 @@ function Section({ title, count, children }: { title: string; count: number; chi
   const headingId = useId();
   return (
     <section className="patch-section" aria-labelledby={headingId}>
-      <h3 className="patch-section__title" id={headingId}>
+      <h4 className="patch-section__title" id={headingId}>
         {title} <span className="patch-count">({count})</span>
-      </h3>
+      </h4>
       {children}
     </section>
   );
 }
 
-/** A patch's cards, filtered by `query`. */
 function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: string; onOpen: OpenCard }): ReactElement {
-  const keep = (def: CardDef): boolean => nameMatches(def.name, query);
+  const keep = (def: CardDef): boolean => nameMatches(def.name, query) || nameMatches(readerName(def), query);
   const changed = all.changed.filter((delta) => keep(delta.def));
   const quiet = all.dataOnly.filter((delta) => keep(delta.def));
   const added = all.added.map((group) => ({ ...group, cards: group.cards.filter(keep) })).filter((group) => group.cards.length > 0);
@@ -125,14 +117,14 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
   if (nothing) {
     return (
       <p className="patch-status" data-testid={patchTestid.noMatch}>
-        {query.trim() === "" ? "This patch changed no card." : `No card in this patch matches “${query.trim()}”.`}
+        {query.trim() === "" ? t("This patch changed no card.") : t("No card in this patch matches “{query}”.", { query: query.trim() })}
       </p>
     );
   }
   return (
     <>
       {changed.length === 0 ? null : (
-        <Section title="Changed" count={changed.length}>
+        <Section title={t("Changed")} count={changed.length}>
           <ul className="patch-card-list">
             {changed.map((delta) => (
               <ChangedCard key={delta.id} delta={delta} onOpen={onOpen} />
@@ -141,25 +133,25 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
         </Section>
       )}
       {quiet.length === 0 ? null : (
-        <Section title="Changed only in details the card doesn’t print" count={quiet.length}>
+        <Section title={t("Changed only in details the card doesn’t print")} count={quiet.length}>
           <ul className="patch-quiet">
             {quiet.map((delta) => (
               <li key={delta.id} className="patch-quiet__card" data-testid={patchTestid.dataOnly} data-card={delta.id}>
                 <NameButton def={delta.def} onOpen={onOpen} />
-                <span className="patch-quiet__what">{delta.changes.map(changeSummary).join("; ")}</span>
+                <span className="patch-quiet__what">{delta.changes.map(changeSummary).join(listSeparator())}</span>
               </li>
             ))}
           </ul>
         </Section>
       )}
       {added.length === 0 ? null : (
-        <Section title="Added" count={addedCount}>
+        <Section title={t("Added")} count={addedCount}>
           <div className="patch-groups">
             {added.map((group) => (
               <div key={group.label} className="patch-group" data-testid={patchTestid.addedGroup} data-group={group.label}>
-                <h4 className="patch-group__title">
-                  {group.label} <span className="patch-count">({group.cards.length})</span>
-                </h4>
+                <h5 className="patch-group__title">
+                  {group.token ? t("{set} tokens", { set: t(group.set) }) : t(group.set)} <span className="patch-count">({group.cards.length})</span>
+                </h5>
                 <ul className="patch-names">
                   {group.cards.map((def) => (
                     <li key={def.id}>
@@ -173,7 +165,7 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
         </Section>
       )}
       {removed.length === 0 ? null : (
-        <Section title="Removed" count={removed.length}>
+        <Section title={t("Removed")} count={removed.length}>
           <ul className="patch-names">
             {removed.map((def) => (
               <li key={def.id} data-testid={patchTestid.removed} data-card={def.id}>
@@ -187,7 +179,6 @@ function CardsView({ cards: all, query, onOpen }: { cards: PatchCards; query: st
   );
 }
 
-/** A patch's cards: its snapshot and the one before it, loaded on first show, then the filter and the lists. */
 function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: readonly Patch[]; onOpen: OpenCard }): ReactElement {
   const source = usePatchSource();
   const [query, setQuery] = useState("");
@@ -204,7 +195,7 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   if (read.status === "loading") {
     return (
       <p className="patch-status" role="status" data-testid={patchTestid.cardsLoading}>
-        Loading this patch&rsquo;s cards…
+        {t("Loading this patch’s cards…")}
       </p>
     );
   }
@@ -212,10 +203,10 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.cardsError}>
-          This patch&rsquo;s cards didn&rsquo;t load.
+          {t("This patch’s cards didn’t load.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.cardsRetry} onClick={read.retry}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -223,12 +214,12 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
   return (
     <div className="patch-cards" data-testid={patchTestid.cards}>
       <label className="patch-filter">
-        <span className="patch-filter__label">Find a card in {patch.version}</span>
+        <span className="patch-filter__label">{t("Find a card in {version}", { version: patch.version })}</span>
         <input
           type="search"
           data-testid={patchTestid.filter}
           value={query}
-          placeholder="Card name"
+          placeholder={t("Card name")}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => {
@@ -237,6 +228,26 @@ function PatchCardsPanel({ patch, patches, onOpen }: { patch: Patch; patches: re
         />
       </label>
       <CardsView cards={read.value} query={query} onOpen={onOpen} />
+    </div>
+  );
+}
+
+/** R724001: a patch's note under the page's fixed headings; nothing when it has none or no line. */
+function PlayerNoteView({ note }: { note: PlayerNote | undefined }): ReactElement | null {
+  const sections = note === undefined ? [] : NOTE_SECTIONS.filter(({ key }) => note[key].length > 0);
+  if (note === undefined || sections.length === 0) return null;
+  return (
+    <div className="patch-note" data-testid={patchTestid.note}>
+      {sections.map(({ key, heading }) => (
+        <section key={key} className="patch-note__section" data-testid={patchTestid.noteSection} data-section={key}>
+          <h4 className="patch-note__heading">{t(heading)}</h4>
+          <ul className="patch-note__lines">
+            {note[key].map((line, at) => (
+              <li key={at}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
@@ -259,19 +270,18 @@ function PatchEntry({
   return (
     <article className="patch" data-testid={patchTestid.patch} data-version={patch.version} aria-labelledby={titleId}>
       <header className="patch__head">
-        <h2 className="patch__title" id={titleId}>
-          <span className="patch-version">{patch.version}</span> <span className="patch__name">{patch.title}</span>
-        </h2>
+        <h3 className="patch__title" id={titleId}>
+          <span className="patch-version">{patch.version}</span> <span className="patch__name">{playerTitle(patch)}</span>
+        </h3>
         <p className="patch__meta">
           <time className="patch-date" dateTime={patch.date}>
-            {patch.date}
+            {formatDay(patch.date)}
           </time>
-          {patch.source === "" ? null : <span className="patch__source"> · {patch.source}</span>}
         </p>
       </header>
-      {patch.notes === "" ? null : <p className="patch__notes">{patch.notes}</p>}
+      <PlayerNoteView note={patch.player} />
       {patch.changes.length === 0 ? (
-        <p className="patch__counts">No card changed.</p>
+        <p className="patch__counts">{t("No card changed.")}</p>
       ) : (
         <>
           <p className="patch__counts">{counts}</p>
@@ -285,7 +295,7 @@ function PatchEntry({
               setOpen((was) => !was);
             }}
           >
-            {open ? "Hide the cards" : `Show the ${cards(patch.changes.length)}`}
+            {open ? t("Hide the cards") : t("Show the {cards}", { cards: cards(patch.changes.length) })}
           </button>
           <div id={panelId} className="patch__panel" hidden={!open}>
             {open ? <PatchCardsPanel patch={patch} patches={patches} onOpen={onOpen} /> : null}
@@ -296,7 +306,6 @@ function PatchEntry({
   );
 }
 
-/** The card a name opened, as it stands now, in the detail view with its history open. */
 function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Patch[]; onClose: () => void }): ReactElement | null {
   const source = usePatchSource();
   const read = useLoaded<CardDef | null>(`open:${id}`, async () => currentDef(id, patches, await source.index(), (version) => source.snapshot(version)));
@@ -304,21 +313,94 @@ function OpenedCard({ id, patches, onClose }: { id: string; patches: readonly Pa
   return <CardDetail def={read.value} onClose={onClose} historyOpen />;
 }
 
-/** The list, once patches.json has loaded: references resolve against the newest snapshot. */
-function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
+/** R724000: one release line as a bubble: its name, span and count, and, opened, its summary, technical changes and patches. */
+function ReleaseBubble({
+  release,
+  group,
+  patches,
+  opened,
+  initiallyOpen,
+  onOpen,
+}: {
+  release: Release;
+  group: readonly Patch[];
+  patches: readonly Patch[];
+  opened: ReadonlySet<string>;
+  initiallyOpen: boolean;
+  onOpen: OpenCard;
+}): ReactElement {
+  const [open, setOpen] = useState(initiallyOpen);
+  const headingId = useId();
+  const panelId = useId();
+  const newest = group[0]?.version ?? "";
+  const oldest = group.at(-1)?.version ?? "";
+  return (
+    <section className="patch-set" data-testid={patchTestid.set} data-set={release.id} aria-labelledby={headingId}>
+      <h2 className="patch-set__heading" id={headingId}>
+        <button
+          type="button"
+          className="link-button patch-set__toggle"
+          data-testid={patchTestid.setToggle}
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => {
+            setOpen((was) => !was);
+          }}
+        >
+          <span className="patch-set__name">{t(release.name)}</span>
+          <span className="patch-set__span">{oldest === newest ? newest : `${oldest} – ${newest}`}</span>
+          <span className="patch-set__count">{patchCount(group.length)}</span>
+        </button>
+      </h2>
+      <div id={panelId} className="patch-set__panel" hidden={!open}>
+        {open ? (
+          <>
+            {release.summary === "" ? null : <p className="patch-set__summary">{release.summary}</p>}
+            {release.technical.length === 0 ? null : (
+              <section className="patch-tech" data-testid={patchTestid.technical}>
+                <h3 className="patch-tech__title">{t("Technical changes")}</h3>
+                <ul className="patch-tech__lines">
+                  {release.technical.map((line, at) => (
+                    <li key={at}>{line}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <ol className="patch-list">
+              {group.map((patch) => (
+                <li key={patch.version}>
+                  <PatchEntry patch={patch} patches={patches} initiallyOpen={opened.has(patch.version)} onOpen={onOpen} />
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function PatchList({ patches, releases }: { patches: readonly Patch[]; releases: readonly Release[] }): ReactElement {
   const source = usePatchSource();
   const [openId, setOpenId] = useState<string | null>(null);
   const newest = patches[patches.length - 1];
   const defs: Loaded<CardDefs | null> = useLoaded(`defs:${newest?.version ?? ""}`, () =>
     newest === undefined ? Promise.resolve(null) : source.snapshot(newest.version),
   );
-  const ordered = newestFirst(patches);
+  const opened = new Set(newestFirst(patches).slice(0, PATCHES_OPEN_ON_LOAD).map((patch) => patch.version));
   return (
     <CardDefsProvider defs={defs.status === "ready" ? (defs.value ?? NO_DEFS) : NO_DEFS}>
-      <ol className="patch-list">
-        {ordered.map((patch, at) => (
-          <li key={patch.version}>
-            <PatchEntry patch={patch} patches={patches} initiallyOpen={at < PATCHES_OPEN_ON_LOAD} onOpen={setOpenId} />
+      <ol className="patch-sets">
+        {releaseGroups(patches, releases).map(({ release, patches: group }, at) => (
+          <li key={release.id}>
+            <ReleaseBubble
+              release={release}
+              group={group}
+              patches={patches}
+              opened={opened}
+              initiallyOpen={at < RELEASES_OPEN_ON_LOAD}
+              onOpen={setOpenId}
+            />
           </li>
         ))}
       </ol>
@@ -336,14 +418,14 @@ function PatchList({ patches }: { patches: readonly Patch[] }): ReactElement {
   );
 }
 
-export function PatchNotes(): ReactElement {
+export function PatchNotes({ releases = RELEASES }: { releases?: readonly Release[] }): ReactElement {
   const source = usePatchSource();
   const read = useLoaded("patches", () => source.patches());
 
   if (read.status === "loading") {
     return (
       <p className="patch-status" role="status" data-testid={patchTestid.loading}>
-        Loading the patch notes…
+        {t("Loading the patch notes…")}
       </p>
     );
   }
@@ -351,10 +433,10 @@ export function PatchNotes(): ReactElement {
     return (
       <div className="patch-status">
         <p role="alert" data-testid={patchTestid.error}>
-          The patch notes didn&rsquo;t load. Check your connection and try again.
+          {t("The patch notes didn’t load. Check your connection and try again.")}
         </p>
         <button type="button" className="patch-retry" data-testid={patchTestid.retry} onClick={read.retry}>
-          Try again
+          {t("Try again")}
         </button>
       </div>
     );
@@ -362,9 +444,9 @@ export function PatchNotes(): ReactElement {
   if (read.value.length === 0) {
     return (
       <p className="patch-status" data-testid={patchTestid.empty}>
-        There are no patch notes yet.
+        {t("There are no patch notes yet.")}
       </p>
     );
   }
-  return <PatchList patches={read.value} />;
+  return <PatchList patches={read.value} releases={releases} />;
 }

@@ -1,32 +1,15 @@
-//! Port of `packages/engine/test/combat.property.test.ts`.
+//! The M2 gate (BUILD.md): 1,000 random combats between random keyword combinations never produce
+//! negative health, never leave a unit at health ≤ 0 on the field unless it is Indestructible with max
+//! health above 0 (R69), and never emit a `damage` event on an Indestructible target.
+//! R69: an Indestructible unit at 0 or less health stays while its max health is above 0, and is
+//! collected like any other once its max health falls to 0 or less. R46: a would-destroy on it
+//! switches it to Attack Position and takes its Taunt away for the turn.
 //!
-//! The M2 gate (BUILD.md), verbatim: "`engine/test/combat.property.test.ts`: 1,000 random combats
-//! between random keyword combinations never produce negative health, never leave a unit at health
-//! ≤ 0 on the field unless it is Indestructible with max health above 0 (R69), and never emit a
-//! `damage` event on an Indestructible target."
-//!
-//! R69, verbatim: "An Indestructible unit whose max health falls to 0 or less (Suppressive Aura) is
-//! collected like any other unit, because no destroy effect is involved: it dies, fires Death, may
-//! Reborn and counts toward Ceaseless Void's destroyed counter (Hearthstone). An Indestructible unit
-//! at 0 or less health whose max health is still above 0 (damage taken before it became
-//! Indestructible) stays." R46 is the other half: a would-destroy on an Indestructible unit switches
-//! it to Attack Position and takes its Taunt away for the turn.
-//!
-//! How the 1,000 cases are built. Each case is a deterministic function of its index: case `i` draws
-//! from `createRng("m2-combat-<i>")`, so a violation is reproduced by that seed alone and the whole
-//! run is the same on every machine (§10.7, §9.3). A case picks an attacker and a defender from the
-//! keyword fixtures of `./fixtures/combat`, adds zero to two granted keywords out of the pool below
-//! (which is where the *combinations* come from: Divine Shield on a Trampler, Indestructible on a
-//! Poisonous body, Armor on a First Striker), flips radiant on either side, puts either unit in
-//! Defense Position, gives either one damage it took earlier or a negative health buff that drags
-//! its max health to 0 (R69's first sentence, which no Core fixture has an aura for), aims at the
-//! defender or at the hero, and enters through `declareAttack` when §4.2 allows it or `forceAttack`
-//! when it does not (R53). Every entry point runs the combat and then the state check of §4.5.
-//!
-//! The three invariants are checked as SPEC reads them, and the readings are in the comments at each
-//! one. Two exceptions are the rules themselves rather than a loosening: R69 leaves an Indestructible
-//! unit at 0 or less health on the field while its max health is above 0, and §4.5 step 2 stops the
-//! check the moment a hero dies, so a game that is over may still have a body on the board.
+//! Case `i` draws from the seed `m2-combat-<i>`, so a violation reproduces from that seed alone
+//! (§10.7, §9.3). It pairs two keyword fixtures with zero to two granted keywords each, flips radiant
+//! and position, adds earlier damage or drags max health to 0, aims at a unit or the hero, and enters
+//! through `declareAttack` when §4.2 allows it or `forceAttack` when it does not (R53), then runs the
+//! §4.5 state check; step 2 stops it the moment a hero dies, so a game that is over may keep a body.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -107,7 +90,7 @@ struct Tally {
     r69_survivors: i32,
     /// R69's first sentence: collected because its max health fell to 0 or less.
     r69_collected: i32,
-    /// Tallied and never asserted on, as in TS.
+    /// Tallied and never asserted on.
     #[allow(dead_code)]
     games_over: i32,
 }
@@ -128,7 +111,7 @@ fn grants_for(rng: &mut Rng) -> Vec<Keyword> {
     picked
 }
 
-/// The instance as the state holds it now (TS reads its live object).
+/// The instance as the state holds it now.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
@@ -176,11 +159,9 @@ fn dress(state: &mut GameState, unit_id: &str, rng: &mut Rng) {
             .buffs
             .health -= view.max_health;
     } else if rng.chance(0.5) && view.max_health > 1 {
-        // "Damage taken before it became Indestructible": a body that is already hurt. The range runs
-        // past max health on purpose, so R69's second sentence — an Indestructible unit at 0 or less
-        // health whose max health is still above 0, which stays on the field — is reached: it cannot
-        // be reached any other way, since §4.4 step 4 stops an Indestructible unit taking damage at
-        // all. A unit that is not Indestructible and lands there is simply collected by §4.5.
+        // Earlier damage, the range running past max health on purpose: R69's second sentence (an
+        // Indestructible unit at 0 or less health, max health above 0, stays) is reachable no other
+        // way, since §4.4 step 4 stops an Indestructible unit taking damage. Others are collected (§4.5).
         let earlier = rng.int(view.max_health + 3);
         find_instance_mut(state, unit_id).expect("dressed unit").damage = earlier;
     }
@@ -322,10 +303,9 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         });
     };
 
-    // ---- Invariant 1: "never produce negative health". -----------------------
-    // A hero's health below 0 is how a hero dies (§4.5 step 2), so the invariant is that no *live*
-    // game holds one; and no instance anywhere carries negative damage, which is the counter every
-    // health on the board is computed from (§10.4 layer 6).
+    // Invariant 1, "never produce negative health": a hero below 0 is how a hero dies (§4.5 step 2),
+    // so no *live* game holds one; and no instance carries negative damage, the counter every health
+    // on the board is computed from (§10.4 layer 6).
     for player in [P1, P2] {
         let side = &state.players[player];
         if state.result.is_none() && side.hero.health <= 0 {
@@ -369,7 +349,7 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         }
     }
 
-    // ---- Invariant 2: no unit at health ≤ 0 on the field, R69's exception aside. ----
+    // Invariant 2: no unit at health ≤ 0 on the field, R69's exception aside.
     for player in [P1, P2] {
         for unit in units_on_field(&state, player) {
             let view = unit_view(&state, &unit);
@@ -404,7 +384,7 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
         }
     }
 
-    // ---- Invariant 3: no `damage` event on an Indestructible target (§4.4 step 4). ----
+    // Invariant 3: no `damage` event on an Indestructible target (§4.4 step 4).
     for hit in events_of_type(&events, GameEventType::Damage).iter() {
         let GameEvent::Damage {
             source_id,
@@ -455,7 +435,7 @@ fn run_one_combat(index: i32, tally: &mut Tally) -> Vec<Violation> {
     out
 }
 
-/// `describe("M2 gate: 1,000 random combats (BUILD M2, §4.3, §4.4, §4.5)")`.
+/// M2 gate: 1,000 random combats (BUILD M2, §4.3, §4.4, §4.5).
 mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
     use super::*;
 
@@ -467,8 +447,7 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
         let mut violations: Vec<Violation> = Vec::new();
         for index in 0..COMBATS {
             violations.extend(run_one_combat(index, &mut tally));
-            // A failure names the seed that reproduces the case on its own; stop at a handful so the
-            // report is readable rather than a wall of the same bug.
+            // Each failure names its seed; stop at a handful so the report stays readable.
             if violations.len() >= 5 {
                 break;
             }
@@ -508,7 +487,7 @@ mod m2_gate_1_000_random_combats_build_m2_s4_3_s4_4_s4_5 {
     }
 }
 
-/// `describe("R69 and R46: the exception invariant 2 carves out")`.
+/// R69 and R46: the exception invariant 2 carves out.
 mod r69_and_r46_the_exception_invariant_2_carves_out {
     use super::*;
 

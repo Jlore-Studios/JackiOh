@@ -1,6 +1,8 @@
 // The emote UI (issue §2, §5): the picker that opens on your own portrait, the one-item "Mute
 // emotes" menu on the opponent's, and the bubble/sticker that pops out of a hero. The picker offers
 // the seat's dealt hand and nothing else (R1343): its voice lines and its emoji, in the pool's order.
+// A click on a portrait hangs its menu off the portrait, the placement below; a hold opens the hero's
+// inspect view (`HeroInspect.tsx`), which draws the same menu `inline` (R1449, R1330).
 //
 // Placement is inside the hero element (`position: relative`), so it needs no board coordinates:
 // the hand's voice lines sit on an arc above the portrait, its emoji in a row under them, the bubble or
@@ -13,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactElement, type R
 import type { EmojiEmoteId, EmoteId, VoiceEmoteId } from "@jackioh/shared";
 import { isVoiceEmote, type EmoteGate } from "@jackioh/shared";
 
+import { DEFAULT_LOCALE, getLocale, t } from "../i18n/i18n.ts";
 import { EmojiArt, EMOJI_LABEL } from "./EmojiArt.tsx";
 import { EMOTE_MENU_EDGE_PX, EMOTE_MENU_TICK_MS } from "./config.ts";
 import type { EmoteShow as EmoteShowState } from "./session.ts";
@@ -42,14 +45,21 @@ export function arcDrop(index: number, count: number): number {
 
 /**
  * Closes on an outside press, Escape or a drag beginning elsewhere — the issue's menu lifetime —
- * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against.
+ * by watching pointerdown/keydown on the window the menu's own clicks stopPropagation against. A
+ * press on the portrait the menu hangs off (`menu`'s parent) is not outside it (R1449): that click
+ * toggles the menu shut itself, and a hold there turns it into the hero's inspect view, so closing
+ * on its pointerdown would have the click open the menu again.
  */
-function useMenuLifetime(open: boolean, onClose: () => void): void {
+function useMenuLifetime(open: boolean, onClose: () => void, menu: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     if (!open) return undefined;
     const onPointerDown = (event: PointerEvent): void => {
-      const inside = (event.target as Element | null)?.closest?.("[data-emote-menu]");
-      if (inside === null || inside === undefined) onClose();
+      const target = event.target as Element | null;
+      const inside = target?.closest?.("[data-emote-menu]");
+      if (inside !== null && inside !== undefined) return;
+      const portrait = menu.current?.parentElement;
+      if (target instanceof Node && portrait?.contains(target) === true) return;
+      onClose();
     };
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") onClose();
@@ -60,7 +70,7 @@ function useMenuLifetime(open: boolean, onClose: () => void): void {
       window.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, onClose]);
+  }, [open, onClose, menu]);
 }
 
 /**
@@ -83,8 +93,9 @@ export function menuShift(rect: { left: number; right: number }, viewportWidth: 
  * mounts the app under it), and a re-run that read the shift the first run applied would take the
  * slid menu for centred and write 0 back — the rect carries the transform.
  */
-function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
+function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
+    if (!enabled) return;
     const menu = ref.current;
     if (menu === null) return;
     menu.style.setProperty("--emote-menu-shift", "0px");
@@ -96,7 +107,7 @@ function useKeepOnScreen(ref: RefObject<HTMLDivElement | null>): void {
       return;
     }
     menu.style.setProperty("--emote-menu-shift", `${menuShift(rect, viewportWidth, EMOTE_MENU_EDGE_PX)}px`);
-  }, [ref]);
+  }, [ref, enabled]);
 }
 
 /**
@@ -110,6 +121,7 @@ export function EmoteMenu({
   gate,
   onPick,
   onClose,
+  inline = false,
 }: {
   side: "you" | "opponent";
   /** The seat's dealt hand (R1341), in the pool's order: the menu shows these and nothing else. */
@@ -117,10 +129,12 @@ export function EmoteMenu({
   gate: () => EmoteGate;
   onPick: (emote: EmoteId) => void;
   onClose: () => void;
+  /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
+  inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(true, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
-  useKeepOnScreen(menuRef);
+  useMenuLifetime(!inline, onClose, menuRef);
+  useKeepOnScreen(menuRef, !inline);
   const [, forceTick] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => forceTick((tick) => tick + 1), EMOTE_MENU_TICK_MS);
@@ -141,11 +155,11 @@ export function EmoteMenu({
   return (
     <div
       ref={menuRef}
-      className={`emote-menu emote-menu-${side}`}
+      className={`emote-menu emote-menu-${side}${inline ? " emote-menu--inline" : ""}`}
       data-emote-menu="true"
       data-testid="emote-menu"
       role="menu"
-      aria-label="Emotes"
+      aria-label={t("Emotes")}
       onPointerDown={(event) => event.stopPropagation()}
       // A click inside the menu must never reach .hero's own onClick — it would read the hero as
       // a non-legal target and reopen the very menu the pick just closed (issue §2: closes on a
@@ -165,7 +179,7 @@ export function EmoteMenu({
             style={{ "--emote-arc-drop": `${arcDrop(index, voices.length)}px` } as React.CSSProperties}
             onClick={pick(emote)}
           >
-            {VOICE_LABEL[emote]}
+            {t(VOICE_LABEL[emote])}
             {limited && waitS > 0 ? <span className="emote-wait">{waitS}</span> : null}
           </button>
         ))}
@@ -180,8 +194,8 @@ export function EmoteMenu({
             data-testid={`emote-${emote}`}
             data-limited={limited ? "true" : undefined}
             disabled={limited}
-            title={EMOJI_LABEL[emote]}
-            aria-label={EMOJI_LABEL[emote]}
+            title={t(EMOJI_LABEL[emote])}
+            aria-label={t(EMOJI_LABEL[emote])}
             onClick={pick(emote)}
           >
             <EmojiArt emoji={emote} />
@@ -201,22 +215,25 @@ export function MuteMenu({
   muted,
   onMute,
   onClose,
+  inline = false,
 }: {
   muted: boolean;
   onMute: () => void;
   onClose: () => void;
+  /** Drawn inside the hero's inspect view (R1330): the view owns its lifetime and placement. */
+  inline?: boolean;
 }): ReactElement {
-  useMenuLifetime(true, onClose);
   const menuRef = useRef<HTMLDivElement>(null);
-  useKeepOnScreen(menuRef);
+  useMenuLifetime(!inline, onClose, menuRef);
+  useKeepOnScreen(menuRef, !inline);
   return (
     <div
       ref={menuRef}
-      className="emote-menu emote-menu-mute"
+      className={`emote-menu emote-menu-mute${inline ? " emote-menu--inline" : ""}`}
       data-emote-menu="true"
       data-testid="emote-mute-menu"
       role="menu"
-      aria-label="Opponent emotes"
+      aria-label={t("Opponent emotes")}
       onPointerDown={(event) => event.stopPropagation()}
       // Same bubbling guard as the emote menu: muting closes the menu, and a click that reached
       // the hero would toggle it straight back open.
@@ -233,10 +250,19 @@ export function MuteMenu({
           onClose();
         }}
       >
-        {muted ? "Emotes muted" : "Mute emotes"}
+        {muted ? t("Emotes muted") : t("Mute emotes")}
       </button>
     </div>
   );
+}
+
+/**
+ * The bubble's words: the voice line as it was recorded, for an English reader; for a reader of any
+ * other language the line's label in their words (#711), since the recording itself stays English.
+ */
+function bubbleText(show: EmoteShowState): string | null {
+  if (show.text === null || getLocale() === DEFAULT_LOCALE || !isVoiceEmote(show.emote)) return show.text;
+  return t(VOICE_LABEL[show.emote]);
 }
 
 /**
@@ -257,7 +283,7 @@ export function EmoteShow({ show }: { show: EmoteShowState }): ReactElement {
       role={isVoice ? "status" : undefined}
     >
       {isVoice ? (
-        show.text
+        bubbleText(show)
       ) : (
         <EmojiArt emoji={show.emote as EmojiEmoteId} />
       )}

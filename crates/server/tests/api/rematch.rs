@@ -15,18 +15,12 @@
 //!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
 //!    status names the mode the rematch plays.
 //!
-//! Port of `apps/server/test/api/rematch.test.ts`. Everything runs on tokio's paused clock through
-//! `test_app()`, with the real registry: the created rematch is asserted off the store and off
-//! `Registry::has`, where TS read the fake directory's `started` list. Where TS replaced a function
-//! to reach a situation (the directory's `presenceOf`, the store's `setInMatch`), the situation is
-//! reached for real (sockets attached to a live actor; the order of the store's calls). TS's
-//! "keeps a seat taken during the start in its game" needs a seat to change hands between the
-//! pre-check and the flagging, which only a replaced `matches.start` could arrange: it is not
-//! ported (notes, GAPS).
+//! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
+//! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
+//! reached for real (sockets on a live actor; the order of the store's calls).
 //!
-//! The offers are module state shared by every test of this binary (`rematch.rs`'s map, as TS's
-//! module map), so each test names its own profiles and matches instead of clearing the map
-//! (TS's `clearRematchOffers()` in `beforeEach` would wipe a test running beside it).
+//! The offers are module state shared by every test of this binary, so each test names its own
+//! profiles and matches instead of clearing the map, which would wipe a test running beside it.
 
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -36,7 +30,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use tokio::sync::MutexGuard;
 
-use jackioh_engine::{PlayerId, newest_shipped_set};
+use jackioh_engine::{ActionBody, PlayerId, newest_shipped_set};
 use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::ws_server::Socket;
 use jackioh_server::api::ranked::rate_ranked_game;
@@ -49,11 +43,9 @@ use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput};
 
 use crate::support::deps::{add_user, call, test_app};
 
-// ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
@@ -65,7 +57,7 @@ fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// One store call in its own transaction, as every TS `deps.store.<x>.<y>(…)` call was.
+/// One store call in its own transaction.
 macro_rules! q {
     ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
         let mut tx = $app.db.begin(None).await.expect("begin");
@@ -82,7 +74,7 @@ async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
     }
 }
 
-/// `{ status, body }` of one request (TS's `router(jsonRequest(…))` and `readJson`).
+/// `{ status, body }` of one request.
 async fn request(app: &Arc<App>, method: &str, path: &str, token: &str, body: Option<Value>) -> (u16, Value) {
     let (status, _headers, body) = call(app, method, path, Some(token), body.unwrap_or(Value::Null)).await;
     (status, body)
@@ -266,9 +258,7 @@ async fn start_live(app: &Arc<App>, match_id: &str, a: &str, b: &str) {
         .expect("the match starts");
 }
 
-// ---------------------------------------------------------------------------------------------
 // R672 — the rating move
-// ---------------------------------------------------------------------------------------------
 
 mod r672_double_or_nothing {
     use super::*;
@@ -409,15 +399,12 @@ mod r672_double_or_nothing {
         let (code, body) = offer(&app, &token_a, &finished, STAKE_DOUBLE).await;
         assert_eq!(code, 422);
         assert_eq!(body["error"]["code"], "double_requires_ranked");
-        // And nothing was offered on the way to the refusal.
         let (_, seen) = status(&app, &token_a, &finished).await;
         assert_eq!(seen["youOffered"], Value::Null);
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Offers and creation
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_offers {
     use super::*;
@@ -474,13 +461,11 @@ mod rematch_offers {
             rematch["stake"]
         );
         assert_ne!(rematch["seed"], finished["seed"]);
-        // Both seats are in the new game.
         assert_eq!(in_match_of(&app, &a).await, json!(rematch_id));
         assert_eq!(in_match_of(&app, &b).await, json!(rematch_id));
         // The registry started it, so a reconnecting socket finds a live actor's match row.
         assert!(app.matches.has(&rematch_id));
 
-        // Offering again changes nothing: the same id comes back, no second game.
         let (_, again) = offer(&app, &token_a, &finished_id, STAKE_NORMAL).await;
         assert_eq!(again["matchId"], json!(rematch_id));
         assert_eq!(live_ids(&app).await, vec![json!(rematch_id)]);
@@ -751,9 +736,7 @@ mod rematch_creation_guards {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Refusals
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_refusals {
     use super::*;
@@ -864,9 +847,7 @@ mod rematch_refusals {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Presence
-// ---------------------------------------------------------------------------------------------
 
 mod rematch_presence {
     use super::*;
@@ -952,5 +933,141 @@ mod rematch_presence {
 
         app.matches.stop(match_id).await;
         assert!(app.matches.presence_of(match_id).is_none());
+    }
+
+    /// The reaper drops a finished actor only once its rematch window has passed and no seat holds an
+    /// open socket, which is when `opponentHere` already read false: the status and the offers read the
+    /// same before and after.
+    #[tokio::test(start_paused = true)]
+    async fn the_status_reads_the_same_before_and_after_the_reaper_drops_the_finished_actor() {
+        let app = test_app().await;
+        let (a, b, finished) = names("presence-reaped");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        start_live(&app, &finished, &a, &b).await;
+        let (p1, _p1_frames) = Socket::channel();
+        let (p2, _p2_frames) = Socket::channel();
+        app.matches
+            .attach(&app, &finished, &a, p1.clone())
+            .await
+            .expect("A attaches");
+        app.matches
+            .attach(&app, &finished, &b, p2.clone())
+            .await
+            .expect("B attaches");
+        settle().await;
+
+        // The game ends through the actor, which records its result and so finishes the match's row.
+        let actor = app
+            .matches
+            .actor_for(&app, &finished)
+            .await
+            .expect("the live actor");
+        let reply = actor
+            .submit(
+                PlayerId::P1,
+                "presence-reaped-concede".to_string(),
+                ActionBody::Concede,
+            )
+            .await;
+        assert_eq!(to_json(&reply)["type"], "ack");
+        actor.idle().await;
+        let window_end = actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+        drop(actor);
+        assert_eq!(match_row(&app, &finished).await["status"], "finished");
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+
+        // Within the window, with both sockets open, nothing changes.
+        assert!(app.matches.reap_finished(window_end).await.is_empty());
+        assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
+
+        // Past it, an open socket still holds the actor, and so the opponent's presence.
+        assert!(app.matches.reap_finished(window_end + 1).await.is_empty());
+        assert_eq!(status(&app, &token_a, &finished).await.1["opponentHere"], true);
+        assert!(p1.is_open() && p2.is_open());
+
+        // The sockets close, and the status already reads nobody here with A's offer standing.
+        p1.transport_closed();
+        p2.transport_closed();
+        settle().await;
+        let before = (
+            status(&app, &token_a, &finished).await.1,
+            status(&app, &token_b, &finished).await.1,
+        );
+        assert_eq!(before.0["opponentHere"], false);
+        assert_eq!(before.1["opponentOffer"], json!(STAKE_NORMAL));
+
+        // The reaper drops the actor, and the status is the one it already was.
+        assert_eq!(
+            app.matches.reap_finished(window_end + 1).await,
+            vec![finished.clone()]
+        );
+        assert!(app.matches.presence_of(&finished).is_none());
+        let after = (
+            status(&app, &token_a, &finished).await.1,
+            status(&app, &token_b, &finished).await.1,
+        );
+        assert_eq!(after, before);
+
+        // The offers outlive the actor: B's matching offer still creates the rematch.
+        let (_, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_ne!(created["matchId"], Value::Null);
+    }
+}
+
+// R1442 — the offers among the finished match's play telemetry
+
+mod r1442_rematch_signals {
+    use super::*;
+
+    /// Each seat's `(rematchOffered, rematchAccepted)`, p1 first.
+    async fn marks(app: &App, match_id: &str) -> Vec<(Value, Value)> {
+        let held = to_json(&q!(app, play_telemetry_of(match_id)));
+        held["matchSignals"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|row| (row["rematchOffered"].clone(), row["rematchAccepted"].clone()))
+            .collect()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1442_an_offer_marks_its_seat_offered_and_the_offer_that_makes_the_rematch_accepted() {
+        let app = test_app().await;
+        let (a, b, finished) = names("signals");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+        // The signals the match's result left (`actor::telemetry`), neither seat having offered.
+        {
+            let mut data = fake(&app).await;
+            for seat in ["p1", "p2"] {
+                data.tables.match_signals.push(from(json!({
+                    "matchId": finished,
+                    "seat": seat,
+                    "drawOffers": 0,
+                    "drawAccepted": false,
+                    "rematchOffered": false,
+                    "rematchAccepted": false,
+                    "timeouts": 0,
+                    "pilot": "human",
+                })));
+            }
+        }
+
+        assert_eq!(offer(&app, &token_a, &finished, STAKE_NORMAL).await.0, 200);
+        assert_eq!(
+            marks(&app, &finished).await,
+            vec![(json!(true), json!(false)), (json!(false), json!(false))]
+        );
+
+        let (status, created) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(status, 200);
+        assert!(created["matchId"].is_string(), "{created}");
+        assert_eq!(
+            marks(&app, &finished).await,
+            vec![(json!(true), json!(false)), (json!(true), json!(true))]
+        );
     }
 }

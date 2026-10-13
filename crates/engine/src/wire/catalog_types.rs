@@ -189,6 +189,17 @@ string_union! {
 }
 
 string_union! {
+    /// R980: a card's element (Meditative #40 Feng Shui), in Hetu (河图) order 1–5. No tag (R986).
+    pub enum CardElement {
+        Water = "水",
+        Fire = "火",
+        Wood = "木",
+        Metal = "金",
+        Earth = "土",
+    }
+}
+
+string_union! {
     /// §8: Core's by mechanical complexity, Classic's and Classic+'s the designer's; every token carries "Token".
     pub enum Rarity {
         Common = "Common",
@@ -228,7 +239,12 @@ string_union! {
 /// The sets that ship, in catalog order. A pool that names no set draws from all of them (R380),
 /// and only from them: a set the catalog holds that is not listed here is in no such pool, in no
 /// deck and on no list a player reads until it is (R1420).
-pub const SHIPPED_SETS: [SetName; 3] = [SetName::Core, SetName::Classic, SetName::ClassicPlus];
+pub const SHIPPED_SETS: [SetName; 4] = [
+    SetName::Core,
+    SetName::Classic,
+    SetName::ClassicPlus,
+    SetName::Meditative,
+];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
@@ -362,12 +378,20 @@ pub enum Keyword {
     /// E35: a Spell can't target this and doesn't affect it.
     #[serde(rename = "Immune to Spells")]
     ImmuneToSpells,
+    /// MD-B1, R940: harmful effects that pick cards by a tribal tag can't target or affect this.
+    #[serde(rename = "Immune to tribal tag based hate")]
+    ImmuneToTribalHate,
     /// R636: a Unit may attack twice each turn.
     Windfury,
     /// R637: a card discarded from its owner's hand at the end of their turn. Not temporary mana (§2.3).
     Temporary,
     /// A Unit may attack and switch position in the same turn (R49).
     Deft,
+    /// R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing.
+    Untributable,
+    /// R1086: a Unit may be played onto one of its controller's Units, resolving on top of it
+    /// before fusing into it (ME-MAGNETIC). In no random keyword pool (R21).
+    Magnetic,
 }
 
 string_union! {
@@ -395,9 +419,13 @@ string_union! {
         Brittle = "Brittle",
         SpellDamage = "Spell Damage",
         ImmuneToSpells = "Immune to Spells",
+        ImmuneToTribalHate = "Immune to tribal tag based hate",
         Windfury = "Windfury",
         Temporary = "Temporary",
         Deft = "Deft",
+        Untributable = "Untributable",
+        /// R1086: ME-MAGNETIC's keyword.
+        Magnetic = "Magnetic",
     }
 }
 
@@ -430,9 +458,12 @@ impl Keyword {
             Keyword::Brittle { .. } => KeywordKind::Brittle,
             Keyword::SpellDamage { .. } => KeywordKind::SpellDamage,
             Keyword::ImmuneToSpells => KeywordKind::ImmuneToSpells,
+            Keyword::ImmuneToTribalHate => KeywordKind::ImmuneToTribalHate,
             Keyword::Windfury => KeywordKind::Windfury,
             Keyword::Temporary => KeywordKind::Temporary,
             Keyword::Deft => KeywordKind::Deft,
+            Keyword::Untributable => KeywordKind::Untributable,
+            Keyword::Magnetic => KeywordKind::Magnetic,
         }
     }
 
@@ -473,9 +504,12 @@ impl Keyword {
             KeywordKind::Brittle => Keyword::Brittle { n },
             KeywordKind::SpellDamage => Keyword::SpellDamage { n },
             KeywordKind::ImmuneToSpells => Keyword::ImmuneToSpells,
+            KeywordKind::ImmuneToTribalHate => Keyword::ImmuneToTribalHate,
             KeywordKind::Windfury => Keyword::Windfury,
             KeywordKind::Temporary => Keyword::Temporary,
             KeywordKind::Deft => Keyword::Deft,
+            KeywordKind::Untributable => Keyword::Untributable,
+            KeywordKind::Magnetic => Keyword::Magnetic,
         }
     }
 }
@@ -545,6 +579,13 @@ pub struct CardFace {
     /// Conventions and written out in full (R277), so a client can print it whole and mark what differs.
     /// A tunable number (`CardDef.params`, B3.4) is written `{key}`, filled in by `fill_params`.
     pub text: String,
+    /// ME-GRANT (MD-D13): the Death abilities this face grants, by key, holding the quoted ability of
+    /// the face — `meditative-058`'s faces carry `bookDeath`, `meditative-059`'s `fusedBookDeath`.
+    /// The instance carries the name and the numbers as plain data; `grants::grant_texts` fills the
+    /// text for the view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub grants: Option<IndexMap<String, String>>,
 }
 
 string_union! {
@@ -755,9 +796,20 @@ pub fn fill_params(def: &CardDef, face: FaceKind, values: Option<&IndexMap<Strin
         FaceKind::Base => &def.base.text,
         FaceKind::Radiant => &def.radiant.text,
     };
+    fill_text(text, def, face, values)
+}
+
+/// ME-GRANT: `fill_params` over a text that is not the face's own — a granted ability's quoted text,
+/// filled with the grant's numbers against the granting card's declarations.
+pub fn fill_text(
+    text: &str,
+    def: &CardDef,
+    face: FaceKind,
+    values: Option<&IndexMap<String, i32>>,
+) -> String {
     let params = match &def.params {
         Some(params) if !params.is_empty() => params,
-        _ => return text.clone(),
+        _ => return text.to_string(),
     };
     let mut out = String::with_capacity(text.len());
     let mut copied = 0;
@@ -842,6 +894,13 @@ pub struct CardDef {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub ingredients: Option<Vec<FusedIngredient>>,
+    /// R882: a crafted definition's recipe (Meditative #17 True Craft a Card) — what its scripts
+    /// rebuild from, as `ingredients` is for a fused one. Only the crafter writes it. Optional and
+    /// skipped when absent, so a game that never crafts one serialises, hashes and replays as
+    /// before (D14: no golden trace moves).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub craft: Option<crate::wire::craft::CraftRecipe>,
     pub base: CardFace,
     pub radiant: CardFace,
 }
@@ -968,6 +1027,10 @@ pub struct CatalogQuery {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub with_tokens: Option<bool>,
+    /// R1080: the printed base attack and health a pool asks for (M #51's "random 1/1s").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub stats: Option<AttackHealth>,
 }
 
 string_union! {
@@ -991,6 +1054,10 @@ string_union! {
         Cell = "cell",
         Reward = "reward",
         Pick = "pick",
+        /// ME-CRAFT (Meditative #17, R880): the block editor's answer, a `Selection::Craft`.
+        Craft = "craft",
+        /// ME-MARKET (Meditative #42, R1000): a night market's deals, one buy, barter or Leave an answer.
+        Market = "market",
     }
 }
 
@@ -1298,6 +1365,7 @@ mod tests {
             x_stats: None,
             keywords: vec![],
             text: text.into(),
+            grants: None,
         };
         CardDef {
             id: "core-999".into(),
@@ -1315,6 +1383,7 @@ mod tests {
             loc: None,
             radiant_fallback: None,
             ingredients: None,
+            craft: None,
             base: face.clone(),
             radiant: face,
         }

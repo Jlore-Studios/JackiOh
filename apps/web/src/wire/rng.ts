@@ -1,15 +1,5 @@
-// The web client's copy of the engine's seeded generator (docs/v0.3.0/SURFACE.md §10.4), for the
-// tests and the tutorial harness that draw a stream of their own and hand it to the engine or the AI
-// (`subsystems.chooseAction`, `decide`, `buildAiDeck` in `./engine.ts` and `./ai.ts`). Bit for bit
-// the engine's (`crates/engine/src/rng.rs`, SURFACE §6.3), so `createRng(seed, cursor)` here and
-// `Rng::new(seed, cursor)` there draw the same numbers.
-//
-// One addition: the generator carries its `seed`. A stream crosses into WebAssembly as
-// `(seed, cursor)` and comes back as the cursor the Rust side stopped at; the wrappers then draw
-// this object forward to that cursor, so the caller's `rng` stands where the engine left it.
-//
-// The only source of randomness in the engine (§10.7, §9.3). The cursor lives in GameState, so
-// (seed, cursor) reproduces a sequence exactly, in this process or any other.
+// Engine-compatible seeded generator: `(seed, cursor)` must match `Rng::new` across WebAssembly
+// (§10.4, §6.3). `seed` and GameState's cursor reproduce sequences exactly (§10.7, §9.3).
 
 /** xmur3: string seed to a 32-bit integer stream, used once to seed mulberry32. */
 function seedToInt(seed: string): number {
@@ -32,9 +22,7 @@ function valueAt(seedInt: number, n: number): number {
 }
 
 export type Rng = {
-  /** The seed this stream was created from; with `cursor`, everything the stream is. */
   readonly seed: string;
-  /** Draws taken so far; store this in state and resume from it. */
   readonly cursor: number;
   next(): number;
   int(n: number): number;
@@ -99,9 +87,7 @@ export function createRng(seed: string, cursor = 0): Rng {
 }
 
 /**
- * Draws `rng` forward until it stands at `cursor`: the stream the WebAssembly side drew from,
- * rebuilt there from `(rng.seed, rng.cursor)`, stopped at `cursor`, and this object must agree. A
- * cursor behind the stream's own is a broken promise of the engine's, not something to paper over.
+ * Advance to WebAssembly's cursor; a prior cursor violates the engine's stream contract.
  */
 export function advanceTo(rng: Rng, cursor: number): void {
   if (!Number.isInteger(cursor) || cursor < rng.cursor) {

@@ -92,7 +92,7 @@ const MOCK_PLAYERS = {
   players: [
     {
       profileId: "profile-alpha",
-      displayName: "AlphaPlayer",
+      username: "AlphaPlayer",
       games: 45,
       wins: 30,
       losses: 15,
@@ -268,6 +268,41 @@ describe("R654 public statistics route", () => {
     const table = screen.getByTestId(statsTestid.playersTable);
     expect(within(table).queryByText(/elo/i)).not.toBeInTheDocument();
     expect(within(table).queryByText(/rating/i)).not.toBeInTheDocument();
+  });
+
+  it("R1436 players tab shows usernames, isolated, never a profile id nor any slice of one, and searches by username", async () => {
+    const ids = ["7c1d2e3f-4a5b-4c6d-8e9f-0a1b2c3d4e5f", "0f9e8d7c-6b5a-4f4e-9d3c-2b1a0f9e8d7c"];
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/stats/players")) {
+        const players = [
+          { ...MOCK_PLAYERS.players[0], profileId: ids[0], username: "Max#3" },
+          { ...MOCK_PLAYERS.players[0], profileId: ids[1], username: "محمد" },
+        ];
+        return Promise.resolve(new Response(JSON.stringify({ ...MOCK_PLAYERS, players }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify(MOCK_CARD_STATS_PROVISIONAL), { status: 200 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const user = userEvent.setup();
+    const { container } = render(<StatsRoute />);
+
+    await user.click(await screen.findByTestId(statsTestid.tabPlayers, undefined, SLOW));
+    const table = await screen.findByTestId(statsTestid.playersTable, undefined, SLOW);
+    const names = [...table.querySelectorAll("bdi.username")].map((name) => name.getAttribute("title"));
+    expect(names).toEqual(["Max#3", "محمد"]);
+    const text = container.textContent;
+    for (const id of ids) {
+      expect(text).not.toContain(id);
+      expect(text).not.toContain(id.slice(0, 8));
+    }
+
+    // The search box asks the server by username; the folding is the server's (R654, R1436).
+    const search = screen.getByPlaceholderText("Search player by username…");
+    fireEvent.change(search, { target: { value: "max" } });
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/stats/players?search=max"))).toBe(true);
+    });
   });
 
   it("R654 fallback button switches to previous patch live data when available", async () => {

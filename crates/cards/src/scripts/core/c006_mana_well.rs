@@ -2,17 +2,11 @@
 //! a Radiant cell that changes only a number changes only that number (§8 Conventions), so the two
 //! faces are the same hook with a different amount.
 //!
-//! Everything else in the §8.1 Engine cell ("Temporary mana, may exceed 4") is already the engine's:
-//!   - `gain_mana` (effects/mana.rs) calls `mana::gain_mana`, which adds to `mana.current` and never
-//!     touches `mana.max`, so §2.3's "temporary mana adds to current mana and can exceed 4" holds
-//!     without this file saying anything. A turn-4 player refreshes to 4 and then sits at 5.
-//!   - it is temporary because nothing stores it: `refresh_mana` sets `current = max` at every start
-//!     of turn (§2.3), so the gain never accumulates across turns — the Well grants it again.
-//!   - `start_of_turn` fires for the controller only, on their own turn, because `turn::start_turn`
-//!     asks `run_hooks_in_trigger_order(sink, "startOfTurn", player)` for that one player (§2.2,
-//!     §6.2, R68), and it fires before the draw, which is the same §2.2 ordering.
-//!   - a Field Spell that has left the field answers no start-of-turn hook (R153's filter in
-//!     `triggers::trigger_holders_with_hook`), so "leaves → back to 4" needs nothing here either.
+//! The rest of the §8.1 Engine cell ("Temporary mana, may exceed 4") is the engine's already:
+//!   - `gain_mana` adds to `mana.current`, never `mana.max`, so it can exceed 4 (§2.3); `refresh_mana`
+//!     resets `current = max` each turn, so the gain never accumulates.
+//!   - `start_of_turn` fires for the controller only, before the draw (§2.2, §6.2, R68), and a Field
+//!     Spell that has left the field answers no hook (R153), so "leaves → back to 4" needs nothing here.
 //!
 //! The gain lands on the controller because `gain_mana` defaults its `player` to "self" (§6.3).
 
@@ -38,11 +32,8 @@ pub fn script() -> CardScripts {
 // #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass: "Turn-4 player has 5 mana; leaves → back
 // to 4; radiant 6".
 //
-// The harness's default `turn: 9` gives the active side five started turns, so `refresh_mana`
-// computes §2.3's max of min(turnsStarted, MAX_MANA) = 4: every scenario here is already a
-// "turn-4 player". `start_turn()` is the engine's own start of turn for the player who is active
-// now — refresh, then the start-of-turn triggers, then the draw — which is the moment this card
-// acts. Each side keeps a small library so that draw is a draw and not fatigue (§2.4, R3).
+// The default `turn: 9` makes every scenario here a "turn-4 player" (§2.3's max is 4), and each side
+// keeps a small library so `start_turn()`'s draw is a draw, not fatigue (§2.4, R3).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

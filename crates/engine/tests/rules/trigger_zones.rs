@@ -3,29 +3,16 @@
 //!
 //! The registry is keyed by hook AND by zone, and the zone half is what this file pins:
 //!
-//!   * on the field or in the backrow a card answers its `triggers` plus its `startOfTurn`,
-//!     `endOfTurn`, `aura`, `setStat` and `onPlayHook` hooks;
-//!   * in a hand it answers only `handTriggers` (#89 Corpse Eater) — no hook at all;
-//!   * in a graveyard only the end-of-turn return of a spell that flagged itself when it was played
-//!     (#23 Reoccurring Dream, #24 Efficiency Dividend, #31 KY's Math Equation, R68);
-//!   * in a library, in exile, in the resolving zone or dormant under a Stack, nothing (R13).
+//!   * field or backrow: `triggers` plus `startOfTurn`, `endOfTurn`, `aura`, `setStat`, `onPlayHook`;
+//!   * hand: only `handTriggers` (#89 Corpse Eater);
+//!   * graveyard: only the end-of-turn return of a spell flagged when played (#23, #24, #31, R68);
+//!   * library, exile, resolving zone, dormant under a Stack: nothing (R13).
 //!
-//! `triggers.triggerHoldersWithHook` read the hook off the script and ignored the zone, so a card in
-//! a HAND or a GRAVEYARD answered every hook it carried. Neither half raised an error; both produced
-//! a different game, which is why every test below asserts the board and not the registry alone:
+//! A card in a hand or graveyard that answered every hook would change the board silently (#58 Rush
+//! Token Farm summoning from a hand, #64 Gifted Program making plays Radiant), so the tests assert the
+//! board. Each has a second half: the same card on the field or in the backrow must fire.
 //!
-//!   * #58 Rush Token Farm in a hand summoned a Rush Token at the start of every turn, moving a unit
-//!     into a lane from a card that was never on the board;
-//!   * #64 Gifted Program in a hand made a 1-cost play Radiant, and a radiant #8 Mr. Vanilla is a
-//!     7/7 rather than a 3/3 — a combat spec's arithmetic, silently rewritten.
-//!
-//! Each test has a second half on purpose: the same card on the field or in the backrow must fire.
-//! Without it every assertion here would pass just as well on a card that never fires at all.
-//!
-//! Every fixture is its own: defs are prefixed `tz-` and indexed above 2500, so they cannot collide
-//! with another test file's catalog (BUILD §0).
-//!
-//! Port of `packages/engine/test/trigger-zones.test.ts`.
+//! Fixtures are this file's own: `tz-` defs indexed above 2500 (BUILD §0).
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -33,10 +20,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// Fixtures. TS numbered them from a module counter starting at 2500; each def's index is written
-// out here in the order TS created them.
-// ---------------------------------------------------------------------------
+// Fixtures.
 
 fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
     let mut literal = json!({
@@ -60,7 +44,6 @@ fn def(name: &str, index: u32, type_: &str, extra: Value) -> CardDef {
     json_as(literal)
 }
 
-/// TS `unit(name, attack = 2, health = 4)`.
 fn unit(name: &str, index: u32) -> CardDef {
     let (attack, health) = (2, 4);
     def(
@@ -125,9 +108,7 @@ const TOKEN_ID: &str = "fx-token-rush";
 /// A plain 1-cost vanilla unit from the fixture catalog: the card the `onPlayHook` test plays.
 const BAIT_ID: &str = "fx-1";
 
-// ---------------------------------------------------------------------------
 // The note log: what fired, in the order it fired.
-// ---------------------------------------------------------------------------
 
 const NOTE_LANE: usize = 5;
 
@@ -258,9 +239,7 @@ fn scripts() -> Vec<(String, CardScripts)> {
     ]
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 /// A fresh game whose catalog and script registry also carry this file's fixtures.
 fn game(seed: &str) -> GameState {
@@ -278,10 +257,8 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's module-level `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// `body` is the TS `ActionInput` literal; the nonce is added here.
 fn act(state: &GameState, body: Value) -> GameState {
     let nonce = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
@@ -359,7 +336,6 @@ fn only<T>(items: Vec<T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// The live card TS's test kept a handle on, to write through as TS wrote through it.
 fn card_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no instance {id}"))
 }
@@ -375,8 +351,6 @@ fn holder_ids(holders: &[TriggerHolder]) -> Vec<String> {
 fn strings(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
-
-// ---------------------------------------------------------------------------
 
 mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
     use super::*;
@@ -506,10 +480,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
 
     #[test]
     fn r155_the_flag_not_the_turn_log_is_what_lets_a_graveyard_spell_answer_its_return() {
-        // This test used to assert the turn log, because nothing set `returnToHandAtEndOfTurn` and the
-        // registry took the log as a stand-in. R155 gives §10.5 step 7 the setter, so the flag is now
-        // the gate and the log is no longer consulted — which is strictly more correct, since the log
-        // cannot tell a spell that asked to return from a card that merely happened to be played.
+        // R155 gives §10.5 step 7 the setter, so the flag is the gate and the turn log is not consulted.
         let mut played = playing("tz-gy-log");
         let spell = bury(&mut played, &wanderer().id, PlayerId::P1);
         card_mut(&mut played, &spell.id).return_to_hand_at_end_of_turn = Some(true);
@@ -519,8 +490,7 @@ mod r153_a_card_registers_only_the_triggers_its_zone_allows_s10_3_s6_2_r13_r68 {
             strings(&["wanderer:end"])
         );
 
-        // Being in this turn's play log is NOT enough on its own any more: that is the R155 change,
-        // and asserting it here is what stops the flag check silently reverting to the old behaviour.
+        // Being in the play log alone is not enough (R155); the flag is the gate.
         let mut logged = playing("tz-gy-logonly");
         let via_log = bury(&mut logged, &wanderer().id, PlayerId::P1);
         logged.players.p1.turn_log.played_ids.push(via_log.id.clone());

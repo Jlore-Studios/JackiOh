@@ -1,5 +1,4 @@
-// Lesson "advanced" as data (SPEC §9.10, R291): ../lessons.ts says what every field means and the
-// rules every lesson keeps. Its coach script is ../scripts/advanced.ts.
+// Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/advanced.ts is the coach.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -9,20 +8,9 @@ export const lesson: TutorialLesson = {
   title: "Tricks of the trade",
   summary: "The mulligan, The Coin, Radiant cards, tribes, tokens, Tribute and the yellow glow.",
   mechanics: ["Mulligan", "The Coin", "Radiant", "Tribes", "Tokens", "Tribute", "Yellow glow"],
-  // The human goes second, so The Coin is theirs (R244). This seed deals Jlockeed Shredder-10,
-  // Felinor Fiender, Glowy Jelly Bean and the 4-mana 7/7 as the opening hand: the 7/7 is the card to
-  // send back, and The Rock comes in its place. Friend of Felinors is the second draw, just in time
-  // for the second turn, and Reno the third, which glows yellow while the hero is hurt; the coach
-  // asks for it on the fifth turn, once The Rock is down and the mana is there. The coach's line
-  // (the policies "coach" and "coach-passive") and the autopilot both win it on the seventh turn with
-  // the hero never below 22, and so does a follower who picks other lanes and tokens. Scanned with
-  // scripts/lesson-deal.ts.
-  //
-  // Patch v0.2.0 made Hit Job cost (3), and a player who plays their dearest card first then spent a
-  // whole turn on it, sometimes on a 1/1, which lost a game on another deal of these decks (the
-  // autopilot's deal 9, ../scripts/advanced.test.ts). Gravedigger took its place in the list: no line
-  // on the lesson's own seed draws that card, so the lesson plays exactly as before, and the other
-  // deals end as they did before the patch.
+  // The human goes second, so receives The Coin (R244). This seed exchanges the 7/7 for The Rock and
+  // times Friend of Felinors and Reno for the coach; the coach and autopilot win by turn seven with
+  // the hero no lower than 22 (verified with scripts/lesson-deal.ts).
   seed: "tutorial-advanced-3087",
   humanSeat: "p2",
   humanDeck: [
@@ -47,11 +35,8 @@ export const lesson: TutorialLesson = {
     "core-037", // Gravedigger (Rare)
     "core-035", // Lunar Eclipse (Rare)
   ],
-  // A light opponent: a few cheap units that keep the board busy (Me and Mr Token's Rush Token
-  // thins the Felinor Tokens, so The Rock and Reno find a free zone) and a few small spells, but too
-  // little to race the player while the lesson's turns go on setup. Four cards cost more than the
-  // AI's mana cap (AI_TUTORIAL.manaCap, 3) and are never cast; no card here can copy, steal or
-  // remove The Rock.
+  // The AI applies cheap board pressure without racing the player during setup. Its 4+ mana cards are
+  // uncast at AI_TUTORIAL.manaCap (3); none can copy, steal, or remove The Rock.
   aiDeck: [
     "core-008", // Mr. Vanilla
     "core-004", // Gary the Gambler

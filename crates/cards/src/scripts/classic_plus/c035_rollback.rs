@@ -1,14 +1,14 @@
 //! C+ #35 Rollback (SPEC §8.7 row 35; R419, R562, R563, R566): N — 1, 2 or 3, declared with the play
 //! (R81) — and the board goes back to how it was at the start of the player-turn N before this one; the
 //! Radiant face also declares the part: your side, your opponent's side or both. The history and the
-//! restore are E29's (`subsystems/boardHistory.ts`).
+//! restore are E29's.
 
 use jackioh_engine::effects::{chosen_number, roll_back};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-035";
 
-/// TS `TURNS`: N, declared with the play, "1" to ROLLBACK_MAX_TURNS.
+/// N, declared with the play, "1" to ROLLBACK_MAX_TURNS.
 fn turns() -> ModeDecl {
     ModeDecl {
         kind: PromptKind::Number,
@@ -55,19 +55,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #35 Rollback — SPEC §8.7 row 35, BUILD M9 "C+ 35", R419, and this card's rulings R562 (too little
-// history), R563 (held zones) and R566 (what a put-back card keeps of the present). The history is
-// E29's (`packages/engine/src/subsystems/boardHistory.ts`, engine-tested in `boardHistory.test.ts`).
-//
-// The harness starts mid-game on turn 9 without running a turn start, so a test's history begins with
-// its first `endTurn()`: two of them reach p1's turn 11 holding the snapshots of turns 10 and 11.
-// Libraries hold Mr. Vanilla fillers for the draws, and each side keeps a Unit, so no turn auto-ends
-// (R82). Props: #8 Mr. Vanilla, #11 Tempo Timmy, #15 Me and Mr Token (a Cry that would show), #16 Hit
-// Job, #17 Flood, #34 Collateral Damage, #36 Magic Jammed, #41 Sheepish (a face-down Trap), #43 Big
-// Felinor under #92 Felinor Fiender (a Stack pile), #3 Right-house defender (Reborn), #49 Snom Bunny Mind
-// Control, #63 Plastic Surgery (a buff and a keyword), #66 The Rock (Radiant: Indestructible, Immutable),
-// #83 Transmogulate, #85 Unlicensed Experimentation, the Rush Token, C+ #12.8 Frostspatula ("Animated on
-// your turn") and C+ #33 Ivory Tower (a Field Spell that fuses the first Unit stacked onto it).
+// C+ #35 Rollback (SPEC §8.7, R419, R562, R563, R566).
+// The harness starts mid-game on turn 9 without running a turn start, so tests begin history with
+// `endTurn()`; two reach turn 11 with snapshots of turns 10 and 11. Libraries hold fillers and each
+// side keeps a Unit so no turn auto-ends (R82).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

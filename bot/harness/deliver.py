@@ -5,12 +5,13 @@ item comes from the plan job's outputs and the branch is worked out again here, 
 must hold the head the result names, descend from the commit the work started at, change no
 forbidden path, and fast-forward the branch on GitHub.
 
-The review rule (`review_rule.py`): a commit ships when one strong model (Opus) approved it, or
-two medium models did (the same model twice included), or, for an easy item, one weak model and
-one medium one did, and no model's rejection of it stands. Votes are kept per commit, one per
-review, with the tier of the seat that cast them (`_vote`), from the plan's seats, never from the
-model job. A pull request whose commit has that gets auto-merge, which merges it once the
-required CI checks pass; one still short of it waits in `bot:cross-review` for a review run.
+The review rule (`review_rule.py`): a commit ships when its lane's final audit approved it
+(one strong model for a medium or hard item, one medium model for an easy item), and no
+model's rejection of it stands. A weak approval never ships anything. Votes are
+kept per commit, one per review, with the tier of the seat that cast them (`_vote`), from the
+plan's seats, never from the model job. A pull request whose commit has that gets auto-merge,
+which merges it once the required CI checks pass; one still short of it waits in
+`bot:cross-review` for a review run.
 
 A commit that meets the rule is recorded as cleared (`_clear`). When `main` then leaves it with
 conflicts, the revision that resolves them carries the clearance (`_carry`) if it started from
@@ -35,11 +36,11 @@ from harness import plan as plan_mod
 from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
-from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_APPROVED,
-                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
-                            LABEL_NEEDS_REVIEW, LABEL_PLANNED, LABEL_PR, LABEL_PR_OPEN, LABEL_READY,
-                            LABEL_REVISE, LABEL_STUCK, LABEL_SUGGESTION, LABEL_TREE, OTHERS,
-                            PLAN_FLOOR, SLASH, STATE_BRANCH, TITLE)
+from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED,
+                            LABEL_PR, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_STUCK,
+                            LABEL_SUGGESTION, LABEL_TREE, OTHERS, PLAN_FLOOR, SLASH, STATE_BRANCH,
+                            TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, Identity, matches
@@ -131,9 +132,15 @@ class Deliverer:
             minutes = float(self.result.get("minutes") or 0)
         except (TypeError, ValueError):
             minutes = 0.0
+        tokens = self.result.get("tokens")
+        tokens = tokens if isinstance(tokens, dict) else None
+        try:
+            cost = float(self.result.get("cost_usd") or 0)
+        except (TypeError, ValueError):
+            cost = 0.0
         self.ctx.store.update(lambda s: providers_mod.note_usage(
-            s, self.provider.id, usage, reset_at, self.ctx.now(), minutes),
-            f"usage {self.provider.id}")
+            s, self.provider.id, usage, reset_at, self.ctx.now(), minutes, tokens,
+            cost if cost > 0 else None), f"usage {self.provider.id}")
         self._machine_disk()
         self._machine_memory()
         self._login_works()
@@ -377,7 +384,7 @@ class Deliverer:
             # The run planned it first: a later run builds from that plan, never plans again.
             who, tier = self._planner()
             self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
-                           planned_tier=tier)
+                           planned_by_id=self.provider.id, planned_tier=tier)
             self._plan_into_issue(number, who)
             if self.rating_note and self.result.get("status") != "planned":
                 self._try(lambda: self.gh.create_comment(number, self.rating_note))
@@ -457,13 +464,14 @@ class Deliverer:
             self._fail(number, "build")
             return
         who, tier = self._planner()
-        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who, planned_tier=tier)
+        self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                       planned_by_id=self.provider.id, planned_tier=tier)
         self._requeue_label(number, "build")
         rated = getattr(self, "rating_note", "")
         rated = f"{rated} " if rated else ""
         difficulty = self._difficulty(number)
         if tier and not providers_mod.tier_at_least(tier, PLAN_FLOOR[difficulty]):
-            # A medium planner rated it medium or hard: a strong model plans it next (part 6).
+            # A medium planner rated it hard: a strong model plans it next (part 6, #695).
             nxt = (f"A {PLAN_FLOOR[difficulty]} model plans `difficulty:{difficulty}` work, so "
                    "one plans it next; it is queued for that.")
         else:
@@ -486,15 +494,28 @@ class Deliverer:
         """Label the item with the difficulty its planner rated (#317 part 8), and say so: only
         when no person set one (`queue.rating_source`), never lower than the bot's own earlier
         rating, and easy only when the plan's **Files to touch** table holds to the easy rule
-        (`easy.plan_breach`). Records `difficulty_by`. Returns the sentence for the comment."""
+        (`easy.plan_breach`, borderline included) and the rating's `why` admits no doubt
+        (`easy.uncertain_why`, #695). Records `difficulty_by`. Returns the sentence for the
+        comment."""
         plan = self.result.get("plan") if isinstance(self.result.get("plan"), dict) else {}
         rated = plan.get("rating") if isinstance(plan.get("rating"), dict) else None
-        if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
-            return ""
         labels = self._labels(number)
         record = self._record(number)
         if rating_source(labels, record) == "person":
             return ""
+        if not rated or str(rated.get("difficulty")) not in DIFFICULTIES:
+            # The planner left its rating line out (a weaker model may): the item routes as medium
+            # anyway, so say so on the thread instead of leaving it unlabelled. An earlier rating
+            # of the bot's own stands, and a later planner may raise this one.
+            if rating_source(labels, record) == "bot":
+                return ""
+            who, tier = self._planner()
+            self._set_difficulty(number, "medium", labels)
+            self._remember(number, difficulty_by={
+                "difficulty": "medium", "provider": self.provider.id, "tier": tier,
+                "at": iso(self.ctx.now()), "why": "the planner gave no rating line"})
+            return (f"{who} gave no rating, so it is `difficulty:medium`, which is how an unrated "
+                    "item is routed anyway.")
         wanted = str(rated["difficulty"])
         earlier = str((record.get("difficulty_by") or {}).get("difficulty") or "")
         if earlier in DIFFICULTIES and DIFFICULTIES.index(wanted) < DIFFICULTIES.index(earlier):
@@ -504,6 +525,12 @@ class Deliverer:
             breach = easy_mod.plan_breach(str(plan.get("text") or ""), self.cfg.easy,
                                           self.cfg.review_paths, self.cfg.forbidden_paths)
             if breach:
+                wanted = "medium"
+            elif easy_mod.uncertain_why(str(rated.get("why") or "")):
+                # Torn between two means the higher (#695): the planner admitted doubt.
+                breach = (f"the rating itself was unsure "
+                          f"({str(rated.get('why') or '').strip()[:140]}), "
+                          f"so borderline easy is medium")
                 wanted = "medium"
         who, tier = self._planner()
         self._set_difficulty(number, wanted, labels)
@@ -563,7 +590,7 @@ class Deliverer:
                 if LABEL_PLANNED not in labels:
                     self.gh.add_labels(number, [LABEL_PLANNED])
             elif LABEL_NEEDS_PLAN not in labels:
-                # A medium plan of a medium or hard item (#317 part 6): a strong one comes next.
+                # A medium plan of a hard item (#317 part 6, #695): a strong one comes next.
                 self.gh.add_labels(number, [LABEL_NEEDS_PLAN])
         except GitHubError:
             pass  # the next plan job's sync puts the labels right
@@ -853,7 +880,9 @@ class Deliverer:
                                        "going.")
                 return
         self._requeue_label(number, kind)
-        self._remember(number, last_findings=self.result.get("findings") or [])
+        rounds, round_tier = self._rounds()
+        self._remember(number, last_findings=self.result.get("findings") or [],
+                       verdict_rounds=rounds, round_tier=round_tier)
         where = (f"on `{wip_branch(number)}`, where the next revision starts"
                  if kind == "revise" else "on the branch")
         kept = f" The work so far is {where}." if pushed else ""
@@ -956,6 +985,8 @@ class Deliverer:
                                    "queues it again.")
         else:
             self._requeue_label(number, kind)
+            rounds, round_tier = self._rounds()
+            self._remember(number, verdict_rounds=rounds, round_tier=round_tier)
             self.gh.create_comment(number, f"This run failed ({self._link()}): {reason}\n\nIt "
                                    f"is back in the queue (attempt {failures} of "
                                    f"{self.cfg.max_failures}).")
@@ -1087,14 +1118,16 @@ class Deliverer:
             cycles = len(self.result.get("cycles") or [])
             if approved:
                 said = (f"Its adversarial reviewer, {self.review_seat.describe()}, approved it on "
-                        f"round {cycles} of {self.cfg.max_review_cycles}.")
+                        f"round {cycles} of {self._cycles_cap()}.")
             else:
                 said = self._self_check_said()
             if approved:
                 self._unstick(number, pr)
             self.gh.create_comment(number, f"Opened #{pr}, built on {self._built_on()}. "
                                    f"{said} {merge_note}")
-            self._remember(number, last_findings=[], question="", failures=0, pr=pr)
+            rounds, round_tier = self._rounds()
+            self._remember(number, last_findings=[], question="", failures=0, pr=pr,
+                           verdict_rounds=rounds, round_tier=round_tier)
         else:
             if self._strike(number, f"its reviewer did not approve it: "
                             f"{self._first_finding() or self.result.get('reason')}"):
@@ -1108,7 +1141,9 @@ class Deliverer:
                                    f"{self._findings_md()}\n\n{self._why_md()}\n\n{stuck}"
                                    f"Comment `@{self.cfg.bot_login} <guidance>` here or on #{pr} "
                                    "to have me try again with your notes.")
-            self._remember(number, last_findings=self.result.get("findings") or [], pr=pr)
+            rounds, round_tier = self._rounds()
+            self._remember(number, last_findings=self.result.get("findings") or [], pr=pr,
+                           verdict_rounds=rounds, round_tier=round_tier)
 
     # ------------------------------------------------------------------ a split (#60)
 
@@ -1357,24 +1392,43 @@ class Deliverer:
             return f"it could not land, and keeping it on `{own}` was refused: {exc}"
         return ""
 
+    def _cycles_cap(self) -> int:
+        """In-run review verdict rounds for this item's difficulty (#725)."""
+        return int(self.cfg.max_review_cycles.get(str(self.plan.get("difficulty") or "medium"),
+                                                  3))
+
+    def _rounds(self) -> tuple[int, str]:
+        """Verdict rounds this item used with its current owner, and that owner's tier (#725),
+        for the record: usage pauses and infra never reach a verdict, so they never spend one."""
+        return (int(self.result.get("verdict_rounds") or 0),
+                str(self.result.get("round_tier") or ""))
+
+    def _audit_tier(self) -> str:
+        """The tier of the seat that just reviewed this pull request (#725): a revision that
+        answers its findings stays at that tier, so the auditor fixes and pushes it."""
+        seats = self.plan.get("seats") if isinstance(self.plan.get("seats"), dict) else {}
+        review = seats.get("review") if isinstance(seats, dict) else None
+        tier = str((review or {}).get("tier") or "") if isinstance(review, dict) else ""
+        return tier or str(getattr(self.provider, "tier", "") or "")
+
     def _not_approved_head(self) -> str:
         """The first words of a comment on a build or revision that was not approved: the real
         round count, and the real reason when it stopped before its last round."""
         rounds = len(self.result.get("cycles") or [])
-        limit = self.cfg.max_review_cycles
+        limit = self._cycles_cap()
         if failures.stuck(self.result.get("cycles"), limit):
             return f"After all {limit} rounds the reviewer still had blocking findings"
         reason = str(self.result.get("reason") or "no reason recorded")
         return f"It stopped without an approval after {rounds} of {limit} round(s): {reason}"
 
     def _why_md(self) -> str:
-        return failures.why(self.result.get("cycles"), self.cfg.max_review_cycles,
+        return failures.why(self.result.get("cycles"), self._cycles_cap(),
                             str(self.result.get("reason") or ""))
 
     def _mark_stuck(self, *numbers: int) -> str:
         """Label a run that used every round `bot:stuck`, for a person to review; the sentence
         that says so, or "" for one that stopped sooner."""
-        if not failures.stuck(self.result.get("cycles"), self.cfg.max_review_cycles):
+        if not failures.stuck(self.result.get("cycles"), self._cycles_cap()):
             return ""
         for number in numbers:
             if number:
@@ -1389,9 +1443,16 @@ class Deliverer:
                 self._try(lambda n=number: self.gh.remove_label(n, LABEL_STUCK))
 
     def _self_check_said(self) -> str:
-        """What a change built without a reviewer in its run went through."""
+        """What a change built without a shipping review in its run went through."""
         rounds = sum(len(c.get("self_check") or []) for c in self.result.get("cycles") or [])
+        verdicts = sum(1 for c in self.result.get("cycles") or []
+                       if isinstance(c.get("review"), dict)
+                       and c["review"].get("verdict") in ("approve", "changes"))
         open_findings = len(self.result.get("self_check_findings") or [])
+        if verdicts:
+            return (f"Its own reviewer read it {verdicts} time(s) in the run and asked for "
+                    "changes; the kept work goes to its final audit, which judges it from "
+                    "scratch.")
         if not rounds:
             return "No model on its subscription may review it."
         if open_findings:
@@ -1447,8 +1508,9 @@ class Deliverer:
                                    f"{self._not_approved_head()} ({self._link()}).\n\n"
                                    f"{self._findings_md()}\n\n{self._why_md()}"
                                    + (f"\n\n{stuck}" if stuck else ""))
+            rounds, round_tier = self._rounds()
             self._remember(number, last_findings=self.result.get("findings") or [],
-                           feedback_since=started)
+                           feedback_since=started, verdict_rounds=rounds, round_tier=round_tier)
             return
         approved = status == "approved"
         pushed, problem = self._publish(approved=approved)
@@ -1467,8 +1529,9 @@ class Deliverer:
         # The head a CI fix pushed: CI red on it is a strike (`events.on_ci`, #316).
         fixed = ({"ci_fixed_head": str(self.result.get("head") or "")}
                  if pushed and self._record(number).get("source") == "ci" else {})
+        rounds, round_tier = self._rounds()
         self._remember(number, feedback_since=started, failures=0, source="", last_findings=[],
-                       question="",
+                       question="", verdict_rounds=rounds, round_tier=round_tier,
                        self_check_findings=self.result.get("self_check_findings") or [], **fixed)
         note = ""
         if not pushed and approved:
@@ -1678,8 +1741,16 @@ class Deliverer:
         set_state_label(self.ctx, pr, labels, LABEL_CROSS)
         self._remember(pr, queued_at=iso(self.ctx.now()))
         approvals = self._approvals(votes)
-        have = (f"{review_rule.who(approvals)} approved it" if approvals
-                else "No model has reviewed it yet")
+        in_run = sum(1 for c in self.result.get("cycles") or []
+                     if isinstance(c.get("review"), dict)
+                     and c["review"].get("verdict") in ("approve", "changes"))
+        if approvals:
+            have = f"{review_rule.who(approvals)} approved it"
+        elif in_run:
+            have = (f"Its own reviewer read it {in_run} time(s) in the run without approving "
+                    "it")
+        else:
+            have = "No model has reviewed it yet"
         need = review_rule.missing((tier for _, tier in approvals), difficulty)
         line = f"{have}, so it waits for {need} (`{LABEL_CROSS}`) before auto-merge turns on."
         if not self._reviewer_set_up(votes, difficulty):
@@ -1767,7 +1838,8 @@ class Deliverer:
             return
         set_state_label(self.ctx, number, self._labels(number), LABEL_REVISE)
         self._remember(number, cross_rounds=rounds, last_findings=findings, source="cross-review",
-                       kind="revise", queued_at=iso(self.ctx.now()), failures=0)
+                       kind="revise", queued_at=iso(self.ctx.now()), failures=0,
+                       audit_tier=self._audit_tier())
         self.gh.create_comment(number, f"Second review ({self._link()}): {who} found blocking "
                                f"problems, so a revision is queued to answer them.\n\n"
                                f"{self._findings_md()}")
@@ -1824,7 +1896,7 @@ class Deliverer:
         merge` and ask the operator to merge it."""
         number = int(pull.get("number") or 0)
         if number:
-            self.gh.add_labels(number, [LABEL_NEEDS_REVIEW, LABEL_READY])
+            self.gh.add_labels(number, [LABEL_READY])
             self._try(lambda: self.gh.request_reviewers(number, [self.cfg.operator]))
         return (f"Auto-merge is off because {why}. The reviews approved it, so it is labelled "
                 f"`{LABEL_READY}`: @{self.cfg.operator}, it waits for you to merge it.")
@@ -1905,7 +1977,7 @@ class Deliverer:
         parts = [f"Closes #{number}", "", report[:REPORT_CHARS], ""]
         if approved:
             parts.append(f"### Adversarial review\n\nApproved on round {len(cycles)} of "
-                         f"{self.cfg.max_review_cycles}.")
+                         f"{self._cycles_cap()}.")
             notes = [f for f in review.get("findings") or [] if f.get("severity") == "note"]
             if notes:
                 parts.append("\nNotes the reviewer left (not blocking):\n")
@@ -1974,9 +2046,8 @@ class Deliverer:
             if not title or not body:
                 continue
             footer = (f"\n\n---\nSuggested by @{self.cfg.bot_login} while the queue was empty. "
-                      f"Add the `{LABEL_APPROVED}` label to have it built: two minutes later "
-                      "triage titles, labels and queues it as it does `method:use-bot`, and the "
-                      "bot rates its difficulty when it plans it. Close it to say no.")
+                      f"Add the `{LABEL_BUILD}` label to have it built, and the bot rates its "
+                      "difficulty when it plans it. Close it to say no.")
             issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")

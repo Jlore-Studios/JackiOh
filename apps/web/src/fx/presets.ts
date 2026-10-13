@@ -1,18 +1,11 @@
 /**
  * Particle physics per preset (docs/polish/1-animations.md, S5). CLAUDE.md rule 9: this table is
- * where every particle number lives. Glowing presets (fire, holy, arcane, sparkle, gold, prismatic,
- * spark, confetti) add light with `lighter`; the rest (ember, poison, smoke, dust, shard, void, blood,
- * frost) paint over with `source-over`. Blood (crimson droplets that fall) and frost (ice shards that
- * scatter) are R502's: #27 Blood Ridden's price and #21 Hinder's cracked crystals, and any card's
- * mark drawn in crimson or cyan (R437). Every `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so nothing a
- * burst leaves behind outlives the tail the runner allows (R200).
+ * where every particle number lives. Blood and frost are R502's (#27 Blood Ridden's price, #21
+ * Hinder's cracked crystals) and serve any card's mark drawn in crimson or cyan (R437). Every
+ * `life[1]` stays at or under FX_MAX_PARTICLE_LIFE_MS, so no burst outlives the runner's tail (R200).
  *
- * Two optional looks ride on a preset. `stretch` draws a fast particle as a streak along its
- * velocity instead of a dot, which is what makes an impact's sparks and a shattering shield read as
- * flying debris. `flash` gives every burst of the preset a short bright bloom at its origin (the
- * white-hot pop of a hit, the violet flare of a trap going off, the gold flare of a Legendary); the
- * director asks canvasFx for it when the burst fires, and it lives FLASH ms at most, well inside the
- * tail.
+ * `stretch` draws a fast particle as a streak along its velocity; `flash` gives every burst of the
+ * preset a short bloom at its origin, which the director asks canvasFx for when the burst fires.
  */
 import type { FxPreset } from "./types.ts";
 

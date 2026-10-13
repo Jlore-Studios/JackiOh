@@ -1,11 +1,11 @@
 # `jackioh-cards`
 
-318 catalog entries in the three shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
-Glitch, a hidden token) and Classic+ (78 cards and 38 tokens), 268 cards and 50 tokens in all, and the
-Meditative set (99 cards and 30 tokens, spec §8.8) joining the catalog part by part before it ships
-(R1420: no pool that names no set, no deck and no random deck holds its cards until the release, and a
-test opens it with the testkit's `preview_sets`); one script file
-per entry with its tests inside it; the catalog query every random pool goes through; and the
+450 catalog entries in the four shipped sets, Core (100 cards and 11 tokens), Classic (90 cards and
+Glitch, a hidden token), Classic+ (78 cards and 38 tokens) and Meditative (102 cards and 30 tokens,
+spec §8.8), 370 cards and 80 tokens in all. A set the catalog holds before it ships, as Meditative
+was while issue #496 built it, is in no pool that names no set, no deck and no random deck until the
+patch that lists it in `SHIPPED_SETS` (R1420), and a test opens it with the testkit's
+`preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
 catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
 for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
@@ -15,6 +15,8 @@ for adding, changing or removing a card (CLAUDE.md rule 10).
 crates/cards
 ├── catalog.json        the card data, proved against spec §8 by tests/cross/catalog.rs
 ├── flavour.json        flavour lines and artist credits, not card data (R660)
+├── chinese.json        Simplified Chinese names and faces, not card data (R1303)
+├── chinese-terms.json  the frame's Chinese words: types, tags, rarities, keywords, labels (R1303)
 ├── patches/            the catalog's history (R388, R646): patches.json, one snapshot per patch,
 │                       shipped.json, index.json, and pending/ (one fragment per patch being built)
 ├── build.rs            generates the registry from src/scripts/** and compiles the catalog version in
@@ -88,7 +90,7 @@ mod tests {
   the catalog (stats, keywords, a config multiple) runs the same script on both:
   `CardScripts { radiant: base.clone(), base }`, and says so in a comment.
 - **`Script`** (`crates/engine/src/script.rs`, spec §10.9) is a struct of optional hooks and
-  declarations: `cost`, `cry`, `death`, `start_of_game`, `resume`, `delayed`, `set_stat`,
+  declarations: `cost`, `cry`, `death`, `start_of_game`, `enters_hand`, `resume`, `delayed`, `set_stat`,
   `start_of_turn`, `end_of_turn`, `aura`, `triggers`, `on_play_hook`, `hand_triggers`,
   `static_flags`, `targets`, `modes`, `condition_met`, `preview`, `activations` and the rest; fill
   what the card needs and end with `..Script::default()`. A Spell's resolution hangs off `cry`.
@@ -127,12 +129,21 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | `active_units_of`, `dormant_units_of`, `card_at`, `slots_of`, `slot_of` | the field, by lane (§3.2, R13) |
 | `face_of`, `stats_with_buffs`, `unit_view` | a unit through the §10.4 layers, never off the instance |
 | `def_of`, `printed_cost`, `effective_cost`, `query_cost`, `own_cost`, `cost_now` | a definition and its costs (R65, R386, R396, R455) |
+| `tags_of(state, card)` | the card's tags now — its definition's plus what effects granted (R923); every instance-level tag read goes through it |
+| `lucky_on(state, card)` | the card's Lucky X now — its printed Lucky as tuning leaves it plus every Lucky it was given (R1438); every luck-based roll a card makes reads it |
+| `highest_permanent_cost(state, player)` | the highest R396 cost among the permanents acting on a side, `None` with none (R901) |
+| `base_stats_of(state, card)` | §10.4 layer 1: the stat override as its face wears it, else the printed stats; no buffs, tuning or auras (R1181) |
+| `credit_used_this_turn(state, player)` | whether the player borrowed mana this turn — Jlarna's base face reads it (R1225) |
+| `armor_on_field(state)` | every point of Armor on the field, Units through §10.4 and both heroes (R1064) |
 | `find_instance(state, id)` | an instance id, wherever the card has since landed (R98) |
 | `instance_of(ctx, spec)` | the card a `TargetSpec` names on the stay the run aimed at (R174) |
 | `recalled(ctx, key)` | what the running card remembers under a key (`remember`'s write; R102) |
 | `killer_of(state, card)` | the Unit that destroyed a card, while it still acts (R42, R361) |
 | `after_attack_of(ctx)` | in an `after_attack` hook, its combat's facts (R426) |
+| `after_attacked_of(ctx)` | in an `after_attacked` hook, its combat's facts (R1026) |
 | `param(ctx, key)` | the running card's current value of a declared number (`params`, R386) |
+| `luck_of(state, player)` | the player's Luck for best-of rolls (R987, Meditative #40) |
+| `subsystems::feng_shui::{last_element, element_preview}` | the last-played elements and their `preview` lines (R982, Meditative #40) |
 | `subsystems::activation_paid(ctx)` | what an Activate paid (R384, C #21) |
 
 Board facts live in `crates/engine/src/query.rs`; if the one you need is missing, add it there and
@@ -229,18 +240,22 @@ cargo clippy -p jackioh-cards --all-targets -- -D warnings
 Every change to card data is a patch, and every patch is kept.
 
 - `patches/patches.json` lists every shipped patch in ship order (`{ version, date, title, source,
-  notes }`); `patches/<version>.json` is the whole catalog as that patch left it; `shipped.json`
+  notes, player }`, `player` the note players read on the Patch notes page, R724001);
+  `patches/<version>.json` is the whole catalog as that patch left it; `shipped.json`
   records each patch's commit and snapshot blob; `index.json` maps each card to the versions it
   changed in. Shipped snapshots are never amended.
 - A branch that changes card data claims it with a pending fragment:
   `cargo jackioh patches <version> <date> "<title>" --source "<issue or PR>" --notes "<what changed>"`
   writes `patches/pending/<version>.json` (`--cards` names the ids; otherwise they are diffed from
-  the newest shipped snapshot). `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
+  the newest shipped snapshot). Its `player` note is written into the fragment by hand, since no flag
+  sets it, and kept when the command runs again (`docs/issues-and-patches.md`, Patch notes players
+  read). `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a version is
   neither a bare patch number nor a micro `vA.B.Y` (R650), or a fragment's title, sources or notes is
-  empty.
+  empty, and when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
+  an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
-  appends each fragment in first-parent order, snapshots the catalog, records `shipped.json`, deletes
+  appends each fragment in first-parent order with its player note, snapshots the catalog, records `shipped.json`, deletes
   the fragment and bumps the catalog version at every site that carries it (`render.yaml`,
   `crates/server/.env.example`, and `apps/web/.env.production` when it names one). The binaries take
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
@@ -254,3 +269,14 @@ is no patch and claims no fragment. `tests/cross/flavour.rs` holds every key to 
 entry to a flavour line, and each line to one trimmed line under its cap (120 characters, 60 for an
 artist); the client's test also refuses rules words. Real art is credited when it lands
 (`apps/web/src/cards/art/ART.md`).
+
+## 8. Chinese text (R1303)
+
+`chinese.json` is keyed by catalog id, `{ name, base, radiant, previews? }`: the name and both faces
+in Simplified Chinese, one Chinese line per English line. It is not card data: an edit to it is no
+patch and claims no fragment. Each face keeps exactly its English face's `{key}`s (an English
+`{key|one|many}` becomes `{key}` plus a measure word), names every `refs` card by its Chinese name,
+and carries `previews` exactly where the script declares `preview`. `chinese-terms.json` holds the
+frame's words: types, tags, rarities, keywords, labels, Radiant, Created and the glossary.
+`tests/cross/chinese.rs` proves both files. Every card added later adds its Chinese entry in the
+same change ([`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md)).

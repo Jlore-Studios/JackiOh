@@ -1,11 +1,8 @@
-//! Two verbs of the Classic+ #1–#39 workstream: `damageRoundsUntilDeath` (effects/rounds.ts; SPEC
-//! §8.7 C+ #32.3 Blade Storm, §4.5, R59, R113, R283) and `chooseFromHand`'s `where` (effects/choose.ts;
-//! C+ #31 Fusion Lab's end of turn, R23). The real cards' tests (packages/cards/test/classic-plus/
-//! 032-3-blade-storm.test.ts, 031-fusion-lab.test.ts) cover the cards again.
+//! Two verbs of the Classic+ #1–#39 workstream: `damageRoundsUntilDeath` (SPEC §8.7 C+ #32.3 Blade
+//! Storm, §4.5, R59, R113, R283) and `chooseFromHand`'s `where` (C+ #31 Fusion Lab's end of turn, R23).
+//! The real cards' tests cover the cards again.
 //!
 //! Fixtures are this file's own: defs are `pcv-`, indexed from 5900.
-//!
-//! Port of `packages/engine/test/effects-plus-c.test.ts`.
 
 use std::sync::Arc;
 
@@ -24,8 +21,6 @@ use jackioh_engine::view_for::view_for;
 
 use super::fixtures::harness::{in_hand, new_game, put, slot};
 
-/// TS `def(name, type, extra)`, numbered from a module counter starting at 5900 in declaration order;
-/// the number is passed here.
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     let face = json!({ "keywords": [], "text": name });
     let mut def = json!({
@@ -149,7 +144,7 @@ fn nothing_more() -> Hook {
     hook(|_ctx| vec![])
 }
 
-/// `chooseFromHand`'s `where`: `(ctx, card) => !unitHas(ctx.state, card, "Immutable")`.
+/// `chooseFromHand`'s `where`: a card without Immutable.
 fn not_immutable(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     !unit_has(&*ctx.state, card, KeywordKind::Immutable)
 }
@@ -208,9 +203,8 @@ fn local_scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-/// `reduce` with a fresh nonce; panics with the refusal (TS threw). TS numbered its nonces from a
-/// module counter (`pcv<n>`); here the game's own count of applied actions numbers them, which is
-/// unique within a game as the counter was (the state hash leaves `applied` out, §5.2).
+/// `reduce` with a fresh nonce, panicking on a refusal. The game's count of applied actions numbers the
+/// nonces, unique within a game (the state hash leaves `applied` out, §5.2).
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let mut action = body;
     action["nonce"] = json!(format!("pcv{}", state.applied.len() + 1));
@@ -250,15 +244,14 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// TS `stormed`'s `options: { defId?, radiant? }`.
 #[derive(Default)]
 struct StormOptions {
     def_id: Option<String>,
     radiant: bool,
 }
 
-/// p1 casts a storm onto the board `setup` builds (a spare hand card keeps the turn going). What
-/// `setup` hands back is handed back beside the play's result (TS's closures assigned outer `let`s).
+/// p1 casts a storm onto the board `setup` builds (a spare hand card keeps the turn going), and gets
+/// back what `setup` returned beside the play's result.
 fn stormed<T>(
     seed: &str,
     setup: impl FnOnce(&mut GameState) -> T,
@@ -320,7 +313,6 @@ fn count_of(events: &[GameEvent], kind: &str) -> usize {
     kinds(events).iter().filter(|k| k.as_str() == kind).count()
 }
 
-/// The top card of `player`'s unit lane `lane` (TS `state.players[player].units[lane - 1]?.[0]`).
 fn top_of(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInstance> {
     state.players[player].units[lane - 1]
         .as_ref()

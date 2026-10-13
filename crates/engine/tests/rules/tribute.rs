@@ -1,24 +1,15 @@
 //! Tribute as an additional cost of playing a card (SPEC §6.3's Tribute row, §3.2, §10.5 steps 1-2,
 //! R81, R41).
 //!
-//! §6.3: "Tribute X | As an additional cost of playing a card, sacrifice X of your units; a card
-//! whose own text tributes (Carnivorous Cube) sacrifices what that text names instead, which may be
-//! any of your other permanents, backrow included (R41) | The play-time cost is the play validator's,
-//! and the choice travels in the play action (R81); the Sheep Token counts as 2 toward that X while
-//! it is on the field (§3.2), and Lava Golem may pick enemy units. A tribute written into a card's
-//! script is an ordinary Sacrifice of the permanent that script names, where the Sheep Token's 2
-//! never applies".
+//! §6.3: Tribute X sacrifices X of your units as an additional cost; a card whose own text tributes
+//! (Carnivorous Cube) sacrifices what that text names, any of your other permanents, backrow
+//! included (R41). The play validator owns the cost and the choice travels in the play action (R81).
+//! The Sheep Token counts as 2 toward X while on the field (§3.2); Lava Golem may pick enemy units.
+//! A tribute in a card's script is an ordinary Sacrifice, where the Sheep's 2 never applies.
+//! §10.5: step 1 validates "Tribute available", step 2 pays "mana, Tributes (sacrifice)".
 //!
-//! §3.2: "Sheep Tokens are worth 2 Tributes while on the field." §10.5: step 1 validates "Tribute
-//! available", step 2 pays "mana, Tributes (sacrifice)". The declared cost is `staticFlags.tribute`
-//! in `src/script.ts`; the channel is `tributes?: string[]` on the `play` action in
-//! `packages/shared/src/actions.ts`.
-//!
-//! Fixtures are prefixed `tb-` and indexed above 1550 so they cannot collide (BUILD §0). The Sheep
-//! carries index `T-sheep` and the `tributeWorth` flag its script declares, which is what
-//! `playChoices.tributeValueOf` reads.
-//!
-//! Port of `packages/engine/test/tribute.test.ts`.
+//! Fixtures are prefixed `tb-` and indexed above 1550 (BUILD §0). The Sheep carries index `T-sheep`
+//! and the `tributeWorth` flag its script declares.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -28,11 +19,9 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
 
-// ---------------------------------------------------------------------------
 // Fixtures.
-// ---------------------------------------------------------------------------
 
-/// `{ ...defaults, ...extra }`: the keys of `extra` replace the defaults' (TS's object spread).
+/// The keys of `extra` replace the defaults'.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(fields), Value::Object(over)) = (base.as_object_mut(), extra) {
         fields.extend(over);
@@ -40,8 +29,6 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `def(name, type, extra)`; `index` is the one TS's `nextIndex` counter gave it (1551 on, in
-/// declaration order: `unit()` calls `def()`, and the Sheep's own index then overrides its number).
 fn def(name: &str, type_: &str, index: i32, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -76,9 +63,8 @@ fn unit(name: &str, attack: i32, health: i32, index: i32, extra: Value) -> CardD
     )
 }
 
-/// §7's Sheep Token, the one unit "worth 2 Tributes while on the field" (§3.2): its script's
-/// `tributeWorth` flag says so (see SCRIPTS); being a unit token it also ceases to exist when it
-/// leaves the field rather than reaching a graveyard (R11).
+/// §7's Sheep Token, "worth 2 Tributes while on the field" (§3.2), by its script's `tributeWorth`
+/// flag; as a unit token it ceases to exist on leaving the field (R11).
 fn sheep() -> CardDef {
     unit(
         "sheep",
@@ -89,7 +75,7 @@ fn sheep() -> CardDef {
     )
 }
 
-/// C #82 Sheeople's shape: worth 2 Tributes (Radiant 3) as a declared number, `worth`, which Degrade and
+/// C #82 Sheeople's shape: worth 2 Tributes (Radiant 3) as a declared `worth`, which Degrade and
 /// Upgrade move (B3.4 rule 5, R386).
 fn worthy() -> CardDef {
     unit(
@@ -126,7 +112,7 @@ fn field_card() -> CardDef {
     def("field-card", "Field Spell", 1558, json!({}))
 }
 
-/// #55's patch v0.1.1 base face: paid for with an opposing unit, it is summoned for the opponent (R360).
+/// #55's base face: paid for with an opposing unit, it is summoned for the opponent (R360).
 fn hand_over_golem() -> CardDef {
     unit("hand-over-golem", 10, 5, 1559, json!({ "cost": 3 }))
 }
@@ -170,9 +156,7 @@ fn flags(value: Value) -> Option<StaticFlags> {
     Some(json_as(value))
 }
 
-/// #55 "may tribute enemy units". `src/script.ts`'s `StaticFlags` does not declare the flag yet —
-/// `src/playChoices.ts` reads it structurally and says so in a comment — so the fixture asserts the
-/// shape the engine reads.
+/// #55 "may tribute enemy units": the fixture asserts the shape the engine reads.
 fn lava_golem_flags() -> Option<StaticFlags> {
     flags(json!({ "tribute": 3, "tributeEnemies": true }))
 }
@@ -272,9 +256,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
     scripts
 }
 
-// ---------------------------------------------------------------------------
 // Harness.
-// ---------------------------------------------------------------------------
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
@@ -341,15 +323,14 @@ fn unit_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .collect()
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
         .expect("the card is in the state")
 }
 
-/// `whyChoicesRefused(state, "p1", card, { type: "play", instanceId, zone: { row: "units", lane }, tributes, targets? })`
-/// as TS's `string | null`.
+/// `why_choices_refused` for p1's play of `card` into a units lane, as the refusal message if any.
 fn refused(
     state: &GameState,
     card: &CardInstance,
@@ -372,7 +353,6 @@ fn refused(
         .map(|error| error.message)
 }
 
-/// `toMatch(/text/)` on a refusal that must be there.
 fn says(refusal: &Option<String>, text: &str) -> bool {
     refusal.as_deref().is_some_and(|message| message.contains(text))
 }
@@ -393,7 +373,7 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Value {
     )
 }
 
-/// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
+/// Every key of `expected` is in `actual` with a matching value.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -414,8 +394,6 @@ fn top(pile: &Option<Pile>) -> Option<&CardInstance> {
     pile.as_ref().and_then(|cards| cards.first())
 }
 
-// ---------------------------------------------------------------------------
-
 mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
     use super::*;
 
@@ -429,8 +407,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         // An empty board cannot pay Tribute 2 at all, so the play is refused outright (§10.5 step 1).
         assert!(says(&refused(&state, &card, 3, &[], None), "needs Tribute 2"));
 
-        // One body pays 1 of the 2, so the board still cannot pay: that is the refusal, whatever the
-        // play named.
+        // One body pays 1 of the 2, so the board still cannot pay, whatever the play named.
         let one = put(
             &mut state,
             &plain.id,
@@ -470,7 +447,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
             &refused(&state, &card, 3, &[&one.id, &two.id, &three.id], None),
             "tributes 2, no more"
         ));
-        // And a unit the chooser does not control is not theirs to tribute.
+        // A unit the chooser does not control is not theirs to tribute.
         let theirs = put(
             &mut state,
             &plain.id,
@@ -554,7 +531,6 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
             "tributes 2, no more"
         ));
 
-        // The enumeration says the same thing: the Sheep pays on its own, or two bodies together.
         let sets = legal_tribute_sets(&state, PlayerId::P1, &card);
         assert!(sets.contains(&vec![woolly.id.clone()]));
         assert!(!sets.contains(&vec![ordinary.id.clone()]));
@@ -576,8 +552,8 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
 
     #[test]
     fn section_6_3_sacrifices_the_tributed_units_which_counts_as_a_death_rather_than_destroying_them() {
-        // The primitive first: §6.3's Tribute row pays with a Sacrifice, and Sacrifice "counts as a
-        // death" — the destroyed counter, the `destroyed` event and the Death trigger (R78).
+        // §6.3's Tribute pays with a Sacrifice, which "counts as a death": the destroyed counter,
+        // the `destroyed` event and the Death trigger (R78).
         let mut direct = playing("tribute-sacrifice-primitive");
         let doomed = put(
             &mut direct,
@@ -621,8 +597,8 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         );
         assert_eq!(direct.players.p2.hero.health, HERO_HEALTH - 3); // its Death hook fired
 
-        // And the play pays the same way: the tributed unit is sacrificed at §10.5 step 2, not marked
-        // destroyed for the next state check (§6.3 Destroy vs Sacrifice).
+        // The play pays the same way: sacrificed at §10.5 step 2, not marked for the state check
+        // (§6.3 Destroy vs Sacrifice).
         let mut state = playing("tribute-sacrifice-play");
         let food = put(
             &mut state,
@@ -684,7 +660,6 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         );
         let card = hand_card(&mut state, &tribute_two().id, PlayerId::P1);
 
-        // Every way to pay is enumerable ahead of the play, which is what "travels in the action" needs.
         assert_eq!(
             legal_tribute_sets(&state, PlayerId::P1, &card),
             vec![vec![a.id.clone(), b.id.clone()]]
@@ -740,8 +715,8 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         );
         let card = hand_card(&mut state, &cube().id, PlayerId::P1);
 
-        // #22 declares no Tribute cost: what it sacrifices is named by its own text, so the play carries
-        // a target, not a tribute, and a `tributes` list is refused.
+        // #22 declares no Tribute cost: its text names what it sacrifices, so the play carries a
+        // target and a `tributes` list is refused.
         assert_eq!(tribute_cost_of(&state, &card), 0);
         assert!(says(
             &refused(
@@ -754,8 +729,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
             "needs no Tribute"
         ));
 
-        // R41: the script's reach is "any of your other permanents, backrow included", which a Tribute X
-        // never offers — that cost is "X of your units".
+        // R41: the script reaches any of your other permanents, backrow included; a Tribute X is "X of your units".
         let rock = hand_card(&mut state, &tribute_one().id, PlayerId::P1);
         assert_eq!(
             legal_tribute_units(&state, PlayerId::P1, &rock)
@@ -778,8 +752,7 @@ mod r81_tribute_as_an_additional_cost_of_a_play_6_3_3_2 {
         assert!(played.state.players.p1.backrow[0].is_none());
         assert_eq!(played.state.counters.destroyed, state.counters.destroyed + 1);
 
-        // And aimed at the Sheep it takes exactly one permanent: the Sheep's 2 is a Tribute value only,
-        // so a script Sacrifice can never get two permanents' worth out of one Sheep (§6.3).
+        // Aimed at the Sheep it takes one permanent: the Sheep's 2 is a Tribute value only (§6.3).
         let mut on_sheep = playing("script-tribute-sheep");
         let woolly2 = put(
             &mut on_sheep,

@@ -1,17 +1,10 @@
-//! Port of `packages/engine/test/layers.test.ts`.
-//!
 //! SPEC §10.4's stat and keyword layers (BUILD M3-T4). `unitView` is the only reader of a unit's
-//! totals — "compute a unit's view on every read, never store totals" — so every assertion here
-//! goes through it, one layer at a time, then as the ordered sequence §10.4 names, then over the
-//! keyword set. The last test proves nothing is written back into the state.
+//! totals ("compute a unit's view on every read, never store totals"), so every assertion goes
+//! through it: one layer at a time, then the ordered sequence, then the keyword set. The last test
+//! proves nothing is written back into the state.
 //!
-//! Fixtures: `./fixtures/combat` already carries the aura and keyword bodies these tests want
-//! (Big D-fender's Defense-Position Armor, Spikey Pillow's attack drain, the printed-keyword
-//! bodies). The three cards §10.4 names that it does not carry get local defs below: Suppressive
-//! Aura (#46), Jlockeed's Weapons (#14) and Felinor Fiender (#92) with a Felinor for it to count.
-//!
-//! (TS wrote through the live instances `put` returned. Here each write goes to the card in the
-//! state by id (`edit`), and each read takes the card as the state holds it now (`view`, `live`).)
+//! `./fixtures/combat` carries the aura and keyword bodies; Suppressive Aura (#46), Jlockeed's
+//! Weapons (#14) and Felinor Fiender (#92) get local defs below.
 
 use jackioh_engine::testkit::*;
 
@@ -21,13 +14,9 @@ use crate::rules::fixtures::combat::{
 };
 use crate::rules::fixtures::harness::{new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// Local defs for the three §10.4 cards ./fixtures/combat does not carry. Indices start above 1200
-// so they never collide with a fixture catalog or another test file's local defs.
-// ---------------------------------------------------------------------------
+// Local defs for the three §10.4 cards ./fixtures/combat lacks. Indices start above 1200 so they
+// never collide with a fixture catalog or another test file's local defs.
 
-/// TS's `def(overrides)`: the defaults, then the overrides over them. `index` is the one TS's counter
-/// gave the def (1201 up, in the order the defs are made).
 fn def(index: u32, overrides: Value) -> CardDef {
     let mut card = json!({
         "index": index.to_string(),
@@ -116,8 +105,7 @@ fn felinor_fiender() -> CardDef {
     )
 }
 
-/// #92 after a Fuse that unioned the `Felinor` tag onto it (R77) — the case R131 exists for. Same
-/// printed stats and the same script; only the tag list differs.
+/// #92 after a Fuse that unioned the `Felinor` tag onto it (R77) — the case R131 exists for.
 fn fused_fiender() -> CardDef {
     def(
         1205,
@@ -152,7 +140,6 @@ fn felinor() -> CardDef {
     )
 }
 
-/// TS's `"all" | "ally" | "enemy"`.
 #[derive(Clone, Copy)]
 enum Side {
     All,
@@ -180,26 +167,11 @@ fn units_aura(stat_mod: Value, side: Side) -> AuraHook {
 }
 
 /// §10.4 layer 2 and R39: Felinor Fiender's stats are its printed ones plus the combined layer-4
-/// stats of its controller's OTHER Felinors, R13's dormant Stack cards included, never below
-/// printed.
-///
-/// R131: it never counts itself, "matched by instance rather than by tag" — the exclusion below is
-/// `unit.id === self.id` and not "the Fiender is a Human, so the tag filter already misses it",
-/// because a Fuse that unions in the `Felinor` tag (R77) would otherwise let it feed on its own
-/// stats. R131's second half is already in the `faceOf` + `buffs` read: a second Felinor Fiender
-/// contributes its printed and buffed stats and never its own layer-2 total, so the layer cannot
-/// recurse.
-///
-/// DISCREPANCY: src/layers.ts has no layer-2 step at all — the comment at its layer-2 slot reads
-/// "Layer 2 (set-stat, Felinor Fiender) arrives with M3-T4; no Core card needs it before then" —
-/// and `Script` (src/script.ts) declares no set-stat hook, so the only stat-contributing hook a
-/// card has is `aura`, which §10.4 numbers as layer 5. The sum therefore rides on the aura hook
-/// here. For a purely additive contribution the two are observably equal, but SPEC §10.4 orders
-/// the set-stat *before* layer 4, so a later set-stat that had to be seen by a layer-4 buff (or
-/// that replaced rather than added) would land in the wrong place.
-///
-/// `applies` may never call back into `unitView` (it would recurse), so the sum reads `faceOf` plus
-/// `buffs`, which is exactly what §10.4 means by "layer-4 stats".
+/// stats of its controller's OTHER Felinors, R13's dormant Stack cards included, never below printed.
+/// R131: it never counts itself (matched by instance, not tag, since a Fuse can union in `Felinor`,
+/// R77), and the sum reads `faceOf` plus `buffs`, never `unitView`, so it cannot recurse. It rides on
+/// the aura hook (layer 5): observably equal for an additive contribution, though §10.4 orders the
+/// set-stat before layer 4.
 fn felinor_set_stat() -> AuraHook {
     aura_hook(|args| {
         let state = args.state;
@@ -207,8 +179,7 @@ fn felinor_set_stat() -> AuraHook {
         let mut attack = 0;
         let mut health = 0;
         let mut count = |unit: &CardInstance| {
-            // R131: every OTHER Felinor you control, excluded by instance so no granted tag can make it
-            // self-feed.
+            // R131: excluded by instance, so no granted tag can make it self-feed.
             if unit.id == me.id {
                 return;
             }
@@ -248,10 +219,9 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// R349: a token that prints no Radiant form (the Ghoul Token's shape): printed 0/0 for an X/X, so
-/// its catalog Radiant face is the fallback written out — the same face, the 0/0 doubled — and the
-/// X doubles at runtime. And an X/X token that prints a Radiant form of its own (the Bread Token's
-/// shape), whose X stays put.
+/// R349: a token that prints no Radiant form (the Ghoul Token's shape): printed 0/0 for an X/X, so its
+/// Radiant face is the fallback written out and the X doubles at runtime. `printed_radiant_token`
+/// is the Bread Token's shape, whose X stays put.
 fn fallback_token() -> CardDef {
     def(
         1207,
@@ -363,7 +333,7 @@ fn board(seed: &str) -> GameState {
     state
 }
 
-/// `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
+/// `put`, with the card made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = state::new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
@@ -385,17 +355,14 @@ fn stack_on(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     live(state, &card.id)
 }
 
-/// The card as the state holds it now (TS read its live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id).expect("the card is in the game").clone()
 }
 
-/// A write through TS's live object: to the card in the state, by id.
 fn edit(state: &mut GameState, id: &str, change: impl FnOnce(&mut CardInstance)) {
     change(find_instance_mut(state, id).expect("the card is in the game"));
 }
 
-/// `unitView(state, card)` on the card as it stands now.
 fn view(state: &GameState, id: &str) -> layers::UnitView {
     layers::unit_view(state, &live(state, id))
 }
@@ -415,7 +382,7 @@ fn kinds_of(id: &str, state: &GameState) -> Vec<String> {
     kinds
 }
 
-/// `stateCheck(sinkFor(state, events))`: an rng at the state's cursor, not written back (as TS).
+/// The state check with an rng at the state's cursor, not written back.
 fn run_state_check(state: &mut GameState) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -471,7 +438,6 @@ mod s10_4_stat_layers {
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (5, 7));
 
-        // One Felinor on the board: its layer-4 stats are its printed 2/3 plus its own +1/+1 buff.
         let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| {
             c.buffs = AttackHealth { attack: 1, health: 1 }
@@ -502,13 +468,12 @@ mod s10_4_stat_layers {
     fn r131_layer_2_never_counts_itself_even_once_a_fuse_has_given_it_the_felinor_tag() {
         let mut state = board("layer-2-self");
 
-        // A Felinor Fiender that IS tagged Felinor: alone on the board it is its printed 5/7, so the
-        // sum excluded it by instance. A tag filter on its own would have doubled it to 10/14.
+        // A Fiender tagged Felinor, alone: its printed 5/7, so the sum excluded it by instance (a tag filter
+        // alone would give 10/14).
         let fused = put(&mut state, &fused_fiender().id, p1(Row::Units, 1), json!({}));
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (5, 7));
 
-        // It still counts every OTHER Felinor, the tag it now carries changing nothing about that.
         let ally = put(&mut state, &felinor().id, p1(Row::Units, 2), json!({}));
         edit(&mut state, &ally.id, |c| {
             c.buffs = AttackHealth { attack: 1, health: 1 }
@@ -516,8 +481,7 @@ mod s10_4_stat_layers {
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
-        // Two of them: each adds the other's printed-and-buffed stats and never its own layer-2 total,
-        // so the layer does not recurse (R131's second half, R116).
+        // Two of them: each adds the other's printed-and-buffed stats, never its layer-2 total (R131, R116).
         let second = put(&mut state, &fused_fiender().id, p1(Row::Units, 3), json!({}));
         let v = view(&state, &fused.id);
         assert_eq!((v.attack, v.max_health), (13, 18));
@@ -582,7 +546,6 @@ mod s10_4_stat_layers {
         let small = put(&mut state, &poisonous.id, p1(Row::Units, 2), json!({}));
         let big = put(&mut state, &plain.id, p1(Row::Units, 3), json!({}));
 
-        // 1 − 2 and 0 − 2 both floor at 0; 3 − 2 does not.
         assert_eq!(view(&state, &small.id).attack, 0);
         assert_eq!(view(&state, &pillow.id).attack, 0);
         assert_eq!(view(&state, &big.id).attack, 1);
@@ -598,7 +561,6 @@ mod s10_4_stat_layers {
         let v = view(&state, &unit.id);
         assert_eq!((v.max_health, v.health), (3, 1));
 
-        // The damage stays where it is; the health it leaves behind follows the new max.
         edit(&mut state, &unit.id, |c| {
             c.buffs = AttackHealth { attack: 0, health: 5 }
         });
@@ -610,7 +572,6 @@ mod s10_4_stat_layers {
     fn s10_4_composes_layers_1_2_4_5_and_6_in_that_order() {
         let mut state = board("layer-order");
         let fiender = put(&mut state, &felinor_fiender().id, p1(Row::Units, 2), json!({}));
-        // 1: the printed face.
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health, v.health), (5, 7, 7));
 
@@ -622,7 +583,6 @@ mod s10_4_stat_layers {
         let v = view(&state, &fiender.id);
         assert_eq!((v.attack, v.max_health), (8, 11));
 
-        // 4: the Fiender's own buffs, on top of the set-stat.
         edit(&mut state, &fiender.id, |c| {
             c.buffs = AttackHealth { attack: 1, health: 2 }
         });
@@ -651,8 +611,7 @@ mod s10_4_stat_layers {
         });
         put(&mut state, &spikey_pillow.id, p1(Row::Units, 1), json!({}));
 
-        // 0 + 3 − 2 = 1. A floor taken before the buff — max(0, 0 − 2) = 0, then +3 — would read 3,
-        // so the order of layers 4 and 5 against the single final floor is observable here.
+        // 0 + 3 − 2 = 1. A floor taken before the buff (max(0, 0 − 2) = 0, then +3) would read 3.
         assert_eq!(view(&state, &unit.id).attack, 1);
     }
 
@@ -786,13 +745,8 @@ mod s10_4_keyword_set {
         assert_eq!(view(&state, &ally.id).armor, 3);
 
         edit(&mut state, &dfender.id, |c| c.vanilla = true);
-        // DISCREPANCY: src/layers.ts does A; SPEC §6.1/§6.3 say B.
-        //   A: `auraSources`/`auraMods` read `scriptOf(source).aura` and never look at the source's
-        //      `vanilla` flag, so a Vanilla'd Big D-fender keeps projecting its Armor aura (armor 3).
-        //   B: Vanilla "clears printed keywords and scripts" (§6.1) — "the card's text stops applying
-        //      — its printed keywords and its scripts" (src/effects/transform.ts's own doc comment) —
-        //      and `aura` is part of a card's Script (§10.9), so only Defense Position's own Armor +1
-        //      should be left.
+        // Vanilla clears printed keywords and scripts, aura included (§6.1, §6.3, §10.9): only Defense
+        // Position's own Armor +1 is left.
         assert_eq!(view(&state, &ally.id).armor, 1);
     }
 
@@ -809,7 +763,6 @@ mod s10_4_keyword_set {
         assert_eq!(v.position, Position::Def);
         assert!(has_keyword(&v.keywords, KeywordKind::Taunt));
         assert_eq!(v.armor, 1);
-        // The grant is positional, not a stored keyword: nothing was written onto the instance.
         assert_eq!(live(&state, &unit.id).granted_keywords, Vec::<Keyword>::new());
     }
 
@@ -846,7 +799,6 @@ mod s10_4_keyword_set {
         assert!(!has(&state, &unit.id, KeywordKind::Taunt));
         assert!(has(&state, &unit.id, KeywordKind::Indestructible));
         assert_eq!(view(&state, &unit.id).armor, 1);
-        // A read-time subtraction, not a removal (§10.4): the grant is still on the instance.
         assert_eq!(live(&state, &unit.id).granted_keywords, vec![Keyword::Taunt]);
 
         // Take the Indestructible away (a Vanilla clears the printed keyword) and the Taunt is back.
@@ -877,7 +829,6 @@ mod s10_4_keyword_set {
         );
         let v = view(&state, &ghoul.id);
         assert_eq!((v.attack, v.max_health, v.health), (7, 7, 5));
-        // The X on the instance is the base face's, never rewritten.
         assert_eq!(
             live(&state, &ghoul.id).stats_override,
             Some(AttackHealth { attack: 3, health: 3 })
@@ -921,8 +872,8 @@ mod s10_4_keyword_set {
         assert_eq!(view(&state, &unit.id).position, Position::Atk);
         assert!(!has(&state, &unit.id, KeywordKind::Taunt));
 
-        // A Vanilla the same turn takes its printed Indestructible: R347 no longer holds the granted
-        // Taunt off, and R46's stamp still does, for "this turn" and no longer.
+        // A Vanilla this turn takes its printed Indestructible: R347 stops holding the granted Taunt off,
+        // R46's stamp still does, for "this turn" and no longer.
         edit(&mut state, &unit.id, |c| c.vanilla = true);
         assert!(!has(&state, &unit.id, KeywordKind::Taunt));
         state.turn = 5;
@@ -949,8 +900,7 @@ mod s10_4_keyword_set {
         edit(&mut state, &shield.id, |c| c.divine_shield_spent = Some(true));
         assert!(!has(&state, &shield.id, KeywordKind::DivineShield));
 
-        // §10.1: "gone until granted again". A grant clears the flag (src/effects/buff.ts `grantTo`),
-        // and the layers hand the keyword back the moment it is clear.
+        // §10.1: "gone until granted again": a grant clears the flag and the keyword returns.
         edit(&mut state, &shield.id, |c| {
             c.granted_keywords = vec![Keyword::DivineShield];
             c.divine_shield_spent = None;
@@ -987,7 +937,6 @@ mod s10_4_recomputation {
             snapshot
         );
 
-        // The instance carries the inputs, never the totals ("never store totals", §10.4).
         let fields = serde_json::to_value(live(&state, &unit.id)).expect("a card serialises");
         let fields = fields.as_object().expect("a card is an object");
         assert!(!fields.contains_key("attack"));

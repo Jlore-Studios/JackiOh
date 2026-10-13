@@ -4,9 +4,10 @@
 //! The pools below are written as explicit id lists, so the test is the diff: if the filter or the
 //! catalog drifts, the failure names the exact card that appeared or vanished. An index repeats across
 //! sets since patch v0.2.0 ("43" is a Core, a Classic and a Classic+ card, B2.2), so pools are named by
-//! id; and a pool that names no set draws from every set (R380, B2.6), in catalog order: Core, then
-//! Classic, then Classic+, each by §5 index. Each pool test also states, in words and in code, the
-//! argument object the card script must pass — that is the part the card files are going to copy.
+//! id; and a pool that names no set draws from every set that ships (R380, R1420, B2.6), in catalog
+//! order: Core, then Classic, then Classic+, then Meditative (since v0.3.5), each by §5 index. Each
+//! pool test also states, in words and in code, the argument object the card script must pass — that
+//! is the part the card files are going to copy.
 //!
 //! `query` reads the *registered* catalog (`crates/engine/src/catalog.rs`), which in a real game is
 //! registered by `register_all()` in `crates/cards/src/lib.rs`; here we register the catalog data
@@ -49,12 +50,28 @@ fn sorted(mut values: Vec<String>) -> Vec<String> {
     values
 }
 
+/// Meditative #102 Catboy Maid SSR+ (§8.8: a Lucky 1, 1/1 Unit), which the release's pools name but
+/// whose catalog entry has not landed with the rest of the set.
+const CATBOY_MAID: &str = "meditative-102";
+
+/// The ids of `wanted` the catalog holds: a §8.8 card a census names joins it from the day its
+/// entry lands, and until then the census is the catalog's.
+fn landed(wanted: &[&str]) -> Vec<String> {
+    wanted
+        .iter()
+        .filter(|id| CATALOG.get(**id).is_some())
+        .map(|id| (*id).to_string())
+        .collect()
+}
+
 /// Every token of every set (B2.1's census itself is catalog.rs's to prove).
 /// Every token a pool may name — all of them but Glitch, which is in none (R674).
+/// Every token of the sets that ship (R1420): like `non_token`, a pool that names no set reaches
+/// no other, so the token lists a pool answers hold no Meditative card until the set ships.
 fn token_ids() -> Vec<String> {
     CATALOG
         .values()
-        .filter(|def| def.token && def.id != GLITCH_DEF_ID)
+        .filter(|def| def.token && def.id != GLITCH_DEF_ID && set_is_open(def.set))
         .map(|def| def.id.clone())
         .collect()
 }
@@ -231,6 +248,8 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             )))
             .contains(&"core-096".to_string())
         );
+        // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker and #87 Tatches the Totem
+        // (§8.8) are (1) KY cards too since the set ships (R1420).
         assert_eq!(
             ids(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
@@ -241,6 +260,8 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
                 "classicplus-041",
                 "classicplus-042",
                 "classicplus-062",
+                "meditative-045",
+                "meditative-087",
             ])
         );
     }
@@ -260,9 +281,73 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
             strings(&["31", "51"])
         );
     }
+
+    #[test]
+    fn s5_1_pool_adds_the_caller_s_id_to_an_exclude_def_id_list_and_to_one_that_already_holds_it() {
+        register();
+        assert_eq!(
+            core_indices(pool(
+                "core-082",
+                &q(json!({ "tags": ["KY"], "excludeDefId": ["core-057", "core-031"] }))
+            )),
+            strings(&["51"])
+        );
+        // The caller's own id already excluded, as one string or in a list: the same pool.
+        assert_eq!(
+            core_indices(pool(
+                "core-057",
+                &q(json!({ "tags": ["KY"], "excludeDefId": "core-057" }))
+            )),
+            strings(&["31", "51", "82"])
+        );
+        assert_eq!(
+            core_indices(pool(
+                "core-057",
+                &q(json!({ "tags": ["KY"], "excludeDefId": ["core-031", "core-057"] }))
+            )),
+            strings(&["51", "82"])
+        );
+    }
+
+    #[test]
+    fn s5_1_pool_own_id_args_is_query_with_own_id_excluded_and_every_other_argument_kept() {
+        register();
+        // The pools the card scripts ask `pool` for, and one per remaining filter, each beside the
+        // `query` a script would write with its own id excluded by hand.
+        let cases = [
+            ("core-057", json!({ "tags": ["KY"] })),
+            ("core-083", json!({ "rarity": "Legendary" })),
+            ("core-096", json!({ "rarity": "Mythic" })),
+            ("core-067", json!({ "type": TRAP_TYPES })),
+            (
+                "core-054",
+                json!({ "type": "Unit", "costRange": { "min": 3, "max": 4 } }),
+            ),
+            ("core-031", json!({ "cost": 1, "tags": ["KY"] })),
+            ("core-059", json!({})),
+            (
+                "core-001",
+                json!({ "set": ["Core", "Classic"], "notTags": ["KY"] }),
+            ),
+            ("classicplus-058", json!({ "tags": ["Fruit"] })),
+            ("classicplus-023", json!({ "withTokens": true })),
+            ("meditative-101", json!({ "luckBased": true })),
+        ];
+        for (own_id, args) in cases {
+            let mut by_hand = args.clone();
+            by_hand["excludeDefId"] = json!(own_id);
+            let pooled = ids(pool(own_id, &q(args)));
+            assert_eq!(pooled, ids(query(&q(by_hand))), "pool({own_id:?}, …)");
+            assert!(!pooled.is_empty(), "pool({own_id:?}, …) is empty");
+            assert!(
+                !pooled.contains(&own_id.to_string()),
+                "pool({own_id:?}, …) offers {own_id}"
+            );
+        }
+    }
 }
 
-mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t4_row_57_b2_6 {
+mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_and_meditative_34_38_45_79_87_build_m4_t4_row_57_b2_6 {
     use super::*;
 
     // THE ARGUMENTS A CARD SCRIPT PASSES:
@@ -270,8 +355,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
     //   or, equivalently and harder to get wrong,
     //     catalog::pool("core-057", &q(json!({ "tags": ["KY"] })))
     // Nothing else is needed: tokens are excluded by default (§5.1), which is what keeps #51.1 KY's
-    // Empty Notebook and Classic+ #42.1 KY's Gift — tokens that carry the KY tag — out of the pool;
-    // and a pool that names no set reaches every set (R380), so the Classic+ KY cards join it.
+    // Empty Notebook, Classic+ #42.1 KY's Gift and Meditative #45.1 Knowledge Breaker Prime — tokens
+    // that carry the KY tag — out of the pool; and a pool that names no set reaches every set that
+    // ships (R380, R1420), so the Classic+ KY cards join it, and since the release (v0.3.5) §8.8's KY
+    // cards: #34 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the
+    // Totem (every tribe).
     const KY_POOL: &[&str] = &[
         "core-031",
         "core-051",
@@ -279,10 +367,15 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
         "classicplus-041",
         "classicplus-042",
         "classicplus-062",
+        "meditative-034",
+        "meditative-038",
+        "meditative-045",
+        "meditative-079",
+        "meditative-087",
     ];
 
     #[test]
-    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_six_defs() {
+    fn build_row_57_the_query_a_card_script_writes_returns_exactly_those_eleven_defs() {
         register();
         assert_eq!(
             ids(catalog.query(&q(json!({ "tags": ["KY"], "excludeDefId": "core-057" })))),
@@ -313,6 +406,11 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
                 "KY's Constant",
                 "KY's Test",
                 "KY's Papaya",
+                "高考",
+                "H1B Printer",
+                "Knowledge Breaker",
+                "Touched by KY",
+                "Tatches the Totem",
             ])
         );
         assert!(card_def_by_index(SetName::Core, "51.1").tags.contains(&Tag::Ky)); // it really is in the tag …
@@ -322,9 +420,12 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_and_classic_plus_41_42_62_build_m4_t
                 .tags
                 .contains(&Tag::Ky)
         );
+        let prime = card_def_by_index(SetName::Meditative, "45.1");
+        assert!(prime.tags.contains(&Tag::Ky) && prime.token);
         let pool_ids = ids(catalog.pool("core-057", &q(json!({ "tags": ["KY"] }))));
         assert!(!pool_ids.contains(&"core-051-1".to_string()));
         assert!(!pool_ids.contains(&"classicplus-042-1".to_string()));
+        assert!(!pool_ids.contains(&"meditative-045-1".to_string()));
         assert!(!pool_ids.contains(&"core-057".to_string()));
     }
 }
@@ -336,7 +437,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     //     catalog::query(&q(json!({ "type": catalog::TRAP_TYPES })))   // TRAP_TYPES = ["Trap", "Field Trap"]
     //   or catalog::pool("core-067", &q(json!({ "type": TRAP_TYPES })))   // #67 is not itself a trap, but §5.1 anyway
     // Both types, because SPEC says "Field Trap counts as Trap" (§8 #51, #85, R35, R61) while the
-    // filter matches `def.type` exactly.
+    // filter matches `def.type` exactly. Since the release (v0.3.5, R1420) the pool holds §8.8's two:
+    // Meditative #64 Traitorous Blood, a (1) Trap, and #68 Catnip, a (1) Field Trap.
     const TRAP_POOL: &[&str] = &[
         "core-018",
         "core-041",
@@ -359,6 +461,8 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         "classicplus-002",
         "classicplus-022",
         "classicplus-074",
+        "meditative-064",
+        "meditative-068",
     ];
 
     fn trap_query() -> Vec<&'static CardDef> {
@@ -376,7 +480,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     }
 
     #[test]
-    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_10_exile_and_classic_plus_22_blood_moon()
+    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_10_exile_classic_plus_22_blood_moon_and_meditative_64_68()
      {
         register();
         assert_eq!(
@@ -389,12 +493,15 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-096",
                 "classic-010",
                 "classicplus-022",
+                "meditative-064",
+                "meditative-068",
             ])
         );
     }
 
     #[test]
-    fn s5_1_the_pool_mixes_both_types_core_18_71_classic_5_38_88_and_classic_plus_74_are_field_traps() {
+    fn s5_1_the_pool_mixes_both_types_core_18_71_classic_5_38_88_classic_plus_74_and_meditative_68_are_field_traps()
+     {
         register();
         let by_type =
             |kind: CardType| -> Vec<String> { ids(trap_query().into_iter().filter(|def| def.type_ == kind)) };
@@ -408,6 +515,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "classic-038",
                 "classic-088",
                 "classicplus-074",
+                "meditative-068",
             ])
         );
         assert_eq!(
@@ -438,9 +546,11 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // THE ARGUMENTS A CARD SCRIPT PASSES:
     //     catalog::query(&q(json!({ "rarity": "Legendary", "excludeDefId": "core-083" })))
     //   or catalog::pool("core-083", &q(json!({ "rarity": "Legendary" })))
-    // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set.
-    // For replacing a card on the board, the script narrows the same pool by type and asks for
-    // TRAP_TYPES when the board card is a trap ("Field Trap counts as Trap").
+    // R35: "Pool: the Legendary-rarity cards except #83", which since patch v0.2.0 reaches every set,
+    // and since v0.3.5 the Meditative set's sixteen Legendaries (§8.8: #7, #11, #26, #40, #42, #45,
+    // #47, #51, #63, #65, #75, #79, #80, #86, #87 and #95; #45.1 and the other Legendary-printed
+    // tokens are tokens, R1420). For replacing a card on the board, the script narrows the same pool
+    // by type and asks for TRAP_TYPES when the board card is a trap ("Field Trap counts as Trap").
     const R35_POOL: &[&str] = &[
         "core-052",
         "core-085",
@@ -471,6 +581,22 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "classicplus-073",
         "classicplus-075",
         "classicplus-078",
+        "meditative-007",
+        "meditative-011",
+        "meditative-026",
+        "meditative-040",
+        "meditative-042",
+        "meditative-045",
+        "meditative-047",
+        "meditative-051",
+        "meditative-063",
+        "meditative-065",
+        "meditative-075",
+        "meditative-079",
+        "meditative-080",
+        "meditative-086",
+        "meditative-087",
+        "meditative-095",
     ];
 
     #[test]
@@ -525,14 +651,17 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
     fn r65_an_x_cost_card_s_query_cost_is_0_and_it_answers_a_cost_0_query() {
         register();
         // Core #24 Efficiency Dividend, #74 Adaptive UI, Classic #87 Plague Chalice, Classic+ #40
-        // Appropriations and #69 Buff Billy are the catalog's X-cost cards (#98 Heroic Power costs (0)
-        // since R752).
+        // Appropriations and #69 Buff Billy, and since the release Meditative #37 CN in a bottle and
+        // #43 CN Jade Market (§8.8), are the X-cost cards of the sets that ship (#98 Heroic Power
+        // costs (0) since R752).
         let x_cards = strings(&[
             "core-024",
             "core-074",
             "classic-087",
             "classicplus-040",
             "classicplus-069",
+            "meditative-037",
+            "meditative-043",
         ]);
         assert_eq!(
             ids(query(&q(json!({})))
@@ -684,9 +813,11 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
     fn r382_a_fruit_pool_is_every_non_token_fruit_card_and_the_five_grapes_the_generating_card_excluded() {
         register();
         // Core #47 Fig of Life, Classic+'s Fruit cards and the Grapes (each after the card that defines
-        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool.
+        // it, in catalog order); Classic+ #58 Fruit Basket asks for its pool. A set that has not
+        // shipped is in no pool (R1420), so Meditative #55 Dragon Fruit joins it as the set ships.
         let expected: Vec<String> = CATALOG
             .values()
+            .filter(|def| set_is_open(def.set))
             .filter(|def| def.tags.contains(&Tag::Fruit) && (!def.token || GRAPES.contains(&def.id.as_str())))
             .map(|def| def.id.clone())
             .filter(|id| id != "classicplus-058")
@@ -741,5 +872,132 @@ mod r382_the_fruit_pool_holds_the_five_grapes_a_pool_that_takes_every_token_take
         ]) {
             assert!(every.contains(&id.to_string()), "{id}");
         }
+    }
+}
+
+mod r1444_the_luck_based_pool_meditative_101_gachaholic {
+    use super::*;
+    use jackioh_cards::query::luck_based;
+    use jackioh_engine::{KeywordKind, has_keyword};
+
+    /// The test's own reading of MD-G1: a non-token card that prints Lucky on either face or whose
+    /// text says "Flip a coin" (any case).
+    fn reads_as_luck_based(def: &CardDef) -> bool {
+        !def.token
+            && [&def.base, &def.radiant].into_iter().any(|face| {
+                has_keyword(&face.keywords, KeywordKind::Lucky)
+                    || face.text.to_lowercase().contains("flip a coin")
+            })
+    }
+
+    #[test]
+    fn r1444_the_luck_based_pool_is_exactly_the_non_token_cards_that_print_lucky_or_flip_a_coin() {
+        register();
+        // The query a card script writes: `query::luck_based()`, which names no set (R1420). Since
+        // the release (v0.3.5) it holds §8.8's Meditative #36 CN Peptides (Lucky 1 on its Radiant
+        // face), #65 Keymaster Keenus (Lucky 1 among its every keyword, on both faces) and #86 Mayor
+        // Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight, and #102 Catboy
+        // Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands.
+        assert_eq!(luck_based(), q(json!({ "luckBased": true })));
+        let mut pool = strings(&[
+            "core-004",
+            "core-023",
+            "core-042",
+            "classic-065",
+            "classicplus-025",
+            "classicplus-053",
+            "classicplus-065",
+            "classicplus-066",
+            "meditative-036",
+            "meditative-065",
+            "meditative-086",
+        ]);
+        pool.extend(landed(&[CATBOY_MAID]));
+        assert_eq!(ids(query(&luck_based())), pool);
+        let expected: Vec<String> = ids(CATALOG
+            .values()
+            .filter(|def| set_is_open(def.set) && reads_as_luck_based(def)));
+        assert_eq!(sorted(ids(query(&luck_based()))), sorted(expected.clone()));
+        // Meditative #36 CN Peptides prints Lucky on its Radiant face; #40 Feng Shui gives Luck and
+        // makes no roll; #101 Gachaholic gives Lucky and prints none.
+        assert!(expected.contains(&"meditative-036".to_string()));
+        assert!(!expected.contains(&"meditative-040".to_string()));
+        assert!(!expected.contains(&"meditative-101".to_string()));
+    }
+}
+
+mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r1080 {
+    use super::*;
+    use jackioh_engine::testkit::preview_sets;
+
+    // THE ARGUMENTS A CARD SCRIPT PASSES:
+    //     catalog::query(&q(json!({ "type": "Unit", "stats": { "attack": 1, "health": 1 }, "withTokens": true })))
+    // `stats` reads the printed base face (R1080): a face that prints none never matches, so Spells
+    // and stat-less backrow cards are out whatever else they are. Tokens join through `withTokens`.
+    // A pool that names no set reaches every set that ships (R380, R1420), in `query`'s order: by
+    // set, then by index, a set's tokens after its cards.
+    const ONE_ONE_POOL: &[&str] = &[
+        "core-003",
+        "core-004",
+        "core-007",
+        "core-015",
+        "core-050",
+        "core-086",
+        "core-t-felinor",
+        "core-t-sheep",
+        "classic-027",
+        "classic-033",
+        "classic-082",
+        "classicplus-006",
+        "classicplus-076",
+    ];
+
+    /// The Meditative set's printed 1/1 Units (§8.8: #51 Devin Bot, #65 Keymaster Keenus, #67 Sentient
+    /// Cat Ears, #82 Medina Outfitter, #88 The True Sheep, #91 Windfast, #93 Growing Felinor and #101
+    /// Gachaholic; none of its tokens prints 1/1), which the pool takes once the set is open: since
+    /// the release (v0.3.5, R1420). §8.8's #102 Catboy Maid SSR+ is a 1/1 too, and joins from the day
+    /// its catalog entry lands.
+    const MEDITATIVE_ONE_ONES: &[&str] = &[
+        "meditative-051",
+        "meditative-065",
+        "meditative-067",
+        "meditative-082",
+        "meditative-088",
+        "meditative-091",
+        "meditative-093",
+        "meditative-101",
+    ];
+
+    #[test]
+    fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
+        register();
+        let mut expected = strings(ONE_ONE_POOL);
+        expected.extend(strings(MEDITATIVE_ONE_ONES));
+        expected.extend(landed(&[CATBOY_MAID]));
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            expected
+        );
+    }
+
+    #[test]
+    fn r1080_r1420_previewing_a_set_that_ships_changes_nothing_so_meditative_s_1_1_units_stay() {
+        register();
+        let _guard = preview_sets(&[SetName::Meditative]);
+        let mut expected = strings(ONE_ONE_POOL);
+        expected.extend(strings(MEDITATIVE_ONE_ONES));
+        expected.extend(landed(&[CATBOY_MAID]));
+        assert_eq!(
+            ids(catalog.query(&q(json!({
+                "type": "Unit",
+                "stats": { "attack": 1, "health": 1 },
+                "withTokens": true,
+            })))),
+            expected
+        );
     }
 }

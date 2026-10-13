@@ -20,6 +20,7 @@ const HIT_JOB: &str = "core-016";
 const MY_PAWN: &str = "core-096";
 const SHEEPISH: &str = "core-041";
 const RUSH_TOKEN: &str = "core-t-rush";
+const APPROPRIATIONS: &str = "classicplus-040";
 
 use super::scenario;
 
@@ -298,6 +299,7 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
                 def_id: SHEEPISH.into(),
                 radiant: false,
                 count: 1,
+                created: None,
             }],
             unknown: 0,
         });
@@ -614,5 +616,173 @@ mod i6_hidden_information_in_what_each_seat_is_sent {
             ),
             no_violations()
         );
+    }
+
+    #[test]
+    fn r316_i6_lets_a_card_a_full_library_refused_before_it_existed_be_named_openly_when_it_copies_nothing() {
+        // Fuzz seed 5967, handicapped (#562): Classic+ #40 Appropriations' Education into a full deck.
+        // Its random Books are never created (R80) and copy no card, so both seats read them (R316):
+        // they were never in any pile. A Book is no token, so R11's rule above does not cover them.
+        let library: Vec<&str> = (0..LIBRARY_CAP).map(|_| VANILLA).collect();
+        let mut g = scenario(json!({ "p1": { "hand": [APPROPRIATIONS], "library": library } }));
+        g.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Education"] }));
+        let refused: Vec<String> = g
+            .last_events()
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::LibraryOverflow {
+                    instance_id,
+                    outcome: LibraryOverflowOutcome::NotCreated,
+                    copy_of: None,
+                    ..
+                } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(refused.len(), 2);
+        for seat in [PlayerId::P1, PlayerId::P2] {
+            let sent = serde_json::to_string(&view_for(g.state(), seat).events).expect("events serialise");
+            for id in &refused {
+                assert!(sent.contains(id.as_str()), "{seat}: {sent}");
+            }
+        }
+        assert_eq!(
+            create_invariant_monitor(g.state()).hidden(g.state()),
+            no_violations()
+        );
+    }
+}
+
+/// R1062: I1 and I4 stay clean as Fiery Waraxe animates again and attacks the hero.
+mod r1062_fiery_waraxe_reanimated {
+    use super::*;
+
+    #[test]
+    fn r1062_i1_and_i4_stay_clean_as_fiery_waraxe_animates_again_and_attacks_the_hero() {
+        // R1062 is live only while the Meditative set is open (R1420), in the engine and in the
+        // monitor alike.
+        let _open = preview_sets(&[SetName::Meditative]);
+        let mut g = scenario(json!({
+            "p1": { "hand": ["meditative-066", "core-005"] },
+            "p2": { "hand": ["core-005"] },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        g.play("meditative-066", json!({ "zone": 1 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let waraxe = g.unit(PlayerId::P1, 1).expect("the waraxe").id.clone();
+        let attack = ActionBody::Attack {
+            attacker_id: waraxe.clone(),
+            target_id: "hero-p2".to_string(),
+        };
+        assert_eq!(monitor.before(g.state(), PlayerId::P1, &attack), no_violations());
+        g.attack(&waraxe, "hero");
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+}
+
+/// R1126: Pareto Optimality's attack animates The Cane on the other player's turn, which is an entry
+/// (R383); only its controller's start-of-turn animation enters nothing (R1062). Fuzz seed 9 of the
+/// M4 gate's short wave found the monitor reading the Pareto animation as the start-of-turn one.
+mod r1126_the_canes_pareto_animation {
+    use super::*;
+
+    const PARETO: &str = "meditative-071";
+    /// A 1/1 for (1) under p2's 4/4 for (1): the worse-scored play that sends the Cane.
+    const BAD: &str = "core-t-felinor";
+
+    #[test]
+    fn r1126_r1062_the_cane_animating_on_the_other_players_turn_enters_and_i4_stays_clean() {
+        let _preview = preview_sets(&[jackioh_engine::SetName::Meditative]);
+        let mut g = scenario(json!({
+            "p1": { "mana": 10, "hand": [PARETO], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": { "mana": 10, "hand": [VANILLA, BAD], "field": ["core-007"], "library": [VANILLA, VANILLA] },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        // The Cry summons the Cane on p1's turn: it enters, animated (R383).
+        g.play(PARETO, json!({}));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        let cane = g
+            .card(PARETO)
+            .memory
+            .get("cane")
+            .and_then(|found| found.as_str().map(str::to_string))
+            .expect("Pareto remembers its Cane");
+        // It goes home at p1's cleanup.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // p2's worse play sends it: it animates on p2's turn, an entry, attacks and goes home.
+        g.play(BAD, json!({}));
+        assert!(
+            g.last_events().iter().any(|event| matches!(
+                event,
+                GameEvent::Animated { instance_id, .. } if *instance_id == cane
+            )),
+            "the Cane animated for Pareto's attack"
+        );
+        assert_eq!(g.card(&cane).summoned_turn, Some(g.state().turn));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // At p1's next start of turn it animates on its own side, no entry (R1062).
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// I6 and a token that was fused, then rolled back to itself (fuzz seed 119)
+// ---------------------------------------------------------------------------------------------
+
+/// R97, R419, R11: Core #85's trap fuses a played Unit onto p2's Rush Token, which keeps the token's
+/// id under a fused (non-token) definition; C+ #35 Rollback then puts the token back as it was, a
+/// token again; it dies attacking, a token ceasing to exist in the open. I6 judges a card in no pile
+/// by what it left as, so the events that name it after it went read to both seats, as R97 says.
+mod r97_r419_a_fused_token_rolled_back_to_itself_dies_in_the_open {
+    use super::*;
+
+    const ROLLBACK: &str = "classicplus-035";
+    const FUSING_TRAP: &str = "core-085";
+    const MENACE: &str = "core-019";
+
+    #[test]
+    fn r97_r419_i6_stays_clean_as_a_rolled_back_token_ceases_to_exist() {
+        let mut g = scenario(json!({
+            "p1": { "mana": 10, "hand": [VANILLA], "field": [MENACE], "library": [VANILLA, VANILLA, VANILLA] },
+            "p2": {
+                "mana": 10,
+                "hand": [ROLLBACK],
+                "field": [RUSH_TOKEN],
+                "backrow": [{ "def": FUSING_TRAP, "lane": 1 }],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+        }));
+        let mut monitor = create_invariant_monitor(g.state());
+        let token = g.unit(PlayerId::P2, 1).expect("p2's Rush Token").id;
+        // Turn 11 begins on p1's side, and its snapshot holds the token as a token (R419).
+        g.end_turn().end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        // p1's Vanilla trips the trap, which fuses it onto the token: the token's id, a fused definition.
+        g.play(VANILLA, json!({ "zone": 2 }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert!(
+            g.card(&token).def_id.starts_with("t-"),
+            "the token wears the fused definition"
+        );
+        // On p2's turn 12, Rollback 1 puts the board back to turn 11's start: the token is a token again.
+        g.end_turn();
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        g.play(ROLLBACK, json!({ "modes": ["1"] }));
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert_eq!(g.card(&token).def_id, RUSH_TOKEN);
+        // It attacks the Taunt Menace and dies: a token, it ceases to exist (R11).
+        g.attack(token.as_str(), MENACE);
+        assert!(
+            find_instance(g.state(), &token).is_none(),
+            "the token ceased to exist"
+        );
+        assert_eq!(monitor.after(g.last_events(), g.state()), no_violations());
+        assert_eq!(monitor.hidden(g.state()), no_violations());
     }
 }

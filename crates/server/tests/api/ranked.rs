@@ -17,7 +17,6 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
 use jackioh_server::actor::contracts::RecordResultInput;
-use jackioh_server::api::crypto::player_tag;
 use jackioh_server::api::ranked::{
     RankedGameInput, SeasonDeps, leaderboard, open_season, open_season_in_tx, own_rank, rate_ranked_game,
 };
@@ -196,9 +195,19 @@ async fn ladder_of(app: &App, profile_id: &str) -> i64 {
     rank["ladder"].as_i64().unwrap_or(-1)
 }
 
-/// A placed player at `ladder` with `rating`, written straight into the season.
+/// The username `seed_placed` gives a profile: its id with `_` for `-` (`m-high` is `m_high`).
+fn username_of(profile_id: &str) -> String {
+    profile_id.replace('-', "_")
+}
+
+/// A placed player at `ladder` with `rating`, written straight into the season, named
+/// `username_of` its id.
 async fn seed_placed(app: &App, profile_id: &str, rating: f64, ladder: i32, extra: Value) {
-    seed_profile(app, json!({ "id": profile_id, "rating": rating })).await;
+    seed_profile(
+        app,
+        json!({ "id": profile_id, "rating": rating, "username": username_of(profile_id) }),
+    )
+    .await;
     let rank = merged(
         json_of(&fresh_rank(&season(), profile_id, 0)),
         json!({
@@ -416,7 +425,7 @@ mod r610_bots {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn r610_a_bot_is_rated_like_a_player_from_its_own_rating_and_has_no_rank_no_season_row_and_no_place_on_the_leaderboard()
+    async fn r610_a_bot_is_rated_like_a_player_from_its_own_rating_and_an_id_with_no_profile_holds_no_season_row()
      {
         let app = test_app().await;
         seed_profile(&app, json!({ "id": A })).await;
@@ -504,14 +513,14 @@ mod r608_jlorious_through_the_server {
             .as_array()
             .expect("a list")
             .iter()
-            .map(|row| json!([row["position"], row["tag"], row["you"]]))
+            .map(|row| json!([row["position"], row["profileId"], row["username"], row["you"]]))
             .collect();
         assert_eq!(
             jlorious,
             vec![
-                json!([1, player_tag("m-high"), false]),
-                json!([2, player_tag(A), true]),
-                json!([3, player_tag("m-low"), false]),
+                json!([1, "m-high", "m_high", false]),
+                json!([2, A, username_of(A), true]),
+                json!([3, "m-low", "m_low", false]),
             ]
         );
         let peak = |rank: Value| rank["peakJlorious"].clone();
@@ -539,10 +548,226 @@ mod r608_jlorious_through_the_server {
             .as_array()
             .expect("players")
             .iter()
-            .map(|row| row["tag"].clone())
+            .map(|row| row["username"].clone())
             .collect();
-        assert_eq!(golden, vec![json!(player_tag("golden"))]);
+        assert_eq!(golden, vec![json!("golden")]);
         assert_eq!(JLORIOUS_SIZE, 100);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R640000 ladder bots on the ladder
+// ---------------------------------------------------------------------------
+
+mod r640000_bots_on_the_ladder {
+    use super::*;
+
+    /// A ladder bot as the pool writes one (R1454): a bot profile at the starting rating, named
+    /// `username_of` its id, and its own R610 rating at `rating`.
+    async fn seed_bot(app: &App, bot_id: &str, rating: f64) {
+        seed_profile(
+            app,
+            json!({ "id": bot_id, "kind": "bot", "username": username_of(bot_id) }),
+        )
+        .await;
+        let own: BotRating = from(json!({
+            "botId": bot_id,
+            "glicko": merged(json_of(&START_GLICKO), json!({ "rating": rating })),
+            "games": 50,
+            "updatedAt": 0,
+        }));
+        store!(app, ranked_put_bot(&own));
+    }
+
+    /// `seed_placed` for a ladder bot.
+    async fn seed_placed_bot(app: &App, bot_id: &str, rating: f64, ladder: i32) {
+        seed_bot(app, bot_id, rating).await;
+        put_rank(
+            app,
+            merged(
+                json_of(&fresh_rank(&season(), bot_id, 0)),
+                json!({
+                    "games": RANK_PLACEMENT_GAMES,
+                    "wins": RANK_PLACEMENT_GAMES,
+                    "ladder": ladder,
+                    "floor": ladder / tier_bottom(1),
+                    "peakLadder": ladder,
+                }),
+            ),
+        )
+        .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640000_a_bot_profile_climbs_its_own_season_row_and_its_rated_side_records_its_ranks() {
+        let app = test_app().await;
+        seed_profile(&app, json!({ "id": A })).await;
+        seed_bot(&app, "bot-1", 1000.0).await;
+        let placements = RANK_PLACEMENT_GAMES as i64;
+        let mut last = Value::Null;
+        for n in 1..=placements {
+            last = rate(
+                &app,
+                game(&format!("b-{n}"), [player(A), bot("bot-1")], Some(1), n),
+            )
+            .await;
+        }
+        let row = json_of(&store!(app, ranked_rank(&season(), "bot-1")));
+        assert_matches(
+            &row,
+            &json!({ "games": RANK_PLACEMENT_GAMES, "wins": RANK_PLACEMENT_GAMES, "losses": 0 }),
+            "the bot's row",
+        );
+        assert!(row["ladder"].is_number(), "placed: {row}");
+        // The record still names the side a bot's; it carries the bot's ranks as a player's would.
+        // Placed with no placed person to be read against, the median: Normal Grape.
+        assert_matches(
+            &last["sides"][1],
+            &json!({
+                "profileId": null,
+                "botId": "bot-1",
+                "pilot": "ai",
+                "rankBefore": raisin(placements - 1),
+                "rankAfter": { "tier": "normal" },
+            }),
+            "sides[1]",
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640000_a_bot_on_the_ladder_moves_no_person_s_percentile() {
+        let app = test_app().await;
+        seed_placed(&app, "placed", 2000.0, tier_bottom(2), json!({})).await;
+        for n in 0..5 {
+            seed_placed_bot(&app, &format!("bot-{n}"), 3000.0, tier_bottom(4)).await;
+        }
+        seed_profile(&app, json!({ "id": A })).await;
+        for n in 1..=(RANK_PLACEMENT_GAMES as i64) {
+            rate(
+                &app,
+                game(&format!("g-{n}"), [player(A), bot("bot-0")], Some(1), n),
+            )
+            .await;
+        }
+        // Read against the one placed person alone: the 25th percentile, in Normal Grape. Counting
+        // the five bots above them would put A at 1 in 14, in Rotten Grape.
+        assert_matches(&own(&app, A).await["rank"], &json!({ "tier": "normal" }), "rank");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640000_jlorious_skips_a_bot_that_would_qualify_and_it_stays_mythic_grape() {
+        let app = test_app().await;
+        // R608's season, and a placed Mythic bot rated above everyone in it.
+        let mythic = tier_bottom(4);
+        seed_placed(&app, "m-high", 1900.0, mythic, json!({})).await;
+        seed_placed(&app, "m-low", 1500.0, mythic + 2, json!({})).await;
+        seed_placed(&app, "golden", 2500.0, tier_bottom(3) + 8, json!({})).await;
+        seed_placed(&app, A, 1400.0, mythic + 1, json!({})).await;
+        seed_placed(&app, B, 1300.0, tier_bottom(1), json!({})).await;
+        seed_placed_bot(&app, "bot-mythic", 3000.0, mythic + 3).await;
+        rate(&app, game("j-1", [player(A), player(B)], Some(0), 1)).await;
+        let played = rate(&app, game("j-2", [bot("bot-mythic"), player(B)], Some(0), 2)).await;
+
+        let listed = board(&app, A).await;
+        let jlorious: Vec<Value> = listed["jlorious"]
+            .as_array()
+            .expect("a list")
+            .iter()
+            .map(|row| row["profileId"].clone())
+            .collect();
+        assert_eq!(jlorious, vec![json!("m-high"), json!(A), json!("m-low")]);
+        let in_mythic: Vec<Value> = listed["tiers"]
+            .as_array()
+            .expect("tiers")
+            .iter()
+            .find(|tier| tier["tier"] == json!("mythic"))
+            .expect("a mythic tier")["players"]
+            .as_array()
+            .expect("players")
+            .iter()
+            .map(|row| row["profileId"].clone())
+            .collect();
+        assert_eq!(in_mythic, vec![json!("bot-mythic")]);
+        assert_matches(
+            &played["sides"][0],
+            &json!({ "rankAfter": { "tier": "mythic" } }),
+            "sides[0]",
+        );
+        assert_eq!(
+            json_of(&store!(app, ranked_rank(&season(), "bot-mythic")))["peakJlorious"],
+            Value::Null
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r640000_get_api_leaderboard_and_match_ranks_show_a_bot_like_a_player() {
+        let app = test_app().await;
+        let token = add_user(&app, &format!("user-{A}"), "a@example.test", true);
+        seed_profile(
+            &app,
+            json!({ "id": A, "userId": format!("user-{A}"), "username": "Alice" }),
+        )
+        .await;
+        seed_bot(&app, "bot-1", 1000.0).await;
+        for id in ["bot-1", A] {
+            put_rank(
+                &app,
+                merged(
+                    json_of(&fresh_rank(&season(), id, 0)),
+                    json!({
+                        "games": RANK_PLACEMENT_GAMES,
+                        "ladder": tier_bottom(1) + 4,
+                        "floor": 1,
+                        "peakLadder": tier_bottom(1) + 4,
+                    }),
+                ),
+            )
+            .await;
+        }
+
+        let (status, _headers, listed) =
+            call(&app, "GET", "/api/leaderboard", Some(&token), Value::Null).await;
+        assert_eq!(status, 200, "{listed}");
+        let normal = listed["tiers"]
+            .as_array()
+            .expect("tiers")
+            .iter()
+            .find(|tier| tier["tier"] == json!("normal"))
+            .cloned()
+            .expect("a normal tier");
+        // A tie on the ladder is broken by profile id, as between two people.
+        assert_eq!(
+            normal["players"],
+            json!([
+                { "profileId": "bot-1", "username": "bot_1", "division": 2, "pips": 1, "you": false },
+                { "profileId": A, "username": "Alice", "division": 2, "pips": 1, "you": true },
+            ])
+        );
+
+        let mut row = live_match("match-1", "s", true);
+        row.players.1 = String::from("bot-1");
+        store!(app, matches_create(&row));
+        let (status, _headers, ranks) = call(
+            &app,
+            "GET",
+            "/api/matches/match-1/ranks",
+            Some(&token),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{ranks}");
+        assert_eq!(ranks["seats"]["p2"]["rank"], ranks["seats"]["p1"]["rank"]);
+        assert_matches(
+            &ranks["seats"]["p2"]["rank"],
+            &json!({ "tier": "normal", "division": 2, "pips": 1 }),
+            "the bot's seat",
+        );
+        for body in [&listed, &ranks] {
+            let text = body.to_string();
+            for tell in ["\"kind\"", "\"pilot", "\"bot\""] {
+                assert!(!text.contains(tell), "{tell} in {text}");
+            }
+        }
     }
 }
 
@@ -572,12 +797,12 @@ mod r612_what_the_client_reads {
         let stranger = add_user(&app, "user-stranger", "s@example.test", true);
         seed_profile(
             &app,
-            json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678 }),
+            json!({ "id": A, "userId": format!("user-{A}"), "rating": 1234.5678, "username": "Alice" }),
         )
         .await;
         seed_profile(
             &app,
-            json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654 }),
+            json!({ "id": B, "userId": format!("user-{B}"), "rating": 987.654, "username": "Bob", "usernameTag": 3 }),
         )
         .await;
         seed_profile(&app, json!({ "id": "stranger", "userId": "user-stranger" })).await;
@@ -601,7 +826,8 @@ mod r612_what_the_client_reads {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_ranked_answers_the_caller_s_tag_rank_streak_record_and_badges_and_never_a_rating() {
+    async fn r612_r1436_get_api_ranked_answers_the_caller_s_username_rank_streak_record_and_badges_and_never_a_rating()
+     {
         let Routed { app, token_a, .. } = routed().await;
         let got = get(&app, "/api/ranked", &token_a).await;
         assert_eq!(got.status, 200);
@@ -609,7 +835,8 @@ mod r612_what_the_client_reads {
             got.body,
             json!({
                 "season": season(),
-                "tag": player_tag(A),
+                "profileId": A,
+                "username": "Alice",
                 "rank": raisin(0),
                 "streak": 0,
                 "record": { "games": 0, "wins": 0, "losses": 0, "draws": 0 },
@@ -620,7 +847,8 @@ mod r612_what_the_client_reads {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_leaderboard_lists_tags_and_ranks_marks_the_caller_and_counts_the_raisins() {
+    async fn r612_r1436_get_api_leaderboard_lists_usernames_and_ranks_marks_the_caller_and_counts_the_raisins()
+     {
         let Routed { app, token_a, .. } = routed().await;
         put_rank(
             &app,
@@ -675,7 +903,7 @@ mod r612_what_the_client_reads {
             json!({
                 "tier": "normal",
                 "count": 1,
-                "players": [{ "tag": player_tag(A), "division": 2, "pips": 1, "you": true }],
+                "players": [{ "profileId": A, "username": "Alice", "division": 2, "pips": 1, "you": true }],
             })
         );
         assert_matches(
@@ -683,11 +911,11 @@ mod r612_what_the_client_reads {
             &json!({ "tier": "normal", "division": 2, "pips": 1 }),
             "you",
         );
-        mentions_none(&got.text, &["1234", "987", "profile-", "rating"]);
+        mentions_none(&got.text, &["1234", "987", "rating", "\"tag\""]);
     }
 
     #[tokio::test(start_paused = true)]
-    async fn r612_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else()
+    async fn r612_r1436_get_api_matches_id_ranks_shows_both_seats_to_a_player_of_the_match_and_404s_for_anyone_else()
      {
         let Routed {
             app,
@@ -703,12 +931,12 @@ mod r612_what_the_client_reads {
             json!({
                 "ranked": true,
                 "seats": {
-                    "p1": { "tag": player_tag(A), "rank": raisin(0), "you": true },
-                    "p2": { "tag": player_tag(B), "rank": raisin(0), "you": false },
+                    "p1": { "profileId": A, "username": "Alice", "rank": raisin(0), "you": true },
+                    "p2": { "profileId": B, "username": "Bob#3", "rank": raisin(0), "you": false },
                 },
             })
         );
-        mentions_none(&mine.text, &["rating", "profile-"]);
+        mentions_none(&mine.text, &["rating", "\"tag\""]);
         assert_eq!(
             get(&app, "/api/matches/match-1/ranks", &stranger).await.status,
             404
@@ -719,6 +947,53 @@ mod r612_what_the_client_reads {
                 .status,
             404
         );
+    }
+
+    /// R1436: the ladder names nobody; it joins each username in from `profiles`, so a rename shows
+    /// on the next read with no rank row rewritten.
+    #[tokio::test(start_paused = true)]
+    async fn r1436_a_rename_shows_on_the_leaderboard_at_once_and_rewrites_no_rank_row() {
+        let Routed { app, token_a, .. } = routed().await;
+        let placed = merged(
+            json_of(&fresh_rank(&season(), A, 0)),
+            json!({
+                "games": RANK_PLACEMENT_GAMES,
+                "ladder": tier_bottom(1) + 4,
+                "floor": 1,
+                "peakLadder": tier_bottom(1) + 4,
+            }),
+        );
+        put_rank(&app, placed).await;
+        let row_before = json_of(&store!(app, ranked_rank(&season(), A)));
+        let names = |body: &Value| -> Vec<Value> {
+            body["tiers"]
+                .as_array()
+                .expect("tiers")
+                .iter()
+                .flat_map(|tier| tier["players"].as_array().cloned().unwrap_or_default())
+                .map(|row| json!([row["profileId"], row["username"]]))
+                .collect()
+        };
+        let before = get(&app, "/api/leaderboard", &token_a).await;
+        assert_eq!(names(&before.body), vec![json!([A, "Alice"])]);
+
+        let (status, _headers, renamed) = call(
+            &app,
+            "PUT",
+            "/api/username",
+            Some(&token_a),
+            json!({ "username": "Alicia" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{renamed}");
+
+        let after = get(&app, "/api/leaderboard", &token_a).await;
+        assert_eq!(names(&after.body), vec![json!([A, "Alicia"])]);
+        assert_eq!(
+            get(&app, "/api/ranked", &token_a).await.body["username"],
+            json!("Alicia")
+        );
+        assert_eq!(json_of(&store!(app, ranked_rank(&season(), A))), row_before);
     }
 }
 

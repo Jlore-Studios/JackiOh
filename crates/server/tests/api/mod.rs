@@ -4,6 +4,7 @@
 
 pub mod account;
 pub mod auth;
+pub mod bots;
 pub mod catalog;
 pub mod client_address;
 pub mod code_input_parity;
@@ -30,3 +31,4 @@ pub mod series_rules;
 pub mod settings;
 pub mod stats;
 pub mod tutorial;
+pub mod username;

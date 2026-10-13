@@ -39,7 +39,6 @@
 //! object was.
 
 use jackioh_engine::{CardDef, CardType, CatalogQueryArgs};
-use serde_json::Value;
 
 /// §5.1's query arguments: `{ type, cost, costRange, tags, notTags, rarity, set, excludeDefId,
 /// withTokens }`, plus the engine's identity fields (`defId`, `token`) for a pool a card names card by
@@ -67,28 +66,25 @@ pub fn query(args: &CardQuery) -> Vec<&'static CardDef> {
 /// ```
 ///
 /// TS's `excludeDefId` is `string | string[]`: absent becomes `[ownId]`, one string `s` becomes
-/// `[s, ownId]`, and a list gets `ownId` appended. The arguments are extended on their own JSON (the
-/// shape TS spread), so each of the three keeps TS's reading whatever Rust type holds the field.
+/// `[s, ownId]`, and a list gets `ownId` appended (an id it already holds is not listed twice). The
+/// typed arguments are extended by the engine's `catalog::excluding_def_id`, the helper its own
+/// generating effects use, so they are never written out as JSON and read back.
 pub fn pool(own_id: &str, args: &CardQuery) -> Vec<&'static CardDef> {
-    let mut json = match serde_json::to_value(args) {
-        Ok(json) => json,
-        Err(error) => panic!("pool({own_id}): the query arguments are not JSON: {error}"),
-    };
-    let already = json.get("excludeDefId").cloned();
-    let mut exclude_def_id: Vec<Value> = match already {
-        None | Some(Value::Null) => Vec::new(),
-        Some(Value::Array(list)) => list,
-        Some(one) => vec![one],
-    };
-    exclude_def_id.push(Value::String(own_id.to_string()));
-    if let Value::Object(map) = &mut json {
-        map.insert("excludeDefId".to_string(), Value::Array(exclude_def_id));
+    query(&jackioh_engine::catalog::excluding_def_id(
+        None,
+        args,
+        Some(own_id),
+    ))
+}
+
+/// MD-G1, R1444: "a random Luck-based card" (Meditative #101 Gachaholic): every non-token card that
+/// prints Lucky on either face or flips a coin (`jackioh_engine::catalog::is_luck_based`), from the
+/// sets that ship (R1420).
+pub fn luck_based() -> CardQuery {
+    CardQuery {
+        luck_based: Some(true),
+        ..CardQuery::default()
     }
-    let with_own: CardQuery = match serde_json::from_value(json) {
-        Ok(args) => args,
-        Err(error) => panic!("pool({own_id}): the query arguments do not read back: {error}"),
-    };
-    query(&with_own)
 }
 
 /// Both trap types, for a pool or filter that says "Trap". SPEC says "Field Trap counts as Trap" for

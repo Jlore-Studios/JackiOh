@@ -1,24 +1,11 @@
-// Lesson "basics"'s coach script (SPEC §9.10): the steps the coach walks the player through, and the
-// tips it shows when something new happens. Written against this lesson's fixed seed and decks
-// (lessons.ts), so it may name the cards the seed deals.
-//
-// The line it is written for (lessons/basics.ts has the deal): turn 1 Mr. Vanilla, then what mana
-// is; turn 2 Mr. Vanilla hits the enemy hero and Duplicating Felinors arrives; turn 3 Jlockeed
-// Shredder-10; turn 4 a trade, then the rule of thumb, and from there the coach names every next
-// move (`yourMove`) until the enemy hero falls. Every step reads only the view and the legal
-// actions (CLAUDE.md rule 7), so a player who strays from the line — plays another card, attacks
-// elsewhere, ends the turn early — is met where they are: a step whose moment has passed retires,
-// and the attack steps pick attacker and target from the board as it is.
-//
-// The coach never asks for more than two "Got it"s in a row (the lesson's test holds it to that):
-// the AI's second turn brings an attack that costs the player a unit and a switch to Defense
-// Position, so the attack and the loss are one tip, and a Prejudiced Postdoc's copy, when one comes,
-// is explained on the player's own turn, once they have made a move.
+// Fixed "basics" coach script (SPEC §9.10): view-only steps use legal actions (CLAUDE.md rule 7)
+// and retire when players deviate from the scripted line.
 
 import type { PlayerView, UnitView } from "@jackioh/shared";
 import { MAX_MANA } from "@jackioh/engine/config";
 
-import { cardName, goodTrade, heroAttack, legalAttacksOf, sameMove, yourMove, zoneOf } from "../advice.ts";
+import { t } from "../../i18n/i18n.ts";
+import { cardName, goodTrade, heroAttack, legalAttacksOf, readerCardName, sameMove, yourMove, zoneOf } from "../advice.ts";
 import type { CoachAnchor, CoachCtx, CoachStep, LessonScript } from "../coach.ts";
 import {
   freshOf,
@@ -43,12 +30,12 @@ const GARY = "core-004";
 const MENACE = "core-019";
 const SEVEN = "core-025";
 const MOTHS = "core-009";
+const POSTDOC = "core-061";
 const COIN = "core-t-coin";
 
 /** The enemy hero's health at or under which the coach says it is nearly beaten. */
 const ENEMY_LOW_HEALTH = 8;
 
-/** The human declared an attack of their own on this view, at the hero or at a unit. */
 function attacked(ctx: CoachCtx, at: "hero" | "unit"): boolean {
   const hero = heroTargetId(ctx.view, "opponent");
   const own = (instanceId: string): boolean =>
@@ -58,10 +45,6 @@ function attacked(ctx: CoachCtx, at: "hero" | "unit"): boolean {
   );
 }
 
-/**
- * The human has already played a card or declared an attack this turn, as far as the view's recent
- * events reach back (`PlayerView.events`, after the turn's `turnStarted`).
- */
 function movedThisTurn(view: PlayerView): boolean {
   for (let index = view.events.length - 1; index >= 0; index -= 1) {
     const event = view.events[index];
@@ -72,16 +55,12 @@ function movedThisTurn(view: PlayerView): boolean {
   return false;
 }
 
-/**
- * A unit on the enemy's side with no text of its own (`vanilla`): in this lesson, only the copy
- * Prejudiced Postdoc's Cry makes (the AI deck's one card that does, lessons/basics.ts).
- */
 function plainCopy(view: PlayerView): UnitView | undefined {
   return unitsOf(view, "opponent").find((unit) => unit.vanilla === true);
 }
 
-/** "End your turn" on the human's own turn `n`: retired unasked once that turn is behind them. */
-function endTurnOn(n: number, options: { id: string; title: string; text: string; when?: (ctx: CoachCtx) => boolean }): CoachStep {
+/** Retires an end-turn prompt once its turn is past. */
+function endTurnOn(n: number, options: { id: string; title: CoachStep["title"]; text: CoachStep["text"]; when?: (ctx: CoachCtx) => boolean }): CoachStep {
   const { when, ...rest } = options;
   return {
     kind: "act",
@@ -94,7 +73,7 @@ function endTurnOn(n: number, options: { id: string; title: string; text: string
   };
 }
 
-/** "Play this card", retired unasked once the card is on the field some other way or turn `byTurn` is past. */
+/** Retires a play prompt after its deadline or when the card has left hand. */
 function playBy(byTurn: number, options: Parameters<typeof playCard>[0]): CoachStep {
   const step = playCard(options);
   return {
@@ -111,15 +90,18 @@ const attackHero: CoachStep = {
   title: "Attack the hero",
   text: (ctx) => {
     const choice = heroAttack(ctx);
-    const name = choice === undefined ? "Your unit" : cardName(ctx, choice.attacker.defId);
-    const damage = choice === undefined ? "its attack" : String(choice.attacker.attack);
-    return `${name} is ready: it glows green. Drag it onto the enemy hero to deal ${damage} damage. Any unit can attack any target, whatever its lane.`;
+    if (choice === undefined) {
+      return t("Your unit is ready: it glows green. Drag it onto the enemy hero to deal its attack damage. Any unit can attack any target, whatever its lane.");
+    }
+    return t("{name} is ready: it glows green. Drag it onto the enemy hero to deal {damage} damage. Any unit can attack any target, whatever its lane.", {
+      name: cardName(ctx, choice.attacker.defId),
+      damage: String(choice.attacker.attack),
+    });
   },
   anchor: { kind: "hero", side: "opponent" },
   when: (ctx) => myMain(ctx) && myTurnNumber(ctx.view) >= 2 && heroAttack(ctx) !== undefined,
   done: (ctx, since) => since !== ctx.view && attacked(ctx, "hero"),
-  // Gone unasked once its turn has passed, or while a Taunt unit keeps every ready unit off the hero
-  // (the "defense" tip says why; the last step asks for the hero again once the way is clear).
+  // Retire while Taunt blocks the hero; the final step resumes when it is clear.
   moot: (ctx, since) => {
     if (since !== null) return ctx.view.turn !== since.turn;
     const blocked = myMain(ctx) && heroAttack(ctx) === undefined && legalAttacksOf(ctx).length > 0;
@@ -134,10 +116,13 @@ const trade: CoachStep = {
   title: "Trade units",
   text: (ctx) => {
     const choice = goodTrade(ctx);
-    if (choice === undefined) return "Attack an enemy unit: both units hit each other at the same time.";
-    const a = cardName(ctx, choice.attacker.defId);
-    const b = cardName(ctx, choice.target.defId);
-    return `Attack a unit this time: drag ${a} onto the highlighted ${b}. Both hit each other at once, ${String(choice.dealt)} damage one way and ${String(choice.taken)} back.`;
+    if (choice === undefined) return t("Attack an enemy unit: both units hit each other at the same time.");
+    return t("Attack a unit this time: drag {attacker} onto the highlighted {target}. Both hit each other at once, {dealt} damage one way and {taken} back.", {
+      attacker: cardName(ctx, choice.attacker.defId),
+      target: cardName(ctx, choice.target.defId),
+      dealt: String(choice.dealt),
+      taken: String(choice.taken),
+    });
   },
   anchor: (ctx): CoachAnchor | null => {
     const choice = goodTrade(ctx);
@@ -168,7 +153,7 @@ export const script: LessonScript = {
     info({
       id: "your-hero",
       title: "Your hero",
-      text: (ctx) => `This is you: your hero, with ${String(ctx.view.you.hero.health)} health. If it ever drops to 0, you lose.`,
+      text: (ctx) => t("This is you: your hero, with {health} health. If it ever drops to 0, you lose.", { health: String(ctx.view.you.hero.health) }),
       anchor: { kind: "hero", side: "you" },
       // The first turn the player can act on: turn 1, unless a hand with nothing to play ended it (R82).
       when: (ctx) => myMain(ctx),
@@ -177,24 +162,32 @@ export const script: LessonScript = {
       id: "enemy-hero",
       title: "The enemy hero",
       text: (ctx) =>
-        `Across the board is the enemy hero. In this lesson it starts with ${String(ctx.view.opponent.hero.health)} health. Bring it down to 0 and you win.`,
+        t("Across the board is the enemy hero. In this lesson it starts with {health} health. Bring it down to 0 and you win.", {
+          health: String(ctx.view.opponent.hero.health),
+        }),
       anchor: { kind: "hero", side: "opponent" },
       when: (ctx) => myMain(ctx),
     }),
     playBy(2, {
       id: "play-vanilla",
       title: "Play a unit",
-      text: "Mr. Vanilla costs (1): the blue number at its top left. Drag it into any of your five unit zones, or click it and then a zone. Each column is a lane.",
+      text: () =>
+        t("{name} costs (1): the blue number at its top left. Drag it into any of your five unit zones, or click it and then a zone. Each column is a lane.", {
+          name: readerCardName(VANILLA, "Mr. Vanilla"),
+        }),
       defId: VANILLA,
     }),
-    // After the first play rather than before it, so the turn's first "Got it"s stop at two, and the
-    // crystals it points at show what the play spent.
+    // Follow the first play so this turn has at most two "Got it"s.
     info({
       id: "mana",
       title: "Mana",
       text: (ctx) => {
         const { current, max } = ctx.view.you.mana;
-        return `This is your mana: ${String(current)} of ${String(max)} left this turn. Cards cost mana. You get one more crystal each turn, up to ${String(MAX_MANA)}, and your mana refills every turn.`;
+        return t("This is your mana: {current} of {max} left this turn. Cards cost mana. You get one more crystal each turn, up to {cap}, and your mana refills every turn.", {
+          current: String(current),
+          max: String(max),
+          cap: String(MAX_MANA),
+        });
       },
       anchor: { kind: "mana" },
       when: (ctx) => myMain(ctx),
@@ -202,10 +195,10 @@ export const script: LessonScript = {
     info({
       id: "sick",
       title: "Not ready yet",
-      text: (ctx) => {
-        const name = unitOf(ctx.view, "you", VANILLA) === undefined ? "Your unit" : "Mr. Vanilla";
-        return `Units can't attack on the turn they arrive. ${name} will be ready on your next turn.`;
-      },
+      text: (ctx) =>
+        unitOf(ctx.view, "you", VANILLA) === undefined
+          ? t("Units can't attack on the turn they arrive. Your unit will be ready on your next turn.")
+          : t("Units can't attack on the turn they arrive. {name} will be ready on your next turn.", { name: readerCardName(VANILLA, "Mr. Vanilla") }),
       anchor: (ctx) => (unitOf(ctx.view, "you", VANILLA) === undefined ? { kind: "units", side: "you" } : { kind: "unit", side: "you", defId: VANILLA }),
       when: (ctx) => myMain(ctx) && unitsOf(ctx.view, "you").length > 0 && legalAttacksOf(ctx).length === 0,
       moot: (ctx, since) => since === null && (legalAttacksOf(ctx).length > 0 || myTurnNumber(ctx.view) > 2),
@@ -221,8 +214,16 @@ export const script: LessonScript = {
       title: "Two for one",
       text: (ctx) => {
         const cost = inHand(ctx.view, FELINORS)?.cost;
-        const costs = cost === undefined ? "" : ` costs (${String(cost)})`;
-        return `Your mana refilled with one more crystal: ${String(ctx.view.you.mana.max)} now. Duplicating Felinors${costs}: when you play it, it brings a copy of itself, two units from one card.`;
+        const max = String(ctx.view.you.mana.max);
+        const name = readerCardName(FELINORS, "Duplicating Felinors");
+        if (cost === undefined) {
+          return t("Your mana refilled with one more crystal: {max} now. {name}: when you play it, it brings a copy of itself, two units from one card.", { max, name });
+        }
+        return t("Your mana refilled with one more crystal: {max} now. {name} costs ({cost}): when you play it, it brings a copy of itself, two units from one card.", {
+          max,
+          name,
+          cost: String(cost),
+        });
       },
       defId: FELINORS,
     }),
@@ -235,13 +236,19 @@ export const script: LessonScript = {
     playBy(4, {
       id: "play-shredder",
       title: "A big unit",
-      text: "Jlockeed Shredder-10 costs (3). Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of turn.",
+      text: () =>
+        t("{name} costs (3). Play it: it's the biggest unit on the board, and it has a trick you'll see at the end of turn.", {
+          name: readerCardName(SHREDDER, "Jlockeed Shredder-10"),
+        }),
       defId: SHREDDER,
     }),
     endTurnOn(3, {
       id: "end-3",
-      title: "Watch the Shredder",
-      text: "Shredder can't attack yet, but press End turn and watch: at the end of each of your turns it hits every enemy for 2.",
+      title: () => t("Watch the {name}", { name: readerCardName(SHREDDER, "Shredder") }),
+      text: () =>
+        t("{name} can't attack yet, but press End turn and watch: at the end of each of your turns it hits every enemy for 2.", {
+          name: readerCardName(SHREDDER, "Shredder"),
+        }),
     }),
     trade,
     info({
@@ -249,7 +256,6 @@ export const script: LessonScript = {
       title: "How trades work",
       text: "Both units took their damage at once. A unit at 0 health is destroyed and goes to the graveyard; one that lives keeps its damage.",
       anchor: { kind: "graveyard", side: "opponent" },
-      // Right after the trade, on the view that shows it: gone unshown if the trade never came.
       when: (ctx) => myMain(ctx),
       moot: (ctx, since) => since === null && !attacked(ctx, "unit"),
     }),
@@ -260,14 +266,14 @@ export const script: LessonScript = {
       anchor: { kind: "units", side: "opponent" },
       when: (ctx) => myMain(ctx) && myTurnNumber(ctx.view) >= 4,
     }),
-    // From here to the end the coach names one move at a time and points at it.
     yourMove({ id: "win", title: "Win the game", final: true }),
   ],
   tips: [
     tip({
       id: "coin",
-      title: "The Coin",
-      text: "The enemy played The Coin: a bonus card for the player who goes second. It gives 1 extra mana, once.",
+      title: () => readerCardName(COIN, "The Coin"),
+      text: () =>
+        t("The enemy played {name}: a bonus card for the player who goes second. It gives 1 extra mana, once.", { name: readerCardName(COIN, "The Coin") }),
       anchor: { kind: "hero", side: "opponent" },
       when: (ctx) => freshOf(ctx, "cardPlayed").some((event) => event.player !== ctx.view.viewer && event.defId === COIN),
       holdAi: true,
@@ -283,15 +289,16 @@ export const script: LessonScript = {
     tip({
       id: "enemy-attacks",
       title: "The enemy attacks",
-      // One tip for the attack and what it cost: the AI's attacks resolve in the same step as they
-      // are declared, so a unit it destroys is gone on the same view.
+      // AI attacks resolve with their losses, so one tip covers both.
       text: (ctx) => {
         const lost = freshOf(ctx, "destroyed").find((event) => event.owner === ctx.view.viewer);
-        const what =
-          lost === undefined
-            ? "The enemy attacked too."
-            : `The enemy attacked and destroyed your ${cardName(ctx, lost.defId)}: it went to your graveyard.`;
-        return `${what} Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.`;
+        if (lost === undefined) {
+          return t("The enemy attacked too. Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.");
+        }
+        return t(
+          "The enemy attacked and destroyed your {name}: it went to your graveyard. Its units follow the same rules as yours: one attack each per turn, never on the turn they arrive.",
+          { name: cardName(ctx, lost.defId) },
+        );
       },
       anchor: (ctx) =>
         freshOf(ctx, "destroyed").some((event) => event.owner === ctx.view.viewer) ? { kind: "graveyard", side: "you" } : { kind: "hero", side: "you" },
@@ -303,8 +310,13 @@ export const script: LessonScript = {
       title: "Defense Position",
       text: (ctx) => {
         const unit = unitsOf(ctx.view, "opponent").find((candidate) => candidate.position === "DEF");
-        const armor = unit === undefined || unit.armor === 0 ? "" : `, and it takes ${String(unit.armor)} less damage`;
-        return `The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first${armor}. More in lesson 2.`;
+        if (unit === undefined || unit.armor === 0) {
+          return t("The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first. More in lesson 2.");
+        }
+        return t(
+          "The enemy turned a unit sideways: Defense Position. It now has Taunt, so your attacks must hit it first, and it takes {armor} less damage. More in lesson 2.",
+          { armor: String(unit.armor) },
+        );
       },
       anchor: (ctx) => {
         const unit = unitsOf(ctx.view, "opponent").find((candidate) => candidate.position === "DEF");
@@ -321,21 +333,29 @@ export const script: LessonScript = {
       title: "A plain copy",
       text: (ctx) => {
         const copy = plainCopy(ctx.view);
-        const name = copy === undefined ? "unit" : cardName(ctx, copy.defId);
-        return `That enemy ${name} is a plain copy Prejudiced Postdoc made: the same stats, none of its text. One more body for you to deal with.`;
+        const maker = readerCardName(POSTDOC, "Prejudiced Postdoc");
+        if (copy === undefined) {
+          return t("That enemy unit is a plain copy {maker} made: the same stats, none of its text. One more body for you to deal with.", { maker });
+        }
+        return t("That enemy {name} is a plain copy {maker} made: the same stats, none of its text. One more body for you to deal with.", {
+          name: cardName(ctx, copy.defId),
+          maker,
+        });
       },
       anchor: (ctx) => {
         const copy = plainCopy(ctx.view);
         return (copy === undefined ? null : zoneOf(ctx, "opponent", copy.instanceId)) ?? { kind: "units", side: "opponent" };
       },
-      // On the player's own turn, after their first move: the AI's turn that makes the copy already
-      // brings the attack and Defense Position tips.
+      // Wait for the player's move; the AI turn already has two tips.
       when: (ctx) => myMain(ctx) && movedThisTurn(ctx.view) && plainCopy(ctx.view) !== undefined,
     }),
     tip({
       id: "shredder-fired",
-      title: "Shredder at work",
-      text: "At the end of turn, Jlockeed Shredder-10 hit every enemy unit and the enemy hero for 2. It does that every turn it stays.",
+      title: () => t("{name} at work", { name: readerCardName(SHREDDER, "Shredder") }),
+      text: () =>
+        t("At the end of turn, {name} hit every enemy unit and the enemy hero for 2. It does that every turn it stays.", {
+          name: readerCardName(SHREDDER, "Jlockeed Shredder-10"),
+        }),
       anchor: { kind: "unit", side: "you", defId: SHREDDER },
       when: (ctx) => {
         const shredder = unitOf(ctx.view, "you", SHREDDER);
@@ -347,8 +367,12 @@ export const script: LessonScript = {
       title: "Heads or tails",
       text: (ctx) => {
         const buff = freshOf(ctx, "buffed").find((event) => [...unitsOf(ctx.view, "you"), ...unitsOf(ctx.view, "opponent")].some((unit) => unit.instanceId === event.instanceId && unit.defId === GARY));
-        const got = buff === undefined ? "" : ` This one got +${String(buff.attack)} attack and +${String(buff.health)} health.`;
-        return `Gary the Gambler flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails.${got}`;
+        const name = readerCardName(GARY, "Gary the Gambler");
+        if (buff === undefined) return t("{name} flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails.", { name });
+        return t(
+          "{name} flipped five coins as it arrived: +1 attack for each heads, +1 health for each tails. This one got +{attack} attack and +{health} health.",
+          { name, attack: String(buff.attack), health: String(buff.health) },
+        );
       },
       anchor: (ctx) => (unitOf(ctx.view, "you", GARY) === undefined ? { kind: "unit", side: "opponent", defId: GARY } : { kind: "unit", side: "you", defId: GARY }),
       when: (ctx) => freshOf(ctx, "summoned").some((event) => event.defId === GARY && event.row === "units"),
@@ -356,30 +380,37 @@ export const script: LessonScript = {
     tip({
       id: "menace",
       title: "A bodyguard",
-      text: "Midrange Menace has Taunt, like a unit in Defense Position: enemy attacks must go at it first, so it guards your hero. It heals to full at the end of turn.",
+      text: () =>
+        t("{name} has Taunt, like a unit in Defense Position: enemy attacks must go at it first, so it guards your hero. It heals to full at the end of turn.", {
+          name: readerCardName(MENACE, "Midrange Menace"),
+        }),
       anchor: { kind: "unit", side: "you", defId: MENACE },
       when: (ctx) => freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.defId === MENACE),
     }),
     tip({
       id: "armor",
       title: "Armor",
-      text: "4-mana 7/7 has Armor 7: every hit on it is 7 smaller, so most units can't hurt it at all.",
+      text: () => t("{name} has Armor 7: every hit on it is 7 smaller, so most units can't hurt it at all.", { name: readerCardName(SEVEN, "4-mana 7/7") }),
       anchor: { kind: "unit", side: "you", defId: SEVEN },
       when: (ctx) => freshOf(ctx, "summoned").some((event) => event.player === ctx.view.viewer && event.defId === SEVEN),
     }),
     tip({
       id: "moths",
-      title: "Moths to the Flame",
-      text: "Moths to the Flame makes every one of your units attack it at the start of the enemy's turn. They still attack as usual on yours.",
+      title: () => readerCardName(MOTHS, "Moths to the Flame"),
+      text: () =>
+        t("{name} makes every one of your units attack it at the start of the enemy's turn. They still attack as usual on yours.", {
+          name: readerCardName(MOTHS, "Moths to the Flame"),
+        }),
       anchor: { kind: "unit", side: "opponent", defId: MOTHS },
       when: (ctx) => freshOf(ctx, "attackDeclared").some((event) => event.forced),
     }),
     tip({
       id: "enemy-low",
       title: "Almost there",
-      text: (ctx) => `The enemy hero is down to ${String(ctx.view.opponent.hero.health)} health. Look for units that can reach it this turn.`,
+      text: (ctx) =>
+        t("The enemy hero is down to {health} health. Look for units that can reach it this turn.", { health: String(ctx.view.opponent.hero.health) }),
       anchor: { kind: "hero", side: "opponent" },
-      // Only while the player still has an attack to make, so "this turn" is true.
+      // Only show while the player can still attack this turn.
       when: (ctx) => myMain(ctx) && ctx.view.opponent.hero.health <= ENEMY_LOW_HEALTH && legalAttacksOf(ctx).length > 0,
     }),
     tip({

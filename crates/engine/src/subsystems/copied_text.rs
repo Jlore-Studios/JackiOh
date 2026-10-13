@@ -45,7 +45,7 @@
 
 use serde_json::{Value, json};
 
-use crate::script::StaticFlags;
+use crate::script::{HookArgs, StaticFlags};
 use crate::scripts::ScriptRef;
 use crate::state::{CardInstance, GameState, PlayRecord};
 use crate::wire::CardCost;
@@ -169,16 +169,27 @@ pub fn running_script_of(state: &GameState, card: &CardInstance) -> ScriptRef {
 }
 
 /// R546: the Echo X the copied face prints, which adds to the copier's own Echo (0 for any other card).
+/// R802: a copied face that computes its Echo X prints the larger of that and its fixed one, computed
+/// on the copier's instance under the copied face, as every reader of the copied text is handed it.
 pub fn copied_echo(state: &GameState, card: &CardInstance) -> i32 {
     if copied_text_of(state, card).is_none() {
         return 0;
     }
-    let echo = running_script_of(state, card)
+    let script = running_script_of(state, card);
+    let echo = script
         .static_flags
         .as_ref()
         .and_then(|flags| flags.echo)
         .unwrap_or(0);
-    echo.max(0)
+    let face = text_face_of(state, card);
+    let computed = script.echo_x.as_ref().map_or(0, |hook| {
+        hook(HookArgs {
+            state,
+            self_: &face,
+            radiant: face.radiant,
+        })
+    });
+    echo.max(computed).max(0)
 }
 
 /// R547: whether the copied face casts on draw (§2.4), for a copier being drawn.

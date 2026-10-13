@@ -37,6 +37,17 @@ export type { CardType } from "./generated/CardType.ts";
 export type { CardView } from "./generated/CardView.ts";
 export type { CatalogQuery } from "./generated/CatalogQuery.ts";
 export type { CopiedTextView } from "./generated/CopiedTextView.ts";
+export type { CraftEffect } from "./generated/CraftEffect.ts";
+export type { CraftHat } from "./generated/CraftHat.ts";
+export type { CraftHatKind } from "./generated/CraftHatKind.ts";
+export type { CraftHatPrice } from "./generated/CraftHatPrice.ts";
+export type { CraftKeyword } from "./generated/CraftKeyword.ts";
+export type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
+export type { CraftPreview } from "./generated/CraftPreview.ts";
+export type { CraftRecipe } from "./generated/CraftRecipe.ts";
+export type { CraftVerb } from "./generated/CraftVerb.ts";
+export type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
+export type { CreditView } from "./generated/CreditView.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";
@@ -54,15 +65,20 @@ export type { ModifierView } from "./generated/ModifierView.ts";
 export type { MulliganView } from "./generated/MulliganView.ts";
 export type { Param } from "./generated/Param.ts";
 export type { PendingOption } from "./generated/PendingOption.ts";
+export type { PendingPromptView } from "./generated/PendingPromptView.ts";
 export type { PendingView } from "./generated/PendingView.ts";
 export type { PlayerId } from "./generated/PlayerId.ts";
 export type { PlayerView } from "./generated/PlayerView.ts";
+export type { PredictOutcome } from "./generated/PredictOutcome.ts";
 export type { PreviewValue } from "./generated/PreviewValue.ts";
 export type { PrintedRarity } from "./generated/PrintedRarity.ts";
 export type { PromptKind } from "./generated/PromptKind.ts";
 export type { QuestView } from "./generated/QuestView.ts";
 export type { Rarity } from "./generated/Rarity.ts";
+export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
+export type { SecretChoice } from "./generated/SecretChoice.ts";
+export type { SecretView } from "./generated/SecretView.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
@@ -140,6 +156,7 @@ export const GAME_EVENT_TYPES = [
   "promptAnswered",
   "drawOffered",
   "drawAnswered",
+  "emoted",
   "gameOver",
   "cardAnnounced",
   "countered",
@@ -163,7 +180,16 @@ export const GAME_EVENT_TYPES = [
   "turnCutShort",
   "marked",
   "glitched",
+  "fengShui",
+  "translated",
+  "discardPrevented",
+  "deradianted",
+  "manaSpent",
   "damageAbsorbed",
+  "jadeChanged",
+  "secretChosen",
+  "secretRevealed",
+  "predicted",
 ] as const satisfies readonly GameEventType[];
 
 /**

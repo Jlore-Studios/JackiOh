@@ -1,25 +1,16 @@
 //! #96 My Pawn after it has fired: the window it leaves behind, and where the trap ends up (SPEC §3.2,
 //! §4.2 step 4, §5.1, §6.3 "Cancel an attack" and Exile, R44, R99, R152). Found by the polish-4
-//! edge-case hunt, round 2 (docs/polish/4-edge-cases.md, lenses L5 and L7); every case here failed
-//! before its fix.
+//! edge-case hunt (docs/polish/4-edge-cases.md, lenses L5 and L7).
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
-//!  - §4.2 step 4, §6.3: a cancelled attack resolves no combat, so it "would be lethal" to nobody and
-//!    a second My Pawn stays armed (R99) — the window no longer offers it the declaration, and it
-//!    reads the trap as the board holds it after the first one's AI turn, not as it was before.
-//!  - §3.2, §6.3 Exile: a My Pawn its own AI turn exiled stays in exile.
-//!  - R152, §3.2: its effect is the rest of the turn it took, so it is in the graveyard by the time
-//!    the next turn starts.
-//!  - Round 5 (lens L7). R168, §10.10: the AI turn's events reach the view once, after the
-//!    declaration that handed the turn over, not a second time ahead of it.
-//!  - Round 7 (lenses "legality-agreement" and "engine invariants"). R117: the AI turn owed behind a
-//!    play of the AI's that the other player's trap asked about waits for the play, so the play's Cry
-//!    resolves on that turn. R44, §8 #96: a question of the locked-out player's that opens outside the
-//!    AI's playout is the AI's to answer. R152: a My Pawn fused onto a My Pawn hands over one turn —
-//!    its second half finds no turn of the attacker's left to hand over.
-//!  - The review of round 10. R212: the AI turn My Pawn hands over happened after the window's
-//!    earlier events, though the loop dispatched it first, so a card it drew does not answer them.
-//!
-//! Port of `packages/cards/test/my-pawn.test.ts` (SURFACE §4.1, §8).
+//!  - §4.2 step 4, §6.3, R99: a cancelled attack resolves no combat, so a second My Pawn stays armed.
+//!  - §3.2, §6.3 Exile: a My Pawn its own AI turn exiled stays in exile. R152, §3.2: its effect is the
+//!    rest of the turn it took, so it is in the graveyard by the time the next turn starts.
+//!  - R168, §10.10: the AI turn's events reach the view once, after the declaration that handed it over.
+//!  - R117: the AI turn owed behind a play that the other player's trap asked about waits for the play.
+//!    R44, §8 #96: a locked-out player's question opened outside the AI's playout is the AI's to
+//!    answer. R152: a My Pawn fused onto a My Pawn hands over one turn. R212: a card drawn on the AI
+//!    turn My Pawn hands over does not answer the window's earlier events.
 
 use jackioh_engine::effects::{choose_mode, destroy};
 use jackioh_engine::testkit::*;
@@ -45,7 +36,7 @@ fn backrow_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         .unwrap_or_else(|| panic!("setup: {player} should hold a backrow card in lane {lane}"))
 }
 
-/// TS's `Array.prototype.findIndex`: the first match's index, or -1.
+/// The first match's index, or -1.
 fn find_index(events: &[GameEvent], predicate: impl Fn(&GameEvent) -> bool) -> i64 {
     events.iter().position(predicate).map_or(-1, |at| at as i64)
 }
@@ -213,7 +204,7 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
 
         // The scenario began with no history, so the view's stream is exactly this action's events: the
         // declaration and the cancel first, then the AI's turn end and p2's turn start, each once. The
-        // AI's own actions are part of this one (`aiPolicy.adoptState` keeps the enclosing history).
+        // AI's own actions are part of this one.
         let seen: Vec<GameEventType> = view_for(s.state(), PlayerId::P2)
             .events
             .iter()
@@ -224,10 +215,8 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 7 (lenses "legality-agreement" and "engine invariants"): the AI turn's questions, and a My
 // Pawn fused onto a My Pawn.
-// ---------------------------------------------------------------------------
 
 const TEMPO_TIMMY: &str = "core-011";
 const JEWELOSCO_SCARAB: &str = "core-007";
@@ -235,8 +224,8 @@ const MR_VANILLA: &str = "core-008";
 const JLOCKEED_SHREDDER: &str = "core-013";
 const UNLICENSED_EXPERIMENTATION: &str = "core-085";
 
-/// TS `registeredScripts()`: the registry as `registerScripts` last set it — this thread's testkit
-/// override once a fixture is in (SURFACE §8), the production registry before.
+/// The registry as `registerScripts` last set it: this thread's testkit override once a fixture is
+/// in, the production registry before.
 fn registered_scripts_now() -> IndexMap<String, CardScripts> {
     match scripts_override() {
         Some(scripts) => scripts.clone(),
@@ -290,7 +279,7 @@ fn place_fixture(s: &mut Scenario, def_id: &str, player: PlayerId, row: Row, lan
 }
 
 /// A Trap that fires when its controller's opponent plays a card, asks its controller, then runs
-/// `after` (TS's default `() => []` when `None`).
+/// `after` (nothing when `None`).
 fn asking_trap(s: &mut Scenario, id: &str, after: Option<Hook>) {
     let after = after.unwrap_or_else(|| hook(|_ctx| vec![]));
     let prompt = format!("{id}: asked");
@@ -511,12 +500,10 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
     fn r212_r44_a_corpse_eater_drawn_during_my_pawns_ai_turn_does_not_feed_on_a_death_a_trap_dealt_earlier_in_the_same_window()
      {
         jackioh_cards::register_all();
-        // p1's Sorcerer swings for lethal. In the window, p2's lane-1 trap destroys p1's Mr. Vanilla,
-        // and then My Pawn cancels the swing and hands the rest of p1's turn to the AI (R44), which ends
-        // it: p2's turn starts inside this one action, and p2 draws Corpse Eater. The loop hands the
-        // window's death to the triggers only after the window, AI turn included (§10.3) — but the Eater
-        // reached the hand after that death, and R212 has "a #89 Corpse Eater drawn after a death not
-        // feed on it".
+        // p1's Sorcerer swings for lethal; p2's lane-1 trap destroys p1's Mr. Vanilla, then My Pawn cancels
+        // the swing and hands the rest of p1's turn to the AI (R44), which ends it, so p2 draws Corpse Eater
+        // inside this action. The loop hands the window's death to the triggers only after the AI turn
+        // (§10.3), but the Eater reached the hand after that death, and R212 says it must not feed on it.
         let mut s = scenario(json!({
             "seed": "edge-r11-pawn-eater",
             "p1": { "field": [SORCERER, { "def": MR_VANILLA, "lane": 2 }], "library": [GIGA, GIGA, GIGA] },
@@ -548,7 +535,6 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
             },
         );
         let sniper = place_fixture(&mut s, "edge-r11-sniper", PlayerId::P2, Row::Backrow, 1);
-        // TS wrote `sniper.faceUp = false` through the live object, which is the card on the field.
         find_instance_mut(s.state_mut(), &sniper.id)
             .expect("the sniper on p2's backrow")
             .face_up = Some(false);

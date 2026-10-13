@@ -2,6 +2,7 @@
 
 import type { ReactElement } from "react";
 
+import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
@@ -13,9 +14,10 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-03";
+export const TERMS_LAST_UPDATED = "2026-10-12";
 
 export default function TermsRoute(): ReactElement {
+  const locale = useLocale();
   return (
     <div className="app-shell tavern privacy-screen" data-testid={termsTestid.screen}>
       <BackLink />
@@ -24,9 +26,11 @@ export default function TermsRoute(): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Terms of service</h2>
+        <h2>{t("Terms of service")}</h2>
+        {/* A translation says the English text governs; the English needs no such line. */}
+        {locale === DEFAULT_LOCALE ? null : <p className="privacy-policy__governing">{t("The English text governs.")}</p>}
         <p className="privacy-policy__updated" data-testid={termsTestid.updated}>
-          Last updated <time dateTime={TERMS_LAST_UPDATED}>{TERMS_LAST_UPDATED}</time>
+          {t("Last updated")} <time dateTime={TERMS_LAST_UPDATED}>{formatDay(TERMS_LAST_UPDATED)}</time>
         </p>
 
         <section aria-labelledby="terms-use">
@@ -49,6 +53,10 @@ export default function TermsRoute(): ReactElement {
             JackiOh is provided as-is and may change, pause, or stop at any time. Patch notes and game
             updates can change cards, mechanics, and progression.
           </p>
+        </section>
+        <section aria-labelledby="terms-ranked">
+          <h3 id="terms-ranked">Ranked play</h3>
+          <p>When no suitable opponent is available, ranked may pair you with an AI opponent.</p>
         </section>
         <section aria-labelledby="terms-contact">
           <h3 id="terms-contact">Contact</h3>

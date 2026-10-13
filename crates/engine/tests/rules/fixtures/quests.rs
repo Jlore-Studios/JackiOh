@@ -1,19 +1,10 @@
-//! Port of `packages/engine/test/fixtures/quests.ts`.
+//! Test-only cards for the quests subsystem (docs/classic-sets.md B5 E33), so the engine half of
+//! Classic #90 In Too Deep is proved without `jackioh-cards` (CLAUDE.md: the engine never imports it).
 //!
-//! Test-only cards for the quests subsystem (docs/classic-sets.md B5 E33; `src/subsystems/quests.ts`),
-//! so the engine half of Classic #90 In Too Deep is proved without `packages/cards` (CLAUDE.md: the
-//! engine never imports it). The real card arrives with its own script and test file.
-//!
-//!   - one Field Spell per goal kind (`GOAL_CARDS`), whose only quest is that goal and offers nothing:
-//!     each count, and each board condition, proved alone;
-//!   - `tree`, a small quest tree shaped like In Too Deep's: a reward prompt on the base face, every
-//!     reward and every path on the Radiant face, a reward that asks a question of its own (a pause
-//!     mid-reward), a quest reached by two paths, a reward two quests offer, a reward whose own draws
-//!     come before the quest it opens, and an aura reward;
+//!   - one Field Spell per goal kind (`GOAL_CARDS`), whose only quest is that goal and offers nothing;
+//!   - `tree`, a small quest tree shaped like In Too Deep's, with a pause mid-reward, a quest reached
+//!     by two paths, a reward two quests offer and an aura reward;
 //!   - plain helper Spells and a draw-limiting Field Spell the tests drive the counts with.
-//!
-//! TS numbered the definitions from a module counter (`nextIndex = 3300`, one step per `def`): the
-//! nine goal cards first, then the rest in source order. Each index is written out here.
 
 use std::sync::LazyLock;
 
@@ -23,7 +14,7 @@ use jackioh_engine::subsystems::quests::{
 };
 use jackioh_engine::testkit::*;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
+/// `b`'s keys replace `a`'s.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -59,11 +50,9 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // One goal kind per card
-// ---------------------------------------------------------------------------------------------
 
-/// TS `keyof typeof GOALS`: a goal kind's name, as `QuestGoal`'s `kind` writes it.
+/// A goal kind's name, as `QuestGoal`'s `kind` writes it.
 pub type GoalKind = &'static str;
 
 /// The goal kinds, in `GOALS`' key order.
@@ -154,9 +143,7 @@ pub static GOAL_CARDS: LazyLock<IndexMap<GoalKind, CardDef>> = LazyLock::new(|| 
         .collect()
 });
 
-// ---------------------------------------------------------------------------------------------
 // The tree
-// ---------------------------------------------------------------------------------------------
 
 pub fn tree() -> CardDef {
     def(3310, "tree", "Field Spell", json!({ "cost": 1 }))
@@ -168,9 +155,7 @@ pub const TREE_PING: i32 = 1;
 pub const TREE_BUFF: i32 = 2;
 
 /// draws 2 → heal (→ kill) or ask (→ board); kill → both (→ mana); board → both (→ mana) or hand
-/// (→ fresh); mana → aura (end); fresh (draws 2) → heal (→ kill). So `mana` is reached by two paths,
-/// `both` is offered by two quests, `ask` pauses for a target, `hand` draws 2 before `fresh` opens,
-/// and `aura` is held.
+/// (→ fresh); mana → aura (end); fresh (draws 2) → heal (→ kill).
 pub static TREE: LazyLock<QuestBook> = LazyLock::new(|| {
     json_as(json!({
         "first": "draws",
@@ -315,9 +300,7 @@ fn tree_script(radiant: bool) -> Script {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // Helpers the tests drive the counts with
-// ---------------------------------------------------------------------------------------------
 
 /// Draw 1, and draw 2.
 pub fn draw_one() -> CardDef {
@@ -488,9 +471,7 @@ fn helper_scripts() -> IndexMap<String, CardScripts> {
     table
 }
 
-// ---------------------------------------------------------------------------------------------
 // Registration
-// ---------------------------------------------------------------------------------------------
 
 /// Graveyard cards back to hand: `returnRandomFromGraveyard` proved through a Spell.
 pub fn recall() -> CardDef {
@@ -524,7 +505,6 @@ pub static QUEST_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
     defs
 });
 
-/// TS `QUEST_SCRIPTS` (module-private there), as a call.
 pub fn quest_scripts() -> IndexMap<String, CardScripts> {
     let mut table: IndexMap<String, CardScripts> = IndexMap::new();
     table.insert(
@@ -569,7 +549,7 @@ pub fn quest_scripts() -> IndexMap<String, CardScripts> {
     table
 }
 
-/// This file's definitions, by id (the brief's `catalog()`).
+/// This file's definitions, by id.
 pub fn catalog() -> CardDefs {
     QUEST_DEFS
         .iter()
@@ -577,7 +557,7 @@ pub fn catalog() -> CardDefs {
         .collect()
 }
 
-/// This file's scripts, by id (the brief's `scripts()`).
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     quest_scripts()
 }

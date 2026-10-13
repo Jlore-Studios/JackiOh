@@ -1,13 +1,10 @@
 /**
- * Shaped canvas effects (docs/polish/1-animations.md, S5; B31): spell projectiles on a shallow
- * quadratic arc that leave a particle trail and a comet tail, branching death cracks, expanding
- * shock rings, and the short bloom a preset with a `flash` paints where its burst fires. Loose
- * particles belong to the ParticleSystem; this module only owns the shapes, and each one ends
- * exactly when its time is up, so nothing outlives the tail the runner allows (R200).
+ * Shaped canvas effects (docs/polish/1-animations.md, S5; B31): projectiles, death cracks, shock
+ * rings and flash blooms. Loose particles belong to the ParticleSystem; each shape here ends exactly
+ * when its time is up, so nothing outlives the tail the runner allows (R200).
  *
  * Glow comes from layered strokes and radial gradients under `lighter` blending, never from
- * `shadowBlur` or text, and every random choice (arc bend, crack shape) comes from the injected
- * `FxRng`.
+ * `shadowBlur` or text, and every random choice comes from the injected `FxRng`.
  */
 import { PARTICLE_PRESETS } from "./presets.ts";
 import type { ParticleSystem, EmitOptions } from "./particles.ts";
@@ -15,28 +12,17 @@ import type { FxRng } from "./rng.ts";
 import type { FxBox, FxPreset, FxVec } from "./types.ts";
 
 export type CanvasFx = {
-  /**
-   * A glowing head along a shallow quadratic arc, emitting `preset` trail particles each step; ends at
-   * flightMs. `density` (the intensity scale, default 1) multiplies the trail and the arrival burst.
-   */
+  /** A glowing head on a shallow arc, trailing `preset` particles until flightMs; `density` (default 1) scales the trail and the arrival burst. */
   projectile(preset: FxPreset, from: FxVec, to: FxVec, flightMs: number, density?: number): void;
   /** Jagged branching polyline from the box centre, white-hot fading to dark over durationMs. */
   crack(box: FxBox, durationMs: number): void;
   /** An expanding elliptical shock wave about the box (RING.scaleFrom to RING.scaleTo), fading over durationMs. */
   ring(preset: FxPreset, box: FxBox, durationMs: number): void;
-  /**
-   * The preset's bloom (`PARTICLE_PRESETS[preset].flash`) at `at`, sized against `box` and the
-   * burst's `count`. A preset without a flash paints nothing.
-   */
+  /** The preset's bloom at `at`, sized against `box` and the burst's `count`; a preset without a flash paints nothing. */
   flash(preset: FxPreset, at: FxVec, box: FxBox, count: number): void;
-  /**
-   * Moves everything on by `dtMs` (the clamped frame time, which paces the trail) and ages it by
-   * `ageMs` (the real time that passed, default `dtMs`), so a stalled frame never stretches a shape
-   * past its wall-clock end (R200).
-   */
+  /** `dtMs` (clamped frame time) paces the trail; `ageMs` (real time, default `dtMs`) ages shapes, so a stalled frame never stretches one past its end (R200). */
   step(dtMs: number, ageMs?: number): void;
   draw(ctx: CanvasRenderingContext2D): void;
-  /** Projectiles, cracks, rings and flashes still running. */
   alive(): number;
   clear(): void;
 };
@@ -49,26 +35,20 @@ const PROJECTILE = {
   /** Trail particles per ms of flight, and at least this many each step. */
   trailPerMs: 0.45,
   trailMinPerStep: 2,
-  /** Trail particles drift slowly: their preset speed is scaled by this. */
   trailPower: 0.35,
   /** Each trail particle is born this far (CSS px, either way) off the path, so the trail has body. */
   trailJitter: 4,
-  /**
-   * Head glow: a radial gradient from the core colour out to the halo, radii in CSS px. The body
-   * colour sits at `bodyRadius` with `bodyAlpha`, and the halo colour at `haloAt` of the radius with
-   * `haloAlpha`, fading to nothing at the edge.
-   */
+  /** Head glow: a radial gradient, radii in CSS px; the body colour sits at `bodyRadius`, the halo at `haloAt` of the radius. */
   haloRadius: 24,
   haloAt: 0.7,
   haloAlpha: 0.25,
   bodyRadius: 11,
   bodyAlpha: 0.85,
   coreRadius: 5,
-  /** The comet tail: this many past head positions, drawn as a tapering stroke. */
+  /** The comet tail: this many past head positions, as a tapering stroke. */
   tailPoints: 9,
   tailWidth: 16,
   tailAlpha: 0.55,
-  /** On arrival the bolt bursts: this many particles of its preset, thrown this hard. */
   arrivalCount: 18,
   arrivalPower: 1.5,
 } as const;
@@ -90,7 +70,6 @@ const CRACK = {
   branchTurnMin: 0.5,
   branchTurnMax: 1.1,
   maxDepth: 2,
-  /** Fraction of the duration spent spreading outward from the centre. */
   growFraction: 0.25,
   /** Colour ramp points (fraction of duration): white-hot → orange by `hotUntil`, → dark by `darkAt`. */
   hotUntil: 0.35,
@@ -98,7 +77,6 @@ const CRACK = {
   /** The crack fades out between these fractions of its duration, so it goes with the card. */
   fadeFrom: 0.2,
   fadeTo: 0.45,
-  /** The glow stroke is only drawn while the crack is still hot. */
   glowUntil: 0.45,
   glowWidth: 6,
   glowAlpha: 0.5,
@@ -118,21 +96,13 @@ const RING = {
   minWidthPx: 0.5,
   /** A wide box (a lane zone) still gets a ring about the card in it, not one the width of the lane. */
   maxAspect: 1.8,
-  /**
-   * The shock wave is three strokes of one ellipse, widest and faintest first: [width multiple,
-   * alpha]. The outer two use the preset's deeper colour and the last its hot core, so the ring
-   * glows instead of reading as an outline.
-   */
+  /** Three strokes of one ellipse, widest and faintest first: [width multiple, alpha]. The last is the hot core, so the ring glows. */
   passes: [
     [3.4, 0.16],
     [1.8, 0.34],
     [0.7, 0.95],
   ],
-  /**
-   * A painted (source-over) ring is dust or void: no hot core, only soft strokes in its pale colour,
-   * [width multiple, alpha], so it reads as a cloud rolling out rather than a drawn line (visual
-   * pass 2: the old two strokes at up to 0.58 alpha read as a solid beige donut).
-   */
+  /** A painted (source-over) ring is dust or void: soft strokes in its pale colour, no hot core, so it reads as a cloud, not a line. */
   paintedPasses: [
     [5.2, 0.06],
     [3.4, 0.09],
@@ -146,9 +116,7 @@ const FLASH = {
   countRef: 20,
   minRadiusPx: 26,
   maxRadiusPx: 150,
-  /** It swells from this fraction of its radius to the full radius. */
   growFrom: 0.5,
-  /** Where the gradient passes from the core colour to the halo colour, and their alphas there. */
   coreStop: 0.22,
   coreAlpha: 0.9,
   haloStop: 0.5,
@@ -172,7 +140,6 @@ type Projectile = {
   tx: number;
   ty: number;
   flightMs: number;
-  /** The intensity scale on the trail and the arrival burst. */
   density: number;
   elapsed: number;
   lastT: number;
@@ -322,7 +289,6 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
     // Glowing presets add light; a poison or void bolt still glows, or it would vanish on the board.
     ctx.globalCompositeOperation = "lighter";
 
-    // The comet tail: a stroke through the last head positions, thin and faint at its old end.
     const tail = pr.tail;
     const points = tail.length / 2;
     ctx.lineCap = "round";
@@ -337,7 +303,6 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
       ctx.stroke();
     }
 
-    // The head: one radial gradient, white-hot core through the body colour to a soft halo.
     const gradient = ctx.createRadialGradient(pr.hx, pr.hy, 0, pr.hx, pr.hy, PROJECTILE.haloRadius);
     gradient.addColorStop(0, withAlpha(core, 1));
     gradient.addColorStop(PROJECTILE.coreRadius / PROJECTILE.haloRadius, withAlpha(core, 1));
@@ -368,7 +333,6 @@ export function createCanvasFx(options: { particles: ParticleSystem; rng: FxRng 
     ctx.beginPath();
     ctx.arc(fl.x, fl.y, radius, 0, TAU);
     ctx.fill();
-    // A thin horizontal streak through the bloom, the lens-flare line of a hard hit.
     ctx.globalAlpha = fade * FLASH.streakAlpha;
     ctx.beginPath();
     ctx.ellipse(fl.x, fl.y, radius * FLASH.streakLength, Math.max(1, radius * FLASH.streakThickness), 0, 0, TAU);

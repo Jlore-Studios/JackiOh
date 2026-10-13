@@ -173,12 +173,6 @@ class NightBotLeavesSquishyAloneTests(unittest.TestCase):
         self.gh.add_assignees(8, ["squishy-squooby"])
         self.assertIn("is Squishy's", queue_mod.queue_build(self.ctx, 8, by="jgoetzmann"))
 
-    def test_squishys_own_labels_are_never_offered_by_triage(self):
-        from harness import triage
-        self.assertTrue(triage._bot_only("squishy:split"))
-        self.assertTrue(triage._bot_only("bot:build"))
-        self.assertFalse(triage._bot_only("patch"))
-
 
 class BotsDoNotTalkForEverTests(unittest.TestCase):
     """The bots name each other in their replies; only a bare `stop` from the other bot is a
@@ -228,7 +222,7 @@ class StatusSectionTests(unittest.TestCase):
     def test_the_section_goes_after_the_night_bots_facts(self):
         ctx = make_ctx(FakeGitHub())
         body = dashboard.render(ctx, ("<!-- s -->\n## 🫧 Squishy\n\nIts facts.",))
-        self.assertLess(body.index("## Last night-bot runs"), body.index("## 🫧 Squishy"))
+        self.assertLess(body.index("## 🏃 Last night-bot runs"), body.index("## 🫧 Squishy"))
         self.assertLess(body.index("## 🫧 Squishy"), body.index("The full status"))
         self.assertIn("---\n\n<!-- s -->", body)
 
@@ -241,7 +235,7 @@ class StatusSectionTests(unittest.TestCase):
             out = "## 🫧 Squishy\n" if "--section-only" in argv else "swept\n"
             return subprocess.CompletedProcess(argv, 0, out, "")
 
-        def update(ctx, extra=()):
+        def update(ctx, extra=(), **_):
             seen.append(extra)
             return "rewrote #148"
 
@@ -271,14 +265,14 @@ class StatusSectionTests(unittest.TestCase):
         def run(*args, **kwargs):
             raise AssertionError("no process should start")
         with mock.patch.object(main_mod.subprocess, "run", run), offline(), \
-                mock.patch.object(dashboard, "update", lambda ctx, extra=(): "rewrote #148"), \
+                mock.patch.object(dashboard, "update", lambda ctx, extra=(), **_: "rewrote #148"), \
                 contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(main_mod.cmd_dashboard(make_config(), argparse.Namespace()), 0)
 
 
 class StatisticsSectionTests(unittest.TestCase):
-    """Squishy's record has a section of its own in the night bot's statistics issue, drawn by
-    its own process, and only when the issue is rewritten."""
+    """Squishy's record has a section of its own in the night bot's statistics, folded in the
+    status issue, drawn by its own process, and only when the statistics are counted."""
 
     def test_the_section_goes_after_the_night_bots_record(self):
         from harness import stats
@@ -288,14 +282,16 @@ class StatisticsSectionTests(unittest.TestCase):
 
         def extra():
             drawn.append(1)
-            return ("<!-- s -->\n## 🫧 Squishy\n\nIts record.",)
-        stats.update(ctx, extra=extra)
-        [issue] = [t for t in ctx.gh.threads.values() if t["title"] == stats.TITLE]
+            return ("<!-- s -->\n🫧 Squishy\n\nIts record.",)
+        dashboard.update(ctx, stats=True, stats_extra=extra)
+        [issue] = [t for t in ctx.gh.threads.values() if t["title"] == dashboard.TITLE]
         body = issue["body"]
-        self.assertLess(body.index("## All time"), body.index("## 🫧 Squishy"))
-        self.assertLess(body.index("## 🫧 Squishy"), body.index(stats.MARKER))
-        self.assertEqual(stats.update(ctx, extra=extra), "statistics: not due")
-        self.assertEqual(drawn, [1])  # not drawn again when nothing is rewritten
+        self.assertLess(body.index("<b>All time</b>"), body.index("Its record."))
+        self.assertLess(body.index("Its record."), body.index(stats.BLOCK_END))
+        self.assertEqual(dashboard.update(ctx, stats=True, stats_extra=extra),
+                         f"rewrote #{issue['number']}")
+        self.assertEqual(drawn, [1])  # not drawn again when nothing is counted
+        self.assertIn("Its record.", ctx.gh.threads[issue["number"]]["body"])  # but kept
 
     def test_the_loop_draws_squishys_record_in_a_process_of_its_own(self):
         calls: list[list[str]] = []
@@ -305,12 +301,11 @@ class StatisticsSectionTests(unittest.TestCase):
             return subprocess.CompletedProcess(argv, 0, "## 🫧 Squishy\n", "")
         seen: list[tuple[str, ...]] = []
 
-        def update(ctx, *, force=False, extra=tuple):
-            seen.append(extra())
-            return "statistics: rewrote #190"
+        def update(ctx, extra=(), *, stats=False, stats_extra=tuple, force_stats=False):
+            seen.append(stats_extra())
+            return "rewrote #148"
         with mock.patch.object(main_mod.subprocess, "run", run), offline(), \
-                mock.patch.object(main_mod.stats_mod, "update", update), \
-                mock.patch.object(dashboard, "update", lambda ctx, extra=(): "rewrote #148"), \
+                mock.patch.object(dashboard, "update", update), \
                 contextlib.redirect_stdout(io.StringIO()):
             main_mod.cmd_dashboard(make_config(), argparse.Namespace(stats=True, companions=True))
         self.assertEqual(seen, [("## 🫧 Squishy\n",)])

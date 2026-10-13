@@ -1,30 +1,16 @@
 //! What `viewFor` hands each seat about cards it may not read (SPEC §9.1, §10.8, R33, R35, R97,
-//! R177, R222, R223). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L10,
-//! rounds 1 to 6); every case here failed before its fix. Where a leak is a difference between two
-//! games that differ only in hidden cards, the test builds both and asserts the viewer cannot tell
-//! them apart. Round 6 found #97 Zephyrs' offer reading a face-down trap and the library's order
-//! (R222), a library-wide discount whose events spelled out the library's order once a card read
-//! openly (R177), and instance ids numbered in the order the store sorts a deck in (R223). Round 7
-//! found a random Make Radiant cueing only the cards it changed, which counted a hidden hand's Radiant
-//! cards (R177), and #83's library replacements numbered top down, which located a revealed library
-//! card by its id (R223). Round 8 found a hidden cue's zone saying where #28's pick landed, and #23
-//! rolling only for a hand that held a base-face card, both of which told p2 about p1's hidden faces
-//! (R177). The last case, R119's, is the one that did not fail first: it pins the strip `viewFor`
-//! already made of `cardResolved.arrivedDuring`, which would name a face-down trap if it went out.
+//! R177, R222, R223), found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L10).
+//! Each test builds two games differing only in hidden cards and asserts the viewer cannot tell them apart.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
-//! Round 9 found three more: a card the mulligan returned, waiting in no pile while a replacement
-//! draw's cast asks, read as public, so the deal's events named it to the other seat (R224); and #28's
-//! cues trailed its real picks and landed on the owner's own hand first, so their order told the
-//! other seat, and their place told the owner, which hidden faces were base-face (R177).
-//!
-//! Round 10 found two more in #28, and three things the view left out. R60's pick over the
-//! non-Radiant cards alone made the chance that #28 passed over p1's public unit hang on how many of
-//! p1's hidden cards were base-face, and its picks in the zones' order put a face-down trap's after
-//! the public unit's and a hand card's before it (R242). And a card's own owner could not read what
-//! it is made of beyond its printed face: a Corpse Eater's meals in hand, a Heroic Power's rolled
-//! power, a crafted card's definition (R243).
-//!
-//! Port of `packages/cards/test/hidden-information.test.ts` (SURFACE §4.1, §8).
+//!  - R222, R177, R223: an offer, a discount's events and an instance id must not spell out a hidden
+//!    library's order, a face-down trap, or the order a deck was sorted in.
+//!  - R177, R242, R60: a random Make Radiant's cues, their zones and their order must not count a hidden
+//!    pile's Radiant cards; #23's roll likewise.
+//!  - R224: a card the mulligan returned, in no pile while a replacement draw's cast asks, stays unread.
+//!  - R243: the owner reads what a card is made of beyond its printed face: a Corpse Eater's meals, a
+//!    Heroic Power's rolled power, a crafted card's definition.
+//!  - R119: `viewFor` strips `cardResolved.arrivedDuring`, which would name a face-down trap.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -95,17 +81,16 @@ fn indistinguishable(viewer: PlayerId, a: &Scenario, b: &Scenario) {
     assert_eq!(b.view(viewer), a.view(viewer));
 }
 
-/// A value as TS's `toEqual` compares it: its JSON, absent fields absent.
+/// A value as its JSON, absent fields absent.
 fn json_of(value: &impl serde::Serialize) -> Value {
     serde_json::to_value(value).expect("a view serialises")
 }
 
-/// TS's `JSON.stringify`.
 fn json_text(value: &impl serde::Serialize) -> String {
     serde_json::to_string(value).expect("a view serialises")
 }
 
-/// TS's `expect(text).not.toMatch(/a|b|c/)`, negated: whether any alternative occurs.
+/// Whether any alternative occurs in the text.
 fn matches_any(text: &str, alternatives: &[&str]) -> bool {
     alternatives.iter().any(|alternative| text.contains(alternative))
 }
@@ -574,7 +559,7 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     }
 
     /// p1's two-card library, replaced by Transmogulate; p2 watches. `first` is a def id or a
-    /// `{ def, radiant }` entry, as TS's `string | { def; radiant }`.
+    /// `{ def, radiant }` entry.
     fn immutable_library_game(first: Value) -> Scenario {
         let mut s = scenario(json!({
             "seed": "hunt-r3-transmog-immutable",
@@ -766,11 +751,10 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
 mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
     use super::*;
 
-    /// p1's Twisted Sorcerer swings for lethal at p2 (5 health). p2's lane-1 My Pawn cancels it and
-    /// the AI plays out p1's turn (R44); p2's turn starts inside that playout and Masochism Mask asks
-    /// p2 (§8 #65), so the declaration's trap window stops with a prompt open. p2's lane-2 card is
-    /// face-down, and the games differ only in what it is. p2 answers, then plays Lunar Eclipse,
-    /// whose "next Spell costs 1 less" is a modifier both seats read with its id (R169).
+    /// p1's Twisted Sorcerer swings for lethal at p2 (5 health); p2's lane-1 My Pawn cancels it and the AI
+    /// plays out p1's turn (R44). p2's turn starts inside that playout and Masochism Mask asks p2 (§8 #65),
+    /// so the trap window stops with a prompt open. The games differ only in p2's face-down lane-2 card.
+    /// p2 answers, then plays Lunar Eclipse, whose modifier both seats read with its id (R169).
     fn pawn_game(lane_two: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": "r5-owed-window",
@@ -962,13 +946,10 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
             assert_eq!(library, vec![HIT_JOB.to_string(), HIT_JOB.to_string()]);
         }
 
-        // §9.1 hides library order from both players, which is why R97 blanks `shuffledIn.position`
-        // even for a card the viewer may read, and why R177 hides a library card's cost. The discount
-        // went out one event per card in library order, so read openly once Gary did, its place among
-        // them would say how deep Gary lay — here, whether p1's next draw was a 1-cost Unit. The finder
-        // asked for Gary's event to read openly at the same place in both games; what SPEC asks is that
-        // neither seat learns the order, and the event was made where nobody could read it (§3), so it
-        // stays unread for good (R177) and both seats read the same batch in both games.
+        // §9.1 hides library order from both players, so R97 blanks `shuffledIn.position` and R177 hides
+        // a library card's cost. The discount went out one event per card in library order: read openly
+        // once Gary did, its place among them would say how deep Gary lay. The event was made where nobody
+        // could read it (§3), so it stays unread for good and both seats read the same batch in both games.
         for viewer in [PlayerId::P1, PlayerId::P2] {
             assert_eq!(place_of_recruited(&on_top, viewer), -1);
             assert_eq!(place_of_recruited(&second, viewer), -1);
@@ -980,16 +961,10 @@ mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
 mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
     use super::*;
 
-    // `apps/server`'s store hands `createGame` each deck ordered by card id (`app.resolve_deck`,
-    // "a deck saved in one order comes back sorted"), and `createGame` numbers every card in that
-    // order before §2.1 shuffles the library. This test cannot use `scenario()`, which numbers its
-    // cards in its own setup order: it plays the engine's own path, `createGame` → `beginGame` →
-    // mulligans → turns, as `replay.fold` and the server do.
-    //
-    // p2's deck is 18 cards costing 1 and #98 Heroic Power (a Quickdraw card, so it starts in the
-    // opening hand whatever the shuffle does), plus one card p2 never shows: #1 Big D-fender, which
-    // sorts before every other card of the deck, or #100 Ceaseless Void, which sorts after them all.
-    // p1 only ever ends its turn; p2 plays Heroic Power as soon as it can pay its X, and nothing else.
+    // The server's store hands `createGame` each deck ordered by card id, and `createGame` numbers its
+    // cards in that order before §2.1 shuffles. `scenario()` numbers in its own setup order, so this
+    // plays the engine's own path: `createGame` → `beginGame` → mulligans → turns. p2's deck is 18
+    // cards costing 1, #98 Heroic Power and one it never shows: #1 (sorts first) or #100 (sorts last).
     const P1_DECK: [&str; 20] = [
         "core-003", "core-004", "core-005", "core-007", "core-008", "core-010", "core-011", "core-015",
         "core-018", "core-023", "core-031", "core-035", "core-036", "core-039", "core-041", "core-044",
@@ -1130,12 +1105,10 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
             Some(id)
         );
 
-        // Numbered in the order the store sorts a deck in, the power was c40 when p2's hidden card sorts
-        // before it (#1) and c39 when it sorts after it (#100): the id was its rank. The finder asked for
-        // one id in both games under the same seed, which no numbering can give — any order a card takes
-        // among its deck's shifts with the cards around it. What §9.1 asks is that the id tell p1 nothing,
-        // and the seed that orders the numbers is as hidden as the one that shuffles the library (§2.1):
-        // whatever id p1 reads, the other game shows it under some seed, and the id is not the rank.
+        // §9.1 asks that the id tell p1 nothing. Numbered in the store's sort order, the power's id was
+        // its rank (c40 when p2's hidden card sorts before it, c39 after). The seed that orders the
+        // numbers is as hidden as the one that shuffles the library (§2.1), so whatever id p1 reads, the
+        // other game shows it under some seed, and the id is not the rank.
         let seeds = seeds();
         for hidden in ["core-001", "core-100"] {
             let other = if hidden == "core-001" {
@@ -1155,9 +1128,7 @@ mod r223_instance_ids_and_the_order_a_deck_was_submitted_in {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 7 (lens L10): a random Make Radiant's cue count, and the ids a Replace mints in a library.
-// ---------------------------------------------------------------------------
 
 const RAPID: &str = "core-010";
 const TUTOR: &str = "core-051";
@@ -1293,11 +1264,10 @@ mod r223_instance_ids_transmogulate_gives_a_library {
             .collect();
         assert!(revealed.len() >= 2);
 
-        // §9.1 and §10.8: "the rest of the library stays hidden from both" — its order included, for its
-        // own player too (§3's "Nobody"). R223: an instance id says nothing of where its card came from.
-        // The option's id is the answer's handle and is p1's to read; what it must not do is give p1 the
-        // card's place. Reading each revealed card's place off its id must not give its real place — the
-        // two cards p1 does not take stay in the library, where p1 would know when each comes up.
+        // §9.1, §10.8: "the rest of the library stays hidden from both", its order included, for its own
+        // player too (§3's "Nobody"). R223: an instance id says nothing of where its card came from. The
+        // option's id is p1's to read as the answer's handle, but reading a revealed card's place off it
+        // must not give its real place: the two cards p1 does not take stay in the library.
         let ids: Vec<String> = s.pile("p1", "library").into_iter().map(|card| card.id).collect();
         let read_off_the_id: Vec<i64> = revealed
             .iter()
@@ -1311,7 +1281,7 @@ mod r223_instance_ids_transmogulate_gives_a_library {
     }
 }
 
-/// `defOf(s.state, defId).type` against a Tutor type option ("Trap" covers Field Traps too).
+/// A def's type against a Tutor type option ("Trap" covers Field Traps too).
 fn type_matches(state: &GameState, def_id: &str, want: &str) -> bool {
     let type_ = def_of(Some(state), def_id).type_;
     if want == "Trap" {
@@ -1345,9 +1315,7 @@ fn in_bracket(cost: i32, bracket: &str) -> bool {
     bracket.parse::<i32>().is_ok_and(|n| cost == n)
 }
 
-// ---------------------------------------------------------------------------
 // #28 Knockoff Temu Glowy Jelly Bean: where a hidden Make Radiant landed
-// ---------------------------------------------------------------------------
 
 mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
     use super::*;
@@ -1428,9 +1396,7 @@ mod r177_where_a_random_make_radiant_over_hidden_zones_landed {
     }
 }
 
-// ---------------------------------------------------------------------------
 // #23 Reoccurring Dream: the roll on an all-Radiant hand
-// ---------------------------------------------------------------------------
 
 mod r177_23s_chance_on_a_hidden_hand {
     use super::*;
@@ -1476,9 +1442,7 @@ mod r177_23s_chance_on_a_hidden_hand {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R119's bookkeeping on `cardResolved`
-// ---------------------------------------------------------------------------
 
 mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
     use super::*;
@@ -1537,9 +1501,7 @@ mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 9: the mulligan's returned cards and #28's cues (R224, R177)
-// ---------------------------------------------------------------------------
 
 fn fixture_def(id: &str, type_: CardType) -> CardDef {
     let face = if type_ == CardType::Unit {
@@ -1562,7 +1524,6 @@ fn fixture_def(id: &str, type_: CardType) -> CardDef {
     }))
 }
 
-/// TS's module `let setupNonce`.
 static SETUP_NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act_as(state: &GameState, player: PlayerId, body: ActionBody) -> GameState {
@@ -1594,8 +1555,8 @@ fn named(event: &GameEvent) -> Vec<String> {
     out
 }
 
-/// TS `registeredScripts()`: the registry as `registerScripts` last set it — this thread's testkit
-/// override once a fixture is in (SURFACE §8), the production registry before.
+/// The registry as `registerScripts` last set it: this thread's testkit override once a fixture is
+/// in, the production registry before.
 fn registered_scripts_now() -> IndexMap<String, CardScripts> {
     match scripts_override() {
         Some(scripts) => scripts.clone(),
@@ -1603,9 +1564,7 @@ fn registered_scripts_now() -> IndexMap<String, CardScripts> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The mulligan's returned cards while setup waits on a question (R224, R97)
-// ---------------------------------------------------------------------------
 
 const ASKING: &str = "edge-r9-view-asks";
 
@@ -1768,12 +1727,9 @@ mod r224_r97_a_card_the_mulligan_returned_while_setup_waits {
     }
 }
 
-// ---------------------------------------------------------------------------
 // #28's picks and its cues, in the order the other seat sees them (R177, R60, §9.1)
-// ---------------------------------------------------------------------------
 
-/// p2's view of the `radiantSet` events #28's play made, redacted as p2 reads them: TS's
-/// `{ order, events }` as a pair.
+/// p2's view of the `radiantSet` events #28's play made, redacted as p2 reads them, with their order.
 fn knockoff_cues(seed: &str, hand_radiant: bool) -> (Vec<String>, Vec<GameEvent>) {
     let mut s = scenario(json!({
         "seed": seed,
@@ -1808,11 +1764,10 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
     #[test]
     fn r177_r60_28s_cue_on_an_all_radiant_hand_can_come_in_any_order_a_pick_could() {
         jackioh_cards::register_all();
-        // Two worlds p2 cannot tell apart by what changed: p1's one hidden hand card is base-face (A)
-        // or already Radiant (B). Either way #28's two picks make p1's public unit Radiant and cue one
-        // hidden card in p1's hand, since R177 cues the pick R60 could not make on the Radiant card, "so
-        // an all-Radiant hand ... is cued as a hand the pick changed". The order the two arrive in must
-        // not tell the worlds apart either: every order p2 can see in A must be one B can produce.
+        // Two worlds p2 cannot tell apart by what changed: p1's one hidden hand card is base-face (A) or
+        // already Radiant (B). Either way #28's two picks make p1's public unit Radiant and cue one hidden
+        // card in p1's hand, since R177 cues the pick R60 could not make ("so an all-Radiant hand ... is
+        // cued as a hand the pick changed"). Every order p2 can see in A must be one B can produce.
         let seeds: Vec<String> = (0..40).map(|at| format!("edge-r9-view-28-{at}")).collect();
         let orders = |radiant: bool| -> IndexSet<String> {
             seeds
@@ -1842,11 +1797,10 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
     #[test]
     fn r177_r60_28s_cue_for_a_pick_it_could_not_make_lands_where_its_owner_cannot_read_it_either() {
         jackioh_cards::register_all();
-        // p1's hand holds two cards that are already Radiant, and its library one card: base-face in
-        // world A, Radiant in world B. §3 and §9.1: a library is read by nobody, p1 included, so p1
-        // must not learn which world it is in. #28 wants two picks and R177 cues the ones R60 could not
-        // make; if the cues go to p1's own hand cards, which p1 reads, the number of them spells out
-        // how many of p1's library cards were base-face.
+        // p1's hand holds two already-Radiant cards, its library one: base-face in world A, Radiant in B.
+        // §3, §9.1: nobody reads a library, p1 included, so p1 must not learn which world it is in. #28
+        // wants two picks and R177 cues the ones R60 could not make; if the cues went to p1's own hand
+        // cards, which p1 reads, their number would spell out how many library cards were base-face.
         fn cues_for(library_radiant: bool) -> Vec<GameEvent> {
             let mut s = scenario(json!({
                 "seed": "edge-r9-view-28-owner",
@@ -1894,9 +1848,7 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Round 10: a random pick over public and hidden cards (R242), and what the view carries (R243)
-// ---------------------------------------------------------------------------
 
 const TEMPO_TIMMY: &str = "core-011";
 
@@ -2141,8 +2093,8 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
     const REMINISCE: &str = "core-072";
     const RENO: &str = "core-053";
 
-    /// p2 returns a Sheepish p1 watched go to the graveyard, and sets it again: TS's
-    /// `{ s, oldId, newId }`.
+    /// p2 returns a Sheepish p1 watched go to the graveyard, and sets it again: the game, the old id and
+    /// the new id.
     fn reset_sheepish() -> (Scenario, String, String) {
         let mut s = scenario(json!({
             "seed": "r227-reset-sheepish",

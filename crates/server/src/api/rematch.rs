@@ -1,29 +1,20 @@
-//! Rematch offers after a finished non-series match (SPEC §9.5, R672). Port of
-//! `apps/server/src/api/rematch.ts`.
+//! Rematch offers after a finished non-series match (SPEC §9.5, R672).
 //!
-//! After the death screen lands, either seat may offer a rematch — a normal one or a
-//! double-or-nothing — and a new match is created only when both seats offer equal stakes.
-//! "The opponent is still here" is their match socket being open (`Registry::presence_of`), so the
-//! buttons disappear when they leave or log out. Games of a Conquest series offer nothing: the
-//! series' continue flow owns what comes next.
+//! Either seat may offer a rematch, normal or double-or-nothing; a new match is created only when
+//! both seats offer equal stakes. "The opponent is still here" is their match socket being open
+//! (`Registry::presence_of`). Games of a Conquest series offer nothing: the series' continue flow
+//! owns what comes next. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 //!
-//! Two endpoints (TS's `createRematchRoutes()`; the route table is `app.rs`'s, SURFACE §11.2):
-//!  - `POST /api/matches/:matchId/rematch { stakes, leanNewest? }` (`offer_rematch`, active) upserts
-//!    the caller's offer and, when the seats' stakes match, creates the game and answers its id;
-//!  - `GET /api/matches/:matchId/rematch` (`rematch_status`, active) answers what each seat offered,
-//!    whether the opponent is here, the created game, if any, and the mode the rematch plays.
+//! R1372: an All Random rematch deals fresh decks, each seat's offer carrying its player's "More
+//! cards from the newest set" (`leanNewest`, absent = off; the latest offer's stands). A Best-of-1
+//! rematch replays its frozen decks and reads no lean.
 //!
-//! R1372: an All Random rematch deals fresh decks, and each seat's offer carries its player's "More
-//! cards from the newest set" for their own seat (`leanNewest`, absent = off; the latest offer's
-//! stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
+//! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
-//! The response carries only offer stakes, presence booleans and ids — never decks, hands or
-//! ratings (CLAUDE.md rule 7).
-//!
-//! The offers live in a module-level map, like `queue.rs`'s `E2E_SEED_BY_TICKET`: they are
-//! rendezvous state for two sockets, not rows — a restart drops them, and both clients re-offer.
-//! Entries without a created game are swept on read past `REMATCH_OFFER_TTL_MS`; an entry that made
-//! a game keeps its id so a late poller still learns where to go.
+//! The offers live in a module-level map, like `queue.rs`'s `E2E_SEED_BY_TICKET`: rendezvous state
+//! for two sockets, not rows, so a restart drops them and both clients re-offer. Entries without a
+//! created game are swept on read past `REMATCH_OFFER_TTL_MS`; one that made a game keeps its id so
+//! a late poller still learns where to go.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
@@ -36,17 +27,17 @@ use serde_json::Value;
 use crate::api::collection::caller_profile;
 use crate::api::decks::lean_newest_of;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
-use crate::api::queue::{new_seed, new_uuid};
+use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
 use crate::config::REMATCH_OFFER_TTL_MS;
-use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, QueueMode, StartMatchInput};
+use crate::db::store::{MatchRow, MatchSeat, MatchStatus, Profile, ProfileKind, QueueMode, StartMatchInput};
 
 /// R672: a normal rematch moves the rating once; a double-or-nothing moves it twice.
 pub const STAKE_NORMAL: RematchStakes = 1;
 /// R672: a double-or-nothing rematch. Ranked matches only (`double_requires_ranked`).
 pub const STAKE_DOUBLE: RematchStakes = 2;
 
-/// TS `1 | 2`: `STAKE_NORMAL` or `STAKE_DOUBLE`, nothing else.
+/// `STAKE_NORMAL` or `STAKE_DOUBLE`, nothing else.
 pub type RematchStakes = i32;
 
 /// `POST /api/matches/:matchId/rematch`: the created game, or null while the seats disagree.
@@ -78,8 +69,7 @@ struct OfferEntry {
     at: i64,
     /// The game equal stakes made, once made.
     match_id: Option<String>,
-    /// Which entry this is: TS compared the entry object itself (`offersByMatch.get(id) === entry`)
-    /// after a failed create, and a swept-and-remade entry is another object.
+    /// Which entry this is: a swept-and-remade entry must not be mistaken for it after a failed create.
     generation: u64,
 }
 
@@ -104,12 +94,14 @@ pub fn rematch_offer_count() -> usize {
     offers().len()
 }
 
-// ---------------------------------------------------------------------------
-// Small private copies (fullsend rule 5): the clock, the id minters and the error shapes
-// ---------------------------------------------------------------------------
+// Small private copies (fullsend rule 5): the error shapes
 
 fn no_such_match() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such match")
+}
+
+fn already_in_match() -> ApiError {
+    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
 }
 
 fn series_game() -> ApiError {
@@ -119,9 +111,7 @@ fn series_game() -> ApiError {
     )
 }
 
-// ---------------------------------------------------------------------------
 // Offers
-// ---------------------------------------------------------------------------
 
 fn stakes_of(body: &Value) -> Result<RematchStakes, ApiError> {
     let stakes = body.get("stakes").and_then(Value::as_f64);
@@ -165,11 +155,9 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
     None
 }
 
-/// Creates the rematch both seats offered, exactly like `queue.rs`'s `start_paired_match` makes a
-/// paired match: a Best-of-1 replays the finished row's frozen decks and portraits under a fresh
-/// seed, an All Random deals fresh decks from that seed (`{seed}:p1-deck`, `{seed}:p2-deck`, the
-/// same suffix scheme), each leaning on the newest set when its seat's offer asked (`leans`, seat
-/// order, R1372), and both profiles go in-match in one transaction first.
+/// Creates the rematch both seats offered, as `queue.rs`'s `start_paired_match` makes a paired
+/// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
+/// fresh decks from it, each leaning on the newest set when its seat asked (`leans`, R1372).
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
@@ -226,8 +214,8 @@ async fn create_rematch(
         },
     );
 
-    // Refuse before minting anything: one of them found another game while the offers were coming
-    // in, so the rematch loses and neither seat is stolen out of the game it is actually in.
+    // Refuse before minting anything: a seat that found another game meanwhile keeps that game.
+    let mut bots = Vec::new();
     {
         let mut tx = app
             .db
@@ -240,10 +228,13 @@ async fn create_rematch(
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
             if found.first().is_some_and(|profile| profile.in_match_id.is_some()) {
-                return Err(ApiError::new(
-                    ApiErrorCode::AlreadyInMatch,
-                    "finish your current match first",
-                ));
+                return Err(already_in_match());
+            }
+            if found
+                .first()
+                .is_some_and(|profile| profile.kind == ProfileKind::Bot)
+            {
+                bots.push(seat.profile_id.clone());
             }
         }
         tx.commit()
@@ -251,9 +242,41 @@ async fn create_rematch(
             .map_err(|error| ApiError::internal(error.to_string()))?;
     }
 
-    // The start writes the row (`registry.rs`); a failed start leaves nothing behind, so there is
-    // nothing to undo — the caller clears the offer claim and the seats simply offer again.
-    app.matches
+    // R639000: a ladder bot is claimed for its rematch in one step, as the fallback claims one for a
+    // ticket (R1453): free and not retired, whatever its schedule says. One claimed meanwhile, or any
+    // while `LADDER_BOTS` is off, answers as a seat that found another game.
+    if !bots.is_empty() {
+        if !app.env.ladder_bots {
+            return Err(already_in_match());
+        }
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        for bot in &bots {
+            let claimed = tx
+                .bots_claim_for_rematch(
+                    bot,
+                    &finished.players,
+                    match_id,
+                    &finished.catalog_version,
+                    now_ms(),
+                )
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            if !claimed {
+                return Err(already_in_match());
+            }
+        }
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+    }
+
+    // A failed start leaves nothing behind: the caller clears the offer claim and the seats re-offer.
+    let started = app
+        .matches
         .start(
             app,
             StartMatchInput {
@@ -263,8 +286,7 @@ async fn create_rematch(
                 // The rematch is ranked exactly when the finished match was (§9.5).
                 ranked: finished.ranked.unwrap_or(false),
                 mode: Some(mode),
-                // Absent reads as 1 downstream; only a double writes its stakes, and only ranked games
-                // reach here with 2 (`double_requires_ranked` above).
+                // Absent reads as 1 downstream; only a double writes its stakes.
                 stake: if stakes == STAKE_DOUBLE {
                     Some(i64::from(stakes))
                 } else {
@@ -273,12 +295,38 @@ async fn create_rematch(
                 seats: seats.clone(),
             },
         )
-        .await?;
+        .await;
+    if let Err(error) = started {
+        // R639000: the claimed bot is let go and its skeleton discarded, as `queue.rs` lets go a bot
+        // whose fallback start failed.
+        if !bots.is_empty() {
+            let cleanup = async {
+                let mut tx = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                for bot in &bots {
+                    tx.profiles_set_in_match(bot, None)
+                        .await
+                        .map_err(|error| ApiError::internal(error.to_string()))?;
+                }
+                tx.commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                discard_open(app, match_id).await
+            }
+            .await;
+            if let Err(cleanup) = cleanup {
+                tracing::error!(event = "rematch.bot_cleanup_failed", matchId = %match_id, message = %cleanup.message);
+            }
+        }
+        return Err(error);
+    }
 
-    // After the start, not before (`series.rs`'s `mark_in_match`): the row is what the in-match
-    // reference points at (`profiles_current_match_id_fkey`), so flagging first is a foreign-key
-    // failure on Postgres. A seat taken during the start keeps its game and its tickets; like the
-    // series' post-start flags, a failure here is logged, not thrown — the game exists either way.
+    // After the start, not before: the row is what the in-match reference points at
+    // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. A seat taken during
+    // the start keeps its game and tickets; a failure here is logged, not thrown.
     let flagged = async {
         let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
         for seat in [&seats.0, &seats.1] {
@@ -291,8 +339,7 @@ async fn create_rematch(
                 continue;
             }
             tx.profiles_set_in_match(&seat.profile_id, Some(match_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
-            // A stray open ticket would block the re-queue M7-T1 promises after this game ends, so
-            // the ending is not the only place that clears one (`results.rs`).
+            // A stray open ticket would block the re-queue M7-T1 promises after this game ends.
             if let Some(ticket) = tx.tickets_open_for_profile(&seat.profile_id).await.map_err(|error| ApiError::internal(error.to_string()))? {
                 tx.tickets_cancel(&ticket.id, now_ms()).await.map_err(|error| ApiError::internal(error.to_string()))?;
             }
@@ -308,8 +355,7 @@ async fn create_rematch(
 }
 
 async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiError> {
-    // A series game never reaches here (refused below), so `bo3` below is a store that lost a row,
-    // not a player: refuse it like one.
+    // A series game never reaches here, so `bo3` is a store that lost a row: refuse it like one.
     let mut tx = app
         .db
         .begin(None)
@@ -325,8 +371,7 @@ async fn rematch_mode(app: &App, finished: &MatchRow) -> Result<QueueMode, ApiEr
     if mode == Some(QueueMode::Bo3) {
         return Err(series_game());
     }
-    // A match nothing made (no tickets, room, series or rematch row): replay its frozen decks as a
-    // Best of 1 rather than refusing a game both seats want.
+    // A match nothing made: replay its frozen decks as a Best of 1 rather than refuse it.
     Ok(mode.unwrap_or(QueueMode::Bo1))
 }
 
@@ -372,16 +417,13 @@ async fn is_series_game(app: &App, match_id: &str) -> Result<bool, ApiError> {
     Ok(series.is_some())
 }
 
-// ---------------------------------------------------------------------------
 // Routes
-// ---------------------------------------------------------------------------
 
 /// `POST /api/matches/:matchId/rematch` (active): offer a rematch (or meet one). `AuthLevel::Active`
 /// is §9.4's gate, as on the queue and the rooms; a seat of another match — or of none — learns
 /// nothing beyond "no such match" (§9.1).
 ///
-/// It takes `&Arc<App>` where SURFACE §11.2 writes `&App`: equal offers start the match, and
-/// `Registry::start` takes `&Arc<App>`.
+/// It takes `&Arc<App>` because equal offers start the match and `Registry::start` needs one.
 pub async fn offer_rematch(app: &Arc<App>, req: Req) -> ApiResult {
     offer_rematch_route(app, req).await
 }
@@ -392,6 +434,56 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     // R1372: absent is off, so an offer from a client before it is a plain rematch.
     let lean_newest = lean_newest_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
+    let match_id = offer_as(app, &match_row, seat, stakes, lean_newest).await?;
+    let created = RematchOfferBody { match_id };
+    Ok(json(
+        200,
+        serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?,
+    ))
+}
+
+/// R639000: a ladder bot's offer (or its answer to a person's), made for the seat it began
+/// `match_id` in, as a person's offer is made: the same refusals, the same map and the same start.
+/// Nothing unless `LADDER_BOTS` is on and the match is held. A bot leans on no set (R1372). Answers
+/// the game the offer made, if it made one.
+pub async fn offer_for_bot(
+    app: &Arc<App>,
+    match_id: &str,
+    seat: PlayerId,
+    stakes: RematchStakes,
+) -> Result<Option<String>, ApiError> {
+    if !app.env.ladder_bots {
+        return Ok(None);
+    }
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let found = tx
+        .matches_get(match_id)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let Some(match_row) = found else {
+        return Ok(None);
+    };
+    offer_as(app, &match_row, seat, stakes, false).await
+}
+
+/// The offer of `seat` (the seat its account began the match in) once the caller is known: the
+/// refusals, the claim on the offers map, the start of the rematch equal offers make, and the
+/// telemetry. R639000: an offer that made no rematch is told to the match's actor, if it is still in
+/// memory, so a ladder bot opposite can meet it.
+async fn offer_as(
+    app: &Arc<App>,
+    match_row: &MatchRow,
+    seat: PlayerId,
+    stakes: RematchStakes,
+    lean_newest: bool,
+) -> Result<Option<String>, ApiError> {
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
         return Err(ApiError::new(
@@ -410,9 +502,8 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let now = now_ms();
-    // One new game for one pair of equal offers. The check and the claim run under one lock, so
-    // two offers landing together cannot mint two games; a failed create clears the claim and
-    // returns the error, so a retry mints the next id.
+    // One new game per pair of equal offers: check and claim run under one lock, so two offers
+    // landing together cannot mint two games; a failed create clears the claim.
     let (claimed, answered) = {
         let mut map = offers();
         if live_entry(&mut map, &match_row.id, now).is_none() {
@@ -447,12 +538,13 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
         }
     };
 
+    let made = claimed.is_some();
     let match_id = match claimed {
         None => answered,
         Some((new_id, generation, leans)) => {
             let created = async {
-                let mode = rematch_mode(app, &match_row).await?;
-                create_rematch(app, &match_row, mode, stakes, leans, &new_id).await
+                let mode = rematch_mode(app, match_row).await?;
+                create_rematch(app, match_row, mode, stakes, leans, &new_id).await
             }
             .await;
             if let Err(error) = created {
@@ -467,11 +559,14 @@ async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
             Some(new_id)
         }
     };
-    let created = RematchOfferBody { match_id };
-    Ok(json(
-        200,
-        serde_json::to_value(created).map_err(|error| ApiError::internal(error.to_string()))?,
-    ))
+    // R1442: the offer, and whether it made the rematch, among the finished match's signals.
+    crate::actor::telemetry::note_rematch(app, &match_row.id, seat, made).await;
+    if match_id.is_none()
+        && let Some(actor) = app.matches.get(&match_row.id)
+    {
+        actor.on_rematch_offer(seat, stakes);
+    }
+    Ok(match_id)
 }
 
 /// `GET /api/matches/:matchId/rematch` (active): what each seat offered, whether the opponent is
@@ -484,8 +579,7 @@ pub async fn rematch_status(app: &Arc<App>, req: Req) -> ApiResult {
 async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
-    // A finished series game offers no rematch either: the Conquest continue flow owns what
-    // comes next, so the death screen never polls one into view (`match.tsx`).
+    // A finished series game offers no rematch: the Conquest continue flow owns what comes next.
     if is_series_game(app, &match_row.id).await? {
         return Err(series_game());
     }
@@ -507,8 +601,7 @@ async fn rematch_status_route(app: &App, req: Req) -> ApiResult {
     let status = RematchStatusBody {
         you_offered,
         opponent_offer,
-        // Gone whenever no live actor holds the match (a restart, the reaper) or the opponent's
-        // socket closed: leaving, logging out and closing the tab all read as gone.
+        // Gone whenever no live actor holds the match or the opponent's socket closed.
         opponent_here: presence.is_some_and(|presence| presence[seat.opponent()]),
         match_id: created,
         mode,

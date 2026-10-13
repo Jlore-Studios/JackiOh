@@ -1,14 +1,6 @@
-// Polish task 7, B36 to B39 and B42 (docs/polish/7-mobile-ux.md, Surface S9 and S10): drag to play,
-// driven through `<Game/>` exactly as a player's pointer drives it.
-//
-// jsdom has no layout, so it has no `document.elementsFromPoint` either. Each test stubs it to
-// return whatever element the pointer is "over" (`over(...)`), and deletes the stub afterwards. The
-// press goes to the element, as a real `pointerdown` does; the moves and the release go to
-// `window`, where the DragLayer listens. `isPrimary` and `pointerType` are left at jsdom's defaults
-// on purpose: S9 says the layer must not need them.
-//
-// Every expected action is a body the fixture's `legal` array lists, and the tests that say "the
-// same action click-click sends" record click-click in a render of its own and compare.
+// Polish task 7, B36 to B39 and B42 (docs/polish/7-mobile-ux.md, Surface S9 and S10): pointer-driven drag through `<Game/>`.
+// jsdom's `elementsFromPoint` is stubbed; presses target elements and moves/releases target `window`.
+// S9 must not need `isPrimary` or `pointerType`; expected bodies from `legal` are compared with click-click.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -19,14 +11,9 @@ import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, unit } from "../fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The fixture.
-// ---------------------------------------------------------------------------------------------
 
-/**
- * h1 is a unit that may go into your units lane 3 or 4, s1 is a spell with a single candidate,
- * n1 is a card nothing lets you play. u1 may attack e1 or the enemy hero; u2 may only switch.
- */
+/** h1 plays in lanes 3 or 4; s1 has one candidate; n1 has no play; u1 attacks e1 or the hero; u2 only switches. */
 function dragView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -69,15 +56,11 @@ function renderGame(onAction = vi.fn()) {
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
-// ---------------------------------------------------------------------------------------------
 // The pointer.
-// ---------------------------------------------------------------------------------------------
 
 const POINTER = 1;
-/** Where every press starts. The source element is what matters; the numbers only set distance. */
 const START = { x: 200, y: 400 };
 
-/** What `document.elementsFromPoint` answers, topmost first. */
 let under: Element[] = [];
 
 function over(...stack: Element[]): void {
@@ -101,7 +84,6 @@ function release(x = START.x, y = START.y): void {
   fireEvent.pointerUp(window, { pointerId: POINTER, button: 0, clientX: x, clientY: y });
 }
 
-/** Press the source and move it straight up past the threshold: the drag is now in flight. */
 function lift(source: Element): void {
   over(source);
   press(source);
@@ -116,7 +98,6 @@ function expectNoDrag(): void {
   expect(document.documentElement).not.toHaveAttribute("data-dragging");
 }
 
-/** Idle as the board shows it: nothing selected, h1's zones neither glowing nor clickable. */
 function expectBoardIdle(): void {
   expect(el("hand-card-h1")).not.toHaveAttribute("data-selected");
   expect(el("card-u1")).not.toHaveAttribute("data-selected");
@@ -125,7 +106,6 @@ function expectBoardIdle(): void {
     expect(el(zone)).toHaveAttribute("data-legal", "false");
   }
   expect(el("hero-opponent")).not.toHaveAttribute("data-glow");
-  // No zone picker is open, which it would be for a lifted h1.
   expect(screen.queryByTestId("prompt-modal")).toBeNull();
 }
 
@@ -137,15 +117,13 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   delete (document as Partial<Document>).elementsFromPoint;
-  // Isolation only: a leak from one test must not fail the next one for the wrong reason.
+  // Isolate DOM state.
   document.documentElement.removeAttribute("data-dragging");
   localStorage.clear();
   __resetSettingsForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
 // B36: dragging a hand card onto a zone
-// ---------------------------------------------------------------------------------------------
 
 describe("B36 dragging a hand card onto a glowing zone plays it", () => {
   it("B36 a press on a legal hand card and an 8 px move lift it: its zones glow, the ghost shows, <html data-dragging=play>", () => {
@@ -158,7 +136,6 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
 
     expect(el("zone-you-units-3")).toHaveAttribute("data-glow", "ready");
     expect(el("zone-you-units-4")).toHaveAttribute("data-glow", "ready");
-    // Only h1's candidates glow: an empty zone it cannot go into does not.
     expect(el("zone-you-units-5")).not.toHaveAttribute("data-glow");
 
     expect(el("drag-layer")).toHaveAttribute("data-kind", "play");
@@ -172,7 +149,7 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
     renderGame();
     lift(el("hand-card-h1"));
 
-    // No catalog is mounted, so `useCardInfo` names the card by its def id (catalog.ts).
+    // The fixture has no catalog, so its def id is shown.
     expect(el("drag-ghost")).toHaveTextContent("core-008");
     expect(el("drag-ghost")).toHaveTextContent("3");
     const layer = el("drag-layer");
@@ -250,9 +227,7 @@ describe("B36 dragging a hand card onto a glowing zone plays it", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B37: dragging an attacker onto the enemy hero
-// ---------------------------------------------------------------------------------------------
 
 describe("B37 dragging an attacker shows the arrow and attacks where it is released", () => {
   it("B37 an attacker lifted past the threshold shows the arrow from its card and no ghost", () => {
@@ -263,7 +238,6 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
     expect(el("drag-arrow")).toHaveAttribute("data-from", "card-u1");
     expect(screen.queryByTestId("drag-ghost")).toBeNull();
     expect(document.documentElement).toHaveAttribute("data-dragging", "attack");
-    // Its targets glow.
     expect(el("hero-opponent")).toHaveAttribute("data-glow", "ready");
     expect(el("card-e1")).toHaveAttribute("data-glow", "ready");
     expect(onAction).not.toHaveBeenCalled();
@@ -273,7 +247,7 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
     renderGame();
     lift(el("card-u1"));
 
-    // Something inside the hero panel, as a real hit test returns: the hero is its nearest testid.
+    // A child hit resolves to the nearest testid.
     const hero = el("hero-opponent");
     over(hero.firstElementChild ?? hero, hero);
     move(600, 60);
@@ -325,9 +299,7 @@ describe("B37 dragging an attacker shows the arrow and attacks where it is relea
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B38: every way a drag is cancelled
-// ---------------------------------------------------------------------------------------------
 
 describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows the click after the release", () => {
   const CANCELS: [string, () => void][] = [
@@ -351,7 +323,6 @@ describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows th
     release();
     fireEvent.click(source);
 
-    // The click was swallowed: had it reached the board, h1 would now be selected.
     expect(source).not.toHaveAttribute("data-selected");
     expect(el("zone-you-units-4")).toHaveAttribute("data-legal", "false");
     expect(onAction).not.toHaveBeenCalled();
@@ -469,9 +440,7 @@ describe("B38 a cancelled drag goes back to idle, sends nothing, and swallows th
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B39: clicks keep working
-// ---------------------------------------------------------------------------------------------
 
 describe("B39 a short press is a click, and click-click works with drag to play on or off", () => {
   it("B39 the drag threshold is 8 px", () => {
@@ -593,13 +562,11 @@ describe("B39 a short press is a click, and click-click works with drag to play 
     const { onAction } = renderGame();
     const source = el("hand-card-h1");
 
-    // A drag released on no drop target, with no click after it.
     lift(source);
     over(el("board"));
     release(420, 180);
     expectNoDrag();
 
-    // A fresh tap: press, no move, release, click.
     over(source);
     press(source);
     release();
@@ -611,11 +578,8 @@ describe("B39 a short press is a click, and click-click works with drag to play 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B42: a dropped play stays where it landed until the board catches up
-// ---------------------------------------------------------------------------------------------
 
-/** h1 has left the hand and stands in your units lane 4: the view the play produces. */
 function afterH1(): PlayerView {
   const before = dragView();
   const hand = before.you.hand as ReturnType<typeof card>[];

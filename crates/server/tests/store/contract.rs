@@ -40,18 +40,23 @@ use serde_json::{Value, json};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
-use jackioh_engine::{Action, GameRecord, LastBoardEntry};
+use jackioh_engine::{Action, GameRecord, LastBoardEntry, PlayerId};
+use jackioh_server::api::series_rules::forfeit_series;
+use jackioh_server::config::PersonaName;
+use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotRating, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio, GameRecordQuery, InviteCode,
-    LastBoardKind, MatchActionRow, MatchClocks, MatchRow, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileStatus, RatedGameRow,
-    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow,
-    StoreError, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
+    Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
+    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
+    TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
 use jackioh_server::ranked::season::ResetChange;
+use jackioh_server::username::{normalize_username, username_key};
 
 // ---------------------------------------------------------------------------
 // One store call, one transaction
@@ -393,7 +398,7 @@ pub const TRUNCATE: &str = "truncate
   public.trios, public.decks,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
-  public.code_attempts, public.invite_codes, public.profiles, auth.users
+  public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
   restart identity cascade";
 
 /// `app.settings.redemption_enabled` — migration 0001 seeds it `true` and
@@ -758,6 +763,304 @@ mod profiles {
 }
 
 // ---------------------------------------------------------------------------
+// Usernames (SPEC §9.4, R1434, R1435)
+// ---------------------------------------------------------------------------
+
+mod r1434_usernames {
+    use super::*;
+
+    const COOLDOWN_MS: i64 = USERNAME_CHANGE_COOLDOWN_MS;
+
+    /// A claim of `base` (already in its stored form) by `profile_id`, expecting `expected_tag`.
+    fn claim_of(profile_id: &str, base: &str, expected_tag: Option<i64>, at: i64) -> UsernameClaim {
+        UsernameClaim {
+            profile_id: profile_id.to_string(),
+            base: base.to_string(),
+            key: username_key(base),
+            expected_tag,
+            at,
+            cooldown_ms: COOLDOWN_MS,
+        }
+    }
+
+    /// The username a profile shows now, read back from the store.
+    async fn username_now(harness: &StoreHarness, profile_id: &str) -> String {
+        must(q!(harness, t => t.profiles_get_by_id(profile_id)), "the profile").username()
+    }
+
+    /// Claims `base` for `profile_id` at the tag the store says it would carry now, as a save of a
+    /// fresh preview does, and answers that tag.
+    async fn claim(harness: &StoreHarness, profile_id: &str, base: &str, at: i64) -> Option<i64> {
+        let key = username_key(base);
+        let tag = q!(harness, t => t.profiles_username_tag_for(profile_id, &key));
+        let outcome = q!(harness, t => t.profiles_claim_username(&claim_of(profile_id, base, tag, at)));
+        assert_eq!(
+            outcome,
+            UsernameClaimOutcome::Claimed { tag },
+            "{}: claim {base}",
+            harness.name
+        );
+        tag
+    }
+
+    /// R1434: a new account is the lowest free `Player#n`, in order, always tagged and unprompted.
+    async fn r1434_new_accounts_are_player_1_2_3_in_order(harness: &StoreHarness) {
+        let a = pending_profile(harness, None).await;
+        let b = pending_profile(harness, None).await;
+        let c = pending_profile(harness, None).await;
+        assert_eq!(
+            [a.username(), b.username(), c.username()],
+            ["Player#1", "Player#2", "Player#3"]
+        );
+        for profile in [&a, &b, &c] {
+            assert_eq!(profile.username_key, "player");
+            assert!(!profile.username_prompted);
+            assert_eq!(profile.username_changed_at, None);
+        }
+        assert_eq!(username_now(harness, &b.id).await, "Player#2");
+    }
+
+    /// R1434: a default tag freed by a rename or a deleted account goes to the next new account.
+    async fn r1434_a_freed_default_tag_goes_to_the_next_new_account(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        assert_eq!(c.username(), "Player#3");
+
+        assert_eq!(claim(harness, &b.id, "Bob", harness.now()).await, None);
+        assert_eq!(username_now(harness, &b.id).await, "Bob");
+        let d = pending_profile(harness, None).await;
+        assert_eq!(d.username(), "Player#2", "{}: the rename freed #2", harness.name);
+
+        assert!(q!(harness, t => t.profiles_remove(&a.id)));
+        let e = pending_profile(harness, None).await;
+        assert_eq!(
+            e.username(),
+            "Player#1",
+            "{}: the deletion freed #1",
+            harness.name
+        );
+        let f = pending_profile(harness, None).await;
+        assert_eq!(f.username(), "Player#4");
+    }
+
+    /// R1434: the first claim of a base is bare, later ones take the lowest free tag, and a tag
+    /// freed by a rename goes to the next taker.
+    async fn r1434_first_claim_is_bare_then_the_lowest_free_tag_and_freed_tags_are_reused(
+        harness: &StoreHarness,
+    ) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let d = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(claim(harness, &b.id, "Max", at).await, Some(1));
+        assert_eq!(claim(harness, &c.id, "Max", at).await, Some(2));
+        assert_eq!(
+            [
+                username_now(harness, &a.id).await,
+                username_now(harness, &b.id).await,
+                username_now(harness, &c.id).await
+            ],
+            ["Max", "Max#1", "Max#2"]
+        );
+
+        // b renames once the cooldown has run, which frees `Max#1` for the next taker.
+        assert_eq!(claim(harness, &b.id, "Zed", at + COOLDOWN_MS).await, None);
+        assert_eq!(claim(harness, &d.id, "Max", at).await, Some(1));
+        assert_eq!(username_now(harness, &d.id).await, "Max#1");
+
+        // a renames too: the bare name is free again, and the next taker gets it bare.
+        assert_eq!(claim(harness, &a.id, "Ann", at + COOLDOWN_MS).await, None);
+        let e = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &e.id, "Max", at).await, None);
+        assert_eq!(username_now(harness, &e.id).await, "Max");
+    }
+
+    /// R1434: two base names clash when their NFKC case folds match.
+    async fn r1434_names_clash_on_their_nfkc_case_fold(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let d = active_profile(harness, None).await;
+        let e = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(claim(harness, &b.id, "max", at).await, Some(1));
+        // Fullwidth `ＭＡＸ` is stored as `MAX` (R1432), whose key is `max` as well.
+        let fullwidth = normalize_username("ＭＡＸ").expect("fullwidth MAX is a name");
+        assert_eq!(fullwidth, "MAX");
+        assert_eq!(claim(harness, &c.id, &fullwidth, at).await, Some(2));
+        assert_eq!(username_now(harness, &c.id).await, "MAX#2");
+
+        assert_eq!(claim(harness, &d.id, "Straße", at).await, None);
+        assert_eq!(claim(harness, &e.id, "STRASSE", at).await, Some(1));
+        assert_eq!(username_now(harness, &e.id).await, "STRASSE#1");
+    }
+
+    /// R1434: a player's own current name never counts as taken against them.
+    async fn r1434_the_callers_own_name_is_not_taken_against_them(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        assert_eq!(q!(harness, t => t.profiles_username_tag_for(&a.id, "max")), None);
+        assert_eq!(
+            q!(harness, t => t.profiles_username_tag_for(&b.id, "max")),
+            Some(1)
+        );
+        // A new account's own `Player#n` is not taken against it either.
+        let tag = q!(harness, t => t.profiles_username_tag_for(&b.id, "player"));
+        assert_eq!(tag, None, "{}: no one else holds bare Player", harness.name);
+        // a moves to another form of the same name, keeping it bare.
+        assert_eq!(claim(harness, &a.id, "MAX", at + COOLDOWN_MS).await, None);
+        assert_eq!(username_now(harness, &a.id).await, "MAX");
+    }
+
+    /// R1435: a claim whose tag no longer matches the preview's writes nothing and says what the
+    /// name would carry now.
+    async fn r1435_a_claim_whose_outcome_changed_writes_nothing(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // b previews `Max`, bare; a takes it first.
+        assert_eq!(q!(harness, t => t.profiles_username_tag_for(&b.id, "max")), None);
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        let stale = q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at)));
+        assert_eq!(stale, UsernameClaimOutcome::Changed { tag: Some(1) });
+        let unchanged = must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b");
+        assert_eq!(unchanged.username(), b.username());
+        assert_eq!(unchanged.username_changed_at, None);
+        assert!(!unchanged.username_prompted);
+    }
+
+    /// R1434: two claims of one name at the same moment get different tags.
+    async fn r1434_two_concurrent_claims_of_one_name_get_different_tags(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // Both previewed `Max` bare, and both save at once.
+        let (first, second) = tokio::join!(
+            async { q!(harness, t => t.profiles_claim_username(&claim_of(&a.id, "Max", None, at))) },
+            async { q!(harness, t => t.profiles_claim_username(&claim_of(&b.id, "Max", None, at))) },
+        );
+        let mut outcomes = [first.clone(), second.clone()];
+        outcomes.sort_by_key(|outcome| matches!(outcome, UsernameClaimOutcome::Changed { .. }));
+        assert_eq!(
+            outcomes,
+            [
+                UsernameClaimOutcome::Claimed { tag: None },
+                UsernameClaimOutcome::Changed { tag: Some(1) }
+            ],
+            "{}: one claim lands bare and the other is told the name is taken",
+            harness.name
+        );
+        // The one that lost saves its fresh preview, `Max#1`.
+        let loser = if matches!(first, UsernameClaimOutcome::Claimed { .. }) {
+            &b
+        } else {
+            &a
+        };
+        assert_eq!(claim(harness, &loser.id, "Max", at).await, Some(1));
+        let mut names = [
+            username_now(harness, &a.id).await,
+            username_now(harness, &b.id).await,
+        ];
+        names.sort();
+        assert_eq!(names, ["Max", "Max#1"]);
+    }
+
+    /// R1434: two sign-ups at the same moment never share a default number.
+    async fn r1434_two_concurrent_new_accounts_get_different_tags(harness: &StoreHarness) {
+        let (a, b) = tokio::join!(pending_profile(harness, None), pending_profile(harness, None));
+        let mut names = [a.username(), b.username()];
+        names.sort();
+        assert_eq!(names, ["Player#1", "Player#2"]);
+    }
+
+    /// R1435: a change starts the cooldown; another inside it is refused with the time the next is
+    /// allowed, and the first change away from the default is allowed at once.
+    async fn r1435_a_second_change_inside_the_cooldown_is_refused(harness: &StoreHarness) {
+        let at = harness.now();
+        let a = active_profile(harness, None).await;
+        assert_eq!(a.username_changed_at, None);
+        assert_eq!(claim(harness, &a.id, "Max", at).await, None);
+        let changed = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a");
+        assert_eq!(changed.username_changed_at, Some(at));
+        assert!(
+            changed.username_prompted,
+            "{}: a pick answers the prompt",
+            harness.name
+        );
+
+        let early =
+            q!(harness, t => t.profiles_claim_username(&claim_of(&a.id, "Ann", None, at + COOLDOWN_MS - 1)));
+        assert_eq!(
+            early,
+            UsernameClaimOutcome::Cooldown {
+                next_change_at: at + COOLDOWN_MS
+            }
+        );
+        assert_eq!(username_now(harness, &a.id).await, "Max");
+
+        assert_eq!(claim(harness, &a.id, "Ann", at + COOLDOWN_MS).await, None);
+        assert_eq!(username_now(harness, &a.id).await, "Ann");
+    }
+
+    /// R1435: "Skip for now" answers the prompt and keeps the default, with no cooldown started.
+    async fn r1435_skipping_answers_the_prompt_and_keeps_the_name(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        assert!(!a.username_prompted);
+        q!(harness, t => t.profiles_answer_username_prompt(&a.id));
+        let skipped = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a");
+        assert!(skipped.username_prompted);
+        assert_eq!(skipped.username(), a.username());
+        assert_eq!(skipped.username_changed_at, None);
+        assert!(call!(harness, t => t.profiles_answer_username_prompt(&id())).is_err());
+    }
+
+    /// R1443: a sign-in by username reads the one profile holding the key and tag, with the address
+    /// it signs in with; any other pair names nobody.
+    async fn r1443_reads_a_profile_back_by_its_username(harness: &StoreHarness) {
+        let a_email = format!("{}@example.test", id());
+        let a = active_profile(harness, Some(&a_email)).await;
+        let b = active_profile(harness, None).await;
+        assert_eq!(claim(harness, &a.id, "Max", harness.now()).await, None);
+        assert_eq!(claim(harness, &b.id, "Max", harness.now()).await, Some(1));
+
+        let found = q!(harness, t => t.profiles_get_by_username("max", None));
+        let found = must(found, "Max");
+        assert_eq!(found.id, a.id, "{}", harness.name);
+        assert_eq!(
+            found.email, a_email,
+            "{}: the address it signs in with",
+            harness.name
+        );
+        let found = q!(harness, t => t.profiles_get_by_username("max", Some(1)));
+        assert_eq!(must(found, "Max#1").id, b.id, "{}", harness.name);
+        for (key, tag) in [("max", Some(2)), ("player", None), ("max", Some(i64::MAX))] {
+            let found = q!(harness, t => t.profiles_get_by_username(key, tag));
+            assert_eq!(found, None, "{}: {key} {tag:?}", harness.name);
+        }
+    }
+
+    both_stores!(
+        r1434_new_accounts_are_player_1_2_3_in_order,
+        r1434_a_freed_default_tag_goes_to_the_next_new_account,
+        r1434_first_claim_is_bare_then_the_lowest_free_tag_and_freed_tags_are_reused,
+        r1434_names_clash_on_their_nfkc_case_fold,
+        r1434_the_callers_own_name_is_not_taken_against_them,
+        r1435_a_claim_whose_outcome_changed_writes_nothing,
+        r1434_two_concurrent_claims_of_one_name_get_different_tags,
+        r1434_two_concurrent_new_accounts_get_different_tags,
+        r1435_a_second_change_inside_the_cooldown_is_refused,
+        r1435_skipping_answers_the_prompt_and_keeps_the_name,
+        r1443_reads_a_profile_back_by_its_username,
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Invite codes (SPEC §9.4)
 // ---------------------------------------------------------------------------
 
@@ -858,11 +1161,87 @@ mod codes {
         assert_eq!(q!(harness, t => t.codes_count_failures(now - 60_000)), 2);
     }
 
+    /// §9.8's watch: one IP hash behind six accounts is a cluster, six hashes with one account each
+    /// are not, and the window decides which attempts count. `accounts` is distinct profiles (a
+    /// second attempt by one adds to `attempts` only, and an attempt with no profile to neither
+    /// count of accounts), and the rows come back ordered by hash.
+    async fn lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each(
+        harness: &StoreHarness,
+    ) {
+        let now = harness.now();
+        let window = 3_600_000;
+        let shared = format!("ip-shared-{}", id());
+        let mut accounts = Vec::new();
+        for _ in 0..6 {
+            accounts.push(pending_profile(harness, None).await);
+        }
+        let log = |profile: Option<&Profile>, ip_hash: &str, at: i64| -> CodeAttempt {
+            from(json!({
+                "profileId": profile.map(|p| p.id.as_str()),
+                "ipHash": ip_hash,
+                "result": "rejected",
+                "reason": "missing",
+                "at": at,
+            }))
+        };
+        // Six accounts, one attempt each, from the shared hash; the first tries twice and one attempt
+        // is signed in as nobody.
+        for profile in &accounts {
+            let attempt = log(Some(profile), &shared, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+        let again = log(Some(&accounts[0]), &shared, now - 5);
+        let anonymous = log(None, &shared, now - 5);
+        q!(harness, t => t.codes_log_attempt(&again));
+        q!(harness, t => t.codes_log_attempt(&anonymous));
+        // A seventh account's attempt from the same hash, a second past the window.
+        let late_comer = pending_profile(harness, None).await;
+        let stale = log(Some(&late_comer), &shared, now - window - 1000);
+        q!(harness, t => t.codes_log_attempt(&stale));
+        // One account, six hashes, one attempt each.
+        let solo = pending_profile(harness, None).await;
+        let singles: Vec<String> = (0..6).map(|n| format!("ip-solo-{n}-{}", id())).collect();
+        for ip_hash in &singles {
+            let attempt = log(Some(&solo), ip_hash, now);
+            q!(harness, t => t.codes_log_attempt(&attempt));
+        }
+
+        let cluster = |ip_hash: &str, accounts: i64, attempts: i64| InviteCluster {
+            ip_hash: ip_hash.to_owned(),
+            accounts,
+            attempts,
+        };
+        let expected = |shared_row: InviteCluster| {
+            let mut rows: Vec<InviteCluster> = singles.iter().map(|hash| cluster(hash, 1, 1)).collect();
+            rows.push(shared_row);
+            rows.sort_by(|a, b| a.ip_hash.cmp(&b.ip_hash));
+            rows
+        };
+
+        // Inside the window: six accounts and eight attempts behind the shared hash, and one account
+        // behind each of the others.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window)),
+            expected(cluster(&shared, 6, 8)),
+        );
+        // A window wide enough for the stale attempt counts its account too.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now - window - 2000)),
+            expected(cluster(&shared, 7, 9)),
+        );
+        // Past every attempt there is nothing to list.
+        assert_eq!(
+            q!(harness, t => t.codes_invite_clusters(now + 60_000)),
+            Vec::new()
+        );
+    }
+
     both_stores!(
         round_trips_a_code_by_its_hash,
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
         counts_attempts_by_profile_by_ip_hash_and_by_failure,
+        lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
 }
 
@@ -2176,11 +2555,24 @@ mod player_stats {
         let p2 = active_profile(harness, None).await;
         let p3 = active_profile(harness, None).await;
 
-        q!(harness, t => t.profiles_set_display_name(&p1.id, Some("Alice Wonderland")));
-        q!(harness, t => t.profiles_set_display_name(&p2.id, Some("Bob Builder")));
-        q!(harness, t => t.profiles_set_display_name(&p3.id, Some("Alice Secret")));
-
+        // R1436: each row shows its player's username, joined in from `profiles`.
         let now = harness.now();
+        for (profile, name) in [
+            (&p1, "Alice_Wonderland"),
+            (&p2, "Bob_Builder"),
+            (&p3, "Alice_Secret"),
+        ] {
+            let claim = UsernameClaim {
+                profile_id: profile.id.clone(),
+                base: name.to_string(),
+                key: username_key(name),
+                expected_tag: None,
+                at: now,
+                cooldown_ms: USERNAME_CHANGE_COOLDOWN_MS,
+            };
+            q!(harness, t => t.profiles_claim_username(&claim));
+        }
+
         let stats_1 = bag(json!({
             "games": 50,
             "wins": 30,
@@ -2209,8 +2601,8 @@ mod player_stats {
                 .map(j)
                 .collect();
         assert_eq!(profile_ids(&public_all), vec![json!(p2.id), json!(p1.id)]);
-        assert_eq!(public_all[0]["displayName"], "Bob Builder");
-        assert_eq!(public_all[1]["displayName"], "Alice Wonderland");
+        assert_eq!(public_all[0]["username"], "Bob_Builder");
+        assert_eq!(public_all[1]["username"], "Alice_Wonderland");
         assert_eq!(
             public_all[1]["favouriteCards"],
             json!([{ "id": "c-strike", "count": 25 }, { "id": "c-shield", "count": 15 }])
@@ -2226,6 +2618,25 @@ mod player_stats {
                 .map(j)
                 .collect();
         assert_eq!(profile_ids(&search_alice), vec![json!(p1.id)]);
+        // R1436: the search matches by the NFKC case fold (R1434), tag included.
+        for term in ["alice_WONDERLAND", "ＢＯＢ", "bob_builder"] {
+            let found: Vec<Value> =
+                q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": term, "limit": 10, "offset": 0 }))))
+                    .iter()
+                    .map(j)
+                    .collect();
+            assert_eq!(found.len(), 1, "{}: search {term}", harness.name);
+        }
+        let by_tag: Vec<Value> =
+            q!(harness, t => t.player_stats_list_public(&list_options(json!({ "search": "#1", "limit": 10, "offset": 0 }))))
+                .iter()
+                .map(j)
+                .collect();
+        assert!(
+            by_tag.is_empty(),
+            "{}: no public player carries a tag",
+            harness.name
+        );
 
         let page_1: Vec<Value> =
             q!(harness, t => t.player_stats_list_public(&list_options(json!({ "limit": 1, "offset": 0 }))))
@@ -2250,7 +2661,7 @@ mod player_stats {
 mod series {
     use super::*;
 
-    fn series_row(harness: &StoreHarness, p1: &str, p2: &str, over: Value) -> SeriesRow {
+    pub(super) fn series_row(harness: &StoreHarness, p1: &str, p2: &str, over: Value) -> SeriesRow {
         let now = harness.now();
         from(spread(
             json!({
@@ -2649,7 +3060,7 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
     }
 
-    /// R768 (migration 0028): no hash until the result writes one, `matches_create` never writes
+    /// R768 (migration 0034): no hash until the result writes one, `matches_create` never writes
     /// one, and only the first written is kept.
     async fn r768_records_a_final_hash_once(harness: &StoreHarness) {
         let row = live_match(harness).await;
@@ -2672,6 +3083,25 @@ mod matches {
         assert_eq!(hash_of(q!(harness, t => t.matches_get(&forged.id))), Value::Null);
     }
 
+    async fn r1450_never_reaps_a_live_or_a_finished_match(harness: &StoreHarness) {
+        let now = harness.now();
+        let p1 = active_profile(harness, None).await;
+        let p2 = active_profile(harness, None).await;
+        let live = match_row(&id(), &p1.id, &p2.id, harness, now);
+        let finished_row = match_row(&id(), &p1.id, &p2.id, harness, now);
+        q!(harness, t => t.matches_create(&live));
+        q!(harness, t => t.matches_create(&finished_row));
+        q!(harness, t => t.matches_finish(&finished_row.id, now));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(now + 86_400_000)), 0);
+        assert_eq!(q!(harness, t => t.matches_get(&live.id)), Some(live));
+        let finished = j(&must(
+            q!(harness, t => t.matches_get(&finished_row.id)),
+            "finished match",
+        ));
+        assert_eq!(finished["status"], "finished");
+    }
+
     both_stores!(
         r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
@@ -2685,6 +3115,7 @@ mod matches {
         r679_forgets_a_voided_live_match_its_row_its_log_and_both_players_in_match_flags,
         r679_never_forgets_a_finished_match_or_one_with_a_result,
         finishes_a_match_and_drops_it_out_of_the_live_set,
+        r1450_never_reaps_a_live_or_a_finished_match,
     );
 }
 
@@ -2873,6 +3304,61 @@ mod rooms {
         assert!(q!(harness, t => t.matches_seats(&id())).is_none());
     }
 
+    async fn r1450_reaps_an_expired_unjoined_room_and_frees_its_code(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let expires_at = now + 1_000;
+        let r = room(harness, "ABC234", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&r)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(expires_at)), 0);
+        assert!(q!(harness, t => t.rooms_get("ABC234")).is_some());
+        let second = room(harness, "ABC234", &other.id, json!({}));
+        assert!(!q!(harness, t => t.rooms_create(&second)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(expires_at + 1)), 1);
+        assert!(q!(harness, t => t.rooms_get("ABC234")).is_none());
+        assert!(q!(harness, t => t.rooms_create(&second)));
+    }
+
+    async fn r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go(
+        harness: &StoreHarness,
+    ) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        let expires_at = now + 1_000;
+
+        let room_a = room(harness, "ABC234", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&room_a)));
+        let stranded = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &stranded, now)),
+            "claim stranded",
+        );
+        q!(harness, t => t.profiles_set_in_match(&host.id, Some(&stranded)));
+        q!(harness, t => t.profiles_set_in_match(&guest.id, Some(&stranded)));
+
+        let room_b = room(harness, "BCD345", &host.id, json!({ "expiresAt": expires_at }));
+        assert!(q!(harness, t => t.rooms_create(&room_b)));
+        let started = id();
+        must(
+            q!(harness, t => t.rooms_claim("BCD345", &guest.id, &started, now)),
+            "claim started",
+        );
+        let started_row = match_row(&started, &host.id, &guest.id, harness, now);
+        q!(harness, t => t.matches_create(&started_row));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(now + 1_001)), 1);
+
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&host.id)), "host"))["inMatchId"].is_null());
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&guest.id)), "guest"))["inMatchId"].is_null());
+        let reissued = room(harness, "ABC234", &host.id, json!({}));
+        assert!(q!(harness, t => t.rooms_create(&reissued)));
+        assert_eq!(q!(harness, t => t.matches_get(&started)), Some(started_row));
+    }
+
     both_stores!(
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
@@ -2882,6 +3368,8 @@ mod rooms {
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
         becomes_a_live_match_once_the_registry_creates_it,
+        r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
+        r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
     );
 }
 
@@ -3086,6 +3574,106 @@ mod tickets {
         assert_eq!(q!(harness, t => t.matches_get(&match_id)), Some(row));
     }
 
+    async fn r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go(
+        harness: &StoreHarness,
+    ) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let ta = ticket(harness, &a.id, json!({}));
+        let tb = ticket(harness, &b.id, json!({}));
+        q!(harness, t => t.tickets_insert(&ta));
+        q!(harness, t => t.tickets_insert(&tb));
+
+        let reserved = id();
+        let claimed_at = harness.now();
+        assert!(q!(harness, t => t.tickets_claim_pair(&ta.id, &tb.id, &reserved, claimed_at)));
+        q!(harness, t => t.profiles_set_in_match(&a.id, Some(&reserved)));
+        q!(harness, t => t.profiles_set_in_match(&b.id, Some(&reserved)));
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(claimed_at)), 0);
+        assert_eq!(
+            j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"))["inMatchId"],
+            reserved.as_str()
+        );
+
+        assert_eq!(q!(harness, t => t.matches_reap_open(claimed_at + 1)), 1);
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&a.id)), "a"))["inMatchId"].is_null());
+        assert!(j(&must(q!(harness, t => t.profiles_get_by_id(&b.id)), "b"))["inMatchId"].is_null());
+
+        let ticket_a = j(&must(q!(harness, t => t.tickets_get(&ta.id)), "ticket a"));
+        assert_eq!(ticket_a["status"], "matched");
+        assert!(ticket_a["matchId"].is_null());
+    }
+
+    /// R640002: the waits the queue readout reads, enqueue to claim, of every ticket claimed at or
+    /// after the cut, oldest claim first and a pair's two by id; an open or cancelled ticket has none.
+    async fn r640002_lists_the_waits_of_tickets_claimed_since_and_no_others(harness: &StoreHarness) {
+        let now = harness.now();
+        let mut owners = Vec::new();
+        for _ in 0..8 {
+            owners.push(active_profile(harness, None).await);
+        }
+        let queued = |owner: &Profile, mode: &str, enqueued_at: i64| {
+            let deck = if mode == "bo1" {
+                json!(deck_of(harness, 0))
+            } else {
+                json!([])
+            };
+            ticket(
+                harness,
+                &owner.id,
+                json!({ "mode": mode, "deck": deck, "enqueuedAt": enqueued_at }),
+            )
+        };
+        let old = [
+            queued(&owners[0], "bo1", now - 60_000),
+            queued(&owners[1], "bo1", now - 50_000),
+        ];
+        let recent = [
+            queued(&owners[2], "bo1", now - 9_000),
+            queued(&owners[3], "bo1", now - 4_000),
+        ];
+        let random = [
+            queued(&owners[4], "random", now - 3_000),
+            queued(&owners[5], "random", now - 2_500),
+        ];
+        let open = queued(&owners[6], "bo1", now - 90_000);
+        let gone = queued(&owners[7], "bo1", now - 90_000);
+        for row in old.iter().chain(&recent).chain(&random).chain([&open, &gone]) {
+            q!(harness, t => t.tickets_insert(row));
+        }
+        for (pair, at) in [(&old, now - 40_000), (&recent, now - 1_000), (&random, now)] {
+            assert!(q!(harness, t => t.tickets_claim_pair(&pair[0].id, &pair[1].id, &id(), at)));
+        }
+        q!(harness, t => t.tickets_cancel(&gone.id, now));
+
+        // A pair is claimed at one instant, so its two come by id.
+        let waits_of = |pair: &[Ticket; 2], at: i64| {
+            let mut rows: Vec<&Ticket> = pair.iter().collect();
+            rows.sort_by(|a, b| a.id.cmp(&b.id));
+            rows.into_iter()
+                .map(|row| json!({ "mode": row.mode, "waitedMs": at - row.enqueued_at }))
+                .collect::<Vec<Value>>()
+        };
+        let expected: Vec<Value> = waits_of(&recent, now - 1_000)
+            .into_iter()
+            .chain(waits_of(&random, now))
+            .collect();
+        let waits: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 30_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(waits, expected);
+        // The cut is inclusive.
+        let from_recent: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 1_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(from_recent, expected);
+        assert_eq!(q!(harness, t => t.tickets_recent_waits(now - 60_000)).len(), 6);
+        assert!(q!(harness, t => t.tickets_recent_waits(now + 1)).is_empty());
+    }
+
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
@@ -3096,6 +3684,8 @@ mod tickets {
         claims_a_pair_exactly_once,
         refuses_to_pair_a_ticket_with_itself,
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
+        r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go,
+        r640002_lists_the_waits_of_tickets_claimed_since_and_no_others,
     );
 }
 
@@ -3887,7 +4477,39 @@ mod profiles_remove {
         assert_eq!(kept["sides"][1]["profileId"], other.id.as_str());
     }
 
-    both_stores!(removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match);
+    /// R1412: an effect that won the game (Meditative #8) always had a winner, so once that winner
+    /// deletes their account the game is still the other player's loss, not a draw. Postgres empties
+    /// the winner's seat (`on delete set null`), so `DECISIVE_REASONS` is what keeps it a loss there.
+    async fn r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, &gone.id, &other.id, harness, now)));
+        q!(harness, t => t.matches_append_actions(&[action_row(&match_id, 1, "p1", "n1", now)]));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [gone.id, other.id],
+            "winnerProfileId": gone.id,
+            "reason": "won-by-effect",
+            "turns": 9,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert_eq!(
+            j(&q!(harness, t => t.results_record_for(&other.id))),
+            json!({ "wins": 0, "losses": 1, "draws": 0 })
+        );
+    }
+
+    both_stores!(
+        removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
+        r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -4036,9 +4658,13 @@ mod purge_expired {
         let cutoffs: RetentionPurgeInput = from(json!({
             "codeAttemptsBefore": now - 30 * day,
             "matchActionsEndedBefore": now - 90 * day,
+            "playTelemetryEndedBefore": now - 365 * day,
         }));
         let purged = q!(harness, t => t.purge_expired(&cutoffs));
-        assert_eq!(j(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            j(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+        );
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-old", 0)), 0);
         assert_eq!(q!(harness, t => t.codes_count_attempts_by_ip("ip-new", 0)), 1);
         assert!(q!(harness, t => t.matches_actions(&old_match)).is_empty());
@@ -4048,6 +4674,1100 @@ mod purge_expired {
     }
 
     both_stores!(deletes_attempts_and_finished_logs_older_than_the_cutoffs_and_nothing_newer);
+}
+
+/// R1442: the play telemetry (migration 0029), keyed by match and seat, naming no profile.
+mod r1442_play_telemetry {
+    use super::*;
+
+    const DAY: i64 = 86_400_000;
+
+    /// One match's telemetry: a timing per seat, an emote, both seats' signals. `think_ms` is the
+    /// first timing's think time, so a second write can differ from the first in its values alone.
+    fn telemetry(match_id: &str, think_ms: i64) -> PlayTelemetry {
+        from(json!({
+            "actionTimings": [
+                {
+                    "matchId": match_id, "seat": "p1", "seq": 1, "actionKind": "mulligan", "legalCount": 2,
+                    "turn": 0, "thinkMs": think_ms, "clockLeftMs": 29_000, "firstInTurn": true,
+                    "rankBucket": "raisin", "pilot": "human",
+                },
+                {
+                    "matchId": match_id, "seat": "p2", "seq": 2, "actionKind": "endTurn", "legalCount": 5,
+                    "turn": 1, "thinkMs": 640, "firstInTurn": false, "pilot": "human",
+                },
+            ],
+            "emoteEvents": [
+                {
+                    "matchId": match_id, "seat": "p2", "ordinal": 0, "emoteId": "greetings", "turn": 1,
+                    "triggerEvent": "drawn", "msSinceTrigger": 250, "replyToOpponentMs": 900,
+                    "pilot": "human",
+                },
+            ],
+            "matchSignals": [
+                {
+                    "matchId": match_id, "seat": "p1", "drawOffers": 1, "drawAccepted": false,
+                    "rematchOffered": false, "rematchAccepted": false, "timeouts": 0, "pilot": "human",
+                },
+                {
+                    "matchId": match_id, "seat": "p2", "concededTurn": 3, "concedeEvalDeficit": 12.5,
+                    "drawOffers": 0, "drawAccepted": true, "rematchOffered": false,
+                    "rematchAccepted": false, "timeouts": 2, "pilot": "ai",
+                },
+            ],
+        }))
+    }
+
+    /// A match between `p1` and `p2`, finished at `ended_at` when it is given, else live.
+    async fn a_match(harness: &StoreHarness, p1: &str, p2: &str, ended_at: Option<i64>) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        if let Some(at) = ended_at {
+            q!(harness, t => t.matches_finish(&match_id, at));
+        }
+        match_id
+    }
+
+    /// Which seats a match's rows of each table name, in the read's order.
+    async fn seats_of(harness: &StoreHarness, match_id: &str) -> Value {
+        let held = j(&q!(harness, t => t.play_telemetry_of(match_id)));
+        let seats = |table: &str| -> Vec<Value> {
+            held[table]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| row["seat"].clone())
+                .collect()
+        };
+        json!({
+            "timings": seats("actionTimings"),
+            "emotes": seats("emoteEvents"),
+            "signals": seats("matchSignals"),
+        })
+    }
+
+    async fn round_trips_and_a_second_write_changes_nothing(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let match_id = a_match(harness, &a.id, &b.id, Some(harness.now())).await;
+        let written = telemetry(&match_id, 1_500);
+        q!(harness, t => t.play_telemetry_insert(&written));
+        assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
+
+        // The same keys again, with other values: every row stays as the first write left it.
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 9_999)));
+        assert_eq!(j(&q!(harness, t => t.play_telemetry_of(&match_id))), j(&written));
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_timings())),
+            j(&written.action_timings)
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&id()))),
+            j(&PlayTelemetry::default())
+        );
+    }
+
+    async fn a_rematch_note_marks_only_its_seat(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let match_id = a_match(harness, &a.id, &b.id, Some(harness.now())).await;
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 1_500)));
+        let marks = |held: &Value| -> Vec<(bool, bool)> {
+            held["matchSignals"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| {
+                    (
+                        row["rematchOffered"] == json!(true),
+                        row["rematchAccepted"] == json!(true),
+                    )
+                })
+                .collect()
+        };
+
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p1")), false));
+        let held = j(&q!(harness, t => t.play_telemetry_of(&match_id)));
+        assert_eq!(marks(&held), vec![(true, false), (false, false)]);
+
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p2")), true));
+        // A later offer that made nothing never takes back a rematch that was made.
+        q!(harness, t => t.play_telemetry_note_rematch(&match_id, from(json!("p2")), false));
+        let held = j(&q!(harness, t => t.play_telemetry_of(&match_id)));
+        assert_eq!(marks(&held), vec![(true, false), (true, true)]);
+        // Nothing else on the rows moved.
+        assert_eq!(held["matchSignals"][1]["timeouts"], 2);
+
+        // A match with no signals: nothing to mark, and no error.
+        q!(harness, t => t.play_telemetry_note_rematch(&id(), from(json!("p1")), true));
+    }
+
+    async fn rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands(
+        harness: &StoreHarness,
+    ) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let match_id = a_match(harness, &a.id, &b.id, None).await;
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [a.id, b.id],
+            "winnerProfileId": a.id,
+            "reason": "concede",
+            "turns": 3,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1016, 984],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.matches_finish(&match_id, now));
+
+        let mut stray = telemetry(&match_id, 1_500);
+        stray.match_signals[1].match_id = id();
+        let refused = call!(harness, t => t.play_telemetry_insert(&stray));
+        assert!(
+            refused.is_err(),
+            "{}: a row naming no match was written",
+            harness.name
+        );
+
+        // Nothing of the write landed, and the result it would have followed is untouched.
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&match_id))),
+            j(&PlayTelemetry::default())
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.results_get_by_match(&match_id)),
+                "the result"
+            )),
+            j(&result)
+        );
+    }
+
+    async fn deleting_an_account_deletes_its_seats_rows_only(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        // `gone` holds p1 of the first match and p2 of the second.
+        let first = a_match(harness, &gone.id, &other.id, Some(now)).await;
+        let second = a_match(harness, &other.id, &gone.id, Some(now)).await;
+        for match_id in [&first, &second] {
+            q!(harness, t => t.play_telemetry_insert(&telemetry(match_id, 1_500)));
+        }
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        assert_eq!(
+            seats_of(harness, &first).await,
+            json!({ "timings": ["p2"], "emotes": ["p2"], "signals": ["p2"] })
+        );
+        assert_eq!(
+            seats_of(harness, &second).await,
+            json!({ "timings": ["p1"], "emotes": [], "signals": ["p1"] })
+        );
+    }
+
+    async fn no_write_after_an_account_is_deleted_puts_its_seats_rows_back(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let also_gone = active_profile(harness, None).await;
+        let now = harness.now();
+        // Both finished with a log and no telemetry yet, as a match from before 0029 is, or one whose
+        // telemetry write failed.
+        let kept = a_match(harness, &gone.id, &other.id, Some(now - DAY)).await;
+        let orphaned = a_match(harness, &gone.id, &also_gone.id, Some(now - DAY)).await;
+        for match_id in [&kept, &orphaned] {
+            q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", now)]));
+        }
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert!(q!(harness, t => t.profiles_remove(&also_gone.id)));
+
+        // A match with no account left is not folded at all; the other is.
+        assert_eq!(q!(harness, t => t.play_telemetry_unfolded()), vec![kept.clone()]);
+
+        // The backfill's write: the deleted account's seat is left out, the opponent's goes in.
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&kept, 1_500)));
+        assert_eq!(
+            seats_of(harness, &kept).await,
+            json!({ "timings": ["p2"], "emotes": ["p2"], "signals": ["p2"] })
+        );
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&orphaned, 1_500)));
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&orphaned))),
+            j(&PlayTelemetry::default())
+        );
+        assert!(q!(harness, t => t.play_telemetry_unfolded()).is_empty());
+    }
+
+    async fn the_purge_deletes_telemetry_past_its_cutoff(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let old = a_match(harness, &a.id, &b.id, Some(now - 366 * DAY)).await;
+        let recent = a_match(harness, &a.id, &b.id, Some(now - 364 * DAY)).await;
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        for match_id in [&old, &recent, &live] {
+            q!(harness, t => t.play_telemetry_insert(&telemetry(match_id, 1_500)));
+        }
+
+        let cutoffs: RetentionPurgeInput = from(json!({
+            "codeAttemptsBefore": now - 30 * DAY,
+            "matchActionsEndedBefore": now - 90 * DAY,
+            "playTelemetryEndedBefore": now - 365 * DAY,
+        }));
+        let purged = q!(harness, t => t.purge_expired(&cutoffs));
+        // Two timings, an emote and two signals: the old match's five rows.
+        assert_eq!(
+            j(&purged),
+            json!({ "codeAttempts": 0, "matchActions": 0, "playTelemetry": 5 })
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.play_telemetry_of(&old))),
+            j(&PlayTelemetry::default())
+        );
+        for kept in [&recent, &live] {
+            assert_eq!(
+                j(&q!(harness, t => t.play_telemetry_of(kept))),
+                j(&telemetry(kept, 1_500))
+            );
+        }
+        assert!(q!(harness, t => t.matches_get(&old)).is_some());
+    }
+
+    async fn unfolded_lists_finished_matches_with_a_log_and_no_timings(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let later = a_match(harness, &a.id, &b.id, Some(now - DAY)).await;
+        let earlier = a_match(harness, &a.id, &b.id, Some(now - 2 * DAY)).await;
+        let folded = a_match(harness, &a.id, &b.id, Some(now - 3 * DAY)).await;
+        // Finished first of all, but with no log to fold.
+        a_match(harness, &a.id, &b.id, Some(now - 4 * DAY)).await;
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        for match_id in [&later, &earlier, &folded, &live] {
+            q!(harness, t => t.matches_append_actions(&[action_row(match_id, 1, "p1", "n1", now)]));
+        }
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&folded, 1_500)));
+        // Signals alone (no timing) leave a match unfolded.
+        let signals_only = PlayTelemetry {
+            match_signals: telemetry(&later, 1_500).match_signals,
+            ..PlayTelemetry::default()
+        };
+        q!(harness, t => t.play_telemetry_insert(&signals_only));
+
+        assert_eq!(
+            q!(harness, t => t.play_telemetry_unfolded()),
+            vec![earlier, later]
+        );
+    }
+
+    /// A finished match between `p1` and `p2`, ranked or not, with its result and its telemetry. A
+    /// `swapped` one ended after a Glitch's swap (R677), so its result credits each seat to the
+    /// account that began in the other.
+    async fn finished_with(
+        harness: &StoreHarness,
+        players: (&str, &str),
+        swapped: bool,
+        ranked: bool,
+        winner: Option<&str>,
+        reason: &str,
+        turns: i64,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        let mut row = match_row(&match_id, players.0, players.1, harness, now);
+        row.ranked = ranked.then_some(true);
+        q!(harness, t => t.matches_create(&row));
+        q!(harness, t => t.matches_finish(&match_id, now));
+        let credited = if swapped {
+            [players.1, players.0]
+        } else {
+            [players.0, players.1]
+        };
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": credited,
+            "winnerProfileId": winner,
+            "reason": reason,
+            "turns": turns,
+            "endedAt": now,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1000, 1000],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&match_id, 1_500)));
+        match_id
+    }
+
+    /// R639000: `timing-fit`'s reads: every emote, and every signals row beside how its match ended.
+    async fn r639000_the_fit_reads_hold_emotes_and_signals_with_outcomes(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        // Ranked and won by `a` in p1: a rematch could follow.
+        let won = finished_with(harness, (&a.id, &b.id), false, true, Some(&a.id), "concede", 7).await;
+        // Unranked, and a draw: no winner, and no rematch the ladder fits on.
+        let drawn = finished_with(harness, (&b.id, &a.id), false, false, None, "draw-accepted", 9).await;
+        // Ranked, won by `a` in p2, but a game of a series.
+        let series_game = finished_with(
+            harness,
+            (&b.id, &a.id),
+            false,
+            true,
+            Some(&a.id),
+            "hero-death",
+            11,
+        )
+        .await;
+        // Ranked, won by `a`, who began in p1 and played p2 after a Glitch's swap: the seat it began
+        // in won, whatever the result credits.
+        let swapped = finished_with(harness, (&a.id, &b.id), true, true, Some(&a.id), "hero-death", 13).await;
+        let now = harness.now();
+        let series: SeriesRow = from(json!({
+            "id": id(),
+            "sides": [
+                { "profileId": b.id, "trio": j(&frozen_trio(harness, Some("Mine"))), "wins": 0, "pick": null },
+                { "profileId": a.id, "trio": j(&frozen_trio(harness, Some("Theirs"))), "wins": 1, "pick": null },
+            ],
+            "catalogVersion": harness.catalog_version,
+            "seedBase": "series-seed",
+            "status": "picking",
+            "games": [{
+                "gameNo": 1, "matchId": series_game, "slots": [0, 0], "first": "p1",
+                "winner": "p2", "reason": "hero-death",
+            }],
+            "nextMatchId": id(),
+            "pickDeadline": now + 60_000,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": now,
+            "updatedAt": now,
+            "endedAt": null,
+            "version": 1,
+        }));
+        q!(harness, t => t.series_create(&series));
+        // Live, with no result: its signals are not an outcome yet.
+        let live = a_match(harness, &a.id, &b.id, None).await;
+        q!(harness, t => t.play_telemetry_insert(&telemetry(&live, 1_500)));
+
+        let mut matches = [
+            won.clone(),
+            drawn.clone(),
+            series_game.clone(),
+            swapped.clone(),
+            live.clone(),
+        ];
+        matches.sort();
+        let emotes = q!(harness, t => t.play_telemetry_emotes());
+        let expected: Vec<Value> = matches
+            .iter()
+            .flat_map(|match_id| {
+                telemetry(match_id, 1_500)
+                    .emote_events
+                    .iter()
+                    .map(j)
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert_eq!(
+            emotes.iter().map(j).collect::<Vec<_>>(),
+            expected,
+            "{}",
+            harness.name
+        );
+
+        let outcomes = q!(harness, t => t.play_telemetry_outcomes());
+        let read: Vec<(String, Value, Value, Value, i64, bool)> = outcomes
+            .iter()
+            .map(|row| {
+                (
+                    row.signal.match_id.clone(),
+                    j(&row.signal.seat),
+                    j(&row.won),
+                    j(&row.reason),
+                    row.turns,
+                    row.rematchable,
+                )
+            })
+            .collect();
+        let mut ended = vec![
+            (won.clone(), json!("p1"), json!(true), json!("concede"), 7, true),
+            (won.clone(), json!("p2"), json!(false), json!("concede"), 7, true),
+            (
+                drawn.clone(),
+                json!("p1"),
+                Value::Null,
+                json!("draw-accepted"),
+                9,
+                false,
+            ),
+            (
+                drawn.clone(),
+                json!("p2"),
+                Value::Null,
+                json!("draw-accepted"),
+                9,
+                false,
+            ),
+            (
+                series_game.clone(),
+                json!("p1"),
+                json!(false),
+                json!("hero-death"),
+                11,
+                false,
+            ),
+            (
+                series_game.clone(),
+                json!("p2"),
+                json!(true),
+                json!("hero-death"),
+                11,
+                false,
+            ),
+            (
+                swapped.clone(),
+                json!("p1"),
+                json!(true),
+                json!("hero-death"),
+                13,
+                true,
+            ),
+            (
+                swapped.clone(),
+                json!("p2"),
+                json!(false),
+                json!("hero-death"),
+                13,
+                true,
+            ),
+        ];
+        ended.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.to_string().cmp(&y.1.to_string())));
+        assert_eq!(read, ended, "{}", harness.name);
+        // Each signals row comes back whole beside its outcome.
+        let first = &outcomes[0];
+        let written = telemetry(&first.signal.match_id, 1_500);
+        assert_eq!(first.signal, written.match_signals[0]);
+    }
+
+    both_stores!(
+        round_trips_and_a_second_write_changes_nothing,
+        a_rematch_note_marks_only_its_seat,
+        rows_for_a_match_the_store_does_not_hold_are_refused_and_the_result_stands,
+        deleting_an_account_deletes_its_seats_rows_only,
+        no_write_after_an_account_is_deleted_puts_its_seats_rows_back,
+        r639000_the_fit_reads_hold_emotes_and_signals_with_outcomes,
+        the_purge_deletes_telemetry_past_its_cutoff,
+        unfolded_lists_finished_matches_with_a_log_and_no_timings,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// The ladder bots (R1453, R1454, R1452, migration 0032)
+// ---------------------------------------------------------------------------
+
+mod bots {
+    use super::*;
+
+    const DAY: i64 = 86_400_000;
+
+    fn new_bot(strength: usize, created_at: i64, seed_rating: f64) -> NewBot {
+        from(json!({
+            "profileId": id(),
+            "strength": strength,
+            "speed": 1.25,
+            "persona": "polite",
+            "activeFromHour": 9,
+            "activeHours": 12,
+            "decks": [],
+            "decksCatalogVersion": null,
+            "createdAt": created_at,
+            "seedRating": seed_rating,
+        }))
+    }
+
+    fn deck(harness: &StoreHarness) -> BotDeck {
+        from(json!({ "cards": deck_of(harness, 0), "portrait": "vanilla" }))
+    }
+
+    fn ticket(harness: &StoreHarness, profile_id: &str) -> Ticket {
+        from(json!({
+            "id": id(),
+            "profileId": profile_id,
+            "rating": 1000,
+            "mode": "bo1",
+            "deck": deck_of(harness, 0),
+            "portrait": null,
+            "trio": null,
+            "catalogVersion": harness.catalog_version,
+            "enqueuedAt": harness.now(),
+            "status": "open",
+            "matchId": null,
+        }))
+    }
+
+    /// R641000: a Conquest ticket, its trio frozen in.
+    fn conquest_ticket(harness: &StoreHarness, profile_id: &str) -> Ticket {
+        from(spread(
+            j(&ticket(harness, profile_id)),
+            json!({ "mode": "bo3", "deck": [], "trio": j(&frozen_trio(harness, None)) }),
+        ))
+    }
+
+    /// A finished match between `p1` and `p2` that ended at `ended_at`, with its result.
+    async fn played(harness: &StoreHarness, p1: &str, p2: &str, ended_at: i64) -> String {
+        let match_id = id();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, ended_at)));
+        q!(harness, t => t.matches_finish(&match_id, ended_at));
+        let result: ResultRow = from(json!({
+            "matchId": match_id,
+            "players": [p1, p2],
+            "winnerProfileId": p1,
+            "reason": "concede",
+            "turns": 4,
+            "endedAt": ended_at,
+            "ratingBefore": [1000, 1000],
+            "ratingAfter": [1000, 1000],
+        }));
+        q!(harness, t => t.results_insert(&result));
+        match_id
+    }
+
+    async fn r1454_bots_create_and_list(harness: &StoreHarness) {
+        let now = harness.now();
+        let older = new_bot(0, now - 3 * DAY, 800.0);
+        let newer = new_bot(4, now - DAY, 1200.0);
+        q!(harness, t => t.bots_create(&newer));
+        q!(harness, t => t.bots_create(&older));
+
+        let listed = q!(harness, t => t.bots_list());
+        assert_eq!(
+            listed
+                .iter()
+                .map(|bot| bot.profile_id.clone())
+                .collect::<Vec<_>>(),
+            vec![older.profile_id.clone(), newer.profile_id.clone()],
+            "oldest profile first"
+        );
+        let first = &listed[0];
+        assert_eq!(
+            (
+                first.strength,
+                first.speed,
+                first.persona,
+                first.active_from_hour,
+                first.active_hours
+            ),
+            (0, 1.25, PersonaName::Polite, 9, 12)
+        );
+        assert_eq!(first.created_at, now - 3 * DAY);
+        assert_eq!((first.rating, listed[1].rating), (800.0, 1200.0));
+        assert!(first.decks.is_empty() && first.decks_catalog_version.is_none());
+        assert!(first.retired_at.is_none() && first.in_match_id.is_none());
+
+        // The profile is an active one of kind bot, named the default `Player#n` (R1434), and its R610
+        // row starts at its seed rating with no games.
+        let profile = must(
+            q!(harness, t => t.profiles_get_by_id(&older.profile_id)),
+            "the bot's profile",
+        );
+        assert_eq!(profile.kind, ProfileKind::Bot);
+        assert_eq!(profile.status, ProfileStatus::Active);
+        assert_eq!(profile.username_base, "Player");
+        assert!(profile.username_tag.is_some());
+        let rating = must(q!(harness, t => t.ranked_bot(&older.profile_id)), "its R610 row");
+        assert_eq!((rating.glicko.rating, rating.games), (800.0, 0));
+
+        // A person's profile reads as human.
+        let person = active_profile(harness, None).await;
+        assert_eq!(person.kind, ProfileKind::Human);
+    }
+
+    async fn r1454_retire_and_decks(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+
+        q!(harness, t => t.bots_set_retired(&bot.profile_id, Some(now)));
+        assert_eq!(q!(harness, t => t.bots_list())[0].retired_at, Some(now));
+        q!(harness, t => t.bots_set_retired(&bot.profile_id, None));
+        assert_eq!(q!(harness, t => t.bots_list())[0].retired_at, None);
+
+        let decks = vec![deck(harness)];
+        q!(harness, t => t.bots_set_decks(&bot.profile_id, &decks, "core-9"));
+        let listed = q!(harness, t => t.bots_list());
+        assert_eq!(listed[0].decks, decks);
+        assert_eq!(listed[0].decks_catalog_version.as_deref(), Some("core-9"));
+
+        let unknown = id();
+        assert!(call!(harness, t => t.bots_set_retired(&unknown, Some(now))).is_err());
+        assert!(call!(harness, t => t.bots_set_decks(&unknown, &decks, "core-9")).is_err());
+    }
+
+    async fn r1453_claim_for_bot_is_single_shot(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let ta = ticket(harness, &a.id);
+        let tb = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&ta));
+        q!(harness, t => t.tickets_insert(&tb));
+
+        let match_id = id();
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&ta.id, &bot.profile_id, &match_id, now)));
+        let claimed = j(&must(q!(harness, t => t.tickets_get(&ta.id)), "ticket a"));
+        assert_eq!(claimed["status"], "matched");
+        assert_eq!(claimed["matchId"], match_id.as_str());
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].in_match_id.as_deref(),
+            Some(match_id.as_str())
+        );
+
+        // The ticket is gone, and the bot is busy: neither claims again.
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&ta.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&tb.id, &bot.profile_id, &id(), now)));
+        assert_eq!(
+            j(&must(q!(harness, t => t.tickets_get(&tb.id)), "ticket b"))["status"],
+            "open"
+        );
+
+        // A retired bot is never claimed, and a person is not a bot.
+        let retired = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&retired));
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&tb.id, &retired.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&tb.id, &a.id, &id(), now)));
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
+    }
+
+    async fn r1453_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let ta = ticket(harness, &a.id);
+        let tb = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&ta));
+        q!(harness, t => t.tickets_insert(&tb));
+
+        // A sweep claimed `a` for the bot while another listed `a` and `b` as a pair.
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&ta.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_pair(&ta.id, &tb.id, &id(), now)));
+        let left = j(&must(q!(harness, t => t.tickets_get(&tb.id)), "ticket b"));
+        assert_eq!(left["status"], "open");
+        assert!(left["matchId"].is_null());
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 1);
+    }
+
+    async fn r1453_recent_opponents_newest_first(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        played(harness, &a.id, &b.id, now - 3 * DAY).await;
+        played(harness, &c.id, &a.id, now - 2 * DAY).await;
+        played(harness, &a.id, &b.id, now - DAY).await;
+        // A match the profile did not play.
+        played(harness, &b.id, &c.id, now).await;
+
+        assert_eq!(
+            q!(harness, t => t.results_recent_opponents(&a.id, 2)),
+            vec![b.id.clone(), c.id.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.results_recent_opponents(&a.id, 5)),
+            vec![b.id.clone(), c.id.clone(), b.id.clone()]
+        );
+        assert!(q!(harness, t => t.results_recent_opponents(&id(), 5)).is_empty());
+    }
+
+    async fn r1454_active_humans_skip_bots(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - 30 * DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        played(harness, &a.id, &bot.profile_id, now - DAY).await;
+        played(harness, &a.id, &b.id, now - 10 * DAY).await;
+
+        assert_eq!(q!(harness, t => t.results_count_active_humans(now - 7 * DAY)), 1);
+        assert_eq!(q!(harness, t => t.results_count_active_humans(now - 11 * DAY)), 2);
+        assert_eq!(q!(harness, t => t.results_count_active_humans(now)), 0);
+    }
+
+    async fn r1454_a_claim_that_never_started_is_released(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        // Claimed two minutes ago, its player put in the match, and never started: a cut-off start.
+        let cut = new_bot(2, now - DAY, 1000.0);
+        let a = active_profile(harness, None).await;
+        // Claimed just now: a start still going on.
+        let going = new_bot(2, now - DAY, 1000.0);
+        let b = active_profile(harness, None).await;
+        // Claimed two minutes ago and started: a match in play.
+        let playing = new_bot(2, now - DAY, 1000.0);
+        let c = active_profile(harness, None).await;
+        let mut claims = Vec::new();
+        for (bot, person, at) in [
+            (&cut, &a, now - 2 * MINUTE),
+            (&going, &b, now),
+            (&playing, &c, now - 2 * MINUTE),
+        ] {
+            q!(harness, t => t.bots_create(bot));
+            let ticket = ticket(harness, &person.id);
+            q!(harness, t => t.tickets_insert(&ticket));
+            let match_id = id();
+            assert!(q!(harness, t => t.tickets_claim_for_bot(&ticket.id, &bot.profile_id, &match_id, at)));
+            q!(harness, t => t.profiles_set_in_match(&person.id, Some(&match_id)));
+            claims.push((ticket.id, match_id));
+        }
+        let started = &claims[2].1;
+        q!(harness, t => t.matches_create(&match_row(started, &c.id, &playing.profile_id, harness, now - 2 * MINUTE)));
+
+        assert_eq!(
+            q!(harness, t => t.bots_release_stale_starts(now - MINUTE)),
+            vec![cut.profile_id.clone()]
+        );
+        let in_match = |bots: &[BotRow], bot: &NewBot| {
+            bots.iter()
+                .find(|row| row.profile_id == bot.profile_id)
+                .and_then(|row| row.in_match_id.clone())
+        };
+        let bots = q!(harness, t => t.bots_list());
+        assert_eq!(in_match(&bots, &cut), None, "the cut-off start's bot is free");
+        assert_eq!(
+            in_match(&bots, &going),
+            Some(claims[1].1.clone()),
+            "a start going on keeps its bot"
+        );
+        assert_eq!(
+            in_match(&bots, &playing),
+            Some(started.clone()),
+            "a match in play keeps its bot"
+        );
+        let person = must(q!(harness, t => t.profiles_get_by_id(&a.id)), "player a");
+        assert_eq!(person.in_match_id, None, "its player is let go with it");
+        let kept = must(q!(harness, t => t.profiles_get_by_id(&b.id)), "player b");
+        assert_eq!(kept.in_match_id, Some(claims[1].1.clone()));
+        let ticket = j(&must(
+            q!(harness, t => t.tickets_get(&claims[0].0)),
+            "the cut-off ticket",
+        ));
+        assert_eq!(ticket["status"], "matched", "the ticket stays claimed");
+        assert!(ticket["matchId"].is_null(), "{ticket}");
+
+        // Nothing is left to let go.
+        assert!(q!(harness, t => t.bots_release_stale_starts(now - MINUTE)).is_empty());
+    }
+
+    async fn r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let person = active_profile(harness, None).await;
+        let queued = ticket(harness, &person.id);
+        q!(harness, t => t.tickets_insert(&queued));
+        let match_id = id();
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&queued.id, &bot.profile_id, &match_id, now)));
+        q!(harness, t => t.profiles_set_in_match(&person.id, Some(&match_id)));
+
+        // The claim is a reservation like a pair's: its `ceiling_at` is the claim's time.
+        assert_eq!(q!(harness, t => t.matches_reap_open(now)), 0);
+        assert_eq!(q!(harness, t => t.matches_reap_open(now + 1)), 1);
+        let bots = q!(harness, t => t.bots_list());
+        let held = bots
+            .iter()
+            .find(|row| row.profile_id == bot.profile_id)
+            .and_then(|row| row.in_match_id.clone());
+        assert_eq!(held, None, "the bot is free");
+        let person = must(q!(harness, t => t.profiles_get_by_id(&person.id)), "the player");
+        assert_eq!(person.in_match_id, None, "its player is let go with it");
+        let queued = j(&must(q!(harness, t => t.tickets_get(&queued.id)), "the ticket"));
+        assert_eq!(queued["status"], "matched", "the ticket stays claimed");
+        assert!(queued["matchId"].is_null(), "{queued}");
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + 1)).is_empty());
+    }
+
+    /// R639000: a rematch's claim on a bot, with no ticket: single-shot, a free unretired bot only,
+    /// completed by the match's start and let go like a fallback's when the start never comes.
+    async fn r639000_a_rematch_claims_a_free_unretired_bot_once(harness: &StoreHarness) {
+        const MINUTE: i64 = 60_000;
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let players = (person.id.clone(), bot.profile_id.clone());
+        let version = harness.catalog_version.clone();
+
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &match_id, &version, now))
+        );
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].in_match_id.as_deref(),
+            Some(match_id.as_str())
+        );
+        // Busy now: a second claim, for any rematch, finds nothing.
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &id(), &version, now)));
+        // The start completes the claim's match.
+        q!(harness, t => t.matches_create(&match_row(&match_id, &person.id, &bot.profile_id, harness, now)));
+        let started = must(q!(harness, t => t.matches_get(&match_id)), "the rematch");
+        assert_eq!(started.players, players);
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + MINUTE)).is_empty());
+
+        // A retired bot is never claimed, and a person is not a bot.
+        let retired = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&retired));
+        q!(harness, t => t.bots_set_retired(&retired.profile_id, Some(now)));
+        let with_retired = (person.id.clone(), retired.profile_id.clone());
+        assert!(
+            !q!(harness, t => t.bots_claim_for_rematch(&retired.profile_id, &with_retired, &id(), &version, now))
+        );
+        let other = active_profile(harness, None).await;
+        let with_person = (person.id.clone(), other.id.clone());
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&other.id, &with_person, &id(), &version, now)));
+
+        // A claim whose start never came is let go as a fallback's is (R1454).
+        let cut = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&cut));
+        let with_cut = (other.id.clone(), cut.profile_id.clone());
+        let cut_match = id();
+        assert!(
+            q!(harness, t => t.bots_claim_for_rematch(&cut.profile_id, &with_cut, &cut_match, &version, now - 2 * MINUTE))
+        );
+        assert_eq!(
+            q!(harness, t => t.bots_release_stale_starts(now - MINUTE)),
+            vec![cut.profile_id.clone()]
+        );
+        let freed = q!(harness, t => t.bots_list());
+        assert!(
+            freed
+                .iter()
+                .find(|row| row.profile_id == cut.profile_id)
+                .is_some_and(|row| row.in_match_id.is_none()),
+            "{freed:?}"
+        );
+    }
+
+    /// R640002: the games the queue readout counts are every result that ended at or after the cut,
+    /// a game against a ladder bot as much as any.
+    async fn r640002_counts_the_results_that_ended_since_a_bot_s_game_included(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - 30 * DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        played(harness, &a.id, &bot.profile_id, now - 1_000).await;
+        played(harness, &a.id, &b.id, now - 2_000).await;
+        played(harness, &b.id, &a.id, now - DAY).await;
+
+        assert_eq!(q!(harness, t => t.results_count_since(now - 2_000)), 2);
+        assert_eq!(q!(harness, t => t.results_count_since(now - 1_999)), 1);
+        assert_eq!(q!(harness, t => t.results_count_since(now - 2 * DAY)), 3);
+        assert_eq!(q!(harness, t => t.results_count_since(now + 1)), 0);
+    }
+
+    /// R640002: a ticket a bot claimed waited from its enqueue to that claim, as a pair's does.
+    async fn r640002_a_ticket_claimed_for_a_bot_lists_its_wait(harness: &StoreHarness) {
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let queued: Ticket = from(spread(
+            j(&ticket(harness, &person.id)),
+            json!({ "enqueuedAt": now - 25_000 }),
+        ));
+        q!(harness, t => t.tickets_insert(&queued));
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&queued.id, &bot.profile_id, &id(), now - 5_000)));
+
+        let waits: Vec<Value> = q!(harness, t => t.tickets_recent_waits(now - 5_000))
+            .iter()
+            .map(j)
+            .collect();
+        assert_eq!(waits, vec![json!({ "mode": "bo1", "waitedMs": 20_000 })]);
+        assert!(q!(harness, t => t.tickets_recent_waits(now - 4_999)).is_empty());
+    }
+
+    /// R640000: a ladder bot's season row is marked as one and reads the bot's own R610 rating, not
+    /// its profile's; a person's carries no mark at all.
+    async fn r640000_standings_mark_a_bot_s_row_and_read_its_own_rating(harness: &StoreHarness) {
+        let now = harness.now();
+        let person = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1150.0);
+        q!(harness, t => t.bots_create(&bot));
+        let season: Season = from(json!({ "id": "v0.1", "patchVersion": "v0.1.1", "startedAt": now }));
+        q!(harness, t => t.ranked_create_season(&season));
+        for profile_id in [&person.id, &bot.profile_id] {
+            q!(harness, t => t.ranked_put_rank(&fresh_rank("v0.1", profile_id, now)));
+        }
+
+        let standings: Vec<Value> = q!(harness, t => t.ranked_standings("v0.1"))
+            .iter()
+            .map(j)
+            .collect();
+        let of = |profile_id: &str| {
+            must(
+                standings
+                    .iter()
+                    .find(|standing| standing["profileId"] == profile_id)
+                    .cloned(),
+                "a standing",
+            )
+        };
+        let bot_row = of(&bot.profile_id);
+        assert_eq!(bot_row["bot"], json!(true), "{bot_row}");
+        assert_eq!(bot_row["rating"].as_f64(), Some(1150.0), "{bot_row}");
+        assert_ne!(
+            must(
+                q!(harness, t => t.profiles_get_by_id(&bot.profile_id)),
+                "the bot's profile"
+            )
+            .rating,
+            1150.0,
+            "premise: the profile's rating is not the bot's own"
+        );
+        let person_row = of(&person.id);
+        assert!(person_row.get("bot").is_none(), "{person_row}");
+        assert_eq!(person_row["rating"].as_f64(), Some(person.rating));
+    }
+
+    /// R641000: a bot's Conquest trio is kept beside the catalog version it was dealt for, and its
+    /// Best-of-1 decks are left as they were.
+    async fn r641000_a_bot_s_trio_is_kept_for_its_catalog(harness: &StoreHarness) {
+        let now = harness.now();
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let listed = q!(harness, t => t.bots_list());
+        assert!(listed[0].trio.is_none() && listed[0].trio_catalog_version.is_none());
+
+        let decks = vec![deck(harness)];
+        q!(harness, t => t.bots_set_decks(&bot.profile_id, &decks, "core-9"));
+        let trio: FrozenTrio = from(spread(
+            j(&frozen_trio(harness, Some("Conquest"))),
+            json!({ "decks": [
+                { "name": "Deck 1", "cards": deck_of(harness, 0), "portrait": "vanilla" },
+                { "name": "Deck 2", "cards": deck_of(harness, 1), "portrait": "vanilla" },
+                { "name": "Deck 3", "cards": deck_of(harness, 2), "portrait": "vanilla" },
+            ] }),
+        ));
+        q!(harness, t => t.bots_set_trio(&bot.profile_id, &trio, "core-9"));
+        let listed = q!(harness, t => t.bots_list());
+        assert_eq!(listed[0].trio.as_ref(), Some(&trio));
+        assert_eq!(listed[0].trio_catalog_version.as_deref(), Some("core-9"));
+        assert_eq!(listed[0].decks, decks, "the decks are left as they were");
+
+        let unknown = id();
+        assert!(call!(harness, t => t.bots_set_trio(&unknown, &trio, "core-9")).is_err());
+    }
+
+    /// R641000: a Conquest ticket's claim for a bot takes the ticket, single-shot, and puts the bot
+    /// in no match: the series written beside it holds the bot. A ticket of another mode is not a
+    /// series' to claim.
+    async fn r641000_a_series_claim_takes_the_ticket_and_puts_the_bot_in_no_match(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let conquest = conquest_ticket(harness, &a.id);
+        q!(harness, t => t.tickets_insert(&conquest));
+        let best_of_one = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&best_of_one));
+
+        assert!(
+            !q!(harness, t => t.tickets_claim_for_bot_series(&best_of_one.id, &bot.profile_id, &id(), now))
+        );
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &match_id, now))
+        );
+        let claimed = j(&must(
+            q!(harness, t => t.tickets_get(&conquest.id)),
+            "the Conquest ticket",
+        ));
+        assert_eq!(claimed["status"], "matched");
+        assert_eq!(claimed["matchId"], match_id.as_str());
+        assert_eq!(
+            q!(harness, t => t.bots_list())[0].in_match_id,
+            None,
+            "the bot is in no match"
+        );
+        // A start's cut-off release finds nothing to let go: the bot is in no match.
+        assert!(q!(harness, t => t.bots_release_stale_starts(now + DAY)).is_empty());
+
+        // The ticket is gone, so it claims again for nothing; the other ticket is still open.
+        assert!(!q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &id(), now)));
+        assert!(
+            !q!(harness, t => t.tickets_claim_for_bot_series(&best_of_one.id, &bot.profile_id, &id(), now))
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.tickets_get(&best_of_one.id)),
+                "the Best-of-1 ticket"
+            ))["status"],
+            "open"
+        );
+    }
+
+    /// R641000: a bot that is a side of a series not over is free to no claim, of any kind, until
+    /// the series ends.
+    async fn r641000_a_bot_in_a_series_not_over_is_claimed_by_nothing_else(harness: &StoreHarness) {
+        let now = harness.now();
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let bot = new_bot(2, now - DAY, 1000.0);
+        q!(harness, t => t.bots_create(&bot));
+        let row = super::series::series_row(harness, &a.id, &bot.profile_id, json!({}));
+        q!(harness, t => t.series_create(&row));
+        let best_of_one = ticket(harness, &b.id);
+        q!(harness, t => t.tickets_insert(&best_of_one));
+        let conquest = conquest_ticket(harness, &c.id);
+        q!(harness, t => t.tickets_insert(&conquest));
+        let players = (b.id.clone(), bot.profile_id.clone());
+        let version = harness.catalog_version.clone();
+
+        assert!(!q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.tickets_claim_for_bot_series(&conquest.id, &bot.profile_id, &id(), now)));
+        assert!(!q!(harness, t => t.bots_claim_for_rematch(&bot.profile_id, &players, &id(), &version, now)));
+        assert_eq!(
+            q!(harness, t => t.tickets_count_open()),
+            2,
+            "both tickets wait on"
+        );
+
+        // The series ends, and the bot is free again.
+        let over = must(
+            forfeit_series(&row, PlayerId::P1, now).ok(),
+            "a forfeit between games",
+        );
+        assert!(q!(harness, t => t.series_update(&over)));
+        assert!(q!(harness, t => t.tickets_claim_for_bot(&best_of_one.id, &bot.profile_id, &id(), now)));
+    }
+
+    both_stores!(
+        r1454_bots_create_and_list,
+        r1454_retire_and_decks,
+        r1453_claim_for_bot_is_single_shot,
+        r1453_a_pair_claim_that_lost_to_a_bot_leaves_the_other_ticket_queued,
+        r1453_recent_opponents_newest_first,
+        r1454_active_humans_skip_bots,
+        r1454_a_claim_that_never_started_is_released,
+        r1454_r1450_the_reaper_lets_a_bot_claim_go_that_never_started,
+        r639000_a_rematch_claims_a_free_unretired_bot_once,
+        r640002_counts_the_results_that_ended_since_a_bot_s_game_included,
+        r640002_a_ticket_claimed_for_a_bot_lists_its_wait,
+        r640000_standings_mark_a_bot_s_row_and_read_its_own_rating,
+        r641000_a_bot_s_trio_is_kept_for_its_catalog,
+        r641000_a_series_claim_takes_the_ticket_and_puts_the_bot_in_no_match,
+        r641000_a_bot_in_a_series_not_over_is_claimed_by_nothing_else,
+    );
 }
 
 mod tx {

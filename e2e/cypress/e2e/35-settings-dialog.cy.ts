@@ -1,27 +1,5 @@
-// Spec 35 — the settings dialog's tabs, its resets, the background-music switch, and the account's
-// copy of the settings (issue #128, #129, R633, R634; #263).
-//
-// What it proves, against the `E2E=1` server and a `build:e2e` client:
-//
-//   * the dialog has three tabs, Gameplay, Visuals and Audio, in that order (#304 took the Account
-//     tab out); a click or the
-//     arrow keys open one, only that tab's section is shown, and the dialog opens again on the tab
-//     the player used last;
-//   * Visuals' "Reduce motion" applies at once (`<html data-reduce-motion>`); "Reset this tab" puts
-//     back only the open tab, and "Reset all" every tab;
-//   * the background-music switch is off by default, is kept on the device across a reload, and
-//     Reset this tab turns it off again;
-//   * signed in (`e2e-p1`, active), a change reaches the account (`PUT /api/settings`), and a fresh
-//     device (its `localStorage` empty) takes the account's copy on load (`GET /api/settings`); the
-//     sync runs silently since #304, so the spec reads the account through the API.
-//
-// The E2E server keeps its store for its whole life and other specs sign in as `e2e-p1`, so the
-// account is only ever asked to change the background-music switch, and the spec leaves it off
-// (its default) on the account before and after, through the API, with the newest time.
-//
-// House rules (BUILD M8): no fixed waits — each account read and write the page makes is awaited as
-// the intercepted request, and everything else is a retried assertion on the DOM; every selector
-// comes from support/testids.ts and support/ux.ts. Nothing here starts a game, so there is no seed.
+// Settings-dialog coverage (R633, R634). The shared account changes only background music and ends off.
+// BUILD M8: await account requests and use retried DOM assertions; selectors come from support/testids.ts and support/ux.ts.
 
 import { SESSION_STORAGE_KEY, accounts, routes, server } from "../../support/config.ts";
 import { ts } from "../../support/testids.ts";
@@ -47,7 +25,6 @@ const MUSIC_BACKGROUND = "audio-music-background";
 /** Where the audio store keeps its settings (`AUDIO_SETTINGS_KEY` in apps/web/src/audio/constants.ts). */
 const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 
-/** How long the page may take to read or write the account after it boots. */
 const SYNC_TIMEOUT = 20_000;
 
 type AccountCopy = { groups: Record<string, { at: number; values: Record<string, unknown> }> };
@@ -64,11 +41,7 @@ function readAccount(): Cypress.Chainable<AccountCopy> {
     .its("body.settings");
 }
 
-/**
- * The background-music switch off on the account, as the newest change, keeping the rest of its
- * audio group as it is. Nothing to do when the account holds no audio group (a fresh device then
- * keeps its own default, which is off).
- */
+/** Keeps background music off without overwriting existing audio settings. */
 function backgroundOffOnTheAccount(): void {
   readAccount().then((copy) => {
     const audio = copy.groups.audio;
@@ -82,7 +55,7 @@ function backgroundOffOnTheAccount(): void {
   });
 }
 
-/** The page's own requests to the account, spied on (never answered by the spec). */
+/** Spies on, rather than answers, the page's account requests. */
 function spyOnTheAccount(): void {
   cy.intercept("GET", "**/api/settings").as("load");
   cy.intercept("PUT", "**/api/settings").as("save");
@@ -99,7 +72,6 @@ function closeSettings(): void {
   cy.get(ts(SETTINGS_PANEL)).should("not.exist");
 }
 
-/** `tab` is selected and its section is the only one shown. */
 function expectOpenTab(tab: SettingsSection): void {
   for (const other of TABS) {
     const open = other === tab;
@@ -136,7 +108,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
             "the tabs, in order",
           ).to.deep.equal(TABS.map((tab) => settingsTabId(tab)));
         });
-      // A device that never chose a tab opens on the first.
       expectOpenTab("gameplay");
       cy.get(ts(settingsSectionId("gameplay"))).find(ts(settingId("dragToPlay"))).should("exist");
 
@@ -145,7 +116,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       openTab("audio");
       cy.get(ts(settingsSectionId("audio"))).find(ts(MUSIC_BACKGROUND)).should("exist");
 
-      // The arrow keys walk the strip and wrap round its ends.
       cy.get(ts(settingsTabId("audio"))).focus().type("{rightarrow}");
       expectOpenTab("gameplay");
       cy.focused().should("have.attr", "data-testid", settingsTabId("gameplay"));
@@ -221,10 +191,7 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       readAccount().its("groups.audio.values.playMusicInBackground").should("eq", true);
       closeSettings();
 
-      // A fresh device: nothing in localStorage but the session the visit writes. Cleared as the new
-      // page loads, not from here while the old one is still open: a page that sees its storage
-      // emptied by another window (as `cy.clearLocalStorage` is) takes it for another tab putting
-      // its settings back, stamps them as changed, and the next load keeps them over the account's.
+      // Clear storage on the new page: another window's clear writes settings that eclipse the account copy.
       cy.visitAs(account(), routes.deckbuilder(), {
         onBeforeLoad(win) {
           for (const key of Object.keys(win.localStorage)) {
@@ -238,7 +205,6 @@ describe("35 — the settings dialog (#128, #129, R633, R634)", () => {
       cy.get(ts(MUSIC_BACKGROUND)).should("be.checked");
       storedBackground().should("eq", true);
 
-      // Turned off here, the account follows.
       cy.get(ts(MUSIC_BACKGROUND)).uncheck({ force: true });
       cy.wait("@save", { timeout: SYNC_TIMEOUT })
         .its("request.body.groups.audio.values.playMusicInBackground")

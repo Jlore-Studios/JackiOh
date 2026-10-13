@@ -1,45 +1,28 @@
 // One code, typed into one field and drawn as groups (SPEC §9.4, R191).
 //
-// ONE INPUT, NOT FOUR. A single semantic `<input>` keeps paste, autofill, undo, deletion and screen
-// readers working; four linked inputs lose all of them. So the real input sits on top of the
-// segments with its text made transparent (`color: transparent`, never `opacity: 0`, which Cypress
-// would read as hidden), and the four `aria-hidden` segments underneath draw what it holds. This
-// is the `input-otp` pattern.
+// ONE INPUT, NOT FOUR: one `<input>` keeps paste, autofill, undo and screen readers working. It sits
+// over four `aria-hidden` segments, its text `color: transparent` (never `opacity: 0`: Cypress reads
+// that as hidden), and the segments draw what it holds.
 //
-// NOTHING IS DROPPED. Every change is read by `readCodeInput`, the function the server reads the
-// submitted code with (R191). A keystroke that introduces a problem (an excluded `0`, `1`, `I` or
-// `O`, a character that is in no code, or a 17th character) is refused: the value stays exactly
-// as it was and `code-field-hint` names the character. The old field dropped such characters and
-// kept going, which shifted every later character and sent a different code. An accepted change
-// is re-formatted into groups and the caret is put back after the same number of code characters
-// it was after, so typing in the middle of a code stays in the middle.
+// NOTHING IS DROPPED. Every change goes through `readCodeInput`, as the server reads a submitted code
+// (R191). A keystroke that adds a problem (an excluded or foreign character, a 17th) is refused: the
+// value stays and `code-field-hint` names it, since dropping it would shift every later character.
+// An accepted change is re-formatted, the caret kept after the same number of code characters.
 //
-// A REFUSED PASTE STAYS IN VIEW. Several characters inserted at once (a paste, a drop, a keyboard's
-// clipboard chip) are read for a code first, the inserted text on its own before the whole value,
-// so a code dropped into a field that already holds characters replaces them as a paste does.
-// Failing that, a paste that goes wrong partway keeps what it got right: the characters before the
-// problem stay in the field with the caret at the problem, so the player can see where it was.
-// Two exceptions keep the field's old value and quote what was pasted instead. A paste whose good
-// part would already be a whole code (a 17th character, or a stray one after 16 good ones):
-// keeping it would hand the player a code they never had. And a paste holding more letters and
-// digits than a code has, which is a message and not a mistyped code: its "good part" would be the
-// first word of a sentence ("MY", "HEY"), with a hint about a character that is in no code.
+// A REFUSED PASTE STAYS IN VIEW. Several characters inserted at once (paste, drop, clipboard chip)
+// are read for a code first, the inserted text alone before the whole value. Failing that, a paste
+// that goes wrong partway keeps its good part, caret at the problem. Two exceptions keep the old
+// value and quote the paste: a good part that would already be a whole code, and a paste holding
+// more letters and digits than a code, which is a message whose "good part" is its first word.
 //
-// A SELECTION IS DRAWN. The input's own highlight is as transparent as its text, so the cells a
-// selection covers are marked (`data-selected`) and the drawn caret is hidden while one stands:
-// the next keystroke or paste replaces what is marked, and the player can see that it will.
+// A SELECTION IS DRAWN: the input's highlight is transparent, so the covered cells are marked
+// (`data-selected`) and the drawn caret is hidden.
 //
-// A KEYBOARD THAT COMPOSES IS LEFT TO FINISH. Android keyboards (Gboard) type into a text field
-// through IME composition, and rewriting a controlled value in the middle of one (upper-casing it,
-// or adding a separator) is a known cause of doubled or dropped characters. So while a composition
-// runs, the input shows exactly what the keyboard wrote (`draft`), a clean reading of it still goes
-// up to the parent (so the groups, the count and Redeem follow along), and a problem is named but
-// nothing is refused. The composed text is read, formatted and, if need be, refused only once the
-// composition ends, as if it had been typed in one go.
+// A KEYBOARD THAT COMPOSES IS LEFT TO FINISH. Rewriting a controlled value mid-IME-composition
+// (Gboard) doubles or drops characters, so the input shows what the keyboard wrote (`draft`), a clean
+// reading still goes up to the parent, and nothing is refused until the composition ends.
 //
-// THERE IS NO `maxLength`. A paste of `" abcd - efgh - jkmn - pqrs "` is longer than the formatted
-// code, and a `maxLength` would cut it before `onChange` ever saw it. The reading bounds the input
-// instead (`maxInputLength`, then `length`).
+// THERE IS NO `maxLength`: it would cut a padded paste before `onChange` saw it.
 
 import {
   useLayoutEffect,
@@ -92,12 +75,10 @@ export type CodeFieldProps = {
   describedBy?: string;
 };
 
-/** How many code characters `text` holds: everything that is not a separator, after reading. */
 function codeCharacterCount(text: string): number {
   return normalizeCodeText(text).length;
 }
 
-/** The alphabet characters of a formatted value, separators removed. */
 function charactersOf(formatted: string): string {
   let characters = "";
   for (const character of formatted) {
@@ -106,7 +87,6 @@ function charactersOf(formatted: string): string {
   return characters;
 }
 
-/** How many code characters sit before `position` in a formatted value. */
 function charactersBefore(formatted: string, position: number): number {
   return charactersOf(formatted.slice(0, position)).length;
 }
@@ -136,12 +116,9 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   /** The caret to restore once React has written the value, or null for "leave it alone". */
   const pendingCaret = useRef<number | null>(null);
   const [problem, setProblem] = useState<CodeInputProblem | null>(null);
-  /** The text a refused multi-character insertion carried, quoted in the hint. */
   const [refusedText, setRefusedText] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
-  /** Code characters before the caret (a selection's start), for the active segment and the caret. */
   const [caretCharacters, setCaretCharacters] = useState(0);
-  /** Code characters before a selection's end; equal to `caretCharacters` for a collapsed caret. */
   const [selectedTo, setSelectedTo] = useState(0);
   // A change the parent turns into the value it already holds (a typed separator, a refused
   // character) re-renders nothing upstream, so the caret would never be put back. This does.
@@ -163,7 +140,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     collapseAt(charactersBefore(input.value, at));
   });
 
-  /** A collapsed caret after `count` code characters. */
   function collapseAt(count: number): void {
     setCaretCharacters(count);
     setSelectedTo(count);
@@ -188,7 +164,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     readChange(raw, event.target.selectionStart ?? raw.length);
   }
 
-  /** A composition's text so far: shown as written, followed by the parent while it reads cleanly. */
   function whileComposing(raw: string): void {
     setDraft(raw);
     const next = readCodeInput(raw, format);
@@ -202,7 +177,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     setDraft(event.currentTarget.value);
   }
 
-  /** The composition is over: its text is read like any other change, and may now be rewritten. */
   function handleCompositionEnd(event: CompositionEvent<HTMLInputElement>): void {
     if (disabled || draft === null) return;
     const input = event.currentTarget;
@@ -211,17 +185,14 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     readChange(raw, input.selectionStart ?? raw.length);
   }
 
-  /** One change to the input's text, read, formatted or refused (see NOTHING IS DROPPED). */
   function readChange(raw: string, rawCaret: number): void {
     const next = readCodeInput(raw, format);
     const inserted = raw.length - value.length;
 
     if (next.problem !== null && inserted > 1) {
-      // Text that arrives without a paste event (dropped, or committed by a phone keyboard's
-      // clipboard suggestion) is one multi-character insertion. Read it the way a paste is read
-      // before refusing it, so "Your invite: abcd-…" fills the field however it got there: the
-      // inserted text on its own first (it replaces what the field held, as a paste does), then
-      // the whole value.
+      // Text that arrives without a paste event (a drop, a phone keyboard's clipboard chip) is read
+      // the way a paste is, so "Your invite: abcd-…" fills the field however it got there: the
+      // inserted text first (it replaces what the field held), then the whole value.
       const insertedText = raw.slice(clamp(rawCaret - inserted, 0, raw.length), rawCaret);
       const found = findCodeInText(insertedText, format) ?? findCodeInText(raw, format);
       if (found !== null) {
@@ -273,7 +244,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   function handlePaste(event: ClipboardEvent<HTMLInputElement>): void {
     if (disabled) return;
     const found = findCodeInText(event.clipboardData.getData("text/plain"), format);
-    // No single code in it: let the paste through, and `onChange` reads (or refuses) it.
     if (found === null) return;
     event.preventDefault();
     const next = readCodeInput(found, format);
@@ -297,7 +267,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
     // Separators are drawn, not typed: deleting one would change nothing, and the next keystroke
     // would land on it again, so every one of these keys steps over it.
     if (event.key === "Backspace" && afterSeparator) {
-      // Delete the character before the separator.
       event.preventDefault();
       const before = charactersBefore(value, start);
       if (before === 0) return;
@@ -310,7 +279,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
       return;
     }
     if (event.key === "Delete" && beforeSeparator) {
-      // Delete the character after the separator; the caret stays where it is drawn.
       event.preventDefault();
       const before = charactersBefore(value, start);
       const all = charactersOf(value);
@@ -378,7 +346,6 @@ export default function CodeField(props: CodeFieldProps): ReactElement {
   const activeSegment = focused
     ? Math.min(Math.floor(caretCharacters / format.groupSize), groups - 1)
     : -1;
-  /** A selection covers code characters [caretCharacters, selectedTo) while the field has focus. */
   const selecting = focused && selectedTo > caretCharacters;
 
   const progressId = `${id}-progress`;

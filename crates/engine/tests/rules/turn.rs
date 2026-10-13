@@ -1,8 +1,5 @@
 //! The turn loop and mana (M1-T6), and the end of a turn as a resumable sequence (§2.2, §9.3,
 //! §10.6; R62, R113, R117, R122, R126, R127).
-//!
-//! Port of `packages/engine/test/turn.test.ts` (which has no header comment of its own; its two
-//! halves are described where they begin, below).
 
 use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -15,7 +12,6 @@ use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, 
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-/// TS's module `let nonce`, bumped before each use.
 fn next_nonce() -> u32 {
     NONCE.fetch_add(1, Ordering::SeqCst) + 1
 }
@@ -38,12 +34,10 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// `toMatch(/text/)` on an error that must be there.
 fn says(error: &Option<String>, text: &str) -> bool {
     error.as_deref().is_some_and(|message| message.contains(text))
 }
 
-/// `eventsOfType(events, kind).map((event) => event[field])`, read through each event's JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .into_iter()
@@ -51,7 +45,6 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-/// `Array.prototype.indexOf`: -1 when absent.
 fn index_of(order: &[&str], wanted: &str) -> i64 {
     order
         .iter()
@@ -59,7 +52,7 @@ fn index_of(order: &[&str], wanted: &str) -> i64 {
         .map_or(-1, |at| at as i64)
 }
 
-/// Past the mulligans, in the main phase of turn 1. (TS `playing(seed = "turn", decks?)`.)
+/// Past the mulligans, in the main phase of turn 1.
 fn playing(seed: &str, decks: Option<(Vec<String>, Vec<String>)>) -> GameState {
     let mut state = begin_game(&new_game(seed, decks)).state;
     let keep = ids(&state.players.p1.hand);
@@ -83,7 +76,6 @@ fn end_turns(state: &GameState, count: i32) -> GameState {
     next
 }
 
-/// A modifier's `kind`, as TS reads `m.kind`.
 fn kind_of(modifier: &PlayerModifier) -> Value {
     serde_json::to_value(modifier).expect("a modifier serialises")["kind"].clone()
 }
@@ -221,7 +213,7 @@ mod turn_loop_and_mana_m1_t6 {
             ),
         );
         assert!(says(&zero.error, "X must be at least 1"));
-        // TS `toBe(state)`: a refusal hands back the input itself (SURFACE §6.1: the input, unchanged).
+        // A refusal hands back the input itself, unchanged (SURFACE §6.1).
         assert_eq!(zero.state, state);
         let none = reduce(
             &state,
@@ -432,15 +424,10 @@ mod turn_loop_and_mana_m1_t6 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The end of a turn as a resumable sequence, and the two shapes a delayed continuation takes
-// (§2.2, §9.3, §10.6; R62, R113, R117, R122, R126, R127).
-//
-// Fixtures are this file's own: defs are prefixed `tn-` and indexed from 2400, so they cannot
-// collide with another test file's catalog (BUILD §0).
-// ---------------------------------------------------------------------------
+// (§2.2, §9.3, §10.6; R62, R113, R117, R122, R126, R127). Fixtures are this file's own: `tn-` defs
+// indexed from 2400 (BUILD §0).
 
-/// TS `fixtureDef(name, type)`; `index` is the one TS's `nextIndex` counter gave it (2401 on).
 fn fixture_def(name: &str, type_: &str, index: i32) -> CardDef {
     json_as(json!({
         "id": format!("tn-{name}"),
@@ -556,7 +543,6 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// `String(ctx.data.amount)`.
 fn js_string(value: Option<&Value>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -653,7 +639,6 @@ fn turn_game(seed: &str) -> GameState {
     state
 }
 
-/// A `Resume` literal: `{ defId, hook, step, radiant: false, instanceId?, data }`.
 fn resume(def_id: &str, hook: &str, step: &str, instance_id: Option<&str>, data: Value) -> Resume {
     Resume {
         def_id: def_id.to_string(),
@@ -665,7 +650,7 @@ fn resume(def_id: &str, hook: &str, step: &str, instance_id: Option<&str>, data:
     }
 }
 
-/// Schedule one end-of-turn delayed effect for p1, the way `effects/delay.ts` stores one.
+/// Schedule one end-of-turn delayed effect for p1.
 fn delay_at_end_of_p1(state: &mut GameState, resume: Resume) -> String {
     let mut sink = sink_for(state);
     schedule_delayed(
@@ -724,8 +709,7 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
             slot(PlayerId::P1, Row::Backrow, 1),
             Default::default(),
         );
-        // The shape `resolve.runHook` could not read: `hook` is the step table, `step` picks the entry.
-        // It used to fetch `script.resume` — an object — and call it, which threw.
+        // `hook` is the step table, `step` picks the entry.
         delay_at_end_of_p1(
             &mut state,
             resume(
@@ -749,8 +733,8 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
     #[test]
     fn r127_resolves_a_delayed_continuation_whose_instance_is_gone_with_ctx_self_null() {
         let mut state = turn_game("r127-no-instance");
-        // Two entries R76 and §10.6 allow and the old reader dropped in silence: one that never had an
-        // instance to name, and one whose instance has ceased to exist (#39 exiles itself, #50 dies).
+        // Two entries R76 and §10.6 allow: one that never had an instance to name, and one whose
+        // instance has ceased to exist (#39 exiles itself, #50 dies).
         delay_at_end_of_p1(
             &mut state,
             resume(&self_card().id, "delayed", "", None, json!({})),
@@ -825,8 +809,7 @@ mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {
         assert_eq!(paused.players.p1.turn_log.unspent_at_end, None);
         assert_eq!(paused.active, PlayerId::P1);
 
-        // R113: the rest of the end of turn is *owed*, as plain JSON, and `work.ts` knows the hook —
-        // the handler is registered at module scope by `turn.ts`, not by this test.
+        // R113: the rest of the end of turn is *owed*, as plain JSON.
         let parked = only(&owed_work(&paused, Some(END_OF_TURN_WORK)));
         assert_eq!(round_trip(&parked), parked);
         assert!(can_resume(&paused, &parked.resume));

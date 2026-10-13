@@ -5,7 +5,9 @@
 //! card with a script is played on a busy board under several seeds, every prompt it opens is
 //! answered, and no card the play CREATED — an instance that did not exist before the play — carries
 //! the played card's own definition, and no Discover it opens offers that definition. A card moved
-//! rather than created (a card returning itself to hand, R25) is not generation and is not counted.
+//! rather than created (a card returning itself to hand, R25) is not generation and is not counted,
+//! and neither is what a card the play casts makes while it resolves: that is the cast card's own
+//! generation, swept under its own id.
 //!
 //! The sweep reaches every set's scripts as they land: a new generating card that forgets its own
 //! exclusion fails here, named. The exceptions are the texts that say so, each with its reason.
@@ -43,6 +45,14 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
     (
         "classicplus-073",
         "Call to Chaos (Classic+ Edition) names the Call to Chaos pool (R28, rule 3)",
+    ),
+    (
+        "meditative-095",
+        "Call to Chaos (Meditative Edition) names the Call to Chaos pool (R28, rule 3)",
+    ),
+    (
+        "meditative-081",
+        "Deadman's Hand shuffles \"a copy of each card in your hand, and of this\" into your deck (rule 4)",
     ),
 ];
 
@@ -129,6 +139,59 @@ fn named_cards(event: &GameEvent) -> Vec<(String, String)> {
     }
 }
 
+/// The play's events read for whose generation each one is: the swept card's ids (a card set
+/// face-down takes a fresh id, which the events that set it name through `formerId`, R227), and for
+/// each event whether a card the play cast was resolving when it came (after that card's
+/// `cardPlayed`, before its `cardResolved`), and whether one still is. What a cast card makes is that
+/// card's own generation, swept under its own id, not the caster's (R387): C+ #47 Jogg's Box never
+/// casts itself, but a C+ #27 Zephrys Zealotism it casts deals a perfect hand that may hold one.
+struct Attribution {
+    own_ids: IndexSet<String>,
+    in_cast: Vec<bool>,
+    cast_open: bool,
+}
+
+fn attribute(events: &[GameEvent], own: &str) -> Attribution {
+    let mut own_ids: IndexSet<String> = IndexSet::new();
+    own_ids.insert(own.to_string());
+    let mut casts: Vec<String> = vec![];
+    let mut in_cast = Vec::with_capacity(events.len());
+    for event in events {
+        match event {
+            GameEvent::CardPlayed {
+                instance_id,
+                former_id: Some(former),
+                ..
+            }
+            | GameEvent::Summoned {
+                instance_id,
+                former_id: Some(former),
+                ..
+            } if own_ids.contains(former) => {
+                own_ids.insert(instance_id.clone());
+            }
+            _ => {}
+        }
+        in_cast.push(!casts.is_empty());
+        match event {
+            GameEvent::CardPlayed { instance_id, .. } if !own_ids.contains(instance_id) => {
+                casts.push(instance_id.clone());
+            }
+            GameEvent::CardResolved { instance_id, .. } => {
+                if let Some(at) = casts.iter().rposition(|id| id == instance_id) {
+                    casts.truncate(at);
+                }
+            }
+            _ => {}
+        }
+    }
+    Attribution {
+        own_ids,
+        in_cast,
+        cast_open: !casts.is_empty(),
+    }
+}
+
 /// TS `sweep`'s closures (`step`, `offersItself`) over the state it drives.
 struct Sweep {
     state: GameState,
@@ -152,11 +215,12 @@ impl Sweep {
         true
     }
 
-    fn offers_itself(&mut self, def_id: &str) {
+    fn offers_itself(&mut self, def_id: &str, own: &str) {
         let Some(pending) = &self.state.pending else {
             return;
         };
-        if pending.kind != PromptKind::Discover {
+        // A Discover a card the play cast opens is that card's own (R387).
+        if pending.kind != PromptKind::Discover || attribute(&self.events, own).cast_open {
             return;
         }
         for option in &pending.options {
@@ -201,7 +265,7 @@ fn sweep(def_id: &str, seed: &str) -> Vec<String> {
     if !run.step(&pick, PlayerId::P1) {
         return vec![];
     }
-    run.offers_itself(def_id);
+    run.offers_itself(def_id, &own);
     let mut answered = 0;
     while answered < MAX_ANSWERS && run.state.pending.is_some() && run.state.result.is_none() {
         let player = run
@@ -220,33 +284,18 @@ fn sweep(def_id: &str, seed: &str) -> Vec<String> {
         if !run.step(&answer, player) {
             break;
         }
-        run.offers_itself(def_id);
+        run.offers_itself(def_id, &own);
         answered += 1;
     }
 
-    // The played card itself is not generated, under whatever id it wears: a card set face-down takes a
-    // fresh id, which the events that set it name through `formerId` (R227).
-    let mut own_ids: IndexSet<String> = IndexSet::new();
-    own_ids.insert(own.clone());
-    for event in &run.events {
-        match event {
-            GameEvent::CardPlayed {
-                instance_id,
-                former_id: Some(former),
-                ..
-            }
-            | GameEvent::Summoned {
-                instance_id,
-                former_id: Some(former),
-                ..
-            } if own_ids.contains(former) => {
-                own_ids.insert(instance_id.clone());
-            }
-            _ => {}
-        }
-    }
+    // The played card itself is not generated, under whatever id it wears, and what a card it cast
+    // makes is that card's own generation (`attribute`).
+    let Attribution { own_ids, in_cast, .. } = attribute(&run.events, &own);
     let mut found = run.found;
-    for event in &run.events {
+    for (event, in_cast) in run.events.iter().zip(in_cast) {
+        if in_cast {
+            continue;
+        }
         for (instance_id, card_def_id) in named_cards(event) {
             if card_def_id == def_id
                 && !own_ids.contains(&instance_id)

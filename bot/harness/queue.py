@@ -23,11 +23,11 @@ from harness import providers as providers_mod
 from harness.asks import Ask
 from harness.clock import iso
 from harness.config import (BRANCH_PREFIX, DEFAULT_DIFFICULTY, DIFFICULTIES, DIFFICULTY_LABELS,
-                            LABEL_APPROVED, LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
-                            LABEL_METHOD_BOT, LABEL_PR, LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW,
-                            LABEL_PRIORITY_MEDIUM, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABEL_TREE, LABEL_WORKING, MODES, MODE_LABELS, OTHERS,
-                            PLAN_FLOOR, SLASH, UNRATED_PLAN_FLOOR)
+                            LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_PR,
+                            LABEL_PRIORITY_HIGH, LABEL_PRIORITY_LOW, LABEL_PRIORITY_MEDIUM,
+                            LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_SUGGESTION, LABEL_TREE,
+                            LABEL_WORKING, MODES, MODE_LABELS, OTHERS, PLAN_FLOOR, SLASH,
+                            UNRATED_PLAN_FLOOR)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.state import item as state_item
@@ -166,19 +166,6 @@ def human_reply(number: int) -> str:
             "label off to hand it to me.")
 
 
-def unapproved(names: set[str]) -> bool:
-    """One of the bot's suggestions that no person has approved: it is built only once someone
-    labels it `bot:approved` (or `method:use-bot`), which triage answers by queueing it."""
-    lowered = {name.lower() for name in names}
-    return LABEL_SUGGESTION in lowered and not lowered & {LABEL_APPROVED, LABEL_METHOD_BOT}
-
-
-def unapproved_reply(number: int) -> str:
-    return (f"#{number} is one of my suggestions, which I build only once a person approves it: "
-            f"label it `{LABEL_APPROVED}`, and two minutes later triage titles, labels and queues "
-            "it.")
-
-
 def _label_note(names: set[str]) -> str:
     """What `difficulty:hard` on the thread changes about who takes it (`human` refuses earlier)."""
     if difficulty_of(names) == "hard":
@@ -284,10 +271,9 @@ def queue_build(ctx: Context, number: int, *, by: str, force: bool = False,
     words = MODE_WORDS.get(mode_of(names), "build it")
     if mode_of(names) == "fullsend" and is_fullsend("", record):
         words = "reconcile its parts into one pull request"  # split already (#505)
-    if unapproved(names):
-        if LABEL_BUILD in names:
-            ctx.gh.remove_label(number, LABEL_BUILD)
-        return unapproved_reply(number)
+    if LABEL_SUGGESTION in names:
+        # A person queued one of my suggestions, which is their yes to it (#664).
+        ctx.gh.remove_label(number, LABEL_SUGGESTION)
     if LABEL_WORKING in names:
         _pending(ctx, number, by, ask)
         return (f"I am working on #{number} right now. When this run ends I go round once more "
@@ -525,6 +511,9 @@ class Candidate:
     planned: bool = False
     #: The tier of the model that wrote that plan ("" if none, or if not recorded).
     plan_tier: str = ""
+    #: The subscription that wrote that plan, so a medium or hard build stays with it
+    #: (one lane, one owner, #725).
+    planned_by: str = ""
     #: For a review: the families whose approval the head already has (for the reviewer's prompt).
     approved: tuple[str, ...] = ()
     #: For a review: the tier of each approval the head has, one per review (`review_rule`).
@@ -548,6 +537,13 @@ class Candidate:
     #: For a build: a fullsend part (#505, `is_part`), which lands on its tree's branch with no
     #: checks or review, so a medium subscription may build it from its plan (`PART_FLOOR`).
     part: bool = False
+    #: For a revision: the tier of the final audit it answers (#725), so the auditor's tier
+    #: fixes and pushes it ("" when no audit has asked for changes yet).
+    audit_tier: str = ""
+    #: Review verdict rounds already used on the item in the current owner's hands (#725).
+    rounds_used: int = 0
+    #: The owner tier that used them ("" when none); a new owner starts its own count.
+    round_tier: str = ""
 
 
 def cleared(record: dict[str, Any]) -> dict[str, Any]:
@@ -571,19 +567,20 @@ def plan_of(record: dict[str, Any], thread: dict[str, Any], kind: str,
     bot must not plan over it. A mode (#60) plans for itself: a split is the planning, and a
     one-shot writes its own spec first, so neither waits for a plan."""
     if kind == "build" and mode:
-        return {"planned": True, "plan_tier": "strong"}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
     if record.get("planned_at"):
-        return {"planned": True, "plan_tier": str(record.get("planned_tier") or "")}
+        return {"planned": True, "plan_tier": str(record.get("planned_tier") or ""),
+                "planned_by": str(record.get("planned_by_id") or "")}
     if kind == "build" and issueplan.plan_of(thread.get("body")):
-        return {"planned": True, "plan_tier": "strong"}
-    return {"planned": False, "plan_tier": ""}
+        return {"planned": True, "plan_tier": "strong", "planned_by": ""}
+    return {"planned": False, "plan_tier": "", "planned_by": ""}
 
 
 def plan_floor(candidate: Candidate) -> str:
     """The weakest tier whose plan this item builds from (`config.PLAN_FLOOR`): medium for an
-    easy item, strong for anything harder, and medium to rate and plan an item nobody has rated
-    or planned yet. One planned but never rated (a plan from before ratings, or a planner that
-    gave none) counts as medium, so it needs a strong plan."""
+    easy or medium item, strong for a hard one, and medium to rate and plan an item nobody has
+    rated or planned yet. One planned but never rated (a plan from before ratings, or a planner
+    that gave none) still needs a plan from its difficulty's floor."""
     if not candidate.rated and not candidate.planned:
         return UNRATED_PLAN_FLOOR
     return PLAN_FLOOR[candidate.difficulty]
@@ -599,7 +596,7 @@ def plan_meets(candidate: Candidate) -> bool:
 
 def needs_plan(candidate: Candidate) -> bool:
     """The Needs plan stage: a build with no plan yet, or one whose plan came from a model
-    weaker than its difficulty's plan floor (a medium plan for a medium or hard item). Devin,
+    weaker than its difficulty's plan floor (a medium plan for a hard item). Devin,
     which cannot plan, builds only from a plan that meets its floor."""
     return candidate.kind == "build" and not plan_meets(candidate)
 
@@ -676,8 +673,8 @@ def waits_for(ctx: Context, threads: list[dict[str, Any]]) -> dict[int, list[int
     return waiting
 
 
-def candidates(ctx: Context, state: dict[str, Any],
-               skipped: list[str] | None = None) -> list[Candidate]:
+def candidates(ctx: Context, state: dict[str, Any], skipped: list[str] | None = None, *,
+               held_back: dict[int, str] | None = None) -> list[Candidate]:
     """Queued threads: forced requests first, then by priority tier, then second reviews,
     revisions, and the oldest builds.
 
@@ -685,13 +682,12 @@ def candidates(ctx: Context, state: dict[str, Any],
     plan counts at this one. Either queue label queues either kind of thread: an issue builds
     and a pull request revises. A queue label is the request, so a thread that failed before and
     was labelled again is taken again. A thread labelled `human` is left out, whatever model
-    would take it, and so are a suggestion no person approved (`unapproved`), a fullsend issue
-    whose parts are still open (`open_parts`, #505), forced or not, and a build that waits for
-    another issue (`waits_for`) unless it was forced, each with a line in `skipped` when the
-    caller keeps one."""
+    would take it, and so are a fullsend issue whose parts are still open (`open_parts`, #505),
+    forced or not, and a build that waits for another issue (`waits_for`) unless it was forced,
+    each with a line in `skipped` when the caller keeps one, and in `held_back` (number -> why)
+    when the caller keeps that (the status issue's queue)."""
     found: dict[int, Candidate] = {}
     human: set[int] = set()
-    suggested: set[int] = set()
     others: dict[int, str] = {}
     parted: dict[int, list[int]] = {}
     builds: list[dict[str, Any]] = []
@@ -700,7 +696,7 @@ def candidates(ctx: Context, state: dict[str, Any],
             number = int(thread["number"])
             names = label_names(thread)
             if (LABEL_WORKING in names or number in found or number in human
-                    or number in suggested or number in others or number in parted):
+                    or number in others or number in parted):
                 continue
             is_pr = "pull_request" in thread
             if label == LABEL_CROSS and not (is_pr and LABEL_PR in names):
@@ -708,9 +704,6 @@ def candidates(ctx: Context, state: dict[str, Any],
             lowered = {name.lower() for name in names}
             if LABEL_HUMAN in lowered:
                 human.add(number)
-                continue
-            if not is_pr and unapproved(names):
-                suggested.add(number)
                 continue
             other = owner(thread)
             if other is not None:
@@ -744,17 +737,28 @@ def candidates(ctx: Context, state: dict[str, Any],
                 rated=kind != "build" or rated(names, record),
                 conflict=kind == "revise" and record.get("source") == "conflict",
                 review_floor=str(record.get("review_floor") or "") if kind == "review" else "",
-                mode=mode, part=kind == "build" and not mode and is_part(record))
+                mode=mode, part=kind == "build" and not mode and is_part(record),
+                audit_tier=str(record.get("audit_tier") or "") if kind == "revise" else "",
+                rounds_used=int(record.get("verdict_rounds") or 0)
+                if kind in ("build", "revise") else 0,
+                round_tier=str(record.get("round_tier") or "")
+                if kind in ("build", "revise") else "")
             if kind == "build" and not found[number].forced:
                 builds.append(thread)
     waiting = waits_for(ctx, builds) if builds else {}
     for number in waiting:
         found.pop(number, None)
+    if held_back is not None:
+        held_back.update({number: "labelled `human`" for number in human})
+        held_back.update({number: f"it is {name}'s" for number, name in others.items()})
+        held_back.update({number: "its fullsend parts "
+                          f"{', '.join(f'#{n}' for n in parts)} are still open"
+                          for number, parts in parted.items()})
+        held_back.update({number: f"waits for {', '.join(f'#{n}' for n in blockers)} to close"
+                          for number, blockers in waiting.items()})
     if skipped is not None:
         skipped.extend(f"#{number} skipped: labelled `human`, so no model takes it, whatever its "
                        "tier" for number in sorted(human))
-        skipped.extend(f"#{number} skipped: a suggestion no person approved (`{LABEL_APPROVED}`)"
-                       for number in sorted(suggested))
         skipped.extend(f"#{number} skipped: it is {name}'s" for number, name in sorted(others.items()))
         skipped.extend(f"#{number} skipped: its fullsend parts "
                        f"{', '.join(f'#{n}' for n in parts)} are still open"

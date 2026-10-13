@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Alias } from "vite";
 
+import { staticPages } from "./static-pages.ts";
+
 // The client is a pure `PlayerView` renderer (CLAUDE.md rule 7, SPEC §10.8): it sends intent
 // and draws what the engine hands it. The rules are the Rust engine, compiled to WebAssembly
 // (`src/wasm/`, built into `src/wasm/pkg/` by `scripts/build-wasm.sh`, which `predev`, `prebuild`,
@@ -26,14 +28,15 @@ export const jackiohAliases: Alias[] = [
   { find: /^@jackioh\/engine\/config$/, replacement: `${WIRE}engineConfig.ts` },
   { find: /^@jackioh\/engine$/, replacement: `${WIRE}engine.ts` },
   { find: /^@jackioh\/validator$/, replacement: `${WIRE}validator.ts` },
-  { find: /^@jackioh\/cards\/(catalog|flavour)\.json$/, replacement: `${REPO}crates/cards/$1.json` },
+  { find: /^@jackioh\/cards\/(catalog|flavour|chinese|chinese-terms)\.json$/, replacement: `${REPO}crates/cards/$1.json` },
   { find: /^@jackioh\/cards$/, replacement: `${WIRE}cards.ts` },
   { find: /^@jackioh\/ai(?:\/config)?$/, replacement: `${WIRE}ai.ts` },
   { find: /^@jackioh\/server-config$/, replacement: `${WIRE}serverConfig.ts` },
 ];
 
 export default defineConfig({
-  plugins: [react()],
+  // `staticPages` writes each public page's own HTML and `sitemap.xml` after the bundle (static-pages.ts).
+  plugins: [react(), staticPages()],
   resolve: { alias: jackiohAliases },
   server: {
     port: 5173,

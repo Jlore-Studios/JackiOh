@@ -1,13 +1,10 @@
-// `game/net.ts` driven entirely through a fake WebSocket: every frame
-// `crates/server/src/actor/protocol.rs` defines, the handshake, the reconnect and the dev-handle shim.
-//
-// No real socket, no timer and no server. The seams (`socketFactory`, `timers`, `monotonic`) exist
-// for exactly this, so the protocol can be asserted the way `apps/server` asserts it against its own
-// in-memory socket.
+// `game/net.ts` protocol coverage through a fake WebSocket.
+// Injected socket, timer and clock seams keep it deterministic without a server.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
+import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { baseView } from "../test/fixtures.ts";
 import {
@@ -21,9 +18,7 @@ import {
   type Timers,
 } from "./net.ts";
 
-// ---------------------------------------------------------------------------------------------
-// fakes
-// ---------------------------------------------------------------------------------------------
+// Fakes
 
 class FakeSocket implements SocketLike {
   readyState = 0;
@@ -46,7 +41,7 @@ class FakeSocket implements SocketLike {
     this.closedWith = { ...(code === undefined ? {} : { code }), ...(reason === undefined ? {} : { reason }) };
   }
 
-  // --- test drivers -------------------------------------------------------------------------
+  // Test drivers
 
   open(): void {
     this.readyState = 1;
@@ -75,20 +70,39 @@ type Harness = {
   /** Run every pending backoff callback, in order. */
   runTimers: () => void;
   pending: () => number;
+  /** Every delay a timer was set for, in order. */
+  delays: () => number[];
   now: (value: number) => void;
+  /** R1441: the page wakes (its tab turns visible, the network comes back). */
+  wake: () => void;
 };
 
-function harness(options: { matchId?: string; token?: string } = {}): Harness {
+type HarnessOptions = {
+  matchId?: string;
+  token?: string;
+  /** The reconnect jitter's draw; 0 adds nothing. */
+  random?: () => number;
+  /** Leave the client to listen for the page itself (`visibilitychange`, `online`). */
+  pageEvents?: boolean;
+};
+
+/** How long a socket must have said nothing before a woken page doubts it (R1441). */
+const SILENCE_MS = WS_PING_INTERVAL_SECONDS * 1000;
+
+function harness(options: HarnessOptions = {}): Harness {
   const sockets: FakeSocket[] = [];
   let scheduled: { id: number; run: () => void }[] = [];
+  const delays: number[] = [];
   let nextId = 1;
   let monotonicNow = 0;
+  let onWake: (() => void) | null = null;
 
   const timers: Timers = {
-    setTimeout: (handler) => {
+    setTimeout: (handler, ms) => {
       const id = nextId;
       nextId += 1;
       scheduled.push({ id, run: handler });
+      delays.push(ms);
       return id;
     },
     clearTimeout: (handle) => {
@@ -107,6 +121,17 @@ function harness(options: { matchId?: string; token?: string } = {}): Harness {
     },
     timers,
     monotonic: () => monotonicNow,
+    random: options.random ?? (() => 0),
+    ...(options.pageEvents === true
+      ? {}
+      : {
+          wake: (handler: () => void) => {
+            onWake = handler;
+            return () => {
+              onWake = null;
+            };
+          },
+        }),
   });
 
   return {
@@ -123,27 +148,28 @@ function harness(options: { matchId?: string; token?: string } = {}): Harness {
       for (const entry of due) entry.run();
     },
     pending: () => scheduled.length,
+    delays: () => [...delays],
     now: (value) => {
       monotonicNow = value;
+    },
+    wake: () => {
+      onWake?.();
     },
   };
 }
 
-function connected(options: { matchId?: string; token?: string } = {}): Harness {
+function connected(options: HarnessOptions = {}): Harness {
   const h = harness(options);
   h.client.connect();
   h.socket().open();
   return h;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the handshake
-// ---------------------------------------------------------------------------------------------
+// The handshake
 
 describe("the handshake", () => {
   it("carries the token and the match in the query string, because a browser cannot set headers", () => {
-    // `crates/server/src/actor/ws_server.rs` reads the token from `?token=` and the match from
-    // `?matchId=` (SURFACE §11.3).
+    // `ws_server.rs` reads `?token=` and `?matchId=` (SURFACE §11.3).
     const url = socketUrlFor("ws://server.test/ws/match", "tok en", "m-1");
     expect(url).toContain("token=tok+en");
     expect(url).toContain("matchId=m-1");
@@ -163,9 +189,7 @@ describe("the handshake", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the frames
-// ---------------------------------------------------------------------------------------------
+// The frames
 
 describe("server frames", () => {
   it("a `view` frame becomes the rendered view", () => {
@@ -176,8 +200,7 @@ describe("server frames", () => {
   });
 
   it("with no legal list anywhere, the board stays empty and says so", () => {
-    // A server that sends no `legalActions` at all leaves the board read-only. The client does NOT
-    // compute it (rule 7, BUILD M5-T2) — it reports the gap, and `routes/match.tsx` shows it.
+    // Missing `legalActions` leaves the board read-only; the client never computes them (BUILD M5-T2).
     const h = connected();
     h.socket().deliver({ type: "view", view: baseView() });
     expect(h.client.snapshot().legal).toEqual([]);
@@ -289,10 +312,8 @@ describe("remainingMs", () => {
         ceilingAt: 0,
       },
     };
-    // 75 s were left when the frame was sent; 2 s of local time have passed since.
     expect(remainingMs(85_000, clock, () => 2_500)).toBe(73_000);
     expect(remainingMs(null, clock, () => 2_500)).toBeNull();
-    // Never negative: an expired deadline reads as zero, not as a countdown running backwards.
     expect(remainingMs(85_000, clock, () => 500_000)).toBe(0);
   });
 
@@ -301,9 +322,7 @@ describe("remainingMs", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// sending
-// ---------------------------------------------------------------------------------------------
+// Sending
 
 describe("actions", () => {
   it("sends `{type:'action', action:{...body, nonce}}` and never a playerId", () => {
@@ -341,9 +360,7 @@ describe("actions", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// portraits and emotes (R642, R643)
-// ---------------------------------------------------------------------------------------------
+// Portraits and emotes (R642, R643)
 
 describe("portraits and emotes", () => {
   it("R642 a `portraits` frame names both seats' heroes, on join and again on reconnect", () => {
@@ -351,7 +368,6 @@ describe("portraits and emotes", () => {
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
     expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
 
-    // A second frame — the reconnect's — simply replaces the first.
     h.socket().deliver({ type: "portraits", p1: "timmy", p2: "dfender" });
     expect(h.client.snapshot().portraits).toEqual({ p1: "timmy", p2: "dfender" });
   });
@@ -364,7 +380,6 @@ describe("portraits and emotes", () => {
     expect(h.client.snapshot().portraits).toBeNull();
 
     expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "gary", p2: "nobody" }))).toBeNull();
-    // A portrait id is a string of the roster, never a number.
     expect(parseServerFrame(JSON.stringify({ type: "portraits", p1: "core-008", p2: "shredder" }))).toBeNull();
   });
 
@@ -375,8 +390,7 @@ describe("portraits and emotes", () => {
     expect(h.client.snapshot().portraits).toEqual({ p1: "gary", p2: "shredder" });
     expect(h.client.snapshot().emoteHand).toEqual(hand);
 
-    // The reconnect's frame holds the same hand (R1341); a frame from a server that deals none
-    // leaves the client on its default hand.
+    // R1341: a reconnect can replace the hand; no dealt hand restores the default.
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder", emotes: hand });
     expect(h.client.snapshot().emoteHand).toEqual(hand);
     h.socket().deliver({ type: "portraits", p1: "gary", p2: "shredder" });
@@ -432,7 +446,6 @@ describe("portraits and emotes", () => {
     const h = connected();
     h.client.sendEmote("laugh");
     expect(h.socket().frames().at(-1)).toEqual({ type: "emote", emote: "laugh" });
-    // Nothing else rode along: the frame is exactly the two fields.
     expect(Object.keys(h.socket().frames().at(-1) ?? {})).toEqual(["type", "emote"]);
   });
 
@@ -441,14 +454,11 @@ describe("portraits and emotes", () => {
     h.client.connect(); // connecting, never `open()`ed
     h.client.sendEmote("sob");
     expect(h.socket().sent).toEqual([]);
-    // Cosmetic chatter is never worth an error banner.
     expect(h.client.snapshot().error).toBeNull();
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the socket's life
-// ---------------------------------------------------------------------------------------------
+// The socket's life
 
 describe("reconnect", () => {
   it("reopens after an unexpected close, with a backoff", () => {
@@ -461,7 +471,7 @@ describe("reconnect", () => {
     expect(h.sockets).toHaveLength(2);
     h.socket().open();
     expect(h.client.snapshot().connection).toBe("open");
-    // A reconnected socket asks for a fresh full view (§9.5), never a log replay.
+    // Reconnection requests a fresh full view (§9.5), never a log replay.
     expect(h.socket().frames()).toEqual([{ type: "hello", token: "tok", matchId: "m-1" }]);
   });
 
@@ -512,11 +522,133 @@ describe("reconnect", () => {
     h.socket().deliver({ type: "view", view: baseView({ turn: 5 }) });
     expect(notified).toBe(1);
   });
+
+  it("R1441 a reconnect waits its backoff plus up to a quarter more", () => {
+    const h = connected({ random: () => 0.5 });
+    h.socket().drop(1006);
+    h.runTimers();
+    h.socket().drop(1006);
+    // 250 and 500 ms, each with 12.5% (half of the quarter) added and rounded down.
+    expect(h.delays()).toEqual([281, 562]);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------
-// the dev-handle shim
+// a socket that went quiet (R1441)
 // ---------------------------------------------------------------------------------------------
+
+const HELLO = { type: "hello", token: "tok", matchId: "m-1" };
+
+describe("a silent socket", () => {
+  it("R1441 a silent socket is replaced when the tab turns visible, and the new socket sends hello", () => {
+    const h = connected();
+    const old = h.socket();
+    h.now(SILENCE_MS + 1);
+
+    h.wake();
+    // It is asked first: a healthy socket answers with a view, and nothing else changes.
+    expect(old.frames()).toEqual([HELLO, HELLO]);
+    expect(h.sockets).toHaveLength(1);
+
+    // Nothing came back, so it is let go and a new socket takes its place.
+    h.runTimers();
+    expect(old.closedWith).not.toBeNull();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.client.snapshot().connection).toBe("reconnecting");
+    h.socket().open();
+    expect(h.socket().frames()).toEqual([HELLO]);
+    expect(h.client.snapshot().connection).toBe("open");
+
+    // Whatever the old socket still says is no longer the match's.
+    old.deliver({ type: "view", view: baseView({ turn: 9 }) });
+    expect(h.client.snapshot().view).toBeNull();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
+    expect(h.client.snapshot().view?.turn).toBe(3);
+  });
+
+  it("R1441 a quiet socket that answers the probe is kept", () => {
+    const h = connected();
+    const live = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    live.deliver({ type: "view", view: baseView({ turn: 3 }) });
+
+    // The answer cancelled the probe: nothing is left to run, and the socket stays.
+    expect(h.pending()).toBe(0);
+    h.runTimers();
+    expect(h.sockets).toHaveLength(1);
+    expect(live.closedWith).toBeNull();
+    expect(h.client.snapshot().connection).toBe("open");
+
+    // It was just heard from, so waking again asks nothing.
+    h.wake();
+    expect(live.frames()).toEqual([HELLO, HELLO]);
+  });
+
+  it("R1441 a socket whose monotonic clock stood still through a sleep is still probed", () => {
+    const h = connected();
+    // `performance.now()` leaves a sleeping machine's time out; the wall clock does not.
+    const wall = vi.spyOn(Date, "now").mockReturnValue(Date.now() + SILENCE_MS + 1);
+    try {
+      h.wake();
+      expect(h.socket().frames()).toEqual([HELLO, HELLO]);
+    } finally {
+      wall.mockRestore();
+    }
+  });
+
+  it("R1441 a socket heard within the ping interval is not probed", () => {
+    const h = connected();
+    h.now(SILENCE_MS);
+    h.wake();
+    expect(h.socket().frames()).toEqual([HELLO]);
+    expect(h.pending()).toBe(0);
+  });
+
+  it("R1441 a socket that never opened is replaced at once when the page wakes", () => {
+    const h = harness();
+    h.client.connect();
+    const stuck = h.socket();
+    h.now(SILENCE_MS + 1);
+    h.wake();
+    expect(stuck.closedWith).not.toBeNull();
+    expect(h.sockets).toHaveLength(2);
+  });
+
+  it("R1441 by default the tab turning visible and the network coming back wake it", () => {
+    const h = connected({ pageEvents: true });
+    const live = h.socket();
+    const visibility = Object.getOwnPropertyDescriptor(document, "visibilityState");
+    const show = (state: "hidden" | "visible"): void => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      h.now(SILENCE_MS + 1);
+      show("hidden");
+      expect(live.frames()).toEqual([HELLO]);
+      show("visible");
+      expect(live.frames()).toEqual([HELLO, HELLO]);
+
+      live.deliver({ type: "view", view: baseView() });
+      h.now(2 * SILENCE_MS + 2);
+      window.dispatchEvent(new Event("online"));
+      expect(live.frames()).toEqual([HELLO, HELLO, HELLO]);
+    } finally {
+      h.client.close();
+      if (visibility === undefined) Reflect.deleteProperty(document, "visibilityState");
+      else Object.defineProperty(document, "visibilityState", visibility);
+    }
+
+    // A client that was closed no longer listens.
+    h.now(4 * SILENCE_MS);
+    window.dispatchEvent(new Event("online"));
+    expect(live.frames()).toHaveLength(3);
+    expect(h.sockets).toHaveLength(1);
+  });
+});
+
+// The dev-handle shim
 
 describe("viewDerivedState", () => {
   const view: PlayerView = baseView({
@@ -528,8 +660,7 @@ describe("viewDerivedState", () => {
   });
 
   it("is a view-derived shim, and carries no seed", () => {
-    // The server mints the seed and never sends it: (seed, log) reconstructs the library order
-    // (§9.1, §9.3), which is hidden from the client by design.
+    // The server withholds its seed: `(seed, log)` reconstructs hidden library order (§9.1, §9.3).
     const state = viewDerivedState(view);
     expect(state.seed).toBe("");
     expect(state.turn).toBe(6);

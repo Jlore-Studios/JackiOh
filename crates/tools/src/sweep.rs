@@ -303,7 +303,10 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
         elapsed.map_or_else(String::new, |seconds| format!(", {seconds}s"))
     ));
     out.push(String::new());
-    out.push("## Pass 1 flags (a `neverPlayed` or `selfHarm` here only puts a card at risk)".to_string());
+    out.push(
+        "## Pass 1 flags (a `neverPlayed`, `selfHarm` or `selfKill` here only puts a card at risk)"
+            .to_string(),
+    );
     out.push(String::new());
     let flagged: Vec<&SweepResult> = first.iter().filter(|result| !result.flags.is_empty()).collect();
     if flagged.is_empty() {
@@ -338,7 +341,7 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>) ->
     if !missing.is_empty() {
         out.push(String::new());
         out.push(format!(
-            "Not swept in pass 2 (no evidence, no ban for neverPlayed or selfHarm): {}",
+            "Not swept in pass 2 (no evidence, no ban for neverPlayed, selfHarm or selfKill): {}",
             missing
                 .iter()
                 .map(|id| id.as_str())

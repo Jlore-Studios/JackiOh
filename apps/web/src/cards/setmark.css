@@ -38,6 +38,10 @@
   top: 32.9cqh;
 }
 
+.cf[data-longest="true"] .cf-set {
+  top: 23.4cqh;
+}
+
 /* A face-up backrow card at a size that has room: level with its gem. */
 .cf[data-layout="compact"] .cf-set {
   top: 70.7cqh;

@@ -1,22 +1,18 @@
-//! Port of `apps/server/test/api/code-input-parity.test.ts`.
-//!
 //! R191, docs/polish/5-sign-in.md B5 and B6: the server redeems exactly what the shared reading
 //! says a typed or pasted code is.
 //!
 //! B5 runs every row of the shared table (`crates/engine/tests/fixtures/code-input-cases.json`,
-//! SURFACE §10.4, the JSON form of `packages/shared/test/fixtures/code-input-cases.ts`) through the
-//! real router. A row with a canonical code redeems a code minted as that canonical; a row without
-//! one gets R145's identical error byte for byte, and the code the row was mangled from (the table's
-//! base code, minted beside it) is left untouched. The web's code field is tested against the same
-//! rows, so the two ends cannot drift apart without one of them going red.
+//! SURFACE §10.4) through the real router. A row with a canonical code redeems a code minted as that
+//! canonical; a row without one gets R145's identical error byte for byte, and the code the row was
+//! mangled from (the table's base code, minted beside it) is left untouched. The web's code field is
+//! tested against the same rows, so the two ends cannot drift apart.
 //!
 //! B6 is the input cap: a code longer than `CODE_INPUT_MAX_LENGTH` is refused unread, logged as
 //! malformed, and padded to the redemption floor (R107) like every other outcome.
 //!
-//! Every test here runs on tokio's paused clock (`start_paused`) with the production floor, which
-//! costs nothing to sit through; the B5 rows each run on a fresh server with their own profile and
-//! address, so §9.4 steps 2 and 3 never refuse. TS generated one `it` per table row; Rust has no
-//! test generator without a macro, so each half of B5 is one test that names the failing row.
+//! Every test runs on tokio's paused clock (`start_paused`) with the production floor; the B5 rows
+//! each run on a fresh server with their own profile and address, so §9.4 steps 2 and 3 never refuse.
+//! Each half of B5 is one test that names the failing row.
 
 use std::sync::Arc;
 
@@ -41,15 +37,13 @@ use jackioh_server::db::store::Db;
 
 use crate::support::deps;
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 /// The table's base code: every malformed row is a mangled spelling of it.
 const BASE_CODE: &str = "ABCDEFGHJKMNPQRS";
 
-/// `CODE_PEPPER` for every server here. `index.ts` keys the code hash `${CODE_PEPPER}:code`, and the
-/// code a test puts on record is hashed the same way.
+/// `CODE_PEPPER` for every server here. The code hash is keyed `${CODE_PEPPER}:code`, and the code a
+/// test puts on record is hashed the same way.
 const PEPPER: &str = "code-input-parity-test-pepper-of-32-characters-or-more";
 
 /// The shared table (SURFACE §10.4): one row per typed or pasted input.
@@ -72,9 +66,8 @@ fn identical_body() -> String {
     .expect("the body serialises")
 }
 
-/// The environment `createTestDeps()` stood for: `E2E=1` (the fake store and fixture auth), the
-/// compiled-in catalog version (SURFACE §11.3) and one trusted proxy hop, whose entry
-/// `json_request` writes.
+/// The test environment: `E2E=1` (the fake store and fixture auth), the compiled-in catalog
+/// version (SURFACE §11.3) and one trusted proxy hop, whose entry `json_request` writes.
 fn test_env() -> IndexMap<String, String> {
     let mut source = IndexMap::new();
     for (name, value) in [
@@ -92,7 +85,7 @@ fn test_env() -> IndexMap<String, String> {
     source
 }
 
-/// One App and its router: TS's `deps` and `createRouter(createCodesRoutes(), deps)`.
+/// One App and its router.
 struct Server {
     app: Arc<App>,
     router: axum::Router,
@@ -168,8 +161,8 @@ async fn codes(server: &Server) -> Vec<Value> {
     json_rows(&store_of(&server.app).lock().await.tables.codes)
 }
 
-/// The server's clock (`app::now_ms`, TS `deps.timers.now()`): what it stamps rows with and counts
-/// its windows on. Not the wall clock, which the test clock (tokio's) does not move.
+/// The server's clock (`app::now_ms`): what it stamps rows with and counts its windows on, not the
+/// wall clock, which tokio's test clock does not move.
 fn now_ms() -> i64 {
     jackioh_server::app::now_ms()
 }
@@ -210,9 +203,8 @@ fn formatted(raw: &str) -> String {
         .join(INVITE_CODE_SEPARATOR)
 }
 
-/// `mintInviteCode(deps)` on `depsMinting(code)`: TS's `Ids` fake made the mint draw exactly
-/// `code`, so the test decides which code exists. The Rust mint draws from the OS, so the row is
-/// written as the mint writes it: hashed (`${CODE_PEPPER}:code` over the canonical code), unused,
+/// Mints exactly `code`, so the test decides which code exists. The row is written as the mint
+/// writes it: hashed (`${CODE_PEPPER}:code` over the canonical code), unused,
 /// `DEFAULT_INVITE_CODE_MAX_USES` uses, no expiry. Answers the code as `formatCode` shows it.
 async fn mint_exactly(server: &Server, code: &str) -> String {
     let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
@@ -237,7 +229,7 @@ struct Seeded {
     profile_id: String,
 }
 
-/// An auth user with a verified email (`deps.auth.addUser`) and a profile row (`seedProfile`).
+/// An auth user with a verified email and a profile row.
 async fn seed_caller(server: &Server, id: &str, status: &str) -> Seeded {
     let user_id = format!("user-{id}");
     let token = deps::add_user(&server.app, &user_id, &format!("{id}@example.test"), true);
@@ -251,7 +243,6 @@ async fn seed_caller(server: &Server, id: &str, status: &str) -> Seeded {
     }
 }
 
-/// `jsonRequest("POST", "/api/codes/redeem", body, { token, ip })`.
 fn redeem_request(body: Value, token: &str, ip: &str) -> Request<Body> {
     Request::builder()
         .method("POST")
@@ -269,7 +260,6 @@ async fn redeem(server: &Server, token: &str, code: &str, ip: &str) -> Reply {
         .await
 }
 
-/// `tables.profiles.find((row) => row.id === profileId)?.status`.
 async fn status_of(server: &Server, profile_id: &str) -> Value {
     json_rows(&store_of(&server.app).lock().await.tables.profiles)
         .into_iter()
@@ -278,14 +268,11 @@ async fn status_of(server: &Server, profile_id: &str) -> Value {
         .unwrap_or(Value::Null)
 }
 
-/// `minted.padEnd(length, " ")`.
 fn pad_end(text: &str, length: usize) -> String {
     format!("{text:<length$}")
 }
 
-// ---------------------------------------------------------------------------------------------
 // B5: every table row, redeemed
-// ---------------------------------------------------------------------------------------------
 
 mod r191_b5_the_server_redeems_every_row_of_the_shared_table_as_the_client_reads_it {
     use super::*;
@@ -425,9 +412,7 @@ mod r191_an_empty_code_is_read_like_every_other_input_that_holds_no_code {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // B6: the input cap
-// ---------------------------------------------------------------------------------------------
 
 mod r191_b6_a_code_longer_than_code_input_max_length {
     use super::*;
@@ -496,8 +481,7 @@ mod r191_b6_a_code_longer_than_code_input_max_length {
         assert_eq!(huge_attempts[0]["reason"], json!("malformed"));
     }
 
-    /// TS ran this one on `createVirtualTimers` with the production floor; tokio's paused clock is
-    /// that clock here, and `Instant` reads it.
+    /// Runs on tokio's paused clock with the production floor; `Instant` reads that clock.
     #[tokio::test(start_paused = true)]
     async fn r191_b6_pads_the_refusal_to_the_redemption_floor_like_every_other_outcome_r107() {
         let server = fresh_server().await;

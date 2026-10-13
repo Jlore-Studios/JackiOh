@@ -12,10 +12,14 @@ have used:
 - an open issue or PR assigned to the bot that nothing ever queued;
 - a failed CI run on the head of a bot PR that nothing reran or queued a fix for;
 - a label the bot uses (`config.LABELS`) that the repository does not have: a new one used to
-  wait for a person to run `python3 -m harness setup`, so `method:manual` and `method:use-bot`
-  (#307) shipped without existing, and no issue could be triaged;
+  wait for a person to run `python3 -m harness setup`, so the method labels (#307) shipped
+  without existing, and no issue could be triaged; and one it no longer uses
+  (`config.RETIRED_LABELS`), which it deletes;
 - a tree the bot split (`squishy:tree`, #60) whose sub-issues have all closed: its close-out is
   queued, which checks the parent against `main` and closes it or opens what is missing;
+- an issue the bot has planned, and a pull request it opened, that carries no `difficulty:*` label
+  (a planner that gave no rating line leaves none, #735): it gets its issue's label, or medium,
+  which is how it routes anyway; an issue still waiting for its plan is left to the planner;
 - last, a night run that should be going and is not: GitHub drops scheduled runs, sometimes a
   whole night of `bot-night`'s hourly ones, so when the gate's own question (`plan.peek`) finds
   work for a free lane and no `bot-night` run is on its way to take it, the sweep starts one.
@@ -37,11 +41,12 @@ from typing import Any, Callable
 from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
-from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
+from harness.config import (LABELS, LABEL_BLOCKED, LABEL_PLANNED, RETIRED_LABELS, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
                             LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES, NIGHT_WORKFLOW)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import branch_for_issue, is_human, label_names, queue_build, queue_revise
+from harness.queue import (branch_for_issue, is_human, label_names, labelled_difficulty,
+                           queue_build, queue_revise)
 from harness.state import item as state_item
 
 LOOKBACK = timedelta(days=3)
@@ -68,7 +73,7 @@ def sweep(ctx: Context) -> list[str]:
     since = max(first, now - LOOKBACK)
     notes: list[str] = []
     for part in (_labels, _comments, _reviews, _assignments, _failed_ci, _needs_plan,
-                 _green_heads, _trees, _night_run, _issue_types):
+                 _green_heads, _trees, _night_run, _issue_types, _difficulty_labels):
         try:
             notes += part(ctx, since)
         except Exception as exc:  # noqa: BLE001 - one part failing never stops the rest
@@ -80,11 +85,12 @@ def sweep(ctx: Context) -> list[str]:
 
 
 def _labels(ctx: Context, since: datetime) -> list[str]:
-    """Create every label in `config.LABELS` the repository lacks, once each time that list
-    changes (`labels_synced`, its fingerprint, in the state file), so a tick normally reads
-    nothing. A label a person deleted comes back with the next change to the list, or with
-    `python3 -m harness setup`."""
-    want = hashlib.sha256(json.dumps(sorted(LABELS.items())).encode("utf-8")).hexdigest()[:16]
+    """Create every label in `config.LABELS` the repository lacks and delete every one in
+    `config.RETIRED_LABELS` it still has, once each time those lists change (`labels_synced`,
+    their fingerprint, in the state file), so a tick normally reads nothing. A label a person
+    deleted comes back with the next change to the list, or with `python3 -m harness setup`."""
+    want = hashlib.sha256(json.dumps([sorted(LABELS.items()), RETIRED_LABELS])
+                          .encode("utf-8")).hexdigest()[:16]
     if ctx.store.load().get("labels_synced") == want:
         return []
     notes, refused = [], False
@@ -95,6 +101,13 @@ def _labels(ctx: Context, since: datetime) -> list[str]:
         except GitHubError as exc:  # one GitHub refuses never stops the rest
             refused = True
             notes.append(f"could not create the label `{name}`: {str(exc)[:200]}")
+    for name in RETIRED_LABELS:
+        try:
+            if ctx.gh.delete_label(name):
+                notes.append(f"deleted the retired label `{name}`")
+        except GitHubError as exc:
+            refused = True
+            notes.append(f"could not delete the label `{name}`: {str(exc)[:200]}")
     if not refused:  # a refused one is tried again next tick
         ctx.store.update(lambda s: s.update(labels_synced=want), "labels synced")
     return notes
@@ -129,19 +142,13 @@ def _green_heads(ctx: Context, since: datetime) -> list[str]:
 
 
 def _issue_types(ctx: Context, since: datetime) -> list[str]:
-    """Every open issue gets a type. Triage types the ones people open; the ones a bot opens (the
-    CI-duration alerts, the status issue) never reach it, and triage can miss one. Those get
-    `triage.fallback_type`: a bot's at once, anyone else's after `triage.TYPE_GRACE`."""
+    """Every open issue gets a type. Triage types the ones people open as they open; the ones a
+    bot opens (the CI-duration alerts, the status issue) never reach it, and triage can miss one.
+    Those get the same `triage.fallback_type`."""
     notes: list[str] = []
     types: dict[str, str] | None = None
     for issue in ctx.gh.list_issues(state="open"):
         if "pull_request" in issue or issue.get("type"):
-            continue
-        user = issue.get("user") or {}
-        login = str(user.get("login") or "")
-        by_bot = login.lower() == ctx.cfg.bot_login.lower() or login.endswith("[bot]")
-        opened = parse_iso(issue.get("created_at"))
-        if not by_bot and (opened is None or ctx.now() - opened < triage.TYPE_GRACE):
             continue
         types = types if types is not None else triage.issue_types(ctx.gh)
         wanted = triage.fallback_type(issue, types)
@@ -153,6 +160,45 @@ def _issue_types(ctx: Context, since: datetime) -> list[str]:
         except Exception as exc:  # noqa: BLE001 - one issue never stops the rest
             done = [f"could not type it ({type(exc).__name__})"]
         notes.append(f"#{issue['number']}: {'; '.join(done)}")
+    return notes
+
+
+def _difficulty_labels(ctx: Context, since: datetime) -> list[str]:
+    """A planned issue or a bot pull request with no `difficulty:*` label gets one (#735). The
+    planner labels what it rates, but a plan with no rating line leaves the item bare, and a pull
+    request copies its issue's label only when the issue has one. A pull request takes its issue's
+    label (`bot/issue-<n>`) and an issue takes medium, recorded as the bot's own rating so a later
+    planner may still raise it. An issue still waiting for its plan is left to the planner, which
+    may rate it easy. A `human` thread, and a person's label, are never touched."""
+    notes: list[str] = []
+    # The issues API lists pull requests too, without their branch: take those from the pulls.
+    threads = [i for i in ctx.gh.list_issues(state="open") if "pull_request" not in i]
+    threads += ctx.gh.list_pulls(state="open")
+    stem = branch_for_issue(0)[:-1]
+
+    def act(thread: dict[str, Any]) -> str | None:
+        names = label_names(thread)
+        if labelled_difficulty(names) or is_human(names):
+            return None
+        number = int(thread["number"])
+        if "head" in thread:
+            if LABEL_PR not in names:
+                return None
+            ref = str((thread.get("head") or {}).get("ref") or "")
+            wanted = "medium"
+            if ref.startswith(stem) and ref[len(stem):].isdigit():
+                issue = ctx.gh.get_issue(int(ref[len(stem):]))
+                wanted = labelled_difficulty(label_names(issue)) or wanted
+            ctx.gh.add_labels(number, [f"difficulty:{wanted}"])
+            return f"#{number}: no difficulty, so `difficulty:{wanted}`"
+        if LABEL_PLANNED not in names:
+            return None
+        ctx.gh.add_labels(number, ["difficulty:medium"])
+        ctx.store.update(lambda s: state_item(s, number).update(difficulty_by={
+            "difficulty": "medium", "provider": "sweep", "tier": "", "at": iso(ctx.now()),
+            "why": "planned with no rating, so medium"}), f"sweep #{number}")
+        return f"#{number}: planned with no difficulty, so `difficulty:medium`"
+    _each(threads, act, notes)
     return notes
 
 

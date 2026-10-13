@@ -1,15 +1,8 @@
 // Polish 1 (docs/polish/1-animations.md, S9): the effects layer, B36 to B38.
-//
-// The layer is rendered the way `Game` renders it, as a direct child of `.game`, next to a real
-// animation runner whose timer is a fake `schedule` the test fires by hand. Every browser API the
-// layer would reach for comes in through `seams`: a fake clock and frame source, an always-visible
-// page, a `measure` that returns one fixed box for every anchor and logs what it was asked for, a
-// stub surface with a recording 2D context, and a recording shake sink.
-//
-// What the tests read is what the layer shows: the `--anim-squeeze` property on its parent, the
-// `data-fx` attribute and children of its root, the DOM effects in `fx-dom`, the anchors it asked
-// `measure` to resolve (which is how a planned cue becomes visible to a test), and the runner's own
-// `schedule` calls.
+// The layer renders as `Game` renders it, a direct child of `.game`, next to a real animation
+// runner whose `schedule` the test fires by hand; every browser API comes in through `seams`.
+// Tests read what the layer shows: `--anim-squeeze` on its parent, `data-fx` and the children of
+// its root, and the anchors it asked `measure` to resolve (how a planned cue becomes visible).
 
 import type { CardDef, CardDefs, GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, render } from "@testing-library/react";
@@ -38,9 +31,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * Seams
- * ------------------------------------------------------------------------------------------- */
+// Seams
 
 /** A `schedule` spy: every call is logged, and the callbacks run only when the test says so. */
 function fakeSchedule() {
@@ -231,9 +222,7 @@ function p2View(over: Partial<PlayerView> = {}): PlayerView {
  * trap b20 in backrow lane 5. u2 carries every keyword; u10 is a 10/10. */
 const HIT: GameEvent = { type: "damage", sourceId: "u1", targetId: "u10", amount: 4, combat: true };
 
-/* ------------------------------------------------------------------------------------------- *
- * B36: the squeeze, planning per entry, and a runner that is not slowed at all
- * ------------------------------------------------------------------------------------------- */
+// B36: the squeeze, planning per entry, and a runner that is not slowed at all
 
 describe("B36 — FxLayer follows the runner without pacing it", () => {
   it("R200 each start writes --anim-squeeze on the layer's parent and idle removes it", () => {
@@ -457,9 +446,7 @@ describe("B36 — FxLayer follows the runner without pacing it", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B37: on and off, and nothing the layer renders can be clicked, read or waited on
- * ------------------------------------------------------------------------------------------- */
+// B37: on and off, and nothing the layer renders can be clicked, read or waited on
 
 describe("B37 — when the layer draws, and what it never renders", () => {
   it("B37 with effects enabled it renders data-fx=\"on\", aria-hidden, and holds fx-canvas and fx-dom", () => {
@@ -636,14 +623,12 @@ describe("B37 — when the layer draws, and what it never renders", () => {
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * B38: the view-driven sequences
- * ------------------------------------------------------------------------------------------- */
+// B38: the view-driven sequences
 
 describe("R200 — the reduce setting stops CSS-only motion exactly as the media query does", () => {
   it("R200 the reduce setting zeroes --anim-scale on the game root, and turning it back restores it (B51)", () => {
-    // index.css zeroes --anim-scale on :root under prefers-reduced-motion; the setting only turned
-    // the layer off, so the result overlay's fade and the board's transitions kept moving.
+    // index.css zeroes --anim-scale on :root under prefers-reduced-motion; the setting must too, or
+    // the result overlay's fade and the board's transitions keep moving.
     setFxSettings({ motion: "reduce" });
     const fx = fakeSeams();
     const m = mountLayer(queueWith(fakeSchedule()), fullBoardView(), fx);
@@ -762,8 +747,7 @@ describe("B38 — the result sequence and the hot-seat hand-over banner", () => 
   });
 
   it("R200 the killing blow a finished game drains is replayed first, and the result lands on its beat", () => {
-    // Game.tsx drains the runner the moment a finished view arrives, which cleared the lethal hit
-    // before it drew (review: the last blow of the match never showed).
+    // Game.tsx drains the runner the moment a finished view arrives; the lethal hit must still draw.
     const sched = fakeSchedule();
     const queue = queueWith(sched);
     const fx = fakeSeams();
@@ -815,10 +799,8 @@ describe("B38 — the result sequence and the hot-seat hand-over banner", () => 
   });
 });
 
-/* ------------------------------------------------------------------------------------------- *
- * S9 and S11: the default catalog (CatalogContext, fed by lookupFromDefs) and the surface seam.
- * Every test above overrides `seams.catalog`; these leave it out, as production does.
- * ------------------------------------------------------------------------------------------- */
+// S9 and S11: the default catalog (CatalogContext, fed by lookupFromDefs) and the surface seam.
+// Every test above overrides `seams.catalog`; these leave it out, as production does.
 
 function def(id: string, over: Partial<CardDef> = {}): CardDef {
   return {

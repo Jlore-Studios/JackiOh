@@ -1,44 +1,25 @@
-// The Activate control (docs/classic-sets.md B3.2, SPEC §6.2, R384; its presentation R510).
-//
-// A card the viewer controls whose view lists `activations` (the engine puts them on its
-// controller's own view of a card acting on the field: the top of a pile, or a face-up backrow
-// card) wears one control per ability on the card itself: a lightning glyph and a badge counting
-// the uses left this turn ("2"; "∞" for Activate ♾️, whose `usesLeft` is null). Its label, the
-// ability's words, is the control's tooltip and accessible name, beside the card's full text in the
-// hover preview and the inspect sheet.
-//
-// No rule lives here (CLAUDE.md rule 7). Whether the control fires is `highlight.legal`, which
-// `actions.ts` derived from the `activate` actions `legalActions` listed; the view's `usable` and
-// `reason` are drawn, never obeyed: a control that is not legal is greyed, says why in its tooltip
-// (the engine's own words, `ActivationView.reason`) and sends nothing. A press reports
-// `{ on: "activate", instanceId, ability? }`, which `actions.ts` builds exactly as a play's choices
-// are built: one listed activation is sent at once, several wait for a target clicked (or dragged
-// to, game/drag) on the board, a Tribute, or a mode in the inline picker.
-//
-// `ability` is named only when the card lists several abilities (`namedAbility`), so a card with
-// one is `activate-<instanceId>` and its badge `activate-uses-<instanceId>`.
-//
-// The `activated` event's animation row plays on the card (`card-<instanceId>`, animations.ts); the
-// control reads that from the board's animating map and flashes (`data-flash="activated"`). Under
-// reduced motion the flash does not move: a static ring marks the control for the row's duration.
+// Activate control (B3.2, SPEC §6.2, R384; presentation R510).
+// It renders view data only (CLAUDE.md rule 7): `highlight.legal` decides a press, while `usable`
+// and `reason` are displayed only. A press reports `{ on: "activate", instanceId, ability? }`;
+// `ability` is named only for multiple entries (`namedAbility`).
+// It flashes for its `activated` animation row; reduced motion uses a static ring.
 
 import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
 import { fillParams, type ActivationView, type CardView } from "@jackioh/shared";
 
+import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
 import { NO_HIGHLIGHT, namedAbility, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
+import { isZhCn, t } from "../i18n/i18n.ts";
 
 import "./activate.css";
 
-/** The event whose animation row the control flashes on (animations.ts `activated`). */
 export const ACTIVATED_EVENT = "activated";
 
-/** What the uses badge says for Activate ♾️ (`usesLeft: null`). */
 export const UNLIMITED_USES = "∞";
 
-/** The tooltip's reason when the view gives none and the control is not live (the board catching up, say). */
 export const NOT_NOW = "can't be activated right now";
 
 /** The attribute a drag reads a control's card off (game/drag/targets.ts). */
@@ -46,29 +27,25 @@ export const ACTIVATE_FOR_ATTRIBUTE = "data-activate-for";
 /** The attribute a drag reads the ability a control names off, when it names one. */
 export const ACTIVATE_ABILITY_ATTRIBUTE = "data-activate-ability";
 
-/** "2", or "∞" for Activate ♾️. */
 export function usesText(usesLeft: number | null): string {
   return usesLeft === null ? UNLIMITED_USES : String(usesLeft);
 }
 
 function usesWords(usesLeft: number | null): string {
-  if (usesLeft === null) return "unlimited uses this turn";
-  return usesLeft === 1 ? "1 use left this turn" : `${String(usesLeft)} uses left this turn`;
+  if (usesLeft === null) return t("unlimited uses this turn");
+  return usesLeft === 1 ? t("1 use left this turn") : t("{count} uses left this turn", { count: String(usesLeft) });
 }
 
-/** The words as one sentence, ending in a single full stop however the label ended. */
+/** The words as one sentence, ending in a single full stop however the label ended ("。" for a Chinese reader). */
 function sentence(text: string): string {
-  return `${text.replace(/[\s.]+$/, "")}.`;
+  return `${text.replace(/[\s.。]+$/, "")}${t(".")}`;
 }
 
 function capitalised(text: string): string {
   return text.length === 0 ? text : `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }
 
-/**
- * The ability's words with the card's declared numbers filled in (B3.4: a Degrade or Upgrade moves
- * them, and the view carries them as `params`), so no raw `{key}` reaches the screen.
- */
+/** The ability's words with the card's declared numbers (the view's `params`) filled in, B3.4, so no raw `{key}` reaches the screen. */
 export function abilityLabel(info: CardInfo, card: CardView, label: string): string {
   const def = info.def;
   if (def === undefined || !label.includes("{")) return label;
@@ -87,7 +64,6 @@ export type ActivateControlsProps = {
   onClick?: (target: ClickTarget) => void;
 };
 
-/** Every Activate ability the view lists on `card`, one control each; nothing when it lists none. */
 export default function ActivateControls(props: ActivateControlsProps): ReactElement | null {
   const { card } = props;
   const info = useCardInfo(card.defId, card.radiant);
@@ -100,8 +76,8 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
         <ActivateButton
           key={activation.ability}
           card={card}
-          name={info.name}
-          label={abilityLabel(info, card, activation.label)}
+          name={isZhCn() ? chineseName(card.defId, info.name, info.def) : info.name}
+          label={t(abilityLabel(info, card, activation.label))}
           activation={activation}
           ability={namedAbility(activations.length, activation.ability)}
           highlight={props.highlight ?? NO_HIGHLIGHT}
@@ -118,7 +94,6 @@ function ActivateButton(props: {
   name: string;
   label: string;
   activation: ActivationView;
-  /** The ability the control names: undefined when the card lists only one. */
   ability: string | undefined;
   highlight: Highlight;
   flashing: boolean;
@@ -128,7 +103,7 @@ function ActivateButton(props: {
   const testId = testid.activate(card.instanceId, ability);
   const legal = props.highlight.legal.has(testId);
   const selected = props.highlight.selected.has(testId);
-  const why = legal ? null : capitalised(activation.reason ?? NOT_NOW);
+  const why = legal ? null : capitalised(t(activation.reason ?? NOT_NOW));
   const target: ClickTarget =
     ability === undefined ? { on: "activate", instanceId: card.instanceId } : { on: "activate", instanceId: card.instanceId, ability };
 
@@ -160,8 +135,12 @@ function ActivateButton(props: {
       data-uses={activation.usesLeft ?? "unlimited"}
       data-flash={props.flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`Activate ${props.name}: ${sentence(props.label)} ${sentence(capitalised(uses))}${why === null ? "" : ` ${sentence(why)}`}`}
-      title={why === null ? `Activate: ${props.label} (${uses})` : `Activate: ${props.label} — ${why}`}
+      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
+      title={
+        why === null
+          ? t("Activate: {ability} ({uses})", { ability: props.label, uses })
+          : t("Activate: {ability} — {why}", { ability: props.label, why })
+      }
       onClick={press}
       onKeyDown={key}
     >

@@ -1,16 +1,9 @@
 //! BUILD M7-T1's fake-timer tests for the match clock (SPEC §9.5, R79).
 //!
-//! One test per clock path. TS ran them all on `createManualTimers()`; here tokio's paused clock
-//! (`start_paused = true`) stands in for it: the clock schedules every deadline through
-//! `tokio::time`, and `advance(ms)` sleeps on the paused clock, so the runtime auto-advances from one
-//! due timer to the next in deadline order and fires exactly the callbacks that are due — what
-//! `timers.advance(ms)` did — and the assertions are on the millisecond rather than on a tolerance.
-//!
-//! Every duration is derived from the server's config (`crate::config`, which `defaultConfig()`
-//! read in TS), so these tests state R79's numbers nowhere: they check the behaviour around whatever
-//! `src/config.rs` says.
-//!
-//! Port of `apps/server/test/match/clock.test.ts`.
+//! One test per clock path, on tokio's paused clock (`start_paused = true`): `advance(ms)` fires the
+//! due timers in deadline order, so the assertions are on the millisecond rather than a tolerance.
+//! Every duration is derived from the server's config (`crate::config`), so these tests state R79's
+//! numbers nowhere.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -37,7 +30,7 @@ fn int(value: impl Into<i64>) -> i64 {
     value.into()
 }
 
-/// The server's own epoch-millisecond clock, the one the match clock reads (TS `timers.now()`).
+/// The server's own epoch-millisecond clock, the one the match clock reads.
 fn now() -> i64 {
     now_ms()
 }
@@ -49,8 +42,7 @@ async fn settle() {
     }
 }
 
-/// TS `timers.advance(ms)`: runs every callback due within `ms`, in deadline order, advancing `now`
-/// as it goes.
+/// Runs every callback due within `ms`, in deadline order, advancing `now` as it goes.
 async fn advance(ms: i64) {
     tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
     settle().await;
@@ -89,7 +81,7 @@ impl Harness {
     }
 }
 
-/// `started_offset_ms`: how long before now the match started (TS `startedOffsetMs`).
+/// `started_offset_ms`: how long before now the match started.
 fn harness(started_offset_ms: i64) -> Harness {
     let expiries: Arc<Mutex<Vec<ClockExpiry>>> = Arc::new(Mutex::new(Vec::new()));
     let started_at = now() - started_offset_ms;
@@ -358,8 +350,7 @@ mod match_clock {
         advance(1).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Ceiling]);
 
-        // Once: TS also counted the manual timers' queue empty here (`timers.pending`); tokio keeps no
-        // such count, so the claim is the observable one — a second ceiling's worth fires nothing.
+        // Once: a second ceiling's worth fires nothing.
         advance(h.ceiling_ms).await;
         assert_eq!(h.expiries(), vec![ClockExpiry::Ceiling]);
     }
@@ -413,7 +404,6 @@ mod match_clock {
         h.clock.sync(&view());
         h.clock.start_grace(P1, None);
         h.clock.start_grace(P2, None);
-        // TS counted the armed timers here (`timers.pending > 0`); the deadlines are what is armed.
         assert!(h.deadline("turnDeadline").is_some());
         assert!(h.grace(P1).is_some() && h.grace(P2).is_some());
 
@@ -569,7 +559,6 @@ mod match_clock {
             over: true,
             ..mulligan_window(&[P1])
         });
-        // TS: `timers.pending` is 0. The armed deadline is what the count was counting.
         assert_eq!(h.deadline("promptDeadline"), None);
         assert_eq!(h.clock.remaining_for(P1), None);
         advance(h.mulligan_ms).await;
@@ -594,20 +583,19 @@ mod match_clock {
 mod r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3 {
     use super::*;
 
-    /// B4.3, R389: the engine's turn cap since patch v0.2.0, 30 player-turns each.
+    /// B4.3, R389: the engine's turn cap, 30 player-turns each.
     const PLAYER_TURNS_AT_CAP: i64 = 60;
 
     #[test]
     fn r389_the_hard_ceiling_is_120_minutes_and_the_server_runs_with_it() {
         assert_eq!(int(MATCH_CEILING_MINUTES), 120);
-        // TS: `defaultConfig().matchCeilingMinutes` is `MATCH_CEILING_MINUTES`. The Rust clock reads
-        // `config::MATCH_CEILING_MINUTES` itself (no `ServerConfig`), so the ceiling it arms is it.
+        // The Rust clock reads `config::MATCH_CEILING_MINUTES` itself (no `ServerConfig`).
         assert_eq!(match_ceiling_at(0), int(MATCH_CEILING_MINUTES) * MINUTE);
     }
 
     #[test]
     fn r389_a_game_that_plays_every_turn_to_the_cap_at_a_full_turn_clock_ends_on_the_cap_not_the_ceiling() {
-        // 60 player-turns × 75 s is 75 minutes: under 120, where the old 60-minute ceiling was not.
+        // 60 player-turns × 75 s is 75 minutes: under 120.
         let longest_game_ms = PLAYER_TURNS_AT_CAP * int(TURN_CLOCK_SECONDS) * SECOND;
         assert!(longest_game_ms < int(MATCH_CEILING_MINUTES) * MINUTE);
         assert!(longest_game_ms > 60 * MINUTE);

@@ -1,6 +1,5 @@
 //! Catalog loader. Copies the card catalog into `public.cards`, stamping every row with the catalog
-//! version. `jackioh-server seed-catalog` (TS `db:seed-catalog`), and the second step of
-//! `jackioh-server release`; the port of `apps/server/src/db/seed-catalog.ts`.
+//! version. `jackioh-server seed-catalog`, and the second step of `jackioh-server release`.
 //!
 //! SPEC §9.4: "catalog is static, versioned, shipped with the client". The client renders card text
 //! from its own bundled copy; this table exists so `collection.card_id` and `loadout_deck_cards.card_id`
@@ -10,9 +9,10 @@
 //! With no argument it seeds the catalog compiled into this binary (`jackioh_cards::catalog_json()`,
 //! crates/cards/catalog.json) at the version compiled in with it (`jackioh_cards::catalog_version()`,
 //! the newest entry of crates/cards/patches/patches.json). A `CATALOG_VERSION` in the environment
-//! that names another version is reported and ignored, as the server ignores it (SURFACE §11.3,
-//! #488), so a card patch is seeded without a hand edit anywhere. With a path, it seeds that file
-//! instead (a fixture catalog), at `CATALOG_VERSION`, which is then required, as in TS.
+//! that names another version is reported and ignored, as the server ignores it, so a card patch
+//! is seeded without a hand edit anywhere. With a path, it seeds that file instead (a fixture
+//! catalog), at `CATALOG_VERSION`, which is then required.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use anyhow::{Result, anyhow};
 use indexmap::IndexMap;
@@ -98,12 +98,10 @@ fn entry_of(value: &Value) -> CatalogEntry {
 /// none of the three.
 ///
 /// The third is the one that matters: the catalog is a **record keyed by card id**, which is what
-/// `CardDefs` is and what `src/api/catalog.rs` parses it as. Reading only an array meant the seeder
-/// and the API disagreed about the shape of the one file they share, and the seeder lost —
-/// `db:seed-catalog` could not load the real catalog at all.
+/// `CardDefs` is and what `src/api/catalog.rs` parses it as.
 ///
 /// `text` is the file's text again: a record is re-read into an `IndexMap` so its entries keep the
-/// file's order, as `Object.entries` keeps it (serde_json's own map sorts its keys).
+/// file's order (serde_json's own map sorts its keys).
 fn catalog_rows(parsed: &Value, text: &str, path: &str) -> Result<Option<Vec<Value>>> {
     if let Some(rows) = parsed.as_array() {
         return Ok(Some(rows.clone()));
@@ -239,7 +237,7 @@ async fn write_catalog(
     Ok(entries.len())
 }
 
-/// TS `main()`: the connection string, the version, the catalog, one transaction, one line.
+/// The connection string, the version, the catalog, one transaction, one line.
 pub async fn run(args: Vec<String>) -> Result<()> {
     let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
     if connection_string.is_empty() {

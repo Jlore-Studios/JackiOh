@@ -1,10 +1,8 @@
-//! The delayed kinds of patch v0.2.0 (docs/classic-sets.md B5 E27, E28, R458): a destroy at the start
-//! of your next turn, aimed at a unit (Classic #20) or read then over a scope (its Radiant face); your
-//! hand discarded at the end of this turn or of your *next* turn (Classic #37); `delay`'s `next`; and
-//! a start-of-turn effect for the rest of the game (Classic+ #52), which runs in R62's delayed stage
+//! The delayed kinds (docs/classic-sets.md B5 E27, E28, R458): a destroy at the start of your next
+//! turn, aimed at a unit (Classic #20) or read then over a scope (its Radiant face); your hand
+//! discarded at the end of this turn or of your *next* turn (Classic #37); `delay`'s `next`; and a
+//! start-of-turn effect for the rest of the game (Classic+ #52), which runs in R62's delayed stage
 //! among the delayed effects in creation order, once per turn, and stacks.
-//!
-//! Port of `packages/engine/test/delayed-kinds.test.ts`.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -35,14 +33,13 @@ fn register() {
     register_scripts(scripts);
 }
 
-/// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialisable")
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively.
+/// Every key the expected object names matches, recursively.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -55,7 +52,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// `reduce` with a fresh nonce; `body` is the TS `ActionInput` literal (its `playerId` included).
+/// `reduce` with a fresh nonce; `body` carries its `playerId`.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut action = body;
@@ -94,8 +91,7 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Put `def_id` in `player`'s hand and play it, `extra` merged into the action. (TS also handed back
-/// the card it put in hand, which no test here reads.)
+/// Put `def_id` in `player`'s hand and play it, `extra` merged into the action.
 fn play(state: &mut GameState, player: PlayerId, def_id: &str, extra: Value) -> ReduceResult {
     let card = in_hand(state, def_id, player, 1)
         .into_iter()

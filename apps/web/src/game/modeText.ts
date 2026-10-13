@@ -6,6 +6,10 @@
 // what each option does. This map gives each one a label and a line of detail, written from the
 // card's §8 text, keyed by the card's id and the option string. The option string stays the key the
 // answer sends; an option this map does not know is printed with a capital letter and no detail.
+// The words are English here and read in the reader's language where they are handed out
+// (`modeText`, through `t()`): the Chinese card table has each card's text, not its options' words.
+
+import { t } from "../i18n/i18n.ts";
 
 type ModeText = { label: string; detail: string };
 
@@ -54,7 +58,30 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +2X Health and Armor X." },
   },
+  // M #22 Mind Games: "Choose one in secret: Greed, Attack or Defend." The detail names no
+  // numbers — the reward waits until the start of the caster's next turn (R861).
+  "meditative-022": {
+    greed: { label: "Greed", detail: "In secret: at the start of your next turn, gain mana and draw cards." },
+    attack: { label: "Attack", detail: "In secret: at the start of your next turn, deal damage to each enemy." },
+    defend: { label: "Defend", detail: "In secret: at the start of your next turn, heal your side and grant Armor." },
+  },
+  // M #22.1 Fortify Mind: "Choose one: Greed, Attack or Defend, to guess your opponent's Mind
+  // Games." Rock beats scissors here: Attack beats Greed, Greed beats Defend, Defend beats Attack.
+  "meditative-022-1": {
+    greed: { label: "Guess Greed", detail: "Beats Defend; loses to Attack." },
+    attack: { label: "Guess Attack", detail: "Beats Greed; loses to Defend." },
+    defend: { label: "Guess Defend", detail: "Beats Attack; loses to Greed." },
+  },
+  // M #98 Showdown: "Choose a lane. Lock every other lane until the start of your next turn." The
+  // board draws lane 1 on the left for both seats (Board.tsx), so each option says where it is.
+  "meditative-098": lanes("Lock the other four lanes until the start of your next turn."),
 };
+
+/** Showdown's five lanes, `lane-1` to `lane-5`, each named by where it sits on the board. */
+function lanes(detail: string): Record<string, ModeText> {
+  const where = ["on the left", "second from the left", "in the middle", "second from the right", "on the right"];
+  return Object.fromEntries(where.map((place, index) => [`lane-${String(index + 1)}`, { label: `Lane ${String(index + 1)}`, detail: `The lane ${place}. ${detail}` }]));
+}
 
 /**
  * The options whose words change on the card's Radiant face, keyed like `MODE_TEXT`. Any option
@@ -68,6 +95,8 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
     Culture: { label: "Culture", detail: "Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant." },
     Healthcare: { label: "Healthcare", detail: "Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X." },
   },
+  // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
+  "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
   // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 4X, or gain X mana next turn"
   // (§8 #24, R275), every mode doubled.
   "core-024": {
@@ -77,9 +106,14 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   },
 };
 
+/** A mode's words in the reader's language. */
+function read(text: ModeText): ModeText {
+  return { label: t(text.label), detail: t(text.detail) };
+}
+
 /**
- * An option's label and detail for card `defId` on the face it will resolve with (`radiant`); an
- * unknown one is its own word, capitalised.
+ * An option's label and detail for card `defId` on the face it will resolve with (`radiant`), in the
+ * reader's language; an unknown one is its own word, capitalised.
  */
 export function modeText(
   defId: string | undefined,
@@ -87,8 +121,11 @@ export function modeText(
   radiant = false,
 ): { label: string; detail?: string } {
   const face = radiant && defId !== undefined ? RADIANT_MODE_TEXT[defId]?.[option] : undefined;
-  if (face !== undefined) return face;
+  if (face !== undefined) return read(face);
   const known = defId === undefined ? undefined : MODE_TEXT[defId]?.[option];
-  if (known !== undefined) return known;
-  return { label: option.length === 0 ? option : `${option.charAt(0).toUpperCase()}${option.slice(1)}` };
+  if (known !== undefined) return read(known);
+  if (option.length === 0) return { label: option };
+  // The option's own word first, where the language has one: "draw" is not the result word "Draw".
+  const own = t(option);
+  return { label: own !== option ? own : t(`${option.charAt(0).toUpperCase()}${option.slice(1)}`) };
 }

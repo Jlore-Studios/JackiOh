@@ -13,8 +13,8 @@
 //!  - `app.rs` at boot (`open_season`, SURFACE §11.2), and `cli/season_start.rs` by hand, to open
 //!    the build's season (R609).
 //!
-//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, tags,
-//! and the season's badges.
+//! Nothing here ever sends a rating to a client (R612): the reads answer with `VisibleRank`s, each
+//! player's profile id and username (R1436), and the season's badges.
 
 use std::sync::Arc;
 
@@ -25,18 +25,17 @@ use serde_json::{Value, json};
 use jackioh_engine::PerPlayer;
 
 use crate::api::collection::caller_profile;
-use crate::api::crypto::player_tag;
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_alert, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::db::store::{
-    BotRating, Pilot, Profile, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season, SeasonStanding,
-    StoreError, Tx,
+    BotRating, Pilot, Profile, ProfileKind, RatedGameKind, RatedGameRow, RatedReason, RatedSide, Season,
+    SeasonStanding, StoreError, Tx,
 };
 use crate::ranked::glicko2::{Glicko, START_GLICKO, rate_game};
 use crate::ranked::ladder::{
-    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, SeasonRank, Standing, VisibleRank,
-    apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of, place_of, target_ladder,
-    tier_index_of, visible_rank, with_jlorious_peak,
+    self, ApplyRankedGameInput, GRAPE_TIERS, GrapeTier, PeakBadge, RankTier, SeasonRank, Standing,
+    VisibleRank, VisibleRankWire, apply_ranked_game, fresh_rank, jlorious_order, peak_badge, percentile_of,
+    place_of, target_ladder, tier_index_of, visible_rank, with_jlorious_peak,
 };
 use crate::ranked::season::{ResetReport, season_id_of, soft_reset};
 
@@ -246,10 +245,12 @@ fn row_of(standing: &SeasonStanding) -> SeasonRank {
     standing.rank.clone()
 }
 
-/// The season as the ladder's percentiles and Jlorious read it.
+/// The season as the ladder's percentiles and Jlorious read it. R640000: people only, so a ladder
+/// bot never takes a Jlorious place from a person.
 fn standings_of(standings: &[SeasonStanding]) -> Vec<Standing> {
     standings
         .iter()
+        .filter(|standing| !standing.bot)
         .map(|standing| Standing {
             profile_id: standing.rank.profile_id.clone(),
             ladder: standing.rank.ladder,
@@ -320,17 +321,22 @@ async fn before_of(
     }
 }
 
-/// A season row's move: as it stood, and after this game.
+/// A season row's move: as it stood, and after this game. `bot` marks a ladder bot's (R640000).
 #[derive(Clone, Debug)]
 struct RankChange {
     before: Option<SeasonRank>,
     after: SeasonRank,
+    bot: bool,
 }
 
 /// Plans one ranked game (R603–R608): both sides rated against each other's rating from before it,
-/// each player's season moved toward the rank their new rating calls for, and the Jlorious peaks it
+/// each side's season moved toward the rank their new rating calls for, and the Jlorious peaks it
 /// gave anyone. Both targets are read from the season as it stood before the game, with both new
 /// ratings in it, so neither side's placement depends on which of the two is computed first.
+///
+/// R640000: a ladder bot's season row moves as a person's does, its target read against people's
+/// ratings alone, and it never stands in Jlorious. A bot id with no bot profile behind it (R610's
+/// bare rating) holds no row.
 pub async fn plan_ranked_game(
     t: &mut Tx<'_>,
     _app: &App,
@@ -358,14 +364,24 @@ pub async fn plan_ranked_game(
     let deps = SeasonDeps::current();
     let OpenedSeason { season, .. } = open_season_in_tx(t, &deps).await?;
     let standings = t.ranked_standings(&season.id).await?;
-    let player_ids: Vec<String> = sides
+    let side_ids: Vec<String> = sides
         .iter()
-        .filter_map(|side| match side {
-            RankedSideInput::Player { profile_id } => Some(profile_id.clone()),
-            RankedSideInput::Bot { .. } => None,
+        .map(|side| match side {
+            RankedSideInput::Player { profile_id } => profile_id.clone(),
+            RankedSideInput::Bot { bot_id } => bot_id.clone(),
         })
         .collect();
-    let profiles = t.profiles_get_many(&player_ids).await?;
+    let profiles = t.profiles_get_many(&side_ids).await?;
+    // R640000: the season row a side holds, and whether it is a ladder bot's.
+    let ladder_side = |side: &RankedSideInput| -> Option<(String, bool)> {
+        match side {
+            RankedSideInput::Player { profile_id } => Some((profile_id.clone(), false)),
+            RankedSideInput::Bot { bot_id } => profiles
+                .iter()
+                .any(|profile| profile.id == *bot_id && profile.kind == ProfileKind::Bot)
+                .then(|| (bot_id.clone(), true)),
+        }
+    };
 
     let before = [
         before_of(t, &profiles, first, &input.id).await?,
@@ -397,8 +413,8 @@ pub async fn plan_ranked_game(
     // The season with both new ratings in it, and each player's row as it stood.
     let mut new_rating: IndexMap<String, f64> = IndexMap::new();
     for (index, side) in sides.iter().enumerate() {
-        if let RankedSideInput::Player { profile_id } = side {
-            new_rating.insert(profile_id.clone(), after[index].rating);
+        if let Some((profile_id, _)) = ladder_side(side) {
+            new_rating.insert(profile_id, after[index].rating);
         }
     }
     let re_rated: Vec<SeasonStanding> = standings
@@ -415,22 +431,25 @@ pub async fn plan_ranked_game(
 
     let mut ranks: IndexMap<String, RankChange> = IndexMap::new();
     for (index, side) in sides.iter().enumerate() {
-        let RankedSideInput::Player { profile_id } = side else {
+        let Some((profile_id, bot)) = ladder_side(side) else {
             continue;
         };
         let standing = standings
             .iter()
-            .find(|candidate| candidate.rank.profile_id == *profile_id);
+            .find(|candidate| candidate.rank.profile_id == profile_id);
         let row_before = standing.map(row_of);
+        // R640000: percentiles are people's, so a bot's row moves no person's target.
         let others: Vec<f64> = re_rated
             .iter()
-            .filter(|candidate| candidate.rank.profile_id != *profile_id && candidate.rank.ladder.is_some())
+            .filter(|candidate| {
+                candidate.rank.profile_id != profile_id && candidate.rank.ladder.is_some() && !candidate.bot
+            })
             .map(|candidate| candidate.rating)
             .collect();
         let target = target_ladder(&percentile_of(after[index].rating, &others));
         let start = row_before
             .clone()
-            .unwrap_or_else(|| fresh_rank(&season.id, profile_id, input.at));
+            .unwrap_or_else(|| fresh_rank(&season.id, &profile_id, input.at));
         let row_after = apply_ranked_game(
             &start,
             &ApplyRankedGameInput {
@@ -440,10 +459,11 @@ pub async fn plan_ranked_game(
             },
         );
         ranks.insert(
-            profile_id.clone(),
+            profile_id,
             RankChange {
                 before: row_before,
                 after: row_after,
+                bot,
             },
         );
     }
@@ -458,6 +478,7 @@ pub async fn plan_ranked_game(
         standings_after.push(SeasonStanding {
             rank: change.after.clone(),
             rating: new_rating.get(profile_id).copied().unwrap_or(0.0),
+            bot: change.bot,
         });
     }
     let jlorious_after = jlorious_order(&standings_of(&standings_after));
@@ -483,14 +504,20 @@ pub async fn plan_ranked_game(
 
     let side_of = |side: &RankedSideInput, index: usize| -> RatedSide {
         match side {
+            // R640000: a ladder bot's side carries its season row's ranks, never a Jlorious place;
+            // a bare rating's (R610) carries none.
             RankedSideInput::Bot { bot_id } => RatedSide {
                 profile_id: None,
                 bot_id: Some(bot_id.clone()),
                 pilot: Pilot::Ai,
                 before: before[index].glicko,
                 after: after[index],
-                rank_before: None,
-                rank_after: None,
+                rank_before: ranks
+                    .get(bot_id)
+                    .map(|rank| visible_rank(rank.before.as_ref(), None)),
+                rank_after: ranks
+                    .get(bot_id)
+                    .map(|rank| visible_rank(Some(&rank.after), None)),
             },
             RankedSideInput::Player { profile_id } => {
                 let rank = ranks.get(profile_id);
@@ -611,12 +638,41 @@ pub struct RankRecord {
     pub draws: i64,
 }
 
-/// `GET /api/ranked`: the caller's own season, tag and badges.
+/// R1436: each listed profile's username as shown, read in the transaction that read the standings
+/// it labels, so a rename shows on every read at once and nothing but `profiles` holds a name. A
+/// seat a deleted account left empty names nobody and is not looked up; a profile with no row
+/// shows an empty name.
+async fn usernames_of<'a>(
+    tx: &mut Tx<'_>,
+    profile_ids: impl IntoIterator<Item = &'a str>,
+) -> Result<IndexMap<String, String>, StoreError> {
+    let wanted: IndexSet<String> = profile_ids
+        .into_iter()
+        .filter(|profile_id| !profile_id.is_empty())
+        .map(str::to_string)
+        .collect();
+    let wanted: Vec<String> = wanted.into_iter().collect();
+    Ok(tx
+        .profiles_get_many(&wanted)
+        .await?
+        .iter()
+        .map(|profile| (profile.id.clone(), profile.username()))
+        .collect())
+}
+
+/// A profile's username out of `usernames_of`'s answer.
+fn username_in(usernames: &IndexMap<String, String>, profile_id: &str) -> String {
+    usernames.get(profile_id).cloned().unwrap_or_default()
+}
+
+/// `GET /api/ranked`: the caller's own season, profile id, username and badges.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OwnRankBody {
     pub season: String,
-    pub tag: String,
+    /// R1436: for keys and requests only; a player is shown by `username`.
+    pub profile_id: String,
+    pub username: String,
     pub rank: VisibleRank,
     /// The current win streak, which earns bonus pips below Mythic Grape (R606).
     pub streak: i64,
@@ -630,6 +686,7 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
     let mut tx = app.db.begin(Some(profile_id)).await?;
     let standings = tx.ranked_standings(&season_id).await?;
     let history = tx.ranked_ranks_of(profile_id).await?;
+    let usernames = usernames_of(&mut tx, [profile_id]).await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let mine = standings
@@ -638,7 +695,8 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
         .map(|standing| &standing.rank);
     Ok(OwnRankBody {
         season: season_id,
-        tag: player_tag(profile_id),
+        profile_id: profile_id.to_string(),
+        username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
         streak: mine.map(|rank| rank.streak as i64).unwrap_or(0),
         record: RankRecord {
@@ -655,7 +713,9 @@ pub async fn own_rank(app: &App, profile_id: &str) -> Result<OwnRankBody, ApiErr
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaderboardRow {
-    pub tag: String,
+    /// R1436: the client's list key; the row is shown by `username`.
+    pub profile_id: String,
+    pub username: String,
     pub division: i64,
     pub pips: i64,
     pub you: bool,
@@ -666,7 +726,8 @@ pub struct LeaderboardRow {
 #[serde(rename_all = "camelCase")]
 pub struct JloriousRow {
     pub position: i32,
-    pub tag: String,
+    pub profile_id: String,
+    pub username: String,
     pub you: bool,
 }
 
@@ -697,7 +758,7 @@ pub struct LeaderboardBody {
 /// A placed player as a tier's list holds them before sorting.
 #[derive(Clone, Debug)]
 struct TierEntry {
-    tag: String,
+    profile_id: String,
     ladder: i32,
     you: bool,
 }
@@ -706,6 +767,11 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
     let season_id = build_season_id(&SeasonDeps::current());
     let mut tx = app.db.begin(Some(viewer_id)).await?;
     let standings = tx.ranked_standings(&season_id).await?;
+    let usernames = usernames_of(
+        &mut tx,
+        standings.iter().map(|standing| standing.rank.profile_id.as_str()),
+    )
+    .await?;
     tx.commit().await?;
     let jlorious = jlorious_order(&standings_of(&standings));
     let in_jlorious: IndexSet<&str> = jlorious.iter().map(String::as_str).collect();
@@ -723,7 +789,7 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
         }
         let index = (tier_index_of(ladder) as usize).min(tier_count.saturating_sub(1));
         groups[index].push(TierEntry {
-            tag: player_tag(&standing.rank.profile_id),
+            profile_id: standing.rank.profile_id.clone(),
             ladder,
             you: standing.rank.profile_id == viewer_id,
         });
@@ -735,7 +801,12 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
         .rev()
         .map(|(index, tier)| {
             let mut rows = groups[index].clone();
-            rows.sort_by(|a, b| b.ladder.cmp(&a.ladder).then_with(|| a.tag.cmp(&b.tag)));
+            // A tie on the ladder is broken by profile id, which no rename moves (R1436).
+            rows.sort_by(|a, b| {
+                b.ladder
+                    .cmp(&a.ladder)
+                    .then_with(|| a.profile_id.cmp(&b.profile_id))
+            });
             LeaderboardTier {
                 tier: *tier,
                 count: rows.len(),
@@ -744,7 +815,8 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
                     .map(|row| {
                         let place = place_of(row.ladder);
                         LeaderboardRow {
-                            tag: row.tag.clone(),
+                            profile_id: row.profile_id.clone(),
+                            username: username_in(&usernames, &row.profile_id),
                             division: place.division as i64,
                             pips: place.pips as i64,
                             you: row.you,
@@ -762,7 +834,8 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
             .enumerate()
             .map(|(index, profile_id)| JloriousRow {
                 position: index as i32 + 1,
-                tag: player_tag(profile_id),
+                profile_id: profile_id.clone(),
+                username: username_in(&usernames, profile_id),
                 you: profile_id == viewer_id,
             })
             .collect(),
@@ -776,7 +849,9 @@ pub async fn leaderboard(app: &App, viewer_id: &str) -> Result<LeaderboardBody, 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SeatRank {
-    pub tag: String,
+    /// R1436: empty for a seat a deleted account left, as the match row holds it.
+    pub profile_id: String,
+    pub username: String,
     pub rank: VisibleRank,
     pub you: bool,
 }
@@ -807,10 +882,14 @@ pub async fn match_ranks(
     let standings = tx
         .ranked_standings(&build_season_id(&SeasonDeps::current()))
         .await?;
+    let usernames = usernames_of(&mut tx, [row.players.0.as_str(), row.players.1.as_str()]).await?;
     tx.commit().await?;
+    // R640000: a ladder bot's seat shows its own season row, read as a player's is, as the
+    // leaderboard shows it: nothing on the screen tells the two apart.
     let jlorious = jlorious_order(&standings_of(&standings));
     let seat = |profile_id: &str| SeatRank {
-        tag: player_tag(profile_id),
+        profile_id: profile_id.to_string(),
+        username: username_in(&usernames, profile_id),
         rank: rank_in(&standings, &jlorious, profile_id),
         you: profile_id == viewer_id,
     };
@@ -824,11 +903,24 @@ pub async fn match_ranks(
     }))
 }
 
+/// R1442: the ladder tier each of a match's players holds now (seat order, `MatchRow.players`), read
+/// as `match_ranks` reads a rank, for the play telemetry's rank bucket.
+pub async fn ladder_tiers(app: &App, players: &(String, String)) -> Result<(RankTier, RankTier), StoreError> {
+    let mut tx = app.db.begin(None).await?;
+    let standings = tx
+        .ranked_standings(&build_season_id(&SeasonDeps::current()))
+        .await?;
+    tx.commit().await?;
+    let jlorious = jlorious_order(&standings_of(&standings));
+    let tier = |profile_id: &str| VisibleRankWire::from(rank_in(&standings, &jlorious, profile_id)).tier;
+    Ok((tier(&players.0), tier(&players.1)))
+}
+
 // TS's `createRankedRoutes()`, in its order, is three `AuthLevel::Active` rows of `app.rs`'s
 // `ROUTES`: GET /api/ranked → get_ranked; GET /api/leaderboard → get_leaderboard;
 // GET /api/matches/:matchId/ranks → get_match_ranks.
 
-/// `GET /api/ranked`: the caller's own rank, record, streak, tag and season badges. Never the
+/// `GET /api/ranked`: the caller's own rank, record, streak, username and season badges. Never the
 /// rating (R612).
 pub async fn get_ranked(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;

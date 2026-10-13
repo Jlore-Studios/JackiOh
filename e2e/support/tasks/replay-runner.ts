@@ -1,17 +1,6 @@
-// Run by support/tasks/replay.ts under the repo's own tsx, from the repo root.
-//
-// Reads {seed, decks, log, state, handicaps?, dealt?} as JSON on stdin and prints one JSON line:
-//   { ok: true, replayHash, browserHash, errors } | { ok: false, error }
-//
-// The fold is the Rust engine's: `target/release/jackioh replay` (docs/v0.3.0/SURFACE.md §12) reads
-// the game's setup and log on stdin and prints `{"hash", "errors"}`, the hash of the state the log
-// folds to with every card script registered. Build it once with
-// `cargo build --release -p jackioh-tools`.
-//
-// The browser's hash is computed here, from the raw `state` the page put on `window.__jackioh`:
-// SURFACE §5.2's canonical JSON and FNV-1a over its UTF-16 code units, the same two steps
-// `hash_state` takes in `crates/engine/src/replay.rs`. Hashing is not a rule, so this copy decides
-// nothing; it only lets the browser's state and the CLI's fold be compared without a second engine.
+// Runs under the repo's tsx from its root, folds a replay, and compares it with browser state.
+// The Rust CLI folds registered scripts; the browser hash mirrors canonical JSON/FNV-1a only for
+// comparison (SURFACE §5.2, §12).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -22,18 +11,17 @@ type Payload = {
   decks: [string[], string[]];
   log: unknown[];
   state: unknown;
-  /** The game's handicaps (R180: spec 13's practice tiers, spec 25's fixtures), passed to the fold untouched. */
+  /** R180: pass handicaps to the fold untouched. */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
-  /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to the fold untouched. */
+  /** R433: pass dealt seats to the fold untouched. */
   dealt?: ("p1" | "p2")[];
 };
 
 type CliAnswer = { hash: string; errors: unknown[] };
 
-/** The `jackioh` binary, from the repo root this runs in. */
 const CLI = path.resolve("target", "release", process.platform === "win32" ? "jackioh.exe" : "jackioh");
 
-/** Canonical JSON: keys sorted, so two equal states always produce the same text (SURFACE §5.2). */
+/** Canonical JSON has sorted keys, so equal states produce identical text (SURFACE §5.2). */
 function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -45,8 +33,7 @@ function canonical(value: unknown): string {
 }
 
 /**
- * FNV-1a over the canonical state, minus the nonce log, which is bookkeeping, and the opening a
- * Glitch reset deals again (R676), which is a copy of the fold's own input.
+ * Hash canonical state without bookkeeping `applied` or a Glitch-redrawn opening (R676).
  */
 function hashState(state: unknown): string {
   const { applied: _applied, opening: _opening, ...rest } = state as Record<string, unknown>;

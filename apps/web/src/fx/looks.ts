@@ -1,18 +1,11 @@
-// Issue #124, "flashier animations in general": one effect, many looks.
+// One effect, many looks: a look is one family's choice of particles, ring, DOM tint and emblem, so a
+// single recipe reads differently for a Felinor, a CN virus or a Book, and a new family is one row.
 //
-// The canvas draws sixteen particle presets and the DOM cues take a tint, and a burst can be thrown
-// harder (`power`) or drawn larger (`scale`). A look is one choice of all of them for one family of
-// cards: the particles a card of that family throws, the ring it flares with, the colours its DOM
-// effects are tinted in and the emblem they draw. So a single recipe (a cast flourish, a sweep's fog,
-// an accent on a summon or a hit) reads differently for a Felinor, a CN virus or a Book, and a new
-// family is one row here rather than a new recipe.
+// The families are the art themes (`cards/art/themes.ts`), picked as a card's picture is: its tags,
+// then Token, then its type. The tint is the theme's palette and the emblem its glyph.
 //
-// The families are the art themes (`cards/art/themes.ts`), picked the way a card's picture is: its
-// tags, then Token, then its type. The tint is the theme's own palette and the emblem its own glyph,
-// so a card's effects wear the colours and the sign of its picture.
-//
-// R202: a look is chosen from the public catalog facts of a definition the viewer can read
-// (`FxCardFacts`), never from a hidden card: no facts, no look, and the caller falls back to a tone's.
+// R202: a look is chosen from the public catalog facts (`FxCardFacts`) of a definition the viewer can
+// read, never from a hidden card: no facts, no look, and the caller falls back to a tone's.
 
 import { THEME_PALETTES, themeFor, type ArtThemeId } from "../cards/art/themes.ts";
 import { EMBLEMS, type EmblemGlyph } from "../cards/art/emblems.ts";
@@ -93,7 +86,7 @@ export function lookOf(facts: FxCardFacts | undefined): FxLook | undefined {
   return FX_LOOKS[themeFor(facts.tags ?? [], facts.type)];
 }
 
-/** The look of a whole pile reached at once (a zone wave, issue #124), and which way the wave runs. */
+/** The look of a whole pile reached at once (a zone wave), and which way the wave runs. */
 export type ZoneLook = { look: FxLook; direction: "up" | "down" | "none" };
 
 const ZONE_DOWN: FxLook = {
@@ -116,10 +109,8 @@ const ZONE_GONE: FxLook = {
 };
 
 /**
- * What each kind of event looks like when it reaches a whole pile: a Degrade sinks in violet, an
- * Upgrade rises in gold, a card made Radiant shines gold, cards leaving the pile (exiled, crumbled)
- * go in smoke and void, and everything else (shuffled, stolen, a cost or a number changed, a card
- * transformed) washes over it in arcane.
+ * Each event's look on a whole pile: Degrade sinks in violet, Upgrade rises in gold, a card made Radiant
+ * shines gold, cards leaving (exiled, crumbled) go in smoke and void; anything else is arcane.
  */
 export const ZONE_LOOKS: Readonly<Partial<Record<string, ZoneLook>>> = {
   degraded: { look: ZONE_DOWN, direction: "down" },

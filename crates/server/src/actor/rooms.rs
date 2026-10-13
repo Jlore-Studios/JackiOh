@@ -1,27 +1,20 @@
-//! The room-code challenge (SPEC §9.5, R79, BUILD M6-T4: "room-code challenge (`createRoom` →
-//! 6-char code → `joinRoom`)"), in the queue's three modes (R264).
+//! The room-code challenge (SPEC §9.5, R79, BUILD M6-T4), in the queue's three modes (R264).
 //!
-//! §9.5: "Direct challenge by room code (6 characters from the invite-code alphabet) ships before
-//! the ranked queue and is the primary mode while the player base is small." The queue's rules
-//! apply here too, because they are the same assertions §9.5 makes about entering a match:
+//! §9.5: direct challenge by a 6-character room code from the invite-code alphabet. The queue's
+//! rules apply too, being the same assertions §9.5 makes about entering a match:
 //!
-//!  - the account is active (the route's `AuthLevel::Active`, §9.4), not already in a match and not
-//!    in a series that is not over (R264);
-//!  - the deck or trio is validated at match time by the shared validator, not trusted from save
-//!    time (§9.4, R253), through the same `freeze_choice` the queue uses;
-//!  - the chosen deck or trio is frozen into the room the moment it is created, so editing it
-//!    afterwards cannot change the game (§9.4, §9.5, §9.8);
-//!  - `rooms_claim` is the atomic single-claim, so the loser of a join race gets a 409 and never a
-//!    second match.
+//!  - the account is active (`AuthLevel::Active`, §9.4), not in a match and not in a series that is
+//!    not over (R264);
+//!  - the deck or trio is validated at match time by the shared validator (§9.4, R253), through the
+//!    queue's `freeze_choice`, and frozen into the room at creation (§9.4, §9.5, §9.8);
+//!  - `rooms_claim` is the atomic single-claim: the loser of a join race gets a 409, never a second
+//!    match.
 //!
 //! R264: a room is created in a mode, and a joiner plays that mode or is refused with it named. A
 //! Best-of-1 join starts the match on the two frozen decks; an All Random join deals both decks
-//! (R258) and starts the match; a Conquest join makes the series (R259), whose first game starts
-//! once both players have picked a deck.
-//!
-//! Port of `apps/server/src/match/rooms.ts` (SURFACE §4.1). The two handlers keep TS's names,
-//! `create` (`POST /api/rooms`) and `join` (`POST /api/rooms/:code/join`), with SURFACE §11.2's
-//! shape; `app.rs`'s `ROUTES` lists them where `createRoomRoutes()` put them in `allRoutes()`.
+//! (R258); a Conquest join makes the series (R259), whose first game starts once both players have
+//! picked a deck. Handlers: `create` (`POST /api/rooms`), `join` (`POST /api/rooms/:code/join`).
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.1.
 
 use std::cell::RefCell;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -40,22 +33,18 @@ use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json as json_resp
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
-// `now_ms`: the server's one clock in epoch milliseconds (TS `deps.timers.now()`; SURFACE §11.3:
-// `Timers` → `tokio::time`), read through tokio's clock so a test that pauses and advances it moves
-// every module's "now" together.
+// `now_ms`: the server's one clock (SURFACE §11.3), read through tokio's clock so a paused test
+// moves every module's "now" together.
 use crate::app::{App, now_ms};
 use crate::config::{ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 
 /// SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
-/// still in use and then reporting that no code is available, rather than retrying without limit".
-/// R149 requires the bound and leaves the number to config, the way R79 leaves its clocks; eight is
-/// far more than a 30-bit space (R104) ever needs against the codes R110 has not yet released.
+/// still in use and then reporting that no code is available"; the bound is config's, like R79's
+/// clocks. Eight is far more than a 30-bit space (R104) needs against the codes R110 has not released.
 const CODE_ATTEMPTS: usize = 8;
 
-// ---------------------------------------------------------------------------------------------
 // R143 — the end-to-end mode's optional seed, for the room half
-// ---------------------------------------------------------------------------------------------
 
 /// One remembered seed and the expiry of the room it belongs to.
 #[derive(Clone, Debug)]
@@ -67,13 +56,10 @@ struct HeldSeed {
 /// SPEC §11 R143: "In end-to-end mode the room and queue endpoints accept an optional seed and use
 /// it verbatim so a networked spec can be seeded, and outside that mode the field is rejected."
 ///
-/// A room's match is not created until someone joins, so the seed the *host* supplied to
-/// `POST /api/rooms` has to be held between the two calls. `room code -> seed`, exactly as
-/// `api/queue.rs` holds `ticket id -> seed`, and for the same reasons written out there: `Room`
-/// (db/store.rs) carries no seed, and adding one would put a test-mode field into the shape
-/// `src/db/**` persists. `seed_override_of` — the same function the queue uses — has already refused
-/// the field outside end-to-end mode by the time anything is written here, so a production process
-/// keeps this map permanently empty.
+/// A room's match is not created until someone joins, so the host's seed is held between the two
+/// calls, `room code -> seed` as `api/queue.rs` holds `ticket id -> seed`: `Room` carries no seed,
+/// and a test-mode field must not enter what `src/db/**` persists. `seed_override_of` has already
+/// refused the field outside end-to-end mode, so a production process keeps this map empty.
 static E2E_SEED_BY_ROOM: LazyLock<Mutex<IndexMap<String, HeldSeed>>> =
     LazyLock::new(|| Mutex::new(IndexMap::new()));
 
@@ -90,9 +76,8 @@ pub fn e2e_room_seed_count() -> usize {
     seeds().len()
 }
 
-/// A room that is never joined has no claim to clear it, unlike a ticket, which is always paired or
-/// cancelled. So every remembered seed carries its room's expiry and the stale ones are dropped as
-/// new rooms are made: a long-running end-to-end server cannot accumulate them.
+/// A room never joined has no claim to clear it, so each remembered seed carries its room's expiry
+/// and stale ones are dropped as new rooms are made.
 fn remember_seed(code: &str, seed: &str, expires_at: i64, now: i64) {
     let mut held = seeds();
     held.retain(|_, entry| entry.expires_at > now);
@@ -105,9 +90,7 @@ fn remember_seed(code: &str, seed: &str, expires_at: i64, now: i64) {
     );
 }
 
-/// The seed for this room, consumed. The host's seed wins over a seed the joiner sent: the room was
-/// created first, which is the same "whoever asked first" tie-break `queue.rs` uses between two
-/// seeded tickets.
+/// The seed for this room, consumed. The host's seed wins over the joiner's: the room came first.
 fn take_seed_for_room(code: &str, joiner_seed: Option<String>) -> Option<String> {
     let held = seeds().shift_remove(code);
     match held {
@@ -116,13 +99,10 @@ fn take_seed_for_room(code: &str, joiner_seed: Option<String>) -> Option<String>
     }
 }
 
-// ---------------------------------------------------------------------------------------------
 // R149 — where a room code comes from
-// ---------------------------------------------------------------------------------------------
 
 thread_local! {
-    /// Not in SPEC, and no R-row: the test seam for R149's bound (TS's `deps.ids.code`, which
-    /// `rooms.test.ts` scripted to collide). Absent, as everywhere outside a test, codes are random.
+    /// The test seam for R149's bound; absent, as outside a test, codes are random.
     static SCRIPTED_CODES: RefCell<Option<ScriptedCodes>> = const { RefCell::new(None) };
 }
 
@@ -132,10 +112,8 @@ struct ScriptedCodes {
     minted: usize,
 }
 
-/// Not in SPEC, and no R-row: scripts the room codes `create` mints on the calling thread, in order,
-/// the last one repeating once the list runs out (TS `roomIds(codes)`), until the guard drops. A
-/// `#[tokio::test]` runs the handlers on its own thread, so the script reaches its requests and no
-/// other test's.
+/// Scripts the room codes `create` mints on the calling thread, in order, the last repeating, until
+/// the guard drops. A `#[tokio::test]` runs the handlers on its own thread, so only its requests see it.
 pub fn script_room_codes(codes: &[&str]) -> ScriptedRoomCodes {
     let codes = codes.iter().map(|code| (*code).to_string()).collect();
     SCRIPTED_CODES.with(|scripted| *scripted.borrow_mut() = Some(ScriptedCodes { codes, minted: 0 }));
@@ -170,8 +148,6 @@ fn mint_code() -> String {
 
 /// R264: a join in another mode than the room's is refused with the room's mode named, so the lobby
 /// can ask for the right deck or trio (`details.mode` carries it for the client).
-///
-/// TS's `MODE_REFUSAL: Record<QueueMode, string>`, as a total match.
 fn mode_refusal(mode: QueueMode) -> &'static str {
     match mode {
         QueueMode::Bo1 => "This room plays Best of 1: pick one of your decks.",
@@ -180,7 +156,7 @@ fn mode_refusal(mode: QueueMode) -> &'static str {
     }
 }
 
-/// The mode a request's choice asks for (TS read `choice.mode`).
+/// The mode a request's choice asks for.
 fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
     match choice {
         ModeChoiceInput::Bo1 { .. } => QueueMode::Bo1,
@@ -189,7 +165,7 @@ fn choice_mode(choice: &ModeChoiceInput) -> QueueMode {
     }
 }
 
-/// The mode a frozen choice was made in (TS read `frozen.mode`).
+/// The mode a frozen choice was made in.
 fn frozen_mode(frozen: &FrozenChoice) -> QueueMode {
     match frozen {
         FrozenChoice::Bo1 { .. } => QueueMode::Bo1,
@@ -198,8 +174,7 @@ fn frozen_mode(frozen: &FrozenChoice) -> QueueMode {
     }
 }
 
-/// What a TS `throw new Error(…)` in a handler became: the router logged `handler.threw` and
-/// answered 500 `internal` "something went wrong" (api/http.ts). A wiring fault, never a player's.
+/// A wiring fault, never a player's: logged as `handler.threw`, answered 500 `internal`.
 fn wiring_fault(message: String) -> ApiError {
     tracing::warn!(event = "handler.threw", message = %message);
     ApiError::new(ApiErrorCode::Internal, "something went wrong")
@@ -229,8 +204,7 @@ fn profile_of(req: &Req) -> Result<String, ApiError> {
 }
 
 /// A room the caller may still join. Missing, malformed and expired codes are one answer, so a
-/// scan of the 30-bit code space cannot tell "wrong" from "too late" (the same reasoning as §9.4's
-/// identical invite-code error).
+/// scan of the 30-bit code space cannot tell "wrong" from "too late" (§9.4's invite-code error).
 async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     let code = normalize_code(typed);
     let miss = || ApiError::new(ApiErrorCode::NotFound, "that room code is not open");
@@ -260,11 +234,9 @@ async fn joinable_room(app: &App, typed: &str) -> Result<Room, ApiError> {
     Ok(room)
 }
 
-/// §9.5's "not in a match" holds for the host at the moment the match is made, not only when the
-/// room was opened — the same reason `try_pair` re-reads it at pairing. A room can wait for its
-/// guest up to `ROOM_CODE_TTL_SECONDS`, and the host can be matched from the queue (or paired into
-/// a series, R264) meanwhile. The room is left unclaimed, so the join can be tried again once the
-/// host is free.
+/// §9.5's "not in a match" holds for the host when the match is made, not only when the room was
+/// opened (as `try_pair` re-reads it): the host may have been matched meanwhile (or paired into a
+/// series, R264). The room is left unclaimed so the join can be retried.
 async fn assert_host_free(app: &App, host_profile_id: &str) -> Result<(), ApiError> {
     let mut tx = app.db.begin(None).await?;
     let host = tx.profiles_get_by_id(host_profile_id).await?;
@@ -350,9 +322,8 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     assert_not_in_match(&req)?;
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
-    // R143: an optional `seed`, accepted only by an end-to-end test server and rejected — never
-    // ignored — anywhere else. Read before any work is done, so a production caller that sends one
-    // gets the 400 without a room being made.
+    // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
+    // read before any work so a production caller gets the 400 without a room being made.
     let seed = seed_override_of(app, &req.body)?;
     assert_not_in_series(app, &profile_id).await?;
 
@@ -397,8 +368,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         if !created {
             continue;
         }
-        // R143, after the create won: a seed remembered for a room that does not exist would never be
-        // consumed and never dropped (`queue.rs` waits for its insert for the same reason).
+        // R143, after the create won: a seed for a room that does not exist would never be dropped.
         if let Some(seed) = seed.as_deref() {
             remember_seed(&code, seed, expires_at, now);
         }
@@ -419,14 +389,13 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 /// POST /api/rooms/:code/join — claim the room and start its game (§9.5, R264): the match for
 /// Best of 1 and All Random, the series for Conquest.
 ///
-/// Takes `&Arc<App>`, not SURFACE §11.2's `&App`: it starts a match, and `Registry::start` takes
-/// `&Arc<App>` (the same choice `api::queue::enqueue` makes; part 31 settles `h!`).
+/// Takes `&Arc<App>` because `Registry::start` does (as `api::queue::enqueue`); SURFACE §11.2's
+/// `&App` does not fit.
 pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile_id = profile_of(&req)?;
     assert_not_in_match(&req)?;
     let choice = read_mode_choice(&req.body)?;
-    // R143 again: both room endpoints accept the field in end-to-end mode and both refuse it
-    // outside one. A spec that seeds the join rather than the create still gets its seed.
+    // R143 again: both endpoints accept the field in end-to-end mode and refuse it outside one.
     let joiner_seed = seed_override_of(app, &req.body)?;
     assert_not_in_series(app, &profile_id).await?;
 
@@ -498,9 +467,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             // R604: a room's series is unranked.
             ranked: false,
         };
-        // One transaction, so the series row and `start_series`'s stale-ticket cancels land
-        // together or not at all: a 'picking' row that half-landed would hold both players out
-        // of the queue and the room until the pick deadline ran it out (R333).
+        // One transaction, so a half-landed 'picking' row cannot hold both players out of the
+        // queue and the room until the pick deadline (R333).
         let started: Result<SeriesRow, ApiError> = async {
             let mut tx = app.db.begin(None).await?;
             let series = start_series(app, input, &mut tx).await?;
@@ -511,10 +479,8 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         let series = match started {
             Ok(series) => series,
             Err(error) => {
-                // The claim has already committed, so the room's `open` row is still there, claimed
-                // and pointing at no series — and nothing reaps `open` rows. `matches_discard_open`
-                // releases it, which frees the room code at once (`matches_room_code_open_key` covers
-                // only rows that exist).
+                // The claim has committed, so the room's `open` row would stay claimed and
+                // pointing at no series; `matches_discard_open` releases it and frees the room code.
                 let cleanup: Result<(), ApiError> = async {
                     let mut tx = app.db.begin(None).await?;
                     tx.matches_discard_open(&match_id).await?;
@@ -571,7 +537,6 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
 
     // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
     // "clears both players' in-match state" when the result lands).
-    // Two store calls, as TS made them (each its own transaction).
     for seat_profile in [&claimed.host_profile_id, &profile_id] {
         let mut tx = app.db.begin(None).await?;
         tx.profiles_set_in_match(seat_profile, Some(&match_id)).await?;

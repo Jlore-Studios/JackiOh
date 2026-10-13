@@ -1,10 +1,8 @@
-//! C+ #73 Call to Chaos (Classic+ Edition)'s table (subsystems/callToChaosPlus.ts), rolled by Core #95's
-//! subsystem (R28, R87, R423, R436): each of the ten entries against fixture pools, the Radiant's three
-//! different entries in list order, the recursion counting casts of either edition and resolving into
-//! nothing at the cap, and fused deck cards through JSON (R179, R468). The real card's test covers the
-//! same cases against the real catalog.
-//!
-//! Port of `packages/engine/test/callToChaosPlus.test.ts`.
+//! C+ #73 Call to Chaos (Classic+ Edition)'s table, rolled by Core #95's subsystem (R28, R87, R423,
+//! R436): each of the ten entries against fixture pools, the Radiant's three different entries in list
+//! order, the recursion counting casts of either edition and resolving into nothing at the cap, and
+//! fused deck cards through JSON (R179, R468). The real card's test covers the same cases against the
+//! real catalog.
 
 use jackioh_engine::subsystems::call_to_chaos::{
     CHAOS_CHAIN_KEY, CallToChaosArgs, ChaosEffectDef, call_to_chaos, cast_random_call_to_chaos,
@@ -33,7 +31,7 @@ fn scripts(cry: Hook) -> CardScripts {
     }
 }
 
-/// TS `game(seed, { plus?, core? })`: the cries of the two editions' cast copies.
+/// A game with the cries of the two editions' cast copies.
 fn game(seed: &str, plus_cry: Option<Hook>, core_cry: Option<Hook>) -> GameState {
     let mut state = new_game(seed, None);
     register_catalog(chaos_plus_catalog(registered_catalog().clone()));
@@ -56,7 +54,6 @@ fn game(seed: &str, plus_cry: Option<Hook>, core_cry: Option<Hook>) -> GameState
     state
 }
 
-/// `{ table: CHAOS_PLUS_EFFECTS }`.
 fn plus_table() -> CallToChaosArgs {
     CallToChaosArgs {
         table: Some(CHAOS_PLUS_EFFECTS),
@@ -84,8 +81,7 @@ fn entry(name: &str) -> Effect {
     (found.build)()
 }
 
-/// TS `run(state, effect, self = plusCard(state), controller = "p1")`: `None` is the omitted `self`,
-/// a fresh C+ #73, made as TS's default made it.
+/// Runs `effect` for P1; a `self_` of `None` is a fresh C+ #73.
 fn run(state: &mut GameState, effect: Effect, self_: Option<CardInstance>) -> Vec<GameEvent> {
     let self_ = self_.unwrap_or_else(|| plus_card(state, false, None));
     let mut events: Vec<GameEvent> = Vec::new();
@@ -120,7 +116,6 @@ fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<Strin
         .collect()
 }
 
-/// A seed whose roll (base or Radiant) the predicate accepts.
 fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> String {
     for i in 0..4000 {
         let seed = format!("{tag}-{i}");
@@ -139,7 +134,6 @@ fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).unwrap()
 }
 
-/// One field of every event of a type, as JSON.
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -147,8 +141,7 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .collect()
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
+/// Every key `expected` names matches, recursively; an array matches in length too.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -161,7 +154,7 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// TS `Array.prototype.indexOf`: -1 when absent.
+/// The index of `kind`, -1 when absent.
 fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
     types
         .iter()
@@ -170,7 +163,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .unwrap_or(-1)
 }
 
-/// The live card (TS held the object itself; Rust looks it up by id).
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -458,8 +450,7 @@ mod r423_c_plus_73s_table {
                 assert_eq!(card.known_as, None);
                 seen.push(card.def_id.clone());
             }
-            // TS also read `zone.z === "gone"` off each old object it still held; a Rust test holds no
-            // live handle on a card that has ceased to exist, so what it can read is that none is found.
+            // Each old card has ceased to exist, so none is found.
             assert!(old.iter().all(|card| find_instance(&state, &card.id).is_none()));
         }
         assert_eq!(sorted(seen), sorted(vec![plus.id.clone(), core95.id.clone()]));

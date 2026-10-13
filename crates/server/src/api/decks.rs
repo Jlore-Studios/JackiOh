@@ -1,26 +1,22 @@
 //! Saved decks and trios (SPEC §9.4, R250–R256), and what a queue ticket or a room is made with
-//! (R253, R257, R264). Port of `apps/server/src/api/decks.ts`.
+//! (R253, R257, R264).
 //!
-//! This file replaces the single three-deck loadout. A profile keeps up to `MAX_SAVED_DECKS` named
-//! decks and up to `MAX_SAVED_TRIOS` trios built from them, and both are DRAFTS (R250, R252): a
-//! save checks structure only — D1–D5 for a deck (R641 added the portrait's), T1–T3 for a trio —
-//! and legality is judged when a deck or a trio is queued (R253). So the save routes below never
-//! call the L1–L6 validator, and the queue-time helpers at the bottom always do.
+//! A profile keeps up to `MAX_SAVED_DECKS` named decks and `MAX_SAVED_TRIOS` trios, both DRAFTS
+//! (R250, R252): a save checks structure only — D1–D5 for a deck (D5 is the portrait's, R641),
+//! T1–T3 for a trio — and legality is judged at queue (R253). The save routes never call the L1–L6
+//! validator; the queue-time helpers at the bottom always do.
 //!
-//! No rule is written here. D1–D5, T1–T3, `normalize_name` and L1–L6 are
-//! `jackioh_engine::validator`'s, called directly (TS reached them through `loadout-validator.ts`
-//! and the `LoadoutValidator` port, neither of which is ported, SURFACE §11.3). Every refusal passes
-//! the shared module's issues through untouched as `details`, with the first one's sentence as the
-//! message, so the deck builder and the server say the same words (§9.4: "one validator module
-//! shared by client and server").
+//! No rule is written here: D1–D5, T1–T3, `normalize_name` and L1–L6 are
+//! `jackioh_engine::validator`'s. Every refusal passes the shared module's issues through as
+//! `details`, with the first one's sentence as the message, so the deck builder and the server say
+//! the same words (§9.4: "one validator module shared by client and server").
 //!
-//! Ids are minted by the client (`crypto.randomUUID()`), which is what makes `PUT` an idempotent
-//! upsert a dropped connection can simply retry (R256). The store decides create-or-update, the
-//! cap and ownership in one statement under a lock on the profile (`app.upsert_deck`,
-//! `app.upsert_trio`), so nothing here reads before it writes.
+//! Ids are minted by the client, which makes `PUT` an idempotent upsert a dropped connection can
+//! retry (R256). The store decides create-or-update, the cap and ownership in one statement under a
+//! lock on the profile (`app.upsert_deck`, `app.upsert_trio`), so nothing here reads before it writes.
 //!
-//! R257's legacy queue body (no `mode`, or a `deckIndex` in place of `deckId`) is not ported
-//! (SURFACE §11.3): `read_mode_choice` requires `mode`.
+//! R257's legacy queue body (no `mode`, or a `deckIndex`) is refused: `read_mode_choice` requires
+//! `mode` (docs/v0.3.0/SURFACE.md §11.3).
 
 use std::sync::Arc;
 
@@ -42,16 +38,12 @@ use crate::db::store::{
     FrozenDeck, FrozenTrio, SavedDeck, SavedTrio, TrioSlots, TrioUpsertOutcome, Tx, UpsertOutcome,
 };
 
-// ---------------------------------------------------------------------------
 // Ids
-// ---------------------------------------------------------------------------
 
-/// A deck or trio id is a UUID (R256: the client mints it with `crypto.randomUUID()`). Checked
-/// before any store call, because Postgres would answer a malformed one with a type error — a 500
-/// for what is a malformed request. Case-insensitive on the way in and lower case from then on,
-/// which is how Postgres prints a `uuid`, so both stores hold the same string for the same id.
-///
-/// TS `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu`.
+/// A deck or trio id is a UUID (R256: the client mints it). Checked before any store call, because
+/// Postgres would answer a malformed one with a type error (a 500 for a malformed request).
+/// Case-insensitive in, lower case from then on, as Postgres prints a `uuid`, so both stores hold
+/// the same string.
 fn is_uuid_shape(raw: &str) -> bool {
     let bytes = raw.as_bytes();
     bytes.len() == 36
@@ -77,9 +69,7 @@ fn path_id_of(raw: Option<&String>, what: &str) -> Result<String, ApiError> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // What the client sees
-// ---------------------------------------------------------------------------
 
 /// `SavedDeck` in `apps/web/src/net/api.ts`: the row without its owner, who is the caller.
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -148,8 +138,7 @@ pub const LIMITS: DeckLimits = DeckLimits {
 };
 
 /// Another profile's id is answered as if it did not exist (the store's `not_owner`), so an id
-/// reveals nothing about anyone else's decks. With client-minted UUIDs no one can guess one anyway;
-/// this keeps the answer honest if one ever leaks.
+/// reveals nothing about anyone else's decks.
 ///
 /// A save refused by D1–D4 or T1–T3: the first issue's sentence, and the issues in `details`, at
 /// most `DRAFT_ISSUES_REPORTED_MAX` of them so a body of junk cannot buy an answer many times its
@@ -177,13 +166,10 @@ fn first_message(issues: &[Value]) -> Option<String> {
     issues.first()?.get("message")?.as_str().map(str::to_string)
 }
 
-// ---------------------------------------------------------------------------
 // Body readers
-// ---------------------------------------------------------------------------
 
 /// A name must be a string, and that is all this checks: an empty or over-long one is D1's (or
-/// T1's) to refuse, in the shared module's own sentence, so `str` — which refuses an empty string
-/// with a sentence of its own — is not used here.
+/// T1's) to refuse, in the shared module's own sentence, so `str` is not used.
 fn name_of(body: &Value) -> Result<String, ApiError> {
     match body.get("name") {
         Some(Value::String(value)) => Ok(value.clone()),
@@ -207,10 +193,9 @@ fn slots_of(body: &Value) -> Result<Vec<Option<String>>, ApiError> {
 }
 
 /// §9.4: the catalog is "static, versioned, shipped with the client", and R253 checks the version a
-/// client sends at save: a builder one release behind would otherwise save ids it cannot know are
-/// gone. Checked before D3, which would call those ids undeckable when the real problem is the
-/// client. BUILD M6-T2's acceptance item is literally 'a stale `catalogVersion` gets "update
-/// required"', so that is the message.
+/// client sends at save: a builder one release behind would save ids it cannot know are gone.
+/// Checked before D3, which would call them undeckable. BUILD M6-T2's acceptance: a stale
+/// `catalogVersion` gets "update required".
 fn assert_current_catalog(app: &App, catalog_version: &str) -> Result<(), ApiError> {
     if catalog_version != app.catalog.version {
         return Err(ApiError::with_details(
@@ -268,9 +253,7 @@ fn trio_slots_of(deck_ids: &[Option<String>]) -> Result<TrioSlots, ApiError> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A trio import (R340, R341)
-// ---------------------------------------------------------------------------
 
 /// One deck of an imported trio, as the body carries it: its client-minted id, name and cards.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -280,7 +263,7 @@ struct ImportedDeckInput {
     cards: Vec<String>,
 }
 
-/// The imported trio's own id and name (TS's anonymous `trio: { id, name }`).
+/// The imported trio's own id and name.
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct ImportedTrioInput {
     id: String,
@@ -302,9 +285,8 @@ fn record_of(value: Option<&Value>) -> Option<&Map<String, Value>> {
     value?.as_object()
 }
 
-/// R341: the body, read without trusting any of it. Shapes are checked here (ids are UUIDs, names
-/// are strings, cards are lists of strings, exactly `TRIO_DECKS` slots); what the shapes hold is the
-/// draft rules' to judge, in their own words.
+/// R341: the body, read without trusting any of it. Shapes are checked here (UUID ids, string names,
+/// lists of strings, exactly `TRIO_DECKS` slots); what they hold is the draft rules' to judge.
 fn import_of(body: &Value) -> Result<TrioImportInput, ApiError> {
     let catalog_version = str(body, "catalogVersion")?;
     let trio = record_of(body.get("trio"));
@@ -352,8 +334,7 @@ fn imported_deck_label(slot: usize, name: &str) -> String {
 }
 
 /// R340: the room check, in the words the workshop shows, against what `t` holds now. Ids the
-/// caller already owns are a retry of an import that landed (R256's idempotent upsert): they take no
-/// new slot.
+/// caller already owns are a retry of an import that landed (R256): they take no new slot.
 async fn assert_import_room(
     t: &mut Tx<'_>,
     profile_id: &str,
@@ -424,16 +405,10 @@ fn trio_outcome_name(outcome: &TrioUpsertOutcome) -> &'static str {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Routes
-// ---------------------------------------------------------------------------
 
-// TS's `createDeckRoutes()`, in its order, is six rows of `app.rs`'s `ROUTES`, every one
-// `AuthLevel::Active`, so a pending account gets 403 from each (§9.4: "no collection, loadout,
-// queue or match"):
-//   GET /api/decks → list_decks;           PUT /api/decks/:id → put_deck;
-//   DELETE /api/decks/:id → delete_deck;   PUT /api/trios/:id → put_trio;
-//   POST /api/trios/import → import_trio;  DELETE /api/trios/:id → delete_trio.
+// All six routes are `AuthLevel::Active` rows of `app.rs`'s `ROUTES`, so a pending account gets 403
+// (§9.4: "no collection, loadout, queue or match").
 
 /// `GET /api/decks`. Everything the builder opens on, oldest first, with the server's catalog
 /// version so a stale client finds out before it builds rather than at save.
@@ -601,12 +576,9 @@ pub async fn put_trio(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `POST /api/trios/import`. R340, R341: import a trio code's decks and the trio naming them, all
 /// or nothing. The client decoded the code (R339) and minted every id; this checks all of it as any
-/// save would — the catalog version, D1–D4 for each deck, T1–T3 for the trio — and then the room
-/// under both caps (R340). A refusal names what to fix and nothing is written; otherwise every deck
-/// and then the trio are upserted in one transaction, so a write that fails part-way rolls the
-/// others back. Sending the same ids again (a retry after a dropped answer) updates what the first
-/// attempt made and takes no new slot. Unowned cards and cards the decks share are kept: both are
-/// judged at queue (R253), and the workshop marks them.
+/// save would, then the room under both caps (R340), and upserts every deck and the trio in one
+/// transaction. Resending the same ids (a retry) updates what the first attempt made and takes no
+/// new slot. Unowned cards and shared cards are kept: both are judged at queue (R253).
 pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let input = import_of(&req.body)?;
@@ -648,8 +620,7 @@ pub async fn import_trio(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     assert_import_room(&mut tx, &profile.id, &filled_ids, &input.trio.id).await?;
     // Each deck one millisecond after the one before: the list is oldest first with ties broken on
-    // the id, and the ids are random, so one instant for all three would list them in any order
-    // rather than in their slots' (R341).
+    // the id, and the ids are random, so one instant for all three would not list them in slot order (R341).
     for (order, deck) in (0_i64..).zip(decks.iter().flatten()) {
         let at = now + order;
         let outcome = tx
@@ -724,12 +695,10 @@ pub async fn delete_trio(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&json!({ "deleted": deleted }))
 }
 
-// ---------------------------------------------------------------------------
 // The queue-time half: what a ticket or a room is made with (R253, R257, R264)
-// ---------------------------------------------------------------------------
 
 /// What `POST /api/queue`, `POST /api/rooms` and `POST /api/rooms/:code/join` were asked for, parsed
-/// but not yet looked up (R257). The legacy `deckIndex` form is not ported (SURFACE §11.3).
+/// but not yet looked up (R257).
 #[derive(serde::Serialize, Clone, Debug, PartialEq, Eq)]
 #[serde(tag = "mode", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModeChoiceInput {
@@ -766,8 +735,8 @@ pub enum FrozenChoice {
 }
 
 /// R1372: a body's `leanNewest`, the player's "More cards from the newest set" for their own seat's
-/// dealt deck. Absent or `null` is off, so a client from before it keeps working; anything but a
-/// boolean is a 400. The set is the server's to resolve when it deals (R1371), never the client's.
+/// dealt deck. Absent or `null` is off; anything but a boolean is a 400. The set is the server's to
+/// resolve when it deals (R1371), never the client's.
 pub fn lean_newest_of(body: &Value) -> Result<bool, ApiError> {
     match body.get("leanNewest") {
         None | Some(Value::Null) => Ok(false),
@@ -777,8 +746,8 @@ pub fn lean_newest_of(body: &Value) -> Result<bool, ApiError> {
 }
 
 /// R257: `{ mode: "bo1", deckId } | { mode: "bo3", trioId } | { mode: "random", leanNewest? }`. Only
-/// the fields the mode needs are read; anything malformed among them is a 400. A body with no `mode`
-/// (and R257's legacy `deckIndex`) is refused like any other malformed mode (SURFACE §11.3).
+/// the fields the mode needs are read; anything malformed among them is a 400, and so is a body
+/// with no `mode` (R257's legacy `deckIndex` form is refused too).
 pub fn read_mode_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let mode = body.get("mode").and_then(Value::as_str);
     match mode {
@@ -841,12 +810,11 @@ enum LoadoutScope {
 /// The single call to the shared validator at queue time (§9.4: "at save and again at queue").
 /// R253: `scope` picks the rules — L2, L3, L5, L6 for one deck, L1–L6 for a trio — and the decks'
 /// names let every sentence name the deck as the player named it. L5 needs the entitlements, so the
-/// collection is read and handed in; L6 is checked against the CURRENT catalog, whatever version the
-/// deck was saved under (R253: a saved deck's own version is no reason to refuse it).
+/// collection is read and handed in; L6 is checked against the CURRENT catalog, whatever version
+/// the deck was saved under (R253).
 ///
 /// The first issue's message becomes the error's and every issue rides along as `details`, exactly
-/// as reported: no renumbering, no recomposed sentence. (This is TS's `sharedLoadoutValidator`, the
-/// adapter `loadout-validator.ts` held, inlined.)
+/// as reported: no renumbering, no recomposed sentence.
 fn assert_legal(
     app: &App,
     owned: &IndexMap<String, i64>,
@@ -936,8 +904,8 @@ fn freeze(deck: &SavedDeck) -> FrozenDeck {
 }
 
 /// Loads the chosen deck or trio, checks it by R253 and returns the frozen copy the ticket or the
-/// room keeps. Nothing after this reads the saved deck again, so editing it while queued (or while
-/// a room waits) cannot change the game it becomes (§9.8: "Deck swapped after matchmaking").
+/// room keeps. Nothing after this reads the saved deck again, so editing it while queued cannot
+/// change the game it becomes (§9.8: "Deck swapped after matchmaking").
 ///
 /// An empty trio slot is not skipped: the filled decks go to the validator as they are, so a trio
 /// with two decks fails L1 in the shared module's own words. All Random freezes nothing but the

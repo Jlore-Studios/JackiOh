@@ -58,7 +58,8 @@ use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_SECONDS, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS,
-    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, TURN_CLOCK_SECONDS,
+    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, REMATCH_OFFER_TTL_MS,
+    TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::store::{Db, MatchRow, StartMatchInput};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
@@ -1622,6 +1623,406 @@ mod r384_activate_over_the_socket {
 }
 
 // ---------------------------------------------------------------------------
+// R880 — a craft answer over the socket (Meditative #17)
+// ---------------------------------------------------------------------------
+
+/// ME-CRAFT's answer through the actor (R880): `{ pick: "craft", recipe }` parses to
+/// `Selection::Craft`, and a malformed recipe is `malformed` before it ever reaches `reduce`.
+mod r880_parses_a_craft_answer_and_refuses_a_malformed_recipe {
+    use super::*;
+    use jackioh_engine::Selection;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    fn recipe() -> Value {
+        json!({
+            "cost": 1,
+            "type": "Unit",
+            "adjective": "Pure",
+            "noun": "Closure",
+            "attack": 3,
+            "health": 4,
+            "keywords": [],
+            "echo": 0,
+            "hats": [],
+        })
+    }
+
+    #[test]
+    fn r880_parses_a_craft_answer_and_refuses_a_malformed_recipe() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "answer",
+                    "choiceId": "q3",
+                    "selection": [{ "pick": "craft", "recipe": recipe() }],
+                    "nonce": "craft-1",
+                },
+            })
+            .to_string(),
+        );
+        let recipe: jackioh_engine::CraftRecipe = serde_json::from_value(recipe()).expect("the test recipe");
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "craft-1".to_string(),
+                body: jackioh_engine::ActionBody::Answer {
+                    choice_id: "q3".to_string(),
+                    selection: vec![Selection::Craft { recipe }],
+                },
+            }))
+        );
+        // A recipe of the wrong shape is malformed, never passed on: no `recipe`, and a recipe
+        // whose type is no card type.
+        for wrong in [
+            json!([{ "pick": "craft" }]),
+            json!([{ "pick": "craft", "recipe": { "cost": 1 } }]),
+            json!([{ "pick": "craft", "recipe": 7 }]),
+        ] {
+            let parsed = parse_client_message(
+                &json!({
+                    "type": "action",
+                    "action": { "type": "answer", "choiceId": "q3", "selection": wrong, "nonce": "bad" },
+                })
+                .to_string(),
+            );
+            assert!(parsed.is_err(), "{wrong} parsed as {parsed:?}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R454 — a Plague-paid graveyard play over the socket, and every listed action through the parser (#620)
+// ---------------------------------------------------------------------------
+
+/// R454: `legal_actions` lists Classic #74 Corpse Plantation's graveyard plays as a `play` whose
+/// `plague` names the counters that pay, and the reducer refuses such a play without them. The socket's
+/// parser rebuilt a `play` without `plague`, so online every one was refused (#620), the class of #491.
+/// The guard below writes every field of every client `ActionBody` out, so a field added to one fails
+/// to compile until it is written in, and then fails the round trip until the parser keeps it; the
+/// sample sends back every action seeded random games list.
+mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
+    use super::*;
+    use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
+    use jackioh_engine::{
+        ActionType, GameState, PerPlayer, PlagueSpend, RevealAt, Row, Selection, ZoneChoice,
+    };
+    use jackioh_server::actor::engine::deal_random_deck;
+    use jackioh_server::actor::protocol::{
+        ActionMessage, CLIENT_ACTION_TYPES, ClientMessage, MalformedMessage, parse_client_message,
+    };
+
+    const PLANTATION: &str = "classic-074";
+    /// Core #8 Mr. Vanilla: a (1) 4/4 Unit with no text.
+    const VANILLA: &str = "core-008";
+
+    /// The seeded random games the sample plays, and the most actions each runs to.
+    const SAMPLE_SEEDS: [&str; 3] = ["r454-sample-1", "r454-sample-2", "r454-sample-3"];
+    const SAMPLE_MAX_ACTIONS: usize = 200;
+
+    /// `body` as a client sends it back: encoded as the `legal` array carries it, given a nonce, in an
+    /// `action` frame (`apps/web/src/game/net.ts`).
+    fn round_trip(body: &ActionBody, nonce: &str) -> Result<ClientMessage, MalformedMessage> {
+        let mut action = serde_json::to_value(body).expect("an ActionBody serialises");
+        action["nonce"] = json!(nonce);
+        parse_client_message(&json!({ "type": "action", "action": action }).to_string())
+    }
+
+    /// What `round_trip` must answer: the same body, under the same nonce.
+    fn unchanged(body: &ActionBody, nonce: &str) -> Result<ClientMessage, MalformedMessage> {
+        Ok(ClientMessage::Action(ActionMessage {
+            nonce: nonce.to_string(),
+            body: body.clone(),
+        }))
+    }
+
+    /// One body per client action type, in `CLIENT_ACTION_TYPES`' order, with every optional field
+    /// set. Each is a struct literal, which an enum variant takes without `..`, so a field added to
+    /// any of them fails to compile here until it is written in.
+    fn every_client_body() -> Vec<ActionBody> {
+        let selections = vec![
+            Selection::Instance {
+                instance_id: "c2".to_string(),
+            },
+            Selection::Hero { player: P2 },
+            Selection::Zone {
+                player: P1,
+                row: Row::Backrow,
+                lane: 3,
+            },
+            Selection::Mode {
+                option: "mana".to_string(),
+            },
+            Selection::None,
+        ];
+        vec![
+            ActionBody::Mulligan {
+                keep: vec!["c1".to_string(), "c2".to_string()],
+            },
+            ActionBody::Play {
+                instance_id: "c1".to_string(),
+                zone: Some(ZoneChoice {
+                    row: Row::Units,
+                    lane: 2,
+                }),
+                x: Some(3),
+                embiggen: Some(true),
+                magnetic: Some(true),
+                tributes: Some(vec!["c3".to_string()]),
+                targets: Some(selections.clone()),
+                modes: Some(vec!["draw".to_string()]),
+                plague: Some(PlagueSpend {
+                    from: "c4".to_string(),
+                    tokens: 1,
+                }),
+                face_down: Some(RevealAt::StartOfNextTurn),
+            },
+            ActionBody::Attack {
+                attacker_id: "c5".to_string(),
+                target_id: "c6".to_string(),
+            },
+            ActionBody::SwitchPosition {
+                instance_id: "c5".to_string(),
+            },
+            ActionBody::Activate {
+                instance_id: "c7".to_string(),
+                ability: Some("plant".to_string()),
+                targets: Some(selections.clone()),
+                modes: Some(vec!["mana".to_string()]),
+                tributes: Some(vec!["c3".to_string()]),
+            },
+            ActionBody::ActivatePower {
+                instance_id: "c8".to_string(),
+                targets: Some(selections.clone()),
+            },
+            ActionBody::Answer {
+                choice_id: "choice-1".to_string(),
+                selection: selections,
+            },
+            ActionBody::OfferDraw,
+            ActionBody::AnswerDraw { accept: true },
+            ActionBody::Concede,
+            ActionBody::EndTurn,
+            ActionBody::SetAutoEndTurn { enabled: false },
+        ]
+    }
+
+    #[test]
+    fn r454_parses_a_plays_plague_field_by_field_and_answers_any_other_shape_malformed() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c9",
+                    "plague": { "from": "c4", "tokens": 1, "playerId": "p2" },
+                    "playerId": "p2",
+                    "nonce": "grave-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "grave-1".to_string(),
+                body: ActionBody::Play {
+                    instance_id: "c9".to_string(),
+                    zone: None,
+                    x: None,
+                    embiggen: None,
+                    magnetic: None,
+                    tributes: None,
+                    targets: None,
+                    modes: None,
+                    plague: Some(PlagueSpend {
+                        from: "c4".to_string(),
+                        tokens: 1,
+                    }),
+                    face_down: None,
+                },
+            }))
+        );
+
+        // A shape check only: a count of 0 parses, and the reducer refuses it (MIN_PLAGUE_PAYMENT).
+        let none_paid = parse_client_message(
+            &json!({ "type": "action", "action": {
+                "type": "play", "instanceId": "c9", "plague": { "from": "c4", "tokens": 0 }, "nonce": "grave-2",
+            } })
+            .to_string(),
+        );
+        assert!(matches!(none_paid, Ok(ClientMessage::Action(_))), "{none_paid:?}");
+
+        for wrong in [
+            json!("c4"),
+            json!(null),
+            json!({ "tokens": 1 }),
+            json!({ "from": "c4" }),
+            json!({ "from": 4, "tokens": 1 }),
+            json!({ "from": "c4", "tokens": -1 }),
+            json!({ "from": "c4", "tokens": 1.5 }),
+            json!({ "from": "c4", "tokens": "1" }),
+        ] {
+            let parsed = parse_client_message(
+                &json!({ "type": "action", "action": {
+                    "type": "play", "instanceId": "c9", "plague": wrong, "nonce": "bad",
+                } })
+                .to_string(),
+            );
+            assert_eq!(
+                parsed,
+                Err(MalformedMessage {
+                    reason: r#""play.plague" must be { from, tokens }"#.to_string(),
+                }),
+                "{wrong}"
+            );
+        }
+    }
+
+    #[test]
+    fn r454_every_client_action_type_with_every_optional_field_set_round_trips_unchanged() {
+        let bodies = every_client_body();
+        let kinds: Vec<ActionType> = bodies.iter().map(ActionBody::action_type).collect();
+        assert_eq!(kinds, CLIENT_ACTION_TYPES, "one body per client action type");
+        for (n, body) in bodies.iter().enumerate() {
+            let nonce = format!("guard-{n}");
+            assert_eq!(round_trip(body, &nonce), unchanged(body, &nonce));
+        }
+    }
+
+    #[test]
+    fn r454_every_action_seeded_random_games_list_for_either_seat_round_trips_unchanged() {
+        jackioh_cards::register_all();
+        let mut listed: Vec<ActionType> = Vec::new();
+        let mut changed: Vec<String> = Vec::new();
+        for seed in SAMPLE_SEEDS {
+            let config = MatchConfig {
+                seed: seed.to_string(),
+                decks: (
+                    deal_random_deck(&format!("{seed}:p1-deck"), None),
+                    deal_random_deck(&format!("{seed}:p2-deck"), None),
+                ),
+                handicaps: None,
+                controllers: PerPlayer {
+                    p1: SeatController::Random,
+                    p2: SeatController::Random,
+                },
+                max_actions: Some(SAMPLE_MAX_ACTIONS),
+            };
+            // Every state an action was taken from: the first, after the deal, to the last but one.
+            let mut states: Vec<GameState> = Vec::new();
+            let mut hooks = MatchHooks {
+                after_action: Some(Box::new(
+                    |before: &GameState, _after: &GameState, _seat: PlayerId, _action: &ActionBody| {
+                        states.push(before.clone());
+                    },
+                )),
+                ..MatchHooks::default()
+            };
+            play_match(&config, &mut hooks);
+            drop(hooks);
+            for state in &states {
+                for seat in PLAYER_IDS {
+                    for body in jackioh_engine::legal_actions(state, seat) {
+                        let nonce = format!("sample-{}", listed.len());
+                        if round_trip(&body, &nonce) != unchanged(&body, &nonce) {
+                            changed.push(format!("{seed}, {seat}: {body:?}"));
+                        }
+                        listed.push(body.action_type());
+                    }
+                }
+            }
+        }
+        assert_eq!(changed, Vec::<String>::new(), "listed, but not sent on unchanged");
+        // Not a vacuous sample: the games reached the main phase and its fights.
+        for kind in [
+            ActionType::Mulligan,
+            ActionType::Play,
+            ActionType::Attack,
+            ActionType::EndTurn,
+        ] {
+            assert!(listed.contains(&kind), "no {kind} was listed in the sample");
+        }
+    }
+
+    /// The `kind` action p1's or p2's own legal array lists on `card`.
+    fn listed_on(socket: &Client, kind: &str, card: &str) -> Value {
+        legal_of(socket)
+            .into_iter()
+            .find(|action| action["type"] == kind && action["instanceId"] == card)
+            .unwrap_or_else(|| panic!("no {kind} of {card} is listed"))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r454_the_plague_paid_graveyard_play_a_seats_legal_array_lists_is_sent_back_and_applied() {
+        let h = harness(Options {
+            decks: Decks::Scripted {
+                p1: vec![PLANTATION, VANILLA],
+                p2: vec![VANILLA],
+            },
+            ..Options::default()
+        })
+        .await;
+        let plantation = in_hand(&h.p1, PLANTATION);
+        let mine = in_hand(&h.p1, VANILLA);
+        let theirs = in_hand(&h.p2, VANILLA);
+
+        // Turn 1 each: both seats play their Mr. Vanilla.
+        send(&h, &h.p1, "p1-vanilla", listed_on(&h.p1, "play", &mine)).await;
+        send(&h, &h.p1, "p1-end", json!({ "type": "endTurn" })).await;
+        send(&h, &h.p2, "p2-vanilla", listed_on(&h.p2, "play", &theirs)).await;
+        send(&h, &h.p2, "p2-end", json!({ "type": "endTurn" })).await;
+        // R137: p1's window holds MATCH_ACTIONS_PER_SECOND actions a second; turn 2 sends four more.
+        advance(SECOND).await;
+
+        // p1's turn 2: the two 4/4s trade, so p1's lies in its graveyard; the Plantation (2) takes the
+        // turn's mana, and its Activate places 2 Plague Counters on it.
+        let trade = legal_of(&h.p1)
+            .into_iter()
+            .find(|action| {
+                action["type"] == "attack"
+                    && action["attackerId"] == mine.as_str()
+                    && action["targetId"] == theirs.as_str()
+            })
+            .expect("p1's Vanilla may attack p2's");
+        send(&h, &h.p1, "trade", trade).await;
+        send(&h, &h.p1, "plantation", listed_on(&h.p1, "play", &plantation)).await;
+        send(&h, &h.p1, "plant", listed_on(&h.p1, "activate", &plantation)).await;
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+
+        // With no mana left, the Vanilla's (1) is listed paid by one of the Plantation's counters.
+        let grave_play = legal_of(&h.p1)
+            .into_iter()
+            .find(|action| action["type"] == "play" && action.get("plague").is_some())
+            .expect("the Plantation lets p1 play its Vanilla from the graveyard");
+        assert_eq!(grave_play["plague"], json!({ "from": plantation, "tokens": 1 }));
+
+        send(&h, &h.p1, "grave-play", grave_play.clone()).await;
+        assert_eq!(
+            errors(&h.p1),
+            Vec::<Value>::new(),
+            "the Plague-paid play was refused"
+        );
+        assert_eq!(
+            acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("grave-play"))
+        );
+        let row = h.last_row().await;
+        assert_eq!(row["action"]["type"], json!("play"));
+        assert_eq!(row["action"]["playerId"], json!("p1"));
+        assert_eq!(row["action"]["instanceId"], grave_play["instanceId"]);
+        assert_eq!(row["action"]["plague"], grave_play["plague"]);
+
+        // Applied: the counter it spent came off the Plantation.
+        let state = h.actor.engine_state();
+        let card =
+            jackioh_engine::find_instance(&state, &plantation).expect("the Plantation is on the field");
+        assert_eq!(card.counters.plague, Some(1));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // R643 — the emote protocol and its shared rate limit (§9.5, §10.10)
 // ---------------------------------------------------------------------------
 
@@ -1969,6 +2370,146 @@ mod r643_emotes_through_the_actor_9_5_10_10 {
             relays(&h.p1),
             vec![json!({ "type": "emote", "from": "p2", "emote": only_theirs })]
         );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R1127 — emotes become engine actions while a card hears them (MD-D29)
+// ---------------------------------------------------------------------------
+
+/// An emote that passed the rate gate runs as a task behind every action queued ahead of it: while
+/// a card with `hears_emotes` acts, the actor mints an `Emote` action for it (nonce `srv-emote-*`,
+/// R270), and the append-only log holds the row. Unheard, rate-limited, or sent on the action
+/// channel, an emote stays R643's cosmetic relay — or a refusal.
+mod r1127_emotes_become_actions_while_heard {
+    use super::*;
+    use crate::support::engine::TEST_HEARS_EMOTES;
+
+    fn relays(socket: &Client) -> Vec<Value> {
+        socket.of_type("emote")
+    }
+
+    fn options() -> Options {
+        Options {
+            decks: Decks::Scripted {
+                p1: vec![TEST_HEARS_EMOTES],
+                p2: vec![],
+            },
+            ..Options::default()
+        }
+    }
+
+    /// The rows the actor minted for emotes: `srv-emote-*` nonces (R270).
+    async fn emote_rows(h: &Harness) -> Vec<Value> {
+        h.rows()
+            .await
+            .into_iter()
+            .filter(|row| {
+                row["action"]["nonce"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .starts_with("srv-emote-")
+            })
+            .collect()
+    }
+
+    /// p1 plays the hearing Field Spell, so either seat's emote is an action from here on.
+    async fn hear(h: &Harness) {
+        send(
+            h,
+            &h.p1,
+            "n1",
+            json!({ "type": "play", "instanceId": in_hand(&h.p1, TEST_HEARS_EMOTES) }),
+        )
+        .await;
+        assert!(acks(&h.p1).iter().any(|ack| ack["nonce"] == "n1"));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_heard_emote_minted_and_logged() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p2.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+
+        // The relay still runs first, to the opponent alone.
+        assert_eq!(
+            relays(&h.p1),
+            vec![json!({ "type": "emote", "from": "p2", "emote": "laugh" })]
+        );
+        assert_eq!(relays(&h.p2), Vec::<Value>::new());
+        // Then the minted action: one row, the server's nonce, the emote's type — and no reply,
+        // since the sender already showed the emote locally.
+        let rows = emote_rows(&h).await;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["action"]["type"], json!("emote"));
+        assert_eq!(rows[0]["action"]["emote"], json!("laugh"));
+        assert_eq!(acks(&h.p2), Vec::<Value>::new());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_unheard_only_relays() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // No card hears anything here: the emote relays and mints nothing.
+        h.p1.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+        assert_eq!(
+            relays(&h.p2),
+            vec![json!({ "type": "emote", "from": "p1", "emote": "laugh" })]
+        );
+        assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_rate_limited_mints_nothing() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        h.p2.receive_json(json!({ "type": "emote", "emote": "laugh" }));
+        h.idle().await;
+        assert_eq!(emote_rows(&h).await.len(), 1);
+
+        // Inside the cooldown the shared gate says no: no second relay, no second row, no error.
+        h.p2.receive_json(json!({ "type": "emote", "emote": "thanks" }));
+        h.idle().await;
+        assert_eq!(relays(&h.p1).len(), 1);
+        assert_eq!(emote_rows(&h).await.len(), 1);
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1127_action_channel_emote_malformed() {
+        let h = harness(options()).await;
+        hear(&h).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // An emote rides its own message, never the action channel — even while heard. The answer is
+        // the actor's usual malformed one, code and reason back to the sender alone.
+        h.p2.receive_json(json!({
+            "type": "action",
+            "action": { "type": "emote", "emote": "laugh", "nonce": "n9" },
+        }));
+        h.idle().await;
+        let refused = errors(&h.p2);
+        assert_eq!(refused.len(), 1, "{refused:?}");
+        assert_eq!(refused[0]["code"], json!("malformed"));
+        assert_eq!(
+            refused[0]["message"],
+            json!("\"emote\" is an emote message, never an action (R1127)")
+        );
+        assert_eq!(errors(&h.p1), Vec::<Value>::new());
+        assert_eq!(relays(&h.p1), Vec::<Value>::new());
+        assert_eq!(emote_rows(&h).await, Vec::<Value>::new());
     }
 }
 
@@ -3737,5 +4278,180 @@ mod the_ws_adapter {
         assert_eq!(close.map(i64::from), Some(code(WS_CLOSE.forbidden)));
         // Refused before the registry was asked: no actor was made for the match.
         assert!(!server.app.matches.has(MATCH_ID));
+    }
+}
+
+mod r1044_face_down_play_over_the_socket {
+    use super::*;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    #[test]
+    fn r1044_parses_a_face_down_play_and_refuses_a_bad_timing() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "backrow", "lane": 2 },
+                    "faceDown": "startOfNextTurn",
+                    "nonce": "set-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "set-1".to_string(),
+                body: serde_json::from_value(json!({
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "backrow", "lane": 2 },
+                    "faceDown": "startOfNextTurn",
+                }))
+                .expect("a play body"),
+            }))
+        );
+        // Anything but a reveal timing is malformed, never passed on.
+        for bad in [json!("tomorrow"), json!(3), json!(true)] {
+            let parsed = parse_client_message(
+                &json!({ "type": "action", "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "faceDown": bad,
+                    "nonce": "bad",
+                } })
+                .to_string(),
+            );
+            assert!(parsed.is_err(), "{bad} parsed as {parsed:?}");
+        }
+    }
+}
+
+mod r1086_magnetic_over_the_socket {
+    use super::*;
+    use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
+
+    #[test]
+    fn r1086_parses_a_play_s_magnetic_flag() {
+        let parsed = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                    "playerId": "p1",
+                    "nonce": "mag-1",
+                },
+            })
+            .to_string(),
+        );
+        assert_eq!(
+            parsed,
+            Ok(ClientMessage::Action(ActionMessage {
+                nonce: "mag-1".to_string(),
+                body: serde_json::from_value(json!({
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                }))
+                .expect("a play body"),
+            }))
+        );
+
+        // Absent reads as no Magnetic play, and a non-boolean is malformed, never passed on.
+        let bare = parse_client_message(
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "mag-2" } })
+                .to_string(),
+        );
+        assert!(matches!(bare, Ok(ClientMessage::Action(_))), "{bare:?}");
+        let wrong = parse_client_message(
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "magnetic": "yes", "nonce": "bad" } })
+                .to_string(),
+        );
+        assert!(wrong.is_err(), "{wrong:?}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R672 — a finished actor leaves the registry once its rematch window has passed
+// ---------------------------------------------------------------------------
+
+/// Nothing dropped a finished actor: `Registry.actors` kept its state, its acks and its queue task for
+/// the life of the process, since the reaper read only the matches still `live`. `reap_finished` drops
+/// one `REMATCH_OFFER_TTL_MS` after the game's end, once neither seat holds an open socket.
+mod a_finished_actor_leaves_the_registry_after_its_rematch_window {
+    use super::*;
+
+    /// The tasks the test's runtime is running now, the actor's queue among them.
+    fn alive_tasks() -> usize {
+        tokio::runtime::Handle::current().metrics().num_alive_tasks()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn drops_a_finished_actor_and_its_queue_task_once_its_window_passed_and_no_socket_is_open() {
+        let h = harness(Options::default()).await;
+        send(&h, &h.p1, "resign", json!({ "type": "concede" })).await;
+        let window_end =
+            h.actor.finished_at().expect("the concede finished the match") + REMATCH_OFFER_TTL_MS;
+
+        // The window is still open at its last millisecond.
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+
+        // Past it, an open socket still keeps the actor: closing it would send the client back to
+        // rebuild the actor it was just parted from.
+        assert!(h.app.matches.reap_finished(window_end + 1).await.is_empty());
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(h.p1.is_open() && h.p2.is_open());
+
+        // With both sockets gone, the window is the only thing left to wait for.
+        h.p1.drop_transport();
+        h.p2.drop_transport();
+        settle().await;
+        assert!(h.app.matches.reap_finished(window_end).await.is_empty());
+
+        // The test's own handle is the last one but the registry's: let it go, so what the reaper
+        // drops is the actor's last holder, and count the tasks first.
+        let weak = h.actor.downgrade();
+        drop(h.actor);
+        settle().await;
+        let before = alive_tasks();
+        assert_eq!(
+            h.app.matches.reap_finished(window_end + 1).await,
+            vec![MATCH_ID.to_string()]
+        );
+        settle().await;
+
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert!(h.app.matches.live().is_empty());
+        assert!(!weak.is_alive(), "the actor's state is still held");
+        assert_eq!(
+            alive_tasks(),
+            before - 1,
+            "the actor's queue task is still running"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn a_live_actor_is_never_reaped() {
+        let h = harness(Options {
+            attach: false,
+            ..Options::default()
+        })
+        .await;
+        assert_eq!(h.actor.finished_at(), None);
+        assert!(
+            h.app
+                .matches
+                .reap_finished(now() + REMATCH_OFFER_TTL_MS + 1)
+                .await
+                .is_empty()
+        );
+        assert!(h.app.matches.has(MATCH_ID));
     }
 }

@@ -8,7 +8,8 @@
 //! reads the same rule: a card's name, or its name before a parenthesis ("Call to Chaos (Core
 //! Edition)" is named as "Call to Chaos"), alone or with a plural "s", standing as whole words — the
 //! characters either side are not letters, digits, an apostrophe or a hyphen, so "CN-Viral" does not
-//! name "CN-Virus" and "Mr. Vanilla" is not named by #61's "Vanilla copy".
+//! name "CN-Virus" and "Mr. Vanilla" is not named by #61's "Vanilla copy". R903 adds one alias:
+//! "Coin" names The Coin.
 //!
 //! Patch v0.2.0 adds two things to the rule. R381 (B2.8): four Classic cards are named like rules
 //! words — #10 Exile, #36 Burn, #57 Echo and #30 Recycle — so a text that says "Exile …" or "Echo 1"
@@ -21,19 +22,52 @@
 
 use indexmap::IndexSet;
 use jackioh_cards::CATALOG;
-use jackioh_engine::{CardDef, SetName, Tag};
+use jackioh_engine::{CardDef, SetName, Tag, set_ships};
 
 fn entries() -> Vec<&'static CardDef> {
     CATALOG.values().collect()
 }
 
 /// §2.1, R244: dealt by a rule, so no card's text names it — The Coin, and Glitch, which R673's roll deals.
-const DEALT_BY_A_RULE: &[&str] = &["core-t-coin", "classic-t-glitch"];
+const DEALT_BY_A_RULE: &[&str] = &[
+    "core-t-coin",
+    "classic-t-glitch",
+    // Summoned by the Jade Counter crossing 5 or 10, never named by a card (R962).
+    "meditative-039-5",
+];
+
+/// R1420: tokens of a set that has not shipped, landed before the card that names them, by that card's
+/// id. Its part empties the entry: the test fails once the maker is in the catalog (Meditative #97
+/// Jlockheed's Evil Blueprints, issue #542, names the nine buildings; issue #541 lands five first).
+const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the
 /// card's `refs` lists it: Exile the verb and the pile, Burn at the hand cap, Echo the keyword,
 /// Recycle the verb.
 const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle"];
+
+/// R961: rules phrases that hold a card's name without naming it (R381): "Jade Counter" holds
+/// "Jade" (Meditative #39.2), which names nothing inside it.
+const RULES_PHRASES: &[&str] = &["Jade Counter"];
+
+/// Whether the match at byte range `at..end` lies inside a rules phrase: the phrase holds the
+/// name, so the name reads as the phrase's word, not the card's. Both bounds sit on the match's
+/// own edges, so every byte index here is a character boundary.
+fn inside_rules_phrase(text: &str, at: usize, end: usize) -> bool {
+    RULES_PHRASES.iter().any(|phrase| {
+        let mut from = 0;
+        loop {
+            let Some(offset) = text[from..].find(phrase) else {
+                return false;
+            };
+            let start = from + offset;
+            if start <= at && end <= start + phrase.len() {
+                return true;
+            }
+            from = start + 1;
+        }
+    })
+}
 
 /// R480: the token pools a card names by tag, and the phrase that names each.
 struct TokenPool {
@@ -81,14 +115,23 @@ fn without_parenthetical(name: &str) -> String {
     }
 }
 
+/// R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name.
+const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin")];
+
 /// The names a text may call a card by: its name, and its name before a parenthesis.
 fn names_of(def: &CardDef) -> Vec<String> {
     let bare = without_parenthetical(&def.name);
-    if bare == def.name {
+    let mut out = if bare == def.name {
         vec![def.name.clone()]
     } else {
         vec![def.name.clone(), bare]
+    };
+    for (name, alias) in ALIASES {
+        if *name == def.name {
+            out.push(alias.to_string());
+        }
     }
+    out
 }
 
 /// `/[A-Za-z0-9'-]/`: a character that continues a word.
@@ -96,7 +139,8 @@ fn is_word(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '\'' || c == '-'
 }
 
-/// Whether `text` names `name` as whole words, alone or plural.
+/// Whether `text` names `name` as whole words, alone or plural — never from inside a rules
+/// phrase (R961: the "Jade" in "Jade Counter" names no card).
 fn names(text: &str, name: &str) -> bool {
     let mut from = 0;
     loop {
@@ -110,7 +154,10 @@ fn names(text: &str, name: &str) -> bool {
             end += 1;
         }
         let after = text[end..].chars().next();
-        if before.is_none_or(|c| !is_word(c)) && after.is_none_or(|c| !is_word(c)) {
+        if before.is_none_or(|c| !is_word(c))
+            && after.is_none_or(|c| !is_word(c))
+            && !inside_rules_phrase(text, at, end)
+        {
             return true;
         }
         // `from = at + 1`, kept on a character boundary.
@@ -118,11 +165,15 @@ fn names(text: &str, name: &str) -> bool {
     }
 }
 
-/// Every catalog id a card's base or Radiant text names, in catalog order.
+/// Every catalog id a card's base or Radiant text names, in catalog order. R1249: a card of a set that
+/// ships names no card of a set that has not (R1420), so its shipped `refs` stay as they are until
+/// that set ships ("Call to Chaos" on Core #95 and C+ #73 reached Meditative #95 when it shipped, in
+/// v0.3.5).
 fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
         .into_iter()
+        .filter(|other| !set_ships(card.set) || set_ships(other.set))
         .filter(|other| {
             names_of(other)
                 .iter()
@@ -208,6 +259,23 @@ mod r279_the_reference_map_spec_5_7_10_10 {
                 named.insert(member.id.clone());
             }
         }
+        for (maker, tokens) in MAKER_STILL_TO_COME {
+            assert!(
+                !CATALOG.contains_key(*maker),
+                "{maker} is in the catalog: take its tokens off MAKER_STILL_TO_COME"
+            );
+            for token in *tokens {
+                let card = CATALOG
+                    .get(*token)
+                    .expect("a token waiting for its maker is in the catalog");
+                assert!(card.token, "{token} is not a token");
+                assert!(
+                    !set_ships(card.set),
+                    "{token} is in a shipped set: its maker must exist"
+                );
+                named.insert(token.to_string());
+            }
+        }
         let unnamed: Vec<String> = entries()
             .into_iter()
             .filter(|card| card.token && !named.contains(&card.id))
@@ -242,10 +310,16 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             naming("Pancake token"),
             strings(&["classicplus-012", "classicplus-013"])
         );
-        // AI Slop and Claude's Datacenter make them; Scaling Law counts them.
+        // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #53
+        // Prestige adds one and #60 Eschews casts one (§8.8 rows 53 and 60, R1421).
         assert_eq!(
             naming("AI generated card"),
-            strings(&["classicplus-043", "classicplus-t-ai-02"])
+            strings(&[
+                "classicplus-043",
+                "classicplus-t-ai-02",
+                "meditative-053",
+                "meditative-060"
+            ])
         );
         // Balance patch 1 reworded Claude's Datacenter to "AI Generated card".
         assert_eq!(naming("AI Generated card"), strings(&["classicplus-078"]));
@@ -292,6 +366,70 @@ mod r279_the_reference_map_spec_5_7_10_10 {
     }
 
     #[test]
+    fn r961_reads_jade_counter_as_a_rules_word_the_jade_inside_names_no_card() {
+        assert!(!names(
+            "Add {jade} to your Jade Counter. Gain {mana} mana.",
+            "Jade"
+        ));
+        assert!(!names(
+            "You summon this when your Jade Counter reaches 5.",
+            "Jade"
+        ));
+        // Outside the phrase it still names Jade (Meditative #39.2).
+        assert!(names("Your Jade Beauties become Radiant.", "Jade"));
+        assert!(names(
+            "Add one of these: Dud (20%), Jade (70%) or Red Jade (10%).",
+            "Jade"
+        ));
+        // So neither Jade nor Red Jade lists a `refs` for the Counter alone.
+        for id in ["meditative-039-2", "meditative-039-4"] {
+            assert_eq!(
+                CATALOG
+                    .get(id)
+                    .and_then(|card| card.refs.clone())
+                    .unwrap_or_default(),
+                Vec::<String>::new(),
+                "{id} names no card"
+            );
+        }
+    }
+
+    #[test]
+    fn r1249_the_patch_that_ships_meditative_adds_its_95_to_the_refs_of_core_95_and_classic_plus_73() {
+        let card = |id: &str| CATALOG.get(id).unwrap_or_else(|| panic!("{id} in the catalog"));
+        let meditative = card("meditative-095");
+        // Core #95 and C+ #73 say "Call to Chaos", which names Meditative #95 once its set ships: since
+        // v0.3.5, whose fragment claims both cards' refs (R646). A later set held back (R1420) is named
+        // by no shipped card's refs the same way until it ships, which `named_by` reads.
+        assert!(set_ships(meditative.set));
+        for shipped in ["core-095", "classicplus-073"] {
+            let named = named_by(card(shipped));
+            assert!(
+                named.contains(&shipped.to_string()),
+                "{shipped} names its own pool"
+            );
+            assert!(
+                named.contains(&meditative.id),
+                "{shipped} names Meditative #95, whose set ships"
+            );
+            assert!(
+                card(shipped).refs.iter().flatten().any(|id| *id == meditative.id),
+                "{shipped}'s refs list Meditative #95"
+            );
+        }
+        // Meditative #95 names every card its texts name, of any set.
+        let named = named_by(meditative);
+        for id in [
+            "core-095",
+            "classicplus-073",
+            "meditative-095",
+            "meditative-095-1",
+        ] {
+            assert!(named.contains(&id.to_string()), "meditative-095 names {id}");
+        }
+    }
+
+    #[test]
     fn r279_names_a_card_by_its_name_before_a_parenthesis_and_never_by_a_longer_word() {
         let chaos = CATALOG.get("core-095");
         assert!(chaos.is_some_and(|card| card.refs.iter().flatten().any(|id| id == "core-095")));
@@ -302,6 +440,32 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             "your units other than Spikey Pillows have",
             "Spikey Pillow"
         ));
+    }
+
+    #[test]
+    fn r903_coin_and_coins_name_the_coin_and_a_lower_case_coin_does_not() {
+        let coin = CATALOG.get("core-t-coin").expect("The Coin in the catalog");
+        assert_eq!(coin.name, "The Coin");
+        assert!(names_of(coin).contains(&"Coin".to_string()));
+        // Alone or plural, by the full name or the alias.
+        assert!(names("add a Coin to your hand", "Coin"));
+        assert!(names("add Coins to your hand", "Coin"));
+        assert!(names("shuffle The Coin into each player's deck", "The Coin"));
+        // Case matters: "flip a coin" names nothing.
+        assert!(!names("flip a coin", "Coin"));
+        assert!(!names("flip a coin", "The Coin"));
+        // No other card is named without its "The": every other name stands alone.
+        for card in entries() {
+            let bare = without_parenthetical(&card.name);
+            let mut expected = vec![card.name.clone()];
+            if bare != card.name {
+                expected.push(bare);
+            }
+            if card.id == "core-t-coin" {
+                expected.push("Coin".to_string());
+            }
+            assert_eq!(names_of(card), expected, "{}", card.id);
+        }
     }
 
     #[test]

@@ -109,7 +109,7 @@ const PLAYERS_FIXTURE = {
   players: [
     {
       profileId: "profile-1",
-      displayName: "AcePlayer",
+      username: "AcePlayer",
       games: 150,
       wins: 95,
       losses: 55,

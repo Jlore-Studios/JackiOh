@@ -1,27 +1,6 @@
-// Issue #477: the death screen's rematch and double-or-nothing offers (routes/Rematch.tsx, R672), in
-// the result panel at 1280x800 and 390x844, measured in a real browser.
-//
-// Before the fix the offers were a column beside the panel's row of ways on: the panel's "first way
-// on is the primary" rule painted the whole column gold and gave its ink to Double or nothing (dark
-// on dark wood), Rematch wore the lobby's blue call to action, both offers were 38 px tall beside
-// 44 px buttons, the row stretched Back to lobby and View the board to the column's height (89 px
-// at 1280x800 with an offer in), and the incoming line set the panel's width (824 px). Now:
-//
-//   - the offers are the panel's buttons: at least TOUCH_PX tall, as tall as Back to lobby, and on
-//     its row (all four on one row at 1280x800; the two offers on one row, the route's two below,
-//     at 390x844);
-//   - the block draws no box of its own, Rematch wears the panel's gold primary and Double or
-//     nothing the same face and ink as the route's other buttons;
-//   - the incoming offer is a line above the buttons and the wait or the note a line below, and
-//     neither stretches the panel past its buttons;
-//   - everything sits inside the panel, the panel inside the screen, and nothing scrolls sideways.
-//
-// jsdom has no layout engine; apps/web/src/routes/Rematch.test.tsx holds the markup and reads the
-// rules as text. The mount is the match route's (routes/match.tsx `resultActions`): `Game` inside
-// `.app-shell.app-shell--wide` with the offers, then Back to lobby. The rematch status is answered by
-// a stubbed `fetch`; no server runs. Reduced motion is on, so the panel comes in at once.
-//
-// Every measurement is taken inside a `should` callback so it is retried until the layout settles.
+// Result-panel rematch offers are responsive at 1280x800 and 390x844 (R672).
+// They match the panel buttons, stay in-panel, avoid sideways overflow, and do not widen actions.
+// jsdom cannot measure layout, so this mounts the match route in a browser, stubs status fetches, and reduces motion.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import RematchButtons from "../../../apps/web/src/routes/Rematch.tsx";
@@ -29,11 +8,11 @@ import type { RematchStatusResponse } from "../../../apps/web/src/net/api.ts";
 import { writeSettings, __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
 import { baseView } from "../../../apps/web/src/test/fixtures.ts";
 
-/** WCAG 2.5.5 / Apple HIG, the floor S11 sets for every touch target. */
+/** S11 touch-target floor. */
 const TOUCH_PX = 44;
-/** Subpixel slack for edges the browser rounds; never enough to hide a real overflow. */
+/** Fractional-pixel edge slack. */
 const EPSILON = 0.5;
-/** `--primary-ink` (apps/web/src/index.css), as the browser computes it. */
+/** Browser-computed `--primary-ink` from `index.css`. */
 const PRIMARY_INK = "rgb(43, 24, 0)";
 
 const VIEWPORTS = [
@@ -58,7 +37,6 @@ function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-/** Answers `GET /api/matches/:id/rematch` with `status`; anything else goes out as it would. */
 function stubRematchStatus(status: RematchStatusResponse): void {
   cy.window({ log: false }).then((win) => {
     const passThrough = win.fetch.bind(win);
@@ -139,7 +117,6 @@ describe("#477 the rematch offers in the result panel", () => {
           const panel = rectOf(doc, ts("result-overlay"));
           const actions = rectOf(doc, ".result-overlay__actions");
 
-          // The panel's buttons, all four: touch-sized and one height.
           for (const [name, box] of [
             ["Rematch", offer],
             ["Double or nothing", double],
@@ -151,12 +128,10 @@ describe("#477 the rematch offers in the result panel", () => {
             inside(box, panel, `${name} inside the panel`);
           }
 
-          // One row of ways on where it fits; on a phone, the offers' row over the route's.
           expect(double.top, "the two offers share a row").to.be.closeTo(offer.top, EPSILON);
           expect(view.top, "Back to lobby and View the board share a row").to.be.closeTo(back.top, EPSILON);
           if (viewport.oneRow) {
             expect(back.top, "the four ways on share one row").to.be.closeTo(offer.top, EPSILON);
-            // The lines wrap to the buttons' width: each adds at most the row's gap, never its text.
             const gap = Number.parseFloat(styleOf(doc, ".result-overlay__actions").columnGap) || 0;
             expect(actions.width, "the incoming line and the wait do not widen the panel").to.be.at.most(
               view.right - offer.left + state.lines * gap + EPSILON,
@@ -165,8 +140,6 @@ describe("#477 the rematch offers in the result panel", () => {
             expect(back.top, "the route's ways on sit below the offers").to.be.greaterThan(offer.bottom);
           }
 
-          // The block is no box; Rematch is the panel's gold primary and Double or nothing is drawn
-          // as the route's other buttons are.
           expect(styleOf(doc, ".result-overlay__actions > .rematch").display, "the block draws no box").to.eq("contents");
           const rematchStyle = styleOf(doc, ts("rematch-offer"));
           expect(rematchStyle.backgroundImage, "Rematch wears the primary face").to.contain("linear-gradient");
@@ -177,7 +150,6 @@ describe("#477 the rematch offers in the result panel", () => {
           expect(doubleStyle.backgroundImage, "Double or nothing has no primary face").to.eq(backStyle.backgroundImage);
           expect(doubleStyle.backgroundColor, "Double or nothing's face").to.eq(backStyle.backgroundColor);
 
-          // The lines: the incoming offer above the buttons, the wait or the note below, in the panel.
           const incoming = doc.querySelector(ts("rematch-incoming"));
           if (incoming !== null) {
             const box = incoming.getBoundingClientRect();
@@ -191,7 +163,6 @@ describe("#477 the rematch offers in the result panel", () => {
           }
           expect(doc.querySelectorAll(".rematch-incoming, .rematch-status, .rematch-note").length, "the state's lines").to.eq(state.lines);
 
-          // The panel is on the screen and nothing scrolls sideways.
           expect(panel.left, "the panel's left edge").to.be.at.least(-EPSILON);
           expect(panel.right, "the panel's right edge").to.be.at.most(viewport.width + EPSILON);
           expect(doc.documentElement.scrollWidth, "the document fits").to.be.at.most(viewport.width);

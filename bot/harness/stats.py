@@ -1,14 +1,15 @@
-"""The pinned "Night bot statistics" issue: what the night bot has done over the last six hours, the
-last day, the last week and all time, rewritten every 30 minutes by the `bot-status` loop
-(`dashboard --stats`).
+"""The statistics in the pinned status issue (#148): what the night bot has done over the last six
+hours, the last day, the last week and all time, counted afresh every 30 minutes by the
+`bot-status` loop (`dashboard --stats`) and kept in the issue between counts (`kept`).
 
-Where the status issue (`dashboard.py`) says what the bot is doing now, this one keeps the record.
-It opens with one table that sets the four windows side by side, then gives each window a section
-of its own: what each subscription did in it (plans, builds, revisions, reviews, pull requests
-opened and merged, lines merged, pauses, failures, model time), bar charts of runs and lines by
-subscription, and every pull request merged in it with who planned, built, revised and approved
-it. The charts are bars and lines, never pies. Everything is read from GitHub and the state file
-each time, so it holds nothing of its own but the issue's number and when it was last written:
+Where the rest of the issue says what the bot is doing now, this block keeps the record. It opens
+with one table that sets the four windows side by side and charts of the last two weeks, then
+folds each window into a section of its own: what each subscription did in it (plans, builds,
+revisions, reviews, pull requests opened and merged, lines merged, pauses, failures, model time,
+tokens and cost) with bar charts of runs and lines by subscription; then every pull request
+merged, newest first, with who planned, built, revised and approved it. The charts are bars and
+lines, never pies. Everything is read from GitHub and the state file each count, so it holds
+nothing of its own but when it last counted:
 
 - **Runs and outcomes** come from the bot's own comments. A run's starting comment ("Starting work
   on this now …, on `claude-1` (claude, `opus`, strong)") names its subscription and model, and
@@ -21,12 +22,17 @@ each time, so it holds nothing of its own but the issue's number and when it was
   issues from their `Closes #n` lines; commits on the default branch from the commit list.
 - **Model minutes** come from each subscription's `spent` record in the state file. Every entry is
   dated, so a window sums the entries in it; all time is its last `providers.SPENT_KEEP` runs.
+- **Model tokens and cost** come from each subscription's `tokens_spent` record beside it
+  (#695): per run its input, output and cached tokens and its USD cost, summed the same way.
 
-Squishy (#60) has a section of its own at the end, apart from the night bot's record: the same
-four windows from its own comments, pull requests, runs and state, and its modes (one-shot builds,
-splits, the sub-issues they opened, the trees closed). Squishy's own process draws it
-(`bot_section`), and the night bot's loop runs that process every 30 minutes and puts it in (`update`'s
-`extra`).
+Squishy (#60) has a folded section of its own at the end, apart from the night bot's record: the
+same four windows from its own comments, pull requests, runs and state, and its modes (one-shot
+builds, splits, the sub-issues they opened, the trees closed). Squishy's own process draws it
+(`bot_section`), and the night bot's loop runs that process at each count and puts it in
+(`block`'s `extra`).
+
+This used to be an issue of its own, "Night bot statistics" (#190); it is now part of the status
+issue, so one pinned issue says what the bot is doing and what it has done.
 """
 
 from __future__ import annotations
@@ -44,10 +50,11 @@ from harness.config import TITLE as BOT_TITLE
 from harness.context import Context
 from harness.errors import GitHubError
 
-TITLE = "Night bot statistics"
-MARKER = "<!-- jackioh-bot:statistics -->"
-LABELS = ("night bot",)
-#: How often the loop rewrites the issue: often enough that the six-hour window is current.
+#: Where the block starts and ends in the status issue, so a rewrite between counts keeps it.
+BLOCK_START = "<!-- jackioh-bot:statistics -->"
+BLOCK_END = "<!-- /jackioh-bot:statistics -->"
+#: How often the loop counts afresh: often enough that the six-hour window is current. (A count
+#: reads every bot comment and pull request, a few hundred calls, so not at every rewrite.)
 STATS_EVERY = timedelta(minutes=30)
 #: The four windows the issue reports, newest first; None is all time.
 WINDOWS: tuple[tuple[str, timedelta | None], ...] = (
@@ -56,10 +63,9 @@ WINDOWS: tuple[tuple[str, timedelta | None], ...] = (
     ("Last 7 days", timedelta(days=7)),
     ("All time", None),
 )
-#: How many merged pull requests each window lists, newest first; `fit` lists fewer when the body
-#: would pass GitHub's limit on an issue's body.
+#: How many merged pull requests the block lists, newest first; the status issue lists fewer when
+#: its body would pass GitHub's limit (`dashboard.fit`).
 MERGES_SHOWN = 40
-MAX_BODY = 65_000
 TITLE_SHOWN = 70
 DAYS_SHOWN = 14
 LIMIT_COMMENTS = 5000
@@ -136,6 +142,8 @@ class Facts:
     runs: list[tuple[str, str]] = field(default_factory=list)
     #: Each subscription's dated model minutes: (when, minutes).
     spent: dict[str, list[tuple[str, float]]] = field(default_factory=dict)
+    #: Each subscription's dated token counts and cost: (when, input, output, cache, USD).
+    counted: dict[str, list[tuple[str, int, int, int, float]]] = field(default_factory=dict)
 
 
 def classify(body: str) -> str:
@@ -202,6 +210,11 @@ def collect(ctx: Context) -> Facts:
     for provider_id, record in providers.items():
         facts.spent[provider_id] = [(str(entry.get("at") or ""), float(entry.get("minutes") or 0))
                                     for entry in (record or {}).get("spent") or []]
+        facts.counted[provider_id] = [
+            (str(entry.get("at") or ""), int(entry.get("input") or 0),
+             int(entry.get("output") or 0), int(entry.get("cache") or 0),
+             float(entry.get("cost") or 0))
+            for entry in (record or {}).get("tokens_spent") or []]
     return facts
 
 
@@ -272,6 +285,9 @@ class Window:
     merged: list[dict[str, Any]]
     runs: list[tuple[str, str]]
     minutes: dict[str, float]
+    #: Per subscription: (input tokens, output tokens, cached tokens) and USD cost (#695).
+    tokens: dict[str, tuple[int, int, int]]
+    cost: dict[str, float]
 
     @property
     def starts(self) -> list[Event]:
@@ -302,6 +318,12 @@ def window(name: str, span: timedelta | None, now: datetime, facts: Facts) -> Wi
         runs=[r for r in facts.runs if _within(r[0], start)],
         minutes={pid: sum(m for at, m in entries if _within(at, start))
                  for pid, entries in facts.spent.items()},
+        tokens={pid: (sum(i for at, i, _o, _c, _d in entries if _within(at, start)),
+                      sum(o for at, _i, o, _c, _d in entries if _within(at, start)),
+                      sum(c for at, _i, _o, c, _d in entries if _within(at, start)))
+                for pid, entries in facts.counted.items()},
+        cost={pid: sum(d for at, _i, _o, _c, d in entries if _within(at, start))
+              for pid, entries in facts.counted.items()},
     )
 
 
@@ -337,13 +359,27 @@ def _pct(part: float, whole: float) -> str:
 def _lines(pulls: list[dict[str, Any]]) -> str:
     added = sum(int(p.get("additions") or 0) for p in pulls)
     removed = sum(int(p.get("deletions") or 0) for p in pulls)
-    return f"+{added} / −{removed}"
+    return f"+{added:,} / −{removed:,}"
+
+
+def _total(pulls: list[dict[str, Any]], key: str) -> int:
+    return sum(int(p.get(key) or 0) for p in pulls)
 
 
 def _median_to_merge(merged: list[dict[str, Any]]) -> str:
     took = [parse_iso(p["merged_at"]) - parse_iso(p["created_at"]) for p in merged
             if parse_iso(p.get("merged_at")) and parse_iso(p.get("created_at"))]
     return human_delta(statistics.median(took)) if took else "—"
+
+
+def _tokens(w: Window) -> str:
+    """A window's token counts as `in / out / cached`, compact (#695)."""
+    tin = sum(t[0] for t in w.tokens.values())
+    tout = sum(t[1] for t in w.tokens.values())
+    cached = sum(t[2] for t in w.tokens.values())
+    if not tin and not tout and not cached:
+        return "—"
+    return f"{tin:,} / {tout:,} / {cached:,}"
 
 
 def _title(pull: Mapping[str, Any]) -> str:
@@ -375,11 +411,12 @@ def summary(windows: list[Window]) -> list[str]:
          lambda w: str(len({int(n) for p in w.merged
                             for n in CLOSES.findall(str(p.get("body") or ""))}))),
         ("Lines merged (added / removed)", lambda w: _lines(w.merged)),
-        ("Files changed in them", lambda w: str(sum(int(p.get("changed_files") or 0)
-                                                    for p in w.merged))),
-        ("Commits in them", lambda w: str(sum(int(p.get("commits") or 0) for p in w.merged))),
+        ("Files changed in them", lambda w: f"{_total(w.merged, 'changed_files'):,}"),
+        ("Commits in them", lambda w: f"{_total(w.merged, 'commits'):,}"),
         ("Median time from opening to merge", lambda w: _median_to_merge(w.merged)),
         ("Model hours", lambda w: f"{sum(w.minutes.values()) / 60:.1f}"),
+        ("Model tokens (in / out / cached)", _tokens),
+        ("Model cost (USD)", lambda w: f"${sum(w.cost.values()):.2f}"),
         (f"`{NIGHT_WORKFLOW}` workflow runs", lambda w: str(len(w.runs))),
         ("Requests answered (`Queued …`)",
          lambda w: str(sum(1 for e in w.events if e.kind == "queued"))),
@@ -412,96 +449,135 @@ def by_subscription(w: Window, who: Credits) -> dict[str, Counter]:
     return counts
 
 
-def section(ctx: Context, w: Window, who: Credits, facts: Facts, *, shown: int) -> list[str]:
+def _order(w: Window, counts: dict[str, Counter]) -> list[str]:
+    """The subscriptions with anything in the window: the busiest first, the unrecorded last."""
+    return sorted((pid for pid in set(counts) | {p for p, m in w.minutes.items() if m > 0}
+                   | {p for p, t in w.tokens.items() if t != (0, 0, 0)}
+                   | {p for p, c in w.cost.items() if c > 0}
+                   if counts[pid] or w.minutes.get(pid) or w.tokens.get(pid, (0, 0, 0))
+                   != (0, 0, 0) or w.cost.get(pid, 0.0) > 0),
+                  key=lambda pid: (pid == UNRECORDED, -counts[pid]["start"],
+                                   -counts[pid]["pr:merged"], pid))
+
+
+def section(ctx: Context, w: Window, who: Credits, facts: Facts) -> list[str]:
+    """One window, folded: what each subscription did in it, its tokens and cost, and bar charts of
+    runs and lines by subscription (all time adds model hours and what runs ended in)."""
     counts = by_subscription(w, who)
-    order = sorted((pid for pid in set(counts) | {p for p, m in w.minutes.items() if m > 0}
-                    if counts[pid] or w.minutes.get(pid)),
-                   key=lambda pid: (pid == UNRECORDED, -counts[pid]["start"],
-                                    -counts[pid]["pr:merged"], pid))
-    lines = [f"## {w.name}", ""]
-    if not w.events and not w.opened and not w.merged:
-        return lines + ["Nothing happened.", ""]
-
-    lines += ["### Who did what", ""]
-    lines += ["| Subscription | Models | Runs | Plans | Builds | Revisions | Reviews "
-              "| Outcomes delivered | PRs opened | Merged | Lines merged | Paused | Failed "
-              "| Could not run | Model time |", "|---|" + "---|" * 14]
-    models: dict[str, Counter] = defaultdict(Counter)
-    for event in w.starts:
-        if event.provider:
-            models[event.provider][event.model] += 1
-    for pid in order:
-        c = counts[pid]
-        ended = sum(c[k] for k in DONE + NOT_DONE)
-        done = sum(c[k] for k in DONE)
-        model_list = ", ".join(f"`{m}`" for m, _ in models[pid].most_common(3)) or "—"
-        mins = w.minutes.get(pid, 0.0)
-        kept = len(facts.spent.get(pid, []))
-        time = f"{mins / 60:.1f} h"
-        if w.start is None and kept:
-            time += f" (its last {kept} runs)"
-        name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
-        lines.append(
-            f"| {name} | {model_list} | {c['start']} | {c['start:plan']} | {c['start:build']} "
-            f"| {c['start:revise']} | {c['start:review']} | {done} of {ended} "
-            f"| {c['pr:opened']} | {c['pr:merged']} | +{c['added']} / −{c['removed']} "
-            f"| {c['paused']} "
-            f"| {c['failed'] + c['not approved']} | {c['infra']} | {time} |")
-    lines.append("")
-
-    lines += _bars(f"Runs started, by subscription ({w.name.lower()})", "runs",
-                   {pid: counts[pid]["start"] for pid in order}, empty="none") + [""]
-    lines += _bars(f"Lines added in merged pull requests, by builder ({w.name.lower()})", "lines",
-                   {pid: counts[pid]["added"] for pid in order}, empty="none") + [""]
-    if w.start is None:
-        lines += _bars("Model hours, by subscription (all time)", "hours",
-                       {pid: w.minutes.get(pid, 0.0) / 60 for pid in order}) + [""]
-        outcomes = w.outcomes
-        lines += _bars("What runs ended in (all time)", "runs",
-                       {kind: outcomes[kind] for kind in DONE + NOT_DONE}, zeros=True) + [""]
-
-    lines += [f"### Pull requests merged ({len(w.merged)})", ""]
-    if not w.merged:
-        lines += ["None.", ""]
-    else:
-        lines += ["| Pull request | Planned | Built | Revised | Approved | Open for | Lines "
-                  "| Files |", "|---|---|---|---|---|---|---|---|"]
-        for p in w.merged[:shown]:
-            number = int(p["number"])
-            took = parse_iso(p["merged_at"]) - parse_iso(p["created_at"])
-            title = _title(p)
-            built = who.builder(p)
+    order = _order(w, counts)
+    has_tokens = any(tok != (0, 0, 0) or w.cost.get(pid, 0.0) > 0
+                     for pid, tok in w.tokens.items())
+    active = bool(w.events or w.opened or w.merged)
+    if not active and not has_tokens:
+        return [f"<details><summary><b>{w.name}</b>: nothing happened</summary>", "",
+                "Nothing happened.", "", "</details>", ""]
+    runs = sum(counts[pid]["start"] for pid in order)
+    summary = (f"<b>{w.name}</b>: {runs} runs, {len(w.merged)} pull requests merged, "
+               f"{_lines(w.merged)} lines")
+    lines = [f"<details><summary>{summary}</summary>", ""]
+    if active:
+        lines += ["| Subscription | Models | Runs | Plans | Builds | Revisions | Reviews "
+                  "| Outcomes delivered | PRs opened | Merged | Lines merged | Paused | Failed "
+                  "| Could not run | Model time |", "|---|" + "---|" * 14]
+        models: dict[str, Counter] = defaultdict(Counter)
+        for event in w.starts:
+            if event.provider:
+                models[event.provider][event.model] += 1
+        for pid in order:
+            c = counts[pid]
+            ended = sum(c[k] for k in DONE + NOT_DONE)
+            done = sum(c[k] for k in DONE)
+            model_list = ", ".join(f"`{m}`" for m, _ in models[pid].most_common(3)) or "—"
+            mins = w.minutes.get(pid, 0.0)
+            kept = len(facts.spent.get(pid, []))
+            time = f"{mins / 60:.1f} h"
+            if w.start is None and kept:
+                time += f" (its last {kept} runs)"
+            name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
             lines.append(
-                f"| #{number} {title} | {_who(who.planned.get(number, []))} "
-                f"| {f'`{built}`' if built != UNRECORDED else UNRECORDED} "
-                f"| {_who(who.revised.get(number, []))} | {_who(who.approved.get(number, []))} "
-                f"| {human_delta(took)} | {_lines([p])} | {int(p.get('changed_files') or 0)} |")
-        if len(w.merged) > shown:
-            lines.append(f"\n_… and {len(w.merged) - shown} older ones._")
+                f"| {name} | {model_list} | {c['start']} | {c['start:plan']} | {c['start:build']} "
+                f"| {c['start:revise']} | {c['start:review']} | {done} of {ended} "
+                f"| {c['pr:opened']} | {c['pr:merged']} | +{c['added']:,} / −{c['removed']:,} "
+                f"| {c['paused']} "
+                f"| {c['failed'] + c['not approved']} | {c['infra']} | {time} |")
         lines.append("")
+    rows = [(pid, w.tokens.get(pid, (0, 0, 0)), w.cost.get(pid, 0.0)) for pid in order]
+    rows = [(pid, tok, cost) for pid, tok, cost in rows if tok != (0, 0, 0) or cost > 0]
+    lines += ["**Tokens and cost**", ""]
+    if not rows:
+        lines += ["No call reported token counts in this window.", ""]
+    else:
+        lines += ["| Subscription | Input tokens | Output tokens | Cached tokens | Cost (USD) |",
+                  "|---|---|---|---|---|"]
+        for pid, (tin, tout, cached), cost in rows:
+            name = f"`{pid}`" if pid != UNRECORDED else f"_{UNRECORDED}_"
+            lines.append(f"| {name} | {tin:,} | {tout:,} | {cached:,} | ${cost:.2f} |")
+        lines.append("")
+    if active:
+        lines += _bars(f"Runs started, by subscription ({w.name.lower()})", "runs",
+                       {pid: counts[pid]["start"] for pid in order}, empty="none") + [""]
+        lines += _bars(f"Lines added in merged pull requests, by builder ({w.name.lower()})",
+                       "lines", {pid: counts[pid]["added"] for pid in order}, empty="none") + [""]
+        if w.start is None:
+            lines += _bars("Model hours, by subscription (all time)", "hours",
+                           {pid: w.minutes.get(pid, 0.0) / 60 for pid in order}) + [""]
+            outcomes = w.outcomes
+            lines += _bars("What runs ended in (all time)", "runs",
+                           {kind: outcomes[kind] for kind in DONE + NOT_DONE}, zeros=True) + [""]
+    return lines + ["</details>", ""]
 
-    if w.start is None:
-        now = ctx.now()
-        days = [(_local(ctx, now) - timedelta(days=i)).strftime("%m-%d")
-                for i in range(DAYS_SHOWN - 1, -1, -1)]
 
-        def day(at: str) -> str:
-            when = parse_iso(at)
-            return _local(ctx, when).strftime("%m-%d") if when else ""
+def over_time(ctx: Context, w: Window) -> list[str]:
+    """The last two weeks day by day: runs started, pull requests merged and lines added."""
+    now = ctx.now()
+    days = [(_local(ctx, now) - timedelta(days=i)).strftime("%m-%d")
+            for i in range(DAYS_SHOWN - 1, -1, -1)]
 
-        per_day = Counter(day(e.at) for e in w.starts)
-        merged_day = Counter(day(p["merged_at"]) for p in w.merged)
-        added_day: Counter = Counter()
-        for p in w.merged:
-            added_day[day(p["merged_at"])] += int(p.get("additions") or 0)
-        lines += ["### Over time", ""]
-        lines += _line(f"Runs started per day (last {DAYS_SHOWN} days)", "runs", days,
-                       [per_day.get(d, 0) for d in days]) + [""]
-        lines += _bars(f"Pull requests merged per day (last {DAYS_SHOWN} days)", "merged",
-                       {d: merged_day.get(d, 0) for d in days}, zeros=True) + [""]
-        lines += _bars(f"Lines added per day in merged pull requests (last {DAYS_SHOWN} days)",
-                       "lines", {d: added_day.get(d, 0) for d in days}, zeros=True) + [""]
+    def day(at: str) -> str:
+        when = parse_iso(at)
+        return _local(ctx, when).strftime("%m-%d") if when else ""
+
+    per_day = Counter(day(e.at) for e in w.starts)
+    merged_day = Counter(day(p["merged_at"]) for p in w.merged)
+    added_day: Counter = Counter()
+    for p in w.merged:
+        added_day[day(p["merged_at"])] += int(p.get("additions") or 0)
+    lines = _line(f"Runs started per day (last {DAYS_SHOWN} days)", "runs", days,
+                  [per_day.get(d, 0) for d in days]) + [""]
+    lines += _bars(f"Pull requests merged per day (last {DAYS_SHOWN} days)", "merged",
+                   {d: merged_day.get(d, 0) for d in days}, zeros=True) + [""]
+    lines += _bars(f"Lines added per day in merged pull requests (last {DAYS_SHOWN} days)",
+                   "lines", {d: added_day.get(d, 0) for d in days}, zeros=True) + [""]
     return lines
+
+
+def merged_table(ctx: Context, merged: list[dict[str, Any]], who: Credits, *,
+                 shown: int) -> list[str]:
+    """Every pull request merged, newest first, with who planned, built, revised and approved it,
+    folded."""
+    if not merged:
+        return ["_No pull request has merged yet._", ""]
+    head = (f"<b>Pull requests merged</b>: the newest {min(shown, len(merged))} of "
+            f"{len(merged)}, with who planned, built, revised and approved each")
+    if not shown:
+        return [f"_{len(merged)} pull requests merged; the list is left out to keep this issue "
+                "under GitHub's size limit._", ""]
+    lines = [f"<details><summary>{head}</summary>", "",
+             "| Pull request | Merged | Planned | Built | Revised | Approved | Open for | Lines "
+             "| Files |", "|---|---|---|---|---|---|---|---|---|"]
+    for p in merged[:shown]:
+        number = int(p["number"])
+        took = parse_iso(p["merged_at"]) - parse_iso(p["created_at"])
+        built = who.builder(p)
+        when = _local(ctx, parse_iso(p["merged_at"])).strftime("%a %m-%d %H:%M")
+        lines.append(
+            f"| #{number} {_title(p)} | {when} | {_who(who.planned.get(number, []))} "
+            f"| {f'`{built}`' if built != UNRECORDED else UNRECORDED} "
+            f"| {_who(who.revised.get(number, []))} | {_who(who.approved.get(number, []))} "
+            f"| {human_delta(took)} | {_lines([p])} | {int(p.get('changed_files') or 0)} |")
+    if len(merged) > shown:
+        lines.append(f"\n_… and {len(merged) - shown} older ones._")
+    return lines + ["", "</details>", ""]
 
 
 def modes(windows: list[Window]) -> list[str]:
@@ -528,21 +604,21 @@ SECTION_MERGES = 10
 
 
 def bot_section(ctx: Context) -> str:
-    """This bot's section of the night bot's statistics issue (#60): Squishy's record, drawn by
-    its own process from its own comments, pull requests, runs and state."""
+    """This bot's section of the night bot's statistics (#60): Squishy's record, drawn by its own
+    process from its own comments, pull requests, runs and state, and folded in the status issue."""
     facts = collect(ctx)
     now = ctx.now()
     who = credits(facts.events, facts.pulls)
     windows = [window(name, span, now, facts) for name, span in WINDOWS]
-    lines = [SECTION_START, f"## 🫧 {BOT_TITLE}", "",
+    lines = [SECTION_START, f"<details><summary>🫧 <b>{BOT_TITLE}'s record</b>: "
+             f"{len(windows[-1].merged)} pull requests merged</summary>", "",
              f"_What @{ctx.cfg.bot_login} has done, read the same way as the night bot's record "
-             f"above. What it is doing now is in its section of the **Night bot status** issue, "
-             f"and `{SLASH} status`._", "", "### The four windows", ""]
+             f"above. What it is doing now is in its section above, and `{SLASH} status`._", ""]
     lines += summary(windows) + [""]
     if MODES:
-        lines += ["### Its modes", ""] + modes(windows) + [""]
+        lines += ["**Its modes**", ""] + modes(windows) + [""]
     merged = windows[-1].merged
-    lines += [f"### Its pull requests merged ({len(merged)})", ""]
+    lines += [f"**Its pull requests merged** ({len(merged)})", ""]
     if not merged:
         lines += ["None yet.", ""]
     else:
@@ -558,11 +634,14 @@ def bot_section(ctx: Context) -> str:
         if len(merged) > SECTION_MERGES:
             lines.append(f"\n_… and {len(merged) - SECTION_MERGES} older ones._")
         lines.append("")
-    return "\n".join(lines + [SECTION_END])
+    return "\n".join(lines + ["</details>", "", SECTION_END])
 
 
-def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
-           extra: tuple[str, ...] = ()) -> str:
+def block(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
+          extra: tuple[str, ...] = ()) -> str:
+    """The statistics block of the status issue, between its markers: the four windows side by
+    side, the last two weeks, each window folded, the merged pull requests folded, and the other
+    bots' sections (`extra`, `bot_section`) folded at the end."""
     now = ctx.now()
     who = credits(facts.events, facts.pulls)
     windows = [window(name, span, now, facts) for name, span in WINDOWS]
@@ -571,58 +650,39 @@ def render(ctx: Context, facts: Facts, *, shown: int = MERGES_SHOWN,
     open_now = sum(1 for p in pulls if p.get("state") == "open")
     closed_unmerged = sum(1 for p in pulls if p.get("state") == "closed" and not p.get("merged_at"))
     ended = Counter(conclusion for _, conclusion in facts.runs)
-
-    lines = [f"# 📊 {TITLE}", "",
-             f"_Updated {_local(ctx, now).strftime('%Y-%m-%d %H:%M %Z')} by `bot-status`, every "
-             "30 minutes. What the bot is doing right now is in the pinned **Night bot status** "
-             "issue._",
-             "", "## The four windows", ""]
-    lines += summary(windows)
-    lines += ["",
-              f"Active since {_local(ctx, first).strftime('%Y-%m-%d') if first else '—'}. Now: "
-              f"{open_now} of its pull requests open, {closed_unmerged} closed without merging, "
-              f"{facts.commits_on_main} commits on `main` by the bot itself. "
-              f"`{NIGHT_WORKFLOW}` runs ended: "
-              f"{', '.join(f'{k} {v}' for k, v in ended.most_common()) or 'none yet'}.",
-              "",
-              "Runs, outcomes and who did what come from the bot's comments; lines, files and "
-              "commits from its merged pull requests; model time from the state file's dated "
-              "record of each subscription's runs. A run counts in the window it started in, an "
-              "outcome (a pull request opened, a revision pushed, a plan, an approval, or a "
-              "pause, failure or run that could not start) in the window it was posted in, and a "
-              "pull request in the window it was opened or merged in.", ""]
+    counted = _local(ctx, now).strftime("%H:%M")
+    lines = [BLOCK_START, "## 📊 What it has done", "",
+             f"_Counted at {counted}, afresh every {int(STATS_EVERY.total_seconds() // 60)} "
+             "minutes. Active since "
+             f"{_local(ctx, first).strftime('%Y-%m-%d') if first else '—'}. Now: "
+             f"{open_now} of its pull requests open, {closed_unmerged} closed without merging, "
+             f"{facts.commits_on_main} commits on `main` by the bot itself. "
+             f"`{NIGHT_WORKFLOW}` runs ended: "
+             f"{', '.join(f'{k} {v}' for k, v in ended.most_common()) or 'none yet'}._", ""]
+    lines += ["### The four windows", ""] + summary(windows) + [""]
+    lines += ["### The last two weeks", ""] + over_time(ctx, windows[-1])
+    lines += ["### Per window", "",
+              "<sub>Runs, outcomes and who did what come from the bot's comments; lines, files "
+              "and commits from its merged pull requests; model time, tokens and cost from the "
+              "state file's dated record of each subscription's runs. A run counts in the window "
+              "it started in, an outcome (a pull request opened, a revision pushed, a plan, an "
+              "approval, or a pause, failure or run that could not start) in the window it was "
+              "posted in, and a pull request in the window it was opened or merged in.</sub>", ""]
     for w in windows:
-        lines += section(ctx, w, who, facts, shown=shown)
+        lines += section(ctx, w, who, facts)
+    lines += merged_table(ctx, windows[-1].merged, who, shown=shown)
     for part in extra:
-        lines += ["---", "", part.strip(), ""]
-    lines += [MARKER]
-    return "\n".join(lines)
+        lines += [part.strip(), ""]
+    return "\n".join(lines + [BLOCK_END])
 
 
-def fit(ctx: Context, facts: Facts, extra: tuple[str, ...] = ()) -> str:
-    """The body, listing fewer merged pull requests per window if it would pass GitHub's limit.
-    The other bots' sections (`extra`) are kept whole."""
-    for shown in (MERGES_SHOWN, MERGES_SHOWN // 2, 10, 0):
-        body = render(ctx, facts, shown=shown, extra=extra)
-        if len(body) <= MAX_BODY:
-            return body
-    return body[:MAX_BODY - len(MARKER) - 1] + "\n" + MARKER
-
-
-def find(ctx: Context, state: Mapping[str, Any]) -> dict[str, Any] | None:
-    number = (state.get("statistics") or {}).get("issue")
-    if number:
-        try:
-            issue = ctx.gh.get_issue(int(number))
-            if issue.get("state") == "open" and "pull_request" not in issue:
-                return issue
-        except GitHubError:
-            pass
-    for issue in ctx.gh.list_issues(labels=""):
-        if ("pull_request" not in issue and issue.get("title") == TITLE
-                and MARKER in str(issue.get("body") or "")):
-            return issue
-    return None
+def kept(body: str | None) -> str | None:
+    """The statistics block a rewrite of the status issue keeps between counts, or None."""
+    text = str(body or "")
+    start, end = text.find(BLOCK_START), text.find(BLOCK_END)
+    if start < 0 or end < start:
+        return None
+    return text[start:end + len(BLOCK_END)]
 
 
 def due(ctx: Context, state: Mapping[str, Any]) -> bool:
@@ -630,29 +690,7 @@ def due(ctx: Context, state: Mapping[str, Any]) -> bool:
     return last is None or ctx.now() - last >= STATS_EVERY
 
 
-def update(ctx: Context, *, force: bool = False,
-           extra: Callable[[], tuple[str, ...]] = tuple) -> str:
-    """Rewrite the statistics issue when `STATS_EVERY` has passed (or `force`), opening and pinning it
-    first if there is none. `extra` draws the other bots' sections (`bot_section`, each in a
-    process of its own), and is called only when the issue is rewritten."""
-    state = ctx.store.load()
-    if not force and not due(ctx, state):
-        return "statistics: not due"
-    body = fit(ctx, collect(ctx), extra())
-    issue = find(ctx, state)
-    if issue is None:
-        issue = ctx.gh.create_issue(TITLE, body, LABELS)
-        number = int(issue["number"])
-        note = f"statistics: opened #{number}"
-        try:
-            ctx.gh.pin_issue(str(issue.get("node_id") or ""))
-            note += " and pinned it"
-        except GitHubError as exc:
-            note += f"; could not pin it ({exc.status}): pin it by hand"
-    else:
-        number = int(issue["number"])
-        ctx.gh.update_issue(number, body=body)
-        note = f"statistics: rewrote #{number}"
+def counted(ctx: Context) -> None:
+    """Note in the state file that the statistics were counted now."""
     at = iso(ctx.now())
-    ctx.store.update(lambda s: s.update(statistics={"issue": number, "at": at}), "statistics")
-    return note
+    ctx.store.update(lambda s: s.update(statistics={"at": at}), "statistics")

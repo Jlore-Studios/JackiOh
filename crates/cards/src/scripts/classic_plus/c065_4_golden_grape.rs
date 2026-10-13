@@ -2,20 +2,14 @@
 //!   Base:    "Make a card on your side of the field or in your hand Radiant."
 //!   Radiant: "Make a card on your side of the field or in your hand Radiant, and the cards next to it
 //!            (beside it in its row, or beside it in your hand)."
-//!   Engine:  "A declared pick (R81): a card in your hand or one of your permanents. Make Radiant (§6.3):
-//!            a field card converts in place (§5.2); a Radiant card changes nothing. 'Next to it' is
-//!            §3.1's adjacency on the field (your side, the same row, N − 1 and N + 1) and the
-//!            neighbours by index in the hand. Tunes: none."
 //!
-//! The pick travels in the play (R81): your Units (tops of piles), your backrow cards (a face-down one
-//! included — it is yours to read, R33) and your other hand cards. Make Radiant is the engine's
-//! `setRadiant`: a field card converts in place with no Cry (R22), a card already Radiant is left as it
-//! is, and a change to a card someone may not read — a hand card, a face-down card — is cued to them
-//! redacted whether or not the flag moved (R177), so the cue never tells them which were Radiant.
+//! The pick travels in the play (R81): your Units, your backrow cards (a face-down one included, R33)
+//! and your other hand cards. Make Radiant (§6.3) converts a field card in place with no Cry (§5.2, R22)
+//! and leaves a Radiant card as it is; a change to a card someone may not read is cued to them redacted
+//! whether or not the flag moved (R177).
 //!
-//! The Radiant face's neighbours are read as the Spell resolves, which is when this hook runs (a Spell's
-//! `cry` is its resolution): on the field §3.1's adjacency on the pick's own side and row (`adjacentTo`;
-//! an empty or dormant neighbour is nothing), in the hand the cards at the indices either side of it.
+//! "Next to it" is read as the Spell resolves: §3.1's adjacency on the pick's own side and row
+//! (an empty or dormant neighbour is nothing), or the hand cards at the indices either side of it.
 
 use jackioh_engine::effects::{BoardScope, TargetSpec, adjacent_to, instance_of, set_radiant};
 use jackioh_engine::prelude::*;
@@ -27,7 +21,6 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "ally", "of": ["unit", "backrow", "hand"] }))]
 }
 
-/// TS `{ of: "chosen" }`: the card the play declared.
 fn chosen() -> TargetSpec {
     json_as(json!({ "of": "chosen" }))
 }
@@ -44,7 +37,6 @@ fn neighbours_of(ctx: &EffectContext<'_>, picked: &CardInstance) -> Vec<CardInst
     let Some(at) = hand.iter().position(|card| card.id == picked.id) else {
         return Vec::new();
     };
-    // `[hand[at - 1], hand[at + 1]]` with the missing ones filtered out, in that order.
     let mut neighbours = Vec::new();
     if let Some(before) = at.checked_sub(1).and_then(|index| hand.get(index)) {
         neighbours.push(before.clone());
@@ -82,11 +74,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #65.4 Golden Grape — SPEC §8.7 row 65.4, BUILD M9 Classic+ row C+ 65.4: "A card chosen with the play
-// (R81), in your hand or a permanent you control (face-down included), becomes Radiant, no change if it
-// already is (§5.2); a hand card's or face-down card's change is reported to the opponent by a redacted
-// `radiantSet` whether or not the flag changed (R177); radiant also the cards next to it: its row
-// neighbours on your side (lanes N−1, N+1), or in your hand the cards at the neighbouring indices".
+// BUILD M9 Classic+ row C+ 65.4: the pick is declared with the play (R81), in your hand or a permanent
+// you control (face-down included); it becomes Radiant, no change if it already is (§5.2); a hand or
+// face-down card's change is reported to the opponent by a redacted `radiantSet` either way (R177);
+// radiant also the cards next to it: its row neighbours on your side, or the neighbouring hand indices.
 #[cfg(test)]
 mod tests {
     use super::*;

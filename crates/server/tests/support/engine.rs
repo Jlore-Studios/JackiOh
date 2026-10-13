@@ -24,7 +24,9 @@
 //!    `past_the_mulligans` answers both by keeping the whole hand, for a test that is not about them.
 //!
 //! The scripted cards, each a 0-cost Spell with Quickdraw (§6.2), so the opening deal always puts
-//! them in their owner's hand (as TS's `fakeDeck(extra)` put its extras there):
+//! them in their owner's hand (as TS's `fakeDeck(extra)` put its extras there) — except
+//! `test-hears-emotes`, a 0-cost Field Spell with Quickdraw, played to hear:
+//!  - `test-hears-emotes`  hears emotes while it acts (MD-D29, R1127);
 //!  - `test-prompt-self`   opens a prompt for the player who played it;
 //!  - `test-prompt-enemy`  opens a prompt for the other player (a trap firing on your turn, R79);
 //!  - `test-lethal`        ends the match: the player who played it wins by `hero-death`;
@@ -65,6 +67,9 @@ use serde_json::{Value, json};
 pub const TEST_PROMPT_SELF: &str = "test-prompt-self";
 /// Opens a prompt for the other player (a trap firing on your turn, R79).
 pub const TEST_PROMPT_ENEMY: &str = "test-prompt-enemy";
+/// A 0-cost Field Spell that hears emotes (MD-D29, R1127): played, it makes `Emote` actions
+/// legal for either seat.
+pub const TEST_HEARS_EMOTES: &str = "test-hears-emotes";
 /// The player who played it wins by `hero-death`.
 pub const TEST_LETHAL: &str = "test-lethal";
 /// Both heroes die in the same check: a draw by `both-heroes-dead` (§2.5).
@@ -112,7 +117,7 @@ fn test_def(id: &str, index: i32, text: &str) -> CardDef {
     }))
 }
 
-/// Every card the server tests add to the real catalog: the four scripted cards, then the
+/// Every card the server tests add to the real catalog: the five scripted cards, then the
 /// `DECK_SIZE` fillers `fake_deck` deals from.
 pub fn test_card_defs() -> Vec<CardDef> {
     let mut defs = vec![
@@ -121,6 +126,19 @@ pub fn test_card_defs() -> Vec<CardDef> {
             FIRST_TEST_INDEX,
             "Quickdraw. Choose one: keep or pass.",
         ),
+        json_as(json!({
+            "id": TEST_HEARS_EMOTES,
+            "index": (FIRST_TEST_INDEX + 4).to_string(),
+            "name": format!("{TEST_HEARS_EMOTES} (server tests)"),
+            "set": "Core",
+            "type": "Field Spell",
+            "tags": [],
+            "rarity": "Common",
+            "token": false,
+            "cost": 0,
+            "base": { "keywords": [], "text": "Quickdraw. Hears emotes." },
+            "radiant": { "keywords": [], "text": "Quickdraw. Hears emotes." },
+        })),
         test_def(
             TEST_PROMPT_ENEMY,
             FIRST_TEST_INDEX + 1,
@@ -215,6 +233,17 @@ fn test_card_scripts() -> Vec<(String, Script)> {
     let mut scripts = vec![
         (TEST_PROMPT_SELF.to_string(), prompt_script("self")),
         (TEST_PROMPT_ENEMY.to_string(), prompt_script("enemy")),
+        (
+            TEST_HEARS_EMOTES.to_string(),
+            Script {
+                static_flags: Some(StaticFlags {
+                    quickdraw: Some(true),
+                    hears_emotes: Some(true),
+                    ..StaticFlags::default()
+                }),
+                ..Script::default()
+            },
+        ),
         (
             TEST_LETHAL.to_string(),
             Script {

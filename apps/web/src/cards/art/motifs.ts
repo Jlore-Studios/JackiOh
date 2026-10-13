@@ -1,21 +1,13 @@
-// A card's motif: the small picture its name asks for (R503). The theme says what family a card
-// belongs to and the composition what kind of card it is; the motif says what it is about, read from
-// the words of its printed name: flames for Book of Flame and Burn, spores for the Plague cards, a
-// padlock for Lockdown, a sheep for Sheeople. Presentation only, from the public catalog's name: no
-// rule reads it (CLAUDE.md rule 7).
+// A card's motif: the small picture its name asks for (R503), read from the words of its printed
+// name. Presentation only, from the public catalog's name: no rule reads it (CLAUDE.md rule 7).
 //
 // `motifFor` splits the name into lowercase words and walks MOTIF_WORDS in order; the first motif with
 // a word that matches wins. A pattern is a whole word (its plural too), `word*` a word that starts
 // so, `*word` one that ends so. The table runs from the concrete (a creature, an object) to the
-// abstract (chaos, time), so "Plague Doctor" is spores rather than a cross, "Anti-Magic Monkey" a
-// monkey and "Chaos Golem" a rock.
+// abstract (chaos, time), so "Plague Doctor" is spores rather than a cross.
 //
-// How a motif is drawn (procedural.ts): a card of a type theme (a plain Unit, Spell, Field Spell, Trap
-// or Field Trap) wears its motif's glyph as its emblem, in the motif's own colours, since its type
-// says nothing else about it; a tribe or family keeps its emblem and carries the motif beside it,
-// as a larger glyph in a free top corner (`hero`), a handful scattered through the sky (`scatter`),
-// a row along the ground (`rise`) or a fall from the top (`fall`). Two motifs also draw a pattern
-// under everything (`circuits`, `waves`), and on a figure three change what it wears.
+// Drawn in procedural.ts: a card of a type theme wears the motif's glyph as its emblem, in the motif's
+// own colours; a tribe or family keeps its emblem and carries the motif by its `arrangement`.
 
 import type { EmblemGlyph } from "./emblems.ts";
 import type { ArtThemeId } from "./themes.ts";
@@ -119,9 +111,8 @@ export const MOTIFS: Readonly<Record<MotifId, Motif>> = {
 };
 
 /**
- * The words that call each motif up, in the order they are tried (first match wins). Every card of
- * Classic and Classic+ that names something drawable is covered; a name about nothing drawable ("Guy
- * Att", "Prep") has no motif and its theme's picture alone.
+ * The words that call each motif up, in the order they are tried (first match wins). A name about
+ * nothing drawable ("Guy Att", "Prep") has no motif and its theme's picture alone.
  */
 export const MOTIF_WORDS: readonly (readonly [MotifId, readonly string[]])[] = [
   // Creatures and people first: the thing a card is.
@@ -211,8 +202,7 @@ function matches(pattern: string, word: string): boolean {
 
 /**
  * The motifs a family's own picture already draws, which its cards' names therefore skip: every
- * Book card is called "Book of …", every Felinor card a Felinor, and the AI family is circuitry
- * already. "Book of Flame" is flames, "Felinor Flagbearer" a flag, "Anti-Waffle Shell" armour.
+ * Book card is called "Book of …", every Felinor card a Felinor, and the AI family is circuitry.
  */
 export const THEME_OWN_MOTIFS: Readonly<Partial<Record<ArtThemeId, readonly MotifId[]>>> = {
   book: ["book"],

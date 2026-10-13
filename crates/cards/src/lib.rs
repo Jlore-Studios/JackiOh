@@ -6,8 +6,8 @@
 //!   §7.4), which also proves what `buildRegistry` threw on (a file's `ID` names a real catalog card,
 //!   no two files claim one) and what `missing-tests.ts` listed (a catalog id with no file).
 //! - `register_all()`: hands the catalog and every card's scripts to the engine, once.
-//! - `catalog_json()`, `flavour_json()`, `catalog_version()`: the data, compiled in (SURFACE §3: data
-//!   reaches a pure crate only at compile time).
+//! - `catalog_json()`, `flavour_json()`, `chinese_json()`, `chinese_terms_json()`, `catalog_version()`:
+//!   the data, compiled in (SURFACE §3: data reaches a pure crate only at compile time).
 //! - `CATALOG`, `CATALOG_IDS`, `CATALOG_VERSION`, `card_def`, `card_def_by_index`: `catalog-data.ts`'s
 //!   readers of the shipped catalog, under their TS names (SURFACE §4.2).
 //!
@@ -21,7 +21,7 @@
 use std::sync::{LazyLock, OnceLock};
 
 use indexmap::IndexMap;
-use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName};
+use jackioh_engine::{CardDef, CardDefs, CardScripts, SetName, WinRateTable};
 
 include!(concat!(env!("OUT_DIR"), "/registry.rs"));
 
@@ -41,6 +41,18 @@ pub fn catalog_json() -> &'static str {
 /// `packages/cards/flavour.json` as compiled in (the client's flavour lines and artists).
 pub fn flavour_json() -> &'static str {
     include_str!("../flavour.json")
+}
+
+/// ME-CN, R1303: `crates/cards/chinese.json` as compiled in, every card's name and faces in Simplified
+/// Chinese (the client's `apps/web/src/cards/chinese.ts`). A sidecar like `flavour.json`: no rule reads it.
+pub fn chinese_json() -> &'static str {
+    include_str!("../chinese.json")
+}
+
+/// ME-CN, R1303: `crates/cards/chinese-terms.json` as compiled in, the frame's words in Chinese (types,
+/// tags, rarities, keywords, labels, Radiant, Created and the glossary).
+pub fn chinese_terms_json() -> &'static str {
+    include_str!("../chinese-terms.json")
 }
 
 /// §9.4: the catalog version the engine registers — the newest entry of `patches/patches.json`,
@@ -90,6 +102,19 @@ pub fn scripts_of() -> IndexMap<String, CardScripts> {
         .collect()
 }
 
+/// ME-STATS (Meditative #50 CN Tech): `data/win_rates.json` as compiled in, the table CN Tech
+/// reads. A sidecar like `flavour.json`: no rule but CN Tech reads it, and only through the engine's
+/// registered copy.
+pub fn win_rates_json() -> &'static str {
+    include_str!("../data/win_rates.json")
+}
+
+/// ME-STATS: the compiled win-rate table, parsed once, on first use.
+pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
+    serde_json::from_str(win_rates_json())
+        .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
+});
+
 /// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4): the
 /// engine's two `OnceLock`s are set here, once per process, and read-only after. Idempotent: a second
 /// call does nothing. A test that wants fixture cards uses the testkit's thread-local override
@@ -97,7 +122,7 @@ pub fn scripts_of() -> IndexMap<String, CardScripts> {
 pub fn register_all() {
     static REGISTERED: OnceLock<()> = OnceLock::new();
     REGISTERED.get_or_init(|| {
-        jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION);
+        jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION, WIN_RATES.clone());
         jackioh_engine::scripts::register_scripts(scripts_of());
     });
 }
@@ -159,6 +184,15 @@ fn tune_number(
 #[cfg(test)]
 pub(crate) fn upgrade_number(s: &mut jackioh_engine::testkit::Scenario, card: &str, key: &str) -> i32 {
     tune_number(s, card, key, jackioh_engine::effects::TuneDirection::Upgrade)
+}
+
+/// R1438: give `card` Lucky `n`, as a `lucky` rider does once a card is in a hand: a granted keyword
+/// that adds to the Lucky the card prints.
+#[cfg(test)]
+pub(crate) fn give_lucky(s: &mut jackioh_engine::testkit::Scenario, card: &str, n: i32) {
+    s.card_mut(card)
+        .granted_keywords
+        .push(jackioh_engine::Keyword::Lucky { n });
 }
 
 /// R386: whether a step `direction` would move `card`'s declared number `key` at all — false for a

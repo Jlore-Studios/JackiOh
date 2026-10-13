@@ -120,6 +120,10 @@ pub const TRIGGER_HOOKS: &[HookName] = &[
 /// The `hook` of the one queue entry that is not a card's trigger: an event owed to the traps.
 pub const OWED_TO_TRAPS: &str = "@traps";
 
+/// MD-B22, R946: the `hook` of a lane watcher's queue entry — Showdown's watcher answering a card
+/// entering its lane (Meditative #98, Radiant face).
+pub const LANE_WATCH: &str = "@laneWatch";
+
 /// How many times `settle` may go round before the board is called stuck (§10.3). Each pass resolves
 /// something — a dispatch, owed work, a check or one queued trigger — so the cap has to hold every
 /// trigger one legal action can set off, and R58 bounds that from the rules: "draw your whole
@@ -597,16 +601,95 @@ pub fn queue_hook(sink: &mut EngineSink<'_>, holder: &TriggerHolder, hook: HookN
 
 /// Queue one hook across the board in R68's order (§6.2, R62). The caller runs `settle` to drain it,
 /// which is what puts a state check between each two hooks and lets one that prompts pause the rest.
+///
+/// R820, R821 (Meditative #9 Joint Filing): a player's own start-of-turn and end-of-turn hooks run
+/// 1 + N times under a turn-hook multiplier, N read once as they are queued. Each copy is its own entry
+/// right behind the original, re-read as it pops like any entry (`run_queued_trigger`, R153), so a card
+/// gone by then fizzles. Only these two hooks: C #62's start of the opponent's turn, the delayed effects
+/// and the end-of-turn trap window are never queued here as the player's own (R62).
 pub fn queue_hooks_in_trigger_order(
     sink: &mut EngineSink<'_>,
     hook: HookName,
     only: Option<PlayerId>,
 ) -> Vec<QueuedTrigger> {
+    let copies = match (hook, only) {
+        (HookName::StartOfTurn | HookName::EndOfTurn, Some(player)) => {
+            1 + crate::multipliers::extra_runs(sink.state, player, crate::multipliers::Multiplied::TurnHooks)
+                .max(0) as usize
+        }
+        _ => 1,
+    };
     let holders = trigger_holders_with_hook(sink.state, hook, only);
-    holders
-        .iter()
-        .map(|holder| queue_hook(sink, holder, hook))
-        .collect()
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for holder in &holders {
+        for _ in 0..copies {
+            queued.push(queue_hook(sink, holder, hook));
+        }
+    }
+    queued
+}
+
+/// The `hook` of a queue entry that queues the next round of a player's end-of-turn hooks
+/// (`queue_turn_hook_rounds`, R824). No card's trigger id starts with `@`.
+pub const TURN_HOOKS_ROUND: &str = "@turnHooksRound";
+
+/// Where a round entry keeps how many rounds are still to be queued after the one it queues.
+const ROUNDS_LEFT_KEY: &str = "roundsLeft";
+
+/// R824 (Meditative #12 Fear Mongerer): "trigger your End of turn effects" `rounds` times, now. Each
+/// round queues `player`'s end-of-turn hooks as §2.2's end-of-turn trigger step would — the same
+/// holders, R68's order and R821's multiplier — and nothing else of the end of the turn: no trap window,
+/// no delayed effect, and the turn goes on (R62). The rounds run one after another: behind the first
+/// round's entries goes one entry that queues the next round as it pops, so a round reads the board the
+/// round before it left (a unit an end-of-turn hook summoned answers the next round).
+///
+/// The round entry does not wait for the queue to empty: a loop that pops only its own entries (a forced
+/// attack's playout, `effects::combat`) would wait on it for ever, so it simply takes its place in R68's
+/// queue.
+pub fn queue_turn_hook_rounds(sink: &mut EngineSink<'_>, player: PlayerId, rounds: i32) {
+    if rounds <= 0 {
+        return;
+    }
+    queue_hooks_in_trigger_order(sink, HookName::EndOfTurn, Some(player));
+    if rounds == 1 {
+        return;
+    }
+    let (id, seq) = next_entry_id(sink.state, false, "t");
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("controller".to_string(), player_value(player));
+    data.insert(ROUNDS_LEFT_KEY.to_string(), Value::from(rounds - 1));
+    sink.state.trigger_queue.push(QueuedTrigger {
+        id,
+        seq,
+        instance_id: String::new(),
+        hook: TURN_HOOKS_ROUND.to_string(),
+        resume: Resume {
+            def_id: String::new(),
+            hook: TURN_HOOKS_ROUND.to_string(),
+            step: TRIGGER_STEP.to_string(),
+            radiant: false,
+            instance_id: None,
+            data,
+        },
+    });
+}
+
+/// A round entry popping (R824): the next round of its player's end-of-turn hooks, queued now.
+fn run_turn_hooks_round(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
+    let queued_for = entry.resume.data.get("controller").and_then(Value::as_str);
+    let Some(player) = PLAYER_IDS
+        .into_iter()
+        .find(|player| Some(player.as_str()) == queued_for)
+    else {
+        return;
+    };
+    let rounds = entry
+        .resume
+        .data
+        .get(ROUNDS_LEFT_KEY)
+        .and_then(Value::as_i64)
+        .map_or(0, |rounds| rounds.clamp(0, i64::from(i32::MAX)) as i32);
+    queue_turn_hook_rounds(sink, player, rounds);
 }
 
 /// Queue one hook across the board and resolve it, in R68's order (§6.2, R62, R59).
@@ -812,7 +895,16 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
         let moves = later.get_or_insert_with(|| {
             crate::stays::moves_in(&events_after_dispatched(&*sink, at), Some(&*sink.state))
         });
-        if moves.moved.contains(&holder.card.id) {
+        // R862: a card the event itself sent toward a graveyard is on the stay that move began, the
+        // report of where it landed being that same move (`stays::stands_where_it_landed`).
+        if moves.moved.contains(&holder.card.id)
+            && !crate::stays::stands_where_it_landed(
+                event,
+                &events_after_dispatched(&*sink, at),
+                &holder.card.id,
+                Some(&*sink.state),
+            )
+        {
             continue;
         }
         // §3.2, R153: nor does the card the event's own removal uncovered in its Stack pile — dormant
@@ -835,8 +927,99 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
             queued.push(queue_trigger(sink, &holder, def, event));
         }
     }
+    // MD-B22, R946: Showdown's watchers answer the event before anything notes its removals.
+    queued.extend(offer_to_lane_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
+    queued
+}
+
+/// MD-B22, R946: offer one event to every live lane watcher (`ModifierKind::LaneWatch`). A watch
+/// matches a `cardResolved` for a permanent played into one of its owner's zones in its lane, and a
+/// `summoned` onto its owner's side in its lane that is no play's step-4 (`exits_from` absent — a
+/// played card answers through its resolution instead, so it is cast on once). Each match queues one
+/// `LANE_WATCH` entry carrying the stored resume with the card's id (`instanceId`) and the watcher
+/// (`watcher`) in its data, in R68's order (the active player's watcher first).
+fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    // The card the event puts into the lane, when it puts one there: its owner, its id, its lane.
+    // A played permanent answers through its resolution; a play's step-4 summon (`exits_from` set)
+    // is not a placing of its own, so only a summon no play made answers as a summon.
+    let placed: Option<(PlayerId, String, i32)> = match event {
+        GameEvent::CardResolved {
+            permanent,
+            player,
+            instance_id,
+            ..
+        } if *permanent => {
+            let Some(card) = find_instance(sink.state, instance_id) else {
+                return Vec::new();
+            };
+            match card.zone {
+                Zone::Field { player: at, lane, .. } if at == *player => {
+                    Some((*player, instance_id.clone(), lane))
+                }
+                _ => None,
+            }
+        }
+        GameEvent::Summoned {
+            player,
+            lane,
+            exits_from: None,
+            instance_id,
+            ..
+        } => Some((*player, instance_id.clone(), *lane)),
+        _ => None,
+    };
+    let Some((player, instance_id, lane)) = placed else {
+        return Vec::new();
+    };
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    let order: [PlayerId; 2] = if sink.state.active == PLAYER_IDS[0] {
+        PLAYER_IDS
+    } else {
+        [PLAYER_IDS[1], PLAYER_IDS[0]]
+    };
+    for owner in order {
+        if owner != player {
+            continue;
+        }
+        let watches: Vec<(String, i32, Resume)> = sink.state.players[owner]
+            .mods
+            .iter()
+            .filter_map(|modifier| match &modifier.kind {
+                crate::state::ModifierKind::LaneWatch {
+                    lane: watched,
+                    resume,
+                    ..
+                } if modifier.expiry
+                    == crate::state::ModifierExpiry::ThisTurn {
+                        turn: sink.state.turn,
+                    } =>
+                {
+                    Some((modifier.id.clone(), *watched, resume.clone()))
+                }
+                _ => None,
+            })
+            .collect();
+        for (id, watched, resume) in watches {
+            if watched != lane {
+                continue;
+            }
+            let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+            let mut data = resume.data.clone();
+            data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+            data.insert("watcher".to_string(), Value::String(owner.as_str().to_string()));
+            let entry = QueuedTrigger {
+                id: entry_id,
+                seq,
+                instance_id: id,
+                hook: LANE_WATCH.to_string(),
+                resume: Resume { data, ..resume },
+            };
+            sink.state.trigger_queue.push(entry.clone());
+            queued.push(entry);
+        }
+    }
     queued
 }
 
@@ -853,6 +1036,27 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         if let Some(event) = event {
             run_owed_traps(sink, &event, entry);
         }
+        return;
+    }
+    if entry.hook == TURN_HOOKS_ROUND {
+        run_turn_hooks_round(sink, entry);
+        return;
+    }
+    // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner.
+    if entry.hook == LANE_WATCH {
+        let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
+        let owner = PLAYER_IDS
+            .into_iter()
+            .find(|player| Some(player.as_str()) == watcher)
+            .unwrap_or(PLAYER_IDS[0]);
+        crate::prompts::run_resume(
+            sink,
+            &entry.resume,
+            crate::prompts::ResumeOptions {
+                controller: Some(owner),
+                ..Default::default()
+            },
+        );
         return;
     }
 
@@ -1129,9 +1333,12 @@ pub fn mark_dispatched(sink: &mut EngineSink<'_>, events: &[GameEvent]) {
 /// frontier a replay builds is the frontier the live game had.
 fn collect_events(sink: &mut SettleSink<'_>) {
     // R437: a mark whose effect has stopped waiting goes, and says so, before the frontier moves; R750:
-    // a delayed destroy of a scope marks the Units it names now.
-    crate::effects::delay::refresh_scope_marks(sink);
-    crate::marks::sweep_marks(sink);
+    // a delayed destroy of a scope marks the Units it names now. R216: once the game is over neither
+    // speaks, since `gameOver` is the action's last event (the view reads only live marks, `marks_on`).
+    if sink.state.result.is_none() {
+        crate::effects::delay::refresh_scope_marks(sink);
+        crate::marks::sweep_marks(sink);
+    }
     let len = sink.events.len();
     let from = sink.frontier.get().collected;
     for at in from..len {

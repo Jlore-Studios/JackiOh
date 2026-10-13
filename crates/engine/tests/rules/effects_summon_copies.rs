@@ -3,22 +3,15 @@
 //! Felinors, #61 Prejudiced Postdoc, R57) and §10.7's random pool (#67 Zoomerbin Oomen, §5.1).
 //!
 //! The fixture defs and scripts live here, on top of the shared fixture catalog, so no shared
-//! fixture has to grow for them (CLAUDE.md, BUILD §0). Every assertion runs through a real
-//! `EffectContext` built by `makeContext`, the way a hook's effects are applied.
-//!
-//! Port of `packages/engine/test/effects-summon-copies.test.ts`.
+//! fixture has to grow for them (CLAUDE.md, BUILD §0).
 
 use jackioh_engine::effects::{damage, summon, summon_copy, summon_random};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `defOfKind`. TS numbered each def from a module counter (`nextIndex`, starting at 760 and
-/// raised before each def); the index each def drew is written out at its call.
 fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("cp-{name}"),
@@ -37,7 +30,7 @@ fn def_of_kind(name: &str, index: i32, type_: &str, overrides: Value) -> CardDef
     json_as(def)
 }
 
-/// TS `{ ...base, ...overrides }`: the override's keys replace the base's.
+/// The override's keys replace the base's.
 fn spread(target: &mut Value, overrides: Value) {
     if let (Some(into), Value::Object(from)) = (target.as_object_mut(), overrides) {
         for (key, value) in from {
@@ -123,7 +116,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `RunOptions = { controller?, self?, targets? }`.
 #[derive(Default)]
 struct RunOptions {
     controller: Option<PlayerId>,
@@ -132,7 +124,7 @@ struct RunOptions {
 }
 
 /// Apply a whole effect list the way a hook's list is applied: one context, one rng, in order.
-/// TS's `sinkFor(state)` is the sink built here: its rng starts at the state's cursor, as reduce does.
+/// The sink's rng starts at the state's cursor, as reduce does.
 fn run_all(state: &mut GameState, effects: &[Effect], options: RunOptions) -> Vec<GameEvent> {
     let mut events = Vec::new();
     let mut rng = Rng::new(&state.seed, state.rng_cursor);
@@ -159,10 +151,8 @@ fn run(state: &mut GameState, effect: Effect, options: RunOptions) -> Vec<GameEv
     run_all(state, &[effect], options)
 }
 
-/// TS `put(state, defId, slot, { radiant: true })`, the harness's `put` with its option: the card is
-/// made in its owner's hand, flagged Radiant, then placed (TS's order), and a copy of it as placed comes
-/// back. Written here from part 1's `new_instance` and `zones::place_on_field`, since the harness's
-/// `put` is called with three arguments in every other file of this part.
+/// The harness's `put` with the Radiant flag: made in its owner's hand, flagged, then placed; a copy
+/// of it as placed comes back.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let mut card = new_instance(state, def_id, at.player, Zone::Hand { player: at.player });
     card.radiant = true;
@@ -175,7 +165,6 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     live(state, &card.id)
 }
 
-/// TS `unitAt(state, lane, player = "p1")`.
 fn unit_at(state: &GameState, lane: i32, player: PlayerId) -> Option<CardInstance> {
     card_at(state, slot(player, Row::Units, lane)).cloned()
 }
@@ -186,19 +175,16 @@ fn keyword_kinds_at(state: &GameState, lane: i32) -> Vec<KeywordKind> {
         .unwrap_or_default()
 }
 
-/// TS held the live instance and read it after an effect; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// TS wrote through the live instance; Rust writes through the card found by id.
 fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id} in the state"))
 }
 
-/// `eventsOfType(events, "summoned").map((event) => event.lane)`.
 fn summoned_lanes(events: &[GameEvent]) -> Vec<i32> {
     events
         .iter()
@@ -209,7 +195,6 @@ fn summoned_lanes(events: &[GameEvent]) -> Vec<i32> {
         .collect()
 }
 
-/// `eventsOfType(events, "summoned").map((event) => [event.row, event.lane])`.
 fn summoned_rows_and_lanes(events: &[GameEvent]) -> Vec<(Row, i32)> {
     events
         .iter()
@@ -224,9 +209,7 @@ fn kinds_of(keywords: &[Keyword]) -> Vec<KeywordKind> {
     keywords.iter().map(Keyword::kind).collect()
 }
 
-// ---------------------------------------------------------------------------
 // summon({ randomKeywords }) — R21, #80 Zao Gao
-// ---------------------------------------------------------------------------
 
 mod summon_with_random_keywords_r21_s7_80 {
     use super::*;
@@ -311,9 +294,7 @@ mod summon_with_random_keywords_r21_s7_80 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // summonCopy — §10.7, R57, #12 and #61
-// ---------------------------------------------------------------------------
 
 mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     use super::*;
@@ -359,8 +340,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         assert_eq!(view.attack, 9);
         assert_eq!(view.max_health, 12);
 
-        // The copy's state is its own: writing the source afterwards does not reach it. (TS pinned
-        // this as object identity, `not.toBe`; Rust values are never shared, so the write is made.)
+        // The copy's state is its own: writing the source afterwards does not reach it.
         {
             let card = live_mut(&mut state, &source.id);
             card.buffs = AttackHealth { attack: 0, health: 0 };
@@ -582,14 +562,11 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // summonRandom — §5.1, §10.7, R60, #67 Zoomerbin Oomen
-// ---------------------------------------------------------------------------
 
 mod summon_random_s5_1_s10_7_r60_67 {
     use super::*;
 
-    /// TS `const pool = { defId: [poolA.id, poolB.id] }`.
     fn pool() -> Value {
         json!({ "defId": [pool_a().id, pool_b().id] })
     }

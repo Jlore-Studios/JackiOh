@@ -9,8 +9,10 @@
 //! Reads `public.game_records` through the store (DATABASE_URL), keeps the records the filter names,
 //! and prints every card's four breakdowns — in deck, in the opening hand, going first and going
 //! second, played against drawn but not played — each with the games behind it. With nothing named
-//! it reads live games of every mode, patch and pilot: a development run's records are read only
-//! with `--source=dev` or `--source=all` (R378). `--json` prints the report as data instead.
+//! it reads the people's seats of live games of every mode and patch: a development run's records are
+//! read only with `--source=dev` or `--source=all` (R378), and a ladder bot's side of a live game
+//! only with `--pilot=ai` or `--pilot=unified`, or as `--source=dev` and `--source=all` count every
+//! seat by default (R1451). `--json` prints the report as data instead.
 //!
 //! The arithmetic is `card_stats` in `jackioh_engine::wire::stats` (TS `packages/shared/src/stats.ts`),
 //! the same the AI's development run prints its own games with, so a pre-release run and the live
@@ -32,7 +34,8 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --source=live|dev|all      Live games (the default), an AI development run's, or both.
   --mode=bo1|bo3|random      One match type. Default: every mode.
   --patch=<version>          One patch, as patches.json names it. Default: every patch.
-  --pilot=human|ai|unified   The seats counted. Default: unified, every seat.
+  --pilot=human|ai|unified   The seats counted. Default: human for live games, a ladder bot's
+                             side left out; unified, every seat, with --source=dev or all.
   --card=<id>                One card's row only.
   --json                     The report as JSON.";
 
@@ -96,6 +99,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     let mut filter: CardStatsFilter = DEFAULT_CARD_STATS_FILTER.clone();
     let mut card: Option<String> = None;
     let mut json = false;
+    let mut pilot: Option<PilotFilter> = None;
 
     for arg in argv {
         if arg == "--json" {
@@ -109,12 +113,18 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
             "source" => filter.source = one_of::<SourceFilter>(name, raw, SOURCE_FILTERS, USAGE)?,
             "mode" => filter.mode = Some(one_of::<GameMode>(name, raw, GAME_MODES, USAGE)?),
             "patch" => filter.patch = Some(raw.to_owned()),
-            "pilot" => filter.pilot = one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?,
+            "pilot" => pilot = Some(one_of::<PilotFilter>(name, raw, PILOT_FILTERS, USAGE)?),
             "card" => card = Some(raw.to_owned()),
             _ => bail!("Unrecognised option --{name}.\n\n{USAGE}"),
         }
     }
 
+    // R1451: a ladder bot's side of a live game is read only when it is asked for.
+    filter.pilot = pilot.unwrap_or(if filter.source == SourceFilter::Live {
+        PilotFilter::Human
+    } else {
+        PilotFilter::Unified
+    });
     Ok(CardStatsOptions { filter, card, json })
 }
 

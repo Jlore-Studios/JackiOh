@@ -139,7 +139,13 @@ export const FX_CENTER = { x: 0.5, y: 0.45 } as const;     // viewport anchor fo
 export const FX_TEXT = {
   yourTurn: "Your turn",
   opponentTurn: "Opponent's turn",
+  /** R845: an extra turn's banner. */
+  yourExtraTurn: "Your extra turn",
+  opponentExtraTurn: "Opponent's extra turn",
   autoEnded: "No moves left",
+  /** R983: what the turn banner shows for a Feng Shui judgement. */
+  auspicious: "吉",
+  inauspicious: "凶",
   /** R436: the title over the effects Call to Chaos rolled. */
   chaosRolled: "Call to Chaos:",
   /** B5 E10: an effect ended the turn. */

@@ -1,15 +1,12 @@
-// `/patch-notes` (R388): a public route, lazy like the others, with its tab title and canonical link,
+// `/patch-notes` (R388, R724000): a public route, lazy like the others, with its tab title and canonical link,
 // linked from the site footer, served by vercel.json (net/deploy-routes.test.ts reads `paths`) and
 // listed in the sitemap.
-
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import { PatchSourceProvider } from "../patches/context.tsx";
 import { fixtureSource } from "../patches/fixtures.ts";
@@ -21,8 +18,6 @@ import PatchNotesRoute from "./patch-notes.tsx";
 import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
-
-const HERE = dirname(fileURLToPath(import.meta.url));
 
 /** A lazily-imported route chunk and the real history's first read can outrun the 1 s default. */
 const SLOW = { timeout: 10_000 } as const;
@@ -58,6 +53,20 @@ describe("R388 the /patch-notes route", () => {
     expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/api/auth/me"))).toBe(false);
   });
 
+  it("R724000 opens on the newest release line, the others shut", async () => {
+    at(paths.patchNotes);
+    render(<App />);
+    const sets = await screen.findAllByTestId(patchTestid.set, undefined, SLOW);
+    const shipped = await realPatchSource.patches();
+    const toggles = sets.map((set) => within(set).getByTestId(patchTestid.setToggle).getAttribute("aria-expanded"));
+    expect(toggles).toEqual(sets.map((_set, at) => (at === 0 ? "true" : "false")));
+    expect(sets.length).toBeGreaterThan(1);
+    // The newest patch sits in the open line, and no shut line lists a patch until it is opened.
+    expect(within(sets[0] ?? document.body).getAllByTestId(patchTestid.patch)[0]?.dataset.version).toBe(shipped.at(-1)?.version);
+    for (const set of sets.slice(1)) expect(within(set).queryAllByTestId(patchTestid.patch)).toEqual([]);
+    expect(screen.getByText(/Every JackiOh patch, set by set, newest first\./u)).toBeInTheDocument();
+  });
+
   it("R388 has a tab title, a canonical link and a heading", () => {
     expect(paths.patchNotes).toBe("/patch-notes");
     expect(documentTitleFor(paths.patchNotes)).toBe("Patch notes · JackiOh");
@@ -90,7 +99,7 @@ describe("R388 the /patch-notes route", () => {
   });
 
   it("R388 is in the sitemap", () => {
-    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/patch-notes</loc>`);
   });
 });

@@ -387,7 +387,9 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
     reads the subscriptions and the secrets afresh (`_current`), so one added or changed while
     the loop runs shows within a tick (or, when this checkout's code is too old to read it, the
     loop ends and the next one shows it on newer code), and settles the issue about the
-    machine's disk (`disk.alert`). A failure is only a warning: it never fails the sweep or the loop.
+    machine's disk (`disk.alert`). With `--stats` the issue carries the statistics, counted
+    afresh every 30 minutes and kept between (`dashboard.update`). A failure is only a warning:
+    it never fails the sweep or the loop.
 
     With `--companions`, each other bot (Squishy, #60) is swept (with `--sweep`) and drawn by a
     process of its own (`_companions`), and its section goes into the issue apart from the night
@@ -412,7 +414,9 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
         extra = (_companions(cfg, sweep=bool(getattr(args, "sweep", False)))
                  if getattr(args, "companions", False) else ())
         try:
-            note = dashboard_mod.update(_ctx(cfg), extra)
+            note = dashboard_mod.update(_ctx(cfg), extra,
+                                        stats=bool(getattr(args, "stats", False)),
+                                        stats_extra=_stats_sections(cfg, args))
             print(redact(f"dashboard: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the status issue was not updated: {exc}"), flush=True)
@@ -422,21 +426,14 @@ def cmd_dashboard(cfg: Config, args: argparse.Namespace) -> int:
                 print(redact(f"disk: {note}"), flush=True)
         except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
             print(redact(f"::warning::the disk issue was not settled: {exc}"), flush=True)
-        if getattr(args, "stats", False):
-            try:
-                print(redact(stats_mod.update(_ctx(cfg), extra=_stats_sections(cfg, args))),
-                      flush=True)
-            except Exception as exc:  # noqa: BLE001 - one bad tick must not end the loop
-                print(redact(f"::warning::the statistics issue was not updated: {exc}"),
-                      flush=True)
         if not every or time.monotonic() + every > deadline:
             return 0
         time.sleep(every)
 
 
 def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
-    """What draws the other bots' sections of the statistics issue: their own processes with
-    `--companions` (#60), nothing without. Called only when the issue is rewritten."""
+    """What draws the other bots' records in the statistics: their own processes with
+    `--companions` (#60), nothing without. Called only when the statistics are counted."""
     if not getattr(args, "companions", False):
         return tuple
     return lambda: _companions(cfg, sweep=False, argv=("stats", "--section-only"),
@@ -444,14 +441,17 @@ def _stats_sections(cfg: Config, args: argparse.Namespace) -> Any:
 
 
 def cmd_stats(cfg: Config, args: argparse.Namespace) -> int:
-    """The pinned "Night bot statistics" issue (stats.py): rewritten when due, or now with --force.
-    `--section-only` prints this bot's section of it (Squishy's, which the night bot's loop puts
-    in) and writes nothing; `--companions` puts the other bots' sections in."""
+    """The statistics in the pinned status issue (stats.py): the issue rewritten now, with them
+    counted afresh when due, or at once with --force. `--section-only` prints this bot's record
+    (Squishy's, which the night bot's loop puts in) and writes nothing; `--companions` draws the
+    other bots' sections and records, as the loop does."""
     if getattr(args, "section_only", False):
         print(stats_mod.bot_section(_ctx(cfg, write=False)))
         return 0
-    print(redact(stats_mod.update(_ctx(cfg), force=bool(getattr(args, "force", False)),
-                                  extra=_stats_sections(cfg, args))))
+    extra = _companions(cfg, sweep=False) if getattr(args, "companions", False) else ()
+    print(redact("dashboard: " + dashboard_mod.update(
+        _ctx(cfg), extra, stats=True, force_stats=bool(getattr(args, "force", False)),
+        stats_extra=_stats_sections(cfg, args))))
     return 0
 
 
@@ -489,7 +489,7 @@ def cmd_providers(cfg: Config, args: argparse.Namespace) -> int:
         except (GitHubError, HarnessError) as exc:
             print(f"(the state file could not be read: {exc}; usage is not shown)")
     for provider in cfg.pool.ordered():
-        reason = providers_mod.availability(provider, state, now, cfg.timezone, cfg.secrets)
+        reason = providers_mod.start_reason(provider, state, now, cfg.timezone, cfg.secrets)
         limits = provider.limits
         caps = ", ".join([f"{k} {v:.0%}" for k, v in limits.stops.items()]
                          + [f"{k} {v} min" for k, v in limits.budgets.items()]) or "none"
@@ -617,102 +617,31 @@ def cmd_setup(cfg: Config, args: argparse.Namespace) -> int:
 
 
 def cmd_triage(cfg: Config, args: argparse.Namespace) -> int:
-    """Triage a new issue or pull request, or one a person called it on (`triage.py`). Every step
-    skips quietly on failure: triage is a convenience, never a reason for a red run."""
-    if args.step == "gate":
-        payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
-        asked = str((payload.get("inputs") or {}).get("number") or "").strip().lstrip("#")
-        if asked:  # `workflow_dispatch`: a person called triage on this thread
-            try:
-                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(int(asked))}
-            except (GitHubError, ValueError) as exc:
-                _output({"go": "false", "number": ""})
-                print(redact(f"triage: skip: #{asked} could not be read: {exc}"))
-                return 0
-        elif payload.get("action") == "labeled" and (payload.get("issue") or {}).get("number"):
-            # #307: a method label (or `bot:approved` on a suggestion) starts triage. A person
-            # gets METHOD_WAIT to set a difficulty and a priority, and then the issue is read
-            # again, so their labels count.
-            if not triage_mod.starts_triage(str((payload.get("label") or {}).get("name") or "")):
-                _output({"go": "false", "number": ""})
-                print("triage: skip: not a method label")
-                return 0
-            time.sleep(triage_mod.METHOD_WAIT.total_seconds())
-            number = int(payload["issue"]["number"])
-            try:
-                payload = {"issue": _ctx(cfg, write=False).gh.get_issue(number)}
-            except (GitHubError, ValueError) as exc:
-                _output({"go": "false", "number": ""})
-                print(redact(f"triage: skip: #{number} could not be read: {exc}"))
-                return 0
-        go, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
-                                  cfg.root, clock_now(), cfg.timezone, asked=bool(asked))
-        thread, _ = triage_mod.thread_of(payload)
-        _output({"go": str(go).lower(), "number": thread.get("number") or ""})
-        print(f"triage: {'go' if go else 'skip'}: {why}")
-        return 0
-    number = int(args.number)
-    out = Path(args.verdict)
-    if args.step == "classify":
-        try:
-            ctx = _ctx(cfg, write=False)
-            thread = ctx.gh.get_issue(number)
-            text = triage_mod.prompt(thread, "pull_request" in thread, ctx.gh.list_labels(),
-                                     triage_mod.conventions_text(cfg.root),
-                                     triage_mod.issue_types(ctx.gh),
-                                     ctx.gh.list_issues(state="open", limit=300),
-                                     method=triage_mod.method_of(thread))
-            model, effort = triage_mod.classifier_model(cfg.root)
-            answer = triage_mod.run_muse(cfg.bin("muse"), model, effort, text)
-            verdict = triage_mod.parse(answer)
-        except Exception as exc:  # noqa: BLE001 - any failure skips
-            print(redact(f"triage: {triage_mod.CLASSIFIER} did not classify #{number}: {exc}"))
-            return 0
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps({"number": number, "verdict": verdict}), encoding="utf-8")
-        print(f"triage: #{number}: {json.dumps(verdict)[:500]}")
-        return 0
-    try:
-        written = json.loads(out.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        # No answer from the classifier: the method label's own labels and assignees, and the
-        # links the issue's own text and title give, are still made.
-        written = {"number": number, "verdict": None}
-    if int(written.get("number") or 0) != number:
-        print(f"triage: the answer is for #{written.get('number')}, not #{number}")
-        return 0
+    """Triage a new issue or pull request, an issue a person labelled `human`, or a thread a
+    person called it on (`triage.py`). Any failure skips quietly: triage is a convenience, never a
+    reason for a red run."""
+    payload = json.loads(Path(args.payload).read_text(encoding="utf-8"))
+    asked = str((payload.get("inputs") or {}).get("number") or "").strip().lstrip("#")
     try:
         ctx = _ctx(cfg)
-        thread = ctx.gh.get_issue(number)
+        if asked:  # `workflow_dispatch`: a person called triage on this thread
+            payload = {"issue": ctx.gh.get_issue(int(asked))}
+        step, why = triage_mod.gate(payload, Trust.load(cfg.root / TRUST_PATH), cfg.bot_login,
+                                    asked=bool(asked))
+        print(f"triage: {step or 'skip'}: {why}")
+        if not step:
+            return 0
+        number = int(triage_mod.thread_of(payload)[0]["number"])
+        thread = ctx.gh.get_issue(number)  # afresh: what a person set meanwhile counts
         is_pr = "pull_request" in thread
-        repo_labels = {str(label.get("name")) for label in ctx.gh.list_labels()}
-        open_issues: dict[int, dict] | None = None
-        linked: dict[str, Any] = {}
-        if not is_pr:
-            open_issues = {int(i["number"]): i for i in ctx.gh.list_issues(state="open", limit=300)
-                           if "pull_request" not in i}
-            linked = {"blocked_by": {int(i["number"]) for i in ctx.gh.blocked_by(number)},
-                      "blocking": {int(i["number"]) for i in ctx.gh.blocking(number)},
-                      "parent": triage_mod.parent_number(thread)}
-        plan = triage_mod.decide(written.get("verdict"), thread, is_pr, repo_labels,
-                                 cfg.bot_login, triage_mod.issue_types(ctx.gh), open_issues,
-                                 linked, asked=bool(getattr(args, "asked", False)))
-        ids = {n: int(i.get("id") or 0) for n, i in (open_issues or {}).items()}
-        ids[number] = int(thread.get("id") or 0)
-        done = triage_mod.apply(ctx.gh, number, plan, ids)
-    except GitHubError as exc:
-        print(redact(f"triage: could not triage #{number}: {exc}"))
+        plan = triage_mod.decide(step, thread, is_pr, cfg.bot_login,
+                                 types=None if is_pr else triage_mod.issue_types(ctx.gh),
+                                 form=not asked)
+        done = triage_mod.apply(ctx.gh, number, plan)
+    except (GitHubError, ValueError) as exc:
+        print(redact(f"triage: could not triage: {exc}"))
         return 0
-    if plan.classified:
-        # Every thread triage classified says so (a closed one, or an issue whose method label
-        # went before the answer came, was not classified, and gets nothing).
-        try:
-            ctx.gh.create_comment(number, triage_mod.comment(
-                plan, done, is_pr=is_pr, answered=isinstance(written.get("verdict"), dict)))
-        except GitHubError as exc:
-            print(redact(f"triage: could not comment on #{number}: {exc}"))
-    lines = done or ["nothing to change"]
-    report = f"Triage of #{number}:\n" + _bullets(lines + plan.notes)
+    report = f"Triage of #{number}:\n" + _bullets((done or ["nothing to change"]) + plan.notes)
     print(report)
     _summary(report)
     return 0
@@ -759,7 +688,7 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("sweep", help="answer any request an event handler never answered")
     sub.add_parser("status", help="print the status report")
     dashboard = sub.add_parser("dashboard", help="rewrite the pinned status issue (bot-status "
-                               "runs it every ten minutes; each sweep runs it once)")
+                               "runs it every five minutes)")
     dashboard.add_argument("--every", type=int, default=0,
                            help="seconds between rewrites; 0 rewrites it once")
     dashboard.add_argument("--for", dest="for_seconds", type=int, default=0,
@@ -767,19 +696,21 @@ def parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--sweep", action="store_true",
                            help="sweep before each rewrite, as the ten-minute sweep does")
     dashboard.add_argument("--stats", action="store_true",
-                           help="also rewrite the pinned statistics issue, every 30 minutes")
+                           help="carry the statistics in it, counted afresh every 30 minutes")
     dashboard.add_argument("--companions", action="store_true",
                            help="also sweep and draw each other bot (Squishy) in a process of "
                            "its own, and put its section in the issue")
     dashboard.add_argument("--section-only", action="store_true",
                            help="print this bot's section of the status issue and write nothing "
                            "(the night bot's loop runs this as Squishy)")
-    p = sub.add_parser("stats", help="rewrite the pinned statistics issue now")
-    p.add_argument("--force", action="store_true", help="even if it was rewritten under an hour ago")
+    p = sub.add_parser("stats", help="rewrite the pinned status issue now, with its statistics")
+    p.add_argument("--force", action="store_true",
+                   help="count the statistics afresh even if they were counted under 30 minutes ago")
     p.add_argument("--companions", action="store_true",
-                   help="also put in each other bot's section (Squishy's), drawn by its own process")
+                   help="also put in each other bot's section and record (Squishy's), drawn by "
+                   "its own process")
     p.add_argument("--section-only", action="store_true",
-                   help="print this bot's section of the statistics issue and write nothing")
+                   help="print this bot's record for the statistics and write nothing")
     p = sub.add_parser("halt", help="stop all model work")
     p.add_argument("reason", nargs="*")
     sub.add_parser("start", help="lift a halt")
@@ -796,15 +727,9 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("setup", help="create or update the labels, and create the state branch")
     p.add_argument("--repo-settings", action="store_true",
                    help="also allow auto-merge and protect the default branch (needs admin)")
-    p = sub.add_parser("triage", help="label, assign, title and link a new issue or pull "
-                       "request, or one a person called it on")
-    p.add_argument("step", choices=("gate", "classify", "apply"))
-    p.add_argument("--payload", default="", help="gate: the event's payload file")
-    p.add_argument("--number", default="0", help="classify, apply: the issue or pull request")
-    p.add_argument("--verdict", default="", help="classify writes it, apply reads it")
-    p.add_argument("--asked", action="store_true",
-                   help="apply: a person called triage on it, so an issue with no method label "
-                   "is classified all the same")
+    p = sub.add_parser("triage", help="label, type and assign a new issue or pull request, an "
+                       "issue labelled human, or one a person called it on")
+    p.add_argument("--payload", required=True, help="the event's payload file")
     p = sub.add_parser("forget", help="clear an item's failure count")
     p.add_argument("number")
     return top

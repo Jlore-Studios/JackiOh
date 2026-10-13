@@ -1,22 +1,5 @@
-// The practice table at the viewports practice is played on, measured on the M5-T1 fixture board
-// with a hand of 4, 7 and 10 cards.
-//
-// The practice page is exactly one screen tall with `overflow: hidden` (practice.css, "the game
-// screen"), so anything laid out past the viewport is not scrolled to: it is gone. The board inside
-// it is board.css's, as in hotseat and online play (the practice-only skin this spec was first
-// written against was dropped at integration, once polish tasks 6 and 7 landed). Two things are
-// pinned here, each a public part of the view (§10.8) that has to stay on screen:
-//
-//   - every card in the player's hand lies across the viewport, however many there are, and shows
-//     enough of itself to be clicked. Across, and down to its top: on a phone board.css lets the
-//     hand hang below the screen's edge as Hearthstone's does, and its B46 (mobile-ux.cy.tsx) holds
-//     a hand card to showing its top 24 px, the cost and the name. This spec holds practice to the
-//     same line, under the HUD practice adds;
-//   - R169's modifier badges (`modifiers-<side>`), the plague and grade counters, and a Stack's
-//     buried count are drawn at every size.
-//
-// The mount is the route's own shell (routes/practice.tsx): `.app-shell--wide.practice--game`
-// with a HUD row above `.practice-board.practice-table`, so the table gets the height it really has.
+// M5-T1: verify the fixture board at its practice viewports with 4, 7, and 10-card hands.
+// The route shell must keep the hand, R169 modifiers, counters, and Stack count visible (§10.8, B46).
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import "../../../apps/web/src/practice/practice.css";
@@ -37,7 +20,7 @@ const HAND_CARD_IDS = [
   "core-013", "core-025", "core-054", "core-066", "core-068",
 ] as const;
 
-/** Sub-pixel rounding at a fractional overlap; nothing a player could miss a card by. */
+/** Fractional-overlap rounding slack. */
 const EPSILON = 1;
 
 function mountTable(handSize: number): void {
@@ -56,10 +39,9 @@ function mountTable(handSize: number): void {
   );
 }
 
-/** B46's line for a hand card (mobile-ux.cy.tsx): the top 24 px of a card, its cost and name. */
+/** B46: a hand card shows its top 24 px, cost, and name (mobile-ux.cy.tsx). */
 const HAND_CARD_SHOWING_PX = 24;
 
-/** A hand card a player can see and press: displayed, across the viewport, its top on screen. */
 function expectHandCardOnScreen(element: Element, label: string, width: number, height: number): void {
   const style = getComputedStyle(element);
   expect(style.display, `${label} is displayed`).to.not.eq("none");
@@ -75,7 +57,6 @@ function expectHandCardOnScreen(element: Element, label: string, width: number, 
   );
 }
 
-/** Visible in the sense a player means: displayed, with an area, and inside the viewport. */
 function expectOnScreen(element: Element, label: string, width: number, height: number): void {
   const style = getComputedStyle(element);
   expect(style.display, `${label} is displayed`).to.not.eq("none");
@@ -107,7 +88,6 @@ describe("the practice table keeps the hand, the modifiers and the counters on s
           handCards.forEach((element, index) => {
             expectHandCardOnScreen(element, `hand card ${String(index + 1)} of ${String(handSize)}`, viewport.width, viewport.height);
           });
-          // A card must show enough of itself to be clicked: at least 12 px of its left edge.
           for (let index = 0; index + 1 < handCards.length; index += 1) {
             const here = (handCards[index] as Element).getBoundingClientRect();
             const next = (handCards[index + 1] as Element).getBoundingClientRect();

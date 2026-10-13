@@ -19,7 +19,7 @@ from harness.state import item as state_item
 from harness.work import NOTES_FILE
 
 from tests.fakes import FakeGitHub, git, push_branch
-from tests.support import DAY, MACHINE, make_config, make_ctx, test_pool
+from tests.support import DAY, MACHINE, NIGHT, make_config, make_ctx, test_pool
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, DONE, builder, changes, reviewer
 
@@ -59,49 +59,50 @@ class ReviewRuleTests(unittest.TestCase):
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
         return pr, result
 
-    def test_two_medium_reviews_of_different_families_merge_it(self):
+    def test_a_medium_item_waits_for_its_strong_final(self):
+        """Muse's in-run approval never ships a medium item (#725 keeps Strong-only): the head
+        waits for its Strong final audit, and no medium review run goes out meanwhile."""
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, result = self.build_on_medium(h)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         votes = h.ctx.store.load()["items"][str(pr)]["votes"]
         self.assertEqual(votes, {"sha": result["head"], "builder": "muse",
                                  "approvals": ["muse"], "rejections": [],
                                  "tiers": {"muse": "medium"},
                                  "reviews": [{"family": "muse", "tier": "medium", "run": "777"}]})
-        self.assertIn("`muse` (medium) approved it, so it waits for a strong or medium model's "
-                      "review (the same medium model may review it again)",
-                      h.gh.bot_comments(12)[-1])
+        self.assertIn("`muse` (medium) approved it, so it waits for one strong model's final "
+                      "audit (Opus)", h.gh.bot_comments(12)[-1])
         self.assertEqual(h.ctx.store.load()["providers"]["muse"]["spent"][-1]["minutes"], 10.0)
-        # No strong model is free by day: the review run goes to another medium family.
+        # No strong model is free by day: no review run goes out at all.
+        planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
+        self.assertEqual(planned["action"], "none")
+        self.assertEqual(h.gh.auto_merge, {})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
+        # With a strong seat free, Opus audits, and that ships it.
+        h.committed_hours()  # claude-3 works all day
+        next_run(h, "778")
         planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
-        self.assertEqual((planned["action"], planned["provider"]), ("review", "agy"))
-        self.assertEqual(planned["seats"]["review"]["tier"], "medium")
+        self.assertEqual((planned["action"], planned["provider"],
+                          planned["seats"]["review"]["tier"]),
+                         ("review", "claude-3", "strong"))
         self.assertEqual((review["status"], review["verdict"]), ("reviewed", "approve"))
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR})
-        votes = h.ctx.store.load()["items"][str(pr)]["votes"]
-        self.assertEqual((votes["approvals"], votes["tiers"]),
-                         (["muse", "gemini"], {"muse": "medium", "gemini": "medium"}))
-        self.assertEqual([r["family"] for r in votes["reviews"]], ["muse", "gemini"])
 
-    def test_two_reviews_by_the_same_medium_model_merge_it(self):
-        """agy builds and its own reviewer approves; with no other subscription set up, a review
-        run by agy again is the second medium approval."""
+    def test_with_no_strong_seat_set_up_it_waits_for_a_person(self):
+        """agy builds and its own reviewer approves; with no Strong seat set up, no review run
+        can take it to the rule, so the head waits for a person to merge it (#725: no medium
+        review runs go out for a medium item)."""
         h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("agy",), at=DAY)
         pr, _ = self.build_on_medium(h, "agy")
         self.assertEqual(h.gh.auto_merge, {})
-        self.assertNotIn("No subscription that could give that review is set up",
-                         h.gh.bot_comments(12)[-1])
+        self.assertIn("No subscription that could give that review is set up",
+                      h.gh.bot_comments(12)[-1])
         next_run(h, "778")
-        planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
-        self.assertEqual((planned["action"], planned["provider"]), ("review", "agy"))
-        self.assertEqual(planned["approved"], ["gemini"])
-        self.assertEqual(review["verdict"], "approve")
-        self.assertIn(f"PR_{pr}", h.gh.auto_merge)
-        votes = h.ctx.store.load()["items"][str(pr)]["votes"]
-        self.assertEqual([(r["family"], r["tier"], r["run"]) for r in votes["reviews"]],
-                         [("gemini", "medium", "777"), ("gemini", "medium", "778")])
+        planned, _ = h.night(FakeRunner({"review": reviewer(APPROVE)}))
+        self.assertEqual(planned["action"], "none")
+        self.assertEqual(h.gh.auto_merge, {})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
 
     def test_a_deliver_job_run_again_does_not_count_its_review_twice(self):
         h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("agy",), at=DAY)
@@ -113,10 +114,9 @@ class ReviewRuleTests(unittest.TestCase):
         self.assertEqual(len(votes["reviews"]), 1)
         self.assertFalse(d._rule_met(votes))
 
-    def test_an_easy_item_ships_on_a_weak_and_a_medium_approval(self):
-        """Devin builds an easy item and checks itself, which is no review; agy, the only medium
-        model, approves it in a review run; then Devin reviews it in a run of its own, and a weak
-        approval with a medium one is enough for an easy item."""
+    def test_an_easy_item_ships_on_its_medium_audit(self):
+        """Devin builds an easy item and checks itself, which is no review; the lane's Medium
+        final audit then ships it, with no Opus gate (#725). No weak review run goes out."""
         h = Harness(self, env={"HARNESS_SECRETS_SET": ""}, machine=("devin", "agy"), at=DAY)
         h.gh.add_issue(12, labels=(LABEL_BUILD, "difficulty:easy"),
                        body="<!-- jackioh-bot:plan -->\n## Plan\n1. Edit src/game.txt.\n"
@@ -125,33 +125,22 @@ class ReviewRuleTests(unittest.TestCase):
                                               "self_check": reviewer(APPROVE)}))
         self.assertEqual((planned["provider"], result["status"]), ("devin", "built"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
-        self.assertIn("one strong model's review (Opus), two medium ones (the same model may give "
-                      "both), or a weak and a medium one", h.gh.bot_comments(12)[-1])
-        # A medium model is free, so it reviews first.
+        self.assertIn("a medium model's final audit", h.gh.bot_comments(12)[-1])
+        # The Medium audit approves, and that ships the easy item.
         next_run(h, "778")
         planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
         self.assertEqual((planned["provider"], planned["seats"]["review"]["tier"]),
                          ("agy", "medium"))
-        self.assertEqual(h.gh.auto_merge, {})
-        self.assertIn("one more review, by a strong, medium or weak model",
-                      h.gh.bot_comments(pr)[-1])
-        # agy is no longer free: Devin, weak, may give the second review, but only once the
-        # review has waited half an hour for a stronger reviewer (#317 part 9).
-        next_run(h, "779")
-        h.ctx.cfg = h.cfg = dataclasses.replace(h.cfg, pool=test_pool(("devin",)))
-        self.assertEqual(plan_mod.make(h.ctx)["action"], "none")
-        h.ctx.clock_fn.at = DAY + timedelta(minutes=31)
-        planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
-        self.assertEqual((planned["action"], planned["provider"]), ("review", "devin"))
-        self.assertEqual(planned["seats"]["review"]["tier"], "weak")
         self.assertEqual(review["verdict"], "approve")
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)
         votes = h.ctx.store.load()["items"][str(pr)]["votes"]
         self.assertEqual([(r["family"], r["tier"]) for r in votes["reviews"]],
-                         [("gemini", "medium"), ("cognition", "weak")])
+                         [("gemini", "medium")])
 
     def test_one_strong_review_is_enough(self):
-        h = Harness(self, env=ALL, machine=MACHINE)  # by night: the Claude accounts are open
+        # Only claude-3 is set up: it plans, builds and reviews the item, and its one strong
+        # review ships it (#695).
+        h = Harness(self, env={"HARNESS_SECRETS_SET": "CLAUDE_CODE_OAUTH_TOKEN_3"}, machine=())
         h.gh.add_issue(12, labels=(LABEL_BUILD,))
         runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
                              "review": reviewer(APPROVE)})
@@ -175,36 +164,85 @@ class ReviewRuleTests(unittest.TestCase):
         self.assertEqual(review["verdict"], "approve")
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)  # one strong approval is enough
 
-    def test_findings_send_it_back_and_it_stops_after_three(self):
+    def test_a_pause_does_not_spend_a_verdict_round(self):
+        """Usage pauses never reach a verdict, so they never spend one (#725): two rejections,
+        then a pause, then one more rejection uses up the lane's 3 rounds across the two runs."""
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY, max_review_cycles=3)
+        h.gh.add_issue(12, labels=(LABEL_BUILD,))
+
+        def limited(request):
+            return RunResult(False, "", 1, error="You've hit your limit",
+                             reset_at="2026-09-30T05:00:00Z")
+
+        planned, result = h.night(FakeRunner(
+            {"build": builder({"src/game.txt": "v2\n"}),
+             "fix": builder({"src/game.txt": "v3\n"}),
+             "review": [reviewer(changes("No.")), reviewer(changes("No.")), limited]}))
+        self.assertEqual((planned["provider"], result["status"]), ("muse", "interrupted"))
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual((record["verdict_rounds"], record["round_tier"]), (2, "medium"))
+        # One round left in the lane: the pause parked Muse, so agy (same tier) picks it up
+        # and one more rejection ends the lane phase.
+        runner = FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                             "fix": builder({"src/game.txt": "v3\n"}),
+                             "review": reviewer(changes("No."))})
+        planned, result = h.night(runner)
+        self.assertEqual((planned["provider"], result["status"]), ("agy", "built"))
+        self.assertEqual([c.role for c in runner.calls].count("review"), 1)
+        self.assertIn("Strong final audit", result["reason"])
+        pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
+        record = h.ctx.store.load()["items"]["12"]
+        self.assertEqual((record["verdict_rounds"], record["round_tier"]), (3, "medium"))
+
+    def test_a_strong_revise_after_rejection_ships(self):
+        """A Strong audit's rejection is answered at its own tier (#725): Opus fixes the medium
+        item in its own run, its own reviewer approves, and that ships it."""
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
         pr, _ = self.build_on_medium(h)
         h.night(FakeRunner({"review": reviewer(changes("It skips the replay check."))}))
         record = h.ctx.store.load()["items"][str(pr)]
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE})
-        self.assertEqual((record["source"], record["cross_rounds"]), ("cross-review", 1))
-        # The revision goes to the builder the building rule picks, reads the findings, and
-        # goes back for another review.
+        self.assertEqual(record["audit_tier"], "strong")
         runner = FakeRunner({"revise": builder({"src/game.txt": "rules v2 + replay\n"}),
                              "review": reviewer(APPROVE)})
         planned, result = h.night(runner)
         self.assertEqual((planned["action"], planned["provider"], result["status"]),
-                         ("revise", "muse", "approved"))
+                         ("revise", "claude-3", "approved"))
+        self.assertEqual([c.model for c in runner.calls], ["opus", "opus"])
         self.assertIn("It skips the replay check.", runner.calls[0].prompt)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
-        self.assertEqual(h.gh.auto_merge, {})
+        self.assertIn(f"PR_{pr}", h.gh.auto_merge)
+
+    def test_findings_send_it_back_and_it_stops_after_three(self):
+        h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
+        pr, _ = self.build_on_medium(h)
+        h.night(FakeRunner({"review": reviewer(changes("It skips the replay check."))}))
+        record = h.ctx.store.load()["items"][str(pr)]
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_REVISE, "difficulty:medium"})
+        self.assertEqual((record["source"], record["cross_rounds"]), ("cross-review", 1))
+        # The revision answers the Strong audit, so it stays with a Strong seat (#725).
+        # Two failed revisions are strikes two and three (each failed for the item's own sake),
+        # so the third steps it up instead of blocking it for a person.
+        seen = {}
+
+        def broken(request):
+            seen["prompt"] = request.prompt
+            return RunResult(False, "I cannot fix this; the approach is wrong.", 1,
+                             error="the model gave up", duration_s=120.0)
+
         for _ in range(2):
-            h.night(FakeRunner({"review": reviewer(changes("Still wrong."))}))
-            if LABEL_REVISE in h.gh.label_names(pr):
-                h.night(FakeRunner({"revise": builder({"src/game.txt": "again\n"}),
-                                    "review": reviewer(APPROVE)}))
-        # Three rejections are three strikes (#317 parts 4 and 8): instead of blocking it for a
+            planned, result = h.night(FakeRunner({"revise": broken}))
+            self.assertEqual((planned["action"], planned["provider"], result["status"]),
+                             ("revise", "claude-3", "failed"))
+        self.assertIn("It skips the replay check.", seen["prompt"])
+        # Three strikes (#317 parts 4 and 8): instead of blocking it for a
         # person, the bot raises the issue a step and builds it again from main.
         self.assertEqual(h.gh.threads[pr]["state"], "closed")
         self.assertIn("difficulty:hard", h.gh.label_names(12))
         self.assertIn(LABEL_BUILD, h.gh.label_names(12))
         said = h.gh.bot_comments(12)[-1]
         self.assertIn("This failed 3 times at `difficulty:medium`", said)
-        self.assertIn("It skips the replay check.", said)
         self.assertIn(f"#{pr} is closed and #12 is queued to build again from `main`", said)
         self.assertIn("Closed to build #12 again from `main`", h.gh.bot_comments(pr)[-1])
         record = h.ctx.store.load()["items"]["12"]
@@ -213,6 +251,7 @@ class ReviewRuleTests(unittest.TestCase):
 
     def test_a_review_of_a_head_that_moved_does_not_count(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
+        h.committed_hours()  # claude-3 works all day: the Strong final can audit
         pr, _ = self.build_on_medium(h)
         def moved(request):
             # Someone pushes to the branch while the reviewer reads it.
@@ -220,7 +259,7 @@ class ReviewRuleTests(unittest.TestCase):
                         base="bot/issue-12")
             return reviewer(APPROVE)(request)
         h.night(FakeRunner({"review": moved}))
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         self.assertIn("does not count", h.gh.bot_comments(pr)[-1])
 
@@ -251,19 +290,19 @@ class HandoffTests(unittest.TestCase):
                                               NOTES_FILE: "plan: rules v2\nnext: the Coin\n"}),
                             "review": limited})
         planned, result = h.night(first)
-        self.assertEqual((planned["provider"], result["status"]), ("claude-3", "interrupted"))
+        self.assertEqual((planned["provider"], result["status"]), ("muse", "interrupted"))
         record = h.ctx.store.load()["items"]["12"]
         self.assertIn("next: the Coin", record["handoff"]["notes"])
-        self.assertEqual(record["handoff"]["provider"], "claude-3")
+        self.assertEqual(record["handoff"]["provider"], "muse")
         self.assertTrue(record["planned_at"])  # planned in that run: not planned again
         # The notes never reach the branch.
         self.assertNotIn(NOTES_FILE, git(h.origin, "ls-tree", "-r", "--name-only", result["head"]))
-        # claude-3 is parked until its reset; the next run is another account (claude-7, next
-        # in the usage order), told what happened.
+        # Muse is parked until its reset, so the lane's tier order picks agy (#725: the
+        # owner keeps it only when it can build it). The next run is agy, told what happened.
         second = FakeRunner({"build": builder({"src/game.txt": "whole\n"}),
                              "review": reviewer(APPROVE)})
         planned, result = h.night(second)
-        self.assertEqual((planned["provider"], result["status"]), ("claude-7", "approved"))
+        self.assertEqual((planned["provider"], result["status"]), ("agy", "approved"))
         self.assertEqual([c.role for c in second.calls], ["build", "review"])
         prompt = second.calls[0].prompt
         self.assertIn("## Picking up from another agent", prompt)
@@ -317,15 +356,18 @@ class ConflictCarryTests(unittest.TestCase):
         h.gh.threads[pr]["mergeable_state"] = "dirty"
 
     def cleared_pr(self, h):
-        """Muse builds and approves it, agy approves it in a review run: the rule is met, and
-        then `main` conflicts with it."""
+        """Muse builds and approves it by day; at night a Strong seat reviews it: the rule is
+        met (#695), and then `main` conflicts with it."""
         pr, built = ReviewRuleTests.build_on_medium(self, h)
         next_run(h, "778")
-        h.night(FakeRunner({"review": reviewer(APPROVE)}))
+        h.ctx.clock_fn.at = NIGHT
+        planned, review = h.night(FakeRunner({"review": reviewer(APPROVE)}))
+        self.assertEqual((planned["provider"], planned["seats"]["review"]["tier"]),
+                         ("claude-3", "strong"))
         self.assertIn(f"PR_{pr}", h.gh.auto_merge)
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertEqual(record["cleared"]["sha"], built["head"])
-        self.assertEqual(record["cleared"]["by"], "`muse` (medium), `gemini` (medium)")
+        self.assertEqual(record["cleared"]["by"], "`muse` (medium), `claude` (strong)")
         self.conflicted(h, pr)
         next_run(h, "779")
         return pr, built["head"]
@@ -344,7 +386,7 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertIn("yours is the only review of the resolution", runner.calls[1].prompt)
         self.assertIn("resolved the conflicts in `src/game.txt`", runner.calls[1].prompt)
         # No review run: auto-merge is back on, pinned to the resolved head.
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge_heads[f"PR_{pr}"], result["head"])
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertEqual([r["family"] for r in record["votes"]["reviews"]], ["muse"])
@@ -354,10 +396,10 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertEqual((record["cleared"]["sha"], record["cleared"]["carried_from"]),
                          (result["head"], cleared_sha))
         self.assertEqual((record["cleared"]["by"], record["cleared"]["resolved_by"]),
-                         ("`muse` (medium), `gemini` (medium)", "`muse` (medium)"))
+                         ("`muse` (medium), `claude` (strong)", "`muse` (medium)"))
         comment = h.gh.bot_comments(pr)[-1]
         self.assertIn(f"The reviews had cleared this change at `{cleared_sha[:12]}` (`muse` "
-                      "(medium), `gemini` (medium)). This revision only merged `main` and resolved "
+                      "(medium), `claude` (strong)). This revision only merged `main` and resolved "
                       "the conflicts in `src/game.txt`, and its own reviewer approved that, so the "
                       "clearance carries over and no review run is needed. Auto-merge is on",
                       comment)
@@ -368,14 +410,14 @@ class ConflictCarryTests(unittest.TestCase):
         planned, result = h.night(FakeRunner({"revise": resolve({"src/extra.txt": "more\n"}),
                                               "review": reviewer(APPROVE)}))
         self.assertEqual(result["status"], "approved")
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         record = h.ctx.store.load()["items"][str(pr)]
         self.assertNotIn("carried", record["votes"])
         self.assertEqual(record["cleared"]["sha"], cleared_sha)
         self.assertIn("but that does not carry over: it changed more than the conflicts "
-                      "(`src/extra.txt`). `muse` (medium) approved it, so it waits for a strong "
-                      "or medium model's review", h.gh.bot_comments(pr)[-1])
+                      "(`src/extra.txt`). `muse` (medium) approved it, so it waits for one strong "
+                      "model's final audit (Opus)", h.gh.bot_comments(pr)[-1])
 
     def test_a_branch_that_moved_after_the_reviews_does_not_carry(self):
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
@@ -387,13 +429,13 @@ class ConflictCarryTests(unittest.TestCase):
         h.night(runner)
         self.assertNotIn("change nothing else", runner.calls[0].prompt)
         self.assertNotIn("yours is the only review", runner.calls[1].prompt)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertIn("but that does not carry over: the branch had moved on from the commit they "
                       "cleared", h.gh.bot_comments(pr)[-1])
 
     def test_a_change_short_of_the_rule_has_nothing_to_carry(self):
-        """One medium approval of two: the change was never cleared, so its resolution waits for
-        the review run like any revision."""
+        """One medium approval, short of the Strong one: the change was never cleared, so its
+        resolution waits for the review run like any revision."""
         h = Harness(self, env=ALL, machine=MACHINE, at=DAY)
         pr, _ = ReviewRuleTests.build_on_medium(self, h)
         self.assertNotIn("cleared", h.ctx.store.load()["items"][str(pr)])
@@ -404,7 +446,7 @@ class ConflictCarryTests(unittest.TestCase):
         self.assertEqual((planned["source"], result["status"]), ("conflict", "approved"))
         self.assertNotIn("cleared", planned)
         self.assertNotIn("yours is the only review", runner.calls[1].prompt)
-        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS})
+        self.assertEqual(h.gh.label_names(pr), {LABEL_PR, LABEL_CROSS, "difficulty:medium"})
         self.assertEqual(h.gh.auto_merge, {})
         self.assertNotIn("cleared this change", h.gh.bot_comments(pr)[-1])
 

@@ -1,27 +1,6 @@
-// Polish 6, B39: the deck builder with the real catalog has no horizontal overflow at 390x844 and
-// 1280x720, and shows at least two pool columns on the phone (docs/polish/6-cards.md). It also
-// holds B29's layout half: the detail view's two faces sit side by side at both sizes.
-//
-// jsdom has no layout, so the workshop's own tests can only prove structure. This spec puts the
-// builder in front of a real layout engine with the heaviest pool it ever shows: every one of the
-// deckable cards of Core, Classic and Classic+ as a full CardFace, a full deck of 20 open in the sidebar, and three
-// saved decks and a trio in the rail.
-//
-// THE MOUNT. The deck builder is now the deck workshop (SPEC §9.4, R250–R256): `DeckWorkshop`, the
-// component `/decks` renders once its reads have landed, whose own root is the page shell —
-// `div.app-shell.app-shell--wide.deckbuilder.workshop [workshop]`. So it is mounted bare, as the
-// route mounts it, and the first assertion is that its root really carries both shell classes.
-// Wrapping it in a second `.app-shell--wide` would take another 24px off the phone, a width the
-// builder never gets on /decks, and the two-column check would then measure a page that does not
-// exist. Its I/O is four stubs that resolve (nothing here is about saving), `storage: null` keeps
-// the local mirror out of the measurement, and `initialOpen` opens the full deck — on a phone the
-// rail and the editor take turns (`data-view`), and it is the editor, pool and all, that has to fit.
-//
-// WHAT IS MEASURED, as board-layout.cy.tsx does for the board: documentElement, body and the
-// workshop's own scrollWidth, each at most the viewport width. Two controls keep "it fits" from
-// being satisfied by a builder that is not there: every deckable pool item is present, and the workshop
-// spans the viewport. Each measure sits inside `.should()`, so it retries while the fonts, the
-// procedural art and `useFitText` settle.
+// Polish 6: B39 verifies the real deck workshop at phone and desktop widths; B29 verifies its detail faces.
+// Mount `/decks`'s bare `DeckWorkshop` with its heaviest data so the browser measures production layout (SPEC §9.4, R250–R256).
+// jsdom cannot measure layout; retried Cypress assertions require the workshop and every pool item to render.
 
 import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import DeckWorkshop, { type WorkshopOpen } from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.tsx";
@@ -52,13 +31,11 @@ const VIEWPORTS = [
   { label: "desktop", width: 1280, height: 720 },
 ] as const;
 
-/** The deckable cards: no token, by flag or by tag, the same test the validator's L3 applies. */
+/** Deckable cards follow validator L3: no token by flag or tag. */
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token"));
 
-/** A collection owning every deckable card once. */
 const COLLECTION: Record<string, number> = Object.fromEntries(DECKABLE.map((def) => [def.id, 1]));
 
-/** Three disjoint decks of 20, in catalog order, and a trio of them: a legal Conquest choice. */
 const DECK_SIZE = 20;
 const SAVED_AT = 0;
 const DECK_IDS = [
@@ -92,10 +69,8 @@ const FULL_DECKS: string[][] = [0, 1, 2].map((deck) =>
   DECKABLE.slice(deck * DECK_SIZE, (deck + 1) * DECK_SIZE).map((def) => def.id),
 );
 
-/** Mount the workshop as `/decks` does, with `decks` saved and the first of them open. */
 function mountWorkshop(decks: readonly (readonly string[])[]): void {
   const open: WorkshopOpen = { kind: "deck", id: DECK_IDS[0] };
-  // Nothing here saves; the stubs only satisfy the prop.
   const api = {
     putDeck: cy.stub().resolves({}),
     deleteDeck: cy.stub().resolves({}),
@@ -123,11 +98,7 @@ function fitted(text: HTMLElement): boolean {
   return text.style.getPropertyValue("--cf-fit") !== "";
 }
 
-/**
- * #263: the browser skips the layout of an off-screen pool face (`content-visibility: auto`), and
- * its text is fitted only once it nears the screen (fit.ts). This brings every item near in
- * turn, two frames each, then goes back to the top, so a check of every face reads fitted text.
- */
+/** #263: off-screen faces fit only after nearing the screen; visit each one before checking. */
 function fitEveryPoolCard(): void {
   cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
   cy.document().then({ timeout: 60_000 }, async (doc) => {
@@ -153,8 +124,7 @@ function fitEveryPoolCard(): void {
 }
 
 describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
-  // The workshop calls the validator, which is the Rust one in WebAssembly (docs/v0.3.0/SURFACE.md
-  // §10.3): load the module once, as main.tsx does before the page's first render.
+  // The validator is Rust WebAssembly (docs/v0.3.0/SURFACE.md §10.3); load it before rendering.
   before(() => {
     cy.wrap(loadWasm(), { timeout: 30_000 });
   });
@@ -191,15 +161,12 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
         expect(Math.ceil(builder.getBoundingClientRect().right), `the builder ends inside ${where}`).to.be.at.most(
           viewport.width,
         );
-        // The control: a collapsed builder would trivially fit.
         expect(builder.getBoundingClientRect().width, `the builder spans ${where}`).to.be.at.least(viewport.width - 40);
       });
     });
   }
 
-  // B29 is jsdom-only in CardDetail.test.tsx, which can prove DOM order but not "side by side at
-  // every width". Here the detail opens from a click on the pool card, as on /decks, and the two
-  // faces are measured: one row, base on the left, no overlap, both inside the viewport and drawn.
+  // B29: jsdom proves DOM order only, so measure both faces in the real route layout.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 
@@ -230,14 +197,13 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // The longest card's detail used to run 300 px past a 1280x720 screen, with Add and Close (and
-  // the focus, on Close) below the fold. The actions row is pinned: both are on screen on open.
+  // B38: the detail actions remain visible when it opens.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
 
     it(`B38 the detail's Add to Deck and Close are on screen as it opens, for the longest card, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      // Classic+ #73: the longest base and Radiant text together since patch v0.2.0.
+      // Classic+ #73 has the longest base and Radiant text.
       cy.get(ts(poolCardId("classicplus-073"))).click();
       cy.get(ts(INSPECT_DETAIL)).should("be.visible");
       cy.document().should((doc) => {
@@ -254,8 +220,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // On a desktop the pool scrolls inside its column; its bottom edge (and its scrollbar) used to
-  // sit 90 px below a 720 px screen, under a page that scrolled as well.
+  // B39: the pool scrolls internally while its bottom remains onscreen.
   it("B39 at 1280x720 the pool's own bottom edge is on screen and the page itself does not scroll", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -269,9 +234,6 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // Integration QA: at 1280x720 the pool held one row of cards (a 164 px filter block over
-  // 213 px cards); Hearthstone's collection shows two. The chip rows fold on a short screen and the
-  // cards size to the screen's height.
   it("the pool shows two whole rows of cards at 1280x720", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -290,9 +252,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // Integration QA: dense cards printed their rules at 6-7 px in the grid. Every face now prints at
-  // the floor or above: the long layout first, then a clamp at the floor (fit.ts), and only the
-  // texts past 260 characters (B15's allowance) may clamp.
+  // B15 permits clamping only beyond the text tier maximum.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     it(`every pool card's rules text is at least ${String(FIT_FLOOR_PX)} px at ${where}`, () => {
@@ -316,8 +276,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   }
 
-  // #263: an off-screen card is not laid out, and its text waits to be fitted until it nears the
-  // screen; the first screen's cards are fitted at once, and a far card once it is scrolled to.
+  // #263: an off-screen card fits only after it nears the screen.
   it("#263 a pool card off the screen is fitted when it nears the screen, not before", () => {
     cy.viewport(1280, 720);
     cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);
@@ -335,10 +294,7 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // #85: the builder is a tavern screen, and tavern.css paints the screen's own `strong` pale gold,
-  // which reached every keyword on the parchment, where it all but vanished. Every term in the pool
-  // is bold in its rules box's own ink; the control is that each card's keywords print as terms.
-  // (Which terms a face draws is CardFace.test.tsx's B10 sweep; this is what Chrome paints them.)
+  // #85: pool keywords use their rules box's ink and bold weight; B10 checks which terms appear.
   it("every pool card prints its keywords in bold in the rules box's ink (#85)", () => {
     cy.viewport(1280, 720);
     cy.get(ts(WORKSHOP)).should("have.class", "tavern");
@@ -364,16 +320,13 @@ describe("B39 the deck builder fits /decks at 390x844 and 1280x720", () => {
     });
   });
 
-  // Integration QA: a refused save's reasons rendered under all the pool cards on a phone. There is
-  // no Save button any more (R256); the deck's verdict sits in its sidebar, on the first screen, at
-  // every size — and on a phone, where the sidebar and the pool stack, above the pool, never under
-  // its cards. (On a desktop the two are side by side, so "above" means nothing there.)
+  // R256: the deck verdict stays in the sidebar, above the phone pool.
   for (const viewport of VIEWPORTS) {
     const where = `${viewport.label} ${String(viewport.width)}x${String(viewport.height)}`;
     const stacked = viewport.label === "phone";
     it(`the deck's verdict sits in its sidebar on the first screen${stacked ? ", above the pool," : ""} at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
-      // An empty deck, so the verdict has something to say (L2: 0 of 20 cards).
+      // An empty deck produces the L2 verdict (0 of 20 cards).
       mountWorkshop([[]]);
       cy.get(`${ts(DB_SIDEBAR)} ${ts(DECK_VERDICT)} ${ts(LOADOUT_ERRORS)}`).should("have.attr", "data-count", "1");
       cy.get(POOL_ITEMS).should("have.length", DECKABLE.length);

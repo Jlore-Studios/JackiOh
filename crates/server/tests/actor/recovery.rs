@@ -1,31 +1,19 @@
 //! BUILD M6-T4 acceptance, item 2: "killing the actor mid-game and reconnecting yields the same
-//! `viewFor` for both players". It is docs/v0.3.0/README.md §6's V15 (a match survives a restart by
-//! folding `(seed, log)`) and, on the server, V9 (the fold equals the live state).
+//! `viewFor` for both players" (V15, a match survives a restart by folding `(seed, log)`; V9, the fold
+//! equals the live state; docs/v0.3.0/README.md §6).
 //!
 //! SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`", and §9.3: "`(seed, log)`
-//! reconstructs any match". Dropping the actor out of the registry and leaving the log alone is
-//! exactly what a crash looks like from the outside (`registry.stop`), so that is the kill used here.
+//! reconstructs any match". Dropping the actor from the registry and leaving the log alone is what a
+//! crash looks like from outside (`registry.stop`).
 //!
-//! This file drives the *real* clock (`actor/clock.rs`) on tokio's paused clock: the view carries
-//! `clockMs` (R79), so a stub that always answers `null` would hide the very field a rebuild is most
-//! likely to get wrong. No time is advanced across the crash, which is M6-T4's claim; re-arming a
-//! clock from the deadlines stored on the match is M7-T1's (`docs/architecture.md` §5.2, "re-arm
-//! the clocks from the stored deadlines").
-//!
-//! The item is made twice, for the same reason `match_actor.rs` makes its item 4 twice: the first
-//! block runs the scripted cards, which reach a mid-prompt state in four actions, and the block at
-//! the bottom deals real cards, because "the same `viewFor`" is not a claim scripted cards can
-//! settle.
-//!
-//! Port of `apps/server/test/match/recovery.test.ts`. The Rust server has no scripted engine and no
-//! injected results writer (SURFACE §11.3): the scripted block runs the real engine with
-//! `support::engine`'s test cards (dealt into the opening hands by a searched seed, both mulligans
-//! answered keeping everything before any socket attaches, which is where TS's scripted game
-//! began), and TS's `recordResult` spy is the real results writer, read back off the `results`
-//! table (both profiles are seeded so it can write).
+//! The real clock (`actor/clock.rs`) runs on tokio's paused clock: the view carries `clockMs` (R79). No
+//! time passes across the crash; re-arming clocks from stored deadlines is M7-T1's (`docs/architecture.md` §5.2).
+//! The first block runs scripted cards; the last deals real ones, which "the same `viewFor`" needs.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2, §11.3.
 
 use std::any::Any;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -36,10 +24,11 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::api::results::reap_stuck_matches;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_RECORD_RESULT_ATTEMPTS, PROMPT_CLOCK_SECONDS,
+    TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{Db, StoreError};
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -50,7 +39,7 @@ const MATCH_ID: &str = "match-recovery";
 /// How many seeds `seed_dealing` tries before it gives up.
 const SEED_SEARCH: usize = 5_000;
 
-/// One store call in its own transaction, as TS's `deps.store.<sub>.<method>(…)` was.
+/// One store call in its own transaction.
 macro_rules! store {
     ($app:expr, $t:ident => $call:expr) => {{
         let mut $t = $app
@@ -72,7 +61,7 @@ fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("a serialisable value")
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
+/// The fake store behind the test app.
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -80,7 +69,7 @@ fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     }
 }
 
-/// One table of the fake store, as TS's `deps.store.tables.<name>` read it: rows as JSON.
+/// One table of the fake store: rows as JSON.
 async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     let data = fake(app);
     let data = data.lock().await;
@@ -90,12 +79,10 @@ async fn table(app: &App, pick: impl Fn(&FakeData) -> Value) -> Vec<Value> {
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Time and logs: TS's manual `Timers` and recording `Logger`
-// ---------------------------------------------------------------------------------------------
+// Time and logs
 
-/// TS's `deps.timers.now()`: the server's clock, read as the epoch-ms stamp it wrote on the match
-/// row at the start plus the tokio time (paused, moved only by `advance`) since.
+/// The server's clock: the epoch-ms stamp written on the match row at the start plus the tokio time
+/// (paused, moved only by `advance`) since.
 #[derive(Clone, Copy)]
 struct Clock {
     base_ms: i64,
@@ -108,7 +95,7 @@ impl Clock {
     }
 }
 
-/// TS's `deps.timers.advance(ms)`: every timer due fires, and the woken actor gets to run.
+/// Every timer due fires, and the woken actor gets to run.
 async fn advance(ms: i64) {
     tokio::time::advance(Duration::from_millis(
         u64::try_from(ms).expect("time moves forward"),
@@ -164,7 +151,7 @@ impl Logs {
             .collect()
     }
 
-    /// Whether any line names `event` (SURFACE §11.3 keeps TS's event names).
+    /// Whether any line names `event`.
     fn has(&self, event: &str) -> bool {
         self.entries().iter().any(|entry| event_of(entry) == Some(event))
     }
@@ -186,9 +173,7 @@ fn event_of(entry: &Value) -> Option<&str> {
     })
 }
 
-// ---------------------------------------------------------------------------------------------
 // Frames
-// ---------------------------------------------------------------------------------------------
 
 fn views(socket: &FakeSocket) -> Vec<Value> {
     socket
@@ -215,9 +200,8 @@ async fn send(actor: &MatchActor, socket: &FakeSocket, nonce: &str, body: Value)
     actor.idle().await;
 }
 
-/// The answer to the seat's open prompt, read off the seat's own legal array. TS sent
-/// `{ type: "answer", choiceId, selection: [{ pick: "none" }] }`, its scripted port's one answer; the
-/// scripted card's prompt is the engine's own now (`choose_mode`), which takes one of its options.
+/// The answer to the seat's open prompt, read off the seat's own legal array; the scripted card's
+/// prompt is the engine's own (`choose_mode`), which takes one of its options.
 fn answer_of(socket: &FakeSocket) -> Value {
     let choice = open_choice(socket);
     socket
@@ -255,9 +239,8 @@ fn hand_ids(socket: &FakeSocket) -> Vec<String> {
     hand_of(&last_view(socket))
 }
 
-/// The instance of `def_id` in this player's hand. TS's `firstInHand` read slot 0, where the
-/// scripted engine had dealt `fakeDeck`'s scripted card; the real deal is shuffled, so the card is
-/// found by its definition.
+/// The instance of `def_id` in this player's hand; the real deal is shuffled, so it is found by its
+/// definition.
 fn in_hand(socket: &FakeSocket, def_id: &str) -> String {
     let view = last_view(socket);
     view["you"]["hand"]
@@ -272,9 +255,7 @@ async fn view_of(actor: &MatchActor, player: PlayerId) -> Value {
     to_json(&actor.view_for(player))
 }
 
-// ---------------------------------------------------------------------------------------------
 // The harness
-// ---------------------------------------------------------------------------------------------
 
 struct Harness {
     app: Arc<App>,
@@ -287,7 +268,7 @@ struct Harness {
 
 #[derive(Default)]
 struct StartOptions {
-    /// Real decks (the real catalog, nothing installed): TS's `{ engine: enginePort(), decks }`.
+    /// Real decks (the real catalog, nothing installed).
     real: Option<(Vec<String>, Vec<String>)>,
 }
 
@@ -430,11 +411,10 @@ mod m6_t4_crash_recovery {
 
     #[tokio::test(start_paused = true)]
     async fn a_start_the_engine_refuses_writes_no_match_row_and_registers_no_actor() {
-        // The opening draw runs before the row is written, so a game the engine cannot build (a
-        // deck the catalog change stranded, say) fails the start cleanly. Written the other way
-        // round the row went `live` first: a live match no socket could ever build an actor for —
-        // `(seed, decks, log)` reconstructs nothing the engine refuses — and nothing but the ceiling
-        // reaper could ever end it. TS made `beginGame` throw; here the engine refuses the decks.
+        // The opening draw runs before the row is written, so a game the engine cannot build (a deck a
+        // catalog change stranded, say) fails the start cleanly. Written the other way round the row went
+        // `live` first: a match no socket could ever build an actor for, which only the ceiling reaper
+        // could end.
         let (logs, _recording) = Logs::record();
         let app = empty_test_app().await;
         let refused = app
@@ -578,7 +558,6 @@ mod m6_t4_crash_recovery {
         assert_eq!(h.app.matches.live(), Vec::<String>::new());
 
         // The upgrade path (`ws_server.rs`) only ever calls `attach`; folding is the registry's job.
-        // TS: the attach resolves with the seat, "p2" (SURFACE §11.2 answers `()`; the view names it).
         let socket = create_fake_socket();
         h.app
             .matches
@@ -616,7 +595,7 @@ mod m6_t4_crash_recovery {
             h.app.matches.actor_for(&h.app, MATCH_ID),
             h.app.matches.actor_for(&h.app, MATCH_ID)
         );
-        // TS: the same actor object (`toBe`); here both calls answer, off one fold.
+        // Both calls answer, off one fold.
         first.expect("the first caller's actor");
         second.expect("the second caller's actor");
         assert_eq!(logs.count("match.rebuilt") - rebuilt_before, 1);
@@ -625,21 +604,15 @@ mod m6_t4_crash_recovery {
 
 /// The same acceptance item against the engine itself.
 ///
-/// The block above runs on `support::engine`'s scripted cards, whose behaviour is written by this
-/// test suite. What §9.5 and §9.3 actually promise is that the *real* engine is deterministic enough
-/// for `(seed, decks, log)` to be the whole truth, and that is the property a crash depends on.
-///
-/// So this one deals two decks of real §8 card ids, walks the real opening through the socket
-/// protocol, kills the actor and folds the log back. Only real behaviour can satisfy it: the shuffle
-/// is the match rng replayed from `seed` (`setup.rs`), the opening draw is §2.1's table, and the
-/// mulligan answers in the log have to land on the same instances they did the first time or the
-/// two hands — and therefore the two views — come back different.
+/// §9.5 and §9.3 promise that the *real* engine is deterministic enough for `(seed, decks, log)` to be
+/// the whole truth. This deals two decks of real §8 card ids, walks the real opening through the
+/// socket protocol, kills the actor and folds the log back: the shuffle is the match rng replayed from
+/// `seed` (`setup.rs`), the opening draw is §2.1's table, and the mulligan answers in the log must land
+/// on the same instances or the two views come back different.
 mod m6_t4_crash_recovery_with_the_real_engine {
     use super::*;
 
-    /// Two legal, disjoint decks of real ids (TS `decksTheEngineAccepts`, which grew the slices until
-    /// `createGame` stopped objecting because `apps/server` could not import `DECK_SIZE`; the engine's
-    /// own constant is importable here, and the validator says why if the slices are refused).
+    /// Two legal, disjoint decks of real ids; the validator says why if the slices are refused.
     fn decks_the_engine_accepts(pool: &[String]) -> (Vec<String>, Vec<String>) {
         let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
         let decks = (pool[..size].to_vec(), pool[size..size * 2].to_vec());
@@ -709,11 +682,10 @@ mod m6_t4_crash_recovery_with_the_real_engine {
                 PlayerId::P1
             };
 
-            // §2.1, R265: both mulligans open at once; `first` keeps everything and `second` keeps
-            // nothing, so the fold has to replay R9's "draw the replacements, then shuffle the returned
-            // cards back" in seat order whichever order the answers were logged in — the one step in setup
-            // where the rng is consulted *after* an action in the log, and so the step a fold that merely
-            // re-dealt, or resolved in log order, would get wrong.
+            // §2.1, R265: both mulligans open at once; `first` keeps everything and `second` keeps nothing,
+            // so the fold has to replay R9's "draw the replacements, then shuffle the returned cards back"
+            // in seat order whichever order the answers were logged in: the one step in setup where the rng
+            // is consulted *after* an action in the log.
             let snapshot = actor.snapshot();
             assert_eq!(snapshot.phase, Phase::Mulligan);
             assert_eq!(snapshot.mulligan_owed, vec![PlayerId::P1, PlayerId::P2]);
@@ -913,7 +885,7 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
             .collect()
     }
 
-    /// TS `lossOf(winner)`: the one result the writer was handed, a loss by disconnect.
+    /// The one result the writer was handed, a loss by disconnect.
     async fn assert_loss_of(h: &Harness, winner: &str) {
         let rows = results(h).await;
         assert_eq!(rows.len(), 1, "{rows:?}");
@@ -1151,5 +1123,152 @@ mod r744_disconnect_grace_for_a_seat_that_is_not_there {
         assert_eq!(rows[0]["winnerProfileId"], Value::Null);
         assert_eq!(rows[0]["turns"], json!(0));
         assert_eq!(expired(&h).await, Vec::<Value>::new());
+    }
+}
+
+/// R1437: the actor's write of a finished game's result is the whole ending (§9.5), and a store that
+/// fails it is tried again; one that never takes it leaves the match `live`, with both players still
+/// in it, for the next socket's rebuild to record. The fake store's `on_call` seam fails the
+/// transaction's `results.insert`, which rolls the whole write back.
+mod r1437_a_result_the_store_fails_to_take {
+    use super::*;
+
+    /// Both seats' `inMatchId`, p1's first.
+    async fn in_match(h: &Harness) -> Vec<Value> {
+        let mut flags = Vec::new();
+        for id in ["profile-1", "profile-2"] {
+            let profile = store!(h.app, t => t.profiles_get_by_id(id).await.expect("profiles.getById"))
+                .expect("the profile");
+            flags.push(to_json(&profile)["inMatchId"].clone());
+        }
+        flags
+    }
+
+    /// From here on, counts the store's `results.insert` and `matches.finish` calls, and fails the
+    /// first `failing` inserts. Answers the two counts.
+    async fn count_calls(h: &Harness, failing: usize) -> (Arc<AtomicUsize>, Arc<AtomicUsize>) {
+        let inserts = Arc::new(AtomicUsize::new(0));
+        let finishes = Arc::new(AtomicUsize::new(0));
+        let (seen_inserts, seen_finishes) = (Arc::clone(&inserts), Arc::clone(&finishes));
+        fake(&h.app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+            if method == "results.insert" && seen_inserts.fetch_add(1, Ordering::SeqCst) < failing {
+                return Err(StoreError::Other("the store is away".to_string()));
+            }
+            if method == "matches.finish" {
+                seen_finishes.fetch_add(1, Ordering::SeqCst);
+            }
+            Ok(())
+        }));
+        (inserts, finishes)
+    }
+
+    /// Both players in the match, as the queue leaves them, and both seats attached.
+    async fn in_play() -> (Harness, MatchActor, FakeSocket, FakeSocket) {
+        let h = start_match(StartOptions::default()).await;
+        for id in ["profile-1", "profile-2"] {
+            store!(h.app, t => t.profiles_set_in_match(id, Some(MATCH_ID)).await.expect("profiles.setInMatch"));
+        }
+        let actor = actor_of(&h).await;
+        let p1 = create_fake_socket();
+        let p2 = create_fake_socket();
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
+        actor.idle().await;
+        (h, actor, p1, p2)
+    }
+
+    /// p1 concedes. `submit` answers once the action has run to its end, the result's write and
+    /// its retries included; a frame through the socket would leave `idle` racing the socket's reader.
+    async fn concede(actor: &MatchActor) {
+        let reply = to_json(
+            &actor
+                .submit(PlayerId::P1, "gg".to_string(), from(json!({ "type": "concede" })))
+                .await,
+        );
+        assert_eq!(reply["type"], "ack", "the concession was refused: {reply}");
+    }
+
+    /// The one result row, p1's concession.
+    async fn assert_conceded_by_p1(h: &Harness) {
+        let rows = results(h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["reason"], "concede");
+        assert_eq!(rows[0]["winnerProfileId"], "profile-2");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_written_at_the_first_try_finishes_the_match_row_in_its_own_transaction_only() {
+        let (h, actor, p1, _p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, 0).await;
+        concede(&actor).await;
+
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(inserts.load(Ordering::SeqCst), 1);
+        assert_eq!(finishes.load(Ordering::SeqCst), 1);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert!(h.app.matches.has(MATCH_ID));
+        assert!(p1.is_open());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_write_the_store_fails_once_is_tried_again_and_lands_once() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, _p1, p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, 1).await;
+        concede(&actor).await;
+
+        let actions = table(&h.app, |data| json!(data.tables.match_actions)).await;
+        assert_eq!(actions.last().expect("last")["action"]["type"], "concede");
+        assert_eq!(
+            last_view(&p2)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
+        assert_eq!(logs.count("match.recordResult.failed"), 1);
+        assert_eq!(inserts.load(Ordering::SeqCst), 2);
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(finishes.load(Ordering::SeqCst), 1);
+        assert!(h.app.matches.has(MATCH_ID));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1437_a_result_the_store_never_takes_leaves_the_match_live_until_the_next_socket_records_it() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, p1, p2) = in_play().await;
+        let (inserts, finishes) = count_calls(&h, usize::MAX).await;
+        concede(&actor).await;
+
+        assert_eq!(
+            logs.count("match.recordResult.failed"),
+            MATCH_RECORD_RESULT_ATTEMPTS
+        );
+        assert_eq!(inserts.load(Ordering::SeqCst), MATCH_RECORD_RESULT_ATTEMPTS);
+        assert_eq!(finishes.load(Ordering::SeqCst), 0);
+        assert_eq!(results(&h).await, Vec::<Value>::new());
+        assert_eq!(match_row(&h.app).await["status"], "live");
+        assert_eq!(in_match(&h).await, vec![json!(MATCH_ID), json!(MATCH_ID)]);
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert_eq!(p1.close_code(), Some(1001));
+        assert_eq!(p2.close_code(), Some(1001));
+
+        fake(&h.app).lock().await.on_call = None;
+        let back = create_fake_socket();
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", back.socket())
+            .await
+            .expect("profile-1 attaches");
+        actor_of(&h).await.idle().await;
+
+        assert!(logs.has("match.rebuilt"));
+        assert_conceded_by_p1(&h).await;
+        assert_eq!(in_match(&h).await, vec![Value::Null, Value::Null]);
+        assert_eq!(match_row(&h.app).await["status"], "finished");
+        assert_eq!(
+            last_view(&back)["result"],
+            json!({ "winner": "p2", "reason": "concede" })
+        );
     }
 }

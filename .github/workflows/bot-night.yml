@@ -261,11 +261,19 @@ jobs:
 
       # On the machine, the job's temporary files go in RUNNER_TEMP, which is emptied when the
       # job ends, not in the /tmp every subscription's jobs share (bot/machine/README.md, Disk).
+      # Its Rust builds keep no incremental cache and no debug info: each job builds in a fresh
+      # worktree that goes when it ends, so both only fill the shared disk (the cards' tests build
+      # 5.2 GB with them, 0.55 GB without; four card jobs at once filled it on 2026-10-09, #590).
       - name: Keep the job's temporary files with the job
         if: ${{ !startsWith(needs.plan.outputs.runs_on || 'ubuntu-latest', 'ubuntu-') }}
         run: |
           mkdir -p "$RUNNER_TEMP/tmp"
-          echo "TMPDIR=$RUNNER_TEMP/tmp" >> "$GITHUB_ENV"
+          {
+            echo "TMPDIR=$RUNNER_TEMP/tmp"
+            echo "CARGO_INCREMENTAL=0"
+            echo "CARGO_PROFILE_DEV_DEBUG=0"
+            echo "CARGO_PROFILE_TEST_DEBUG=0"
+          } >> "$GITHUB_ENV"
 
       - name: Checkout the default branch
         uses: actions/checkout@v4

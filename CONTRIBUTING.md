@@ -17,9 +17,9 @@ For people and agents alike. This is a pointer page: the rules live in the files
 
 Open one through a form (**New issue**): Patch, Micro patch, Bug, Architecture or CI, Night bot.
 Each starts the title, puts on the type labels and sets the issue type (Task, Bug or Feature). When
-it is ready, label it `method:manual` (people do it) or `method:use-bot` (the night bot does);
-triage classifies it two minutes later. Work on `.github/`, `bot/`, `.harness/` or `.squishy/` is
-`human`: the bots may not change those paths.
+it is ready, label it `human` (people do it) or `bot:build` (the night bot does), or pick one in
+the form's Who does it. Work on `.github/`, `bot/`, `.harness/` or `.squishy/` is `human`: the bots
+may not change those paths.
 
 ## Titles
 
@@ -50,7 +50,9 @@ as they are.
 
 ## Ruling numbers
 
-A new ruling takes the next free number (`CLAUDE.md` rule 3): the last row of `spec/INDEX.md` on
-`main` plus one. Name it in your pull request. If another open pull request took the same number,
-the one that merges second renumbers its note, its tests and its index row first;
-`cargo jackioh spec check` catches what it misses (`docs/issues-and-patches.md`, Ruling numbers).
+A new ruling takes the lowest number free in its issue's block (`CLAUDE.md` rule 3): issue N
+owns R(N×1000) to R(N×1000+999), so issue #690's first is R690000, and a pull request with no
+issue uses its own number. Name it in your pull request. If another open pull request on the same
+issue took the same number, the one that merges second renumbers its note, its tests and its index
+row first, within the block; `cargo jackioh spec check` catches what it misses
+(`docs/issues-and-patches.md`, Ruling numbers).

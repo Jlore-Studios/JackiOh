@@ -5,27 +5,37 @@
 //! cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 //! ```
 //!
-//! The candidate is this build's AI (`self`). It plays `TRAINING_GAMES` games against SPEC §10.7's
-//! random policy (`jackioh_ai::random_action`) and `TRAINING_GAMES` against the parent, the AI on
-//! `main` (`bin:<parent-bin>`, SURFACE §14.1), seats alternating (the candidate sits p1 on odd
+//! The candidate is this build's AI (`self`). It plays `TRAINING_GAMES` games against the parent, the
+//! AI on `main` (`bin:<parent-bin>`, SURFACE §14.1), seats alternating (the candidate sits p1 on odd
 //! games), on the seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
-//! committing `generation.json` (or the history line) does not change them, and the same seeds
-//! against both opponents. Each seat's deck is `build_ai_deck` over all three sets minus its own AI's
-//! shadow ban (R186), with no handicap (Easy both, R180). The games run on rayon's pool
-//! (`RAYON_NUM_THREADS` is respected); no result depends on the thread count.
+//! committing `generation.json` (or the history line) does not change them. Each seat's deck is
+//! `build_ai_deck` over every set that ships minus its own AI's shadow ban (R186), with no handicap
+//! (Easy both, R180). The games run on rayon's pool (`RAYON_NUM_THREADS` is respected); no result
+//! depends on the thread count.
 //!
 //! It promotes when:
 //!
-//! | Lane      | vs random                              | vs parent                              | shadow bans                      |
-//! |-----------|----------------------------------------|----------------------------------------|----------------------------------|
-//! | `improve` | ≥ `TRAINING_IMPROVE.vs_random` (90)    | ≥ `TRAINING_IMPROVE.vs_parent` (85)    | —                                |
-//! | `unban`   | ≥ `TRAINING_UNBAN.vs_random` (90)      | ≥ `TRAINING_UNBAN.vs_parent` (75)      | strictly fewer than the parent's |
+//! | Lane      | vs parent                              | shadow bans                      |
+//! |-----------|----------------------------------------|----------------------------------|
+//! | `improve` | ≥ `TRAINING_IMPROVE.vs_parent` (65)    | —                                |
+//! | `unban`   | ≥ `TRAINING_UNBAN.vs_parent` (60)      | strictly fewer than the parent's |
+//!
+//! It plays no games against SPEC §10.7's random policy (R732001): the lanes dropped them once
+//! generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
+//! of 100, and a promotion's record says `"vsRandom": null`. The daily quality gates (`cargo jackioh
+//! gate --full`) still hold the AI on `main` to their floor against random.
 //!
 //! A draw is not a win, and neither is a game without a result. Without `--dry-run` or `--verify`, a
 //! pass writes `crates/ai/generation.json` and appends the same object to
 //! `training/history/<lane>.jsonl`. `--verify` (CI) recomputes and compares with the branch's
 //! `generation.json`. The report (Markdown, the lane's pull request body) goes to stdout. Exit 0 on a
 //! pass, 1 on a failed gate.
+//!
+//! The unban lane has nothing to do while the parent keeps no card out of its decks (generation 8
+//! lifted the last shadow ban, #668, and generation 9's sweep of the Meditative set banned cards
+//! again, #732): no candidate has strictly fewer bans than none, so the gate cannot pass, and against
+//! such a parent `promote --lane unban` says so and exits 1, with any flag, before it plays a game or
+//! writes anything (`lane_done`).
 //!
 //! Because the seeds come from the committed AI, a promotion (and a verification) refuses to run on
 //! a `crates/ai/src` with uncommitted changes: they would be measured on another AI's seeds. A dry
@@ -63,10 +73,10 @@ const VERIFIED_FIELDS: &[&str] = &[
 /// The two training lanes (docs/v0.3.0/README.md §8).
 #[derive(clap::ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lane {
-    /// Beat the parent: ≥ 85 of 100 against it and ≥ 90 of 100 against random.
+    /// Beat the parent: ≥ 65 of 100 against it.
     Improve,
-    /// Play well with fewer shadow bans: strictly fewer than the parent's, ≥ 75 of 100 against it and
-    /// ≥ 90 of 100 against random.
+    /// Play well with fewer shadow bans: strictly fewer than the parent's and ≥ 60 of 100 against it.
+    /// Idle while the parent has none (`lane_done`).
     Unban,
 }
 
@@ -107,7 +117,6 @@ pub struct Args {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct GateCounts {
     pub games: i32,
-    pub vs_random: i32,
     pub vs_parent: i32,
     pub shadow_ban: usize,
     pub parent_shadow_ban: usize,
@@ -117,12 +126,6 @@ pub(crate) struct GateCounts {
 pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
     let gate = lane.gate();
     let mut failures = Vec::new();
-    if counts.vs_random < gate.vs_random {
-        failures.push(format!(
-            "vs random: {}/{} wins, {} needed",
-            counts.vs_random, counts.games, gate.vs_random
-        ));
-    }
     if counts.vs_parent < gate.vs_parent {
         failures.push(format!(
             "vs parent: {}/{} wins, {} needed",
@@ -136,6 +139,22 @@ pub(crate) fn gate_failures(lane: Lane, counts: &GateCounts) -> Vec<String> {
         ));
     }
     failures
+}
+
+/// The refusal to give when the lane has nothing to do, else `None`. The unban lane has nothing to do
+/// while its parent, the AI on `main`, keeps no card out of its own decks: no candidate has strictly
+/// fewer shadow bans than none, so its gate fails whatever the games say, and `run` plays none
+/// (#668). It reads the parent's list, not this build's `SHADOW_BAN`: a candidate with none against a
+/// parent with one is the promotion that emptied the table (generation 8's).
+pub(crate) fn lane_done(lane: Lane, parent: &Entrant) -> Option<String> {
+    (lane == Lane::Unban && parent.shadow_ban.is_empty()).then(|| {
+        format!(
+            "promote: the shadow ban list is empty, so the unban lane has nothing to do: the parent ({}) \
+             keeps no card out of its decks, no candidate can have strictly fewer bans than none, and \
+             the gate cannot pass. No game was played and nothing was written (training/unban.md).",
+            parent.label
+        )
+    })
 }
 
 /// The candidate's wins over games given as (result, the candidate's seat). A draw is not a win, and
@@ -194,8 +213,10 @@ pub(crate) struct GenerationRecord {
     pub parent: Option<String>,
     /// `git rev-parse HEAD:crates/ai/src`, the seeds' name.
     pub tree: String,
-    /// `"<wins>/<games>"`.
-    pub vs_random: String,
+    /// `"<wins>/<games>"` against random. `None` (`null`) since R732001: the lanes play no random
+    /// games. Generation 9's record, and every promotion before it, holds a count.
+    pub vs_random: Option<String>,
+    /// `"<wins>/<games>"` against the parent.
     pub vs_parent: String,
     pub shadow_ban: usize,
     pub parent_shadow_ban: usize,
@@ -260,7 +281,6 @@ fn report(
     record: &GenerationRecord,
     counts: &GateCounts,
     parent: &Entrant,
-    vs_random: &[ArenaOutcome],
     vs_parent: &[ArenaOutcome],
     failures: &[String],
 ) -> anyhow::Result<String> {
@@ -270,7 +290,6 @@ fn report(
         (true, _) => "passes",
         (false, _) => "does not pass",
     };
-    let (random_draws, random_aborted) = draws_and_aborted(vs_random);
     let (parent_draws, parent_aborted) = draws_and_aborted(vs_parent);
     let parent_name = match (&parent.lane, &record.parent) {
         (Some(parent_lane), Some(commit)) => format!(
@@ -290,10 +309,6 @@ fn report(
     ));
     out.push_str("| Opponent | Wins | Needs | Draws | No result |\n|---|---|---|---|---|\n");
     out.push_str(&format!(
-        "| random (SPEC §10.7's policy) | {} | {} | {random_draws} | {random_aborted} |\n",
-        record.vs_random, gate.vs_random
-    ));
-    out.push_str(&format!(
         "| parent: {parent_name} | {} | {} | {parent_draws} | {parent_aborted} |\n\n",
         record.vs_parent, gate.vs_parent
     ));
@@ -306,9 +321,9 @@ fn report(
         record.shadow_ban, record.parent_shadow_ban
     ));
     out.push_str(&format!(
-        "Seeds `{first}` to `{last}`, the same against both opponents; the candidate sits p1 on odd \
-         games; each seat's deck is built from all three sets minus its own AI's shadow ban, with no \
-         handicap. A draw is not a win, nor is a game without a result.\n\n"
+        "Seeds `{first}` to `{last}`; the candidate sits p1 on odd games; each seat's deck is built \
+         from every set that ships minus its own AI's shadow ban, with no handicap. A draw is not a \
+         win, nor is a game without a result. No game is played against random (R732001).\n\n"
     ));
     if !failures.is_empty() {
         out.push_str("Fails:\n\n");
@@ -332,6 +347,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         "promotion"
     };
 
+    let parent = arena::entrant(&AgentSpec::Bin(args.parent_bin.clone()))?;
+    if let Some(done) = lane_done(args.lane, &parent) {
+        bail!("{done}");
+    }
+
     if ai_source_dirty(&repo)? {
         if mode != "dry run" {
             bail!(
@@ -347,18 +367,14 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 
     let tree = ai_tree(&repo)?;
     let candidate = arena::entrant(&AgentSpec::SelfAi)?;
-    let random = arena::entrant(&AgentSpec::Random)?;
-    let parent = arena::entrant(&AgentSpec::Bin(args.parent_bin.clone()))?;
     let parent_generation = parent
         .generation
         .with_context(|| format!("promote: {} reported no generation", args.parent_bin.display()))?;
 
     let seed_of = |k: i32| game_seed(args.lane, &tree, k);
-    let mut games = arena::setups(&candidate, &random, TRAINING_GAMES, seed_of)?;
-    games.extend(arena::setups(&candidate, &parent, TRAINING_GAMES, seed_of)?);
+    let games = arena::setups(&candidate, &parent, TRAINING_GAMES, seed_of)?;
     eprintln!(
-        "promote: {} lane, {TRAINING_GAMES} games against random and {TRAINING_GAMES} against gen \
-         {parent_generation}, on seeds {} to {}",
+        "promote: {} lane, {TRAINING_GAMES} games against gen {parent_generation}, on seeds {} to {}",
         args.lane.as_str(),
         game_seed(args.lane, &tree, 1),
         game_seed(args.lane, &tree, TRAINING_GAMES)
@@ -367,11 +383,10 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if let Some(path) = arena::records_path(None) {
         arena::append_records(&path, &arena::records_of(&outcomes)?)?;
     }
-    let (vs_random, vs_parent) = outcomes.split_at(TRAINING_GAMES as usize);
+    let vs_parent = &outcomes[..];
 
     let counts = GateCounts {
         games: TRAINING_GAMES,
-        vs_random: wins_of(&results_of(vs_random)),
         vs_parent: wins_of(&results_of(vs_parent)),
         shadow_ban: candidate.shadow_ban.len(),
         parent_shadow_ban: parent.shadow_ban.len(),
@@ -381,7 +396,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         lane: args.lane.as_str().to_string(),
         parent: parent_commit(&repo),
         tree: tree.clone(),
-        vs_random: format!("{}/{}", counts.vs_random, counts.games),
+        vs_random: None,
         vs_parent: format!("{}/{}", counts.vs_parent, counts.games),
         shadow_ban: counts.shadow_ban,
         parent_shadow_ban: counts.parent_shadow_ban,
@@ -390,9 +405,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     let failures = gate_failures(args.lane, &counts);
     print!(
         "{}",
-        report(
-            args.lane, mode, &record, &counts, &parent, vs_random, vs_parent, &failures
-        )?
+        report(args.lane, mode, &record, &counts, &parent, vs_parent, &failures)?
     );
 
     if args.verify {
@@ -446,10 +459,9 @@ mod tests {
     use jackioh_engine::{GameOverReason, Winner};
     use std::process::Command;
 
-    fn counts(vs_random: i32, vs_parent: i32, shadow_ban: usize, parent_shadow_ban: usize) -> GateCounts {
+    fn counts(vs_parent: i32, shadow_ban: usize, parent_shadow_ban: usize) -> GateCounts {
         GateCounts {
             games: TRAINING_GAMES,
-            vs_random,
             vs_parent,
             shadow_ban,
             parent_shadow_ban,
@@ -457,32 +469,64 @@ mod tests {
     }
 
     #[test]
-    fn the_improve_gate_needs_90_against_random_and_85_against_the_parent() {
-        assert!(gate_failures(Lane::Improve, &counts(90, 85, 11, 11)).is_empty());
-        assert!(gate_failures(Lane::Improve, &counts(100, 100, 11, 11)).is_empty());
-        assert_eq!(gate_failures(Lane::Improve, &counts(89, 85, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Improve, &counts(90, 84, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Improve, &counts(89, 84, 11, 11)).len(), 2);
+    fn r732001_the_improve_gate_needs_65_against_the_parent_and_nothing_against_random() {
+        assert!(gate_failures(Lane::Improve, &counts(65, 11, 11)).is_empty());
+        assert!(gate_failures(Lane::Improve, &counts(100, 11, 11)).is_empty());
+        assert_eq!(gate_failures(Lane::Improve, &counts(64, 11, 11)).len(), 1);
         // The improve lane has no shadow-ban rule: more bans than the parent's still promote.
-        assert!(gate_failures(Lane::Improve, &counts(90, 85, 12, 11)).is_empty());
-        assert_eq!(TRAINING_IMPROVE.vs_random, 90);
-        assert_eq!(TRAINING_IMPROVE.vs_parent, 85);
+        assert!(gate_failures(Lane::Improve, &counts(65, 12, 11)).is_empty());
+        assert_eq!(TRAINING_IMPROVE.vs_parent, 65);
     }
 
     #[test]
-    fn the_unban_gate_needs_strictly_fewer_bans_90_against_random_and_75_against_the_parent() {
-        assert!(gate_failures(Lane::Unban, &counts(90, 75, 10, 11)).is_empty());
-        assert!(gate_failures(Lane::Unban, &counts(95, 80, 0, 11)).is_empty());
+    fn r732001_the_unban_gate_needs_strictly_fewer_bans_and_60_against_the_parent() {
+        assert!(gate_failures(Lane::Unban, &counts(60, 10, 11)).is_empty());
+        assert!(gate_failures(Lane::Unban, &counts(80, 0, 11)).is_empty());
         // Strictly fewer: as many bans as the parent is a failure, more is too.
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 75, 11, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 75, 12, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(90, 74, 10, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(89, 75, 10, 11)).len(), 1);
-        assert_eq!(gate_failures(Lane::Unban, &counts(89, 74, 11, 11)).len(), 3);
-        // 75 against the parent passes the unban lane and fails the improve lane.
-        assert!(!gate_failures(Lane::Improve, &counts(90, 75, 10, 11)).is_empty());
-        assert_eq!(TRAINING_UNBAN.vs_random, 90);
-        assert_eq!(TRAINING_UNBAN.vs_parent, 75);
+        assert_eq!(gate_failures(Lane::Unban, &counts(60, 11, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(60, 12, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(59, 10, 11)).len(), 1);
+        assert_eq!(gate_failures(Lane::Unban, &counts(59, 11, 11)).len(), 2);
+        // 60 against the parent passes the unban lane and fails the improve lane.
+        assert!(!gate_failures(Lane::Improve, &counts(60, 10, 11)).is_empty());
+        assert_eq!(TRAINING_UNBAN.vs_parent, 60);
+    }
+
+    #[test]
+    fn r732001_a_promotion_records_no_count_against_random() {
+        let mut record = sample_record();
+        record.vs_random = None;
+        let line = serde_json::to_string(&record).unwrap();
+        assert!(line.contains(r#""vsRandom":null"#), "{line}");
+        // --verify holds the field like the rest: a claimed count against random is a mismatch.
+        let mut claimed = serde_json::to_value(&record).unwrap();
+        assert!(verify_mismatches(&claimed, &record).is_empty());
+        claimed["vsRandom"] = json!("93/100");
+        assert_eq!(verify_mismatches(&claimed, &record).len(), 1);
+    }
+
+    /// A parent as `arena::entrant` readies a `bin:` one, keeping `shadow_ban` out of its decks.
+    fn parent_banning(shadow_ban: &[&str]) -> Entrant {
+        Entrant {
+            spec: AgentSpec::Bin(PathBuf::from("parent-jackioh")),
+            label: "bin-gen8".to_string(),
+            generation: Some(8),
+            lane: Some("unban".to_string()),
+            shadow_ban: shadow_ban.iter().map(|id| id.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn the_unban_lane_has_nothing_to_do_while_the_parents_shadow_ban_is_empty() {
+        let done = lane_done(Lane::Unban, &parent_banning(&[])).expect("an empty parent ban idles the lane");
+        assert!(done.contains("the unban lane has nothing to do"), "{done}");
+        assert!(done.contains("No game was played"), "{done}");
+        // Whatever the games would say, the gate cannot pass: strictly fewer bans than none.
+        assert!(!gate_failures(Lane::Unban, &counts(100, 0, 0)).is_empty());
+        // Generation 8's own promotion, against a parent with one ban left, still plays its games.
+        assert_eq!(lane_done(Lane::Unban, &parent_banning(&["core-076"])), None);
+        // The improve lane has no ban rule: an empty ban list changes nothing for it.
+        assert_eq!(lane_done(Lane::Improve, &parent_banning(&[])), None);
     }
 
     #[test]
@@ -507,12 +551,12 @@ mod tests {
         ];
         assert_eq!(wins_of(&games), 2);
 
-        // 89 wins and 11 draws against random is a failed gate: the draws are not wins.
+        // 64 wins and 36 draws against the parent is a failed gate: the draws are not wins.
         let mut series: Vec<(Option<GameResult>, PlayerId)> =
-            (0..89).map(|_| (result(Winner::P1), PlayerId::P1)).collect();
-        series.extend((0..11).map(|_| (draw, PlayerId::P1)));
-        let measured = counts(wins_of(&series), 85, 11, 11);
-        assert_eq!(measured.vs_random, 89);
+            (0..64).map(|_| (result(Winner::P1), PlayerId::P1)).collect();
+        series.extend((0..36).map(|_| (draw, PlayerId::P1)));
+        let measured = counts(wins_of(&series), 11, 11);
+        assert_eq!(measured.vs_parent, 64);
         assert_eq!(gate_failures(Lane::Improve, &measured).len(), 1);
     }
 
@@ -594,7 +638,7 @@ mod tests {
             lane: "improve".to_string(),
             parent: Some("0123abc".to_string()),
             tree: "4b825dc".to_string(),
-            vs_random: "93/100".to_string(),
+            vs_random: Some("93/100".to_string()),
             vs_parent: "87/100".to_string(),
             shadow_ban: 11,
             parent_shadow_ban: 11,
@@ -625,10 +669,18 @@ mod tests {
         assert!(mismatches[0].starts_with("generation:"));
         assert!(mismatches[1].starts_with("vsParent:"));
 
-        // Generation 0's record (the port) never verifies as a promotion.
-        let port: Value = serde_json::from_str(include_str!("../../ai/generation.json")).unwrap();
-        assert_eq!(port["generation"], json!(0));
-        assert_eq!(port["lane"], json!("port"));
+        // Generation 0's record (the port) never verifies as a promotion. Its text, not the live
+        // crates/ai/generation.json, which every promotion replaces and no lane may test around.
+        let port = json!({
+            "generation": 0,
+            "lane": "port",
+            "parent": null,
+            "vsRandom": "94/100",
+            "vsParent": null,
+            "shadowBan": 11,
+            "date": "2026-10-07",
+            "source": "packages/ai at 91cc43c (94/100, 35/50, 47/50 in TS)"
+        });
         assert!(!verify_mismatches(&port, &measured).is_empty());
     }
 

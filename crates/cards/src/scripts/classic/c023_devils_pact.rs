@@ -1,21 +1,15 @@
 //! C #23 Devil's Pact (SPEC §8.6 row 23). Field Spell, cost 2, Rare.
 //!   Base:    "Cry: Discard {discards|card|cards}.
 //!             Activate: This turn, each card you play is replaced by a Book of Flame."
-//!   Radiant: "Cry: Discard {discards|card|cards}.
-//!             Activate: This turn, each card you play is replaced by a Radiant Book of Flame."
-//!   (discards: 666 on the base face — the whole hand, the joke — and 6 on the Radiant face.)
+//!   Radiant: the same with a Radiant Book of Flame. Discards: 666 base (the whole hand, the joke), 6 Radiant.
 //!
-//! The Cry (a Field Spell's Cry) discards {discards} random cards (R682): when the hand holds that
-//! many or fewer there is nothing to choose, and the whole hand goes (a discard all the same, so
-//! C #64 sees each card). An empty hand discards nothing.
-//!
-//! Activate (R384), once per turn, installs a this-turn player modifier (`replacePlays`, R449): at
-//! §10.5 step 3 each card you play — a cast included (R70) — is replaced by a new C #16 Book of Flame
-//! (its Radiant face on this card's Radiant face), which resolves as that play: it is announced as a
-//! Book of Flame, counts as one, and asks its target then, since the old card's choices were the old
-//! card's. The old card ceases to exist (R35), unread by the opponent when it left a hand (R177), and
-//! the price paid was the old card's; a Unit or a trap replaced this way takes no zone. A card played
-//! before the activation is not replaced, and the modifier expires at cleanup. Activating is not a play.
+//! The Cry discards {discards} random cards (R682); a hand holding that many or fewer all goes, a
+//! discard all the same, so C #64 sees each card. Activate (R384), once per turn, installs a this-turn
+//! player modifier (`replacePlays`, R449): at §10.5 step 3 each card you play, a cast included (R70),
+//! is replaced by a new C #16 Book of Flame that resolves as that play, counts as one and asks its target
+//! then, since the old card's choices were the old card's. The old card ceases to exist (R35), unread by
+//! the opponent when it left a hand (R177); the price paid was the old card's; a Unit or trap replaced
+//! this way takes no zone. Activating is not a play.
 
 use jackioh_engine::effects::{add_player_modifier, discard_hand, discard_random};
 use jackioh_engine::prelude::*;
@@ -76,16 +70,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #23 Devil's Pact — SPEC §8.6 row 23, BUILD M9 Classic row C 23: "Cry: discard 666 cards, which is
-// your whole hand; Activate, once per turn (R384): for the rest of this turn each card you play is
-// replaced at §10.5 step 3 by a new Book of Flame (C #16, base face), which resolves as that play,
-// counts as a Book of Flame play and asks its target then; the old card ceases to exist (R35) and the
-// price paid was the old card's; a Unit or a trap replaced this way takes no zone; a cast (R70) and
-// a play from the graveyard (R454) are replaced too; a card played before activating is not; the
-// modifier expires at cleanup; activating is not a play; the opponent's view never names a replaced
-// card (it ceased to exist unread, R177);
-// radiant: discard 6 cards at random (R682; all if fewer), and each replacement is a Radiant Book
-// of Flame; its tuned number (discards) reads through `param()` (R386)".
+// C #23 Devil's Pact — SPEC §8.6 row 23, BUILD M9 Classic row C 23: a play from the graveyard (R454)
+// is replaced too; the modifier expires at cleanup; the opponent's view never names a replaced card
+// (R177); its tuned number (discards) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,7 +99,7 @@ mod tests {
         json!([{ "pick": "hero", "player": "p2" }])
     }
 
-    /// TS's `{ …defaults, ...side }`: the side's own keys over the defaults.
+    /// The side's own keys over the defaults.
     fn spread(mut defaults: Value, side: Value) -> Value {
         if let (Some(into), Some(from)) = (defaults.as_object_mut(), side.as_object()) {
             for (key, value) in from {
@@ -140,7 +127,6 @@ mod tests {
         events.iter().filter(|event| event.event_type() == kind).count()
     }
 
-    /// TS's `{ type: "answer", playerId: "p1", choiceId: state.pending?.id ?? "", selection: [...AT_P2], nonce }`.
     fn answer_at_p2(state: &GameState, nonce: &str) -> Action {
         Action::new(
             ActionBody::Answer {
@@ -152,7 +138,7 @@ mod tests {
         )
     }
 
-    /// The `play` action `legalActions` offers for this instance (TS's `.find`).
+    /// The `play` action `legalActions` offers for this instance.
     fn play_of(s: &Scenario, instance_id: &str) -> Option<ActionBody> {
         legal_actions(s.state(), P1)
             .into_iter()

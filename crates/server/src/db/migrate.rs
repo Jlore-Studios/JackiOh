@@ -130,8 +130,32 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0027_lean_newest.sql"),
     ),
     (
-        "0028_replay_final_hash.sql",
-        include_str!("../../migrations/0028_replay_final_hash.sql"),
+        "0028_usernames.sql",
+        include_str!("../../migrations/0028_usernames.sql"),
+    ),
+    (
+        "0029_play_telemetry.sql",
+        include_str!("../../migrations/0029_play_telemetry.sql"),
+    ),
+    (
+        "0030_meditative_set.sql",
+        include_str!("../../migrations/0030_meditative_set.sql"),
+    ),
+    (
+        "0031_meditative_endings.sql",
+        include_str!("../../migrations/0031_meditative_endings.sql"),
+    ),
+    (
+        "0032_ladder_bots.sql",
+        include_str!("../../migrations/0032_ladder_bots.sql"),
+    ),
+    (
+        "0033_bot_trios.sql",
+        include_str!("../../migrations/0033_bot_trios.sql"),
+    ),
+    (
+        "0034_replay_final_hash.sql",
+        include_str!("../../migrations/0034_replay_final_hash.sql"),
     ),
 ];
 

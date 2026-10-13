@@ -205,7 +205,8 @@ def rebuild(ctx: Context, issue: int, pr: int, *, why: str, said: str = "") -> s
             entry.pop(key, None)
         entry.update(kind="build", queued_at=now, failures=0, interruptions=0, died=0, strikes=0,
                      strike_log=[], stop_requested=False, previous_pr=pr, previous_branch=old,
-                     previous_why=why[:500], last_findings=list(findings))
+                     previous_why=why[:500], last_findings=list(findings),
+                     verdict_rounds=0, round_tier="", audit_tier="")
         state_item(state, pr).pop("wip", None)
     ctx.store.update(change, f"rebuild #{issue}")
     labels = label_names(ctx.gh.get_issue(issue))

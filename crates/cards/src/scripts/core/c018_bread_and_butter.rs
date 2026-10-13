@@ -1,39 +1,15 @@
 //! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62): "When any player ends a turn with
 //! unspent mana: summon a Bread Token X/X for the trap's controller, X = that player's unspent mana".
-//! The radiant cell says only "X = 3 × unspent", a cell that changes one number and nothing else
-//! (§8 Conventions), so the trigger, the beneficiary and the token are the same on both faces.
+//! The radiant cell only says "X = 3 × unspent" (§8 Conventions), so both faces share the trigger,
+//! the beneficiary and the token.
 //!
-//! WHERE IT FIRES. R62's turn sequence ends "… end-of-turn triggers → end-of-turn trap window (Bread
-//! and Butter and Intern Stimmy on both sides, in R68 order) → end-of-turn delayed effects → cleanup".
-//! So this is a trap trigger on the `turnEnded` event, which `traps.rs` reserves for exactly that
-//! window (`TRAP_WINDOW_EVENTS = ["turnEnded"]`, withheld from the immediate dispatch so the trap
-//! fires once, in the window, on both players' turns). "Any player" needs no condition of its own:
-//! `turn.rs` emits one `turnEnded` per turn whoever is active, and a backrow trap registers its
-//! `triggers` on either side (triggers.rs `trigger_holders_of`).
-//!
-//! WHOSE TOKEN. R52: "The token always goes to the trap's controller, whichever player ended the turn
-//! with unspent mana". `player: "self"` is that and only that — `player_of(ctx, "self")` is
-//! `ctx.controller`, which `fire_trap`/`run_queued_trigger` set to the trap's own controller, never to
-//! the player who ended the turn.
-//!
-//! X. It comes off the event (`turnEnded.unspentMana`), so the trigger reads no state at all — not the
-//! ending player's mana pool, not `turnLog.unspentAtEnd`, which `cleanup` only writes afterwards.
-//!
-//! THE PREVIEW (R280). "X = that player's unspent mana {n}": the X a token would get if the turn
-//! ended now — the active player's mana as it stands, times the face's multiplier. The event's
-//! `unspentMana` is `unspent_mana_of` read as the turn ends (turn.rs), so the preview reads the same
-//! function for the turn as it stands. It reads the active player's current mana, which is public
-//! (§10.8); `view_for` shows it to the trap's controller alone while the trap is face-down (R33).
-//!
-//! THE TOKEN. §7 and R37: the Bread Token is printed 0/0 with no text and is "always summoned as X/X
-//! through `statsOverride`", which is what `summon`'s `statsOverride` does.
-//!
-//! IT STAYS. §5.1 and §3.2: a Field Trap is not consumed when it fires, so it can pay out every turn;
-//! both `traps.rs` and `triggers.rs` keep it on the field and only turn it face-up (R33).
-//!
-//! THE GLOW (R195, R662). The trap lights up on its controller's field while the active player holds
-//! unspent mana, so the trap would pay out if the turn ended now: the same `unspent_mana_of` its
-//! preview reads, which is what `turnEnded.unspentMana` is as the turn ends. Mana is public.
+//! It fires in R62's end-of-turn trap window (both sides, in R68 order): a trap trigger on `turnEnded`,
+//! which `traps.rs` reserves for that window (`TRAP_WINDOW_EVENTS`). "Any player" needs no condition.
+//! R52: the token goes to the trap's controller (`player: "self"`), whoever ended the turn. X comes off
+//! the event (`turnEnded.unspentMana`), so the trigger reads no state. The token is printed 0/0 and
+//! summoned X/X through `statsOverride` (§7, R37). A Field Trap is not consumed (§5.1, §3.2, R33).
+//! The R280 preview and the R195/R662 glow read `unspent_mana_of`, which is public (§10.8); R33 hides
+//! a face-down trap's preview from the opponent.
 
 use jackioh_engine::effects::summon;
 use jackioh_engine::prelude::*;
@@ -53,18 +29,10 @@ fn unspent_on(event: &GameEvent) -> i32 {
     }
 }
 
-/// The trigger, the same on both faces: the multiplier is §8's X (base) or 3X (radiant), the declared
-/// number `multiplier` (R386), tuned on the Radiant face only (R749: the base face's "X = that
-/// player's unspent mana" prints no number and is always 1).
-///
-/// The condition is written twice on purpose, because the two dispatch paths read it differently:
-///   - `traps.rs`'s `fire_trap` filters on `when`, and a trap no trigger admitted stays armed and
-///     face-down — which is what "ends a turn WITH unspent mana" means at 0 unspent;
-///   - `triggers.rs`'s `run_queued_trigger` ignores `when` and instead takes an empty effect list as
-///     "a trigger whose condition was not met … no event, and a trap stays armed".
-///
-/// Either way nothing is summoned and nothing is revealed at 0 unspent. (TS annotated it
-/// `TrapTrigger`, where `when` was declared; Rust's one `TriggerDef` carries `when` itself.)
+/// The same on both faces: `multiplier` is §8's X (base) or 3X (radiant), a declared number (R386)
+/// tuned on the Radiant face only (R749: the base face prints no number, always 1). The condition is
+/// written twice: `traps.rs` filters on `when`, `run_queued_trigger` ignores it and takes an empty
+/// effect list as "not met", so either way 0 unspent summons nothing and the trap stays armed.
 fn bread_trigger() -> TriggerDef {
     TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], |ctx, event| {
         let x = unspent_on(event) * param(&*ctx, "multiplier");
@@ -77,8 +45,7 @@ fn bread_trigger() -> TriggerDef {
             "player": "self",
             // §7, R37: X/X on a card printed 0/0.
             "statsOverride": { "attack": x, "health": x },
-            // §7: the radiant face prints "Armor X" — the same X. Carried now rather than when the
-            // token turns Radiant, because nothing at that moment still knows what X was.
+            // §7: the radiant face prints "Armor X", the same X; carried now because nothing later knows X.
             "armorOverride": x
         })))]
     })
@@ -145,21 +112,10 @@ pub fn script() -> CardScripts {
 // Must-pass (M4-T4): "Fires in the trap window at either player's end with unspent mana (R62), token
 // to trap controller (R52), X = unspent, 0 → nothing, stays; radiant 3X".
 //
-// R62's sequence: "… end-of-turn triggers → end-of-turn trap window (Bread and Butter and Intern
-// Stimmy on both sides, in R68 order) → end-of-turn delayed effects → cleanup". The trap watches the
-// `turnEnded` event, which `traps.rs` reserves for that window alone (`TRAP_WINDOW_EVENTS`).
-//
-// R52: "The token always goes to the trap's controller, whichever player ended the turn with unspent
-// mana" — which is why the opponent's-turn test asserts an EMPTY board on the ending player's side.
-//
-// §7 and R37: the Bread Token is printed 0/0 and "always summoned as X/X through `statsOverride`",
-// so every assertion below reads the def id AND the stats: the def alone would pass at 0/0.
-//
-// The X a token would get if the turn ended now, its R280 `preview`, is proved in
-// tests/cross/preview.rs, with the face-down case (its controller alone sees it).
-//
-// R662's yellow glow (`conditionMet`): on its controller's field while the active player holds
-// unspent mana, both faces, checked against what ending the turn then does, at the end of this file.
+// R62: the trap watches `turnEnded`, which `traps.rs` reserves for the end-of-turn trap window (R68
+// order). R52 is why the opponent's-turn test asserts an EMPTY board on the ending player's side. §7,
+// R37: the token is printed 0/0, so every assertion reads the def id AND the stats. The R280 preview
+// is proved in tests/cross/preview.rs; R662's glow (`conditionMet`) at the end of this file.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

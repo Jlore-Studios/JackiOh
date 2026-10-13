@@ -74,7 +74,8 @@ allowed `RefCell`.
   `ai_policy`, heroic power, combo index, Call to Chaos, quests, …), each tested through fixture
   scripts in `tests/rules/fixtures/`.
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
-  ingredients on lookup (`subsystems::fuse::compose_fused_scripts`).
+  ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
+  #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behaviour uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
@@ -110,7 +111,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 | Binary | Path | What |
 | --- | --- | --- |
 | `rules` | `tests/rules.rs`, `tests/rules/<x>.rs` | one module per rule area; needs `--features testkit` |
-| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash, and the hotseat fixture's fold to `a798906b` |
+| `golden` | `tests/golden.rs`, `tests/golden/` | the 240 golden traces recorded from the TypeScript engine before it was deleted, replayed hash for hash, and the hotseat fixture's fold to `5c3d578c` |
 | `export_config` | `tests/export_config.rs` | writes `engineConfig.ts` |
 
 A test that proves a ruling is named after it: `fn r58_…` (CLAUDE.md rule 3).

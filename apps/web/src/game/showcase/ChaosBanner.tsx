@@ -11,6 +11,7 @@ import type { CSSProperties, ReactElement } from "react";
 import { createPortal } from "react-dom";
 
 import { CHAOS_TEXT, showcaseTestid } from "./constants.ts";
+import { t } from "../../i18n/i18n.ts";
 
 export type ChaosBannerProps = { names: readonly string[]; seq: number };
 
@@ -18,11 +19,11 @@ export default function ChaosBanner({ names, seq }: ChaosBannerProps): ReactElem
   const style: CSSProperties = { pointerEvents: "none" };
   return createPortal(
     <div className="chaos-banner" data-testid={showcaseTestid.chaos} data-seq={seq} aria-hidden="true" style={style}>
-      <span className="chaos-banner-title">{CHAOS_TEXT.title}</span>
+      <span className="chaos-banner-title">{t(CHAOS_TEXT.title)}</span>
       <ol className="chaos-banner-lines">
         {names.map((name, index) => (
           <li key={`${String(index)}:${name}`} className="chaos-banner-line" data-testid={showcaseTestid.chaosLine}>
-            {name}
+            {t(name)}
           </li>
         ))}
       </ol>

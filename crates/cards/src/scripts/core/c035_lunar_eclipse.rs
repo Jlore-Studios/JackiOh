@@ -4,48 +4,15 @@
 //! The radiant cell changes only the two numbers, so both clauses stay (§8 Conventions).
 //! R81: the target travels in the `play` action and resolution never pauses.
 //!
-//! The discount is a player-level `PlayerModifier` (engine/src/state.ts), and the engine already
-//! reads every part of the shape below:
-//!   * `effectiveCost` (mana.ts) subtracts a live `costDiscount` and skips one whose `onlyType` is
-//!     not the card's type, which is what makes a unit play leave the discount alone;
-//!   * `expireModifiers` (modifiers.ts) drops a `{ until: "thisTurn" }` modifier at cleanup, which
-//!     §2.2 names with this card ("Cleanup expires every 'this turn' effect (the Lunar Eclipse
-//!     discount, …)");
-//!   * `oncePerTurn` on the `costDiscount` variant is the "consumed on use" half of the §8.2 Engine
-//!     cell: without it every Spell this turn would be cheaper, not just the next one.
-//!
-//! `addPlayerModifier` has since landed in `effects/index.ts`, so the verb this file needed exists.
-//!
-//! ONE ENGINE GAP IS LEFT, AND IT IS WHY `only the NEXT Spell is cheaper` IS RED. Nothing consumes
-//! the discount on use. `playSteps.consumeUsedDiscounts` is the only consumer in the tree and its
-//! predicate is `mod.expiry.until !== "used" → skip`, while `oncePerTurn` — declared on the
-//! `costDiscount` variant at `state.ts:72` — is read by no source file at all. So every Spell played
-//! this turn is cheaper, not just the next one.
-//!
-//! THE CARD CANNOT FIX THIS BY CHANGING ITS EXPIRY, which was tried and measured:
-//!   * `{ until: "used" }` does get the discount consumed on the first Spell — and then leaks. It is
-//!     `modifiers.expireModifiers` that runs at cleanup, and it keeps everything that is neither
-//!     `thisTurn` nor a due `nextTurnOf`. So the discount survives into later turns, against §2.2's
-//!     own sentence ("Cleanup expires every 'this turn' effect (the Lunar Eclipse discount, …)") and
-//!     against the §8.2 Engine cell's "consumed on use OR AT CLEANUP". Two green cases in
-//!     `test/035-lunar-eclipse.test.ts` go red on it: "the discount expires at cleanup" (both faces)
-//!     and "a Spell on a later turn pays full price".
-//!   * Nor can `expireModifiers` simply drop every `{ until: "used" }` modifier at cleanup: R30 and
-//!     §2.2 require the other one, #79 Twinspell's `echoNextSpell`, to SURVIVE cleanup.
-//!   * And no card-side workaround exists: `addPlayerModifier` is the only player-modifier verb in
-//!     the barrel — there is nothing that removes or consumes one — so a script cannot retire its
-//!     own rider at end of turn.
-//!
-//! THE FIX IS ONE LINE OF ENGINE, in `playSteps.consumeUsedDiscounts`: treat `oncePerTurn: true` as
-//! a second way of saying "consumed on use", alongside `{ until: "used" }` —
+//! The discount is a player-level `PlayerModifier`. `onlyType: "Spell"` keeps a unit play from using
+//! it; `{ until: "used" }` would leak past cleanup (R30 needs #79 Twinspell's rider to survive it),
+//! so the expiry stays `thisTurn` (§2.2 names this card) and `oncePerTurn` consumes it on the first
+//! Spell (§8.2 Engine cell), which `consume_used_discounts` reads as a second "consumed on use":
 //!
 //! ```text
 //! if (mod.kind !== "costDiscount") continue;
 //! if (mod.expiry.until !== "used" && mod.oncePerTurn !== true) continue;
 //! ```
-//!
-//! — which leaves the expiry below free to be `thisTurn`, so §2.2's cleanup still takes an unused
-//! discount. Nothing else in the tree sets `oncePerTurn`, so the blast radius is this card alone.
 
 use jackioh_engine::effects::{add_player_modifier, damage};
 use jackioh_engine::prelude::*;
@@ -93,24 +60,13 @@ pub fn script() -> CardScripts {
 // "3 damage; next spell this turn −1; a unit play does not consume it; expires at cleanup;
 //  radiant 6 / −2".
 //
-// ONE CASE IS RED, AND IT IS AN ENGINE GAP, NOT A FIXTURE ONE. "only the NEXT Spell is cheaper,
-// not every Spell this turn" fails because nothing consumes the discount when it applies:
-// `playSteps.consumeUsedDiscounts` only retires a `{ until: "used" }` discount, and `oncePerTurn` —
-// which the card sets and which `state.ts` declares — is read by no source file. The card cannot
-// close it from this side: asking for `{ until: "used" }` instead does get the discount consumed,
-// but `modifiers.expireModifiers` keeps every `used` modifier at cleanup (it has to — R30 and §2.2
-// need #79 Twinspell's to survive), so the discount would then leak into later turns and take
-// "the discount expires at cleanup" (both faces) and "a Spell on a later turn pays full price" down
-// with it. `src/scripts/035-lunar-eclipse.ts`'s header writes out the one-line engine fix.
-// Not one assertion in this file has been softened to go around it.
-//
-// The second spell is #16 Hit Job, a (3) Cost Spell since patch v0.2.0 (issue #40): at full price p1
-// would be left with 0 mana, with the discount 1 (and 2 with the radiant −2).
+// The second spell is #16 Hit Job, a (3) Cost Spell: at full price p1 would be left with 0 mana,
+// with the discount 1 (and 2 with the radiant −2).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
 
-    /// The harness's import-time `registerAll()`: the engine's testkit cannot name the cards crate.
+    /// Registers the catalog first: the engine's testkit cannot name the cards crate.
     fn scn(opts: Value) -> Scenario {
         crate::register_all();
         scenario(opts)
@@ -120,7 +76,6 @@ mod tests {
         card.unwrap_or_else(|| panic!("the scenario has no {what}"))
     }
 
-    /// TS `const AT_ENEMY_HERO = [{ pick: "hero", player: "p2" }]`.
     fn at_enemy_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }

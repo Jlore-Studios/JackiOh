@@ -46,6 +46,7 @@ import PlayRoute, {
   pairTargetOf,
   playModeTestid,
   playTestid,
+  playWaitTestid,
   queuedStatus,
   roomLinkStatus,
 } from "./play.tsx";
@@ -141,14 +142,15 @@ function messagesOf(result: LoadoutResult): string[] {
 }
 
 function openTicket(mode: QueueMode): EnqueueResponse {
-  return { ticketId: "tk-1", status: "open", matchId: null, seriesId: null, population: 1, mode };
+  return { ticketId: "tk-1", status: "open", matchId: null, seriesId: null, mode };
 }
 
 /** `GET /api/ranked`'s answer: a Normal Grape III with one pip, unless a test overrides it. */
 function rankBody(over: Partial<OwnRankResponse> = {}): OwnRankResponse {
   return {
     season: "v0.2",
-    tag: "ABC123",
+    profileId: "5d0c7a1e-0b9f-4c55-9a3e-6f2d8b1c4e70",
+    username: "Max#3",
     rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
     streak: 2,
     record: { games: 10, wins: 7, losses: 2, draws: 1 },
@@ -170,7 +172,7 @@ beforeEach(() => {
     catalogVersion: "v1",
     entries: ALL_IDS.map((id) => ({ cardId: id, quantity: 1 })),
   });
-  vi.mocked(getPopulation).mockResolvedValue({ population: 3, byMode: { bo1: 2, bo3: 0, random: 1 } });
+  vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 12, expectedWaitSeconds: { bo1: 30, bo3: null, random: 90 } });
   vi.mocked(getOwnRank).mockResolvedValue(rankBody());
 });
 
@@ -436,14 +438,38 @@ describe("the lobby's modes", () => {
     expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
   });
 
-  it("shows the queue's population per mode", async () => {
+  it("R640002 shows each mode's expected wait on its tile and the last hour's games once", async () => {
     await renderLobby();
-    const population = await screen.findByTestId(playTestid.population);
+    const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
+    expect(await screen.findByTestId(playWaitTestid("bo1"))).toHaveTextContent("Usually under 30 s");
+    expect(tileOf("bo1")).toContainElement(screen.getByTestId(playWaitTestid("bo1")));
+    // Too few Conquest games were counted to say, so its tile says nothing.
+    expect(screen.queryByTestId(playWaitTestid("bo3"))).toBeNull();
+    expect(tileOf("bo3")).not.toHaveTextContent(/usually/i);
+    expect(screen.getByTestId(playWaitTestid("random"))).toHaveTextContent("Usually under 2 min");
+    expect(screen.getAllByTestId(playTestid.recentGames)).toHaveLength(1);
+    expect(screen.getByTestId(playTestid.recentGames)).toHaveTextContent("12 games played in the last hour");
+  });
+
+  it("R640002 shows no wait and no games line when the server counted none", async () => {
+    vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 0, expectedWaitSeconds: { bo1: null, bo3: null, random: null } });
+    await renderLobby();
     await waitFor(() => {
-      expect(population).toHaveAttribute("data-bo1", "2");
+      expect(vi.mocked(getPopulation)).toHaveBeenCalled();
     });
-    expect(population).toHaveAttribute("data-bo3", "0");
-    expect(population).toHaveAttribute("data-random", "1");
+    for (const mode of ["bo1", "bo3", "random"] as const) expect(screen.queryByTestId(playWaitTestid(mode))).toBeNull();
+    expect(screen.queryByTestId(playTestid.recentGames)).toBeNull();
+    expect(screen.getByRole("region", { name: "How do you want to play?" })).not.toHaveTextContent(/usually|played in the last hour/i);
+  });
+
+  it("R640002 a server from before the readout sends neither field, and the lobby shows nothing for it", async () => {
+    vi.mocked(getPopulation).mockResolvedValue({});
+    await renderLobby();
+    await waitFor(() => {
+      expect(vi.mocked(getPopulation)).toHaveBeenCalled();
+    });
+    for (const mode of ["bo1", "bo3", "random"] as const) expect(screen.queryByTestId(playWaitTestid(mode))).toBeNull();
+    expect(screen.queryByTestId(playTestid.recentGames)).toBeNull();
   });
 
   it("R433 All Random names no card of the deck it will deal: that deck is dealt when the game starts", async () => {
@@ -458,33 +484,33 @@ describe("the lobby's modes", () => {
     expect(setup.querySelector(".play-pick-summary")).toBeNull();
   });
 
-  it("R505 the queue's counts are on the mode tiles alone: the Find a match box and the queued notice repeat none", async () => {
-    vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve({ ...openTicket(choice.mode), population: 7 }));
+  it("R505 R640002 the queue's readout is on the mode tiles and the games line alone: the Find a match box and the queued notice repeat none of it", async () => {
+    vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
     await renderLobby();
-    const tiles = screen.getByTestId(playTestid.population);
-    await waitFor(() => {
-      expect(tiles).toHaveAttribute("data-bo1", "2");
-    });
-    // Each tile says how many are waiting for its mode.
+    // Each tile says how long its mode usually takes, and the line under them the last hour's games.
     const tileOf = (mode: QueueMode): HTMLElement | null => screen.getByTestId(playModeTestid(mode)).closest("label");
-    expect(tileOf("bo1")).toHaveTextContent("2 waiting");
-    expect(tileOf("bo3")).toHaveTextContent("0 waiting");
-    expect(tileOf("random")).toHaveTextContent("1 waiting");
+    await waitFor(() => {
+      expect(tileOf("bo1")).toHaveTextContent("Usually under 30 s");
+    });
+    expect(tileOf("random")).toHaveTextContent("Usually under 2 min");
+    const setup = screen.getByRole("region", { name: "How do you want to play?" });
+    expect(within(setup).getByTestId(playTestid.recentGames)).toHaveTextContent("12 games played in the last hour");
 
+    const READOUT = /usually|played in the last hour|\b(12|30|90)\b/i;
     const box = screen.getByRole("region", { name: "Find a match" });
-    expect(box).not.toHaveTextContent(/waiting/i);
-    expect(within(box).queryByTestId(playTestid.population)).toBeNull();
+    expect(box).not.toHaveTextContent(READOUT);
+    expect(within(box).queryByTestId(playTestid.recentGames)).toBeNull();
 
-    // Queued: the box says what it is doing and the notice where you are, and neither counts.
+    // Queued: the box says what it is doing and the notice where you are, and neither repeats it.
     fireEvent.click(screen.getByTestId(playTestid.queue));
     const status = await screen.findByTestId(playTestid.status);
     expect(status).toHaveTextContent(`In the ${MODE_LABEL.bo1} queue.`);
     expect(status).toHaveTextContent("You will be taken to the game as soon as someone is found.");
-    expect(status).not.toHaveTextContent(/waiting|7/);
+    expect(status).not.toHaveTextContent(READOUT);
     expect(within(box).getByTestId(playTestid.searching)).toHaveTextContent(`Looking for a ${MODE_LABEL.bo1} opponent`);
-    expect(box).not.toHaveTextContent(/waiting/i);
-    // The tiles still count.
-    expect(tileOf("bo1")).toHaveTextContent("waiting");
+    expect(box).not.toHaveTextContent(READOUT);
+    // The tiles still say it.
+    expect(tileOf("bo1")).toHaveTextContent("Usually under 30 s");
   });
 });
 

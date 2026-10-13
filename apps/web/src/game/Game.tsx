@@ -71,6 +71,7 @@ import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
@@ -80,14 +81,23 @@ function isTurnEvent(event: GameEvent): event is Extract<GameEvent, { type: "tur
   return event.type === "turnStarted" || event.type === "turnAutoEnded";
 }
 
-function bannerText(view: PlayerView, lastType: string | undefined, startedFor?: PlayerId): string | null {
-  if (view.result !== null) return "Game over";
-  if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
+function bannerText(
+  view: PlayerView,
+  lastType: string | undefined,
+  startedFor?: PlayerId,
+  extra?: boolean,
+): string | null {
+  if (view.result !== null) return t("Game over");
+  if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting, not the one (or the mulligan) being left.
-  if (startedFor !== undefined) return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
-  if (view.phase === "mulligan") return "Mulligan";
-  return view.active === view.viewer ? "Your turn" : "Opponent's turn";
+  // R845: an extra turn's banner says so.
+  if (startedFor !== undefined) {
+    if (extra === true) return startedFor === view.viewer ? t("Your extra turn") : t("Opponent's extra turn");
+    return startedFor === view.viewer ? t("Your turn") : t("Opponent's turn");
+  }
+  if (view.phase === "mulligan") return t("Mulligan");
+  return view.active === view.viewer ? t("Your turn") : t("Opponent's turn");
 }
 
 export type GameProps = {
@@ -170,6 +180,7 @@ export default function Game({
   trackStats = false,
   aim,
 }: GameProps): ReactElement {
+  useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
   /**
@@ -179,11 +190,16 @@ export default function Game({
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**
    * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
-   * hotseat hand-over closes it the way a hand-over closes the concede question. Issue §2's other
-   * closes — outside press, Escape, picking — live in the menus themselves; the ones that are a
-   * board state (a drag or targeting starting) are the render-adjust below.
+   * hotseat hand-over closes it the way a hand-over closes the concede question, and where: hung
+   * off the portrait (`panel`, a click) or in the hero's inspect view (`inspect`, a hold; R1449).
+   * Issue §2's other closes — outside press, Escape, picking — live in the menus themselves; the
+   * ones that are a board state (a drag or targeting starting) are the render-adjust below.
    */
-  const [emoteMenu, setEmoteMenu] = useState<{ side: "you" | "opponent"; viewer: PlayerId } | null>(null);
+  const [emoteMenu, setEmoteMenu] = useState<{
+    side: "you" | "opponent";
+    viewer: PlayerId;
+    place: "panel" | "inspect";
+  } | null>(null);
 
   // The view the DOM is showing: the newest one once the queue has settled, an older one while
   // an event is still animating over it (BUILD M5-T4).
@@ -511,7 +527,9 @@ export default function Game({
    * One hero's emote surface, built per side (R643–R644). The picker opens only on your own
    * portrait — in hotseat "you" is always the seat on move, which is the issue's "only the active
    * seat's portrait opens a menu" for free — and only while nothing is being targeted: `onPortrait`
-   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins.
+   * is the click Hero took when its hero was NOT legal, and a selection in flight still wins. The
+   * click toggles the menu on the portrait; `onPortraitHold`, the hold, opens the hero's inspect
+   * view with the same menu in it, the panel giving way to it (R1449).
    */
   const heroEmotes = useCallback(
     (side: "you" | "opponent"): HeroEmotes | undefined => {
@@ -523,11 +541,16 @@ export default function Game({
         hand: emotes.handOf(shown.viewer),
         show: emotes.visible(player),
         menu: emoteMenu?.side === side ? (side === "you" ? "emotes" : "mute") : null,
+        inspect: emoteMenu?.side === side && emoteMenu.place === "inspect",
         muted: emotes.muted(player),
         gate: () => emotes.gate(shown.viewer),
         onPortrait: () => {
           if (interaction !== IDLE) return;
-          setEmoteMenu((open) => (open?.side === side ? null : { side, viewer: shown.viewer }));
+          setEmoteMenu((open) => (open?.side === side ? null : { side, viewer: shown.viewer, place: "panel" }));
+        },
+        onPortraitHold: () => {
+          if (interaction !== IDLE) return;
+          setEmoteMenu({ side, viewer: shown.viewer, place: "inspect" });
         },
         onPick: (emote) => {
           emotes.send(shown.viewer, emote);
@@ -544,7 +567,12 @@ export default function Game({
   // the board catching up (#37).
   const burstTurn = burst.flatMap((entry) => entry.events).findLast(isTurnEvent);
   const lastTurnEvent = burstTurn ?? [...shown.events].reverse().find(isTurnEvent);
-  const banner = bannerText(shown, lastTurnEvent?.type, burstTurn?.type === "turnStarted" ? burstTurn.player : undefined);
+  const banner = bannerText(
+    shown,
+    lastTurnEvent?.type,
+    burstTurn?.type === "turnStarted" ? burstTurn.player : undefined,
+    burstTurn?.type === "turnStarted" && burstTurn.extra === true,
+  );
 
   return (
     <div
@@ -595,7 +623,7 @@ export default function Game({
           <>
             {error != null && error !== "" ? (
               <p key={error} className="game-error" data-testid="action-error" role="alert">
-                {error}
+                {t(error)}
               </p>
             ) : null}
             {boardNotice}

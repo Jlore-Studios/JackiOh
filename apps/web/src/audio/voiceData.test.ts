@@ -137,7 +137,13 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
 
   it("B41 lineFor gives a unit's play and death text in the voice each hook names", () => {
     const entry = CARD_AUDIO.cards["core-004"];
-    if (entry?.kind !== "unit" || entry.play?.voice === undefined || entry.death?.voice === undefined) {
+    if (
+      entry?.kind !== "unit" ||
+      entry.play?.voice === undefined ||
+      entry.death?.voice === undefined ||
+      !("text" in entry.play) ||
+      !("text" in entry.death)
+    ) {
       throw new Error("core-004 should be a unit with a play and a death line in the shipped file");
     }
 
@@ -149,7 +155,9 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     // docs/polish/2-sound.md, Personas: core-016 is the hustler with `rate 170, pbas 32`, once a
     // per-card override and now the voice `hustler-hitman` (R655).
     const entry = CARD_AUDIO.cards["core-016"];
-    if (entry?.kind !== "spell" || entry.cast?.voice === undefined) throw new Error("core-016 should be a spell with a cast line");
+    if (entry?.kind !== "spell" || entry.cast?.voice === undefined || !("text" in entry.cast)) {
+      throw new Error("core-016 should be a spell with a cast line");
+    }
     const hustler = CARD_AUDIO.voices.hustler;
     if (hustler === undefined || hustler.backend === "sapi") throw new Error("no say voice hustler");
 
@@ -179,9 +187,30 @@ describe("B41 voiceKey, voiceUrl and lineFor", () => {
     expect(lineFor(CARD_AUDIO, "core-005", "death")).toBeNull();
     expect(lineFor(CARD_AUDIO, "core-041", "death")).toBeNull();
     expect(lineFor(CARD_AUDIO, "core-041", "cast")).not.toBeNull();
-    // core-066's attack hook is an effect and nothing else.
-    expect(hookFor(CARD_AUDIO, "core-066", "attack")).toEqual({ effect: "rumble" });
-    expect(lineFor(CARD_AUDIO, "core-066", "attack")).toBeNull();
+    // An attack hook that is an effect and nothing else has no line. Every shipped unit's attack hook
+    // has a line since #103, so the fixture's core-004 carries the effect-only hook.
+    const table = parseCardAudio(fixture(), CATALOG);
+    expect(hookFor(table, "core-004", "attack")).toEqual({ effect: "zip" });
+    expect(lineFor(table, "core-004", "attack")).toBeNull();
+  });
+
+  it("R1088 parses a trigger list; lineFor reads trigger2", () => {
+    const raw = fixture();
+    raw.cards["core-006"] = {
+      cast: { voice: "crone", text: "Drink up, dearie." },
+      trigger: { voice: "crone", lines: ["First.", "Second.", "Third."] },
+    };
+    const table = parseCardAudio(raw, CATALOG);
+
+    expect(hookFor(table, "core-006", "trigger")).toEqual({
+      voice: "crone",
+      lines: ["First.", "Second.", "Third."],
+    });
+    expect(lineFor(table, "core-006", "trigger2")).toEqual({ text: "Second.", persona: CRONE });
+    expect(lineFor(table, "core-006", "trigger4")).toBeNull();
+    expect(lineFor(table, "core-006", "trigger")).toBeNull();
+    expect(lineFor(table, "core-005", "trigger1")).toBeNull();
+    expect(parseError(raw)).toBe("(no error)");
   });
 });
 
@@ -224,7 +253,7 @@ describe("B42 parseCardAudio", () => {
     const kinded = fixture();
     kinded.cards["core-004"] = { kind: "unit", ...kinded.cards["core-004"] };
     expect(parseError(kinded)).toBe(
-      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast)",
+      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger)",
     );
 
     const slow = fixture();
@@ -332,7 +361,7 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names an unknown hook", () => {
     expectError((t) => {
       t.cards["core-004"] = { jump: { effect: "zip" } };
-    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast)");
+    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger)");
   });
 
   it("R655 names a hook the card's kind may not carry", () => {
@@ -398,7 +427,7 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names a field no part of the file allows", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "hustler", text: "Hi.", rate: 200 } };
-    }, "cards.core-004.play.rate: unknown field (expected voice, text, effect)");
+    }, "cards.core-004.play.rate: unknown field (expected voice, text, lines, effect)");
     expectError((t) => {
       t.effects.thud = { sfx: "impact", volume: 1 };
     }, "effects.thud.volume: unknown field (expected sfx, pitch, gain, params)");
@@ -628,9 +657,9 @@ describe("B43 voiceKeysForView", () => {
     });
   }
 
-  it("B43 lists the hand, then every unit's death line, then the viewer's own face-up traps, each key once", () => {
-    // The shipped file has no attack line yet: core-012's attack hook is an effect, so it adds no key.
-    expect(hookFor(CARD_AUDIO, "core-012", "attack")).toEqual({ effect: "catChirp" });
+  it("B43 R655 R1448 lists the hand, every unit's death line, the viewer's own units' attack lines, then their face-up traps, each key once", () => {
+    // Since #103 every shipped unit has an attack line: core-012's is spoken over its catChirp.
+    expect(hookFor(CARD_AUDIO, "core-012", "attack")).toMatchObject({ voice: "cat", effect: "catChirp" });
     expect(voiceKeysForView(viewWith(), CARD_AUDIO)).toEqual([
       "core-004-play",
       "core-005-cast",
@@ -638,6 +667,8 @@ describe("B43 voiceKeysForView", () => {
       "core-012-death",
       "core-t-sheep-death",
       "core-004-death",
+      "core-012-attack",
+      "core-t-sheep-attack",
       "core-041-cast",
       "core-071-cast",
     ]);

@@ -14,7 +14,7 @@ database and auth (Supabase).
 | How often | Every push to main that changes the bundle | Once a day (an open issue counts down, and anyone can hold or delay it), plus catalog bumps as soon as CI passes |
 | Gate | Vercel's own build | `main`'s push-to-main CI run must have passed |
 | Routing and headers | `vercel.json` (source of truth) | `apps/web/public/_redirects`, `_headers`, `wrangler.jsonc` |
-| Domain | `jackioh.vercel.app` | your Cloudflare domain (to be chosen) |
+| Domain | `jackioh.vercel.app` | jackioh.com |
 | Backend | Render + Supabase (shared) | Render + Supabase (shared) |
 
 `main` stays the only branch anyone merges into. `production` is a pointer to "the commit of main
@@ -147,7 +147,8 @@ throws the path away, so every rewrite targets `/` instead. And a `/login` rule 
 `/login/`, so each path is listed both ways. With those, every case in `deploy-routes.test.ts`
 (screens, match and series ids, trailing slashes, and the paths that must 404) behaves the same on
 Cloudflare as on Vercel, query strings survive (so emailed auth links work), and the headers are on
-every response.
+every response. A page the build writes (`apps/web/static-pages.ts`) is rewritten to its own folder
+(`cloudflare-config.test.ts` has the measurement).
 
 ## 4. What you need to do
 
@@ -254,12 +255,15 @@ Replace `$SITE` with the Cloudflare URL.
 
 ### Step 6: Cut over the canonical domain
 
-When the Cloudflare domain is final, make one change that moves every place that names the
-canonical origin, which still say `jackioh.vercel.app`:
+Every address the build writes names `VITE_SITE_ORIGIN`: production's in
+`apps/web/.env.production` (`https://jackioh.com`), staging's in both `vercel.json`
+`buildCommand`s (`https://jackioh.vercel.app`, which wins over `.env.production`). The source files
+keep spelling `SITE_ORIGIN`, which `apps/web/static-pages.ts` replaces with the build's own host in
+each page's canonical link, `og:url`, `og:image` and JSON-LD `url`, in `dist/sitemap.xml` and in the
+copied `robots.txt` and `.well-known/security.txt`.
 
-- `apps/web/src/net/navigate.ts` `SITE_ORIGIN`
-- `apps/web/index.html`: `og:url`, `og:image` and the JSON-LD `url`
-- `apps/web/public/robots.txt`, `public/sitemap.xml`, `public/.well-known/security.txt`
+What still names `jackioh.vercel.app` and moves at cut-over:
+
 - `apps/web/src/routes/privacy.tsx`: "Vercel hosts this website" should name Cloudflare. This is
   your privacy policy, so it has to be accurate about who hosts the site.
 - `crates/server/tests/deploy/rehearse.sh` `PUBLIC_ORIGINS`

@@ -568,11 +568,24 @@ describe("the match screen in a player's words", () => {
 });
 
 describe("the match screen's ranks (R604, R612)", () => {
+  /** Profile ids as the server sends them: keys, never shown (R1436). */
+  const P1_ID = "c0ffee00-1234-4abc-9def-0123456789ab";
+  const P2_ID = "deadbeef-5678-4cde-8f01-23456789abcd";
   const ranksBody = {
     ranked: true,
     seats: {
-      p1: { tag: "ABC123", rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }, you: true },
-      p2: { tag: "XYZ999", rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 }, you: false },
+      p1: {
+        profileId: P1_ID,
+        username: "Max#3",
+        rank: { tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" },
+        you: true,
+      },
+      p2: {
+        profileId: P2_ID,
+        username: "שרה",
+        rank: { tier: "raisin", placementsPlayed: 2, placementGames: 5 },
+        you: false,
+      },
     },
   };
 
@@ -598,8 +611,43 @@ describe("the match screen's ranks (R604, R612)", () => {
 
     const banner = await screen.findByTestId("match-ranks");
     expect(banner).toHaveTextContent("Ranked match");
-    expect(banner).toHaveTextContent("ABC123 (you) Normal Grape III");
-    expect(banner).toHaveTextContent("XYZ999 Raisin");
+    expect(banner).toHaveTextContent("Max#3 (you) Normal Grape III");
+    expect(banner).toHaveTextContent("שרה Raisin");
+  });
+
+  it("R1436 names both seats by username, isolated, and shows no profile id nor any slice of one", async () => {
+    stubFetch(ranksBody);
+    const { container } = render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    const names = [...banner.querySelectorAll("bdi.username")];
+    expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
+    expect(names[1]?.querySelector(":scope > bdi")).toHaveAttribute("dir", "auto");
+    const text = container.textContent;
+    for (const id of [P1_ID, P2_ID]) {
+      expect(text).not.toContain(id);
+      expect(text).not.toContain(id.slice(0, 8));
+    }
+  });
+
+  it("R1436 a seat without a profile id and username is not a ranks body: no banner", async () => {
+    const fetchMock = stubFetch({
+      ranked: true,
+      // The body a server before usernames sent: both seats named by a tag alone.
+      seats: {
+        p1: { tag: "ABC123", rank: ranksBody.seats.p1.rank, you: true },
+        p2: { tag: "DEF456", rank: ranksBody.seats.p2.rank, you: false },
+      },
+    });
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    await screen.findByTestId("hero-you");
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/ranks"), expect.anything());
+    });
+    await act(async () => {});
+    expect(screen.queryByTestId("match-ranks")).toBeNull();
   });
 
   it("says an unranked match moves nothing, and stays silent when the read is not a ranks body", async () => {

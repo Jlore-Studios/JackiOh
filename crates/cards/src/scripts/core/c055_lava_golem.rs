@@ -3,31 +3,16 @@
 //!   Base:    "Taunt, Tribute 3. Can use enemy Units as Tributes. If any are used, summon this for your
 //!            opponent."
 //!   Radiant: "Taunt, Tribute 3. Can use enemy Units as Tributes."
-//! Patch v0.1.1 took Armor 3 off both faces and Indestructible off the Radiant one, and gave the
-//! base face its price: a Tribute that takes any opposing unit summons the Golem for the opponent.
 //!
-//! KEYWORDS ARE DATA, NOT SCRIPT. Both faces print [Taunt], read straight off the def by §10.4
-//! layer 1 (`face_of` in engine/src/layers.rs), so this file grants nothing.
+//! Keywords are data: both faces print [Taunt], read off the def by §10.4 layer 1, so this file grants none.
+//! The Tribute is the play cost, not a hook (§6.3: "an additional cost of playing a card"): it lives in
+//! `play_choices.rs` and the chosen units travel in the `play` action's `tributes` list (R81).
+//!   * `tribute` — Tribute 3, the Sheep Token worth 2 (§3.2); sacrificed at §10.5 step 2, past Indestructible.
+//!   * `tribute_enemies` — "Can use enemy Units as Tributes" (R101).
+//!   * `enemy_tribute_hands_over` — base face (R360): an opposing unit in the Tribute puts the Golem on the
+//!     opponent's side, in the lane named else their leftmost open one (R15); still the player's card and play.
 //!
-//! THE COST IS THE SCRIPT. §6.3 calls Tribute "an additional cost of playing a card", so it lives in
-//! the play validator (`play_choices.rs`), and the units chosen travel in the `play` action's own
-//! `tributes` list (R81). What this file declares, and who reads it:
-//!   * `tribute` — `tribute_cost_of(card)`: Tribute 3, with the Sheep Token worth 2 (`tribute_value_of`,
-//!     §3.2), and `refuse_tributes` refusing a board that cannot pay; the units are sacrificed at §10.5
-//!     step 2, which bypasses Indestructible and counts as a death (§6.3).
-//!   * `tribute_enemies` — "Can use enemy Units as Tributes" (R101): `legal_tribute_units` offers both
-//!     sides' units only to a card that says so.
-//!   * `enemy_tribute_hands_over` — the base face's "If any are used, summon this for your
-//!     opponent" (R360): step 2 records whether the Tribute it paid took an opposing unit, and step 4
-//!     then puts the Golem in the opponent's zone in the lane the player named, else their leftmost
-//!     open one (R15), under their control; it stays the player's card and the player's play.
-//!
-//! R65/§6.3: a Tribute is an *additional* cost, so a mana price of 0 does not touch it — #41
-//! Sheepish's radiant "Add a Lava Golem to your hand. It costs (0)." is a `cost_override` of 0 on the
-//! mana term alone and that free copy still needs three units on the field.
-//!
-//! Nothing here is a hook: a play cost, and where the play lands, have to be readable before the card
-//! resolves.
+//! R65/§6.3: a mana price of 0 does not touch the Tribute (#41 Sheepish's free copy still needs three units).
 
 use jackioh_engine::prelude::*;
 
@@ -68,9 +53,8 @@ pub fn script() -> CardScripts {
 
 // #55 Lava Golem (SPEC §8.3, §6.3 Tribute/Sacrifice, §3.2, §6.1, §4.2; R11, R12, R65, R81, R90,
 // R101, R360).
-// BUILD M4-T4 row 55: "Tribute 3 counts enemy units and Sheep as 2, enemies sacrificed; Taunt; an
-// opposing unit in the Tribute summons the base face for the opponent (R360); radiant keeps it;
-// Sheepish's free copy still needs tributes".
+// BUILD M4-T4 row 55: Tribute 3 counts enemy units and Sheep as 2; Taunt; an opposing unit in the
+// Tribute summons the base face for the opponent (R360); Sheepish's free copy still needs tributes.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -78,7 +62,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    /// A unit on the board, so a test can name it in `tributes` without a non-null assertion.
+    /// A unit that must be on the board, so a test can name it in `tributes`.
     fn unit_at(s: &Scenario, player: PlayerId, lane: i32) -> CardInstance {
         match s.unit(player, lane) {
             Some(unit) => unit,
@@ -99,7 +83,6 @@ mod tests {
         ])
     }
 
-    /// TS `[...list, ...more]` over two JSON arrays.
     fn concat(list: Value, more: Value) -> Value {
         let mut all = list.as_array().cloned().unwrap_or_default();
         all.extend(more.as_array().cloned().unwrap_or_default());
@@ -113,7 +96,7 @@ mod tests {
         s.stats(card).keywords.iter().map(|keyword| keyword.kind()).collect()
     }
 
-    /// `s.card(ref).costOverride = 0`: the hand card #41 Sheepish's radiant `addToHand` creates.
+    /// The hand card #41 Sheepish's radiant creates: a `cost_override` of 0.
     fn set_cost_override(s: &mut Scenario, card: &str, cost: i32) {
         let id = s.card(card).id.clone();
         match find_instance_mut(s.state_mut(), &id) {
@@ -210,8 +193,8 @@ mod tests {
 
         #[test]
         fn s6_3_two_sheep_pay_4_for_a_cost_of_3_and_nothing_smaller_would_do() {
-            // `isMinimalTribute`: dropping either Sheep leaves 2, under the cost, so the pair is minimal
-            // even though it overshoots — the one case §6.3's Sheep clause creates.
+            // Dropping either Sheep leaves 2, under the cost, so the pair is minimal even though it
+            // overshoots — the one case §6.3's Sheep clause creates.
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-055"], "field": [{ "def": "core-t-sheep", "lane": 1 }, { "def": "core-t-sheep", "lane": 2 }] },
@@ -475,8 +458,7 @@ mod tests {
         fn r65_a_costoverride_of_0_pays_no_mana_but_still_owes_the_tribute() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }], "mana": 0 } }));
-            // #41 Sheepish's radiant text is `addToHand({ defId: "core-055", costOverride: 0 })`; this is
-            // the card that verb creates, and a Tribute is an additional cost that no price touches (§6.3).
+            // The card #41 Sheepish's radiant creates; a Tribute is an additional cost no price touches (§6.3).
             set_cost_override(&mut s, "core-055", 0);
             let one = ids_at(&s, P1, &[1]);
 

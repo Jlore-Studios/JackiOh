@@ -44,10 +44,12 @@ use crate::api::queue::json_list;
 use crate::api::ranked::{RankedGameInput, RankedSideInput, rate_ranked_game};
 use crate::api::series::{SeriesGameResult, advance_series_in_tx, resume_series};
 use crate::app::{App, now_ms};
-use crate::config::{MATCH_REAPER_INTERVAL_SECONDS, RATING_START, RESULT_WRITE_ATTEMPTS};
+use crate::config::{
+    MATCH_REAPER_INTERVAL_SECONDS, OPEN_MATCH_REAP_GRACE_MS, RATING_START, RESULT_WRITE_ATTEMPTS,
+};
 use crate::db::store::{
-    LastBoardKind, MatchRow, MatchSeat, Profile, RatedGameKind, RatedReason, ResultRow, SeriesRow,
-    SeriesStatus, StoreError, Tx,
+    LastBoardKind, MatchRow, MatchSeat, Profile, ProfileKind, RatedGameKind, RatedReason, ResultRow,
+    SeriesRow, SeriesStatus, StoreError, Tx,
 };
 
 /// A failure this file reports to its caller (the actor, the reaper): TS rethrew the error itself,
@@ -230,6 +232,15 @@ async fn write_once(
         RATING_START
     };
 
+    // R610, R1452: a ladder bot's side is rated as the bot it is, on its own `bot_ratings` row.
+    let side_of = |seat: &MatchSeat| -> RankedSideInput {
+        let profile_id = seat.profile_id.clone();
+        match by_id.get(&seat.profile_id).map(|profile| profile.kind) {
+            Some(ProfileKind::Bot) => RankedSideInput::Bot { bot_id: profile_id },
+            _ => RankedSideInput::Player { profile_id },
+        }
+    };
+
     let mut before: (f64, f64) = (rating_of(seat_a), rating_of(seat_b));
     let mut after: (f64, f64) = (before.0, before.1);
     if rating_policy == RatingPolicy::Rated
@@ -244,14 +255,7 @@ async fn write_once(
                 id: input.match_id.clone(),
                 kind: RatedGameKind::Match,
                 catalog_version: match_row.catalog_version.clone(),
-                sides: (
-                    RankedSideInput::Player {
-                        profile_id: seat_a.profile_id.clone(),
-                    },
-                    RankedSideInput::Player {
-                        profile_id: seat_b.profile_id.clone(),
-                    },
-                ),
+                sides: (side_of(seat_a), side_of(seat_b)),
                 winner_side: winner_side_of(&input.outcome, &input.seats),
                 reason: RatedReason::Game(input.outcome.reason),
                 at: input.at,
@@ -470,6 +474,25 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
     Ok(resolved)
 }
 
+/// R1450: the reaper's second sweep. Every `open` row more than `OPEN_MATCH_REAP_GRACE_SECONDS` past
+/// its `ceiling_at` is deleted: a room nobody joined before it expired, a claimed room whose match never
+/// started, a queue pairing's reservation whose start failed and whose cleanup failed too
+/// (`queue.pair_cleanup_failed`). That frees its room code and both players. The grace outlasts any
+/// start in flight: a room is claimed only before its expiry, and a reservation is started straight
+/// after its claim or, for a Conquest series, within the pick clock and the start give-up.
+///
+/// Answers how many rows it deleted.
+pub async fn reap_open_matches(app: &App) -> Result<u64, ApiError> {
+    let before = now_ms() - OPEN_MATCH_REAP_GRACE_MS;
+    let mut tx = app.db.begin(None).await.map_err(failure)?;
+    let reaped = tx.matches_reap_open(before).await.map_err(failure)?;
+    tx.commit().await.map_err(failure)?;
+    if reaped > 0 {
+        tracing::warn!(event = "reaper.open_released", rows = reaped);
+    }
+    Ok(reaped)
+}
+
 /// Seat order is the match row's player order: index 0 is p1 (`MatchRow.players`).
 fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
     (
@@ -491,7 +514,9 @@ fn seats_of(match_row: &MatchRow) -> (MatchSeat, MatchSeat) {
 /// The reaper's loop (SURFACE §11.2: `api::results::run_reaper(app)`, every
 /// `MATCH_REAPER_INTERVAL_SECONDS`), as TS's `start()` in `src/index.ts` ran it: the first sweep one
 /// interval after boot, each next one an interval after the last finished, a failure logged and the
-/// next sweep tried all the same. Runs until its task is aborted.
+/// next sweep tried all the same. Runs until its task is aborted. Each tick resolves the stuck
+/// matches, then deletes the `open` rows past their grace (R1450), then drops the finished actors
+/// whose rematch window has passed (`Registry::reap_finished`).
 pub async fn run_reaper(app: Arc<App>) {
     loop {
         tokio::time::sleep(Duration::from_secs(MATCH_REAPER_INTERVAL_SECONDS as u64)).await;
@@ -505,5 +530,9 @@ pub async fn run_reaper(app: Arc<App>) {
                 tracing::warn!(event = "matches.reaper_failed", message = %error.message);
             }
         }
+        if let Err(error) = reap_open_matches(&app).await {
+            tracing::warn!(event = "matches.open_reaper_failed", message = %error.message);
+        }
+        app.matches.reap_finished(now_ms()).await;
     }
 }

@@ -1,10 +1,5 @@
-// The code screen's feedback (docs/polish/5-sign-in.md, B20-B23): when submit is allowed, how many
-// tries are left, a rate limit shown as a rate limit (R192, never R145's identical error), and a
-// way out of the screen in every state.
-//
-// `../net/api.ts` is mocked the way invite.test.tsx mocks it, so the three reads are whatever each
-// test says the server answered. Every server sentence is either imported from config or is a stub
-// this file invents to stand for "whatever the server wrote", which the screen must show verbatim.
+// Invite-feedback contract (docs/polish/5-sign-in.md; B20-B23): submit eligibility, attempts,
+// R192 rate limits (not R145's code refusal), and an exit in every state.
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -47,10 +42,10 @@ vi.mock("../net/api.ts", async (importOriginal) => {
 const TOKEN = "e2e-token-pending";
 const EMAIL = "player@example.test";
 
-/** A stand-in for whatever sentence the server's 429 carries. The screen must relay it verbatim. */
+/** Stand-in 429 sentence that the screen must relay verbatim. */
 const SERVER_RATE_SENTENCE = "Too many attempts. Wait, then try again. (stubbed server sentence)";
 
-/** The redemption window the server states as the wait (R192's upper bound). */
+/** R192's server-stated redemption wait. */
 const WINDOW_MS = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 
 const LETTERS = CODE_ALPHABET.replace(/[0-9]/g, "");
@@ -65,7 +60,7 @@ function grouped(characters: string): string {
 }
 
 const GOOD = grouped(FULL);
-/** Another complete code, for a second try: a refused code is never sent again unchanged. */
+/** A distinct complete code for a second try. */
 const OTHER = grouped(LETTERS.slice(LETTERS.length - INVITE_CODE_LENGTH));
 
 function meBody(status: "pending" | "active", needsInviteCode: boolean) {
@@ -101,7 +96,7 @@ beforeEach(() => {
   vi.mocked(getMe).mockResolvedValue(meBody("pending", true));
   vi.mocked(getCodeStatus).mockResolvedValue(status());
   vi.mocked(redeemCode).mockReset();
-  // Sign-out revokes at the provider; nothing here may reach a real network.
+  // Keep provider sign-out offline.
   vi.stubGlobal(
     "fetch",
     vi.fn(() => new Promise<Response>(() => {})),
@@ -134,9 +129,7 @@ function fill(value: string): void {
   fireEvent.change(input(), { target: { value } });
 }
 
-// ---------------------------------------------------------------------------------------------
 // B20: when submit is allowed, and what it sends
-// ---------------------------------------------------------------------------------------------
 
 describe("B20 submit", () => {
   it("B20 is disabled for an empty and a partial code, and enabled once complete", async () => {
@@ -232,9 +225,7 @@ describe("B20 submit", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B21: tries left
-// ---------------------------------------------------------------------------------------------
 
 describe("B21 tries left", () => {
   it.each([[5], [3], [1], [0]] as const)(
@@ -283,7 +274,7 @@ describe("B21 tries left", () => {
       expect(screen.getByTestId(inviteTestid.attempts)).toHaveAttribute("data-remaining", "2");
     });
 
-    // A refused code is never sent again unchanged (R145), so the second try is another code.
+    // R145: retry with another code after a refusal.
     fill(OTHER);
     await waitFor(() => {
       expect(submit()).toBeEnabled();
@@ -310,9 +301,7 @@ describe("B21 tries left", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B22 / R192: a rate limit is a rate limit
-// ---------------------------------------------------------------------------------------------
 
 describe("B22 a rate-limited redemption", () => {
   it("B22 shows the server's sentence verbatim, the wait, and disables submit", async () => {
@@ -395,9 +384,7 @@ describe("B22 a rate-limited redemption", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B23: always a way out
-// ---------------------------------------------------------------------------------------------
 
 describe("B23 the way out", () => {
   const states: readonly (readonly [string, () => void])[] = [
@@ -446,7 +433,7 @@ describe("B23 the way out", () => {
     await mount();
     const where = await screen.findByTestId(inviteTestid.whereFrom);
     expect(where.textContent).toMatch(/invite-only/);
-    // In a player's words: who hands codes out, not a note about servers.
+    // Use player-facing language, not server jargon.
     expect(where.textContent).toMatch(/JackiOh team/);
     expect(where.textContent).not.toMatch(/server/);
     expect(screen.getByTestId(inviteTestid.playAi)).toHaveAttribute("href", paths.practice);
@@ -478,12 +465,7 @@ describe("B23 the way out", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B23: sign-out lands on `/`. `signOut` does a real page load (`window.location.assign`), which
-// jsdom cannot follow, so the test swaps `location` for a copy whose `assign` records where it was
-// sent and what storage held at that moment. The swap happens after the screen has mounted, so
-// nothing else on the screen reads the copy.
-// ---------------------------------------------------------------------------------------------
+// B23: after mounting, replace location because jsdom cannot follow signOut's page load; assign records its destination and storage.
 
 describe("B23 signing out lands on the landing page", () => {
   it("B23 invite-sign-out loads / once both session keys are gone", async () => {
@@ -521,11 +503,9 @@ describe("B23 signing out lands on the landing page", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The adversarial panel's findings
-// ---------------------------------------------------------------------------------------------
 
-/** Settle promise chains without touching timers. */
+/** Settle promises without timers. */
 async function flushMicrotasks(): Promise<void> {
   await act(async () => {
     for (let tick = 0; tick < 50; tick += 1) await Promise.resolve();
@@ -534,7 +514,7 @@ async function flushMicrotasks(): Promise<void> {
 
 describe("R192 a stated wait lifts by itself", () => {
   it("R192 no tries left says how long to wait, reads the status again when it runs out, and submit comes back", async () => {
-    // The waits are deadlines on the clock, so the clock moves with the timers.
+    // Advance deadline timers with the clock.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     try {
       const wait = 17 * 60_000;
@@ -564,7 +544,7 @@ describe("R192 a stated wait lifts by itself", () => {
   });
 
   it("R192 paused redemption says how long, and lifts when the breaker's wait is over", async () => {
-    // The waits are deadlines on the clock, so the clock moves with the timers.
+    // Advance deadline timers with the clock.
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"] });
     try {
       const wait = 5 * 60_000;
@@ -593,7 +573,7 @@ describe("R192 a stated wait lifts by itself", () => {
 
 describe("R192 a per-IP refusal on a shared network", () => {
   it("R192 never shows a full count of tries beside the wait, and blames no one", async () => {
-    // Step 3 (per IP) refused; this account's own count is untouched and the status still says 6.
+    // A per-IP refusal leaves the account count untouched.
     vi.mocked(getCodeStatus).mockResolvedValue(status({ attemptsRemaining: 6 }));
     vi.mocked(redeemCode).mockRejectedValue(rateLimited(WINDOW_MS));
     await mount();
@@ -656,7 +636,6 @@ describe("an active account on the code screen", () => {
     expect(screen.queryByTestId(inviteTestid.attempts)).toBeNull();
     const onward = screen.getByTestId(inviteTestid.goToDecks);
     expect(onward).toHaveAttribute("href", paths.decks);
-    // The title says there is nothing to enter, rather than asking for a code.
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("You\u2019re all set");
     fireEvent.click(onward);
     expect(window.location.pathname).toBe(paths.decks);
@@ -675,9 +654,8 @@ describe("an active account on the code screen", () => {
     fill(GOOD);
     fireEvent.click(submit());
 
-    // R145: the account-state sentence is shown as the server wrote it...
+    // R145: show the server's account-state sentence, then read the account again.
     expect((await screen.findByTestId(inviteTestid.error)).textContent).toBe("This account is already active.");
-    // ...and the screen reads the account again and offers the way on.
     await screen.findByTestId(inviteTestid.goToDecks);
     expect(screen.queryByTestId(inviteTestid.submit)).toBeNull();
   });
@@ -758,9 +736,7 @@ describe("R194 a redemption the API refuses as unauthorised", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R145: a refused code is not sent again unchanged, and the answer is about the code on screen
-// ---------------------------------------------------------------------------------------------
 
 describe("R145 a code the server refused", () => {
   it("R145 is not sent again unchanged: Redeem stays off and says why until the code is changed", async () => {
@@ -773,7 +749,7 @@ describe("R145 a code the server refused", () => {
       expect(submit()).toHaveAttribute("aria-busy", "false");
     });
 
-    // Pressing again ("maybe it didn't take") spends nothing: the same code cannot turn good.
+    // Repeated presses cannot turn a refused code good.
     expect(submit()).toBeDisabled();
     expect(screen.getByTestId(inviteTestid.refused).textContent).toMatch(/Change the code to try again/);
     for (let press = 0; press < 3; press += 1) {
@@ -781,16 +757,13 @@ describe("R145 a code the server refused", () => {
       await flushMicrotasks();
     }
     expect(vi.mocked(redeemCode).mock.calls.map((call) => call[1])).toEqual([GOOD]);
-    // The caret is back in the field, where the fix goes.
     expect(document.activeElement).toBe(input());
 
-    // Edited and edited back: still the refused code, still off.
     fill(GOOD.slice(0, -1));
     fill(GOOD);
     expect(submit()).toBeDisabled();
     expect(screen.getByTestId(inviteTestid.refused)).toBeInTheDocument();
 
-    // Another code is a new try.
     fill(OTHER);
     expect(submit()).toBeEnabled();
     expect(screen.queryByTestId(inviteTestid.refused)).toBeNull();
@@ -830,7 +803,7 @@ describe("R145 a code the server refused", () => {
     });
     expect(input()).toBeDisabled();
 
-    // An edit that somehow arrives meanwhile (a synthetic event) is ignored by the locked field.
+    // Synthetic edits cannot change a locked field.
     fill(OTHER);
     expect(input()).toHaveValue(GOOD);
 
@@ -847,9 +820,7 @@ describe("R145 a code the server refused", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // §9.4 step 1: an unconfirmed email has a way forward on the code screen
-// ---------------------------------------------------------------------------------------------
 
 describe("an account whose email is not confirmed yet", () => {
   const UNVERIFIED_SENTENCE = "Verify your email address before redeeming an invite code.";
@@ -891,7 +862,7 @@ describe("an account whose email is not confirmed yet", () => {
     await waitFor(() => {
       expect(sent).toHaveLength(1);
     });
-    // R323: the resend carries a PKCE challenge beside the address.
+    // R323: resend includes a PKCE challenge.
     expect(JSON.parse(sent[0] ?? "{}")).toEqual({
       type: "signup",
       email: EMAIL,
@@ -899,10 +870,9 @@ describe("an account whose email is not confirmed yet", () => {
       code_challenge_method: "s256",
     });
     expect((await screen.findByTestId(inviteTestid.resendNotice)).textContent).toBe(AUTH_NOTICES.resendSent);
-    // R192: the provider's interval for that address is waited out before it is offered again.
+    // R192: wait out the provider's resend interval.
     expect(screen.getByTestId(inviteTestid.resend)).toBeDisabled();
 
-    // Confirmed in the mail app; "Check again" reads the account again and the panel goes.
     vi.mocked(getMe).mockResolvedValue(meBody("pending", true));
     const reads = vi.mocked(getMe).mock.calls.length;
     fireEvent.click(screen.getByTestId(inviteTestid.checkAgain));
@@ -928,16 +898,14 @@ describe("an account whose email is not confirmed yet", () => {
     expect(await screen.findByTestId(inviteTestid.unverified)).toBeInTheDocument();
     expect(screen.getByTestId(inviteTestid.resend)).toBeEnabled();
     expect(screen.getByTestId(inviteTestid.checkAgain)).toBeEnabled();
-    // Not a code refusal: the same code may be sent again once the email is confirmed.
+    // Email confirmation permits retrying the same code.
     await waitFor(() => {
       expect(submit()).toBeEnabled();
     });
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // One account's state: the screen starts again for another account
-// ---------------------------------------------------------------------------------------------
 
 describe("the code screen's state belongs to one account", () => {
   function me(id: string, email: string) {
@@ -954,7 +922,6 @@ describe("the code screen's state belongs to one account", () => {
     vi.mocked(getCodeStatus).mockResolvedValue(status({ attemptsRemaining: 1 }));
     vi.mocked(redeemCode).mockRejectedValueOnce(rateLimited());
 
-    // What `<Gated>` renders for /invite: the same InviteRoute, handed the gate's account.
     const { rerender } = render(<InviteRoute account={{ token: "token-a", me: me("a", "a@example.test") }} />);
     fireEvent.change(await screen.findByTestId(inviteTestid.input), { target: { value: GOOD } });
     await waitFor(() => {
@@ -963,7 +930,6 @@ describe("the code screen's state belongs to one account", () => {
     fireEvent.click(submit());
     await screen.findByTestId(inviteTestid.rateLimited);
 
-    // Another tab signs B in over A; the gate hands B to the same screen.
     vi.mocked(getCodeStatus).mockResolvedValue(status({ attemptsRemaining: 6 }));
     await act(async () => {
       rerender(<InviteRoute account={{ token: "token-b", me: me("b", "b@example.test") }} />);
@@ -980,9 +946,7 @@ describe("the code screen's state belongs to one account", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// The third panel round: stated waits are deadlines, a 503 is a pause, "Check again" answers
-// ---------------------------------------------------------------------------------------------
+// Stated waits are deadlines, a 503 pauses, and "Check again" answers.
 
 const MINUTE = 60_000;
 
@@ -992,7 +956,7 @@ describe("R192 a stated wait is read from the clock", () => {
   });
 
   it("R192 'No tries left' counts down: half an hour into a 42-minute wait it says about 12 minutes", async () => {
-    // The clock stands still between the read and the check, so the minutes come out exact.
+    // Pin the clock so remaining minutes are exact.
     const start = Date.now();
     vi.spyOn(Date, "now").mockReturnValue(start);
     vi.mocked(getCodeStatus).mockResolvedValue(status({ attemptsRemaining: 0, attemptsRetryAfterMs: 42 * MINUTE }));
@@ -1000,7 +964,6 @@ describe("R192 a stated wait is read from the clock", () => {
     expect((await screen.findByTestId(inviteTestid.attempts)).textContent).toBe(attemptsText(0, 42 * MINUTE));
 
     vi.spyOn(Date, "now").mockReturnValue(start + 30 * MINUTE);
-    // Any re-render (here a keystroke) reads the clock again.
     fill("AB");
     expect(screen.getByTestId(inviteTestid.attempts).textContent).toBe(attemptsText(0, 12 * MINUTE));
   });
@@ -1015,7 +978,6 @@ describe("R192 a stated wait is read from the clock", () => {
     fill(GOOD);
     expect(submit()).toBeDisabled();
 
-    // The phone slept with the tab in the background and is unlocked after the wait.
     vi.spyOn(Date, "now").mockReturnValue(start + 43 * MINUTE);
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
@@ -1039,7 +1001,6 @@ describe("R192 a stated wait is read from the clock", () => {
     fireEvent.click(submit());
     const panel = await screen.findByTestId(inviteTestid.rateLimited);
     expect(panel.textContent).toContain(waitInWords(WINDOW_MS));
-    // The stated wait is kept as the server said it.
     expect(panel).toHaveAttribute("data-retry-after-ms", String(WINDOW_MS));
 
     vi.spyOn(Date, "now").mockReturnValue(start + WINDOW_MS - 10 * MINUTE);
@@ -1062,7 +1023,7 @@ describe("R192 a 503 from a redemption is a pause", () => {
     let answerStatus: (value: CodeStatusResponse) => void = () => undefined;
     vi.mocked(getCodeStatus)
       .mockResolvedValueOnce(status())
-      // The read after the refusal is slow (a sleeping server): the pause must not wait for it.
+      // The pause must not wait for a slow status read.
       .mockImplementationOnce(
         () =>
           new Promise((resolve) => {
@@ -1080,7 +1041,7 @@ describe("R192 a 503 from a redemption is a pause", () => {
     await waitFor(() => {
       expect(getCodeStatus).toHaveBeenCalledTimes(2);
     });
-    // Off before the status read answers, so a second press cannot spend another try.
+    // Disable before the status read returns to block another attempt.
     expect(submit()).toBeDisabled();
     fireEvent.click(submit());
     expect(redeemCode).toHaveBeenCalledTimes(1);

@@ -1,10 +1,5 @@
-// The green glow (docs/polish/7-mobile-ux.md, S5): `highlightFor(...).glow` is Hearthstone's "can
-// act" border, derived from `legalActions` and the open prompt's options alone. Every test feeds a
-// hand-written `ActionBody[]` and checks the glow came out of that array, and every test also checks
-// the invariant `glow ⊆ legal`.
-//
-// The two pure attribute helpers of `glow.ts` (`glowAttr`, `conditionAttr`) are here too: they are
-// the half of B16/B17 that needs no DOM.
+// S5: glow comes only from legal actions and the viewer's prompt; glow ⊆ legal.
+// B16/B17's pure attributes need no DOM.
 
 import type { ActionBody, PlayerView, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -14,7 +9,6 @@ import { NO_HIGHLIGHT, testid, type Highlight } from "../../game/contract.ts";
 import { conditionAttr, glowAttr } from "../../game/glow.ts";
 import { baseView, card, emptySide, heroPower, pendingFor, unit, waitingPending } from "../fixtures.ts";
 
-/** Three cards in hand, two of your units, one of theirs, and a hero power. */
 function seatedView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -43,7 +37,6 @@ const playZone = (instanceId: string, lane: number): ActionBody => ({
 const onEnemy: Selection = { pick: "instance", instanceId: "e1" };
 const onEnemyHero: Selection = { pick: "hero", player: "p2" };
 
-/** The glow as a sorted list; an absent glow is an empty one. */
 function glowOf(highlight: Highlight): string[] {
   return [...(highlight.glow ?? new Set<string>())].sort();
 }
@@ -52,7 +45,7 @@ function sorted(ids: string[]): string[] {
   return [...ids].sort();
 }
 
-/** The invariant of S5: nothing glows that is not already legal. */
+/** S5: glow is a subset of legal. */
 function expectGlowWithinLegal(highlight: Highlight): void {
   for (const id of highlight.glow ?? []) expect(highlight.legal.has(id), `${id} glows but is not legal`).toBe(true);
 }
@@ -69,7 +62,6 @@ function selectAttacker(view: PlayerView, legal: ActionBody[], instanceId: strin
   return interaction;
 }
 
-/** A turn with a bit of everything on offer. */
 const EVERYTHING: ActionBody[] = [
   playZone("h1", 3),
   playZone("h1", 4),
@@ -84,9 +76,7 @@ const EVERYTHING: ActionBody[] = [
   { type: "concede" },
 ];
 
-// ---------------------------------------------------------------------------------------------
 // B11: idle
-// ---------------------------------------------------------------------------------------------
 
 describe("B11 the idle glow: playable cards, ready attackers and the power", () => {
   it("B11 holds every hand card a play names, every unit an attack names, and power", () => {
@@ -148,9 +138,7 @@ describe("B11 the idle glow: playable cards, ready attackers and the power", () 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B12: playing
-// ---------------------------------------------------------------------------------------------
 
 describe("B12 the playing glow: the remaining candidates' zones, tributes and declared targets", () => {
   it("B12 is exactly the candidate zones, never the selected card or the other playable cards", () => {
@@ -164,7 +152,6 @@ describe("B12 the playing glow: the remaining candidates' zones, tributes and de
     expect(highlight.glow?.has(testid.card("u1")) ?? false).toBe(false);
     expect(highlight.glow?.has(testid.power) ?? false).toBe(false);
     expect(highlight.glow?.has(testid.endTurn) ?? false).toBe(false);
-    // The selected card is still marked as selected; it just does not glow.
     expect(highlight.selected.has(testid.handCard("h1"))).toBe(true);
     expectGlowWithinLegal(highlight);
   });
@@ -201,9 +188,6 @@ describe("B12 the playing glow: the remaining candidates' zones, tributes and de
 
   it("B12 narrows to the candidates that remain once a picker has chosen", () => {
     const view = seatedView();
-    // X narrows the zones here: choosing X = 1 drops lane 3 and leaves lanes 4 and 5. Two
-    // candidates stay, so the play is still in flight (one would be sent at once, as a click
-    // with one candidate left always is).
     const legal: ActionBody[] = [
       { type: "play", instanceId: "h1", x: 0, zone: { row: "units", lane: 3 } },
       { type: "play", instanceId: "h1", x: 1, zone: { row: "units", lane: 4 } },
@@ -221,9 +205,7 @@ describe("B12 the playing glow: the remaining candidates' zones, tributes and de
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B13: attacking
-// ---------------------------------------------------------------------------------------------
 
 describe("B13 the attacking glow: the selected attacker's targets only", () => {
   it("B13 is exactly the enemy unit and the hero the attacker may hit, never another attacker", () => {
@@ -241,7 +223,6 @@ describe("B13 the attacking glow: the selected attacker's targets only", () => {
     expect(glowOf(highlight)).toEqual(sorted([testid.card("e1"), testid.hero("opponent")]));
     expect(highlight.glow?.has(testid.card("u2")) ?? false).toBe(false);
     expect(highlight.glow?.has(testid.card("u1")) ?? false).toBe(false);
-    // u2's own target is not u1's.
     expect(highlight.glow?.has(testid.card("e2")) ?? false).toBe(false);
     expect(highlight.glow?.has(testid.handCard("h1")) ?? false).toBe(false);
     expectGlowWithinLegal(highlight);
@@ -262,9 +243,7 @@ describe("B13 the attacking glow: the selected attacker's targets only", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B14: an open prompt, and the stale-interaction fallback
-// ---------------------------------------------------------------------------------------------
 
 describe("B14 the prompt glow and the empty-legal fallback", () => {
   const targetPrompt = pendingFor("target", [
@@ -326,9 +305,7 @@ describe("B14 the prompt glow and the empty-legal fallback", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B15: end-turn
-// ---------------------------------------------------------------------------------------------
 
 describe("B15 end-turn glows only when nothing else can act", () => {
   it("B15 glows when endTurn is legal and nothing else is playable, attack-ready or activatable", () => {
@@ -391,7 +368,7 @@ describe("B15 end-turn glows only when nothing else can act", () => {
 
   it("B15 does not glow while a play is in flight, even with only end-turn otherwise on offer", () => {
     const view = seatedView();
-    // Two zones, so the click leaves the play in flight (a one-zone card would be sent at once).
+    // Two zones keep the play in flight.
     const legal: ActionBody[] = [playZone("h1", 3), playZone("h1", 4), { type: "endTurn" }];
     const playing = selectHand(view, legal, "h1");
     const highlight = highlightFor(view, legal, playing);
@@ -407,9 +384,7 @@ describe("B15 end-turn glows only when nothing else can act", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// glow.ts's pure attribute helpers (the DOM half is glow-render.test.tsx)
-// ---------------------------------------------------------------------------------------------
+// B16/B17: glow.ts's pure attribute helpers.
 
 describe("B16 glowAttr: data-glow is 'ready' exactly for a testid in highlight.glow", () => {
   const highlight: Highlight = {

@@ -9,6 +9,9 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PLAY_TELEMETRY_RETENTION_DAYS } from "@jackioh/server-config";
+
+import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
 import LandingRoute from "./landing.tsx";
@@ -54,7 +57,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-08");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-10");
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
@@ -64,6 +67,32 @@ describe("the privacy policy", () => {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);
+  });
+
+  it("R1442 names the play telemetry, how long it is kept, and that deleting an account deletes it", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const collected = section(/what we collect/i);
+    for (const fact of [
+      /how long each of your moves took/,
+      /clock was left/,
+      /emotes/,
+      /clock ran out/,
+      /conceded/,
+      /draw/,
+      /rematch/,
+    ]) {
+      expect(collected).toMatch(fact);
+    }
+    expect(collected).toMatch(/kept by match and seat and names\s+no account itself/);
+    expect(section(/why we collect it/i)).toMatch(/computer opponents play at a human pace/);
+    expect(section(/what we don.t do/i)).toMatch(/no third-party analytics/);
+    expect(section(/how long we keep it/i)).toContain(
+      `how you played a finished match: ${PLAY_TELEMETRY_RETENTION_DAYS} days after the match ends`,
+    );
+    expect(section(/deleting your account/i)).toMatch(/the records of how you played/);
   });
 
   it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {
@@ -98,6 +127,12 @@ describe("the legal pages", () => {
     );
   });
 
+  it("R640001 the terms say ranked may pair a player with an AI opponent", () => {
+    render(<TermsRoute />);
+    const ranked = screen.getByRole("region", { name: "Ranked play" });
+    expect(ranked).toHaveTextContent("When no suitable opponent is available, ranked may pair you with an AI opponent.");
+  });
+
   it("open as drafts for the owner: their first source lines say so", () => {
     for (const file of ["terms.tsx", "accessibility.tsx"]) {
       const source = readFileSync(join(HERE, file), "utf8");
@@ -106,7 +141,7 @@ describe("the legal pages", () => {
   });
 
   it("are in the sitemap", () => {
-    const sitemap = readFileSync(join(HERE, "../../public/sitemap.xml"), "utf8");
+    const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/terms</loc>`);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/accessibility</loc>`);
   });

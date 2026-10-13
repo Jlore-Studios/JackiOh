@@ -4169,7 +4169,16 @@ const MEDITATIVE: &[SpecRow] = &[
         st(1, 1),
         st(2, 2),
     ),
-    row("89", "Jlarna", c(0), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row(
+        "89",
+        "Jlarna",
+        c(3),
+        T::FieldSpell,
+        &[],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
     row(
         "90",
         "Spell Basket",
@@ -4402,6 +4411,36 @@ const MEDITATIVE: &[SpecRow] = &[
         NO_STATS,
         NO_STATS,
     ),
+    row(
+        "100",
+        "Greaser",
+        c(2),
+        T::Unit,
+        &[],
+        R::Common,
+        st(7, 7),
+        st(21, 21),
+    ),
+    row(
+        "101",
+        "Gachaholic",
+        c(1),
+        T::Unit,
+        &[G::Cn, G::Human],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "102",
+        "Catboy Maid SSR+",
+        c(1),
+        T::Unit,
+        &[G::Cn, G::Felinor],
+        R::Common,
+        st(1, 1),
+        st(2, 2),
+    ),
 ];
 
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
@@ -4469,7 +4508,7 @@ const RARITY_COUNTS: &[(&str, &[(&str, usize)])] = &[
     (
         "Meditative",
         &[
-            ("Common", 26),
+            ("Common", 29),
             ("Rare", 29),
             ("Epic", 22),
             ("Legendary", 16),
@@ -4504,7 +4543,7 @@ const SET_SIZES: &[SetSize] = &[
     // R1420: docs/meditative-set.md M2, a ceiling until the set ships.
     SetSize {
         set: "Meditative",
-        cards: 99,
+        cards: 102,
         tokens: 30,
     },
 ];
@@ -5000,7 +5039,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             (
                 "Call to Chaos",
                 Rarity::Legendary,
-                &["core-095", "classicplus-073"],
+                &["core-095", "classicplus-073", "meditative-095"],
             ),
             (
                 "___ Glowy Jelly Bean",
@@ -5063,6 +5102,7 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
      {
         let printed: BTreeMap<String, String> = entries()
             .into_iter()
+            .filter(|entry| entry.set == SetName::ClassicPlus)
             .filter_map(|entry| {
                 entry
                     .printed_rarity
@@ -5095,12 +5135,91 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
             expected.insert(index.to_string(), rarity.to_string());
         }
         assert_eq!(printed, expected);
+        // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart:
+        // their indices repeat Classic+ ones); every printed rarity is a Classic+ or a Meditative
+        // token's, never a card's.
         assert!(
             entries()
                 .into_iter()
                 .filter(|entry| entry.printed_rarity.is_some())
-                .all(|entry| entry.set == SetName::ClassicPlus && entry.token)
+                .all(|entry| entry.token
+                    && (entry.set == SetName::ClassicPlus || entry.set == SetName::Meditative))
         );
+    }
+
+    #[test]
+    fn b2_5_prints_the_designer_s_rarity_on_every_meditative_token_the_catalog_holds() {
+        // The rarity §7 and §8.8 print on each of the set's thirty tokens, by index.
+        const MEDITATIVE_PRINTED: &[(&str, &str)] = &[
+            ("19.1", "Epic"),
+            ("22.1", "Epic"),
+            ("28.1", "Common"),
+            ("30.1", "Epic"),
+            ("39.1", "Rare"),
+            ("39.2", "Rare"),
+            ("39.3", "Common"),
+            ("39.4", "Mythic"),
+            ("39.5", "Mythic"),
+            ("45.1", "Legendary"),
+            ("49.1", "Mythic"),
+            ("49.2", "Mythic"),
+            ("49.3", "Mythic"),
+            ("70.1", "Common"),
+            ("71.1", "Mythic"),
+            ("91.1", "Epic"),
+            ("93.1", "Common"),
+            ("93.2", "Common"),
+            ("93.3", "Common"),
+            ("95.1", "Legendary"),
+            ("96.1", "Rare"),
+            ("97.1", "Common"),
+            ("97.2", "Common"),
+            ("97.3", "Rare"),
+            ("97.4", "Rare"),
+            ("97.5", "Epic"),
+            ("97.6", "Epic"),
+            ("97.7", "Epic"),
+            ("97.8", "Legendary"),
+            ("97.9", "Mythic"),
+        ];
+        // Every Meditative token the catalog holds yet (R1420: the set joins part by part), with
+        // what it prints.
+        let present: BTreeMap<String, Option<String>> = entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Meditative && entry.token)
+            .map(|entry| {
+                (
+                    entry.index.clone(),
+                    entry.printed_rarity.map(|rarity| rarity.as_str().to_string()),
+                )
+            })
+            .collect();
+        assert!(!present.is_empty(), "the catalog holds Meditative tokens");
+        let mut wrong: Vec<String> = Vec::new();
+        for (index, printed) in &present {
+            match MEDITATIVE_PRINTED.iter().find(|(row, _)| row == index) {
+                None => wrong.push(format!("Meditative token {index} has no row")),
+                Some((_, rarity)) if printed.as_deref() != Some(*rarity) => {
+                    wrong.push(format!(
+                        "Meditative token {index} prints {printed:?}, not {rarity}"
+                    ));
+                }
+                Some(_) => {}
+            }
+        }
+        assert_eq!(
+            wrong,
+            Vec::<String>::new(),
+            "every present token prints its row's rarity"
+        );
+        // No Meditative card prints one: a printed rarity is a token's.
+        let cards: Vec<String> = entries()
+            .into_iter()
+            .filter(|entry| entry.set == SetName::Meditative && !entry.token)
+            .filter(|entry| entry.printed_rarity.is_some())
+            .map(|entry| entry.id.clone())
+            .collect();
+        assert_eq!(cards, Vec::<String>::new());
     }
 }
 
@@ -5222,7 +5341,7 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
     use super::*;
 
     #[test]
-    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_and_classic_4_palantir_and_no_other_entry()
+    fn r278_tags_core_13_and_14_the_three_classic_plus_jlockheed_cards_48_51_and_52_classic_4_palantir_and_meditative_87_97_and_97_9_and_no_other_entry()
      {
         let mut tagged: Vec<String> = entries()
             .into_iter()
@@ -5239,19 +5358,28 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "classicplus-052",
                 "core-013",
                 "core-014",
+                "meditative-087",
+                "meditative-097",
+                "meditative-097-9",
             ]),
             "entries tagged Jlockeed"
         );
         // The tag follows the name: every entry whose name says Jlockeed, or the Classic+ spelling
         // Jlockheed, carries it — one faction under two spellings (B2.4) — plus Classic #4 Palantir,
-        // which the balance patch inducted without renaming it.
+        // which the balance patch inducted without renaming it, and M #87 Tatches the Totem, which
+        // carries every tribal tag ("All Tribes", §8.8 row 87, R1424). M #97.9 Jlockheed's
+        // Headquarters is the Meditative set's, a token that fills the board with the faction's
+        // Units (§8.8).
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.contains("Jlockeed") || entry.name.contains("Jlockheed"))
             .map(|entry| entry.id.clone())
             .collect();
         named.sort();
-        let expected: Vec<String> = tagged.into_iter().filter(|id| id != "classic-004").collect();
+        let expected: Vec<String> = tagged
+            .into_iter()
+            .filter(|id| id != "classic-004" && id != "meditative-087")
+            .collect();
         assert_eq!(named, expected, "entries whose name names Jlockeed or Jlockheed");
     }
 }
@@ -5280,19 +5408,29 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_catalyst_and_no_other_entry() {
+    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_45_and_91_catalyst_and_no_other_entry()
+     {
         assert_eq!(
             tagged(Tag::Catalyst),
-            strings(&["classicplus-038", "classicplus-046"])
+            strings(&[
+                "classicplus-038",
+                "classicplus-046",
+                "meditative-045",
+                "meditative-091"
+            ])
         );
     }
 
     #[test]
-    fn tags_the_two_prime_tokens_prime_each_named_its_catalyst_s_name_and_a_spaced_prime_and_no_other_entry()
-    {
+    fn tags_the_prime_tokens_prime_each_named_its_catalyst_s_name_and_a_spaced_prime_and_no_other_entry() {
         assert_eq!(
             tagged(Tag::Prime),
-            strings(&["classicplus-038-1", "classicplus-046-1"])
+            strings(&[
+                "classicplus-038-1",
+                "classicplus-046-1",
+                "meditative-045-1",
+                "meditative-091-1"
+            ])
         );
         // Every entry named "<card> Prime" carries the tag, and each is the token its Catalyst defines.
         let mut named: Vec<String> = entries()
@@ -5310,6 +5448,15 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 catalyst.is_some_and(|entry| entry.tags.contains(&Tag::Catalyst)),
                 "{id}"
             );
+            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime".
+            if id == "meditative-091-1" {
+                assert_eq!(
+                    prime.map(|entry| entry.name.clone()),
+                    Some("Windfurious Prime".to_string()),
+                    "{id}"
+                );
+                continue;
+            }
             assert_eq!(
                 prime.map(|entry| entry.name.clone()),
                 Some(format!(
@@ -5333,10 +5480,20 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_80_boom_big_max_and_classic_plus_37_wardrum_acclaimed_and_no_other_entry() {
+    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_its_three_tokens_acclaimed_and_no_other_entry()
+     {
+        // §8.8 rows 49 to 49.3 print the tag on YileGPT Tamed, YileGPT Unleashed, Yile's Virus and
+        // AI Girlfriend (the designer's "Acclaimed").
         assert_eq!(
             tagged(Tag::Acclaimed),
-            strings(&["classic-080", "classicplus-037"])
+            strings(&[
+                "classic-080",
+                "classicplus-037",
+                "meditative-049",
+                "meditative-049-1",
+                "meditative-049-2",
+                "meditative-049-3",
+            ])
         );
     }
 }
@@ -5387,9 +5544,10 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
 
     // R347 keeps Taunt off an Indestructible unit whatever prints it, so a face printing both would
     // print a Taunt it never has. Patch v0.1.1 dropped Indestructible from the two faces that did, #55
-    // and #56 radiant (issue #27), and none may print both again.
+    // and #56 radiant (issue #27), and none may print both again — except Keymaster Keenus (M #65),
+    // whose list prints every keyword and whose Taunt R347 drops while it is Indestructible (R1084).
     #[test]
-    fn r347_no_unit_face_prints_both() {
+    fn r347_r1084_no_unit_face_prints_both_but_keenus() {
         let both: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.type_ == CardType::Unit)
@@ -5404,6 +5562,6 @@ mod no_face_prints_taunt_beside_indestructible_spec_6_1_r347 {
                     })
             })
             .collect();
-        assert_eq!(both, Vec::<String>::new());
+        assert_eq!(both, ["meditative-065 base", "meditative-065 radiant"]);
     }
 }

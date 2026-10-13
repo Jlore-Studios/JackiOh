@@ -3,10 +3,13 @@
 // Jlorious #1–#100 first, then every other placed player grouped by Grape tier, highest tier
 // first, then how many are still playing placements. The caller's own standing heads the page.
 // The page is read-only and decides nothing (CLAUDE.md rule 7): it renders `GET /api/leaderboard`
-// through `rankWords`, and the hidden rating never reaches it.
+// through `rankWords`, and the hidden rating never reaches it. A row is keyed by its profile id and
+// shows the player's username, never the id (R1436).
 
 import { useEffect, useState, type ReactElement } from "react";
 
+import Username from "../auth/Username.tsx";
+import { t } from "../i18n/i18n.ts";
 import { getLeaderboard, type LeaderboardResponse } from "../net/api.ts";
 import { divisionNumeral, rankWords, tierName } from "../rank/rank.ts";
 import { BackLink } from "./nav.tsx";
@@ -54,38 +57,38 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Leaderboard</h2>
+        <h2>{t("Leaderboard")}</h2>
 
         {error !== null ? (
           <p className="notice" data-testid={leaderboardTestid.error} role="alert">
-            {error}
+            {t(error)}
           </p>
         ) : null}
 
         {board === null && error === null ? (
           <p className="notice shell-panel__loading" data-testid={leaderboardTestid.loading} role="status">
-            Loading the ladder…
+            {t("Loading the ladder…")}
           </p>
         ) : null}
 
         {board !== null ? (
           <>
-            <p data-testid={leaderboardTestid.season}>Season {board.season}</p>
+            <p data-testid={leaderboardTestid.season}>{t("Season {season}", { season: board.season })}</p>
             <p data-testid={leaderboardTestid.you}>
               {board.jlorious.some((row) => row.you) || board.tiers.some((tier) => tier.players.some((row) => row.you))
-                ? `You are ${rankWords(board.you)}`
-                : `You are ${rankWords(board.you)} — play rated games to climb`}
+                ? t("You are {rank}", { rank: rankWords(board.you) })
+                : t("You are {rank} — play rated games to climb", { rank: rankWords(board.you) })}
             </p>
 
-            <h3 className="leaderboard-heading">Jlorious</h3>
+            <h3 className="leaderboard-heading">{t("Jlorious")}</h3>
             {board.jlorious.length === 0 ? (
-              <p>No Jlorious players yet this season.</p>
+              <p>{t("No Jlorious players yet this season.")}</p>
             ) : (
               <ol data-testid={leaderboardTestid.jlorious}>
                 {board.jlorious.map((row) => (
-                  <li key={row.position} data-you={row.you ? "you" : undefined}>
-                    #{row.position} {row.tag}
-                    {row.you ? " (you)" : ""}
+                  <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                    {t("#{position}", { position: row.position })} <Username name={row.username} />
+                    {row.you ? ` ${t("(you)")}` : ""}
                   </li>
                 ))}
               </ol>
@@ -97,13 +100,14 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
                   {tierName(tier.tier)} ({tier.count})
                 </h3>
                 {tier.players.length === 0 ? (
-                  <p>Nobody here yet.</p>
+                  <p>{t("Nobody here yet.")}</p>
                 ) : (
                   <ul>
                     {tier.players.map((row) => (
-                      <li key={row.tag} data-you={row.you ? "you" : undefined}>
-                        {row.tag} · Division {divisionNumeral(row.division)} · {row.pips} {row.pips === 1 ? "pip" : "pips"}
-                        {row.you ? " (you)" : ""}
+                      <li key={row.profileId} data-you={row.you ? "you" : undefined}>
+                        <Username name={row.username} /> · {t("Division {division}", { division: divisionNumeral(row.division) })} ·{" "}
+                        {row.pips === 1 ? t("{n} pip", { n: row.pips }) : t("{n} pips", { n: row.pips })}
+                        {row.you ? ` ${t("(you)")}` : ""}
                       </li>
                     ))}
                   </ul>
@@ -113,8 +117,10 @@ export default function LeaderboardRoute({ token }: LeaderboardRouteProps): Reac
 
             <p data-testid={leaderboardTestid.raisins}>
               {board.raisins === 0
-                ? "Nobody is playing placements right now."
-                : `${board.raisins} ${board.raisins === 1 ? "player is" : "players are"} still playing placements.`}
+                ? t("Nobody is playing placements right now.")
+                : board.raisins === 1
+                  ? t("{n} player is still playing placements.", { n: board.raisins })
+                  : t("{n} players are still playing placements.", { n: board.raisins })}
             </p>
           </>
         ) : null}

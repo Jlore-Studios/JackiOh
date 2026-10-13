@@ -1,11 +1,6 @@
-// R658 (#261, part of #146): drag for a play's second board choice, for a backrow card whose
-// ability aims at nothing, and for a prompt's options, driven through `<Game/>` as a pointer drives
-// it. The pointer helpers are drag-layer.test.tsx's: jsdom has no layout, so `elementsFromPoint` is
-// stubbed to answer whatever the pointer is "over", the press goes to the element and the moves and
-// the release go to `window`.
-//
-// Every action expected below is a body the fixture's `legal` lists, and the drag's is checked
-// against what click-click sends from the same state.
+// R658: pointer-driven follow-up choices through `<Game/>`.
+// jsdom's `elementsFromPoint` is stubbed; presses target elements and moves/releases target `window`.
+// Expected bodies come from `legal` and are compared with click-click actions.
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -16,14 +11,9 @@ import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, card, emptySide, faceUpBackrow, pendingFor, unit } from "../fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // The fixture.
-// ---------------------------------------------------------------------------------------------
 
-/**
- * c1 is a Unit that goes into units lane 3, its Cry aimed at e1 or the enemy hero. fs1 is a
- * face-up Field Spell in backrow lane 1 whose one ability aims at nothing.
- */
+/** c1's Cry targets e1 or the hero after lane 3; fs1 activates on the board without a target. */
 function boardView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -66,9 +56,7 @@ const LEGAL: readonly ActionBody[] = [C1_E1, C1_HERO, FS1, { type: "endTurn" }, 
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
-// ---------------------------------------------------------------------------------------------
 // The pointer.
-// ---------------------------------------------------------------------------------------------
 
 const POINTER = 1;
 const START = { x: 200, y: 400 };
@@ -96,7 +84,6 @@ function lift(source: Element): void {
   move(START.x, START.y - 20);
 }
 
-/** Drag `source` and release it over `target`. */
 function dragOnto(source: Element, target: Element): void {
   lift(source);
   over(target);
@@ -117,9 +104,7 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
 // A play's second choice
-// ---------------------------------------------------------------------------------------------
 
 describe("R658 after a drop places a card, its Cry target is dragged to from the zone", () => {
   it("R658 the zone a card was dropped in lifts the play again: the arrow starts there and its targets glow", () => {
@@ -135,7 +120,6 @@ describe("R658 after a drop places a card, its Cry target is dragged to from the
     expect(el("drag-arrow")).toHaveAttribute("data-from", "zone-you-units-3");
     expect(el("card-e1")).toHaveAttribute("data-glow", "ready");
     expect(el("hero-opponent")).toHaveAttribute("data-glow", "ready");
-    // The zone already picked stays picked.
     expect(el("zone-you-units-3")).toHaveAttribute("data-selected", "true");
   });
 
@@ -177,7 +161,7 @@ describe("R658 after a drop places a card, its Cry target is dragged to from the
     const onAction = vi.fn();
     render(<Game view={boardView()} legal={LEGAL} onAction={onAction} />);
     dragOnto(el("hand-card-c1"), el("zone-you-units-3"));
-    // A real click starts with a press, which disarms the swallow the drop armed (B39).
+    // A press disarms the drop's click swallow (B39).
     over(el("card-e1"));
     press(el("card-e1"));
     release();
@@ -196,9 +180,7 @@ describe("R658 after a drop places a card, its Cry target is dragged to from the
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A backrow card whose ability aims at nothing
-// ---------------------------------------------------------------------------------------------
 
 describe("R658 a backrow card whose ability aims at nothing is dragged onto the board", () => {
   it("R658 it lifts as a ghost of the card and a drop on the board sends what its click would", () => {
@@ -225,9 +207,7 @@ describe("R658 a backrow card whose ability aims at nothing is dragged onto the 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // A prompt's options
-// ---------------------------------------------------------------------------------------------
 
 const DISCOVER = pendingFor("discover", [
   { key: "mode:core-043", label: "Flood", defId: "core-043" },
@@ -240,7 +220,7 @@ function renderDiscover(onAction = vi.fn()) {
   return onAction;
 }
 
-/** Give the picker's panel a box, so a release can land over it or outside it. */
+/** Give the picker a box so drops can land inside or outside. */
 function panelBox(): void {
   const panel = el("prompt-modal");
   panel.getBoundingClientRect = () => ({ left: 100, top: 300, right: 500, bottom: 600, width: 400, height: 300, x: 100, y: 300, toJSON: () => ({}) });
@@ -270,7 +250,7 @@ describe("R658 a prompt's option is dragged out of the picker", () => {
     press(option);
     move(300, 100);
     release(300, 100);
-    // The click the release itself produces is swallowed: it is not a second pick.
+    // Swallow the release click so it cannot pick twice.
     fireEvent.click(option);
 
     expect(onAction).toHaveBeenCalledTimes(1);

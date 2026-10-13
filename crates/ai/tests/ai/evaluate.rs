@@ -9,10 +9,10 @@
 //! Port of `packages/ai/test/evaluate.test.ts`. TS's `evaluate(state, seat)` defaults are written
 //! out (`NextSwing::Enemy`, `AI_EVAL`) by `eval`.
 
-use jackioh_ai::{AI_EVAL, NextSwing, evaluate, face_threat, unit_worth};
+use jackioh_ai::{AI_EVAL, GREEDY_EVAL, NextSwing, evaluate, face_threat, unit_worth};
 use jackioh_engine::testkit::{
-    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Phase, PlayerId, Value,
-    Winner, json,
+    AI_DIFFICULTY, CardInstance, GameOverReason, GameResult, GameState, HERO_HEALTH, Keyword, Phase,
+    PlayerId, Value, Winner, json,
 };
 
 use super::support::{AI, clone, register_cards, scenario};
@@ -249,6 +249,91 @@ mod evaluate_the_strength_passs_terms {
             10,
         );
     }
+
+    /// The first unit of p1's units lane 1.
+    fn first_unit(state: &GameState) -> CardInstance {
+        state.players[AI].units[0]
+            .as_ref()
+            .and_then(|pile| pile.first())
+            .cloned()
+            .expect("a unit stands on p1's field")
+    }
+
+    #[test]
+    fn printed_taunt_unit_in_defense_position_keeps_its_inherent_taunt() {
+        // Midrange Menace is 9/9 with a printed Taunt and no Armor.
+        let attack = board(json!({ "p1": { "field": ["core-019"] } }));
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let (atk, def) = (first_unit(&attack), first_unit(&defense));
+        // Switching costs it what it costs a vanilla body: its attack share, less the position's Armor
+        // that `positionGrants` keeps. Its own Taunt is not part of the loss.
+        let lost = (1.0 - AI_EVAL.defense_attack_share) * AI_EVAL.attack * 9.0;
+        let kept = AI_EVAL.position_grants * AI_EVAL.armor_point;
+        assert_close(
+            unit_worth(&attack, &atk, &AI_EVAL) - unit_worth(&defense, &def, &AI_EVAL),
+            lost - kept,
+            10,
+        );
+        // Against a vanilla body of the same stats, in the same position, it is worth its Taunt more,
+        // less the share of that Taunt the position grants the body anyway.
+        let mut vanilla = def.clone();
+        vanilla.vanilla = true;
+        let diff = unit_worth(&defense, &def, &AI_EVAL) - unit_worth(&defense, &vanilla, &AI_EVAL);
+        assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
+        assert!(diff > 0.0);
+    }
+
+    #[test]
+    fn defense_position_grants_scale_with_position_grants_weight() {
+        let vanilla_def = board(json!({ "p1": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        let taunt_def = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let (v_unit, t_unit) = (first_unit(&vanilla_def), first_unit(&taunt_def));
+        for share in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let mut w = AI_EVAL;
+            w.position_grants = share;
+            // Mr. Vanilla, 4/4: the position's Taunt and Armor 1 count for `share` of themselves.
+            let body =
+                w.health * 4.0 + w.armor_point + w.attack * 4.0 * w.defense_attack_share + w.keyword.taunt;
+            assert_close(
+                unit_worth(&vanilla_def, &v_unit, &w),
+                body - (1.0 - share) * (w.keyword.taunt + w.armor_point),
+                10,
+            );
+            // Midrange Menace, 9/9: its Taunt is its own, so only the position's Armor is discounted.
+            let body =
+                w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
+            assert_close(
+                unit_worth(&taunt_def, &t_unit, &w),
+                body - (1.0 - share) * w.armor_point,
+                10,
+            );
+        }
+    }
+
+    #[test]
+    fn greedy_eval_still_discounts_a_taunt_units_own_taunt_in_defense_position() {
+        // The frozen baseline: Midrange Menace in Defense Position loses a Taunt and a point of Armor.
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-019", "position": "DEF" }] } }));
+        let unit = first_unit(&defense);
+        let w = GREEDY_EVAL;
+        let body = w.health * 9.0 + w.armor_point + w.attack * 9.0 * w.defense_attack_share + w.keyword.taunt;
+        assert_close(
+            unit_worth(&defense, &unit, &w),
+            body - (1.0 - w.position_grants) * (w.keyword.taunt + w.armor_point),
+            10,
+        );
+    }
+
+    #[test]
+    fn granted_taunt_unit_in_defense_position_keeps_its_granted_taunt() {
+        let defense = board(json!({ "p1": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        let plain = first_unit(&defense);
+        let mut granted = plain.clone();
+        granted.granted_keywords.push(Keyword::Taunt);
+        let diff = unit_worth(&defense, &granted, &AI_EVAL) - unit_worth(&defense, &plain, &AI_EVAL);
+        assert_close(diff, (1.0 - AI_EVAL.position_grants) * AI_EVAL.keyword.taunt, 10);
+        assert!(diff > 0.0);
+    }
 }
 
 mod face_threat_b13 {
@@ -341,5 +426,47 @@ mod face_threat_b13 {
         let state = board(json!({ "p1": { "field": enemy() }, "p2": {} }));
         assert_eq!(face_threat(&state, AI), 10);
         assert_eq!(face_threat(&state, PlayerId::P2), 0);
+    }
+}
+
+mod r1224_r1225_credit_line {
+    use super::*;
+
+    use jackioh_engine::SetName;
+    use jackioh_engine::testkit::preview_sets;
+
+    const JLARNA: &str = "meditative-089";
+
+    fn indebted(base: &GameState, owed: Vec<i32>) -> GameState {
+        let mut out = clone(base);
+        out.players[AI].owed_instalments = if owed.is_empty() { None } else { Some(owed) };
+        out
+    }
+
+    #[test]
+    fn r1224_owed_instalments_lower_the_score() {
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let plain = board(base());
+        let owed = indebted(&plain, vec![1, 1]);
+        assert!(eval(&owed, AI) < eval(&plain, AI));
+        let expected = AI_EVAL.owed_mana * 2.0;
+        assert_close(eval(&plain, AI) - eval(&owed, AI), expected, 9);
+    }
+
+    #[test]
+    fn r1225_an_unused_base_jlarna_is_worth_nothing_on_its_turn() {
+        let _preview = preview_sets(&[SetName::Meditative]);
+        let bare = board(json!({ "active": "p1", "p1": {}, "p2": {} }));
+        let mut held = board(json!({
+            "active": "p1",
+            "p1": { "backrow": [JLARNA] },
+            "p2": {},
+        }));
+        // Nothing borrowed this turn, on its controller's turn: the end of turn will tribute it.
+        assert_eq!(held.players[AI].turn_log.mana_borrowed, None);
+        assert_eq!(eval(&held, AI), eval(&bare, AI));
+        // Borrowed: the same card counts again.
+        held.players[AI].turn_log.mana_borrowed = Some(1);
+        assert!(eval(&held, AI) > eval(&bare, AI));
     }
 }

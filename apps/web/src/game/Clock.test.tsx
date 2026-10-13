@@ -1,15 +1,7 @@
-// BUILD M7-T1's client half. R79 fixes the behaviour and the actor runs it; what is asserted here
-// is that the component RENDERS it rather than deciding it:
-//
-//   * the turn clock belongs to the active player;
-//   * a prompt held by the non-active player runs its own `PROMPT_CLOCK_SECONDS` clock and the
-//     turn clock pauses — which reaches the browser as `turnDeadline: null` in the `clock` frame,
-//     so the component shows a stopped clock because the server stopped it, not because it worked
-//     out that a prompt was open;
-//   * remaining time is `deadline - now` measured against a monotonic delta, as
-//     `crates/server/src/actor/protocol.rs` documents, never against the browser's wall clock.
-//
-// Every duration comes from `crates/server/src/config.rs`; no test below spells a number of seconds.
+// BUILD M7-T1's client half. R79 fixes the behaviour and the actor runs it; these tests assert that the
+// component RENDERS it rather than deciding it: a paused turn clock is `turnDeadline: null` in the frame,
+// and remaining time is `deadline - now` against a monotonic delta (`protocol.rs`), never the wall clock.
+// Every duration comes from `crates/server/src/config.rs`; no test spells a number of seconds.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -65,9 +57,7 @@ function props(over: Partial<ClockProps> = {}): ClockProps {
   return { youMs: null, opponentMs: null, viewer: "p1", activePlayer: "p1", ...over };
 }
 
-// ---------------------------------------------------------------------------------------------
 // R79: whose clock is running
-// ---------------------------------------------------------------------------------------------
 
 describe("R79 — the turn clock belongs to the active player", () => {
   it("counts down for the active player and is idle for the other", () => {
@@ -149,9 +139,7 @@ describe("R79 — a prompt held by the non-active player pauses the turn clock",
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// the monotonic delta (protocol.ts)
-// ---------------------------------------------------------------------------------------------
+// The monotonic delta
 
 describe("remaining time is deadline - now against a monotonic delta", () => {
   it("subtracts the elapsed monotonic time from the server's own now", () => {
@@ -172,9 +160,7 @@ describe("remaining time is deadline - now against a monotonic delta", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// grace and the ceiling (§9.5, R79)
-// ---------------------------------------------------------------------------------------------
+// Grace and the ceiling (§9.5, R79)
 
 describe("grace and the ceiling", () => {
   it("maps the frame's per-player grace onto the viewer's sides", () => {
@@ -199,9 +185,7 @@ describe("grace and the ceiling", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// what reaches the DOM
-// ---------------------------------------------------------------------------------------------
+// What reaches the DOM
 
 describe("the rendered clock", () => {
   it("renders both sides, the turn clock and the ceiling", () => {
@@ -272,9 +256,7 @@ describe("the rendered clock", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R268: the mulligan window runs one clock for both seats
-// ---------------------------------------------------------------------------------------------
 
 describe("R268 — while both mulligans are open, one mulligan clock for both seats", () => {
   /** The server's frame in the window: the turn clock paused, the mulligan deadline as the prompt's. */
@@ -335,9 +317,7 @@ describe("R268 — while both mulligans are open, one mulligan clock for both se
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R439: the last 30 seconds of a turn clock
-// ---------------------------------------------------------------------------------------------
 
 describe("R439 — the last 30 seconds of a turn clock", () => {
   afterEach(() => {
@@ -346,12 +326,10 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
     __resetSettingsForTests();
   });
 
-  /** A turn line with `remainingMs` left, running unless `paused`. */
   function turnLine(remainingMs: number | null, over: Partial<ClockLine> = {}): ClockLine {
     return { side: "you", kind: "turn", remainingMs, totalMs: TURN_CLOCK_MS, paused: false, ...over };
   }
 
-  /** The viewer's (p1's) turn clock with `ms` left on it, in the frame the server pushed. */
   function finalFrame(ms: number): ClockFrame {
     return frame({ turnDeadline: NOW + ms });
   }
@@ -376,7 +354,6 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
     expect(turnClockUrgency(turnLine(null))).toBe("none");
     expect(turnClockUrgency(null)).toBe("none");
 
-    // The mulligan window's one clock, and a prompt held by the other seat, rendered.
     const mulligan = readClock(props({ frame: frame({ turnDeadline: null, promptDeadline: NOW + ms }), mulligan: true }), 0);
     expect(readUrgency(mulligan)).toEqual(NO_URGENCY);
     render(
@@ -487,7 +464,6 @@ describe("R439 — the last 30 seconds of a turn clock", () => {
       const root = document.querySelector(".clock");
       expect(root).toHaveAttribute("data-motion", "reduced");
       expect(root).toHaveAttribute("data-clock-urgency", "last10");
-      // No fuse at all; the readout keeps its words, its gauge and its urgent state.
       expect(screen.queryByTestId("turn-clock-fuse")).toBeNull();
       const line = screen.getByTestId("clock-you");
       expect(line).toHaveAttribute("data-urgency", "last10");

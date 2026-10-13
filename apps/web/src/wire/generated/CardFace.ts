@@ -24,4 +24,11 @@ xStats?: AttackHealth, keywords: Array<Keyword>,
  * Conventions and written out in full (R277), so a client can print it whole and mark what differs.
  * A tunable number (`CardDef.params`, B3.4) is written `{key}`, filled in by `fill_params`.
  */
-text: string, };
+text: string, 
+/**
+ * ME-GRANT (MD-D13): the Death abilities this face grants, by key, holding the quoted ability of
+ * the face — `meditative-058`'s faces carry `bookDeath`, `meditative-059`'s `fusedBookDeath`.
+ * The instance carries the name and the numbers as plain data; `grants::grant_texts` fills the
+ * text for the view.
+ */
+grants?: { [key in string]: string }, };

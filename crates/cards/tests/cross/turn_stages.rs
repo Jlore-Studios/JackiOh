@@ -1,33 +1,15 @@
 //! The stages of the turn loop, each settled before the next (SPEC §2.2, §6.2, §10.3, R44, R62, R68,
-//! R152). Found by the polish-4 edge-case hunt, round 6 (docs/polish/4-edge-cases.md, lens L8);
-//! every case here failed before its fix.
+//! R152). Found by the polish-4 edge-case hunt (docs/polish/4-edge-cases.md, lens L8).
 //!
-//!  - R62, §10.3: a stage that emits events settles before the next one runs, so a trigger answering
-//!    the end-of-turn trap window resolves in that turn's end, and one answering a start-of-turn
-//!    delayed effect resolves before the start-of-turn triggers are queued behind it.
-//!  - R44, R152: the AI turn #96 My Pawn hands over goes on after the other player answers a question
-//!    one of its actions put to them.
-//!
-//! Round 7 (lens L8) added two: the traps answer each start-of-turn delayed effect before the next one
-//! resolves (R68, §10.3), and cleanup settles its own events — My Pawn reaching the graveyard at the
-//! end of the turn it took (R152) — before the turn-cap check and the next turn (R62).
-//!
-//! Round 8 (lens L8) added two more: the deaths the check after a delayed effect collects reach the
-//! traps before the next delayed effect resolves (R68, §4.5), and a "this turn" modifier made while
-//! cleanup's own events are answered ends with that turn rather than lasting for good (§2.2, R62).
+//!  - R62, §10.3: what a stage's events wake resolves before the next stage: the end-of-turn trap
+//!    window, the start-of-turn delayed effects, and cleanup, ahead of the turn-cap check (R68, §4.5).
+//!  - R44, R152: the AI turn #96 My Pawn hands over goes on after the other player answers a question.
+//!  - R155, R241: a Spell's end-of-turn clause belongs to the turn it was played on (§2.2, §6.2).
+//!  - R169, R240, R1362: the refresh's rider is a badge the view lists (§6.3 Mana), and a fatigue
+//!    draw Armor absorbs is still reported.
 //!
 //! No Core card answers a summon or a change of control, and no Core trap asks its controller
-//! anything, so the card that makes each case observable is a fixture (a transient def, the way a
-//! fusion's is held, as paused-sequences.test.ts does); every other card is a real one.
-//!
-//! Round 9 (lens L8) added two: cleanup clears the return flags again once its own events are
-//! answered, so a return Spell cast then does not come back two turns later (R155, R62), and an
-//! end-of-turn clause a Spell arms on the other player's turn is not armed at all (R241, §6.2).
-//! Then, from the lens "engine invariants": the refresh's rider is a badge the view lists and the
-//! refresh reports spent (R169, §6.3 Mana), and a fatigue draw Armor absorbs is still reported (R240),
-//! since patch v0.3.X by the pipeline's own `damageAbsorbed` (R1362).
-//!
-//! Port of `packages/cards/test/turn-stages.test.ts` (SURFACE §4.1, §8).
+//! anything, so the card that makes each case observable is a fixture (a transient def).
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
@@ -64,7 +46,6 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     }
 }
 
-/// `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
 fn register_fixture_script(id: &str, script: Script) {
     let mut scripts = registered_scripts().clone();
     scripts.insert(
@@ -316,7 +297,7 @@ mod r44_r152_a_locked_out_player_is_never_handed_back_the_turn_my_pawn_gave_the_
     fn r44_r152_once_the_other_player_answers_a_prompt_the_ai_turn_ran_into_the_rest_of_the_turn_is_still_the_ai_s_8_96()
      {
         // The seed only fixes which of p1's actions the AI draws: here it attacks the fixture unit with
-        // one of its 1/1s early in the playout, with plays and switches still left to take.
+        // one of its 1/1s early in the playout, with plays and position switches (§4.1) still left to take.
         let mut s = scenario(json!({
             "seed": "edge-r6-pawn-1",
             "p1": {
@@ -565,11 +546,10 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P1);
 
-        // The first steal takes Timmy, which dies in the check that follows that whole delayed effect
-        // (§4.5, R59). §10.3: a trap is a response and fires at once, and R68 has each delayed effect's
-        // consequences answered before the next delayed effect resolves, as settle dispatches a check's
-        // deaths before anything else pops. So p2's trap returns Mr. Vanilla to p2's hand, and the
-        // second steal fizzles on a target that has left the field (R76, R174).
+        // The first steal takes Timmy, which dies in the check after that delayed effect (§4.5, R59).
+        // §10.3, R68: a trap is a response, so it fires before the next delayed effect resolves and
+        // returns Mr. Vanilla to p2's hand; the second steal then fizzles on a target that has left the
+        // field (R76, R174).
         assert!(any_event(&s, |event| matches!(
             event,
             GameEvent::Destroyed { instance_id, .. } if *instance_id == timmy.id
@@ -598,7 +578,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
         // p1 plays Lunar Eclipse on turn N and plays no Spell after it, so cleanup expires its discount
         // (§2.2) and reports the removal. p1's fixture unit answers one of p1's modifiers ending, on turn
         // N only, with "this turn your cards cost 1 less" (/fullsend's rider) for the turn that is ending.
-        // Round 7 made cleanup's events answered at the end of turn N (R62), which is where it lands.
+        // Cleanup's events are answered at the end of turn N (R62), which is where it lands.
         let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, RENO, RENO], "library": [RENO, RENO, RENO] },
             "p2": { "hand": [RENO], "library": [RENO, RENO, RENO] },
@@ -677,9 +657,7 @@ mod r62_2_2_a_this_turn_effect_made_after_cleanup_ends_with_that_turn {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 9: a Spell's clauses belong to the turn it was played on (R155, R241, §6.2, R62)
-// ---------------------------------------------------------------------------
+// A Spell's clauses belong to the turn it was played on (R155, R241, §6.2, R62)
 
 const PREM_PANTHER: &str = "core-032"; // 5/4 Rush; after it attacks and survives, draw 2 per Unit destroyed
 const MOTHS: &str = "core-009"; // 1/14; start of turn: every enemy Unit attacks this
@@ -698,12 +676,9 @@ mod r155_a_return_spell_cast_after_cleanup_does_not_come_back_on_a_later_turn {
     fn r155_r62_a_spell_with_an_end_of_turn_return_cast_while_cleanup_s_events_are_answered_stays_in_the_graveyard_at_the_end_of_its_caster_s_next_turn_5_1()
      {
         // p1 plays Lunar Eclipse on turn N and no Spell after it, so cleanup expires its discount and
-        // reports the removal (§2.2). p1's fixture unit answers that removal, on turn N only, by drawing
-        // a card: p1's fixture Spell, cast on draw (§2.4, R70), whose text is #23's "End of turn: returns
-        // from the GY to your hand". Round 7 made cleanup's events answered at the end of turn N (R62),
-        // so the Spell is played on turn N, after that turn's end-of-turn triggers have run: it does not
-        // come back at the end of turn N, and R155 says it "stays in the graveyard rather than coming
-        // back at the end of a later turn it was not played on".
+        // reports the removal (§2.2). p1's fixture unit answers that, on turn N only, by drawing a Spell
+        // cast on draw (§2.4, R70) with #23's "End of turn: returns from the GY to your hand". It is played
+        // after turn N's end-of-turn triggers have run (R62), so R155 keeps it in the graveyard.
         let mut s = scenario(json!({
             "p1": { "hand": [LUNAR_ECLIPSE, RENO, RENO], "library": [RENO, RENO, RENO] },
             "p2": { "hand": [RENO], "library": [RENO, RENO, RENO] },
@@ -795,11 +770,10 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
     #[test]
     fn r241_r155_r70_a_spell_cast_on_the_opponent_s_turn_with_78_s_at_end_of_turn_exile_your_hand_does_not_exile_its_caster_s_hand_at_the_end_of_the_caster_s_next_turn_6_2()
      {
-        // At p2's start of turn p2's #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther
-        // (5/4) attack it: the Panther kills it and survives, so p1 draws 2 on p2's turn (#32, R426). The
-        // top card is a cast-on-draw Spell carrying /fullsend's clause verbatim in shape — `delay({ at: {
-        // phase: "end", player: "self" } })` re-entering an `exileHand` step — so p1 casts it on p2's turn
-        // (§2.4, R70).
+        // At p2's start of turn #9 Moths to the Flame (worn to 4 health) makes p1's Prem Panther (5/4)
+        // attack it: the Panther survives, so p1 draws 2 on p2's turn (#32, R426). The top card is a
+        // cast-on-draw Spell whose `delay` at the end of its controller's turn re-enters an `exileHand`
+        // step, so p1 casts it on p2's turn (§2.4, R70).
         let mut s = scenario(json!({
             "p1": { "field": [PREM_PANTHER], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
             "p2": { "field": [{ "def": MOTHS, "damage": 10 }], "hand": [RENO], "library": [RENO, RENO, RENO, RENO] },
@@ -846,12 +820,9 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
         );
 
         // p1's own turn ends. §6.2 makes "End of turn" the controller's turn end, and R155 reads it for
-        // a Spell cast on the other player's turn: that turn's end is not its controller's, so nothing of
-        // the clause happens "at the end of a later turn it was not played on". /fullsend's own riders
-        // say the same: its "this turn" discount and Combo draw were p2's turn's and ended with it
-        // (§2.2), so an exile at the end of p1's turn is an exile no "this turn" of the card ever
-        // covered — and #39's "every other card you played this turn" would read a turn log the Spell
-        // was never in (R71).
+        // a Spell cast on the other player's turn: that turn's end is not its controller's, so the clause
+        // does not run at the end of a later turn it was not played on. Its "this turn" riders ended with
+        // p2's turn (§2.2), and #39's "every other card you played this turn" reads no log of its own (R71).
         s.end_turn();
         assert_eq!(s.state().active, PlayerId::P2);
         assert_eq!(
@@ -862,9 +833,7 @@ mod r241_r155_r71_a_spell_s_end_of_turn_clause_belongs_to_the_turn_it_was_played
     }
 }
 
-// ---------------------------------------------------------------------------
-// Round 9: the start of a turn reports what it changes (R169, R240, §10.3)
-// ---------------------------------------------------------------------------
+// The start of a turn reports what it changes (R169, R240, §10.3)
 
 const HINDER: &str = "core-021"; // Cast on draw: the opponent's next mana refresh is 1 lower
 const HIT_JOB: &str = "core-016"; // a Spell with no hand trigger
@@ -913,8 +882,8 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         }));
         s.end_turn(); // p2's turn
         s.end_turn(); // p1's draw casts Hinder: p2's next refresh is 1 lower (§8 #21)
-        // R431 (balance patch 1): the base face then discards 1 at random with no prompt — here p1's
-        // only card left in hand, HIT_JOB.
+        // R431: the base face then discards 1 at random with no prompt — here p1's only card left in
+        // hand, HIT_JOB.
         let hit_job = s.card(HIT_JOB).id.clone();
         s.expect_in_zone(&hit_job, "graveyard");
 
@@ -991,7 +960,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
         )));
     }
 
-    /// TS `onHeroHit(ctx)`: a `damage` event whose target is a hero.
+    /// A `damage` event whose target is a hero.
     /// R1361: a report of a hit Armor took whole counts here too, so only the engine keeps it unanswered.
     fn on_hero_hit(event: &GameEvent) -> bool {
         match event {

@@ -12,12 +12,15 @@
 //  - URL search params for shareable views.
 //  - Card drill-down modal showing CardFace, patch history, turn curve, and co-played synergy.
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDefs } from "@jackioh/shared";
+import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
+import { chineseName, drawnInChinese, readerName } from "../cards/chinese.ts";
 import { CardFace } from "../cards/CardFace.tsx";
 import { faceModel } from "../cards/model.ts";
+import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   getCardDrillDown,
   getCardStats,
@@ -39,11 +42,29 @@ import "./stats.css";
 
 const CATALOG = catalogJson as unknown as CardDefs;
 
+/** A card's name as the reader reads it: the catalog's Chinese for a reader of Chinese, else the server's own. */
+function shownName(id: string, name: string): string {
+  return drawnInChinese(false) ? chineseName(id, name, CATALOG[id]) : name;
+}
+
+/**
+ * A translated sentence with an element inside it: the sentence is one dictionary entry, written with
+ * `{token}`s, and each token is replaced by the node given for it, so a language may order them as it
+ * needs and English reads as it always did.
+ */
+function withNodes(sentence: string, nodes: Readonly<Record<string, ReactNode>>): ReactNode[] {
+  return sentence.split(/(\{\w+\})/).map((part, index) => {
+    const token = /^\{(\w+)\}$/.exec(part)?.[1];
+    return <Fragment key={index}>{token !== undefined && token in nodes ? nodes[token] : part}</Fragment>;
+  });
+}
+
 type TabKey = "cards" | "players";
 type SortColumn = "name" | "cost" | "rarity" | "games" | "winRate" | "drawnWinRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
 export default function StatsRoute(): ReactElement {
+  const locale = useLocale();
   // Read initial state from URL search params
   const initialParams = useMemo(() => new URLSearchParams(window.location.search), []);
 
@@ -207,10 +228,18 @@ export default function StatsRoute(): ReactElement {
 
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.id.toLowerCase().includes(q));
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          shownName(c.id, c.name).toLowerCase().includes(q) ||
+          c.id.toLowerCase().includes(q),
+      );
     }
 
     const flip = sortDir === "desc" ? -1 : 1;
+    const language = locale === "en" ? undefined : locale;
+    const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
+      shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
     list.sort((a, b) => {
       if (sortCol === "winRate") {
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
@@ -235,14 +264,14 @@ export default function StatsRoute(): ReactElement {
         const diff = rarities.indexOf(a.rarity) - rarities.indexOf(b.rarity);
         if (diff !== 0) return diff * flip;
       } else if (sortCol === "name") {
-        const diff = a.name.localeCompare(b.name);
+        const diff = compareNames(a, b);
         if (diff !== 0) return diff * flip;
       }
-      return a.games - b.games || a.name.localeCompare(b.name);
+      return a.games - b.games || compareNames(a, b);
     });
 
     return list;
-  }, [cardStatsData, search, sortCol, sortDir]);
+  }, [cardStatsData, search, sortCol, sortDir, locale]);
 
   const summary = cardStatsData?.summary;
   const isProvisional = cardStatsData?.source === "provisional";
@@ -256,29 +285,29 @@ export default function StatsRoute(): ReactElement {
       <div className="app-shell app-shell--wide tavern stats-page" data-testid={statsTestid.screen}>
         <header className="stats-header">
           <BackLink />
-          <h1 className="stats-title">Statistics</h1>
+          <h1 className="stats-title">{t("Statistics")}</h1>
         </header>
 
         {/* Summary tiles */}
         {cardStatsData && (
-          <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label="Statistics summary">
+          <section className="stats-summary-tiles" data-testid={statsTestid.summaryTiles} aria-label={t("Statistics summary")}>
             <div className="stats-summary-tile" data-testid={statsTestid.summaryTotalGames}>
-              <span className="stats-summary-label">Games on patch {cardStatsData.patch}</span>
-              <span className="stats-summary-value">{summary?.totalGames.toLocaleString()}</span>
+              <span className="stats-summary-label">{t("Games on patch {patch}", { patch: cardStatsData.patch })}</span>
+              <span className="stats-summary-value">{summary ? formatNumber(summary.totalGames) : ""}</span>
             </div>
             {summary?.bestCard && (
               <div className="stats-summary-tile" data-testid={statsTestid.summaryBestCard}>
-                <span className="stats-summary-label">Top card (win rate)</span>
+                <span className="stats-summary-label">{t("Top card (win rate)")}</span>
                 <span className="stats-summary-highlight">
-                  {summary.bestCard.name} ({Math.round(summary.bestCard.winRate * 100)}%)
+                  {shownName(summary.bestCard.id, summary.bestCard.name)} ({Math.round(summary.bestCard.winRate * 100)}%)
                 </span>
               </div>
             )}
             {summary?.worstCard && (
               <div className="stats-summary-tile" data-testid={statsTestid.summaryWorstCard}>
-                <span className="stats-summary-label">Lowest card (win rate)</span>
+                <span className="stats-summary-label">{t("Lowest card (win rate)")}</span>
                 <span className="stats-summary-highlight">
-                  {summary.worstCard.name} ({Math.round(summary.worstCard.winRate * 100)}%)
+                  {shownName(summary.worstCard.id, summary.worstCard.name)} ({Math.round(summary.worstCard.winRate * 100)}%)
                 </span>
               </div>
             )}
@@ -289,7 +318,7 @@ export default function StatsRoute(): ReactElement {
         {isProvisional && (
           <div className="stats-provisional-banner" data-testid={statsTestid.provisionalBanner} role="alert">
             <div className="stats-provisional-info">
-              <span className="stats-provisional-title">Provisional statistics</span>
+              <span className="stats-provisional-title">{t("Provisional statistics")}</span>
             </div>
             {cardStatsData?.previousPatch && (
               <button
@@ -302,7 +331,7 @@ export default function StatsRoute(): ReactElement {
                   fetchCardStats(target);
                 }}
               >
-                View previous patch ({cardStatsData.previousPatch}) →
+                {t("View previous patch ({patch}) →", { patch: cardStatsData.previousPatch })}
               </button>
             )}
           </div>
@@ -310,21 +339,31 @@ export default function StatsRoute(): ReactElement {
 
         {/* How to read this */}
         <details className="stats-info-accordion">
-          <summary className="stats-info-summary">How to read these statistics</summary>
+          <summary className="stats-info-summary">{t("How to read these statistics")}</summary>
           <div className="stats-info-content">
             <p>
-              <strong>Sample size threshold:</strong> Cards with fewer than {minSample} games display{" "}
-              <em>"not enough games"</em> instead of a percentage to prevent misleading sample artifacts.
+              <strong>{t("Sample size threshold:")}</strong>{" "}
+              {withNodes(
+                t("Cards with fewer than {minSample} games display {phrase} instead of a percentage to prevent misleading sample artifacts.", {
+                  minSample,
+                }),
+                { phrase: <em>{t('"not enough games"')}</em> },
+              )}
             </p>
             <p>
-              <strong>When drawn vs Play rate:</strong> <em>When drawn</em> shows win rate when the card was in
-              hand or played; <em>Play rate</em> shows the percentage of all recorded decks containing the card.
+              <strong>{t("When drawn vs Play rate:")}</strong>{" "}
+              {withNodes(
+                t(
+                  "{whenDrawn} shows win rate when the card was in hand or played; {playRate} shows the percentage of all recorded decks containing the card.",
+                ),
+                { whenDrawn: <em>{t("When drawn")}</em>, playRate: <em>{t("Play rate")}</em> },
+              )}
             </p>
           </div>
         </details>
 
         {/* Tabs */}
-        <div className="stats-tabs" role="tablist" aria-label="Statistics views">
+        <div className="stats-tabs" role="tablist" aria-label={t("Statistics views")}>
           <button
             type="button"
             role="tab"
@@ -335,7 +374,7 @@ export default function StatsRoute(): ReactElement {
             data-testid={statsTestid.tabCards}
             onClick={() => setTab("cards")}
           >
-            Cards
+            {t("Cards")}
           </button>
           <button
             type="button"
@@ -347,7 +386,7 @@ export default function StatsRoute(): ReactElement {
             data-testid={statsTestid.tabPlayers}
             onClick={() => setTab("players")}
           >
-            Players
+            {t("Players")}
           </button>
         </div>
 
@@ -360,7 +399,7 @@ export default function StatsRoute(): ReactElement {
                 type="search"
                 className="stats-search-input"
                 data-testid={statsTestid.searchInput}
-                placeholder="Search card by name or id…"
+                placeholder={t("Search card by name or id…")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -370,34 +409,34 @@ export default function StatsRoute(): ReactElement {
                   className="stats-select"
                   value={setFilter}
                   onChange={(e) => setSetFilter(e.target.value)}
-                  aria-label="Filter by set"
+                  aria-label={t("Filter by set")}
                 >
-                  <option value="">All sets</option>
-                  <option value="core">Core</option>
-                  <option value="classic">Classic+</option>
+                  <option value="">{t("All sets")}</option>
+                  <option value="core">{t("Core")}</option>
+                  <option value="classic">{t("Classic+")}</option>
                 </select>
 
                 <select
                   className="stats-select"
                   value={rarityFilter}
                   onChange={(e) => setRarityFilter(e.target.value)}
-                  aria-label="Filter by rarity"
+                  aria-label={t("Filter by rarity")}
                 >
-                  <option value="">All rarities</option>
-                  <option value="Common">Common</option>
-                  <option value="Rare">Rare</option>
-                  <option value="Epic">Epic</option>
-                  <option value="Legendary">Legendary</option>
-                  <option value="Mythic">Mythic</option>
+                  <option value="">{t("All rarities")}</option>
+                  <option value="Common">{t("Common")}</option>
+                  <option value="Rare">{t("Rare")}</option>
+                  <option value="Epic">{t("Epic")}</option>
+                  <option value="Legendary">{t("Legendary")}</option>
+                  <option value="Mythic">{t("Mythic")}</option>
                 </select>
 
                 <select
                   className="stats-select"
                   value={costFilter}
                   onChange={(e) => setCostFilter(e.target.value)}
-                  aria-label="Filter by cost"
+                  aria-label={t("Filter by cost")}
                 >
-                  <option value="">All costs</option>
+                  <option value="">{t("All costs")}</option>
                   <option value="0">0</option>
                   <option value="1">1</option>
                   <option value="2">2</option>
@@ -410,14 +449,14 @@ export default function StatsRoute(): ReactElement {
 
               {/* Column visibility toggles */}
               <div className="stats-col-toggles">
-                <span className="stats-col-toggles-label">Columns:</span>
+                <span className="stats-col-toggles-label">{t("Columns:")}</span>
                 <label className="stats-col-toggle">
                   <input
                     type="checkbox"
                     checked={visibleCols.cost}
                     onChange={(e) => setVisibleCols((c) => ({ ...c, cost: e.target.checked }))}
                   />
-                  Cost
+                  {t("Cost")}
                 </label>
                 <label className="stats-col-toggle">
                   <input
@@ -425,7 +464,7 @@ export default function StatsRoute(): ReactElement {
                     checked={visibleCols.rarity}
                     onChange={(e) => setVisibleCols((c) => ({ ...c, rarity: e.target.checked }))}
                   />
-                  Rarity
+                  {t("Rarity")}
                 </label>
                 <label className="stats-col-toggle">
                   <input
@@ -433,7 +472,7 @@ export default function StatsRoute(): ReactElement {
                     checked={visibleCols.games}
                     onChange={(e) => setVisibleCols((c) => ({ ...c, games: e.target.checked }))}
                   />
-                  Games
+                  {t("Games")}
                 </label>
                 <label className="stats-col-toggle">
                   <input
@@ -441,7 +480,7 @@ export default function StatsRoute(): ReactElement {
                     checked={visibleCols.drawnWinRate}
                     onChange={(e) => setVisibleCols((c) => ({ ...c, drawnWinRate: e.target.checked }))}
                   />
-                  When drawn
+                  {t("When drawn")}
                 </label>
                 <label className="stats-col-toggle">
                   <input
@@ -449,7 +488,7 @@ export default function StatsRoute(): ReactElement {
                     checked={visibleCols.playRate}
                     onChange={(e) => setVisibleCols((c) => ({ ...c, playRate: e.target.checked }))}
                   />
-                  Play rate
+                  {t("Play rate")}
                 </label>
                 {signedIn && (
                   <label className="stats-col-toggle">
@@ -458,7 +497,7 @@ export default function StatsRoute(): ReactElement {
                       checked={visibleCols.personal}
                       onChange={(e) => setVisibleCols((c) => ({ ...c, personal: e.target.checked }))}
                     />
-                    Your stats
+                    {t("Your stats")}
                   </label>
                 )}
               </div>
@@ -466,22 +505,22 @@ export default function StatsRoute(): ReactElement {
 
             {/* Table */}
             {cardStatsLoading ? (
-              <p className="stats-loading">Loading card statistics…</p>
+              <p className="stats-loading">{t("Loading card statistics…")}</p>
             ) : cardStatsError ? (
               <div className="stats-error">
-                <p>Failed to load card statistics.</p>
+                <p>{t("Failed to load card statistics.")}</p>
                 <button type="button" className="stats-retry-btn" onClick={() => fetchCardStats()}>
-                  Retry
+                  {t("Retry")}
                 </button>
               </div>
             ) : filteredCards.length === 0 ? (
-              <p className="stats-empty">No cards match the selected filters.</p>
+              <p className="stats-empty">{t("No cards match the selected filters.")}</p>
             ) : (
               <div className="stats-table-wrapper">
                 <table className="stats-table" data-testid={statsTestid.cardsTable}>
                   <thead>
                     <tr>
-                      {visibleCols.thumbnail && <th className="stats-th--thumb" scope="col">Card</th>}
+                      {visibleCols.thumbnail && <th className="stats-th--thumb" scope="col">{t("Card")}</th>}
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
@@ -495,7 +534,7 @@ export default function StatsRoute(): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        Name {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Name")} {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.cost && (
                         <th
@@ -511,7 +550,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          Cost{sortCol === "cost" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                          {t("Cost")}{sortCol === "cost" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
                         </th>
                       )}
                       {visibleCols.rarity && (
@@ -528,7 +567,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          Rarity {sortCol === "rarity" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Rarity")} {sortCol === "rarity" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       {visibleCols.games && (
@@ -545,7 +584,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          Games {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Games")} {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       <th
@@ -561,7 +600,7 @@ export default function StatsRoute(): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        Win rate {sortCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Win rate")} {sortCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.drawnWinRate && (
                         <th
@@ -577,7 +616,7 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          When drawn {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("When drawn")} {sortCol === "drawnWinRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       {visibleCols.playRate && (
@@ -594,12 +633,12 @@ export default function StatsRoute(): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          Play rate {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       {signedIn && visibleCols.personal && (
                         <th scope="col" className="stats-th">
-                          Your stats
+                          {t("Your stats")}
                         </th>
                       )}
                     </tr>
@@ -632,13 +671,13 @@ export default function StatsRoute(): ReactElement {
                             </td>
                           )}
                           <td className="stats-td stats-td--name">
-                            <span className="stats-card-name-link">{card.name}</span>
+                            <span className="stats-card-name-link">{shownName(card.id, card.name)}</span>
                           </td>
                           {visibleCols.cost && <td className="stats-td">{card.cost}</td>}
                           {visibleCols.rarity && (
                             <td className="stats-td">
                               <span className="stats-rarity-tag" data-rarity={card.rarity}>
-                                {card.rarity}
+                                {t(card.rarity)}
                               </span>
                             </td>
                           )}
@@ -655,7 +694,7 @@ export default function StatsRoute(): ReactElement {
                                 </div>
                               </div>
                             ) : (
-                              <span className="stats-not-enough">not enough games</span>
+                              <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
                           </td>
                           {visibleCols.drawnWinRate && (
@@ -696,48 +735,51 @@ export default function StatsRoute(): ReactElement {
               <input
                 type="search"
                 className="stats-search-input"
-                placeholder="Search player by display name…"
+                placeholder={t("Search player by username…")}
                 value={playerSearch}
                 onChange={(e) => setPlayerSearch(e.target.value)}
               />
               <p className="stats-player-note">
-                Player stats are public by default (opt-out in Settings). Elo ratings and rankings are kept separate.
+                {t("Player stats are public by default (opt-out in Settings). Elo ratings and rankings are kept separate.")}
               </p>
             </div>
 
             {playersLoading ? (
-              <p className="stats-loading">Loading players…</p>
+              <p className="stats-loading">{t("Loading players…")}</p>
             ) : playersError ? (
               <div className="stats-error">
-                <p>Failed to load player stats.</p>
+                <p>{t("Failed to load player stats.")}</p>
                 <button type="button" className="stats-retry-btn" onClick={() => fetchPlayers(playerSearch)}>
-                  Retry
+                  {t("Retry")}
                 </button>
               </div>
             ) : playersList.length === 0 ? (
-              <p className="stats-empty">No players found.</p>
+              <p className="stats-empty">{t("No players found.")}</p>
             ) : (
               <div className="stats-table-wrapper">
                 <table className="stats-table" data-testid={statsTestid.playersTable}>
                   <thead>
                     <tr>
-                      <th scope="col" className="stats-th">Player</th>
-                      <th scope="col" className="stats-th">Games</th>
-                      <th scope="col" className="stats-th">Win rate</th>
-                      <th scope="col" className="stats-th">Favourite card</th>
-                      <th scope="col" className="stats-th">Cards destroyed</th>
-                      <th scope="col" className="stats-th">Cards defeated</th>
+                      <th scope="col" className="stats-th">{t("Player")}</th>
+                      <th scope="col" className="stats-th">{t("Games")}</th>
+                      <th scope="col" className="stats-th">{t("Win rate")}</th>
+                      <th scope="col" className="stats-th">{t("Favourite card")}</th>
+                      <th scope="col" className="stats-th">{t("Cards destroyed")}</th>
+                      <th scope="col" className="stats-th">{t("Cards defeated")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {playersList.map((p) => {
-                      const name = p.displayName ?? `Player ${p.profileId.slice(0, 8)}`;
                       const rate = p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "—";
                       const topCard = p.favouriteCards?.[0];
-                      const favCardName = topCard ? (CATALOG[topCard.id]?.name ?? topCard.id) : "—";
+                      const favCardDef = topCard ? CATALOG[topCard.id] : undefined;
+                      const favCardName = topCard ? (favCardDef ? readerName(favCardDef) : topCard.id) : "—";
                       return (
                         <tr key={p.profileId} className="stats-tr">
-                          <td className="stats-td stats-td--player-name">{name}</td>
+                          {/* R1436: the username, never the profile id the row is keyed by. */}
+                          <td className="stats-td stats-td--player-name">
+                            <Username name={p.username} />
+                          </td>
                           <td className="stats-td">{p.games}</td>
                           <td className="stats-td">{rate}</td>
                           <td className="stats-td">{favCardName}</td>
@@ -766,13 +808,13 @@ export default function StatsRoute(): ReactElement {
             >
               <header className="stats-drilldown-header">
                 <h2 id="drilldown-title" className="stats-drilldown-title">
-                  {drillDownDef?.name ?? cardDrillDownId}
+                  {drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
                 </h2>
                 <button
                   type="button"
                   className="stats-drilldown-close"
                   data-testid={statsTestid.drillDownClose}
-                  aria-label="Close card details"
+                  aria-label={t("Close card details")}
                   onClick={() => setCardDrillDownId(null)}
                 >
                   ✕
@@ -788,22 +830,22 @@ export default function StatsRoute(): ReactElement {
 
                 <div className="stats-drilldown-details">
                   {drillDownLoading ? (
-                    <p className="stats-loading">Loading drill-down data…</p>
+                    <p className="stats-loading">{t("Loading drill-down data…")}</p>
                   ) : drillDownData ? (
                     <>
                       {/* Patches historical win rate */}
                       <section className="stats-drilldown-section">
-                        <h3>Win rate by patch</h3>
+                        <h3>{t("Win rate by patch")}</h3>
                         {drillDownData.patches.length === 0 ? (
-                          <p className="stats-empty-sub">No earlier patches to show yet.</p>
+                          <p className="stats-empty-sub">{t("No earlier patches to show yet.")}</p>
                         ) : (
                           <ul className="stats-drilldown-list">
                             {drillDownData.patches.map((p) => (
                               <li key={p.patch} className="stats-drilldown-item">
-                                <span className="stats-drilldown-label">Patch {p.patch}:</span>{" "}
+                                <span className="stats-drilldown-label">{t("Patch {patch}:", { patch: p.patch })}</span>{" "}
                                 <span>
-                                  {p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : "not enough games"}{" "}
-                                  ({p.games} games)
+                                  {p.winRate !== null ? `${Math.round(p.winRate * 100)}%` : t("not enough games")}{" "}
+                                  {t("({games} games)", { games: p.games })}
                                 </span>
                               </li>
                             ))}
@@ -813,16 +855,17 @@ export default function StatsRoute(): ReactElement {
 
                       {/* Turn played distribution */}
                       <section className="stats-drilldown-section">
-                        <h3>Win rate by turn played</h3>
+                        <h3>{t("Win rate by turn played")}</h3>
                         {drillDownData.byTurn.length === 0 ? (
-                          <p className="stats-empty-sub">No games recorded with this card played.</p>
+                          <p className="stats-empty-sub">{t("No games recorded with this card played.")}</p>
                         ) : (
                           <ul className="stats-drilldown-list">
-                            {drillDownData.byTurn.map((t) => (
-                              <li key={t.turn} className="stats-drilldown-item">
-                                <span className="stats-drilldown-label">Turn {t.turn}:</span>{" "}
+                            {drillDownData.byTurn.map((row) => (
+                              <li key={row.turn} className="stats-drilldown-item">
+                                <span className="stats-drilldown-label">{t("Turn {turn}:", { turn: row.turn })}</span>{" "}
                                 <span>
-                                  {t.winRate !== null ? `${Math.round(t.winRate * 100)}%` : "—"} ({t.games} games)
+                                  {row.winRate !== null ? `${Math.round(row.winRate * 100)}%` : "—"}{" "}
+                                  {t("({games} games)", { games: row.games })}
                                 </span>
                               </li>
                             ))}
@@ -832,16 +875,20 @@ export default function StatsRoute(): ReactElement {
 
                       {/* Co-played synergy cards */}
                       <section className="stats-drilldown-section">
-                        <h3>Co-played cards (synergy)</h3>
+                        <h3>{t("Co-played cards (synergy)")}</h3>
                         {drillDownData.coPlayed.length === 0 ? (
-                          <p className="stats-empty-sub">No co-played cards recorded.</p>
+                          <p className="stats-empty-sub">{t("No co-played cards recorded.")}</p>
                         ) : (
                           <ul className="stats-drilldown-list">
                             {drillDownData.coPlayed.map((c) => (
                               <li key={c.id} className="stats-drilldown-item">
-                                <span className="stats-drilldown-label">{c.name}:</span>{" "}
+                                <span className="stats-drilldown-label">
+                                  {shownName(c.id, c.name)}
+                                  {t(":")}
+                                </span>{" "}
                                 <span>
-                                  {c.winRate !== null ? `${Math.round(c.winRate * 100)}%` : "—"} ({c.games} games)
+                                  {c.winRate !== null ? `${Math.round(c.winRate * 100)}%` : "—"}{" "}
+                                  {t("({games} games)", { games: c.games })}
                                 </span>
                               </li>
                             ))}
@@ -850,7 +897,7 @@ export default function StatsRoute(): ReactElement {
                       </section>
                     </>
                   ) : (
-                    <p className="stats-empty-sub">Details unavailable.</p>
+                    <p className="stats-empty-sub">{t("Details unavailable.")}</p>
                   )}
                 </div>
               </div>

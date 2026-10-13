@@ -1,14 +1,8 @@
 // B5 E5 replacement windows, with E8's heal conversion and E9's redirects (docs/classic-sets.md B5;
 // SPEC §4.2, §4.4, §4.5, §3.2; R460, R461, R462, R463). Each moment is proved through a fixture card
-// shaped like the Classic or Classic+ card that uses it (`fixtures/damage-combat.ts`): a Final
-// Gambit, a Shadowstep, a Blood Moon, a Voidwalker, a Second Wind, a Pile On and a Joro.
-//
-// Every scenario that runs through `reduce` is also replayed from its start state (§9.3); the ones
-// that pause survive `JSON.parse(JSON.stringify(state))` and finish from the round-tripped copy; and
-// the moments that read a hidden card (a face-down Trap, a hand) are checked from the other seat's
-// view (R97, R177): a replacement that declines leaves that view exactly as a card without one would.
-//
-// Port of `packages/engine/test/replacements.test.ts`.
+// shaped like the Classic or Classic+ card that uses it. Scenarios through `reduce` are replayed from
+// their start state (§9.3), paused ones from a JSON round trip, and hidden-card moments are checked
+// from the other seat's view (R97, R177).
 
 use jackioh_engine::effects::{discard, heal};
 use jackioh_engine::testkit::*;
@@ -43,8 +37,7 @@ fn unit_at(state: &GameState, player: PlayerId, lane: usize) -> Option<&CardInst
         .and_then(|pile| pile.first())
 }
 
-/// TS `sinkFor(state)`'s three parts side by side, so the state stays readable between engine calls
-/// (TS read the same object through `state` and `sink.state`).
+/// The three parts of a sink side by side, so the state stays readable between engine calls.
 struct Bench {
     state: GameState,
     events: Vec<GameEvent>,
@@ -65,7 +58,6 @@ impl Bench {
         EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
     }
 
-    /// `applyEffects(effects, makeContext(sink, self, options))`, `self` read as it stands now.
     fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
         let me = me.map(|card| {
             find_instance(&self.state, &card.id)
@@ -77,7 +69,6 @@ impl Bench {
         apply_effects(&effects, &mut ctx);
     }
 
-    /// `dealDamage(sink, { source, target, amount })`, each card read as it stands now.
     fn deal(&mut self, source: Option<&CardInstance>, target: DamageTarget, amount: i32) -> i32 {
         let source = source.map(|card| live(&self.state, card).clone());
         deal_damage(
@@ -92,7 +83,7 @@ impl Bench {
     }
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).expect("the card is still in the game")
 }
@@ -135,9 +126,7 @@ fn first_in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> CardI
     in_hand(state, def_id, player, 1).remove(0)
 }
 
-// ---------------------------------------------------------------------------
 // §4.4: would take lethal damage (Classic #52 Final Gambit)
-// ---------------------------------------------------------------------------
 
 mod e5_would_take_lethal_damage_e9_damage_redirect {
     use super::*;
@@ -454,9 +443,7 @@ mod e5_would_take_lethal_damage_e9_damage_redirect {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Heals: would be healed, and heal into damage (Classic+ #22 Blood Moon)
-// ---------------------------------------------------------------------------
 
 mod e5_would_be_healed_e8_heal_becomes_damage {
     use super::*;
@@ -651,9 +638,7 @@ mod e5_would_be_healed_e8_heal_becomes_damage {
     }
 }
 
-// ---------------------------------------------------------------------------
 // §4.5 step 1: would die (Classic #14's Radiant face)
-// ---------------------------------------------------------------------------
 
 mod e5_would_die {
     use super::*;
@@ -774,7 +759,6 @@ mod e5_would_die {
         live_mut(&mut state, &unit).marked_destroyed = Some(true);
         let mut b = Bench::sink_for(state);
         state_check(&mut b.sink());
-        // TS `replacementOf({ data: owed.resume.data })`: a context carrying that data.
         let data = b.state.work.first().map(|owed| owed.resume.data.clone());
         let record = data
             .and_then(|data| {
@@ -801,9 +785,7 @@ mod e5_would_die {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Every move into a graveyard (Classic #50, #28, #60)
-// ---------------------------------------------------------------------------
 
 mod e5_would_go_to_a_graveyard {
     use super::*;
@@ -1082,9 +1064,7 @@ mod e5_would_go_to_a_graveyard {
     }
 }
 
-// ---------------------------------------------------------------------------
 // "A friendly unit is targeted" (Classic #33 Joro)
-// ---------------------------------------------------------------------------
 
 mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
     use super::*;
@@ -1218,9 +1198,7 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
     }
 }
 
-// ---------------------------------------------------------------------------
 // R97, R177: what each seat reads of the events these moments emit
-// ---------------------------------------------------------------------------
 
 mod r97_r177_the_replacement_events_in_both_views {
     use super::*;
@@ -1306,8 +1284,6 @@ mod r97_r177_the_replacement_events_in_both_views {
                 Default::default(),
             );
             live_mut(&mut state, &foe).marked_destroyed = Some(true);
-            // TS put the Mend in the recorder's live state (the same object as `state`) right after making
-            // the recorder; the recorder's start copy is never read here, so it goes in first.
             // p1 heals its own hero (no enemy of p1's trap) and p2's unit dies (none of p1's units).
             let cure = first_in_hand(&mut state, &mend.id, P1);
             let mut game = recorder(&state);

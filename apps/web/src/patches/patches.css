@@ -351,6 +351,139 @@
   color: var(--tavern-parchment);
 }
 
+/* R724000: the release lines, one bubble per set, newest first. */
+.tavern.app-shell .patch-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A release line: framed like a patch (below), rounder, holding its patches. */
+.tavern.app-shell .patch-set {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 20px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
+    linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+  box-shadow:
+    inset 0 0 0 3px rgba(18, 11, 7, 0.9),
+    inset 0 0 0 4px rgba(201, 149, 63, 0.35),
+    0 18px 44px rgba(0, 0, 0, 0.55);
+}
+
+.tavern.app-shell .patch-set__heading {
+  margin: 0;
+}
+
+/* The line's whole heading is its control. `link-button` keeps the tavern's wood-button rule off it
+   (auth/tavern.css); the rule below takes the link look off again. */
+.tavern.app-shell .patch-notes .patch-set__toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tavern-gold);
+  font-family: var(--tavern-serif);
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tavern.app-shell .patch-notes .patch-set__toggle:hover {
+  color: var(--tavern-gold-pale);
+  background: none;
+}
+
+.tavern.app-shell .patch-notes .patch-set__toggle:focus-visible {
+  outline: 2px solid var(--tavern-gold);
+  outline-offset: 4px;
+}
+
+/* The caret turns, at once, when the line opens: nothing here moves (the header above). */
+.tavern.app-shell .patch-notes .patch-set__toggle::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--tavern-brass);
+}
+
+.tavern.app-shell .patch-notes .patch-set__toggle[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+.tavern.app-shell .patch-set__span,
+.tavern.app-shell .patch-set__count {
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tavern-text-dim);
+}
+
+.tavern.app-shell .patch-set__span {
+  color: var(--patch-mark-ink);
+}
+
+.tavern.app-shell .patch-set__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tavern.app-shell .patch-set__panel[hidden] {
+  display: none;
+}
+
+.tavern.app-shell .patch-set__summary {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--tavern-parchment);
+}
+
+/* What players noticed since the line before that shipped no card data. */
+.tavern.app-shell .patch-tech {
+  padding: 14px 16px;
+  border: 1px solid var(--tavern-brass);
+  border-radius: 12px;
+  background: var(--tavern-well);
+}
+
+.tavern.app-shell .patch-tech__title {
+  margin: 0 0 6px;
+  font-family: var(--tavern-serif);
+  font-size: 18px;
+  color: var(--tavern-gold-pale);
+}
+
+.tavern.app-shell .patch-tech__lines,
+.tavern.app-shell .patch-note__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--tavern-parchment);
+}
+
 .tavern.app-shell .patch-list {
   display: flex;
   flex-direction: column;
@@ -367,7 +500,7 @@
   align-items: flex-start;
   gap: 10px;
   padding: 20px 20px 22px;
-  /* A source or a note may hold a long path ("docs/classic-sets.md"): it wraps, the page never scrolls sideways. */
+  /* A long word or name in a note wraps: the page never scrolls sideways. */
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
   border-radius: 16px;
@@ -418,12 +551,27 @@
   color: var(--tavern-text-dim);
 }
 
-.tavern.app-shell .patch__notes {
-  margin: 0;
+/* R724001: a patch's player note, under the page's fixed headings. */
+.tavern.app-shell .patch-note {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   max-width: 72ch;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--tavern-parchment);
+}
+
+.tavern.app-shell .patch-note__section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tavern.app-shell .patch-note__heading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tavern-gold);
 }
 
 .tavern.app-shell .patch__counts {
@@ -616,6 +764,10 @@
 @media (max-width: 600px) {
   .tavern.app-shell .patch {
     padding: 16px 14px 18px;
+  }
+
+  .tavern.app-shell .patch-set {
+    padding: 14px 12px 16px;
   }
 
   .tavern.app-shell .patch-card {

@@ -182,3 +182,49 @@ describe("R434 the opponent's hand row turns face up at the game's end", () => {
     expect(rules.some((rule) => rule.selectors.includes(".hand-flip-back") && rule.body.includes("transform: rotateY(180deg)"))).toBe(true);
   });
 });
+
+describe("R1143 and R1141 the hand pile shows its size and its marks", () => {
+  const lookup = lookupFromDefs(CATALOG);
+
+  function renderBoard(view: PlayerView): void {
+    render(
+      <CatalogContext.Provider value={lookup}>
+        <Board view={view} />
+      </CatalogContext.Provider>,
+    );
+  }
+
+  it("R1143 a set hand size shows beside either seat's count", () => {
+    renderBoard(
+      baseView({
+        you: emptySide("p1", { hand: [card({ defId: "core-002" })], handCap: 12 }),
+        opponent: emptySide("p2", { hand: { count: 3 }, handCap: 12 }),
+      }),
+    );
+    for (const side of ["you", "opponent"] as const) {
+      expect(screen.getByTestId(`hand-cap-${side}`)).toHaveTextContent("/12");
+    }
+    // With no set size neither seat shows one.
+    cleanup();
+    renderBoard(baseView());
+    expect(screen.queryByTestId("hand-cap-you")).toBeNull();
+    expect(screen.queryByTestId("hand-cap-opponent")).toBeNull();
+  });
+
+  it("R1141 the opponent's hand shows how many cards are marked, never which", () => {
+    renderBoard(
+      baseView({
+        opponent: emptySide("p2", { hand: { count: 2 }, handMarked: 2 }),
+      }),
+    );
+    const hand = screen.getByTestId("hand-opponent");
+    expect(hand).toHaveAttribute("data-marked", "2");
+    expect(screen.getByTestId("hand-marked-opponent")).toHaveTextContent("2 marked");
+    // Never which: backs carry no instance id and no mark.
+    expect(hand.querySelector("[data-def-id]")).toBeNull();
+    expect(hand.querySelectorAll(".card-back")).toHaveLength(2);
+    // The viewer's own seat shows no count.
+    expect(screen.getByTestId("hand-you")).not.toHaveAttribute("data-marked");
+    expect(screen.queryByTestId("hand-marked-you")).toBeNull();
+  });
+});

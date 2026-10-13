@@ -57,7 +57,10 @@ mod tests {
 
     /// TS `GRAPE_IDS.indexOf(id)`: −1 for an id that is no Grape.
     fn index_of(id: &str) -> i64 {
-        grape_ids().iter().position(|grape| *grape == id).map_or(-1, |at| at as i64)
+        grape_ids()
+            .iter()
+            .position(|grape| *grape == id)
+            .map_or(-1, |at| at as i64)
     }
 
     use crate::js;
@@ -72,7 +75,11 @@ mod tests {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::AddedToHand { player: PlayerId::P1, instance_id, def_id } => Some(Added {
+                GameEvent::AddedToHand {
+                    player: PlayerId::P1,
+                    instance_id,
+                    def_id,
+                } => Some(Added {
                     instance_id: instance_id.clone(),
                     def_id: def_id.clone(),
                 }),
@@ -121,8 +128,10 @@ mod tests {
             s.play(VINE, json!({}));
 
             let mut rng = Rng::new("five", cursor);
-            let expected: Vec<String> =
-                [0, 1, 2, 3, 4].iter().map(|_| jackioh_engine::catalog::roll_grape(&mut rng, 0)).collect();
+            let expected: Vec<String> = [0, 1, 2, 3, 4]
+                .iter()
+                .map(|_| jackioh_engine::catalog::roll_grape(&mut rng, 0))
+                .collect();
             let got: Vec<String> = added(&s).into_iter().map(|event| event.def_id).collect();
             assert_eq!(got, expected);
             assert!(added(&s).iter().all(|event| !s.card(&event.instance_id).radiant));
@@ -135,7 +144,11 @@ mod tests {
             let mut s = played(false, None, Some(7));
             s.play(VINE, json!({}));
             assert_eq!(added(&s).len(), 3);
-            let burned = s.last_events().iter().filter(|event| event.event_type().as_str() == "burned").count();
+            let burned = s
+                .last_events()
+                .iter()
+                .filter(|event| event.event_type().as_str() == "burned")
+                .count();
             assert_eq!(burned, 2);
             assert_eq!(s.hand(P1).len(), 10);
         }
@@ -149,13 +162,21 @@ mod tests {
                 .view(P2)
                 .events
                 .into_iter()
-                .filter(|event| matches!(event, GameEvent::AddedToHand { player: PlayerId::P1, .. }))
+                .filter(|event| {
+                    matches!(
+                        event,
+                        GameEvent::AddedToHand {
+                            player: PlayerId::P1,
+                            ..
+                        }
+                    )
+                })
                 .collect();
             assert_eq!(theirs.len(), 5);
             assert!(
-                theirs
-                    .iter()
-                    .all(|event| matches!(event, GameEvent::AddedToHand { def_id, .. } if def_id == "hidden"))
+                theirs.iter().all(
+                    |event| matches!(event, GameEvent::AddedToHand { def_id, .. } if def_id == "hidden")
+                )
             );
         }
 
@@ -172,6 +193,32 @@ mod tests {
             down.play(VINE, json!({}));
             assert_eq!(added(&down).len(), 4);
         }
+    }
+
+    /// R1438: given Lucky 1, the base face rolls each of its five Grapes twice and keeps the better: ten
+    /// draws of the rng, and the Grapes the same cursor's pairs predict, none of them Radiant.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        crate::register_all();
+        let mut s = played(false, Some("lucky-vine"), None);
+        crate::give_lucky(&mut s, VINE, 1);
+        let cursor = s.state().rng_cursor;
+        s.play(VINE, json!({}));
+
+        let mut rng = Rng::new("lucky-vine", cursor);
+        let ids = grape_ids();
+        let expected: Vec<String> = [0, 1, 2, 3, 4]
+            .iter()
+            .map(|_| {
+                let first = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                let second = index_of(&jackioh_engine::catalog::roll_grape(&mut rng, 0));
+                ids[first.max(second) as usize].to_string()
+            })
+            .collect();
+        let got: Vec<String> = added(&s).into_iter().map(|event| event.def_id).collect();
+        assert_eq!(got, expected);
+        assert!(added(&s).iter().all(|event| !s.card(&event.instance_id).radiant));
+        assert_eq!(s.state().rng_cursor - cursor, 10);
     }
 
     mod radiant {
@@ -203,7 +250,10 @@ mod tests {
         #[test]
         fn r276_the_radiant_face_keeps_five_grapes_not_the_designer_s_three() {
             crate::register_all();
-            let params = crate::CATALOG.get(VINE).map(|def| js(&def.params)).unwrap_or(Value::Null);
+            let params = crate::CATALOG
+                .get(VINE)
+                .map(|def| js(&def.params))
+                .unwrap_or(Value::Null);
             let grapes = params
                 .as_array()
                 .and_then(|entries| entries.iter().find(|entry| entry["key"] == json!("grapes")))

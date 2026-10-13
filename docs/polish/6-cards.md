@@ -940,8 +940,11 @@ The deck builder does the same for its own buttons by scoping every button rule 
     `data-clamped="true"`, and a clamped rules box stays inside the face at `FIT_FLOOR_PX`.
   - Since the integration QA, the rules text has a reading floor (`FIT_FLOOR_PX`, 9 px): a text
     that would need less first drops its tier's head start, then takes the long layout
-    (`data-long` on the face: a shorter art window and a taller rules box), and only then clamps at
-    the floor with an ellipsis (`fit.ts`). Before, the densest cards printed at 6 px in the grid.
+    (`data-long` on the face: a shorter art window and a taller rules box), then the longest layout
+    (`data-longest` as well, #617: the art a strip under the crest and the rules box two thirds of
+    the face, which holds Meditative #8's eleven Ascent lines at 270 px and in the inspect views),
+    and only then clamps at the floor with an ellipsis (`fit.ts`). Before, the densest cards printed
+    at 6 px in the grid.
 - **B16.** `Card` with `card: null` renders one `.card.card-back` with an empty `textContent`, no
   `data-def-id`, no `data-testid` and no `.card-name`. Hovering or long-pressing it opens nothing
   (jsdom).

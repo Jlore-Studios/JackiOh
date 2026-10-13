@@ -1,10 +1,6 @@
-//! Port of `packages/engine/test/playChoices-filters.test.ts`.
-//!
-//! The declaration kinds and filters a play's choices go through (SPEC §10.5 step 1, §10.6, R81,
-//! R90). `playChoices.test.ts` covers the refusals the M3 BLOCKER was about — a dormant card, the
-//! opponent's hand, the counts. This file drives the rest of the module: several declarations
-//! reading the flat `targets` list in order, the `type`, `tags` and `notTags` filters, the backrow,
-//! hero and zone kinds, `excludeSelf`, an ally-only side, and two mode declarations at once.
+//! Declaration kinds and filters a play's choices go through (SPEC §10.5 step 1, §10.6, R81, R90):
+//! several declarations reading the flat `targets` list in order, the `type`, `tags` and `notTags`
+//! filters, the backrow, hero and zone kinds, `excludeSelf`, an ally-only side, two mode declarations.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -13,10 +9,7 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
 
-// TS's `nextIndex` started at 1100 and every `def` took the next number, in declaration order; each
-// def below is written with the index it took.
-
-/// TS `{ ...object, ...extra }`: a shallow merge of `extra`'s keys over `object`'s.
+/// A shallow merge of `extra`'s keys over `object`'s.
 fn spread(object: &mut Value, extra: Value) {
     if let (Some(object), Value::Object(extra)) = (object.as_object_mut(), extra) {
         for (key, value) in extra {
@@ -137,7 +130,7 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-/// A script's `targets`, written as TS's literal.
+/// A script's `targets`, written as JSON.
 fn decls(list: Value) -> Vec<TargetDecl> {
     json_as(list)
 }
@@ -321,10 +314,10 @@ fn defs() -> Vec<CardDef> {
     ]
 }
 
-/// TS's module `let seq`: unique across the tests, which run on parallel threads.
+/// Unique across the tests, which run on parallel threads.
 static SEQ: AtomicU32 = AtomicU32::new(0);
 
-/// TS `act`: `body` is the TS `ActionInput` literal (its `playerId` included); a fresh nonce is added.
+/// `body` is the action literal (its `playerId` included); a fresh nonce is added.
 fn act(state: &GameState, body: Value) -> ReduceResult {
     let seq = SEQ.fetch_add(1, Ordering::Relaxed) + 1;
     let mut body = body;
@@ -398,17 +391,17 @@ fn strs(items: &[&str]) -> Vec<String> {
     items.iter().map(|item| item.to_string()).collect()
 }
 
-/// `inHand(...)[0]` with `expect(card).toBeDefined()`.
+/// The first item.
 fn first<T>(items: Vec<T>) -> T {
     items.into_iter().next().expect("expected at least one item")
 }
 
-/// `result.error` as text, empty when the action went through (TS `toMatch` on `undefined` fails).
+/// `result.error` as text, empty when the action went through.
 fn error_of(result: &ReduceResult) -> String {
     result.error.clone().unwrap_or_default()
 }
 
-/// TS `whyChoicesRefused`'s `string | null`.
+/// A refusal as `Some(message)`.
 fn refusal(answer: Result<(), EngineError>) -> Option<String> {
     answer.err().map(|error| error.message)
 }
@@ -485,7 +478,6 @@ mod r81_r90_play_choice_declarations_and_filters {
         );
         let card = first(in_hand(&mut state, &two_step().id, PlayerId::P1, 1));
 
-        // Declaration 1 takes the first selection (an enemy unit), declaration 2 the second (an ally).
         let played = act(
             &state,
             targeting(&card.id, vec![on_instance(&theirs.id), on_instance(&mine.id)]),
@@ -859,7 +851,6 @@ mod r81_r90_play_choice_declarations_and_filters {
 
         let decl = first_decl(&state, &card);
         let offered = legal(&state, &card, &decl);
-        // Three open unit lanes and five open backrow lanes, all on the ally side.
         assert_eq!(offered.len(), 8);
         assert!(offered.iter().all(|selection| matches!(
             selection,
@@ -881,7 +872,6 @@ mod r81_r90_play_choice_declarations_and_filters {
             .error,
             None
         );
-        // The Locked lane, the occupied lane, the enemy's lane and a lane out of range are all refused.
         for zone in [
             on_zone(PlayerId::P1, Row::Units, 2),
             on_zone(PlayerId::P1, Row::Units, 1),
@@ -1099,14 +1089,12 @@ mod r81_r90_play_choice_declarations_and_filters {
         let bare = first(in_hand(&mut state, &bare_target().id, PlayerId::P1, 1));
         let tribal = first(in_hand(&mut state, &tribal_hitter().id, PlayerId::P1, 1));
 
-        // No filter at all: every active unit, the chooser's side first, in lane order.
         let bare_decl = first_decl(&state, &bare);
         let tribal_decl = first_decl(&state, &tribal);
         assert_eq!(
             ids(&legal(&state, &bare, &bare_decl)),
             vec![mine.id.clone(), felinor.id.clone(), theirs.id.clone()]
         );
-        // A tag filter narrows the unit kind the same way it narrows a hand or backrow pick.
         assert_eq!(
             ids(&legal(&state, &tribal, &tribal_decl)),
             vec![felinor.id.clone()]
@@ -1115,7 +1103,6 @@ mod r81_r90_play_choice_declarations_and_filters {
         let played = act(&state, targeting(&bare.id, vec![on_instance(&theirs.id)]));
         assert_eq!(played.error, None);
         assert_eq!(top_damage(&played.state, PlayerId::P2, 0), Some(1));
-        // A hero is not a unit, so a bare declaration does not reach one.
         assert!(
             error_of(&act(
                 &state,

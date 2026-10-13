@@ -1,8 +1,7 @@
 // The client half of Activate (B3.2, R384; presentation R510), the play's new payments (B5 E5's
 // discards, E11/E19's Plague Counters), a Tribute onto its own zone (B4.5, R391) and plays from the
 // graveyard (B5 E11), as `actions.ts` builds them. Every test feeds a hand-built `legal` array and
-// checks that what comes out was read from that array and nothing else (CLAUDE.md rule 7): no
-// count of uses, no check of a cost, no zone arithmetic.
+// checks the result was read from it alone (CLAUDE.md rule 7).
 
 import type { ActionBody, ActivationView, PlayerView, Selection } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
@@ -25,9 +24,7 @@ import { namedAbility, testid } from "./contract.ts";
 import { planDrag, resolveDrop } from "./drag/model.ts";
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../test/fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 const PING: ActivationView = { ability: "ping", label: "Deal 1 damage", usesLeft: 1, usable: true };
 const MODES: ActivationView = { ability: "punish", label: "Choose one", usesLeft: 1, usable: true };
@@ -71,9 +68,7 @@ function activating(over: Partial<Extract<Interaction, { stage: "activating" }>>
   return { stage: "activating", instanceId: "act1", picked: {}, ...over };
 }
 
-// ---------------------------------------------------------------------------------------------
 // The control and the highlight
-// ---------------------------------------------------------------------------------------------
 
 describe("R384 the Activate control is lit by the activations legalActions lists, and by nothing else", () => {
   it("R384 a listed activate lights and glows its card's control; an unlisted card's control is dark", () => {
@@ -145,9 +140,7 @@ describe("R384 the Activate control is lit by the activations legalActions lists
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The click reducer
-// ---------------------------------------------------------------------------------------------
 
 describe("R384 pressing the control builds the activation as a play is built", () => {
   it("R384 one listed activation is sent at once, exactly as listed", () => {
@@ -309,9 +302,7 @@ describe("R384 Heroic Power is built through the same activation", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // The play's new payments
-// ---------------------------------------------------------------------------------------------
 
 describe("B5 E5 R682 a target that costs discards (Classic #89): random at pay time, nothing picked", () => {
   const ghost = "e2";
@@ -372,9 +363,7 @@ describe("B5 E11, E19 Plague Counters paying a graveyard play (Classic #74)", ()
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R391: a Tribute onto its own zone
-// ---------------------------------------------------------------------------------------------
 
 describe("R391 a Tribute may pay for its own zone, and the client never crosses a zone with another set", () => {
   /** A full unit row (u1..u5): legalActions pairs each Tribute with the zone it empties. */
@@ -452,9 +441,7 @@ describe("R391 a Tribute may pay for its own zone, and the client never crosses 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B5 E11: plays from the graveyard
-// ---------------------------------------------------------------------------------------------
 
 describe("B5 E11 a card in your graveyard that legal lists is played from the pile", () => {
   it("its pile-play control and the pile glow; a graveyard card legal does not list does not", () => {
@@ -487,9 +474,7 @@ describe("B5 E11 a card in your graveyard that legal lists is played from the pi
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Drag to target (game/drag/model.ts)
-// ---------------------------------------------------------------------------------------------
 
 describe("R510 an activation is dragged to its target", () => {
   const legal = [PING_E1, PING_E2, { type: "endTurn" } as ActionBody];

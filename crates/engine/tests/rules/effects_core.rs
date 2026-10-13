@@ -1,28 +1,15 @@
 //! The effects library's cross-cutting acceptance items and the core verbs with no test file of
 //! their own (BUILD M3-T1, SPEC §6.3's verb table).
 //!
-//! M3-T1's acceptance list, verbatim: "every effect has its own test file; `grep -r
-//! \"state.players[\" packages/cards` returns nothing (scripts never touch state); `steal` places
-//! into the same lane if free else first free and leaves excess (R15); `summon` with no zone takes
-//! the leftmost free zone and skips zones reserved for Reborn (R64); `cast` counts as a play with
-//! cost paid 0 (R70); `fuse` follows R77; leaving the field resets an instance per R78 while
-//! `costMod`, `costOverride` and `radiant` persist; `bounce` returns to the owner's hand and drops
-//! buffs (§6.3); `transform` and `vanilla` are refused on Immutable (R23); `recruit` scans top-down
-//! and keeps library order."
+//! M3-T1's acceptance items: `steal` places into the same lane if free else first free and leaves
+//! excess (R15); `summon` with no zone takes the leftmost free zone and skips zones reserved for
+//! Reborn (R64); `cast` counts as a play with cost paid 0 (R70); `fuse` follows R77; leaving the
+//! field resets an instance per R78 while `costMod`, `costOverride` and `radiant` persist; `bounce`
+//! returns to the owner's hand and drops buffs (§6.3); `transform` and `vanilla` are refused on
+//! Immutable (R23); `recruit` scans top-down and keeps library order.
 //!
-//! Who owns what. The per-effect files own their own verbs: `effects-steal` (R15), `effects-summon`
-//! (R64, recruit, fill your board), `effects-move` (bounce, exile, discard, counter),
-//! `effects-transform` (R23), and `fuse.test.ts` (R77). This file owns the two structural items, the
-//! two items no single effect file owns — R70's cast and R78's reset — and the modules of
-//! `src/effects` that have no test file of their own: draw, addToHand, shuffleInto, loseHealth,
-//! mana, memory and position. `targets` used to be on that list; it has `effects-targets.test.ts`
-//! of its own now that it carries the board scope the board-wide verbs are written in.
-//!
-//! Port of `packages/engine/test/effects-core.test.ts`. The TS file's three "M3-T1 structural
-//! acceptance" tests read the source tree (`readdirSync` of `src/effects` and `test/`, `readFileSync`
-//! of every card script), so they are not ported (part 24's brief, Risks: #133's rule): they are
-//! listed in `78f131c^:.fullsend/notes/spec-gaps-part-24-2.md`, and the checks belong to the structural
-//! spec checks (part 28), not to a rules test.
+//! The per-effect files own those verbs. This file owns R70's cast, R78's reset and the modules
+//! with no test file of their own: draw, addToHand, shuffleInto, loseHealth, mana, memory, position.
 
 use jackioh_engine::effects::{
     TargetSpec, add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana,
@@ -40,9 +27,8 @@ use super::fixtures::combat::{plain, spikey_pillow, taunter};
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{anti_oneshot, stockpile};
 
-/// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
-/// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
-/// out, built from part 1's frozen `EngineSink::new` and `Rng::new`.
+/// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
+/// borrows all three, so they live here and `sink()` lends them out.
 struct Bench<'a> {
     state: &'a mut GameState,
     events: Vec<GameEvent>,
@@ -64,7 +50,7 @@ fn sink_for(state: &mut GameState) -> Bench<'_> {
     }
 }
 
-/// TS `put(state, defId, ref, { radiant: true })`: the card is made Radiant before it is placed.
+/// Like `put`, but the card is made Radiant before it is placed.
 fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstance {
     let player = at.player;
     let mut card = new_instance(state, def_id, player, Zone::Hand { player });
@@ -77,12 +63,9 @@ fn put_radiant(state: &mut GameState, def_id: &str, at: ZoneSlot) -> CardInstanc
     find_instance(state, &id).cloned().expect("the placed card")
 }
 
-// ---------------------------------------------------------------------------
 // Fixtures: a Spell with a Cry, for R70's cast.
-// ---------------------------------------------------------------------------
 
-/// TS `def(name, type, extra)`, whose module counter handed out 1701 to the first (and only) def; the
-/// index is written out here, as the order of the TS definitions fixed it. `extra` is spread over the def.
+/// A def named `ec-<name>`, with `extra` spread over it.
 fn def(name: &str, type_: &str, index: u32, extra: Value) -> CardDef {
     let mut def = json!({
         "id": format!("ec-{name}"),
@@ -148,7 +131,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `HookOptions & { self?: CardInstance }`.
 #[derive(Default)]
 struct RunOptions {
     controller: Option<PlayerId>,
@@ -165,9 +147,8 @@ impl RunOptions {
     }
 }
 
-/// Builds the context TS's `makeContext(sinkFor(state), options.self ?? null, options)` builds over a
-/// fresh sink, and hands it to `f` (a context borrows the state, so it cannot be handed back). TS
-/// handed over the live card object; the card is looked up again by id.
+/// Builds the context over a fresh sink and hands it to `f` (a context borrows the state, so it
+/// cannot be handed back). The card is looked up again by id.
 fn with_context<R>(
     state: &mut GameState,
     options: RunOptions,
@@ -193,8 +174,8 @@ fn with_context<R>(
     f(&mut ctx)
 }
 
-/// Apply effects outside any card, as the resolver does, and hand back the events (§10.3). As in TS,
-/// the sink's rng is not written back to the state.
+/// Apply effects outside any card, as the resolver does, and hand back the events (§10.3). The
+/// sink's rng is not written back to the state.
 fn run(state: &mut GameState, effects: Vec<Effect>, options: RunOptions) -> Vec<GameEvent> {
     let RunOptions {
         controller,
@@ -223,7 +204,7 @@ fn must<T>(value: Option<T>, what: &str) -> T {
     value.unwrap_or_else(|| panic!("expected {what}"))
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
@@ -254,8 +235,8 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// `resolveTarget`'s answer as TS's `toEqual` reads it: `{ kind: "unit", instance }`,
-/// `{ kind: "hero", player }`, or `null`.
+/// `resolve_target`'s answer as JSON: `{ kind: "unit", instance }`, `{ kind: "hero", player }`, or
+/// `null`.
 fn target_json(target: Option<DamageTarget>) -> Value {
     match target {
         Some(DamageTarget::Unit { instance }) => json!({ "kind": "unit", "instance": instance }),
@@ -286,9 +267,7 @@ fn field_of(events: &[GameEvent], of: GameEventType, key: &str) -> Vec<Value> {
         .collect()
 }
 
-// ---------------------------------------------------------------------------
 // R70's cast and R78's reset: the two acceptance items no per-effect file owns.
-// ---------------------------------------------------------------------------
 
 mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     use super::*;
@@ -440,9 +419,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
-// targets.ts: the vocabulary every other verb is written in.
-// ---------------------------------------------------------------------------
+// Target and player specs: the vocabulary every other verb is written in.
 
 mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
     use super::*;
@@ -555,9 +532,7 @@ mod s6_3_target_and_player_specs_targets_ts_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // draw, addToHand, shuffleInto.
-// ---------------------------------------------------------------------------
 
 mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     use super::*;
@@ -811,9 +786,7 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // loseHealth, mana, memory, position.
-// ---------------------------------------------------------------------------
 
 mod s6_3_lose_health_r18_m3_t1 {
     use super::*;
@@ -1230,9 +1203,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The effects a card script may see at all.
-// ---------------------------------------------------------------------------
 
 mod s6_3_the_effects_barrel_m3_t1 {
     use super::*;
@@ -1256,8 +1227,8 @@ mod s6_3_the_effects_barrel_m3_t1 {
         ];
 
         for effect in &built {
-            // TS checked `typeof effect.kind === "string"` and `typeof effect.apply === "function"`;
-            // here the types say both, and the kind must still name something.
+            // The types say `kind` is a string and `apply` a function; the kind must still name
+            // something.
             let _: &'static str = effect.kind;
             let _: &EffectApply = &effect.apply;
             assert!(!effect.kind.is_empty());

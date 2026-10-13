@@ -3,46 +3,13 @@
 //!             index to your hand"
 //!   Radiant: "It costs 0"
 //!
-//! WHAT "IT" IS. The radiant cell changes one thing (§8 Conventions: a cell that changes only a
-//! number changes only that number, and every base clause it does not restate is kept), and the
-//! source design note settles which: "Add the Radiant core card corresponding to that number, it
-//! costs (0)" (JackiOh_Core_Cards.md #82). So the radiant face is the same Discover, and the card it
-//! puts in your hand costs 0 — not this spell. BUILD M4-T4's "radiant costs 0" is that card.
-//!
-//! THE POOL IS THE ENGINE'S, NOT THIS CARD'S (§5.1: one query function, R54).
-//! "Rolls 1–100 only, rerolls its own index, never a token index" (R54) is three filters, and
-//! `discoverFromCatalog` plus `catalog.query` already are all three:
-//!   - "never a token index": §5.1's default. `query` drops every Token-tagged, Token-rarity and
-//!     `token: true` def unless the caller names the token pool, which this one does not. The nine
-//!     token indices are exactly the nine non-integer indices in the catalog (51.1, 65.1, 90.1,
-//!     93.1, 95.1, T-rush, T-sheep, T-felinor, T-bread), so "no tokens" and "an integer 1–100" are
-//!     the same set of 100 cards — there is nothing left for this card to filter by number.
-//!   - "rerolls its own index": §5.1's "a random pool never offers the card that generated it".
-//!     `discoverFromCatalog` reads `ctx.self.defId` and passes it as `excludeDefId` itself (R387),
-//!     so #82 can never be offered and the reroll costs nothing.
-//!   - "1–100": `set: "Core"`, which is §8's own numbering — the Core set is indices 1–100 plus its
-//!     tokens, and the tokens are already gone.
-//!
-//! So: 3 options out of those 100, drawn without replacement by `rng.shuffle` (§6.3 Discover), which
-//! is R60's "Discover options are always different" — the "3 distinct numbers" of the row.
-//!
-//! THE OPTIONS ARE THE NUMBERS (R247). §8 says you Discover among three *numbers*, so the prompt
-//! offers exactly that: `offer: "index"` makes each option the card's §5 index, labelled with it,
-//! and nothing in the option — key, label or the definition `viewFor` would attach — names the card.
-//! The player sees three numbers, and which card a number is comes from the public catalog (§5.1),
-//! where every card prints its index: knowing the Core set by number is the trial. The pool is still
-//! the three definitions above, drawn exactly as before; only what the options are changed.
-//!
-//! THE PICK COMES BACK AS A MODE (§10.6, R81). A Discover answer arrives in `ctx.targets` as
-//! `{ pick: "mode", option: "<index>" }`; `chosenOptions` is the one reader for that, `defByIndex`
-//! turns the number back into its Core card (an index is unique only within its set, B2.2), and the named `resume` step below is where `prompts.ts`
-//! re-enters this script (`RESUME_HOOK` = "resume", the step name is `Resume.step`). Nothing is
-//! captured in `data`: the answer is the whole state the continuation needs.
-//!
-//! R74/§5.2: "the Radiant Core card" is the radiant FLAG on a fresh instance, never a second card
-//! id, and `addToHand` carries it. R65: `costOverride` is where the calculation starts, so a 0
-//! override is a card that costs 0 in hand and keeps costing 0 in every zone (R78). R4: a full hand
-//! burns the card that arrives, which is `draw.addToHand`'s job and not this card's.
+//! "It" is the card the Discover adds, not this spell (§8 Conventions; JackiOh_Core_Cards.md #82).
+//! The pool is the engine's (§5.1, R54): `query` drops tokens and, by R387, never offers #82, and
+//! `set: Core` is 1–100. Three options are drawn without replacement (§6.3, R60). The options are
+//! the numbers (R247): `offer: "index"` labels each with its §5 index and names no card. The pick
+//! returns as a mode (§10.6, R81); an index is unique only within its set (B2.2). R74/§5.2: Radiant
+//! is a flag on a fresh instance. R65: `costOverride` 0 costs 0 in every zone (R78). R4: a full hand
+//! burns the card that arrives.
 
 use jackioh_engine::prelude::*;
 
@@ -54,7 +21,7 @@ const OPTIONS: i32 = 3;
 /// B2.6: KY's Trial names the Core set's numbers, so its pool stays Core whatever else ships.
 const TRIAL_SET: SetName = SetName::Core;
 
-/// The `resume` step `prompts.ts` re-enters with the Discover answer (§10.6).
+/// The `resume` step the Discover answer re-enters (§10.6).
 const PICKED: &str = "picked";
 
 /// The faces differ only in whether the card that arrives carries a `costOverride` of 0 (R65).
@@ -100,15 +67,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247).
-//
-// BUILD M4-T4's must-pass row: "Three distinct numbers 1–100 never 82 or a token index (R54);
-// chosen card is radiant; radiant costs 0".
-//
-// The three offered options are the whole of R54, and they can be read straight off
-// `state.pending.options` without answering anything, so those cases are exact. R247 makes each
-// option the number itself — the card's §5 index — so every case reads the options as indices and
-// looks the card up in the catalog, as a player looks it up in the collection.
+// #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row: "Three distinct numbers
+// 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0". The options are
+// the numbers (R247), so each case reads them off `state.pending.options` and looks the card up in
+// the catalog, as a player does in the collection.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -136,7 +98,6 @@ mod tests {
             .map(|def| def.id.clone())
     }
 
-    /// TS `option.selection.pick === "mode" ? option.selection.option : ""`.
     fn mode_option(selection: &Selection) -> String {
         match selection {
             Selection::Mode { option } => option.clone(),

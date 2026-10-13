@@ -1,27 +1,22 @@
 //! Cards buried under a Stack pile, and what Reborn brings back (SPEC §3.2, §4.5, §7, R13, R175).
-//! Found by the polish-4 edge-case hunt, round 3 (docs/polish/4-edge-cases.md, lenses L2, L3 and L4);
-//! every case here failed before its fix.
+//! Paths and testkit: docs/v0.3.0/SURFACE.md §4.1, §8.
 //!
 //!  - §3.2, R13: a card dormant under a Stack is not on the field, so §4.5's check never collects it
 //!    there. The top shields it: an aura or a layer-2 Felinor that stops reaching it cannot kill it,
 //!    and it is judged when it resumes on top, with the board's auras reaching it again.
 //!  - R175: a token summoned X/X comes back through Reborn with that X/X, its printed face (§7), at
 //!    1 health — not as a printed 0/0 that dies again.
-//!  - Round 10 (lens "engine invariants"). R212, R119: a card that resumes as its pile's top did not
-//!    see what happened while it lay dormant (§3.2, R153), so it answers neither the death that
-//!    uncovered it nor the play that was resolving when it resumed.
-//!  - The review of round 10. R212: that is kept against the one removal that uncovered it, so a
-//!    later move of the card that left — exiled out of its graveyard — does not make the card that
-//!    resumed long before miss what its batch did first.
-//!
-//! Port of `packages/cards/test/stacks-and-reborn.test.ts` (SURFACE §4.1, §8).
+//!  - R212, R119: a card that resumes as its pile's top did not see what happened while it lay dormant
+//!    (§3.2, R153), so it answers neither the death that uncovered it nor the play that was resolving
+//!    when it resumed. That is kept against the one removal that uncovered it, so a later move of the
+//!    card that left does not make a card that resumed long before miss what its batch did first.
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::*;
 
 const VANILLA: &str = "core-008";
 const HIT_JOB: &str = "core-016";
-/// Felinor Fiender (2) and Hit Job, (3) since patch v0.2.0 (issue #40), in one turn.
+/// Felinor Fiender (2) and Hit Job (3), in one turn.
 const MANA_FOR_FIENDER_AND_HIT_JOB: i32 = 5;
 const BIG_FELINOR: &str = "core-043";
 const RUSH_TOKEN_FARM: &str = "core-058";
@@ -72,7 +67,6 @@ fn events_json(events: &[GameEvent]) -> String {
     serde_json::to_string(events).expect("events serialise")
 }
 
-/// `registerScripts({ ...registeredScripts(), [id]: { base: script, radiant: script } })`.
 fn register_fixture_script(id: &str, script: Script) {
     let mut scripts = registered_scripts().clone();
     scripts.insert(
@@ -102,8 +96,7 @@ fn fixture_def(id: &str, type_: CardType, face: Value) -> CardDef {
     }))
 }
 
-/// A fixture unit placed on p1's side in `lane`, not summoning sick (TS sets `summonedTurn = 0` on the
-/// live object, which this writes into the state).
+/// A fixture unit placed on p1's side in `lane`, not summoning sick.
 fn place_on_p1_side(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
     let mut card = new_instance(
         g.state_mut(),
@@ -240,7 +233,7 @@ mod r175_a_token_summoned_x_x_comes_back_through_reborn_as_that_x_x {
             "p2": { "hand": [VANILLA], "library": LIBRARY },
         }));
         let bread = unit_at(&g, PlayerId::P1, 1);
-        // TS `g.card(bread).grantedKeywords.push(…)`: the card as it stands, written in the state.
+        // The card as it stands, written in the state.
         let live = g.card(&bread.id).id.clone();
         find_instance_mut(g.state_mut(), &live)
             .expect("the Bread Token")
@@ -292,10 +285,9 @@ fn place_watcher(g: &mut Scenario, id: &str, lane: i32, on: GameEventType) -> Ca
 mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_it_3_2_r153 {
     use super::*;
 
-    // Found while teaching the probe's stay shadow §3.2's resume: when the top of a Stack pile leaves,
-    // the card beneath starts acting in that same step with no event of its own, and the resolution
-    // loop then offered it the very event that uncovered it — R212 read the moves the events after it
-    // recorded, and a resume records none (`stays.noteUncovered` keeps it now).
+    // When the top of a Stack pile leaves, the card beneath starts acting in that same step with no
+    // event of its own (§3.2), so the resolution loop must not offer it the very event that uncovered
+    // it: a resume records no move for R212 to read, and `stays.noteUncovered` keeps one.
     #[test]
     fn r212_r153_a_card_dormant_under_a_stack_does_not_answer_the_death_that_uncovers_it_3_2() {
         let mut g = scenario(json!({
@@ -315,12 +307,10 @@ mod r212_r119_a_card_that_resumes_on_top_of_its_pile_did_not_see_what_uncovered_
             Some(vec![fiender.id.clone(), watcher.id.clone()])
         );
 
-        // #16 Hit Job destroys the Fiender, and the watcher resumes as its pile's top (§3.2). When the
-        // Fiender died the watcher was dormant — "not on the field for effects" (§3.2), registering
-        // nothing (R153) — and R212 answers an event "as the board stood when it happened": it comes
-        // back into play because of that death, as a Reborn body does, and R212 has a Reborn body not
-        // answer the hit that killed its unit. Hearthstone agrees: a minion that enters play because a
-        // minion died does not see that death.
+        // #16 Hit Job destroys the Fiender, and the watcher resumes as its pile's top (§3.2). It was
+        // dormant when the Fiender died, registering nothing (R153), and R212 answers an event "as the
+        // board stood when it happened": like a Reborn body, it comes back into play because of that
+        // death and does not see it.
         g.play(HIT_JOB, json!({ "targets": at(&fiender) }));
         assert_eq!(unit_id(&g, PlayerId::P1, 1), Some(watcher.id.clone()));
         let hits = hits_from(g.last_events(), &watcher.id);
@@ -366,7 +356,7 @@ fn place_hit_watcher(g: &mut Scenario, id: &str, lane: i32) -> CardInstance {
             &[GameEventType::Damage],
             |ctx, event| {
                 let self_id = ctx.self_.as_ref().map(|card| card.id.clone());
-                // TS `ctx.event.sourceId !== ctx.self?.id`: only a source that is this card is its own.
+                // Only a source that is this card is its own.
                 let another = match event {
                     GameEvent::Damage { source_id, .. } => match (source_id, &self_id) {
                         (Some(source), Some(own)) => source != own,
@@ -423,10 +413,9 @@ fn spell_in_hand(g: &mut Scenario, id: &str, cry: Option<Hook>) -> CardInstance 
 mod r212_a_resume_is_kept_against_the_removal_that_caused_it_and_no_later_move_3_2_r153 {
     use super::*;
 
-    // Review of round 10: the note a pile top's removal leaves (`stays.noteUncovered`) was kept until
-    // that card next left the field, so every later move of the card that left — exiled out of its
-    // graveyard, discarded, shuffled back — read as the removal again, and the card that had resumed
-    // long before was taken for one that resumed after whatever the same batch did first.
+    // The note a pile top's removal leaves (`stays.noteUncovered`) is kept against that removal only,
+    // not until the card next leaves the field, or a later move of the card that left (exiled out of
+    // its graveyard, discarded, shuffled back) would read as the removal again.
     #[test]
     fn r212_a_card_that_resumed_under_a_stack_answers_a_later_hit_even_when_the_same_list_then_exiles_the_card_that_uncovered_it_from_the_graveyard()
      {

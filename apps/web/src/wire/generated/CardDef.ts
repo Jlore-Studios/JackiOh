@@ -2,6 +2,7 @@
 import type { CardCost } from "./CardCost";
 import type { CardFace } from "./CardFace";
 import type { CardType } from "./CardType";
+import type { CraftRecipe } from "./CraftRecipe";
 import type { FusedIngredient } from "./FusedIngredient";
 import type { Param } from "./Param";
 import type { PrintedRarity } from "./PrintedRarity";
@@ -55,4 +56,11 @@ radiantFallback?: true,
  * Radiant card"). Only a Fuse writes it. While the list is short the id spells it out too; past
  * `FUSED_ID_CAP` the id is a digest of it, and this list is what rebuilds the scripts.
  */
-ingredients?: Array<FusedIngredient>, base: CardFace, radiant: CardFace, };
+ingredients?: Array<FusedIngredient>, 
+/**
+ * R882: a crafted definition's recipe (Meditative #17 True Craft a Card) — what its scripts
+ * rebuild from, as `ingredients` is for a fused one. Only the crafter writes it. Optional and
+ * skipped when absent, so a game that never crafts one serialises, hashes and replays as
+ * before (D14: no golden trace moves).
+ */
+craft?: CraftRecipe, base: CardFace, radiant: CardFace, };

@@ -8,89 +8,30 @@
 //!   Engine:  "Three chained pending choices; Field Trap counts as Trap; brackets read costs per R65
 //!            (X cards as 0, embiggen cards at their base price)".
 //!
-//! A FOUR-STEP MACHINE, THREE OF THEM PROMPTS. §9.3 forbids callbacks in state, so a chain is a
-//! named step plus captured data (§10.6): `prompts.rs`'s `resume_self(ctx, step, data)` records
-//! `{ defId, hook: "resume", step, radiant, instanceId, data }` on the `PendingChoice`, and
-//! `answer_prompt` re-enters `script.resume[step]` with the answer in `ctx.targets`. So the steps are
-//! entries of the `resume` table below and nothing else:
-//!
-//!   cry            → "start"   read the library, offer the types that have a match       (prompt 1)
-//!   resume.bracket → the type  offer the cost brackets that have a match for that type   (prompt 2)
-//!   resume.reveal  → +bracket  reveal 3 random matching library cards                    (prompt 3)
-//!   resume.take    → the card  move that library card to hand
-//!
-//! Each step carries forward what the earlier ones learned in `data` (the chosen type), because
-//! §10.6's continuation is data, not a closure, and because a step may resume with `ctx.self_`
-//! `None` — this is a Spell, and by resolution time the card is in `resolving` on its way to the
-//! graveyard. `ctx.data` is `IndexMap<String, Value>`, so it is narrowed with `as_str`, never cast.
-//!
-//! "OFFERING ONLY OPTIONS WITH A MATCH IN YOUR LIBRARY" is why the two mode prompts are computed
-//! from the library rather than fixed: a type with no match is never offered, and neither is a
-//! bracket with no match for the type already chosen. Reading the library is reading state, which a
-//! hook may do (CLAUDE.md rule 5 bans mutation, not reads); the cards are not revealed by it —
-//! §10.8 rules that "a card revealed out of a library … is revealed only as an option of the prompt
-//! that reveals it", so only prompt 3 ever exposes a card, only to the chooser, and the rest of the
-//! library stays hidden from both players. The type and bracket prompts leak nothing but the
-//! existence of a match, which is what the §8 row asks them to say.
-//!
-//! "FIELD TRAP COUNTS AS TRAP" (Engine cell) is the same reading as `query.rs`'s `TRAP_TYPES`, R61
-//! (#85) and R35 (#83): a `type` filter matches the field exactly, so "Trap" has to name both
-//! "Trap" and "Field Trap" or #18 Bread and Butter and #71 Intern Stimmy would silently vanish.
-//!
-//! BRACKETS READ COSTS PER R65 (Engine cell): `effective_cost(state, card)` is R65's one calculation
-//! for an instance, the same one #30 Archivist and #94 Genn's Greed read their library cards with
-//! (R24, R66). A library card was never played, so an X-cost card has no X and reads 0 (#74 Adaptive
-//! UI and #96 My Pawn sit in the "0-1" bracket) and an embiggen card its base price (#59 Unbiased
-//! Immigration, "2 embiggen 4", reads 2); and R65 names library filters as its own ground, so the
-//! card's `cost_mod` (kept in every zone, R78 — #95's "costs 2 less"), its `cost_override`, Ceaseless
-//! Void's computed cost and a rolled Heroic Power's X all count, as do the player's live discounts.
-//! The definition's printed cost (`query_cost`) would see none of them.
-//!
-//! "NO MATCH AT ALL → ADD A KY'S EMPTY NOTEBOOK": no type has a match exactly when the library is
-//! empty, since every card in it has one of the five types and all five map onto the four options.
-//! The token is created fresh in hand by `add_to_hand` (R4's cap applies; a spell token is an ordinary
-//! hand card, R11) and it is never reachable from a random pool (§5.1), only from here.
-//!
-//! TWO MISSING VERBS (reported, not worked around, and not faked with a different verb):
-//!
+//! Four steps, three of them prompts. §9.3 forbids callbacks in state, so each step is a named
+//! `resume` entry plus captured data (§10.6: the chosen type rides in `data`), and a step may resume
+//! with `ctx.self_` `None`, since a Spell is already in `resolving`.
+//! Options are computed from the library, so a type or bracket with no match is never offered. A hook
+//! may read state (CLAUDE.md rule 5 bans mutation); §10.8 shows a library card only as an option of
+//! the prompt that reveals it, so only prompt 3 exposes cards, and only to the chooser.
+//! "Field Trap counts as Trap": a `type` filter matches exactly, so Trap names both (R61, R35).
+//! Brackets read `effective_cost`, R65's one calculation, as #30 and #94 read library cards (R24, R66):
+//! X reads 0, embiggen its base, and `cost_mod` (kept in every zone, R78) and live discounts count.
+//! No match at all means an empty library: `add_to_hand` creates the Notebook fresh (R4's cap, R11;
+//! §5.1: never in a random pool).
+//! The reveal is `discover_from_library`, §6.3's Discover with the library as the pool:
 //!   1. ```text
 //!      discoverFromLibrary({ step: string, count?: number, player?: "self" | "enemy",
 //!                            filter?: { type?: CardType | CardType[];
 //!                                       costRange?: { min?: number; max?: number } },
 //!                            prompt?: string, data?: Record<string, unknown> }): Effect
 //!      ```
-//!      §6.3's Discover row already describes this card as the primitive: "'Reveal N matching cards,
-//!      then choose one' (KY's Private Tutor) is this same primitive with the library as the pool:
-//!      the revealed cards are that prompt's options, so only the chooser ever sees them (§10.8)".
-//!      `discoverFromCatalog` queries the CATALOG, which would offer cards that are not in the
-//!      library at all, and `discoverFromGraveyard` is the same shape over the wrong pile — so the
-//!      third one is needed: options are the actual library INSTANCES (`{ pick: "instance",
-//!      instanceId }`, as `discoverFromGraveyard` builds them), drawn without replacement from the
-//!      matching subset with `ctx.rng.shuffle` so the three are always different (R60, §6.3), and
-//!      fewer than `count` matches offer what exists (§6.3: no options at all fizzles).
 //!
-//!   2. addToHand({ instance: { of: "chosen", index?: number } }) — an added overload of the
-//!      existing verb, for §6.3's "Add to hand: CREATES OR MOVES the card". Today `addToHand` only
-//!      creates a fresh instance from a `defId`, which would leave the revealed card in the library
-//!      and put a copy in hand. The chosen library instance must MOVE zones (library → hand) with
-//!      its identity, its radiant flag and its `costOverride` intact (R78: those persist in every
-//!      zone), through the same `draw.ts` pipeline, so the hand cap burns it when the hand is full
-//!      (R4). `bounce` is not that verb — it returns a card from the FIELD to its owner's hand and
-//!      resets the instance (§6.3, R78) — so it is deliberately not used here.
-//!
-//! THE RADIANT ECHO. §6.2's "Echo X" is "recast this card X more times … The repeats outstanding
-//! live in `state.echoQueue` and resolve one at a time in the resolution loop, so a prompt inside
-//! one repeat pauses the rest until it is answered (§10.5 step 6)". That is `StaticFlags.echo`
-//! (R30): the count of EXTRA resolutions, 1 here, which `play_steps.rs`'s `echo_step` reads when it
-//! queues an `EchoRepeat`, summed with the `echoNextSpell` player modifier (#79 Twinspell). Each
-//! repeat re-enters `cry` and opens its OWN fresh prompts, which is what makes the radiant face run
-//! the whole four-step sequence twice.
-//!
-//! Why not grant this card the existing `echoNextSpell` modifier instead: that modifier has expiry
-//! `{ until: "used" }` and applies to the NEXT spell played, so it would have to be granted
-//! mid-resolution of this one (§10.5 step 5, after step 2 already consumed it); no effect verb
-//! grants a `PlayerModifier` at all; and a card that re-entered its own chain by hand would double
-//! up with Twinspell — 2 engine repeats × 2 card repeats = 4 resolutions where §6.2 wants 3.
+//! Its options are library INSTANCES drawn without replacement with `ctx.rng.shuffle` (R60, §6.3);
+//! `add_to_hand`'s `{ instance: { of: "chosen" } }` MOVES the card library → hand, keeping its
+//! identity, radiant flag and `costOverride` (R78), and the hand cap burns it when full (R4).
+//! The radiant Echo is `StaticFlags.echo` (R30), the count of EXTRA resolutions, 1 here: `echo_step`
+//! queues an `EchoRepeat` (§6.2, §10.5 step 6) that re-enters `cry`, opening its own fresh prompts.
 
 use jackioh_engine::prelude::*;
 
@@ -102,7 +43,7 @@ const NOTEBOOK: &str = "core-051-1";
 /// §6.3 Discover: 1 of 3, so three library cards are revealed.
 const REVEAL_COUNT: i32 = 3;
 
-/// One of the four type options (TS `TypeOption`, the literal union of `TYPE_OPTIONS`).
+/// One of the four type options.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TypeOption {
     Spell,
@@ -131,7 +72,7 @@ const TYPE_OPTIONS: [TypeOption; 4] = [
     TypeOption::Trap,
 ];
 
-/// One of the four cost brackets (TS `BracketOption`, the literal union of `BRACKET_OPTIONS`).
+/// One of the four cost brackets.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum BracketOption {
     ZeroToOne,
@@ -163,7 +104,7 @@ const BRACKET_OPTIONS: [BracketOption; 4] = [
 /// The key the chosen type travels under, from the bracket step to the reveal step (§10.6).
 const TYPE_KEY: &str = "type";
 
-/// R65's out-of-play cost range a bracket means (TS `{ min?: number; max?: number }`).
+/// R65's out-of-play cost range a bracket means.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct BracketRange {
     min: Option<i32>,
@@ -234,10 +175,7 @@ fn matches_bracket(ctx: &EffectContext<'_>, card: &CardInstance, bracket: Bracke
     range.max.is_none_or(|max| cost <= max)
 }
 
-/// "Your library" (§8 Conventions: "your" means the controller), top card first. Reading state,
-/// never touching it: `zone_cards` is the engine's read-only pile reader (engine/src/query.rs) and
-/// hands back a copy (BUILD M3-T1).
-///
+/// "Your library" (§8 Conventions: "your" means the controller), top card first, as a read-only copy.
 /// R218: a unit-token card in the library (#33's copy of a played Rush Token card, R34) leaves it only
 /// by being drawn or played (R11), and "choose one to hand" is neither, so the Tutor passes over it —
 /// as the reveal does (`discover_from_library`) — and never offers a type or a bracket only it matches.
@@ -378,20 +316,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// #51 KY's Private Tutor — SPEC §8.3 row 51, §6.3 (Discover), §10.5 steps 5-6, §10.6, §10.8,
-// §5.1; R4, R60, R65, R113.
-//
-// BUILD M4-T4 row 51: "Only types and brackets with a match offered; 3 random matches revealed; no
-// match → Notebook; Field Trap counts as Trap; radiant runs twice".
-//
-// The card is a four-step machine whose middle three steps are prompts (§10.6), so almost every
-// case below is a chain: play, then `answer` once per prompt. R113 is the rule that makes the chain
-// a test subject in its own right — "a work item that cannot be resumed is a lost sequence … and
-// must never be dropped in silence" — so the cases assert both halves of it: answering one prompt
-// opens the next, and the card really finishes (no prompt left open, no work owed, the Spell in the
-// graveyard). One case takes the paused game through a JSON round trip and resumes the revived
-// state through `reduce`, because §9.3's "mid-action choices are state, not callbacks" is only true
-// if the pause survives serialization.
+// #51 KY's Private Tutor — SPEC §8.3 row 51, §6.3 (Discover), §10.5 steps 5-6, §10.6, §10.8, §5.1;
+// R4, R60, R65, R113. BUILD M4-T4 row 51: "Only types and brackets with a match offered; 3 random
+// matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice".
+// Cases are chains (play, then `answer` per prompt): R113's rule that a paused sequence is never
+// dropped, and §9.3's pause that survives a JSON round trip.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -402,11 +331,9 @@ mod tests {
     const TUTOR: &str = "core-051";
     const NOTEBOOK: &str = "core-051-1";
 
-    /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell and therefore always an affordable
-    /// play, so one in hand keeps p1's turn from auto-ending once the Tutor has left the hand — which
-    /// would clear `turn_log` and deal fatigue under the assertions. It is deliberately NOT one of the
-    /// library fixtures below, so no assertion about a library card is ambiguous about which copy it
-    /// means.
+    /// §2.5/R82 TURN ANCHOR. #10 Rapid Replenish is a 0-cost Spell, always affordable, so one in hand
+    /// keeps p1's turn from auto-ending once the Tutor leaves (which would clear `turn_log` and deal
+    /// fatigue). It is not one of the library fixtures below, so no assertion is ambiguous about a copy.
     const ANCHOR: &str = "core-010";
 
     // The library fixture, chosen so each of the four type options has a match and each type offers a
@@ -488,7 +415,6 @@ mod tests {
         s.hand(P1).iter().map(|card| card.id.clone()).collect()
     }
 
-    /// TS `tutor(opts)`'s options: `{ radiant?: boolean; library?: readonly string[] }`.
     #[derive(Default)]
     struct TutorOpts {
         radiant: bool,
@@ -509,7 +435,6 @@ mod tests {
         }))
     }
 
-    /// `tutor({ library })`.
     fn tutor_with(library: &[&'static str]) -> Scenario {
         tutor(TutorOpts {
             library: Some(library.to_vec()),
@@ -517,7 +442,6 @@ mod tests {
         })
     }
 
-    /// `tutor({ radiant: true, library })`.
     fn radiant_tutor_with(library: Option<&[&'static str]>) -> Scenario {
         tutor(TutorOpts {
             radiant: true,
@@ -532,7 +456,7 @@ mod tests {
         s.expect_in_zone(TUTOR, "graveyard");
     }
 
-    /// TS `Object.keys(script).sort()`: the fields a face declares, by their TS names.
+    /// The fields a face declares, by their camelCase names, sorted.
     fn keys_of(script: &Script) -> Vec<&'static str> {
         let present: [(&'static str, bool); 36] = [
             ("cost", script.cost.is_some()),
@@ -577,7 +501,6 @@ mod tests {
         keys
     }
 
-    /// TS `Object.keys(script.resume ?? {}).sort()`.
     fn step_names(script: &Script) -> Vec<&'static str> {
         let mut names: Vec<&'static str> = script.resume.keys().copied().collect();
         names.sort();
@@ -589,9 +512,7 @@ mod tests {
         ids
     }
 
-    // ---------------------------------------------------------------------------
     // The card's shape (§8.3, §10.9)
-    // ---------------------------------------------------------------------------
 
     mod n51_ky_s_private_tutor_the_card {
         use super::*;
@@ -631,9 +552,7 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
     // The chain (§10.6, R113)
-    // ---------------------------------------------------------------------------
 
     mod n51_ky_s_private_tutor_base {
         use super::*;
@@ -900,9 +819,7 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
     // The radiant face: Echo (§6.2, §10.5 step 6)
-    // ---------------------------------------------------------------------------
 
     mod n51_ky_s_private_tutor_radiant {
         use super::*;
@@ -992,10 +909,9 @@ mod tests {
         fn r218_a_unit_token_card_in_the_library_never_reaches_a_hand_through_the_tutor_s3_2_r11() {
             crate::register_all();
             // #33 copies of a played Rush Token card (R34) are how one gets into a library. R11: it
-            // "ceases to exist if it leaves that zone other than by being drawn or played", and the Tutor's
-            // "choose one to hand" is neither, so R218's reasoning for Recruit holds here too. Either the
-            // Tutor passes over it (so "Unit" is not offered at all) or the card ceases to exist on the
-            // way; it never lands in the hand.
+            // "ceases to exist if it leaves that zone other than by being drawn or played", and "choose one
+            // to hand" is neither (R218's reasoning for Recruit). Either the Tutor passes over it or it
+            // ceases to exist on the way; it never lands in the hand.
             let mut g = scenario(json!({
                 "p1": { "hand": ["core-051", "core-010"], "library": ["core-t-rush", "core-005"] },
                 "p2": { "hand": ["core-008"], "library": LIBRARY },

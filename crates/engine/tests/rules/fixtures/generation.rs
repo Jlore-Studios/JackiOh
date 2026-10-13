@@ -1,17 +1,9 @@
-//! Fixture cards for patch v0.2.0's generation systems (docs/classic-sets.md B5 E19, E23, E24, E25):
-//! Plague placements, the Fuse variants, the Transform variants and the Recruit extensions. The engine
-//! never imports `packages/cards` (CLAUDE.md), so each shape a Classic or Classic+ card will take is
-//! written here once, in the smallest script that has it, and the tests drive them through `reduce`.
+//! Fixture cards for the generation systems (docs/classic-sets.md B5 E19, E23, E24, E25): Plague
+//! placements, the Fuse variants, the Transform variants and the Recruit extensions. The engine never
+//! imports `crates/cards` (CLAUDE.md), so each shape a Classic or Classic+ card will take is written
+//! here once, in the smallest script that has it, and the tests drive them through `reduce`.
 //!
 //! Ids are `gen-*` and indexes 4601 upward, so nothing collides with another fixture file's.
-//!
-//! Port of `packages/engine/test/fixtures/generation.ts`. Each exported def is a `pub static` under TS's
-//! name snake_cased; TS's module counter (`nextIndex`, from 4600, one per `def` call in file order,
-//! `unit`'s included) is each def's stated index. TS's module state is per-thread here (each Rust test
-//! runs on its own thread, as each TS test file ran in its own module): `let nonce` is a counter, and
-//! the `askerAnswers` array is read with `asker_answers()` and emptied with `clear_asker_answers()`
-//! (TS `askerAnswers.length = 0`). TS's local `ActionInput` alias is the wire's `ActionInput`; an
-//! action body is that or its JSON (`act(&run, json!({ "type": "endTurn", "playerId": "p1" }))`).
 
 #![allow(non_upper_case_globals)]
 
@@ -27,7 +19,7 @@ use jackioh_engine::testkit::*;
 
 use super::harness::new_game;
 
-/// TS `face(text, extra = {})`, as the JSON a def literal takes.
+/// A face as the JSON a def literal takes.
 fn face(text: &str, extra: Value) -> Value {
     let mut printed = json!({ "keywords": [], "text": text });
     if let (Some(target), Value::Object(extra)) = (printed.as_object_mut(), extra) {
@@ -38,7 +30,7 @@ fn face(text: &str, extra: Value) -> Value {
     printed
 }
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 1 named `Gen <name>`, `extra` over it.
+/// A Core Common at cost 1 named `Gen <name>`, `extra` over it.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut card = json!({
         "id": format!("gen-{name}"),
@@ -61,7 +53,7 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-/// TS `unit(name, attack, health, extra = {})`: a Unit whose Radiant face doubles its stats.
+/// A Unit whose Radiant face doubles its stats.
 fn unit(name: &str, index: i32, attack: i32, health: i32, extra: Value) -> CardDef {
     let mut faces = json!({
         "base": face(&format!("{name} {attack}/{health}"), json!({ "attack": attack, "health": health })),
@@ -85,9 +77,7 @@ fn both(script: Script) -> CardScripts {
     }
 }
 
-// ---------------------------------------------------------------------------
 // E19 Plague Counters.
-// ---------------------------------------------------------------------------
 
 /// Classic #70's shape: "Place 2 Plague Counters" (Radiant 3), then 1 damage to the enemy hero.
 pub static plague_book: LazyLock<CardDef> = LazyLock::new(|| def("plague-book", 4601, "Spell", json!({})));
@@ -107,13 +97,10 @@ pub static scatter: LazyLock<CardDef> = LazyLock::new(|| def("scatter", 4607, "S
 pub static charger: LazyLock<CardDef> = LazyLock::new(|| unit("charger", 4608, 4, 2, json!({})));
 /// A face-down trap with no text, to carry tokens in the backrow.
 pub static quiet_trap: LazyLock<CardDef> = LazyLock::new(|| def("quiet-trap", 4609, "Trap", json!({})));
-/// A plain body.
 pub static body: LazyLock<CardDef> = LazyLock::new(|| unit("body", 4610, 1, 1, json!({})));
 pub static big_body: LazyLock<CardDef> = LazyLock::new(|| unit("big-body", 4611, 3, 5, json!({})));
 
-// ---------------------------------------------------------------------------
 // E23 Fuse.
-// ---------------------------------------------------------------------------
 
 /// An ingredient with its own lines of code and a Radiant face that is not a doubling.
 pub static fuse_a: LazyLock<CardDef> = LazyLock::new(|| {
@@ -204,9 +191,7 @@ pub static felinor_b: LazyLock<CardDef> =
 pub static felinor_c: LazyLock<CardDef> =
     LazyLock::new(|| unit("felinor-c", 4628, 3, 3, json!({ "tags": ["Felinor"] })));
 
-// ---------------------------------------------------------------------------
 // E24 Transform.
-// ---------------------------------------------------------------------------
 
 /// Classic+ #4 Juhan: Stack; its Cry makes the cards beneath it copies of it.
 pub static juhan: LazyLock<CardDef> = LazyLock::new(|| {
@@ -233,9 +218,7 @@ pub static classic_plus_unit: LazyLock<CardDef> =
 pub static classic_spell: LazyLock<CardDef> =
     LazyLock::new(|| def("classic-spell", 4632, "Spell", json!({ "set": "Classic" })));
 
-// ---------------------------------------------------------------------------
 // E25 Recruit.
-// ---------------------------------------------------------------------------
 
 /// Classic #60 Pile On's shape: Recruit every permanent in your deck.
 pub static pile_on: LazyLock<CardDef> = LazyLock::new(|| def("pile-on", 4633, "Spell", json!({ "cost": 5 })));
@@ -248,13 +231,11 @@ pub static pricy_unit: LazyLock<CardDef> =
     LazyLock::new(|| unit("pricy-unit", 4637, 4, 4, json!({ "cost": 4 })));
 
 thread_local! {
-    /// TS's module `askerAnswers: string[]`.
     static ASKER_ANSWERS: Cell<Vec<String>> = const { Cell::new(Vec::new()) };
-    /// TS's module `let nonce = 0`.
     static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
-/// How many times `asker`'s question was answered, by option (TS `askerAnswers`, as it stands now).
+/// How many times `asker`'s question was answered, by option.
 pub fn asker_answers() -> Vec<String> {
     ASKER_ANSWERS.with(|answers| {
         let now = answers.take();
@@ -263,7 +244,7 @@ pub fn asker_answers() -> Vec<String> {
     })
 }
 
-/// TS `askerAnswers.length = 0`.
+/// Forget the answers `asker_answers` reads.
 pub fn clear_asker_answers() {
     ASKER_ANSWERS.with(|answers| answers.set(Vec::new()));
 }
@@ -655,7 +636,6 @@ pub static GEN_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
 
 pub static GEN_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| SCRIPTS.clone());
 
-/// Register this file's fixtures on top of whatever is registered.
 pub fn register_generation() {
     let mut defs: CardDefs = registered_catalog().clone();
     for entry in GEN_DEFS.iter() {
@@ -667,11 +647,8 @@ pub fn register_generation() {
     register_scripts(merged);
 }
 
-// ---------------------------------------------------------------------------
 // Driving a game.
-// ---------------------------------------------------------------------------
 
-/// A replayable run: the state it started from (as JSON) and every action applied since.
 #[derive(Clone, Debug)]
 pub struct Run {
     pub start: String,
@@ -735,7 +712,6 @@ pub fn frozen(run: &Run) -> Run {
     }
 }
 
-/// Apply one action and record it; panics on a refusal.
 pub fn act(run: &Run, input: impl serde::Serialize) -> Run {
     let n = next_nonce();
     let action = action_of(input, format!("gen{n}"));
@@ -771,7 +747,7 @@ pub fn replayed(run: &Run) -> GameState {
     state
 }
 
-/// A card put straight into a player's hand. TS `handCard(state, defId, player = "p1")`.
+/// A card put straight into a player's hand.
 pub fn hand_card(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
     let card = new_instance(state, def_id, player, Zone::Hand { player });
     state.players[player].hand.push(card.clone());
@@ -793,7 +769,7 @@ pub fn answer(run: &Run, selection: Selection, player: Option<PlayerId>) -> Run 
     act(run, input)
 }
 
-/// What `pick` takes: a card or its instance id (TS `CardInstance | string`).
+/// What `pick` takes: a card or its instance id.
 pub trait CardOrId {
     fn instance_id(&self) -> String;
 }
@@ -828,7 +804,6 @@ impl CardOrId for &String {
     }
 }
 
-/// The instance selection for a card.
 pub fn pick(card: impl CardOrId) -> Selection {
     Selection::Instance {
         instance_id: card.instance_id(),

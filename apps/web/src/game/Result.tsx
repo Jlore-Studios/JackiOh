@@ -31,6 +31,7 @@ import { TheirHand, TheirHandButton, type TheirHandProps } from "./TheirHand.tsx
 import { FX_LETHAL_LEAD_MAX_MS, FX_RESULT_MS } from "../fx/constants.ts";
 import { getFxSettings } from "../fx/settings.ts";
 import { readSettings } from "../settings/index.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 
 type Result = NonNullable<PlayerView["result"]>;
 
@@ -65,6 +66,15 @@ export function resultReason(outcome: ResultOutcome, reason: GameOverReason): st
     case "voided":
       // R679: a Glitch voided the match; it counts for nobody.
       return "This match never happened.";
+    case "alt-win":
+      // R850: a held alternative win won.
+      if (outcome === "draw") return "Both players met a winning condition.";
+      return outcome === "win"
+        ? "You met your winning condition."
+        : "Your opponent met their winning condition.";
+    case "won-by-effect":
+      // R850: an effect won the game outright.
+      return outcome === "win" ? "Your card won the game." : "Your opponent's card won the game.";
   }
 }
 
@@ -103,6 +113,7 @@ type GameResultProps = {
 };
 
 export function GameResult({ result, viewer, form, actions, animating, theirHand = null }: GameResultProps): ReactElement {
+  useLocale();
   const outcome = outcomeFor(result, viewer);
   // The panel folds to the chip ("View the board") and opens again ("Result"). Only the first
   // appearance waits for the effects layer; a fold or an unfold is immediate.
@@ -149,8 +160,8 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
         role="status"
         style={delay}
       >
-        <strong className="result-overlay__word">{RESULT_WORD[outcome]}</strong>
-        <span className="result-overlay__reason">{resultReason(outcome, result.reason)}</span>
+        <strong className="result-overlay__word">{t(RESULT_WORD[outcome])}</strong>
+        <span className="result-overlay__reason">{t(resultReason(outcome, result.reason))}</span>
         {shownForm === "panel" && theirHand !== null ? <TheirHand view={theirHand.view} cards={theirHand.cards} /> : null}
         {shownForm === "panel" ? (
           <div className="result-overlay__actions" ref={firstAction}>
@@ -164,7 +175,7 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
                 setOpen(false);
               }}
             >
-              View the board
+              {t("View the board")}
             </button>
           </div>
         ) : form === "panel" ? (
@@ -177,7 +188,7 @@ export function GameResult({ result, viewer, form, actions, animating, theirHand
               setOpen(true);
             }}
           >
-            Result
+            {t("Result")}
           </button>
         ) : null}
         {shownForm === "chip" && theirHand !== null ? <TheirHandButton view={theirHand.view} cards={theirHand.cards} /> : null}

@@ -1,21 +1,13 @@
-// R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units (#258).
+// R670: the bespoke entrances of a handful of marquee Legendary and Mythic Units.
 //
-// Every Legendary or Mythic Unit gets its rarity's entrance (cues.ts `summon`: rays, a gold or
-// prismatic burst and extra trauma). A card listed in `CARD_FX` (cardFx.ts) under one of the keys
-// here gets its own instead: its recipe claims the `summoned` that puts it into a unit zone and
-// replaces the row's summon recipe. It keys off that event's own `defId`, which a unit zone's summon
-// always shows both seats and a hidden summon never has, so nothing the viewer may not read keys one
-// (R202), and it decorates the entry the runner already timed, so it paces nothing (R200, R201): a
-// delay lands inside the entry, and whatever trails after it is gone within FX_MAX_TAIL_MS.
+// A card listed in `CARD_FX` (cardFx.ts) under one of these keys gets its own entrance instead of its
+// rarity's (cues.ts `summon`): its recipe claims the `summoned` into a unit zone. It keys off that
+// event's own `defId`, which a hidden summon never has (R202), and decorates the entry the runner
+// already timed, so it paces nothing (R200, R201): a delay lands inside the entry, and a tail is gone
+// within FX_MAX_TAIL_MS.
 //
-//   #100 Ceaseless Void, "voidCollapse": the board darkens into it, a void ring pulls in from the
-//     first frame, the void bursts out at the slam with a crack under it and the heaviest shake.
-//   #80 BOOM! Big Max, "bigBoom": a fuse of sparks, then the slam goes off: fire, embers, smoke, a
-//     crack and a big shake.
-//   #45 Nature Titan, "titanBloom": holy rays, a ring of dust, and leaves of sparkle and gold that
-//     bloom out of the slam.
-//   #56 Spell Tyrant, "tyrantSigil": an arcane ring from the first frame, sparkles round it, and an
-//     arcane burst with mythic rays at the slam.
+//   #100 Ceaseless Void "voidCollapse", #80 BOOM! Big Max "bigBoom", #45 Nature Titan "titanBloom",
+//   #56 Spell Tyrant "tyrantSigil".
 
 import type { GameEvent } from "@jackioh/shared";
 

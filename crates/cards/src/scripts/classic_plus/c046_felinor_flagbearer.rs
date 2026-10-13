@@ -28,7 +28,8 @@ fn felinor_aura(include_self: bool) -> AuraHook {
                 unit.controller == ctx.self_.controller
                     && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
                     && (include_self || unit.id != ctx.self_.id)
-                    && def_of(Some(ctx.state), &unit.def_id).tags.contains(&Tag::Felinor)
+                    // MD-B15, R923: a granted Felinor tag counts.
+                    && tags_of(ctx.state, unit).contains(&Tag::Felinor)
             }),
             mod_: StatMod {
                 attack: Some(amount),
@@ -182,6 +183,19 @@ mod tests {
         }
 
         #[test]
+        fn r923_a_granted_felinor_gets_the_aura() {
+            crate::register_all();
+            let mut s = rally(Rally::default());
+            s.play(FLAG, json!({}));
+            let vanilla = s.unit(P1, 2).expect("p1's lane 2");
+            s.expect_stats(&vanilla, json!({ "attack": 4, "health": 4 }));
+            // Grant the Vanilla Felinor: the aura's +1/+1 reaches it (MD-B15).
+            find_instance_mut(s.state_mut(), &vanilla.id).expect("the unit").granted_tags =
+                Some(vec![Tag::Felinor]);
+            s.expect_stats(&vanilla, json!({ "attack": 5, "health": 5 }));
+        }
+
+        #[test]
         fn s10_4_its_aura_gives_your_other_felinors_1_1_not_itself_not_a_non_felinor_not_the_opponent_s() {
             crate::register_all();
             let mut s = rally(Rally::default());
@@ -247,10 +261,13 @@ mod tests {
             assert_eq!(prime.len(), 1);
             assert!(!prime[0].radiant);
             let listed = s.view(P1).you.own_library.map(|library| library.cards).unwrap_or_default();
+            // The Prime is effect-made, so R943 marks it Created. Re-pinned for v0.3.5: the Meditative
+            // set ships, so R943's Created mark is live.
             assert!(listed.contains(&LibraryEntryView {
                 def_id: PRIME.to_string(),
                 radiant: false,
                 count: 1,
+                created: Some(true),
             }));
             let id = prime.first().map(|card| card.id.clone()).unwrap_or_else(|| "?".to_string());
             assert!(!serde_json::to_string(&s.view(P2)).expect("serialises").contains(&id));

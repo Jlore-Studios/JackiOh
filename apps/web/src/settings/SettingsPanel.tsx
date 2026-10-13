@@ -1,15 +1,5 @@
-// The settings dialog (docs/polish/7-mobile-ux.md S8, B23–B24): a centred modal on desktop and a
-// bottom sheet on phones (settings.css). `SettingsButton` renders it through a portal while open;
-// tests and integration can also render it directly.
-//
-// Its sections are tabs (issue #128): Gameplay, Visuals and Audio, each a `tabpanel` under one
-// `tablist`. Every panel stays in the document and only the chosen one is shown, so a control keeps
-// its state and a test can reach any of them by test id. A section with no switch and no slot has no
-// tab. The dialog opens on the tab the player used last on this device (`tabs.ts`), or the one a
-// caller names.
-//
-// Every switch reads the store and writes straight back to it, so there is no local draft and no
-// "save": a change applies at once, including to a board rendered behind the scrim.
+// Settings dialog: desktop modal, phone bottom sheet (S8, B23–B24). Hidden tab panels preserve
+// control state and test access; settings write through immediately without a draft.
 
 import {
   useEffect,
@@ -31,20 +21,20 @@ import {
 } from "./store.ts";
 import { readRememberedTab, rememberTab } from "./tabs.ts";
 import { syncPlayerStats } from "../stats/sync.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "./settings.css";
 
 export type SettingsPanelProps = {
   onClose: () => void;
   /** The controls other tasks mount. Defaults to `SETTINGS_SLOTS`. */
   slots?: readonly SettingsSlot[];
-  /** The tab to open on, ahead of the one the player used last. Ignored if the dialog has no such tab. */
+  /** Opens this tab ahead of the remembered one when it exists. */
   initialTab?: SettingsSectionId;
 };
 
 type SectionSpec = {
   id: SettingsSectionId;
   title: string;
-  /** The built-in switches, rendered before the section's slots. */
   controls: readonly SettingKey[];
 };
 
@@ -58,7 +48,6 @@ const SECTIONS: readonly SectionSpec[] = [
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes"] },
 ];
 
-/** The label is the switch's whole accessible name; the hint is its description. */
 const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = {
   dragToPlay: {
     label: "Drag to play",
@@ -72,8 +61,7 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
     label: "End turn automatically",
     hint: "Ends the turn by itself when there is nothing left to play or attack with. Off: press End turn yourself.",
   },
-  // One switch for both hover behaviours: task 7's hand lift and task 6's enlarged preview, which
-  // opens only while this is on (cards/inspect/useInspectTrigger.tsx).
+  // One switch controls both hover behaviours.
   hoverPreviews: {
     label: "Hover previews",
     hint: "Lift a card in your hand, and show any card enlarged, when the mouse rests on it.",
@@ -95,7 +83,6 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
 const FOCUSABLE =
   'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
-/** What "Reset this tab" does: the tab's own switches back to their defaults, and its slots' stores. */
 function resetSection(section: SectionSpec, slots: readonly SettingsSlot[]): void {
   const patch: Partial<Settings> = {};
   for (const setting of section.controls) patch[setting] = DEFAULT_SETTINGS[setting];
@@ -109,7 +96,7 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
   return (
     <div className="settings-row">
       <label className="settings-control">
-        <span className="settings-label">{label}</span>
+        <span className="settings-label">{t(label)}</span>
         <input
           type="checkbox"
           role="switch"
@@ -128,7 +115,7 @@ function SettingSwitch({ setting, checked }: { setting: SettingKey; checked: boo
         />
       </label>
       <p className="settings-hint" id={hintId}>
-        {hint}
+        {t(hint)}
       </p>
     </div>
   );
@@ -139,13 +126,14 @@ export default function SettingsPanel({
   slots = SETTINGS_SLOTS,
   initialTab,
 }: SettingsPanelProps): ReactElement {
+  useLocale();
   const settings = useSettings();
   const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef(new Map<SettingsSectionId, HTMLButtonElement>());
   const base = useId();
 
-  // A section with nothing in it has no tab, so the dialog never shows an empty one.
+  // Omit empty sections.
   const sections = SECTIONS.filter(
     (section) => section.controls.length > 0 || slots.some((slot) => slot.section === section.id),
   );
@@ -153,7 +141,7 @@ export default function SettingsPanel({
   const [chosen, setChosen] = useState<SettingsSectionId | null>(
     () => ids.find((id) => id === initialTab) ?? readRememberedTab(ids),
   );
-  // Slots can change under an open dialog; a tab that has gone falls back to the first one.
+  // A removed active tab falls back to the first.
   const active: SettingsSectionId | undefined = ids.find((id) => id === chosen) ?? ids[0];
   const activeSection = sections.find((section) => section.id === active);
   const canReset =
@@ -166,8 +154,7 @@ export default function SettingsPanel({
     rememberTab(id);
   };
 
-  // Focus the first switch of the open tab on open (or the tab itself when it has none), so a
-  // keyboard or screen-reader user lands inside the dialog.
+  // Start keyboard and screen-reader users inside the dialog.
   useEffect(() => {
     const panel = panelRef.current;
     if (panel === null) return;
@@ -178,7 +165,6 @@ export default function SettingsPanel({
     first.focus({ preventScroll: true });
   }, []);
 
-  // A new tab starts at its top.
   useEffect(() => {
     if (bodyRef.current !== null) bodyRef.current.scrollTop = 0;
   }, [active]);
@@ -200,14 +186,13 @@ export default function SettingsPanel({
 
   const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === "Escape") {
-      // Stopped so the board's own Escape (cancel a selection or a drag) does not also fire.
+      // Keep the board's Escape handler from firing too.
       event.stopPropagation();
       onClose();
       return;
     }
     if (event.key !== "Tab") return;
-    // aria-modal: Tab and Shift+Tab cycle inside the dialog instead of walking off into the board.
-    // A hidden panel's controls are not reachable, so they are not the ends.
+    // Keep Tab inside the dialog; hidden panels are not endpoints.
     const panel = panelRef.current;
     if (panel === null) return;
     const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
@@ -240,17 +225,17 @@ export default function SettingsPanel({
         data-testid="settings-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Settings"
+        aria-label={t("Settings")}
         tabIndex={-1}
         onKeyDown={onKeyDown}
       >
         <header className="settings-head">
-          <h1 className="settings-title">Settings</h1>
+          <h1 className="settings-title">{t("Settings")}</h1>
           <button
             type="button"
             className="settings-close"
             data-testid="settings-close"
-            aria-label="Close settings"
+            aria-label={t("Close settings")}
             onClick={onClose}
           >
             <span aria-hidden="true">✕</span>
@@ -259,7 +244,7 @@ export default function SettingsPanel({
         <div
           className="settings-tabs"
           role="tablist"
-          aria-label="Settings sections"
+          aria-label={t("Settings sections")}
           data-testid="settings-tablist"
           onKeyDown={onTabKeyDown}
         >
@@ -282,7 +267,7 @@ export default function SettingsPanel({
                 choose(section.id);
               }}
             >
-              {section.title}
+              {t(section.title)}
             </button>
           ))}
         </div>
@@ -299,7 +284,7 @@ export default function SettingsPanel({
                 hidden={section.id !== active}
                 data-testid={`settings-section-${section.id}`}
               >
-                <h2 className="settings-section-title">{section.title}</h2>
+                <h2 className="settings-section-title">{t(section.title)}</h2>
                 {section.controls.map((setting) => (
                   <SettingSwitch key={setting} setting={setting} checked={settings[setting]} />
                 ))}
@@ -322,7 +307,7 @@ export default function SettingsPanel({
               if (activeSection !== undefined) resetSection(activeSection, slots);
             }}
           >
-            Reset this tab
+            {t("Reset this tab")}
           </button>
           <button
             type="button"
@@ -330,11 +315,11 @@ export default function SettingsPanel({
             data-testid="settings-reset"
             onClick={() => {
               resetSettings();
-              // Every store the panel shows goes back to its defaults, not only this module's.
+              // Reset every mounted slot too.
               for (const slot of slots) slot.reset?.();
             }}
           >
-            Reset all
+            {t("Reset all")}
           </button>
         </footer>
       </div>

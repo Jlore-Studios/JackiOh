@@ -48,7 +48,13 @@ const PINNED: &[(&str, &str)] = &[
     ("0025_patch_retcon.sql", "203f79a3"),
     ("0026_catalyst_prime_acclaimed_tags.sql", "1d0838c1"),
     ("0027_lean_newest.sql", "8b9b0b34"),
-    ("0028_replay_final_hash.sql", "8bd508cb"),
+    ("0028_usernames.sql", "b559b144"),
+    ("0029_play_telemetry.sql", "c925ba45"),
+    ("0030_meditative_set.sql", "f36f4767"),
+    ("0031_meditative_endings.sql", "7abbf8ee"),
+    ("0032_ladder_bots.sql", "201f2785"),
+    ("0033_bot_trios.sql", "17c2c195"),
+    ("0034_replay_final_hash.sql", "f419b934"),
 ];
 
 /// `PINNED[name]`.

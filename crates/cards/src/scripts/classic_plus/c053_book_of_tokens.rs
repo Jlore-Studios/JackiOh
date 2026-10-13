@@ -22,23 +22,18 @@ const RUSH_TOKEN: &str = "core-t-rush";
 const MIN_TOKENS: i32 = 1;
 const MAX_TOKENS: i32 = 2;
 
-/// §6.1: the Lucky X the running card has now (its Radiant face prints Lucky 1).
+/// §6.1: the Lucky X the running card has now, printed plus given (R1438; its Radiant face prints
+/// Lucky 1).
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
-    let Some(card) = ctx.live_self() else {
-        return 0;
-    };
-    numbered_keywords_on(&*ctx.state, card)
-        .iter()
-        .find(|keyword| matches!(keyword.key, NumberedKey::Lucky))
-        .map(|keyword| keyword.value)
-        .unwrap_or(0)
+    ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
 }
 
 fn book_of_tokens(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let roll = |rng: &mut Rng| -> i32 { MIN_TOKENS + rng.int(MAX_TOKENS - MIN_TOKENS + 1) };
-            let lucky = lucky_of(ctx);
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+            let lucky = lucky_of(ctx) + luck_of(&*ctx.state, ctx.controller);
             let count = if lucky > 0 {
                 ctx.rng.lucky(lucky, roll, |a, b| a.max(b))
             } else {
@@ -121,7 +116,34 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r64_summons_1_2_rush_tokens_3_3_rush_into_your_leftmost_open_zones_the_count_random_but_never_above_the_curve() {
+        fn r987_feng_shui_s_luck_adds_a_roll() {
+            crate::register_all();
+            let _open = preview_sets(&[SetName::Meditative]);
+            let twos = |judge: bool| -> i32 {
+                let mut found = 0;
+                for n in 0..40 {
+                    let mut p1 = json!({ "hand": [{ "def": BOOK }, FILLER] });
+                    if judge {
+                        p1["backrow"] = json!(["meditative-040"]);
+                    }
+                    let mut opts = json!({ "p1": p1, "p2": { "hand": [FILLER] } });
+                    opts["seed"] = json!(format!("book-of-tokens-luck-{n}"));
+                    let mut s = scenario(opts);
+                    s.play(BOOK, json!({}));
+                    if tokens(&s).len() == 2 {
+                        found += 1;
+                    }
+                }
+                found
+            };
+            // The base face rolls once for 1–2; with Luck 1 it keeps the better of two, so 2 comes
+            // up strictly more often across the same seeds.
+            assert!(twos(true) > twos(false));
+        }
+
+        #[test]
+        fn r64_summons_1_2_rush_tokens_3_3_rush_into_your_leftmost_open_zones_the_count_random_but_never_above_the_curve()
+         {
             let mut counts: IndexSet<usize> = IndexSet::new();
             for n in 0..20 {
                 let mut s = book(
@@ -173,6 +195,33 @@ mod tests {
             assert!(!tokens(&s).is_empty());
             assert!(tokens(&s).len() <= 2);
         }
+    }
+
+    /// R1438: given Lucky 1, the base face rolls its count twice and keeps the most: its first roll is
+    /// the plain face's, so it never summons fewer, at more seeds it summons 2, and each cast takes
+    /// one more draw.
+    #[test]
+    fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
+        crate::register_all();
+        let cast = |n: i32, lucky: bool| -> (usize, u32) {
+            let mut s = book(false, json!([]), Some(&format!("book-of-tokens-lucky-{n}")));
+            if lucky {
+                crate::give_lucky(&mut s, BOOK, 1);
+            }
+            let before = s.state().rng_cursor;
+            s.play(BOOK, json!({}));
+            (tokens(&s).len(), s.state().rng_cursor - before)
+        };
+        let mut more = 0;
+        for n in 0..40 {
+            let ((plain, plain_draws), (lucky, lucky_draws)) = (cast(n, false), cast(n, true));
+            assert!(lucky >= plain);
+            assert_eq!(lucky_draws, plain_draws + 1);
+            if lucky > plain {
+                more += 1;
+            }
+        }
+        assert!(more > 0);
     }
 
     mod radiant {

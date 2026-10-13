@@ -15,16 +15,20 @@ rule 4), and it hands them the clock as a callback where they need one.
 | `fuzz [--from N] [--seeds N] [--handicap]` | `fuzz.rs` | random-policy games (spec §10.7) from every non-token card of every set, the I1–I4 invariants checked each step and every game folded back to its live hash; seeds 1–1,000 by default, `--handicap` rotates one seat through Medium and Hard. CI plays `--seeds 200`, the daily run 10,000 of each |
 | `replay` | `replay.rs` | reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?}` on stdin and prints `{"hash", "errors"}`: e2e specs 01 and 13 check the browser's hash with it |
 | `trace [matchup] [n] [full]` | `trace.rs` | one AI gate game, turn by turn |
-| `catalog check` | `catalog.rs` | `crates/cards/catalog.json`'s shape and census, set by set (spec §5, §6.1, §7, §8): 268 cards and 50 tokens, the rarity counts, the tag counts, the patch v0.2.0 fields |
+| `catalog check` | `catalog.rs` | `crates/cards/catalog.json`'s shape and census, set by set (spec §5, §6.1, §7, §8): 370 cards and 80 tokens, the rarity counts, the tag counts, the patch v0.2.0 fields |
 | `catalog loc <script path>` | `catalog.rs` | a new card script's `loc` (its non-blank, non-comment, non-`use` lines above `#[cfg(test)]`); prints, writes nothing |
 | `catalog-version` | `catalog.rs` | the newest version in `crates/cards/patches/patches.json` |
-| `patches <version> [date] "<title>" [--source …] [--notes …] [--cards …]` | `patches.rs` | claim a card patch as `crates/cards/patches/pending/<version>.json` (R388, R646) |
-| `patches check`, `patches ship` | `patches.rs` | every catalog change claimed by exactly one fragment; after a merge, promote the fragments in ship order and bump the catalog version |
+| `patches <version> [date] "<title>" [--source …] [--notes …] [--cards …]` | `patches.rs` | claim a card patch as `crates/cards/patches/pending/<version>.json` (R388, R646); its `player` note, written by hand, is kept when it runs again (R724001) |
+| `patches check`, `patches ship` | `patches.rs` | every catalog change claimed by exactly one fragment, and every fragment and shipped patch holding a player note players can read (R724001); after a merge, promote the fragments in ship order with their notes and bump the catalog version |
 | `gate [--full] [--shard k/K] [--out dir]`, `gate merge [dir]` | `gate.rs` | the AI's three quality gates and its perf gate (spec §9.9, `crates/ai/README.md`) |
 | `sweep [ids…] [--json] [--pass2 files] [--report files]` | `sweep.rs` | R186's two-pass shadow-ban sweep; prints the `SHADOW_BAN` and `SHADOW_WATCH` rows to copy into `crates/ai/src/shadow_ban.rs` |
 | `stats [--games N] [--from N] [--patch v] [--series s] [--out file]` | `stats.rs` | R378's development run for the card statistics |
-| `stats report <file>… [--source live\|dev\|all] [--mode m] [--patch v] [--pilot p] [--card id] [--json]` | `stats.rs` | R377's card win rates over record files (one `GameRecord` per line: `stats --out`, `jackioh-server stats-export`, the training lanes' `~/training-out/<lane>/*.jsonl`) with no database; `stats-cards`' flags and defaults (live games unless `--source` says otherwise), its table or its `--json`; a line that is not a record is an error naming its file and line. The figures `analysis/` computes over the same files are held to these |
+| `stats report <file>… [--source live\|dev\|all] [--mode m] [--patch v] [--pilot p] [--card id] [--json]` | `stats.rs` | R377's card win rates over record files (one `GameRecord` per line: `stats --out`, `jackioh-server stats-export`, the training lanes' `~/training-out/<lane>/*.jsonl`) with no database; `stats-cards`' flags and defaults (live games unless `--source` says otherwise, their human seats unless `--pilot` says otherwise, R1451), its table or its `--json`; a line that is not a record is an error naming its file and line. The figures `analysis/` computes over the same files are held to these |
+| `winrates <input>… [--patch v] [--dry-run]` | `winrates.rs` | ME-STATS: `crates/cards/data/win_rates.json` (M #50 CN Tech's table, R377's in-deck wins and games per card id) from one `stats report --json` export or JSONL record files, never both (records counted as `/api/stats/cards` counts them: a live game's human seats, a development game's both, R1451); `--dry-run` prints it instead of writing it |
 | `golden check`, `golden bless` | `golden.rs` | replay `crates/engine/tests/golden/games.jsonl` (the traces recorded from the TypeScript engine) and the hotseat fixture; `bless` rewrites them, only after an intended rules change |
+| `golden record --seeds A..B [--force ids] --out <path>` | `golden.rs` | the golden seeds A..=B (each within 1–240) played with `bless`'s recorder into a file of its own, `games.jsonl` untouched; each `--force` card goes into both decks (a deck keeps its size), a token through the smallest-id deck card whose `refs` name it (R279); a token no card names, a card of a set that has not shipped (R1420) and an unknown id are refused. The file replays with `golden check --file` |
+| `luau diff --parent-bin <path> (--cards ids [--games N] [--seed base] \| --traces <path>)` | `luau.rs` | plays N games (200, from seed 1) with the cards forced, recorded by `golden record` on this build, and has the parent build (`jackioh` built from the base commit) replay them with `golden check --file`; prints the parent's divergence lines (seed, step, which hash, the action) and exits 1 on any mismatch, keeping the traces; `--traces` checks a recorded file instead. Nothing in it is specific to Luau: it compares two builds |
+| `luau bench --parent-bin <path> [--record <path>]` | `luau.rs` | the performance gate (#442's L13): the wall time of `fuzz --seeds 200`, the `gate` perf gate's slowest decision (scaled as `gate` reports it) and the mean time of one golden step on one thread, measured on the parent and on this build in one run (about 3½ minutes); exits 1 when the slowest decision is over 1.5× the parent's or not under `AI_GATE.max_decision_ms`, or when either other number is over 2× the parent's (`BENCH_BUDGETS`); `--record` writes the numbers, the machine and the date as JSON |
 | `spec check`, `spec index` | `spec.rs` | the spec graph's structural checks (CLAUDE.md rule 3), and `spec/INDEX.md` rewritten from the ruling notes |
 | `arena --a … --b … --games N --seed s [--out dir]` | `arena.rs` | two agents (`self`, `random`, `bin:<path>`) play N games; one game record per line |
 | `agent` | `agent.rs` | this build's AI over JSON lines on stdin and stdout (`info`, `decide`, `quit`) |
@@ -39,9 +43,10 @@ cargo jackioh golden check
 cargo test -p jackioh-tools                    # the tools' own tests
 ```
 
-`spec check` holds four rules: every ruling note's `id` matches its file name and is unique; every
+`spec check` holds six rules: every ruling note's `id` matches its file name and is unique; every
 `proven_in` path exists and holds a proof (a Rust `fn` or `mod` whose name has the `_`-delimited token
 `r<n>`, a TypeScript `it(`, `test(` or `describe(` whose title has `R<n>` as a word, or an SQL
 script's `\echo '### R<n>: … ###'` heading); every `r<n>` test token and every `R<n>` cited in
-`crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in `spec/` resolves. It reads
+`crates/`, `apps/web/src/` and `e2e/` has a note; every `[[…]]` link in `spec/` resolves; every note's
+`title` and `cards` are filled in; `spec/INDEX.md` is what `spec index` writes from the notes. It reads
 ids, file names and test names, never wording.

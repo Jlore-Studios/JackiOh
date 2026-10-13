@@ -26,7 +26,6 @@ use jackioh_engine::{
 };
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::{fold, fold_args, hash_state, seat_played_by};
-use jackioh_server::api::crypto::player_tag;
 use jackioh_server::api::replays::ReplayCache;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
@@ -46,6 +45,8 @@ use crate::support::engine::{
 const A: &str = "profile-a";
 const B: &str = "profile-b";
 const C: &str = "profile-c";
+/// B's username, which A's and C's lists show for B's seat (R1436).
+const B_NAME: &str = "Bea";
 const DAY_MS: i64 = 86_400_000;
 /// How many log actions `played_game` lets a game run before its seat to act concedes.
 const PLAYED_ACTIONS: usize = 36;
@@ -88,14 +89,14 @@ struct Tokens {
     c: String,
 }
 
-/// The test app over an empty store, with A, B and C active and signed in.
+/// The test app over an empty store, with A, B and C active and signed in, B as `B_NAME`.
 async fn app_with_players() -> (Arc<App>, Tokens) {
     let app = empty_test_app().await;
     let mut tokens = Vec::new();
-    for (id, user) in [(A, "user-a"), (B, "user-b"), (C, "user-c")] {
+    for (id, user, username) in [(A, "user-a", "Ada"), (B, "user-b", B_NAME), (C, "user-c", "Cy")] {
         fake(&app)
             .await
-            .seed_profile(json!({ "id": id, "userId": user, "status": "active" }));
+            .seed_profile(json!({ "id": id, "userId": user, "status": "active", "username": username }));
         tokens.push(add_user(&app, user, &format!("{user}@example.test"), true));
     }
     let [a, b, c] = <[String; 3]>::try_from(tokens).expect("three tokens");
@@ -189,7 +190,7 @@ struct Finish<'a> {
     id: &'a str,
     /// The seats as the match began (A first unless a test says otherwise).
     players: (&'a str, &'a str),
-    /// The final hash `api/results.rs` records; `None` for a match from before migration 0028.
+    /// The final hash `api/results.rs` records; `None` for a match from before migration 0034.
     hash: Option<String>,
     ended_at: i64,
     /// Fields laid over the match row's JSON (`catalogVersion`, `mode`, `portraits`).
@@ -545,6 +546,15 @@ mod r768_the_refusals {
         let (app, tokens) = app_with_players().await;
         let played = played_game("replay-route-6", 8);
         let now = now_ms();
+        // A winner who has since deleted their account leaves a winnerless row with their seat
+        // emptied (migration 0012); B begins in the winning seat for that case.
+        let winner = played.last.result.as_ref().expect("a finished game").winner;
+        assert_ne!(winner, Winner::Draw, "the game is conceded");
+        let (b_won, emptied) = if winner == Winner::P1 {
+            ((B, A), json!(["", A]))
+        } else {
+            ((A, B), json!([A, ""]))
+        };
         let cases: Vec<(Finish<'_>, Option<&str>)> = vec![
             (
                 Finish {
@@ -570,6 +580,15 @@ mod r768_the_refusals {
             ),
             (
                 Finish {
+                    players: b_won,
+                    hash: None,
+                    result: json!({ "players": emptied, "winnerProfileId": null }),
+                    ..Finish::new("m-legacy-deleted-winner", &played, now)
+                },
+                None,
+            ),
+            (
+                Finish {
                     row: json!({ "catalogVersion": OLD_CATALOG }),
                     ..Finish::new("m-old-patch", &played, now)
                 },
@@ -578,6 +597,11 @@ mod r768_the_refusals {
         ];
         for (finish, refusal) in cases {
             let id = finish.id.to_string();
+            let home = if finish.players.0 == A {
+                PlayerId::P1
+            } else {
+                PlayerId::P2
+            };
             seed_finished(&app, finish, &played).await;
             let (status, body) = get(&app, &format!("/api/replays/{id}"), &tokens.a).await;
             match refusal {
@@ -589,7 +613,7 @@ mod r768_the_refusals {
                 }
                 None => {
                     assert_eq!(status, 200, "{id}: {body}");
-                    assert_eq!(body["steps"][0], step_of(&played, 0, PlayerId::P1));
+                    assert_eq!(body["steps"][0], step_of(&played, 0, home), "{id}");
                 }
             }
         }
@@ -604,7 +628,7 @@ mod r768_the_list {
     use super::*;
 
     #[tokio::test]
-    async fn r768_lists_newest_first_with_seat_result_portraits_and_tag() {
+    async fn r768_lists_newest_first_with_seat_result_portraits_and_opponent() {
         let (app, tokens) = app_with_players().await;
         let played = played_game("replay-route-7", 6);
         let now = now_ms();
@@ -678,7 +702,7 @@ mod r768_the_list {
                 "turns": played.last.turn,
                 "steps": played.steps(),
                 "portraits": { "p1": portraits[0], "p2": portraits[1] },
-                "opponentTag": player_tag(B),
+                "opponent": { "profileId": B, "username": B_NAME },
             })
         };
         let mut bad_hash = entry(
@@ -705,7 +729,19 @@ mod r768_the_list {
         // C held a seat in one of them.
         let (_, others) = get(&app, "/api/replays", &tokens.c).await;
         assert_eq!(others["replays"][0]["matchId"], "m-others");
-        assert_eq!(others["replays"][0]["opponentTag"], json!(player_tag(B)));
+        assert_eq!(
+            others["replays"][0]["opponent"],
+            json!({ "profileId": B, "username": B_NAME })
+        );
+
+        // R1436: the username is read as the list is, so a rename shows on past games too.
+        {
+            let mut data = fake(&app).await;
+            let profile = data.tables.profiles.iter_mut().find(|found| found.id == B);
+            profile.expect("B's profile").username_base = "Beatrix".to_string();
+        }
+        let (_, renamed) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(renamed["replays"][3]["opponent"]["username"], "Beatrix");
     }
 
     #[tokio::test]
@@ -752,6 +788,66 @@ mod r768_the_list {
         assert_eq!(status, 200, "{past}");
         assert_eq!(past, json!({ "replays": [], "nextOffset": null }));
         assert_eq!(get(&app, "/api/replays?offset=x", &tokens.a).await.0, 400);
+    }
+
+    /// The result a listing gives the caller is the one their record counts (`results_record_for`):
+    /// a winnerless row is a loss when its ending always names a winner, an effect's win included
+    /// (R1412), since its winner has deleted their account; a winnerless `alt-win` is a draw (R850).
+    #[tokio::test]
+    async fn r768_r1412_a_winnerless_result_reads_as_the_record_counts_it() {
+        let (app, tokens) = app_with_players().await;
+        let played = played_game("replay-route-9", 2);
+        let now = now_ms();
+        let cases = [
+            ("m-won", json!({ "winnerProfileId": A }), "win"),
+            ("m-lost", json!({ "winnerProfileId": B }), "loss"),
+            (
+                "m-deleted-concede",
+                json!({ "players": [A, ""], "winnerProfileId": null, "reason": "concede" }),
+                "loss",
+            ),
+            (
+                "m-deleted-effect",
+                json!({ "players": [A, ""], "winnerProfileId": null, "reason": "won-by-effect" }),
+                "loss",
+            ),
+            (
+                "m-alt-draw",
+                json!({ "winnerProfileId": null, "reason": "alt-win" }),
+                "draw",
+            ),
+            (
+                "m-turn-cap",
+                json!({ "winnerProfileId": null, "reason": "turn-cap" }),
+                "draw",
+            ),
+        ];
+        for (n, (id, result, _)) in cases.iter().enumerate() {
+            seed_finished(
+                &app,
+                Finish {
+                    result: result.clone(),
+                    ..Finish::new(id, &played, now - n as i64)
+                },
+                &played,
+            )
+            .await;
+        }
+        let (status, body) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(status, 200, "{body}");
+        let listed: Vec<(&str, &str)> = body["replays"]
+            .as_array()
+            .expect("replays")
+            .iter()
+            .map(|entry| {
+                (
+                    entry["matchId"].as_str().unwrap_or(""),
+                    entry["result"].as_str().unwrap_or(""),
+                )
+            })
+            .collect();
+        let expected: Vec<(&str, &str)> = cases.iter().map(|(id, _, result)| (*id, *result)).collect();
+        assert_eq!(listed, expected);
     }
 }
 

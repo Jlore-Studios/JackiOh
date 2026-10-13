@@ -61,6 +61,8 @@ export const testid = {
   switchPosition: (instanceId: string): string => `switch-${instanceId}`,
   /** R371: the "Face down" tag on the viewer's own face-down trap. */
   unrevealed: (instanceId: string): string => `unrevealed-${instanceId}`,
+  /** R1046: the reveal timing on the viewer's own face-down play, which the opponent never sees. */
+  revealAt: (instanceId: string): string => `reveal-at-${instanceId}`,
   /** R667: the Plague Chalice warning on the viewer's own hand card. */
   countered: (instanceId: string): string => `countered-${instanceId}`,
   endTurn: "end-turn",
@@ -180,6 +182,12 @@ export type Highlight = {
    * `legalActions` and the open prompt's options alone. Absent means nothing glows.
    */
   glow?: ReadonlySet<string>;
+  /**
+   * MD-D5, R1121: the yellow a dragged or selected attack paints — the selected attacker's
+   * `conditionTargets` inside `glow`. A subset of `glow`, derived by `highlightFor` while
+   * attacking alone. Absent means nothing reads yellow from the drag layer.
+   */
+  condition?: ReadonlySet<string>;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };
@@ -194,8 +202,9 @@ export type AnimationFrames = { frames: AnimatingMap; events: readonly GameEvent
  * The emote surface one hero carries (R643–R644, issue §1–§5): its portrait, what it is showing,
  * and which menu — yours' picker or the opponent's "Mute emotes" — is open on it. Game owns the
  * state; the board only draws and reports. `onPortrait` is the click that is NOT a target pick
- * (the legal branch still goes to `onClick`), which is what opens a menu (issue §2: targeting
- * wins).
+ * (the legal branch still goes to `onClick`), which toggles the menu hung off the portrait, and
+ * `onPortraitHold` the hold that opens the hero's inspect view instead (R1449, R1330; issue §2:
+ * targeting wins). `menu` says a menu is open and which, and `inspect` whether it is in the view.
  */
 export type HeroEmotes = {
   portrait: PortraitId;
@@ -203,9 +212,12 @@ export type HeroEmotes = {
   hand: readonly EmoteId[];
   show: EmoteShow | null;
   menu: "emotes" | "mute" | null;
+  /** R1449: the open menu sits in the hero's inspect view (a hold) rather than on the portrait (a click). */
+  inspect: boolean;
   muted: boolean;
   gate: () => EmoteGate;
   onPortrait: () => void;
+  onPortraitHold: () => void;
   onPick: (emote: EmoteId) => void;
   onMute: () => void;
   onCloseMenu: () => void;

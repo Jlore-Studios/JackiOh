@@ -1,9 +1,6 @@
 //! `reduce` (M1-T3): refusals leave the state untouched, the non-active player's actions, the open
 //! mulligans (R265), nonce dedupe, the game's end, bad plays, and every action `legalActions` lists
 //! applying cleanly.
-//!
-//! Port of `packages/engine/test/reduce.test.ts`. TS's `toBe` on a state (object identity) is
-//! equality here: a Rust value has no identity to compare.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -13,7 +10,6 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::new_game;
 
-/// TS's module `let seq`.
 static SEQ: AtomicU32 = AtomicU32::new(0);
 
 fn nonce() -> String {
@@ -21,7 +17,6 @@ fn nonce() -> String {
     format!("r{seq}")
 }
 
-/// An action from its TS object literal (`{ type, …, playerId, nonce }`).
 fn action(body: Value) -> Action {
     json_as(body)
 }
@@ -57,7 +52,6 @@ fn playing(seed: &str) -> GameState {
     state
 }
 
-/// TS `expect(error).toMatch(/text/)`.
 fn assert_error(error: &Option<String>, text: &str) {
     assert!(
         error.as_deref().is_some_and(|message| message.contains(text)),
@@ -225,15 +219,6 @@ mod reduce_m1_t3 {
         assert_error(&blocked.error, "not open");
     }
 
-    // An explicit timeout, because the 5 s this inherited from vitest's default was never chosen for
-    // it and is the only thing here that measures the machine rather than the engine. Measured on the
-    // dev box: the whole file runs in 704 ms, or 1.00 s under coverage instrumentation. It still timed
-    // out at 5 s inside a Linux container running the coverage step while three other agents worked —
-    // a shared or throttled CI runner is the same environment, and `pnpm test:coverage` instruments
-    // every module this walk touches. 30 s keeps roughly a 30x margin over the measured cost while
-    // still failing an engine that has genuinely stopped terminating. No assertion below changes:
-    // the walk still probes every action legalActions offers at each of the 200 states.
-    // (A Rust test has no default timeout, so there is none to raise.)
     #[test]
     fn every_action_legal_actions_lists_succeeds_over_200_random_states() {
         let mut rng = Rng::new("legal-actions-walk", 0);
@@ -245,7 +230,6 @@ mod reduce_m1_t3 {
             let mut state = playing(&format!("walk-{game}"));
 
             while state.result.is_none() && states < 200 {
-                // TS's seatToAct always names a seat; its last fallback is the active player.
                 let player = seat_to_act(&state).unwrap_or(state.active);
                 let actions = legal_actions(&state, player);
                 assert!(!actions.is_empty());

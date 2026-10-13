@@ -7,11 +7,9 @@
 //! RLS, the grants and the SQL function — is `tests/sql/05_tutorial_progress.sql` and
 //! `02_rls_as_client.sql`.
 //!
-//! Port of `apps/server/test/api/tutorial.test.ts` (part 18). TS built a router over the tutorial
-//! routes alone with seeded profiles and scripted tokens; here every request goes through the whole
-//! app (`support::deps::test_app`, the E2E fixtures), so the caller is `e2e-p1`, the other account
-//! `e2e-p2` and the pending one `e2e-pending`, and a banned account is `e2e-p2` set to `banned`.
-//! TS's manual clock is the server's own wall clock: a time "now" is read from it around the call.
+//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
+//! caller is `e2e-p1`, the other account `e2e-p2`, the pending one `e2e-pending`, and a banned
+//! account is `e2e-p2` set to `banned`. A time "now" is read from the server's wall clock.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,7 +34,7 @@ const PENDING_USER: &str = "e2e-pending";
 /// JS's `Number.MAX_SAFE_INTEGER + 2`: past the largest whole number a client can send exactly.
 const PAST_SAFE_INTEGER: i64 = 9_007_199_254_740_993;
 
-/// TS's `beforeEach`: a fresh app, and the profile ids of the three fixture accounts.
+/// A fresh app, and the profile ids of the three fixture accounts.
 struct Fixture {
     app: Arc<App>,
     profile: String,
@@ -57,7 +55,7 @@ async fn setup() -> Fixture {
     }
 }
 
-/// A store value built from TS's own object literal.
+/// A store value built from JSON.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value).expect("a store value from its JSON")
 }
@@ -96,8 +94,7 @@ async fn set_status(app: &App, profile_id: &str, status: &str) {
     tx.commit().await.expect("commit");
 }
 
-/// The profiles that hold a tutorial row, of the three fixture accounts (TS read
-/// `store.tables.tutorial`, which held no one else's).
+/// The profiles, of the three fixture accounts, that hold a tutorial row.
 async fn stored(fixture: &Fixture) -> Vec<String> {
     let mut held = Vec::new();
     for profile_id in [&fixture.profile, &fixture.other, &fixture.pending] {
@@ -142,9 +139,8 @@ mod r320_the_routes_an_active_account_and_only_about_itself {
 
     #[tokio::test]
     async fn r320_declares_get_and_put_api_tutorial_both_active() {
-        // TS read the declared route list; here the app answers for it. GET and PUT exist, every
-        // other method on the path is the router's 404, and both turn a pending account away, which
-        // a `user` route would not.
+        // GET and PUT exist, every other method on the path is the router's 404, and both turn a
+        // pending account away, which a `user` route would not.
         let f = setup().await;
         assert_eq!(get(&f.app, TOKEN).await.0, 200);
         assert_eq!(put(&f.app, json!({ "completed": [] }), TOKEN).await.0, 200);
@@ -308,8 +304,8 @@ mod r320_a_write_merges_into_the_account_and_never_takes_anything_away {
         );
         assert_eq!(ahead["hiddenChoice"], json!({ "hidden": true, "at": now }));
 
-        // A moment later, a choice from a device whose clock is right wins over it. (TS moved its
-        // manual clock a minute; the wall clock is waited on until it has moved past `now`.)
+        // A moment later, a choice from a device whose clock is right wins over it: wait until the
+        // wall clock has moved past `now`.
         while wall_ms() <= now {
             tokio::time::sleep(Duration::from_millis(1)).await;
         }

@@ -1,60 +1,34 @@
-// What a patch changed in one card (brief B4.2, R388): the card as the snapshot before the patch
-// held it against the card as the patch left it. Pure, so the Patch notes page, the History section
-// and the tests read one answer.
-//
-// Every field a player can see or the catalog records is compared: the name, the cost (X and
-// embiggen included, written as card text writes a cost, R432: "(3) Cost"), the type and a face's own
-// type (B2.7), the rarity and a token's printed rarity (B2.5), the tags, each face's stats and
-// keywords, each face's text, the tunable numbers (`params`, B3.4), the cards the text names
-// (`refs`, R279), the lines of code (`loc`, E36), and the card's number, set and token flag. A
-// field this module does not know is still reported, under its own key, so no change is ever lost.
-//
-// A face's text is compared as it prints, its `{key}` numbers filled in (`fillParams`): a v0.2.0
-// text reads "Deal {damage} damage" where the patch before printed "Deal 1 damage", and the two say
-// the same thing. The text diff is R277's word diff (cards/radiantDiff.ts, `wordDiff`): case aside,
-// a word at a time, separators never starting or ending a mark. What the newer text has that the
-// older does not is `added` (the change mark); what the older had that the newer dropped is
-// `removed` (struck through where it is shown, R507).
-//
-// Nothing here is a rule (CLAUDE.md rule 7): it reads two public catalog snapshots.
+// Patch card diffs (brief B4.2; R388) compare snapshots, including unknown fields so no change is lost.
+// Text uses `fillParams` and R277 word diffs (R432; B2.7, B2.5, B3.4; R279; E36; R507).
+// They read public catalog data only (CLAUDE.md rule 7).
 
 import { fillParams, keywordKey, type CardCost, type CardDef, type CardDefs, type CardFace, type Param } from "@jackioh/shared";
 
 import { powerTitle } from "../cards/inPlay.ts";
 import { wordDiff, type TextRange } from "../cards/radiantDiff.ts";
 
-/** A card's two faces, as the catalog keys them. */
 export type FaceKey = "base" | "radiant";
 
-/** A field compared as one value, printed "before → after". */
 export type ValueChange = {
   readonly kind: "value";
-  /** "cost", "radiant.stats", …; a field this module does not know is `data:<key>`. */
   readonly field: string;
-  /** What a player reads before the values: "Cost", "Radiant stats". */
   readonly label: string;
   readonly before: string;
   readonly after: string;
 };
 
-/** A face's text, word-diffed. */
 export type TextChange = {
   readonly kind: "text";
   readonly field: "base.text" | "radiant.text";
   readonly label: string;
-  /** The older text, its numbers filled in. */
   readonly before: string;
-  /** The newer text, its numbers filled in. */
   readonly after: string;
-  /** Stretches of `after` that `before` does not have. */
   readonly added: readonly TextRange[];
-  /** Stretches of `before` that `after` does not have. */
   readonly removed: readonly TextRange[];
 };
 
 export type FieldChange = ValueChange | TextChange;
 
-/** One card in one patch: added, removed, or changed with the list of what changed. */
 export type CardDelta =
   | { readonly kind: "added"; readonly id: string; readonly def: CardDef }
   | { readonly kind: "removed"; readonly id: string; readonly def: CardDef }
@@ -66,12 +40,9 @@ export type CardDelta =
       readonly changes: readonly FieldChange[];
     };
 
-/** The words for a missing list or value. */
 export const NONE = "none";
-/** `loc` absent: the card's lines of code were not recorded then. */
 export const NOT_RECORDED = "not recorded";
 
-/** The labels players read, by field. */
 export const FIELD_LABEL = {
   name: "Name",
   cost: "Cost",
@@ -96,13 +67,9 @@ export const FIELD_LABEL = {
   radiantFallback: "Radiant form",
 } as const;
 
-/**
- * Fields a face does not print: a change to these alone leaves both faces looking as they did, so
- * the Patch notes page lists such a card by name rather than as a face (R507).
- */
+/** R507: fields without printed faces are listed by name. */
 const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(["loc", "refs", "params"]);
 
-/** Top-level `CardDef` keys this module compares by name; any other key is compared as data. */
 const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "id",
   "index",
@@ -122,14 +89,12 @@ const KNOWN_KEYS: ReadonlySet<string> = new Set([
   "radiant",
 ]);
 
-/** R432: a cost as card text writes one: "(3) Cost", "(X) Cost", "(2) Cost, embiggen (4)". */
 export function costText(cost: CardCost): string {
   if (typeof cost === "number") return `(${String(cost)}) Cost`;
   if (cost === "X") return "(X) Cost";
   return `(${String(cost.base)}) Cost, embiggen (${String(cost.embiggen)})`;
 }
 
-/** A face's stats: "2/3", "[3X/3X]" for X stats (B2.7), "" for a face with none. */
 export function statsText(face: CardFace): string {
   if (face.xStats !== undefined) return `[${String(face.xStats.attack)}X/${String(face.xStats.health)}X]`;
   if (face.attack === undefined && face.health === undefined) return "";
@@ -166,14 +131,8 @@ function dataText(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
 
-/** Card names for `refs`, from the snapshot each side belongs to. */
 export type DiffNames = { readonly before?: CardDefs; readonly after?: CardDefs };
 
-/**
- * R388: what changed between `before` (the card in the snapshot before the patch, absent if the
- * patch added it) and `after` (the card as the patch left it, absent if the patch removed it).
- * Null when the two are the same card, or when both are absent.
- */
 export function diffCard(before: CardDef | undefined, after: CardDef | undefined, names: DiffNames = {}): CardDelta | null {
   if (before === undefined && after === undefined) return null;
   if (before === undefined) return after === undefined ? null : { kind: "added", id: after.id, def: after };
@@ -192,7 +151,7 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
   value("cost", costText(before.cost), costText(after.cost));
   value("type", before.type, after.type);
   for (const face of ["base", "radiant"] as const) {
-    // B2.7: a face's own type, reported only where a face carries one, so a card's new type is said once.
+    // B2.7: report a card's new type only once.
     const was = before[face].type;
     const now = after[face].type;
     if (was !== now) value(`${face}.type`, was ?? before.type, now ?? after.type);
@@ -247,27 +206,21 @@ function fieldChanges(before: CardDef, after: CardDef, names: DiffNames): FieldC
   return out;
 }
 
-/** Whether a change shows on a printed face (a name, a cost, a stat, a word of text…). */
 export function printsOnFace(change: FieldChange): boolean {
   return !DATA_ONLY_FIELDS.has(change.field) && !change.field.startsWith("data:");
 }
 
-/** Whether a changed card's changes all lie in data the faces do not print (R507). */
 export function dataOnly(delta: CardDelta): boolean {
   return delta.kind === "changed" && !delta.changes.some(printsOnFace);
 }
 
-/**
- * The face a changed card is shown by on the Patch notes page: the Radiant face when every change
- * a face prints is the Radiant face's own, else the base face (R507).
- */
+/** R507: show Radiant only when every printed change is Radiant-specific. */
 export function faceShown(delta: CardDelta): FaceKey {
   if (delta.kind !== "changed") return "base";
   const printed = delta.changes.filter(printsOnFace);
   return printed.length > 0 && printed.every((change) => change.field.startsWith("radiant.")) ? "radiant" : "base";
 }
 
-/** The marked words of a text change, for tests and summaries: [added, removed]. */
 export function changedWords(change: TextChange): { added: string[]; removed: string[] } {
   return {
     added: change.added.map((range) => change.after.slice(range.start, range.end)),

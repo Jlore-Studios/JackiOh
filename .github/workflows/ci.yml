@@ -336,15 +336,18 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
-      # Built from main's commit in a worktree beside this one, into the same target directory so the
-      # dependencies compile once; copied out before the branch's own build replaces target/release.
+      # Built from main's commit in a worktree beside this one, into a target directory of its own.
+      # Never the branch's: cargo hashes a workspace crate by its path inside the workspace, so both
+      # checkouts' crates share their build units, and it rebuilds one only when a source file is
+      # newer than the last build. The branch was checked out before main's build ran, so the
+      # branch's build reused main's jackioh-ai and the gate played main's AI against itself (#585).
       - name: main's jackioh, the parent
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           git worktree add --detach "$RUNNER_TEMP/main" "$BASE"
-          cargo build --release -p jackioh-tools --manifest-path "$RUNNER_TEMP/main/Cargo.toml" --target-dir "$GITHUB_WORKSPACE/target"
-          cp target/release/jackioh "$RUNNER_TEMP/parent-jackioh"
+          cargo build --release -p jackioh-tools --manifest-path "$RUNNER_TEMP/main/Cargo.toml" --target-dir "$RUNNER_TEMP/main-target"
+          cp "$RUNNER_TEMP/main-target/release/jackioh" "$RUNNER_TEMP/parent-jackioh"
       - name: the lane's gate, played again against the parent (promote --verify)
         env:
           LANE: ${{ steps.claim.outputs.lane }}

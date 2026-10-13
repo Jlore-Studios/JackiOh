@@ -14,6 +14,7 @@ import { MUSIC_STATIONS, VOICE_PREVIEW_DEF_ID, VOICE_PRIORITY } from "./constant
 import { getAudioEngine } from "./engine.ts";
 import { useAudioSettings, writeAudioSettings } from "./settings.ts";
 import type { AudioSettings, MusicStation } from "./types.ts";
+import { t } from "../i18n/i18n.ts";
 import "./audio.css";
 
 export type AudioControlsProps = { className?: string };
@@ -82,15 +83,15 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
       className={className === undefined || className === "" ? "audio-controls" : `audio-controls ${className}`}
       data-testid="audio-controls"
     >
-      <legend>Audio</legend>
+      <legend>{t("Audio")}</legend>
 
-      <Group title="Volume">
+      <Group title={t("Volume")}>
         {VOLUMES.map(({ key, label, testid }) => {
           const inputId = `${id}-${key}`;
           const value = percent(settings, key);
           return (
             <div className="audio-controls__row" key={key}>
-              <label htmlFor={inputId}>{label}</label>
+              <label htmlFor={inputId}>{t(label)}</label>
               <input
                 id={inputId}
                 type="range"
@@ -125,13 +126,13 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
               writeAudioSettings({ muted: event.currentTarget.checked });
             }}
           />
-          <label htmlFor={`${id}-mute`}>Mute all sound</label>
+          <label htmlFor={`${id}-mute`}>{t("Mute all sound")}</label>
         </div>
       </Group>
 
-      <Group title="Music">
+      <Group title={t("Music")}>
         <div className="audio-controls__row">
-          <label htmlFor={`${id}-station`}>Music station</label>
+          <label htmlFor={`${id}-station`}>{t("Music station")}</label>
           <select
             id={`${id}-station`}
             value={settings.station}
@@ -143,7 +144,7 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
           >
             {MUSIC_STATIONS.map((station) => (
               <option key={station} value={station}>
-                {STATION_LABELS[station]}
+                {t(STATION_LABELS[station])}
               </option>
             ))}
           </select>
@@ -163,17 +164,17 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
                 writeAudioSettings(patch);
               }}
             />
-            <label htmlFor={`${id}-${key}`}>{label}</label>
+            <label htmlFor={`${id}-${key}`}>{t(label)}</label>
             {hint === undefined ? null : (
               <p className="audio-controls__hint" id={`${id}-${key}-hint`}>
-                {hint}
+                {t(hint)}
               </p>
             )}
           </div>
         ))}
       </Group>
 
-      <Group title="Voice">
+      <Group title={t("Voice")}>
         <div className="audio-controls__row audio-controls__row--check">
           <input
             id={`${id}-voice-on`}
@@ -184,7 +185,7 @@ export default function AudioControls({ className }: AudioControlsProps): ReactE
               writeAudioSettings({ voiceOn: event.currentTarget.checked });
             }}
           />
-          <label htmlFor={`${id}-voice-on`}>Voice lines</label>
+          <label htmlFor={`${id}-voice-on`}>{t("Voice lines")}</label>
         </div>
       </Group>
     </fieldset>

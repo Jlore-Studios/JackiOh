@@ -162,7 +162,7 @@ fn with_brittle_count(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
 /// count in force. What a card in a hand or a deck is made of (B5 E38, R243) — the granted keywords it
 /// gained there ride onto the field with it — and what a Degrade may take off it (B3.4).
 pub fn card_keywords(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
-    let mut all: Vec<Keyword> = if instance.vanilla {
+    let mut all: Vec<Keyword> = if instance.vanilla || crate::alt_play::is_dormant(instance) {
         Vec::new()
     } else {
         face_of(state, instance).keywords
@@ -191,7 +191,7 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 }
 
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5).
-fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
+pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     // Every unit read walks this list, so it is built with plain loops (#188), straight off the rows
     // as `zones::active_units_of` reads them: each unit zone's top card in lane order, then the Units
     // the side's carriers hold (R446), then the backrow by lane.
@@ -377,7 +377,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
 
     // B3.3 rule 5: a Brittle count in force is the unit's Brittle (`with_brittle_count`).
     let mut listed: Vec<Keyword> = Vec::new();
-    if !instance.vanilla {
+    if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
         listed.extend(printed.keywords.iter().cloned());
     }
     // B5 E35: the keywords its text gives it only while a condition holds, beside the printed ones.

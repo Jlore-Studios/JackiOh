@@ -25,7 +25,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::HAND_CAP;
 use crate::draw::DrawOutcome;
 use crate::own_library::hide_from_owner;
 use crate::preview::is_face_down;
@@ -86,7 +85,7 @@ pub fn change_owner(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Playe
 /// R466: the players who can read a card where it lies (§9.1, §10.8): a hand is its holder's, a library
 /// nobody's, a face-down backrow card its controller's (R33), and a face-up card, a graveyard, an exile
 /// pile and the resolving zone everyone's (a play is public, R98).
-fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
+pub(crate) fn readers_where_it_lies(state: &GameState, card: &CardInstance) -> Vec<PlayerId> {
     match card.zone {
         Zone::Hand { player } => vec![player],
         Zone::Library { .. } => Vec::new(),
@@ -115,7 +114,8 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
     let mut card = live(sink.state, card);
     // `draw::add_to_hand` burns a card entering a full hand (§2.4, R4): the same test, read before
     // the move, names where it went.
-    let burns = sink.state.players[card.owner].hand.len() as i32 >= HAND_CAP;
+    let burns =
+        sink.state.players[card.owner].hand.len() as i32 >= crate::query::hand_cap_of(sink.state, card.owner);
     crate::draw::add_to_hand(sink, &mut card);
     Some(if burns { TakenTo::Burned } else { TakenTo::Hand })
 }

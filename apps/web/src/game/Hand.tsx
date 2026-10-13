@@ -36,10 +36,15 @@ import { testid, type AnimatingMap, type ClickTarget, type Highlight, type Side 
 import { useLanding } from "./drag/landing.ts";
 import { revealTestid } from "./reveal.ts";
 import { useSetting } from "../settings/index.ts";
+import { t } from "../i18n/i18n.ts";
 
 export type HandProps = {
   side: Side;
   hand: CardView[] | { count: number };
+  /** R1143: this seat's hand size, once set for the rest of the game (Meditative #79). Shown beside the count. */
+  cap?: number | undefined;
+  /** R1141: on the opponent's seat, how many of their hand cards carry a mark. Never which. */
+  marked?: number | undefined;
   /** #165: what a touch hold on a card opens (contract.ts's `touchHoldMode`). */
   touchHold?: "sheet" | "preview";
   highlight?: Highlight;
@@ -68,7 +73,7 @@ export function handEmptyTestid(side: Side): string {
 function EmptyHand({ side }: { side: Side }): ReactElement {
   return (
     <div className="hand-empty" data-testid={handEmptyTestid(side)}>
-      <span className="hand-empty-text">{HAND_EMPTY_TEXT}</span>
+      <span className="hand-empty-text">{t(HAND_EMPTY_TEXT)}</span>
     </div>
   );
 }
@@ -93,7 +98,7 @@ function RevealedSlot({ card, index, touchHold }: { card: CardView; index: numbe
 }
 
 export default function Hand(props: HandProps): ReactElement {
-  const { hand, side } = props;
+  const { hand, side, cap, marked } = props;
   const count = handCount(hand);
   const yours = side === "you";
   // R434: the opponent's hand is cards only once the game is over; it is read, never played.
@@ -177,13 +182,25 @@ export default function Hand(props: HandProps): ReactElement {
       data-empty={count === 0 ? "true" : undefined}
       data-revealed={revealed && count > 0 ? "true" : undefined}
       data-hover-preview={yours ? (hoverPreviews ? "on" : "off") : undefined}
-      aria-label={`${side} hand`}
+      data-marked={marked}
+      aria-label={side === "you" ? t("you hand") : t("opponent hand")}
     >
       <span className="pile">
-        <span className="pile-label">Hand</span>
+        <span className="pile-label">{t("Hand")}</span>
         <span className="pile-n" data-testid={`hand-count-${side}`}>
           {count}
         </span>
+        {cap === undefined ? null : (
+          <span className="pile-cap" data-testid={`hand-cap-${side}`}>
+            /{cap}
+          </span>
+        )}
+        {marked === undefined ? null : (
+          <span className="pile-marked" data-testid={`hand-marked-${side}`}>
+            {marked}
+            {t(" marked")}
+          </span>
+        )}
       </span>
       <div className="hand-cards" style={{ "--n": count } as CSSProperties}>
         {count === 0 ? <EmptyHand side={side} /> : null}

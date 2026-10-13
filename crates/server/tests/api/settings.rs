@@ -7,11 +7,9 @@
 //! `tests/store/contract.rs`; the database's half — RLS, the grants and the SQL function — is
 //! `tests/sql/11_player_settings.sql` and `02_rls_as_client.sql`.
 //!
-//! Port of `apps/server/test/api/settings.test.ts` (part 18). TS built a router over the settings
-//! routes alone with seeded profiles and scripted tokens; here every request goes through the whole
-//! app (`support::deps::test_app`, the E2E fixtures), so the caller is `e2e-p1`, the other account
-//! `e2e-p2` and the pending one `e2e-pending`, and a banned account is `e2e-p2` set to `banned`.
-//! TS's manual clock is the server's own wall clock: a time "now" is read from it around the call.
+//! Every request goes through the whole app (`support::deps::test_app`, the E2E fixtures): the
+//! caller is `e2e-p1`, the other account `e2e-p2`, the pending one `e2e-pending`, and a banned
+//! account is `e2e-p2` set to `banned`. A time "now" is read from the server's wall clock.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,10 +34,10 @@ const OTHER_USER: &str = "e2e-p2";
 const PENDING_TOKEN: &str = "e2e-token-pending";
 const PENDING_USER: &str = "e2e-pending";
 
-/// JS's `Number.MAX_SAFE_INTEGER + 2`: past the largest whole number a client can send exactly.
+/// `Number.MAX_SAFE_INTEGER + 2`: past the largest whole number a client can send exactly.
 const PAST_SAFE_INTEGER: i64 = 9_007_199_254_740_993;
 
-/// TS's `beforeEach`: a fresh app, and the profile ids of the three fixture accounts.
+/// A fresh app, and the profile ids of the three fixture accounts.
 struct Fixture {
     app: Arc<App>,
     profile: String,
@@ -60,7 +58,7 @@ async fn setup() -> Fixture {
     }
 }
 
-/// A store value built from TS's own object literal.
+/// A store value built from JSON.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value).expect("a store value from its JSON")
 }
@@ -80,12 +78,12 @@ fn wall_ms() -> i64 {
     jackioh_server::app::now_ms()
 }
 
-/// An object with computed keys (TS `{ [id]: group }`, `Object.fromEntries`).
+/// An object with computed keys.
 fn object(entries: impl IntoIterator<Item = (String, Value)>) -> Value {
     Value::Object(entries.into_iter().collect::<Map<String, Value>>())
 }
 
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively.
+/// Every key `expected` names is in `actual` and matches, recursively.
 fn is_match(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
         (Value::Object(actual), Value::Object(expected)) => expected
@@ -121,8 +119,7 @@ async fn set_status(app: &App, profile_id: &str, status: &str) {
     tx.commit().await.expect("commit");
 }
 
-/// The profiles that hold a settings row, of the three fixture accounts (TS read
-/// `store.tables.playerSettings`, which held no one else's).
+/// The profiles, of the three fixture accounts, that hold a settings row.
 async fn stored(fixture: &Fixture) -> Vec<String> {
     let mut held = Vec::new();
     for profile_id in [&fixture.profile, &fixture.other, &fixture.pending] {
@@ -160,9 +157,8 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
 
     #[tokio::test]
     async fn r633_declares_get_and_put_api_settings_both_active() {
-        // TS read the declared route list; here the app answers for it. GET and PUT exist, every
-        // other method on the path is the router's 404, and both turn a pending account away, which
-        // a `user` route would not.
+        // GET and PUT exist, every other method on the path is the router's 404, and both turn a
+        // pending account away, which a `user` route would not.
         let f = setup().await;
         assert_eq!(get(&f.app, TOKEN).await.0, 200);
         assert_eq!(put(&f.app, json!({ "groups": {} }), TOKEN).await.0, 200);
@@ -356,8 +352,7 @@ mod r634_a_write_replaces_a_group_only_with_a_strictly_later_one {
             json!({ "at": now, "values": { "master": 0.1 } })
         );
 
-        // A moment later, a change from a device whose clock is right wins over it. (TS moved its
-        // manual clock a minute; the wall clock is waited on until it has moved past `now`.)
+        // A moment later, a change from a device whose clock is right wins over it.
         while wall_ms() <= now {
             tokio::time::sleep(Duration::from_millis(1)).await;
         }

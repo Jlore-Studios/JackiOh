@@ -1,32 +1,14 @@
-// The deck builder's detail view (B29): both printed faces side by side at every width, a meta
-// line (its lines of code last, E36), the glossary of both faces, and the caller's meta and actions above Close. It is a centred
-// modal dialog over a scrim, closed by Close, the scrim or Escape (B25), and it takes the one
-// inspect slot: opening it closes any hover preview or sheet, and closeInspect() closes it.
-//
-// Both faces and the reading-size rules are where a reference in a card's text is a control (R279):
-// hovering, focusing or tapping a name shows the card it names. The Radiant face and the Radiant
-// line mark what the base face does not have in gold (R277).
-//
-// Under the faces, the rules text is printed again at reading size. Two faces side by side on a
-// 390 px phone are about 170 px wide each, where a 400-character card prints at 5 px; inspect.css
-// shows this block on narrow screens and short ones, and on any screen for a card long enough to
-// shrink hard. On a wide screen up to 900 px tall (a 1280x720 desktop, a phone on its side) the
-// faces stand at the height the screen allows, with the rest of the dialog in a column beside
-// them. The actions row (the caller's actions and Close) is pinned under the scrolling body, so it
-// is visible the moment the dialog opens, which is also where focus lands.
-//
-// After the glossary, the card's flavour line and artist credit (R660, Flavour.tsx).
-//
-// Last in the column, the card's History (R388, patches/CardHistory.tsx): collapsed under a
-// "History" control, it loads the card's patch history when opened and lists each patch that changed
-// the card, newest first, with its faces as that patch left them and what changed marked. The
-// Patch notes page opens the detail with it already open (`historyOpen`).
+// Detail shows both faces, meta (lines of code last, E36), glossary and caller actions (B29).
+// It is the sole inspect slot, closed by Close, scrim or Escape (B25).
+// Card-text refs are controls and Radiant differences are gold (R279, R277); reading-size rules and
+// pinned actions keep long faces usable. Flavour then History follow the glossary (R660, R388).
 
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
+import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
@@ -37,6 +19,7 @@ import { Flavour } from "./Flavour.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -56,18 +39,25 @@ export type CardDetailProps = {
   historyOpen?: boolean;
   /** SPEC §9.11, R654: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
+  /** R711000: the card is one a match flagged Chinese (R1301): its faces are Chinese, and a Chinese reader gets the easter egg line. */
+  easter?: boolean;
 };
 
 /**
- * `#<index> · <set> · <rarity> · <type>`, then ` · <tags>` when there are any, then ` · N lines of
- * code` (E36) when the card's script was counted. A face with a type of its own (B2.7, Classic+ #22
- * Blood Moon's Radiant Field Trap) says so after the type: "Trap (Radiant: Field Trap)".
+ * `#<index> · <set> · <rarity> · <type>`, then tags and ` · N lines of code` (E36) when present. A
+ * Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)".
  */
 export function detailMetaLine(def: CardDef): string {
+  // R711000: the frame's words in the reader's language (chinese.ts), the catalog's English otherwise.
+  const terms = readerTerms();
+  const typeWord = (type: CardType): string => terms?.types[type] ?? type;
   const radiantType = def.radiant.type;
-  const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
-  const parts = [`#${def.index}`, def.set, def.rarity, type];
-  if (def.tags.length > 0) parts.push(def.tags.join(", "));
+  const type =
+    radiantType !== undefined && radiantType !== def.type
+      ? t("{type} (Radiant: {radiant})", { type: typeWord(def.type), radiant: typeWord(radiantType) })
+      : typeWord(def.type);
+  const parts = [`#${def.index}`, t(def.set), terms?.rarities[def.rarity] ?? def.rarity, type];
+  if (def.tags.length > 0) parts.push(def.tags.map((tag) => terms?.tags[tag] ?? tag).join(t(", ")));
   if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }
@@ -77,8 +67,7 @@ const LONG_TEXT_TIERS: ReadonlySet<string> = new Set(["xl", "xxl"]);
 
 /**
  * The rules at reading size: the base text, then the Radiant face's whole text with what the base
- * face does not have marked (R277). A Radiant text equal to the base one (a card whose Radiant face
- * changes only its stats) is not printed twice.
+ * lacks marked (R277); a Radiant text equal to the base one is not printed twice.
  */
 function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel }): ReactElement | null {
   const radiantLine = radiant.text.full === base.text.full ? null : radiant.text;
@@ -88,17 +77,17 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
     <div className="inspect-rules" data-long={long ? "true" : "false"}>
       {base.text.full === "" ? null : (
         <p className="inspect-rules-line">
-          <span className="inspect-rules-label">Base</span>
+          <span className="inspect-rules-label">{t("Base")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={base.text.full} refs={base.refs} />
+            <RulesText text={base.text.full} refs={base.refs} chinese={base.chinese === true} />
           </span>
         </p>
       )}
       {radiantLine === null ? null : (
         <p className="inspect-rules-line inspect-rules-line--radiant">
-          <span className="inspect-rules-label">Radiant</span>
+          <span className="inspect-rules-label">{t("Radiant")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} />
+            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} chinese={radiant.chinese === true} />
           </span>
         </p>
       )}
@@ -106,7 +95,16 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta, historyOpen = false, showStats = false }: CardDetailProps): ReactElement {
+export function CardDetail({
+  def,
+  onClose,
+  actions,
+  meta,
+  historyOpen = false,
+  showStats = false,
+  easter = false,
+}: CardDetailProps): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -121,8 +119,8 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
     return registerDetail(`inspect-detail:${def.id}`, () => onCloseRef.current());
   }, [def.id]);
 
-  const base = faceModel({ defId: def.id, def, radiant: false });
-  const radiant = faceModel({ defId: def.id, def, radiant: true });
+  const base = faceModel({ defId: def.id, def, radiant: false, chinese: easter });
+  const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
   const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
 
   return createPortal(
@@ -145,13 +143,13 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
                   <CardFace face={base} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Base</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Base")}</figcaption>
               </figure>
               <figure className="inspect-detail-face inspect-detail-face--radiant">
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
                   <CardFace face={radiant} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Radiant</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Radiant")}</figcaption>
               </figure>
             </div>
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
@@ -162,7 +160,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
-              <Flavour defId={def.id} />
+              <Flavour defId={def.id} easter={easter} />
               {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
@@ -179,7 +177,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
             data-testid={INSPECT_CLOSE}
             {...modal.dismissProps}
           >
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

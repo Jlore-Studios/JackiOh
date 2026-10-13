@@ -83,16 +83,16 @@ class StageTests(unittest.TestCase):
         gh.add_issue(7, labels=(LABEL_NEEDS_PLAN,))       # not queued any more
         plan_mod.make(ctx)
         labelled = {n for n in (3, 4, 5, 6, 7) if LABEL_NEEDS_PLAN in gh.label_names(n)}
-        # A medium plan is enough for an easy item; a medium (or hard) one needs a strong
-        # model's (#317 part 6).
-        self.assertEqual(labelled, {3, 6})
+        # A medium plan is enough for an easy or medium item; only a hard one needs a
+        # strong model's (#317 part 6, #695).
+        self.assertEqual(labelled, {3})
 
 
 class PlanningLaneTests(unittest.TestCase):
     def test_planning_comes_first_easy_first_and_takes_no_build_lane(self):
         """claude-3 plans while it builds; claude-1, capped like the rest, plans only
-        when it holds nothing else; Devin builds once a strong model planned it. claude-7,
-        uncapped like claude-3, would plan too, so it has no secret here."""
+        when it holds nothing else; Devin builds once a strong model planned it. claude-7, idle
+        and ahead of claude-1 in the usage order, would plan first, so it has no secret here."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, env=secrets(*(s for s in providers.SECRETS
                                          if s != "CLAUDE_CODE_OAUTH_TOKEN_7")))
@@ -150,32 +150,32 @@ class PlanningLaneTests(unittest.TestCase):
         self.assertEqual((planned["action"], planned["number"]), ("plan", 4))
 
     def test_claude_1_never_plans_while_it_builds(self):
-        """Two lanes let a second build start while one runs, but a capped subscription
-        still never plans while it holds anything: two runs deciding from one reading go
-        past a cap together, so the planning side of that stays shut."""
+        """One lane (#695): while it holds a run it takes nothing more, neither a second
+        build nor a plan — two runs deciding from one reading go past a cap together. Once
+        the run ends, it plans."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN"))
         busy(gh, ctx, ("claude-1", 50))
         queue(gh, ctx, 3, planned=False)
-        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane, never a plan
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
         gh.runs.pop("50")
         self.assertEqual(plan_mod.make(ctx)["action"], "plan")
 
-    def test_a_capped_subscription_builds_twice_but_never_plans_while_holding(self):
-        """claude-2 (capped) takes a second build on its free lane, but never plans while
-        it holds anything: the planning side of the two-runs-one-reading cap blowout stays
-        shut, while the mid-run refusal checks still guard the spending."""
+    def test_a_capped_subscription_takes_nothing_while_holding(self):
+        """claude-2 (capped) has one lane (#695): while it holds a run it takes nothing more,
+        neither a second build nor a plan. Once the run ends, it plans; the mid-run refusal
+        checks still guard the spending."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=(), env=secrets("CLAUDE_CODE_OAUTH_TOKEN_2"))
         busy(gh, ctx, ("claude-2", 50))
         queue(gh, ctx, 3, planned=False)
-        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane, never a plan
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")
         gh.runs.pop("50")
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["provider"]), ("plan", "claude-2"))
         running(gh, ctx, planned)
         queue(gh, ctx, 4)
-        self.assertEqual(plan_mod.make(ctx)["action"], "build")  # the free lane again
+        self.assertEqual(plan_mod.make(ctx)["action"], "none")  # the lane is held again
 
     def test_headroom_holds_back_plans_as_it_does_builds(self):
         """At 87% of its 5-hour window claude-2 (cap 90%, long runs start under 85%) starts
@@ -217,7 +217,7 @@ class PlanningLaneTests(unittest.TestCase):
     def test_a_medium_model_rates_and_plans_an_unrated_item_on_the_lane(self):
         """By day (the Claude accounts keep to the night here) no strong model is free: an item
         nobody has rated or planned may still be rated and planned on the lane by a medium model
-        (#317 part 8), Muse first; a rated medium item waits for a strong planner (part 6)."""
+        (#317 part 8), Muse first; a rated medium item takes a medium planner too (#695)."""
         gh = FakeGitHub()
         ctx = lane_ctx(gh, at=DAY, machine=ALL_MACHINE)
         queue(gh, ctx, 3, planned=False)
@@ -227,8 +227,9 @@ class PlanningLaneTests(unittest.TestCase):
         gh = FakeGitHub()
         ctx = lane_ctx(gh, at=DAY, machine=ALL_MACHINE)
         queue(gh, ctx, 3, "difficulty:medium", planned=False)
-        self.assertEqual(plan_mod.make(ctx)["action"], "none")
-        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(3))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["provider"]), ("plan", "muse"))
+        self.assertEqual(seats(planned)["plan"], ("muse", "muse-spark-1.3-contributor", "medium"))
         # An easy item nobody planned is never Devin's.
         gh = FakeGitHub()
         ctx = lane_ctx(gh, at=DAY, machine=("devin",))
@@ -285,7 +286,7 @@ class PersonsPlanTests(unittest.TestCase):
         planned = plan_mod.make(ctx)
         self.assertEqual((planned["action"], planned["number"]), ("plan", 3))
         # The bot's own record wins over the description: a medium item a medium model planned
-        # still waits for a strong plan (#317 part 6).
+        # builds from that plan (#695), on Sonnet with its run's own Opus reviewer.
         gh = FakeGitHub()
         ctx = lane_ctx(gh, machine=("devin",))
         busy(gh, ctx, *[(p, 50 + i) for i, p in enumerate(
@@ -293,7 +294,8 @@ class PersonsPlanTests(unittest.TestCase):
         gh.add_issue(4, labels=(LABEL_BUILD, "difficulty:medium"), body=self.body())
         ctx.store.update(lambda s: state_item(s, 4).update(planned_at=iso(NIGHT),
                                                             planned_tier="medium"))
-        planned = plan_mod.make(ctx)  # claude-3 plans on the planning lane while it builds
-        self.assertEqual((planned["action"], planned["number"], seats(planned)["plan"][2]),
-                         ("plan", 4, "strong"))
-        self.assertIn(LABEL_NEEDS_PLAN, gh.label_names(4))
+        planned = plan_mod.make(ctx)
+        self.assertEqual((planned["action"], planned["number"]), ("build", 4))
+        self.assertEqual(seats(planned)["build"], ("claude-3", "sonnet", "medium"))
+        self.assertEqual(seats(planned)["review"], ("claude-3", "opus", "strong"))
+        self.assertNotIn(LABEL_NEEDS_PLAN, gh.label_names(4))

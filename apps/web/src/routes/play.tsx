@@ -1,43 +1,7 @@
-// `/play` — the lobby: pick a mode and a deck or trio, then queue or use a room code (SPEC §9.5,
-// R257, R258, R264).
-//
-// IT ENFORCES NOTHING (CLAUDE.md rule 7). The three modes, what each needs and whether a choice may
-// be queued are the server's: `POST /api/queue` and the room routes freeze the choice and run the
-// shared validator on it (R253), and this screen relays what they said. The lobby does run the same
-// validator (`validateDeck` for Best of 1, `validateTrio` for Conquest) over the same collection,
-// but only to say "Ready" or why not before the player presses anything. It never blocks a button:
-// a verdict here is UX, and a 422 `loadout_invalid` from the server shows the validator's sentences
-// exactly as the server relayed them.
-//
-// WAITING. Only one side's HTTP response ever carries the match or series it made: the room's host
-// and a queued player whose ticket the sweeper paired are told nothing. `GET /api/auth/me` answers
-// `currentMatchId` (§9.5) and `currentSeriesId` (R259), so the lobby reads its own state: once on
-// every mount (a reload after being paired must not strand the player) and every
-// `SERIES_POLL_SECONDS` while it is actually waiting. A running game goes to the board; a series
-// between games goes to the series screen, where the next deck is picked.
-//
-// LEAVING WHILE QUEUED (R765). A ticket stays in the queue until it is paired or left, so the player
-// may leave this screen while they wait. The tab remembers the queue (`net/liveGame.ts`): on any
-// other screen the route table follows it and takes the player to the game once they are paired,
-// and back here the lobby picks the wait up again, with Leave as the way out.
-//
-// A ROOM LINK (R767). A room's ticket shares it as a link (`net/roomLink.ts`). A lobby opened on one
-// fills in the join form, chooses the link's mode, says what to pick and focuses it, and never joins
-// by itself: the mode is a hint, and the server's refusal (R264) still decides.
-//
-// THE QUEUE'S COUNTS (R505) are on the mode tiles and nowhere else: each tile says how many are
-// waiting for its mode. The Find a match box says what this screen is doing (queued, looking for
-// an opponent, the room code) and repeats no count, and neither does the queued notice.
-//
-// MORE CARDS FROM THE NEWEST SET (R1372). All Random's setup carries one switch: the player's own
-// dealt deck leans on the newest set that ships (`game/LeanNewest.tsx`). It is intent on the queue
-// and room requests (`leanNewest`), for this player's seat only; the server resolves the set and
-// deals the deck. The pick is kept on this device for the next visit and for the rematch.
-//
-// THE RANK (R661) has a panel of its own beside the queue: the player's own visible rank from
-// `GET /api/ranked`, in `rank/rank.ts`'s words (placements, a Grape tier with its division and pips,
-// or a Jlorious position; never the hidden rating, R612), and the way to the leaderboard. It is
-// read once on arrival; a failed read shows no rank and keeps the link.
+// Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
+// R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
+// Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
+// and rank never exposes its hidden rating.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -78,53 +42,43 @@ import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import { t, useLocale } from "../i18n/i18n.ts";
 import "../auth/tavern.css";
 import "./lobby.css";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
+/** Unit conversion, not configuration. */
+const SECONDS_PER_MINUTE = 60;
 
-/** Chrome this screen invented; `e2e/support/testids.ts` mirrors the strings. */
+/** Browser-test contract; `e2e/support/testids.ts` mirrors these strings. */
 export const playTestid = {
   queue: "play-queue",
   leaveQueue: "play-leave-queue",
   createRoom: "play-create-room",
   roomCode: "play-room-code",
-  /** The created room's mode (`data-mode`), next to its code (R264). */
   roomMode: "play-room-mode",
   joinForm: "play-join-form",
   joinInput: "play-join-code",
   joinSubmit: "play-join-submit",
   status: "play-status",
   error: "play-error",
-  /** The way to `/practice` from here, until the landing page carries its own (polish task 5). */
   practice: "play-practice",
-  /** The three mode radios (R257). */
   modeBo1: "play-mode-bo1",
   modeBo3: "play-mode-bo3",
   modeRandom: "play-mode-random",
-  /** Best of 1's deck `<select>`, and Conquest's trio `<select>`. */
   deckSelect: "play-deck-select",
   trioSelect: "play-trio-select",
-  /** The client's verdict on the choice (`data-ready`): UX only, the server's is law (R253). */
   verdict: "play-choice-verdict",
-  /** The queue's population per mode (`data-bo1`, `data-bo3`, `data-random`), on the mode tiles (R505). */
-  population: "play-population",
-  /** The way to `/decks` when there is no deck (Best of 1) or no trio (Conquest) to pick. */
+  /** R505, R640002: the last hour's games, under the mode tiles; each tile carries its own wait. */
+  recentGames: "play-recent-games",
   decksLink: "play-decks-link",
-  /** The way to the series a refusal said the player is still in. */
   seriesLink: "play-series-link",
-  /** Copies the created room's code to the clipboard. */
   copyRoomCode: "play-copy-room-code",
-  /** R767: shares the created room as a link: the share sheet, else the clipboard. */
   copyRoomLink: "play-copy-room-link",
-  /** The "searching" indicator shown while this screen is queued (`data-mode`). */
   searching: "play-searching",
-  /** R661: the player's own visible rank, in `rankWords`' words, with the season. */
   rank: "play-rank",
-  /** R661: the way to `/leaderboard`. */
   leaderboard: "play-leaderboard",
-  /** R1372: All Random's "More cards from the newest set" checkbox. */
   leanNewest: "play-lean-newest",
 } as const;
 
@@ -136,30 +90,41 @@ const MODE_TESTID: Readonly<Record<QueueMode, string>> = {
   random: playTestid.modeRandom,
 };
 
-/** A mode radio's testid. */
 export function playModeTestid(mode: QueueMode): string {
   return MODE_TESTID[mode];
 }
 
-/**
- * What each mode is called on every screen (the lobby, the room code, the series screen). The trio
- * mode keeps its wire name `bo3` and is called Conquest since R330.
- */
+/** R640002: the expected wait on a mode's tile. */
+export function playWaitTestid(mode: QueueMode): string {
+  return `play-wait-${mode}`;
+}
+
+/** R640002: an expected wait the server counted, in seconds, as its tile says it. */
+export function waitWords(seconds: number): string {
+  if (seconds < SECONDS_PER_MINUTE) return t("Usually under {n} s", { n: String(seconds) });
+  return t("Usually under {n} min", { n: String(Math.ceil(seconds / SECONDS_PER_MINUTE)) });
+}
+
+/** R640002: the games that ended in the last hour, bot games among them. */
+export function recentGamesWords(games: number): string {
+  return games === 1
+    ? t("1 game played in the last hour")
+    : t("{count} games played in the last hour", { count: String(games) });
+}
+
+/** R330 calls wire mode `bo3` Conquest. */
 export const MODE_LABEL: Readonly<Record<QueueMode, string>> = {
   bo1: "Best of 1",
   bo3: "Conquest",
   random: "All Random",
 };
 
-/** Where the lobby remembers the last mode, deck and trio (a convenience; see `readStoredChoice`). */
 export const PLAY_CHOICE_KEY = "jackioh.play.choice";
 
 /** `crates/server/src/api/http.rs`'s code for a choice the validator refused (R253). */
 const LOADOUT_INVALID = "loadout_invalid";
 
-// ---------------------------------------------------------------------------------------------
-// the remembered choice
-// ---------------------------------------------------------------------------------------------
+// Remembered choice
 
 type StoredChoice = { mode?: QueueMode; deckId?: string; trioId?: string };
 
@@ -167,7 +132,6 @@ function isQueueMode(value: unknown): value is QueueMode {
   return value === "bo1" || value === "bo3" || value === "random";
 }
 
-/** The last choice this device made; `{}` in a private window, with blocked storage or bad JSON. */
 function readStoredChoice(): StoredChoice {
   try {
     const raw = window.localStorage.getItem(PLAY_CHOICE_KEY);
@@ -193,16 +157,14 @@ function writeStoredChoice(choice: StoredChoice): void {
   }
 }
 
-// ---------------------------------------------------------------------------------------------
-// the lobby's reads
-// ---------------------------------------------------------------------------------------------
+// Lobby reads
 
 type LobbyData = {
   decks: readonly SavedDeck[];
   trios: readonly SavedTrio[];
-  /** Null when `/api/catalog` could not be read: the verdict is skipped, never guessed. */
+  /** A missing catalog skips the verdict. */
   catalog: CatalogSnapshot | null;
-  /** Null when `/api/collection` could not be read: likewise (L5 needs it). */
+  /** A missing collection skips the verdict (L5). */
   collection: Collection | null;
 };
 
@@ -214,15 +176,11 @@ function collectionOf(entries: readonly { cardId: string; quantity: number }[]):
   return owned;
 }
 
-/** A call that may throw synchronously (or return nothing, in a test), as a promise. */
 function attempt<T>(call: () => Promise<T>): Promise<T> {
   return Promise.resolve().then(call);
 }
 
-/**
- * `GET /api/decks` (the choices), `GET /api/catalog` and `GET /api/collection` (the verdict's
- * inputs). Only the decks are needed to queue; the other two only feed the verdict.
- */
+/** Catalog and collection failures skip only the client verdict. */
 function useLobbyData(token: string): LobbyLoad {
   const [load, setLoad] = useState<LobbyLoad>({ kind: "loading" });
   useEffect(() => {
@@ -271,10 +229,7 @@ export function defaultTrio(trios: readonly SavedTrio[], remembered: string | nu
   );
 }
 
-/**
- * The choice as the queue and the room routes take it; null when the mode needs a pick there isn't.
- * All Random carries the player's R1372 lean, sent only when it is on.
- */
+/** Queue/room choice; null when its required pick is absent. */
 export function choiceFor(
   mode: QueueMode,
   deck: SavedDeck | null,
@@ -291,10 +246,7 @@ export function choiceFor(
   }
 }
 
-/**
- * The client's verdict on a choice, from the shared validator (R253): null when there is nothing to
- * judge or an input is missing. The deck's own names go in, so a message reads as the server's will.
- */
+/** R253 client-only verdict; missing input has no verdict. */
 export function verdictFor(
   mode: QueueMode,
   deck: SavedDeck | null,
@@ -309,7 +261,7 @@ export function verdictFor(
   }
   if (mode === "bo3") {
     if (trio === null) return null;
-    // An empty slot is simply absent, which is L1's "this one has 2" (R253).
+    // Missing trio slots are omitted (L1, R253).
     const decks: LoadoutDeck[] = [];
     for (const id of trio.deckIds) {
       const deck = id === null ? undefined : data.decks.find((saved) => saved.id === id);
@@ -320,9 +272,7 @@ export function verdictFor(
   return null;
 }
 
-// ---------------------------------------------------------------------------------------------
-// refusals
-// ---------------------------------------------------------------------------------------------
+// Refusals
 
 function messageOf(cause: unknown): string {
   if (cause instanceof ApiRequestError) return cause.message;
@@ -331,13 +281,13 @@ function messageOf(cause: unknown): string {
 
 type LobbyError = {
   message: string;
-  /** A 422 `loadout_invalid`'s issues, each the validator's sentence as the server relayed it. */
   issues: readonly string[];
-  /** A refusal that names the series the player is still in (`already_in_match`, R259). */
   seriesId: string | null;
+  /** R264: the room's mode, worded at render (`roomModeMessage`) so a language switch rewords it. */
+  roomMode: QueueMode | null;
 };
 
-/** `details` of a 422, read back as the validator's sentences; nothing is reworded or invented. */
+/** Keeps validator sentences verbatim. */
 export function issueMessagesOf(details: unknown): string[] {
   if (!Array.isArray(details)) return [];
   const messages: string[] = [];
@@ -364,30 +314,42 @@ function errorOf(cause: unknown): LobbyError {
     issues:
       cause instanceof ApiRequestError && cause.code === LOADOUT_INVALID ? issueMessagesOf(cause.details) : [],
     seriesId: seriesIdOfError(cause),
+    roomMode: null,
   };
 }
 
-/** R264: what a joiner is told when the room plays another mode than the one they chose. */
 export function roomModeMessage(mode: QueueMode): string {
-  if (mode === "random") return `This room plays ${MODE_LABEL[mode]}: join again.`;
-  return `This room plays ${MODE_LABEL[mode]}: pick a ${mode === "bo3" ? "trio" : "deck"} and join again.`;
+  if (mode === "random") return t("This room plays {mode}: join again.", { mode: t(MODE_LABEL[mode]) });
+  return t("This room plays {mode}: pick a {thing} and join again.", {
+    mode: t(MODE_LABEL[mode]),
+    thing: mode === "bo3" ? t("trio") : t("deck"),
+  });
 }
 
-/** R767: what the lobby says when it opens on a room link, for the mode it chose. */
 export function roomLinkStatus(mode: QueueMode): string {
-  if (mode === "random") return `No deck needed for ${MODE_LABEL[mode]}: press Join.`;
-  return `Pick a ${mode === "bo3" ? "trio" : "deck"} for ${MODE_LABEL[mode]}, then press Join.`;
+  if (mode === "random") return t("No deck needed for {mode}: press Join.", { mode: t(MODE_LABEL[mode]) });
+  return t("Pick a {thing} for {mode}, then press Join.", {
+    mode: t(MODE_LABEL[mode]),
+    thing: mode === "bo3" ? t("trio") : t("deck"),
+  });
 }
 
-// ---------------------------------------------------------------------------------------------
-// the wait
-// ---------------------------------------------------------------------------------------------
+// The status line
 
 /**
- * Where a paired profile goes: the board (`currentMatchId`) or, between the games of a series,
- * the series screen (`currentSeriesId`) — or nowhere yet. Pure, and the same reading the rest of
- * the client follows a pairing with (`net/liveGame.ts`'s `liveGameOf`), so the two cannot differ.
+ * What the line under the header says, kept as a description and worded at render: a sentence kept
+ * as text would stay in the language it was said in when the reader switches.
  */
+type Status =
+  | { kind: "queued"; mode: QueueMode }
+  | { kind: "roomLink"; mode: QueueMode }
+  | { kind: "found" }
+  | { kind: "left" }
+  | { kind: "ticket" };
+
+// Pairing watch
+
+/** Uses `liveGameOf` so pairing navigation matches the rest of the client. */
 export function pairTargetOf(me: {
   currentMatchId: string | null;
   currentSeriesId?: string | null;
@@ -395,18 +357,11 @@ export function pairTargetOf(me: {
   return liveGameOf(me)?.path ?? null;
 }
 
-/** What the lobby says the moment a pairing lands, before it navigates there. */
 export { MATCH_FOUND_STATUS };
 
-/**
- * Reads `/api/auth/me` once on every mount, and every `SERIES_POLL_SECONDS` while `waiting`, and
- * goes wherever the profile already is (`pairTargetOf`). `onTick` runs with every poll (the
- * population); `onPair` runs once with the target before navigating to it, so the lobby names
- * the pairing instead of vanishing silently. A failed read is ignored: the player cannot act on
- * it, and the next tick retries.
- */
+/** Polls while waiting and reports a pairing once before navigating. */
 function useLobbyWatch(token: string, waiting: boolean, onTick: () => void, onPair: (target: string) => void): void {
-  // Survives a re-render so a slow response cannot navigate twice.
+  // Prevents a slow response from navigating twice after a re-render.
   const navigated = useRef(false);
   const tick = useRef(onTick);
   tick.current = onTick;
@@ -429,8 +384,7 @@ function useLobbyWatch(token: string, waiting: boolean, onTick: () => void, onPa
         .catch(() => undefined);
     };
 
-    // ONE CHECK ON EVERY MOUNT, waiting or not: a player who reloads /play after being paired
-    // loses `waiting` with the page, and would otherwise sit here while their opponent plays.
+    // Check every mount so a reload after pairing cannot strand the player.
     check();
     if (!waiting) {
       return () => {
@@ -448,9 +402,7 @@ function useLobbyWatch(token: string, waiting: boolean, onTick: () => void, onPa
   }, [token, waiting]);
 }
 
-// ---------------------------------------------------------------------------------------------
-// pieces
-// ---------------------------------------------------------------------------------------------
+// UI pieces
 
 function DecksLink({ children }: { children: string }): ReactElement {
   return (
@@ -468,24 +420,23 @@ function Verdict({ result }: { result: LoadoutResult | null }): ReactElement | n
         <span className="lobby-verdict__mark" aria-hidden="true">
           ✓
         </span>
-        Ready to queue
+        {t("Ready to queue")}
       </p>
     );
   }
   return (
     <div className="lobby-verdict" data-testid={playTestid.verdict} data-ready="false">
-      <p className="lobby-verdict__lead">Not ready yet. The server checks again when you queue:</p>
+      <p className="lobby-verdict__lead">{t("Not ready yet. The server checks again when you queue:")}</p>
       <ul>
         {result.errors.map((error, index) => (
           // The same message can repeat for two cards; the index keeps the keys apart.
-          <li key={`${String(index)}-${error.message}`}>{error.message}</li>
+          <li key={`${String(index)}-${error.message}`}>{t(error.message)}</li>
         ))}
       </ul>
     </div>
   );
 }
 
-/** Each mode's emblem on its tile: a blade, three shields, a die. Decoration only. */
 function ModeIcon({ mode }: { mode: QueueMode }): ReactElement {
   const common = { viewBox: "0 0 32 32", "aria-hidden": true, className: "play-mode-tile__icon" } as const;
   switch (mode) {
@@ -516,26 +467,24 @@ function ModeIcon({ mode }: { mode: QueueMode }): ReactElement {
   }
 }
 
-/** Best of 1's pick at a glance: how full the deck is. */
 function DeckSummary({ deck }: { deck: SavedDeck }): ReactElement {
   const full = deck.cards.length === DECK_SIZE;
   return (
     <p className="play-pick-summary" data-full={full ? "true" : "false"}>
-      {String(deck.cards.length)} / {String(DECK_SIZE)} cards
+      {t("{count} / {size} cards", { count: String(deck.cards.length), size: String(DECK_SIZE) })}
     </p>
   );
 }
 
-/** Conquest's pick at a glance: the trio's three decks, or which slots are empty. */
 function TrioSummary({ trio, decks }: { trio: SavedTrio; decks: readonly SavedDeck[] }): ReactElement {
   return (
-    <ul className="play-trio-decks" aria-label={`Decks in ${trio.name}`}>
+    <ul className="play-trio-decks" aria-label={t("Decks in {name}", { name: trio.name })}>
       {trio.deckIds.map((id, slot) => {
         const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
         return (
-          // A slot is its position: the same deck cannot sit in two slots, but two can be empty.
+          // Slot identity distinguishes duplicate empty entries.
           <li key={`${String(slot)}-${id ?? "empty"}`} className="play-trio-deck" data-empty={deck === undefined}>
-            {deck === undefined ? "Empty slot" : deck.name}
+            {deck === undefined ? t("Empty slot") : deck.name}
           </li>
         );
       })}
@@ -543,7 +492,6 @@ function TrioSummary({ trio, decks }: { trio: SavedTrio; decks: readonly SavedDe
   );
 }
 
-/** What this screen shows while it is queued: a slow pulse and who it is looking for. */
 function Searching({ mode }: { mode: QueueMode }): ReactElement {
   return (
     <div className="play-search" data-testid={playTestid.searching} data-mode={mode}>
@@ -551,18 +499,18 @@ function Searching({ mode }: { mode: QueueMode }): ReactElement {
         <span className="play-search__ring" />
         <span className="play-search__ring play-search__ring--late" />
       </span>
-      <span className="play-search__text">Looking for a {MODE_LABEL[mode]} opponent…</span>
+      <span className="play-search__text">
+        {t("Looking for a {mode} opponent…", { mode: t(MODE_LABEL[mode]) })}
+      </span>
     </div>
   );
 }
 
-/** The created room's code as a ticket to hand over, with a button to copy it and one to share it as a link (R767). */
 function RoomTicket({ room }: { room: Room }): ReactElement {
   const [copied, setCopied] = useState(false);
   const [linkSent, setLinkSent] = useState<"shared" | "copied" | null>(null);
   function copy(): void {
-    // The clipboard can be refused (an insecure origin, a denied permission): the code stays on
-    // screen to read out either way, so a refusal only means the button says nothing.
+    // Copy failures stay silent because the code remains visible.
     attempt(() => navigator.clipboard.writeText(room.code)).then(
       () => {
         setCopied(true);
@@ -571,20 +519,20 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
     );
   }
   function sendLink(): void {
-    // R767: a refusal (a closed share sheet, a denied clipboard) says nothing, as the code's button does.
+    // R767: sharing failures stay silent, like copying failures.
     attempt(() => sendRoomLink(roomLinkUrl(room.code, room.mode))).then(setLinkSent, () => undefined);
   }
   return (
     <div className="play-ticket">
-      <span className="play-ticket__label">Room code</span>
+      <span className="play-ticket__label">{t("Room code")}</span>
       <code className="play-ticket__code" data-testid={playTestid.roomCode}>
         {room.code}
       </code>
       <span className="lobby-room-mode" data-testid={playTestid.roomMode} data-mode={room.mode}>
-        {MODE_LABEL[room.mode]}
+        {t(MODE_LABEL[room.mode])}
       </span>
       <button type="button" className="play-ticket__copy" data-testid={playTestid.copyRoomCode} onClick={copy}>
-        {copied ? "Copied" : "Copy"}
+        {copied ? t("Copied") : t("Copy")}
       </button>
       <button
         type="button"
@@ -592,71 +540,83 @@ function RoomTicket({ room }: { room: Room }): ReactElement {
         data-testid={playTestid.copyRoomLink}
         onClick={sendLink}
       >
-        {linkSent === "shared" ? "Link shared" : linkSent === "copied" ? "Link copied" : "Copy invite link"}
+        {linkSent === "shared" ? t("Link shared") : linkSent === "copied" ? t("Link copied") : t("Copy invite link")}
       </button>
     </div>
   );
 }
 
-/** R661: the player's own rank, once it has been read, and the way to the leaderboard. */
 function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
   return (
     <section className="lobby-card play-panel play-panel--rank" aria-labelledby="play-rank-heading">
       <h2 id="play-rank-heading" className="play-panel__heading">
-        Your rank
+        {t("Your rank")}
       </h2>
       {rank === null ? null : (
         <p data-testid={playTestid.rank}>
-          {rankWords(rank.rank)} · Season {rank.season}
+          {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
         </p>
       )}
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
-        Leaderboard →
+        {t("Leaderboard →")}
       </a>
     </section>
   );
 }
 
-// ---------------------------------------------------------------------------------------------
-// the route
-// ---------------------------------------------------------------------------------------------
+// Route
 
 export type PlayRouteProps = { token: string };
 
 type Room = { code: string; mode: QueueMode };
 
-/** What the lobby says while it is queued in `mode` (R505: where you are, never a count). */
+/** R505 queue status carries no count. */
 export function queuedStatus(mode: QueueMode): string {
-  return `In the ${MODE_LABEL[mode]} queue. You will be taken to the game as soon as someone is found. You can leave this screen while you wait.`;
+  return t(
+    "In the {mode} queue. You will be taken to the game as soon as someone is found. You can leave this screen while you wait.",
+    { mode: t(MODE_LABEL[mode]) },
+  );
+}
+
+/** The sentence a status description reads as, in the reader's language now. */
+function statusWords(status: Status): string {
+  switch (status.kind) {
+    case "queued":
+      return queuedStatus(status.mode);
+    case "roomLink":
+      return roomLinkStatus(status.mode);
+    case "found":
+      return t(MATCH_FOUND_STATUS);
+    case "left":
+      return t("Left the queue.");
+    case "ticket":
+      return t("Give your opponent this code. You will be taken to the game when they join.");
+  }
 }
 
 export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
-  /**
-   * R765: the queue this tab is still in, from a visit that left this screen while it waited: the
-   * lobby picks the wait up again, in that mode, with Leave as the way out.
-   */
+  useLocale();
+  /** R765 resumes a queue left from another screen. */
   const [rejoined] = useState(readQueued);
-  /** R767: the room link this tab opened, read once; the effect below forgets it. */
+  /** R767 room link, consumed below. */
   const [link] = useState(readRoomLink);
   const stored = useMemo(readStoredChoice, []);
-  // A queue this tab is in comes before a link's hint, and the hint before the last choice.
+  // Queue state takes precedence over a link hint and the saved choice.
   const [mode, setMode] = useState<QueueMode>(rejoined ?? link?.mode ?? stored.mode ?? "bo1");
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(() => {
-    if (rejoined !== null) return queuedStatus(rejoined);
-    return link === null ? null : roomLinkStatus(mode);
+  const [status, setStatus] = useState<Status | null>(() => {
+    if (rejoined !== null) return { kind: "queued", mode: rejoined };
+    return link === null ? null : { kind: "roomLink", mode };
   });
   const [error, setError] = useState<LobbyError | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [joinCode, setJoinCode] = useState(link?.code ?? "");
-  /** True while this screen is waiting to be paired: queued, or hosting an unclaimed room. */
   const [waiting, setWaiting] = useState(rejoined !== null);
   const [population, setPopulation] = useState<PopulationResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
 
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
-  /** R1372: All Random's "More cards from the newest set", as this device left it. */
   const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
 
   const lobby = useLobbyData(token);
@@ -666,13 +626,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const choice = choiceFor(mode, deck, trio, leanNewest);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
-  // A failed read keeps the last count (or none): it is information, never a blocker.
+  // The readout is informational, never a blocker.
   const refreshPopulation = useCallback((): void => {
     attempt(() => getPopulation(token)).then(setPopulation, () => undefined);
   }, [token]);
-  // Found, as opposed to still waiting: a pairing has landed and the lobby is showing
-  // `MATCH_FOUND_STATUS` for one beat before it navigates there. The setup stays locked,
-  // like while queued, and Leave waits out the beat rather than racing the navigation.
+  // Keep setup locked during the found-status beat to avoid racing navigation.
   const [found, setFound] = useState(false);
   const foundTarget = useRef<string | null>(null);
   const foundTimer = useRef<number | null>(null);
@@ -682,29 +640,22 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     },
     [],
   );
-  // A pairing announces itself before the navigation lands it: the lobby says where it is
-  // going, and only then goes. The delay is `MATCH_FOUND_NAV_DELAY_MS` — a synchronous
-  // `navigate` after `setStatus` unmounts this screen before the status paints, and a test
-  // with a mocked `navigate` cannot tell. Single-flight: the watch and an immediate answer
-  // can name the same pairing at once.
+  // Delay navigation so status paints; watcher and response share one target.
   const goFound = useCallback((target: string): void => {
     if (foundTarget.current !== null) return;
     foundTarget.current = target;
-    // Paired: out of the queue, so nothing else follows it (R765).
     forgetQueued();
     setFound(true);
-    setStatus(MATCH_FOUND_STATUS);
+    setStatus({ kind: "found" });
     foundTimer.current = window.setTimeout(() => {
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
   useLobbyWatch(token, waiting, refreshPopulation, goFound);
-  // The population once on arrival; the wait refreshes it with every poll.
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
 
-  // R661: the player's own rank, once on arrival. A failed read shows no rank; the link stays.
   useEffect(() => {
     let cancelled = false;
     attempt(() => getOwnRank(token)).then(
@@ -718,7 +669,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     };
   }, [token]);
 
-  // Remembered once the decks are known, so a stale id is replaced by what is really shown.
+  // Persist the displayed IDs so stale saved choices are replaced.
   const deckShown = deck?.id;
   const trioShown = trio?.id;
   useEffect(() => {
@@ -730,12 +681,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     });
   }, [data, mode, deckShown, trioShown]);
 
-  // R767: the link is used once. It was read above, and a later visit to this screen starts empty.
+  // R767 link hints apply only once.
   useEffect(() => {
     forgetRoomLink();
   }, []);
-  // R767: a lobby opened on a link puts the cursor on the pick it asks for, once that pick is on screen
-  // (Best of 1's deck and Conquest's trio wait for the decks; All Random has only Join to press).
+  // R767 focuses the link's requested pick once it is available.
   const deckSelect = useRef<HTMLSelectElement>(null);
   const trioSelect = useRef<HTMLSelectElement>(null);
   const joinSubmit = useRef<HTMLButtonElement>(null);
@@ -762,11 +712,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       });
   }
 
-  /**
-   * Where a paired answer goes: the board, or the series screen to pick game 1's deck. A
-   * pairing straight out of `enqueue` / `joinRoom` announces itself the same way a watched
-   * one does, through `goFound`, rather than vanishing silently.
-   */
+  /** Routes immediate pair answers through the found-status flow. */
   function follow(answer: { matchId: string | null; seriesId: string | null }): boolean {
     if (typeof answer.matchId === "string" && answer.matchId.length > 0) {
       goFound(paths.match(answer.matchId));
@@ -786,11 +732,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       const result = await enqueue(token, chosen);
       if (follow(result)) return;
       setWaiting(true);
-      // R765: the queue follows the player off this screen (`net/liveGame.ts`).
+      // R765 queue state follows the player across routes.
       rememberQueued(chosen.mode);
       refreshPopulation();
-      // R505: the tile above says how many are waiting; the notice says only where you are.
-      setStatus(queuedStatus(chosen.mode));
+      // R505, R640002: the status names the queue, never its readout.
+      setStatus({ kind: "queued", mode: chosen.mode });
     });
   }
 
@@ -799,7 +745,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       await dequeue(token);
       forgetQueued();
       setWaiting(false);
-      setStatus("Left the queue.");
+      setStatus({ kind: "left" });
     });
   }
 
@@ -810,13 +756,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       const created = await createRoom(token, chosen);
       setRoom({ code: created.code, mode: created.mode });
       setWaiting(true);
-      setStatus("Give your opponent this code. You will be taken to the game when they join.");
+      setStatus({ kind: "ticket" });
     });
   }
 
-  /** R767: the link's "pick for <mode>" notice goes once the mode it names is no longer the one chosen. */
   function dropLinkStatus(named: QueueMode): void {
-    setStatus((current) => (current === roomLinkStatus(named) ? null : current));
+    setStatus((current) => (current?.kind === "roomLink" && current.mode === named ? null : current));
   }
 
   function onJoin(event: FormEvent<HTMLFormElement>): void {
@@ -825,27 +770,28 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     const chosen = choice;
     run(async () => {
       try {
-        // R104 normalises input to upper case server-side; sending it that way keeps a typed code
-        // and a pasted one identical on the wire.
+        // R104 matches server-side room-code canonicalization.
         const joined = await joinRoom(token, joinCode.trim().toUpperCase(), chosen);
         follow(joined);
       } catch (cause: unknown) {
-        // R264: the room plays another mode. Switch to it and say what to pick; the code stays.
+        // R264 switches to the room's mode while retaining its code.
         const roomMode = roomModeOf(cause);
         if (roomMode === null) throw cause;
         setMode(roomMode);
         dropLinkStatus(chosen.mode);
-        setError({ message: roomModeMessage(roomMode), issues: [], seriesId: null });
+        setError({ message: "", issues: [], seriesId: null, roomMode });
       }
     });
   }
 
+  // Split around the link, so each sentence is one entry and English reads as it always did.
+  const [noDecksBefore = "", noDecksAfter = ""] = t("You have no saved decks yet. {link}.").split("{link}");
+  const [noTriosBefore = "", noTriosAfter = ""] = t("You have no saved trios yet. {link}.").split("{link}");
   const noChoice = choice === null;
-  /** The setup stays locked while the found beat plays: a pairing already landed. */
   const locked = waiting || found;
-  /** Queued, as opposed to hosting a room: the room shows its own ticket instead of a beacon. */
   const queued = waiting && room === null && !found;
-  const byMode = population?.byMode;
+  const expectedWait = population?.expectedWaitSeconds;
+  const games = population?.gamesLastHour ?? 0;
 
   return (
     <div className="app-shell tavern lobby play-screen" data-waiting={locked ? "true" : "false"}>
@@ -855,27 +801,27 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <p className="play-hero__title">Play online</p>
-        <p className="play-hero__lead">Pick a mode, bring a deck, and find someone to play.</p>
+        <p className="play-hero__title">{t("Play online")}</p>
+        <p className="play-hero__lead">{t("Pick a mode, bring a deck, and find someone to play.")}</p>
       </header>
 
       {status !== null ? (
         <p
-          className={status === MATCH_FOUND_STATUS ? "notice play-status--found" : "notice"}
+          className={status.kind === "found" ? "notice play-status--found" : "notice"}
           data-testid={playTestid.status}
           role="status"
         >
-          {status}
+          {statusWords(status)}
         </p>
       ) : null}
       {error !== null ? (
         <div className="notice" data-testid={playTestid.error} role="alert">
           {error.issues.length === 0 ? (
-            <p>{error.message}</p>
+            <p>{error.roomMode === null ? t(error.message) : roomModeMessage(error.roomMode)}</p>
           ) : (
             <ul className="lobby-issues">
               {error.issues.map((issue, index) => (
-                <li key={`${String(index)}-${issue}`}>{issue}</li>
+                <li key={`${String(index)}-${issue}`}>{t(issue)}</li>
               ))}
             </ul>
           )}
@@ -885,7 +831,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               data-testid={playTestid.seriesLink}
               onClick={followInApp(paths.series(error.seriesId))}
             >
-              Go to your series →
+              {t("Go to your series →")}
             </a>
           )}
         </div>
@@ -896,72 +842,78 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
             <span className="play-step" aria-hidden="true">
               1
             </span>
-            How do you want to play?
+            {t("How do you want to play?")}
           </h2>
-          <fieldset
-            className="lobby-modes"
-            data-testid={playTestid.population}
-            data-bo1={byMode?.bo1}
-            data-bo3={byMode?.bo3}
-            data-random={byMode?.random}
-          >
-            <legend className="lobby-modes__legend">Mode</legend>
-            {QUEUE_MODES.map((option) => (
-              <label
-                key={option}
-                className="lobby-mode play-mode-tile"
-                data-selected={option === mode ? "true" : "false"}
-                data-mode={option}
-              >
-                <input
-                  type="radio"
-                  name="play-mode"
-                  value={option}
-                  checked={option === mode}
-                  data-testid={playModeTestid(option)}
-                  disabled={locked}
-                  onChange={() => {
-                    dropLinkStatus(mode);
-                    setMode(option);
-                  }}
-                />
-                <ModeIcon mode={option} />
-                <span className="lobby-mode__text">
-                  <span className="lobby-mode__name">{MODE_LABEL[option]}</span>
-                </span>
-                {byMode === undefined ? null : (
-                  <span className="play-mode-tile__waiting">{String(byMode[option])} waiting</span>
-                )}
-              </label>
-            ))}
+          <fieldset className="lobby-modes">
+            <legend className="lobby-modes__legend">{t("Mode")}</legend>
+            {QUEUE_MODES.map((option) => {
+              const wait = expectedWait?.[option] ?? null;
+              return (
+                <label
+                  key={option}
+                  className="lobby-mode play-mode-tile"
+                  data-selected={option === mode ? "true" : "false"}
+                  data-mode={option}
+                >
+                  <input
+                    type="radio"
+                    name="play-mode"
+                    value={option}
+                    checked={option === mode}
+                    data-testid={playModeTestid(option)}
+                    disabled={locked}
+                    onChange={() => {
+                      dropLinkStatus(mode);
+                      setMode(option);
+                    }}
+                  />
+                  <ModeIcon mode={option} />
+                  <span className="lobby-mode__text">
+                    <span className="lobby-mode__name">{t(MODE_LABEL[option])}</span>
+                  </span>
+                  {wait === null ? null : (
+                    <span className="play-mode-tile__waiting" data-testid={playWaitTestid(option)}>
+                      {waitWords(wait)}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </fieldset>
+          {games === 0 ? null : (
+            <p className="lobby-note" data-testid={playTestid.recentGames}>
+              {recentGamesWords(games)}
+            </p>
+          )}
 
           <h2 className="play-panel__heading play-panel__heading--sub">
             <span className="play-step" aria-hidden="true">
               2
             </span>
-            {mode === "bo3" ? "Bring a trio" : mode === "bo1" ? "Bring a deck" : "No deck to bring"}
+            {mode === "bo3" ? t("Bring a trio") : mode === "bo1" ? t("Bring a deck") : t("No deck to bring")}
           </h2>
 
           {lobby.kind === "loading" && mode !== "random" ? (
             <p className="lobby-note" role="status">
-              Loading your decks…
+              {t("Loading your decks…")}
             </p>
           ) : null}
           {lobby.kind === "failed" && mode !== "random" ? (
             <p className="notice" role="alert">
-              Your decks could not be loaded: {lobby.message}
+              {t("Your decks could not be loaded: {message}", { message: t(lobby.message) })}
             </p>
           ) : null}
 
           {data !== null && mode === "bo1" ? (
             data.decks.length === 0 ? (
               <p className="lobby-note">
-                You have no saved decks yet. <DecksLink>Build one in Decks</DecksLink>.
+                {noDecksBefore}
+                <DecksLink>{t("Build one in Decks")}</DecksLink>
+                {noDecksAfter}
               </p>
             ) : (
               <div className="play-pick">
-                <label htmlFor="play-deck">Your deck</label>
+                <label htmlFor="play-deck">{t("Your deck")}</label>
                 <select
                   id="play-deck"
                   ref={deckSelect}
@@ -987,11 +939,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
           {data !== null && mode === "bo3" ? (
             data.trios.length === 0 ? (
               <p className="lobby-note">
-                You have no saved trios yet. <DecksLink>Build one in Decks</DecksLink>.
+                {noTriosBefore}
+                <DecksLink>{t("Build one in Decks")}</DecksLink>
+                {noTriosAfter}
               </p>
             ) : (
               <div className="play-pick">
-                <label htmlFor="play-trio">Your trio</label>
+                <label htmlFor="play-trio">{t("Your trio")}</label>
                 <select
                   id="play-trio"
                   ref={trioSelect}
@@ -1016,7 +970,9 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           {mode === "random" ? (
             <>
-              <p className="lobby-note">No deck needed: the server deals both of you one when the game starts.</p>
+              <p className="lobby-note">
+                {t("No deck needed: the server deals both of you one when the game starts.")}
+              </p>
               <LeanNewestToggle
                 checked={leanNewest}
                 disabled={locked}
@@ -1038,7 +994,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               <span className="play-step" aria-hidden="true">
                 3
               </span>
-              Find a match
+              {t("Find a match")}
             </h2>
             {queued ? <Searching mode={mode} /> : null}
             <button
@@ -1048,7 +1004,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || noChoice || locked}
               onClick={onEnqueue}
             >
-              Find a match
+              {t("Find a match")}
             </button>
             <button
               type="button"
@@ -1057,7 +1013,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || found}
               onClick={onLeaveQueue}
             >
-              Leave the queue
+              {t("Leave the queue")}
             </button>
           </section>
 
@@ -1065,9 +1021,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           <section className="lobby-card play-panel play-panel--room" aria-labelledby="play-room-heading">
             <h2 id="play-room-heading" className="play-panel__heading">
-              Play a friend
+              {t("Play a friend")}
             </h2>
-            <p className="lobby-note">A room plays the mode it was made with; the joiner picks for the same mode.</p>
+            <p className="lobby-note">
+              {t("A room plays the mode it was made with; the joiner picks for the same mode.")}
+            </p>
             <button
               type="button"
               className="play-room-create"
@@ -1075,12 +1033,12 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               disabled={busy || noChoice || locked}
               onClick={onCreateRoom}
             >
-              Create a room
+              {t("Create a room")}
             </button>
             {room === null ? null : <RoomTicket room={room} />}
 
             <form className="play-join" data-testid={playTestid.joinForm} onSubmit={onJoin}>
-              <label htmlFor="play-join-code">Join a room</label>
+              <label htmlFor="play-join-code">{t("Join a room")}</label>
               <div className="play-join__row">
                 <input
                   id="play-join-code"
@@ -1088,7 +1046,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   value={joinCode}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="Code"
+                  placeholder={t("Code")}
                   disabled={locked}
                   onChange={(event) => {
                     setJoinCode(event.target.value);
@@ -1100,7 +1058,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                   data-testid={playTestid.joinSubmit}
                   disabled={busy || noChoice || locked}
                 >
-                  Join
+                  {t("Join")}
                 </button>
               </div>
             </form>
@@ -1108,11 +1066,11 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
           <section className="lobby-card play-panel play-panel--practice" aria-labelledby="play-practice-heading">
             <h2 id="play-practice-heading" className="play-panel__heading">
-              Practice
+              {t("Practice")}
             </h2>
-            <p>A game against the AI, right here in your browser: no queue, no rating, three difficulties.</p>
+            <p>{t("A game against the AI, right here in your browser: no queue, no rating, three difficulties.")}</p>
             <a href={paths.practice} data-testid={playTestid.practice}>
-              Practice against the AI →
+              {t("Practice against the AI →")}
             </a>
           </section>
         </div>

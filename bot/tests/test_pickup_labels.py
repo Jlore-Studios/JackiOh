@@ -8,8 +8,8 @@ from typing import Any, Iterator
 
 from harness import plan as plan_mod, providers
 from harness import queue as queue_mod
-from harness.config import (LABEL_APPROVED, LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE,
-                            LABEL_SUGGESTION, LABELS)
+from harness.config import (LABEL_BUILD, LABEL_CROSS, LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION,
+                            LABELS)
 from harness.runner import FakeRunner
 from harness.state import item as state_item
 
@@ -216,33 +216,25 @@ class HumanTests(unittest.TestCase):
 
 
 class SuggestionTests(unittest.TestCase):
-    """A suggestion the bot opened is built only once a person approves it: `bot:approved` (or
-    `method:use-bot`), which triage answers by queueing it. `bot:build` alone is not enough."""
+    """A suggestion the bot opened is built once a person queues it (#664): `bot:build`, an
+    assignment or `/harness build` is their yes, and `bot:suggestion` comes off."""
 
-    def test_an_unapproved_suggestion_is_never_a_candidate(self):
+    def test_a_suggestion_a_person_labelled_is_a_candidate(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
         gh.add_issue(5, labels=(LABEL_BUILD, LABEL_SUGGESTION, HIGH))
-        gh.add_issue(6, labels=(LABEL_BUILD, LABEL_SUGGESTION, "Bot:Approved"))
-        gh.add_issue(7, labels=(LABEL_BUILD, LABEL_SUGGESTION, "method:use-bot"))
-        gh.add_issue(3, labels=(LABEL_BUILD,))
+        gh.add_issue(6, labels=(LABEL_SUGGESTION,))  # nobody has said yes yet
         skipped: list[str] = []
         found = queue_mod.candidates(ctx, ctx.store.load(), skipped)
-        self.assertEqual(sorted(c.number for c in found), [3, 6, 7])
-        self.assertEqual(skipped, ["#5 skipped: a suggestion no person approved (`bot:approved`)"])
+        self.assertEqual([c.number for c in found], [5])
+        self.assertEqual(skipped, [])
 
-    def test_a_request_to_build_an_unapproved_suggestion_says_to_approve_it(self):
+    def test_queueing_a_suggestion_approves_it(self):
         gh = FakeGitHub()
         ctx = ctx_for(gh)
-        gh.add_issue(5, labels=(LABEL_BUILD, LABEL_SUGGESTION))
-        reply = queue_mod.queue_build(ctx, 5, by="MaxGoetzmann")
-        self.assertIn("#5 is one of my suggestions", reply)
-        self.assertIn(f"label it `{LABEL_APPROVED}`", reply)
-        self.assertEqual(gh.label_names(5), {LABEL_SUGGESTION})  # its `bot:build` comes off
-        self.assertNotIn("5", ctx.store.load()["items"])
-        gh.add_issue(6, labels=(LABEL_SUGGESTION, LABEL_APPROVED))
-        self.assertIn("Queued #6", queue_mod.queue_build(ctx, 6, by="MaxGoetzmann"))
-        self.assertIn(LABEL_BUILD, gh.label_names(6))
+        gh.add_issue(5, labels=(LABEL_SUGGESTION,))
+        self.assertIn("Queued #5", queue_mod.queue_build(ctx, 5, by="MaxGoetzmann"))
+        self.assertEqual(gh.label_names(5), {LABEL_BUILD})
 
 
 class LabelsTests(unittest.TestCase):
@@ -269,8 +261,11 @@ class LabelsTests(unittest.TestCase):
         self.assertEqual((planned["provider"], planned["priority"], planned["difficulty"],
                           result["status"]), ("muse", "high", "easy", "approved"))
         pr = int(h.gh.list_pulls(head="bot/issue-12")[0]["number"])
+        # Muse planned, built and reviewed it in the run, and a medium approval ships an
+        # easy item with no further audit (#725).
         self.assertEqual(h.gh.label_names(pr),
-                         {LABEL_PR, LABEL_CROSS, "difficulty:easy", "Priority:High"})
+                         {LABEL_PR, "difficulty:easy", "Priority:High"})
+        self.assertIn(f"PR_{pr}", h.gh.auto_merge)
         self.assertEqual(h.ctx.store.load()["items"][str(pr)]["difficulty"], "easy")
 
     def test_a_draft_pull_request_keeps_them_too(self):

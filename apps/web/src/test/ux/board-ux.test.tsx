@@ -1,11 +1,6 @@
-// Polish task 7, B25, B26, B27, B33, B43 and B44 (docs/polish/7-mobile-ux.md, Surface S5, S6, S8,
-// S11): the board's own UX, rendered through `<Board/>` with a hand-built `Highlight` (and through
-// `<Game/>` for B44, whose picker only a play in flight opens).
-//
-// `glow` is set by hand here, as `highlightFor` would set it, so these tests are about what the
-// board does with a highlight and never about how the highlight was derived (that is glow.test.ts).
-// Settings are flipped through the store's public `writeSettings`; each test starts from the
-// defaults, because storage is cleared and the store's cache forgotten after every test.
+// Polish task 7, B25, B26, B27, B33, B43 and B44 (docs/polish/7-mobile-ux.md, Surface S5, S6, S8, S11).
+// Set `glow` directly to test board handling rather than its derivation (glow.test.ts).
+// Settings use public `writeSettings`; each test starts from defaults.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -28,11 +23,8 @@ afterEach(() => {
   __resetSettingsForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures.
-// ---------------------------------------------------------------------------------------------
 
-/** Three cards in your hand, one unit on your side, a hero power; the opponent holds four cards. */
 function boardView(over: Partial<PlayerView> = {}): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -54,9 +46,7 @@ function highlight(legal: string[], glow?: string[], selected: string[] = []): H
   return glow === undefined ? base : { ...base, glow: new Set(glow) };
 }
 
-/** A highlight in which a hand card can still be played: `end-turn` does not glow. */
 const MOVES_LEFT = highlight(["end-turn", "offer-draw", "concede", "hand-card-h1"], ["hand-card-h1"]);
-/** A highlight in which ending the turn is all that is left: `end-turn` glows. */
 const NOTHING_LEFT = highlight(["end-turn", "offer-draw", "concede"], ["end-turn"]);
 
 function endTurn(): HTMLElement {
@@ -69,7 +59,6 @@ function slotOf(testid: string): HTMLElement {
   return slot;
 }
 
-/** An inline custom property, read from the style object or, failing that, the style attribute. */
 function inlineVar(element: HTMLElement, name: string): string {
   const fromStyle = element.style.getPropertyValue(name).trim();
   if (fromStyle !== "") return fromStyle;
@@ -83,9 +72,7 @@ function setConfirmEndTurn(on: boolean): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // B25: confirm end turn
-// ---------------------------------------------------------------------------------------------
 
 describe("B25 confirm end turn asks twice only while a move is left", () => {
   it("B25 with the setting on and a card still playable, the first click arms end-turn and sends nothing", () => {
@@ -119,7 +106,6 @@ describe("B25 confirm end turn asks twice only while a move is left", () => {
     fireEvent.click(endTurn());
     expect(endTurn()).toHaveAttribute("data-confirm", "armed");
 
-    // The view after some other action: a crystal spent.
     const next = boardView();
     rerender(
       <Board
@@ -246,9 +232,7 @@ describe("B25 confirm end turn asks twice only while a move is left", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B26: the hand fan and tap-to-lift
-// ---------------------------------------------------------------------------------------------
 
 describe("B26 each hand card sits in a slot and a tap lifts it", () => {
   it("B26 each of your hand cards sits in its own .hand-slot, in hand order, with --i its index inside a fan of --n", () => {
@@ -262,7 +246,6 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
       expect(cards).toHaveLength(1);
       expect(cards[0]).toHaveAttribute("data-testid", `hand-card-h${index + 1}`);
       expect(inlineVar(slot, "--i")).toBe(String(index));
-      // Nothing is lifted until something lifts it: the attribute is absent, never "false".
       expect(slot).not.toHaveAttribute("data-lifted");
     });
 
@@ -337,7 +320,6 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
     fireEvent.click(screen.getByTestId("hand-card-h2"));
     fireEvent.click(screen.getByTestId("hand-card-h2"));
 
-    // The board reports the clicks; while the highlight still says selected, the card stays up.
     expect(onClick).toHaveBeenCalledTimes(2);
     expect(slotOf("hand-card-h2")).toHaveAttribute("data-lifted", "true");
   });
@@ -354,9 +336,7 @@ describe("B26 each hand card sits in a slot and a tap lifts it", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B27: settings reflected on the board
-// ---------------------------------------------------------------------------------------------
 
 describe("B27 the board reflects drag to play and hover previews, live", () => {
   it("B27 by default the board says data-drag=on and your hand says data-hover-preview=on", () => {
@@ -419,15 +399,12 @@ describe("B27 the board reflects drag to play and hover previews, live", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B33: safe areas and the 390 px width scan, read off the stylesheets
-// ---------------------------------------------------------------------------------------------
 
 function css(file: "board.css" | "prompt.css"): string {
   return readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "..", "game", file), "utf8");
 }
 
-/** A `padding` or `padding-*` declaration whose value uses `env(<inset>)`. */
 function padsWith(text: string, inset: string): boolean {
   const declaration = /padding(?:-[a-z-]+)?\s*:([^;}]*)/g;
   for (const match of text.matchAll(declaration)) {
@@ -451,8 +428,7 @@ describe("B33 the board and the prompt pad for the safe areas, and the board dec
 
   it("B33 board.css declares no px width or min-width over 390", () => {
     const text = css("board.css");
-    // A declaration, not a media feature: `(max-width: 600px)` and `(min-width: 1025px)` are
-    // preceded by "(" and are not matched; `max-width` is not a width floor either.
+    // Match declarations, not media features or max-width.
     const widths = [...text.matchAll(/(?:^|[\s;{])((?:min-)?width)\s*:\s*(\d+(?:\.\d+)?)px/g)].map((match) => ({
       property: match[1],
       px: Number(match[2]),
@@ -464,9 +440,7 @@ describe("B33 the board and the prompt pad for the safe areas, and the board dec
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B43: the log on a phone
-// ---------------------------------------------------------------------------------------------
 
 describe("B43 a phone opens the log from the control bar", () => {
   it("B43 log-toggle opens the log over the board (data-log=open) and closes it again", () => {
@@ -497,9 +471,7 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B44: which route opened a picker, for the phone's slim bar
-// ---------------------------------------------------------------------------------------------
 
 describe("B44 the picker says which route opened it", () => {
   it("B44 a play's zone pick is data-prompt-source=play, and an engine prompt is data-prompt-source=engine", () => {

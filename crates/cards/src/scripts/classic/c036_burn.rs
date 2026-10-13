@@ -7,16 +7,10 @@
 //!
 //! "Deal N damage" with no target named is targeted (§8's Conventions, as #68's is): any unit or hero,
 //! either side, chosen with the play (R81). One §4.4 hit, then the draw if the condition holds.
-//!
-//! The condition, read as the Spell resolves: the base face compares the mana its controller has left
-//! then (current mana, after paying for Burn, §2.3's temporary mana included); the Radiant face
-//! compares §2.3's max mana, which paying does not move. `drawCondition` holds both readings, so the
-//! Cry and the glow cannot disagree.
-//!
-//! R195: in hand the card glows when it would draw if played now — the base face with the mana that
-//! would be left after paying its price now (R65's `effectiveCost`, so a discount or a surcharge moves
-//! it), the Radiant face with max mana as it stands.
-//!
+//! The base face compares the mana left as the Spell resolves (after paying, §2.3's temporary mana
+//! included); the Radiant face compares §2.3's max mana. `drawCondition` holds both readings, so the
+//! Cry and the glow cannot disagree. R195: in hand it glows when it would draw if played now, the base
+//! face with the mana left after paying its price now (R65's `effectiveCost`).
 //! The numbers are the declared `damage`, `threshold` and `draw` (R386), read through `param`.
 
 use jackioh_engine::prelude::*;
@@ -32,10 +26,6 @@ fn targets() -> Vec<TargetDecl> {
 /// The mana the face's condition compares, and whether it reaches the threshold. `leftNow` is the
 /// base face's "mana left": current mana as the Spell resolves, or, asked of a card in hand, what
 /// paying for it now would leave.
-///
-/// TS takes `EffectContext | ConditionContext` and reads `state`, `controller` and
-/// `param(ctx, "threshold")` off it; the two are different types here, so the caller hands over
-/// those three readings (pure reads, so where they are taken changes nothing).
 fn draw_condition(state: &GameState, controller: PlayerId, threshold: i32, radiant: bool, left_now: i32) -> bool {
     let mana = if radiant { max_mana_of(state, controller) } else { left_now };
     mana >= threshold
@@ -76,14 +66,11 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36: "A target, Unit or hero: deal 2, then draw
-// 1 if your current mana as it resolves is 4 or more; `conditionMet` answers in hand whether your mana
-// after paying its cost now would be 4 or more (R195), so a surcharge (C #77) moves it; radiant: deal
-// 4, and draw if your max mana is 4 or more (§2.3); its name is a rules word, and "burned" elsewhere
-// is no reference to it (R381); its tuned numbers (damage, threshold, draw) read through `param()`
-// (R386)".
-//
-// The `conditionMet` proofs (R195) are in `../condition-active.test.ts`, with the other cards'.
+// C #36 Burn — SPEC §8.6 row 36, BUILD M9 Classic row C 36: base draws if your current mana as it
+// resolves is 4 or more, and `conditionMet` answers in hand with the mana left after paying now
+// (R195), so a surcharge (C #77) moves it; radiant: deal 4, draw if max mana is 4 or more (§2.3);
+// its name is a rules word, and "burned" elsewhere is no reference to it (R381); numbers read
+// through `param()` (R386). The `conditionMet` proofs (R195) are in `../condition-active.test.ts`.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -97,7 +84,6 @@ mod tests {
 
     use crate::js;
 
-    /// TS `AT_HERO: Selection[]`.
     fn at_hero() -> Value {
         json!([{ "pick": "hero", "player": "p2" }])
     }

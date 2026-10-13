@@ -58,6 +58,9 @@ pub struct E2EAccount {
     pub token: &'static str,
     /// What `profiles.status` must be once the reseed is done (§9.4).
     pub status: E2EAccountStatus,
+    /// R1435: the fixed username the reseed gives the account, bare, with the prompt after
+    /// activation already answered, so no end-to-end spec meets the prompt.
+    pub username: &'static str,
 }
 
 /// §9.4 makes a verified email a precondition of redemption ("reject unless the account is pending
@@ -71,6 +74,7 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         password: "e2e-p1-password",
         token: "e2e-token-p1",
         status: E2EAccountStatus::Active,
+        username: "e2e_p1",
     },
     E2EAccount {
         user_id: "e2e-p2",
@@ -78,6 +82,7 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         password: "e2e-p2-password",
         token: "e2e-token-p2",
         status: E2EAccountStatus::Active,
+        username: "e2e_p2",
     },
     E2EAccount {
         user_id: "e2e-pending",
@@ -85,6 +90,7 @@ pub const E2E_ACCOUNTS: &[E2EAccount] = &[
         password: "e2e-pending-password",
         token: "e2e-token-pending",
         status: E2EAccountStatus::Pending,
+        username: "e2e_pending",
     },
 ];
 
@@ -231,13 +237,14 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
                 email: account.email.to_string(),
                 rating: RATING_START,
                 at: now,
-                display_name: None,
             })
             .await?;
         if account.status == E2EAccountStatus::Active {
             tx.profiles_set_status(&profile.id, ProfileStatus::Active).await?;
         }
         tx.commit().await?;
+        // R1435: a fixed name and the prompt answered, as `seed-accounts` names its accounts.
+        store.lock().await.name_fixture(&profile.id, account.username);
         if account.status == E2EAccountStatus::Active {
             granted_cards = store.lock().await.grants_for(&profile.id).len();
         }

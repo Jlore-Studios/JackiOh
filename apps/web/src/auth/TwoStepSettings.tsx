@@ -1,15 +1,7 @@
 // `/account`'s two-step sign-in (R665): turn an authenticator app on or off for this account.
-//
-// The provider does the work (`net/auth.ts`): enrolling makes an UNVERIFIED factor and shows its QR
-// code and key; the factor counts for nothing until a code from the app is typed here, which also
-// raises this session to `aal2`. That raised session replaces the stored one at once, because from
-// then on the server honours only `aal2` tokens for this account (R665). It is the same session at
-// the provider with new tokens, so it is written, never adopted: `adoptSession` would revoke the
-// session it replaces, which is this one. Leaving an enrolment unfinished removes the unverified
-// factor, and the next enrolment clears any that are left.
-//
-// Turning it off asks first, then removes the factor; the provider allows that only from an `aal2`
-// session, which this account's every accepted session is.
+// Enrolling makes an UNVERIFIED factor that counts for nothing until a code from the app is typed
+// here. That raises the session to `aal2`, which the server then requires (R665), so the raised
+// session is written over the stored one, never adopted: `adoptSession` would revoke the session in use.
 
 import { useEffect, useState, type FormEvent, type ReactElement } from "react";
 
@@ -26,6 +18,7 @@ import {
 } from "../net/auth.ts";
 import { announceAccountChange } from "../net/gate.ts";
 import { readSession, writeSession, type Session } from "../net/session.ts";
+import { t } from "../i18n/i18n.ts";
 import { requiredProblem } from "./validation.ts";
 
 import "./two-step.css";
@@ -165,22 +158,21 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
 
   return (
     <div className="account-two-step" data-testid={twoStepTestid.section}>
-      <h3 className="account-heading">Two-step sign-in</h3>
-      {phase.kind === "loading" ? <p className="auth-hint">Checking…</p> : null}
+      <h3 className="account-heading">{t("Two-step sign-in")}</h3>
+      {phase.kind === "loading" ? <p className="auth-hint">{t("Checking…")}</p> : null}
       {phase.kind === "unknown" ? (
         <p className="auth-hint" data-testid={twoStepTestid.state} data-state="unknown">
-          Two-step sign-in can&rsquo;t be checked just now. Reload the page to try again.
+          {t("Two-step sign-in can’t be checked just now. Reload the page to try again.")}
         </p>
       ) : null}
       {phase.kind === "off" ? (
         <>
           <p data-testid={twoStepTestid.state} data-state="off">
-            Off. Turn it on to ask for a code from an authenticator app each time you sign in, so a
-            password alone can&rsquo;t get into this account.
+            {t("Off. Turn it on to ask for a code from an authenticator app each time you sign in, so a password alone can’t get into this account.")}
           </p>
           <div className="account-actions">
             <button type="button" data-testid={twoStepTestid.start} disabled={busy} onClick={start}>
-              {busy ? "Starting…" : "Turn on two-step sign-in"}
+              {busy ? t("Starting…") : t("Turn on two-step sign-in")}
             </button>
           </div>
         </>
@@ -188,24 +180,23 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       {phase.kind === "enrolling" ? (
         <form className="form-card account-two-step__form" onSubmit={confirm} noValidate>
           <p>
-            Scan this code with an authenticator app (such as Google Authenticator, 1Password or
-            Authy), or type the key into it by hand. Then type the 6-digit code it shows.
+            {t("Scan this code with an authenticator app (such as Google Authenticator, 1Password or Authy), or type the key into it by hand. Then type the 6-digit code it shows.")}
           </p>
           {phase.enrolment.qrCode !== null ? (
             <img
               className="account-two-step__qr"
               data-testid={twoStepTestid.qr}
               src={phase.enrolment.qrCode}
-              alt="QR code for your authenticator app"
+              alt={t("QR code for your authenticator app")}
             />
           ) : null}
           <p>
-            Key:{" "}
+            {t("Key:")}{" "}
             <span className="account-two-step__secret" data-testid={twoStepTestid.secret}>
               {phase.enrolment.secret}
             </span>
           </p>
-          <label htmlFor="account-two-step-code">Code from the app</label>
+          <label htmlFor="account-two-step-code">{t("Code from the app")}</label>
           <input
             id="account-two-step-code"
             data-testid={twoStepTestid.code}
@@ -224,7 +215,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
           />
           <div className="account-actions">
             <button type="submit" data-testid={twoStepTestid.confirm} disabled={busy} aria-busy={busy}>
-              {busy ? "Checking…" : "Turn it on"}
+              {busy ? t("Checking…") : t("Turn it on")}
             </button>
             <button
               type="button"
@@ -233,7 +224,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
               disabled={busy}
               onClick={cancelEnrolment}
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -241,7 +232,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       {phase.kind === "on" ? (
         <>
           <p data-testid={twoStepTestid.state} data-state="on">
-            On. Signing in asks for a code from your authenticator app.
+            {t("On. Signing in asks for a code from your authenticator app.")}
           </p>
           <div className="account-actions">
             <button
@@ -254,7 +245,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
                 setPhase({ kind: "removing", factorId: phase.factorId });
               }}
             >
-              Turn off two-step sign-in
+              {t("Turn off two-step sign-in")}
             </button>
           </div>
         </>
@@ -262,7 +253,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
       {phase.kind === "removing" ? (
         <>
           <p data-testid={twoStepTestid.state} data-state="removing">
-            Turn it off? Signing in will ask only for your email and password again.
+            {t("Turn it off? Signing in will ask only for your email and password again.")}
           </p>
           <div className="account-actions">
             <button
@@ -272,7 +263,7 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
               aria-busy={busy}
               onClick={remove}
             >
-              {busy ? "Turning off…" : "Turn it off"}
+              {busy ? t("Turning off…") : t("Turn it off")}
             </button>
             <button
               type="button"
@@ -282,19 +273,19 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
                 setPhase({ kind: "on", factorId: phase.factorId });
               }}
             >
-              Keep it on
+              {t("Keep it on")}
             </button>
           </div>
         </>
       ) : null}
       {notice !== null ? (
         <p className="notice" data-testid={twoStepTestid.notice} role="status">
-          {notice}
+          {t(notice)}
         </p>
       ) : null}
       {error !== null ? (
         <p className="notice" data-testid={twoStepTestid.error} role="alert">
-          {error}
+          {t(error)}
         </p>
       ) : null}
     </div>

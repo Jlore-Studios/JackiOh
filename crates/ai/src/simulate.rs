@@ -13,7 +13,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of,
-    reduce,
+    owed_mana_of, reduce,
 };
 use serde::{Deserialize, Serialize};
 
@@ -405,5 +405,11 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             .collect::<Vec<_>>()
             .join(",")
     ));
+    // R1224: a debt is part of the position — but only when one is owed, so signatures without debt
+    // stay exactly as they were.
+    let owed = owed_mana_of(state, seat);
+    if owed > 0 {
+        parts.push(format!("d{owed}"));
+    }
     parts.join("|")
 }

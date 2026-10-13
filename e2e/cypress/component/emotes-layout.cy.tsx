@@ -1,5 +1,8 @@
 // Issue #219: the emote picker, the Mute emotes menu and a voice line's speech bubble, measured in a
-// real browser.
+// real browser. A click on a portrait hangs its menu off the portrait, where each is measured, and a
+// hold opens the hero's inspect view with the same menu in it (R1449, R1330), which is measured too,
+// with the portraits' vivid layers (R1332). The view is opened here by a right-click, the hold's mouse
+// twin, since a spec waits on no clock.
 //
 // Only a layout engine can say what these measure (jsdom has none; ui.test.tsx reads the
 // stylesheet's text instead):
@@ -11,7 +14,9 @@
 //   - a voice line's bubble is sized by its line rather than wrapped word by word, and stays on the
 //     screen,
 //   - nothing on the board is drawn over the opponent's bubble, sticker or Mute menu, and none of
-//     them is faded by its hero (#257).
+//     them is faded by its hero (#257),
+//   - the hero's inspect view stays on the screen with its portrait large and Close a touch target
+//     (R1330), and the board's portraits draw their vivid layers inside the 44 px oval (R1332).
 //
 // The mount is mobile-ux.cy.tsx's: `Game` inside `.app-shell.app-shell--wide`, the narrowest
 // container the board is given, here with the routes' own `useEmotes` (no audio engine), so a pick
@@ -25,6 +30,7 @@
 
 import { StrictMode, useEffect, type ReactElement } from "react";
 
+import { PORTRAIT_MOTE_COUNT } from "../../../apps/web/src/emotes/config.ts";
 import { useEmotes, type EmotesApi } from "../../../apps/web/src/emotes/useEmotes.ts";
 import { EMOTE_HAND_SIZE, EMOTE_HAND_VOICE } from "../../../apps/web/src/wire/emotes.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
@@ -44,6 +50,8 @@ const LABEL_MIN_PX = 11;
 const BUBBLE_MIN_PX = 120;
 /** Subpixel slack for edges the browser rounds; never enough to hide a real overflow. */
 const EPSILON = 0.5;
+/** The inspect view's portrait is large, however short the screen: the board's oval is 44 px. */
+const INSPECT_PORTRAIT_MIN_PX = 96;
 
 /** The seat centres the portrait from 761x501 up and puts it at the seat's left edge below that. */
 const VIEWPORTS = [
@@ -55,7 +63,7 @@ const VIEWPORTS = [
   { width: 844, height: 390, touch: true },
 ] as const;
 
-/** Nothing targets either hero, so a click on a portrait opens its emote menu (SPEC §10.10). */
+/** Nothing targets either hero, so a click on a portrait opens its menu and a hold its view (SPEC §10.10). */
 const END_TURN_ONLY: Legal = [{ type: "endTurn" }];
 
 function ts(testid: string): string {
@@ -103,10 +111,24 @@ function fontSizePx(element: Element): number {
   return win === null ? 0 : Number.parseFloat(win.getComputedStyle(element).fontSize);
 }
 
-/** Opens your portrait's picker: the portrait, not the hero's centre, where a phone puts the power. */
+/**
+ * Opens a hero's inspect view by a right-click on its portrait (R1449): the portrait, not the hero's
+ * centre, where a phone puts the power.
+ */
+function openView(side: "you" | "opponent"): void {
+  cy.get(`${ts(`hero-${side}`)} .hero-portrait`).rightclick();
+  cy.get(ts("hero-inspect")).should("be.visible");
+}
+
+/** Opens a portrait's menu by a click, hung off the portrait (R1449): the picker on yours, the mute on theirs. */
+function openMenu(side: "you" | "opponent"): void {
+  cy.get(`${ts(`hero-${side}`)} .hero-portrait`).click();
+  cy.get(`${ts(`hero-${side}`)} ${ts(side === "you" ? "emote-menu" : "emote-mute-menu")}`).should("be.visible");
+}
+
+/** Opens your portrait's picker. */
 function openPicker(): void {
-  cy.get(`${ts("hero-you")} .hero-portrait`).click();
-  cy.get(ts("emote-menu")).should("be.visible");
+  openMenu("you");
 }
 
 /** fullBoardView() seats the viewer as p1, so the opponent is p2. */
@@ -211,8 +233,8 @@ for (const viewport of VIEWPORTS) {
     });
 
     it("#219 the opponent's Mute emotes menu stays on the screen", () => {
-      cy.get(`${ts("hero-opponent")} .hero-portrait`).click();
-      cy.get(ts("emote-mute-menu"))
+      openMenu("opponent");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-mute-menu")}`)
         .should("be.visible")
         .and(($menu) => {
           const menu = $menu[0] as Element;
@@ -242,8 +264,8 @@ for (const viewport of VIEWPORTS) {
     });
 
     it("#257 the opponent's Mute emotes menu is drawn over the board and takes the click", () => {
-      cy.get(`${ts("hero-opponent")} .hero-portrait`).click();
-      cy.get(ts("emote-mute-menu")).should(($menu) => {
+      openMenu("opponent");
+      cy.get(`${ts("hero-opponent")} ${ts("emote-mute-menu")}`).should(($menu) => {
         expectDrawnOnTop($menu[0] as HTMLElement, "the mute menu");
       });
       // A click Cypress cannot land (the item covered) fails here: before #257 the field took it.
@@ -252,6 +274,54 @@ for (const viewport of VIEWPORTS) {
       cy.then(() => {
         expect(mountedEmotes?.muted(OPPONENT), "the opponent muted").to.equal(true);
       });
+    });
+
+    it("R1330 R1449 the hero's inspect view stays on the screen, its portrait large, its menu in it and Close a touch target", () => {
+      for (const side of ["you", "opponent"] as const) {
+        openView(side);
+        cy.get(ts("hero-inspect")).should(($view) => {
+          const view = $view[0] as Element;
+          expectOnScreen(view, `${side}'s inspect view`);
+          const menu = view.querySelector(ts(side === "you" ? "emote-menu" : "emote-mute-menu"));
+          expect(menu, `${side}'s menu in the view`).not.to.equal(null);
+          expectOnScreen(menu as Element, `${side}'s menu in the view`);
+          const height = view.ownerDocument.documentElement.clientHeight;
+          expect(view.getBoundingClientRect().bottom, `${side}'s inspect view's bottom edge`).to.be.at.most(
+            height + EPSILON,
+          );
+          const portrait = view.querySelector(".hero-inspect-portrait");
+          expect(portrait, "the view's portrait").not.to.equal(null);
+          expect(portrait?.getBoundingClientRect().width ?? 0, "the view's portrait width").to.be.at.least(
+            INSPECT_PORTRAIT_MIN_PX,
+          );
+          expect(view.querySelectorAll(".hero-inspect-portrait .portrait-art-mote")).to.have.length(
+            PORTRAIT_MOTE_COUNT,
+          );
+        });
+        cy.get(ts("hero-inspect-close")).should(($close) => {
+          expect(($close[0] as Element).getBoundingClientRect().height, "Close's height").to.be.at.least(
+            TOUCH_PX - EPSILON,
+          );
+        });
+        cy.get(ts("hero-inspect-close")).click();
+        cy.get(ts("hero-inspect")).should("not.exist");
+      }
+    });
+
+    it("R1332 the board's portraits draw their vivid layers inside the 44px oval", () => {
+      for (const side of ["you", "opponent"] as const) {
+        cy.get(`${ts(`hero-${side}`)} .hero-portrait`).should(($frame) => {
+          const frame = $frame[0] as Element;
+          const art = frame.querySelector(".portrait-art");
+          expect(art, `${side}'s portrait art`).not.to.equal(null);
+          const outer = frame.getBoundingClientRect();
+          const inner = (art as Element).getBoundingClientRect();
+          for (const edge of ["left", "top", "width", "height"] as const) {
+            expect(inner[edge], `the art's ${edge} against its oval`).to.be.closeTo(outer[edge], EPSILON);
+          }
+          expect(frame.querySelectorAll(".portrait-art-mote"), `${side}'s motes`).to.have.length(PORTRAIT_MOTE_COUNT);
+        });
+      }
     });
 
     it("#219 a voice line's bubble is sized by its line and stays on the screen", () => {

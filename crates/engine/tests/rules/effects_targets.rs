@@ -4,11 +4,9 @@
 //! (`cardsInScope`, `adjacentTo`, `matchesScope`) that the board-wide verbs are thin walks over.
 //!
 //! The scope lives here rather than on `TargetSpec` because `resolveTarget` answers with one
-//! `DamageTarget | null`: every verb written in a TargetSpec — damage, destroy, buff, transform —
-//! is single-target by construction, so a multi-card spec could not be threaded through them. The
-//! fixture cards these tests need are registered here, so no shared fixture has to grow (BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-targets.test.ts`.
+//! `DamageTarget | null`: every verb written in a TargetSpec is single-target by construction, so a
+//! multi-card spec could not be threaded through them. The fixture cards these tests need are
+//! registered here, so no shared fixture has to grow (BUILD §0).
 
 use std::borrow::Borrow;
 
@@ -21,9 +19,7 @@ use serde::Serialize;
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::harness::{new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards: two tags and a backrow type, so every filter has something to bite on.
-// ---------------------------------------------------------------------------
 
 fn human() -> CardDef {
     catalog_fx::unit_def(
@@ -50,14 +46,12 @@ fn stackable() -> CardDef {
     )
 }
 
-/// TS `{ ...spellDef(764, { id: "tg-field", name: "Field Spell (fixture)" }), type: "Field Spell" }`.
 fn field_spell() -> CardDef {
     let mut def = catalog_fx::spell_def(764, json!({ "id": "tg-field", "name": "Field Spell (fixture)" }));
     def.type_ = CardType::FieldSpell;
     def
 }
 
-/// TS `game(seed = "targets-test")`: every test here uses the default.
 fn game() -> GameState {
     let state = new_game("targets-test", None);
     let mut catalog = registered_catalog().clone();
@@ -68,8 +62,7 @@ fn game() -> GameState {
     state
 }
 
-/// TS `ctxOf(state, self = null)`: a context over `sinkFor(state)` with p1 as the controller. A
-/// Rust context borrows the state, so the test's reads run inside `f`.
+/// A context with p1 as the controller. It borrows the state, so the test's reads run inside `f`.
 fn with_ctx<R>(
     state: &mut GameState,
     self_: Option<&CardInstance>,
@@ -90,22 +83,19 @@ fn with_ctx<R>(
     f(&mut ctx)
 }
 
-/// TS `idsOf(cards)`; takes the cards owned or lent.
 fn ids_of<C: Borrow<CardInstance>>(cards: &[C]) -> Vec<String> {
     cards.iter().map(|card| card.borrow().id.clone()).collect()
 }
 
-/// `{ of: "instance", instanceId }`.
 fn instance_spec(instance_id: &str) -> TargetSpec {
     json_as(json!({ "of": "instance", "instanceId": instance_id }))
 }
 
-/// A board scope from TS's object literal; `{}` is TS's default.
+/// A board scope from a JSON literal; `{}` is the default.
 fn scope(literal: Value) -> BoardScope {
     json_as(literal)
 }
 
-/// TS held the live instance; Rust reads the card again by id.
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
@@ -116,9 +106,7 @@ fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-// ---------------------------------------------------------------------------
 // `{ of: "instance" }`
-// ---------------------------------------------------------------------------
 
 mod target_spec_of_instance {
     use super::*;
@@ -178,9 +166,7 @@ mod target_spec_of_instance {
     }
 }
 
-// ---------------------------------------------------------------------------
 // `cardsInScope`
-// ---------------------------------------------------------------------------
 
 mod cards_in_scope {
     use super::*;
@@ -244,7 +230,6 @@ mod cards_in_scope {
             json!({}),
         );
 
-        // p2 is active, so its side comes first, and within each side the lanes ascend.
         assert_eq!(
             with_ctx(&mut state, None, |ctx| ids_of(&cards_in_scope(
                 ctx,
@@ -271,7 +256,6 @@ mod cards_in_scope {
             json!({}),
         );
 
-        // controller is p1
         let (own, enemy) = with_ctx(&mut state, None, |ctx| {
             (
                 ids_of(&cards_in_scope(ctx, &scope(json!({ "side": "self" })))),
@@ -449,9 +433,7 @@ mod cards_in_scope {
     }
 }
 
-// ---------------------------------------------------------------------------
 // `adjacentTo`
-// ---------------------------------------------------------------------------
 
 mod adjacent_to {
     use super::*;
@@ -675,9 +657,7 @@ mod adjacent_to {
     }
 }
 
-// ---------------------------------------------------------------------------
 // `matchesScope`
-// ---------------------------------------------------------------------------
 
 mod matches_scope {
     use super::*;

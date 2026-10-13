@@ -1,12 +1,9 @@
-//! Port of `packages/engine/test/fixtures/promptHarness.ts`.
-//!
 //! Helpers the prompts-and-movement tests share (docs/classic-sets.md B5 E13, E16–E18, E26): a board
 //! with the fixtures registered, a Spell resolving, an answer by option key, a round trip, and a short
 //! replayable game whose opening hands hold the fixture under test (Quickdraw, R225).
 //!
-//! TS handed back the sink it ran (`{ state, events, rng }`); a Rust sink borrows the state, so
-//! `cast_now` and `answer_keys` answer the sink's events (the one part TS's callers read; the rng's
-//! cursor is written back to the state) and the caller reads the state it passed in.
+//! A sink borrows the state, so `cast_now` and `answer_keys` answer the sink's events; the rng's
+//! cursor is written back to the state and the caller reads the state it passed in.
 
 use std::cell::Cell;
 
@@ -39,8 +36,7 @@ pub fn board(seed: &str) -> GameState {
     state
 }
 
-/// A card of `defId` resolving for `player` (§10.5 step 4), where a Spell's Cry runs. TS's defaults:
-/// `player = "p1"`, `radiant = false`.
+/// A card of `defId` resolving for `player` (§10.5 step 4), where a Spell's Cry runs.
 pub fn resolving_card(state: &mut GameState, def_id: &str, player: PlayerId, radiant: bool) -> CardInstance {
     let mut card = new_instance(state, def_id, player, Zone::Resolving { player });
     card.radiant = radiant;
@@ -48,8 +44,7 @@ pub fn resolving_card(state: &mut GameState, def_id: &str, player: PlayerId, rad
     card
 }
 
-/// What the sink a helper ran held besides the state (TS returned the sink itself). It derefs to its
-/// events, the one part of the sink TS's callers read (`sink.events`).
+/// What the sink a helper ran held besides the state: its events.
 pub struct SinkResult {
     pub events: Vec<GameEvent>,
 }
@@ -84,7 +79,7 @@ pub fn cast_now(state: &mut GameState, def_id: &str, player: PlayerId, radiant: 
     SinkResult { events }
 }
 
-/// `value`, or a panic naming what was expected (TS threw `expected …`).
+/// `value`, or a panic naming what was expected.
 pub fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
         Some(found) => found,
@@ -158,12 +153,11 @@ pub fn event_types(events: &[GameEvent]) -> Vec<String> {
 }
 
 thread_local! {
-    /// TS's module `let nonce`: one counter per test thread, so every action a test sends is fresh.
+    /// One counter per test thread, so every action a test sends is fresh.
     static NONCE: Cell<u32> = const { Cell::new(0) };
 }
 
-/// One action through `reduce`, logged, erroring loudly. `body` is TS's `ActionInput` (an
-/// `ActionInput` or its JSON literal).
+/// One action through `reduce`, logged, erroring loudly. `body` is an `ActionInput` or its JSON literal.
 pub fn act(state: &GameState, body: impl Serialize, log: Option<&mut Vec<Action>>) -> GameState {
     let nonce = NONCE.with(|n| {
         n.set(n.get() + 1);
@@ -184,7 +178,7 @@ pub fn act(state: &GameState, body: impl Serialize, log: Option<&mut Vec<Action>
     result.state
 }
 
-/// What `replayable` answers: TS's `{ state, log, decks }`.
+/// What `replayable` answers.
 pub struct Replayable {
     pub state: GameState,
     pub log: Vec<Action>,
@@ -193,8 +187,7 @@ pub struct Replayable {
 
 /// A replayable game (§9.2, §9.3): each deck is vanilla fixtures plus the named Quickdraw cards, so the
 /// opening hands hold them whatever the shuffle; both mulligans keep everything, and it is p1's first
-/// main phase. The log and decks go to `fold`, which must rebuild the very same state. TS's default:
-/// `p2Cards = []`.
+/// main phase. The log and decks go to `fold`, which must rebuild the very same state.
 pub fn replayable(seed: &str, p1_cards: &[String], p2_cards: &[String]) -> Replayable {
     setup_catalog();
     register_prompt_fixtures();

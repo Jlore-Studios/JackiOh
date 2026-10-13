@@ -1,12 +1,5 @@
-// R655 through the board: picking up one of your own Units to attack plays its `attack` hook, as in
-// Hearthstone. Driven through `<Game/>` as a player's pointer drives it (drag-layer.test.tsx says
-// how: `document.elementsFromPoint` is stubbed, the press goes to the element, the moves and the
-// release to `window`), with the audio singleton swapped for a fake whose `playPickup` is the spy.
-//
-// What the engine does with a pick-up (the hook's effect and line, the gap, the cut-off) is the
-// engine's own test. This one is the wiring: which gestures reach `playPickup`, how often, with
-// which defId, and that nothing else the board does changes (CLAUDE.md rule 7: the cue is never a
-// rule and is never sent).
+// R655: picking up your own attacker plays its `attack` hook. This pointer-level `<Game/>` suite
+// verifies `playPickup` wiring only; audio never changes rules or sends an action (CLAUDE.md rule 7).
 
 import type { ActionBody, ActivationView, PlayerView, Selection } from "@jackioh/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -20,27 +13,22 @@ import { DRAG_THRESHOLD_PX } from "../../game/drag/model.ts";
 import { __resetSettingsForTests, writeSettings } from "../../settings/index.ts";
 import { baseView, emptySide, unit } from "../fixtures.ts";
 
-// ---------------------------------------------------------------------------------------------
-// The fixture.
-// ---------------------------------------------------------------------------------------------
+// Fixture.
 
-/** The Rock: its `attack` hook is an effect ("rumble") in card-audio.json5. */
+/** Attack-hook fixture ("rumble"). */
 const ROCK = "core-066";
-/** Tempo Timmy, a second attacker with a hook of its own ("zip"). */
+/** Second attack-hook fixture ("zip"). */
 const TIMMY = "core-011";
-/** 4-mana 7/7: it has an `attack` hook, but `legal` gives it no attack this turn. */
+/** Has an `attack` hook but no legal attack. */
 const SEVEN_SEVEN = "core-025";
-/** Brother Ping: no attack, one aimed Activate ability, so a drag lifts the ability instead (R384). */
+/** Its drag lifts an Activate ability, not an attack (R384). */
 const PING_UNIT = "classicplus-076-1";
-/** Lava Golem, the opponent's: a hook of its own ("heavyStomp"), and never yours to pick up. */
+/** Opponent attack-hook fixture: never yours to pick up. */
 const GOLEM = "core-055";
 
 const PING: ActivationView = { ability: "ping", label: "Deal {damage} damage.", usesLeft: 1, usable: true };
 
-/**
- * u1 (The Rock) may attack e1 or the enemy hero; u3 (Tempo Timmy) only the hero. u2 may only switch
- * position, and act1 (Brother Ping) may only ping e1. The opponent's e1 is a Lava Golem.
- */
+/** u1 attacks e1 or the hero; u3 only the hero; u2 switches; act1 pings e1; e1 is the opponent. */
 function pickupView(): PlayerView {
   return baseView({
     you: emptySide("p1", {
@@ -84,13 +72,10 @@ function renderGame() {
 
 const el = (testid: string): HTMLElement => screen.getByTestId(testid);
 
-// ---------------------------------------------------------------------------------------------
-// The audio engine.
-// ---------------------------------------------------------------------------------------------
+// Audio engine.
 
 type FakeEngine = { [K in keyof AudioEngine]: Mock<AudioEngine[K]> };
 
-/** A stand-in for the singleton: every method a spy, every answer the quiet one. */
 function fakeEngine(): FakeEngine {
   return {
     playSfx: vi.fn<AudioEngine["playSfx"]>(() => true),
@@ -114,17 +99,13 @@ function fakeEngine(): FakeEngine {
 
 let engine: FakeEngine;
 
-/** The defIds `playPickup` was called with, in order. */
 const pickups = (): string[] => engine.playPickup.mock.calls.map((call) => call[0]);
 
-// ---------------------------------------------------------------------------------------------
-// The pointer.
-// ---------------------------------------------------------------------------------------------
+// Pointer.
 
 const POINTER = 1;
 const START = { x: 200, y: 400 };
 
-/** What `document.elementsFromPoint` answers, topmost first. */
 let under: Element[] = [];
 
 function over(...stack: Element[]): void {
@@ -143,7 +124,6 @@ function release(x = START.x, y = START.y): void {
   fireEvent.pointerUp(window, { pointerId: POINTER, button: 0, clientX: x, clientY: y });
 }
 
-/** Press the source and move it straight up exactly the threshold: the drag is now in flight. */
 function lift(source: Element): void {
   over(source);
   press(source);
@@ -169,9 +149,7 @@ afterEach(() => {
   resetAudioSettingsForTests();
 });
 
-// ---------------------------------------------------------------------------------------------
-// A drag.
-// ---------------------------------------------------------------------------------------------
+// Drag.
 
 describe("R655 a drag that lifts your attacker plays its pick-up, once per lift", () => {
   it("R655 a press on your attacker plays nothing until it travels the threshold, then plays once with the Unit's defId and sends nothing", () => {
@@ -279,9 +257,7 @@ describe("R655 a drag that lifts your attacker plays its pick-up, once per lift"
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // What never plays.
-// ---------------------------------------------------------------------------------------------
 
 describe("R655 only a Unit `legal` lets attack is picked up", () => {
   it("R655 your Unit with no legal attack plays nothing, dragged or clicked, though its card has an attack hook", () => {
@@ -364,9 +340,7 @@ describe("R655 only a Unit `legal` lets attack is picked up", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Click-click.
-// ---------------------------------------------------------------------------------------------
 
 describe("R655 click-click: choosing your attacker is a pick-up", () => {
   it("R655 clicking your attacker plays once, and clicking its target attacks, plays nothing more and sends exactly the attack", () => {

@@ -506,6 +506,30 @@ mod r144_the_reseed_at_boot {
         }
     }
 
+    /// R1435: every fixture account carries its fixed username, bare, with the prompt answered and
+    /// no cooldown running, after one reseed or two, so no end-to-end spec meets the prompt.
+    #[tokio::test(start_paused = true)]
+    async fn r1435_fixture_accounts_have_fixed_usernames_and_are_prompted() {
+        let app = harness().await;
+        seed_e2e_fixtures(&app).await.expect("the reseed");
+        seed_e2e_fixtures(&app).await.expect("the second reseed");
+
+        for fixture in E2E_ACCOUNTS.iter() {
+            let profile = store!(app.db, profiles_get_by_user_id(&fixture.user_id))
+                .unwrap_or_else(|| panic!("{} has a profile", fixture.user_id));
+            assert_eq!(profile.username(), fixture.username, "{}", fixture.user_id);
+            assert!(profile.username_prompted, "{} is prompted", fixture.user_id);
+            assert_eq!(profile.username_changed_at, None, "{}", fixture.user_id);
+        }
+
+        let (status, _headers, me) = call(&app, "GET", "/api/auth/me", Some(p1().token), Value::Null).await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            me["username"],
+            json!({ "name": p1().username, "nextChangeAt": null, "promptOwed": false })
+        );
+    }
+
     #[tokio::test(start_paused = true)]
     async fn seeds_the_good_expired_and_exhausted_codes_and_never_the_missing_one() {
         let app = harness().await;

@@ -1,19 +1,10 @@
 //! Test-only cards for Activate (docs/classic-sets.md B3.2, R384). Each reproduces one shape of the
-//! Classic and Classic+ cards that use the keyword through the engine's own verbs: a targeted ping
-//! (Classic+ #76.1 Brother Ping), an "Activate 2" on a Unit, a ♾️ Tribute cost that reads the tributed
-//! unit's Attack (Classic #21 Turtinator), a random-discard cost (Classic #15 Nose Hunter), "Tribute
-//! this" on an Indestructible Field Spell (Classic #84 Lockdown), a mana price (Heroic Power's "spend
-//! (X)", the Heroic Power patch), modes with mode-bound targets and a delayed destroy (Classic #20 The Power to
-//! Punish), a condition the text sets (Classic #7 InfiniScepter), an ability that asks mid-list,
-//! abilities a card has only on some instances (the Heroic Power patch's rolled power), and abilities a
-//! fused card carries, each read in its ingredient's place (R102). The engine never imports
-//! `packages/cards`; the real cards' tests cover the same cases again.
+//! Classic and Classic+ cards that use the keyword through the engine's own verbs (each card's own
+//! comment names its shape); the abilities a fused card carries are each read in its ingredient's
+//! place (R102). The engine does not depend on the cards crate; the real cards' tests cover the same
+//! cases again.
 //!
 //! Ids are prefixed `act-` and indexed from 4100, so they cannot collide with another fixture file's.
-//!
-//! Port of `packages/engine/test/fixtures/activate.ts`. Each exported def is a `pub static` under TS's
-//! name snake_cased (`log_card.id`, `low_teller.id`); TS's module counter (`nextIndex`, from 4100, one
-//! per `def` call in file order) is each def's stated index.
 
 #![allow(non_upper_case_globals)]
 
@@ -27,9 +18,9 @@ use jackioh_engine::subsystems::hero_power::{
 };
 use jackioh_engine::testkit::*;
 
-/// TS `def(name, type, extra = {})`: a Core Common at cost 0 named after `name`; a Unit is 2/2 unless
-/// `extra` names `attack` or `health` (its Radiant face doubles them), `extra`'s `keywords` go on both
-/// faces, and every other key of `extra` is written over the definition.
+/// A Core Common at cost 0 named after `name`; a Unit is 2/2 unless `extra` names `attack` or `health`
+/// (its Radiant face doubles them), `extra`'s `keywords` go on both faces, and every other key of
+/// `extra` is written over the definition.
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut rest = if extra.is_object() { extra } else { json!({}) };
     let mut take = |key: &str| rest.as_object_mut().and_then(|object| object.remove(key));
@@ -68,9 +59,7 @@ fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     json_as(card)
 }
 
-// ---------------------------------------------------------------------------
 // The note log: a Field Spell whose memory records what ran, in order.
-// ---------------------------------------------------------------------------
 
 pub static log_card: LazyLock<CardDef> = LazyLock::new(|| def("log", 4101, "Field Spell", json!({})));
 /// The note log sits in p2's backrow lane 5, out of the way of every card under test.
@@ -87,7 +76,6 @@ fn steps_of(memory: &IndexMap<String, Value>) -> Vec<String> {
     }
 }
 
-/// Everything the note log has recorded, in order.
 pub fn notes(state: &GameState) -> Vec<String> {
     match state.players.p2.backrow.get((LOG_LANE - 1) as usize) {
         Some(Some(log)) => steps_of(&log.memory),
@@ -127,7 +115,6 @@ pub fn ask_controller(step: impl Into<String>) -> Effect {
     })
 }
 
-/// TS `faces(base, radiant = base)`.
 fn faces(base: Script) -> CardScripts {
     CardScripts {
         base: base.clone(),
@@ -139,12 +126,12 @@ fn faces_of(base: Script, radiant: Script) -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// TS `ANY_TARGET`: one unit or hero.
+/// One unit or hero.
 fn any_target() -> TargetDecl {
     TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))
 }
 
-/// An ability with no cost, targets, modes or conditions: the TS literal `{ id, label, uses, run }`.
+/// An ability with no cost, targets, modes or conditions.
 fn ability(id: &str, label: &str, uses: ActivationUses, run: Hook) -> ActivationDecl {
     ActivationDecl {
         id: id.to_string(),
@@ -163,7 +150,7 @@ fn notes_hook(entries: &'static [&'static str]) -> Hook {
     hook(move |_ctx| entries.iter().map(|entry| note(*entry)).collect())
 }
 
-/// TS `String(value)` for a value read back out of a card's memory (`undefined` when there is none).
+/// A value read back out of a card's memory as text (`undefined` when there is none).
 fn js_string<V: Borrow<Value>>(value: Option<V>) -> String {
     match value {
         None => "undefined".to_string(),
@@ -174,9 +161,7 @@ fn js_string<V: Borrow<Value>>(value: Option<V>) -> String {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The cards
-// ---------------------------------------------------------------------------
 
 /// Classic+ #76.1's shape: "Activate: Deal 1 damage" (Radiant "Activate 2: Deal 2 damage").
 pub static pinger: LazyLock<CardDef> = LazyLock::new(|| def("pinger", 4102, "Field Spell", json!({})));
@@ -222,7 +207,7 @@ pub static lockdown: LazyLock<CardDef> = LazyLock::new(|| {
 pub static ghost: LazyLock<CardDef> =
     LazyLock::new(|| def("ghost", 4107, "Unit", json!({ "attack": 5, "health": 6 })));
 
-/// A mana price, the Heroic Power patch's "Activate: Spend (2): Draw 1".
+/// A mana price, Heroic Power's "Activate: Spend (2): Draw 1".
 pub static merchant: LazyLock<CardDef> = LazyLock::new(|| def("merchant", 4108, "Field Spell", json!({})));
 pub const MERCHANT_PRICE: i32 = 2;
 
@@ -287,8 +272,8 @@ pub static asker: LazyLock<CardDef> =
 pub static scepter: LazyLock<CardDef> = LazyLock::new(|| def("scepter", 4111, "Field Spell", json!({})));
 pub const SCEPTER_KEY: &str = "stored";
 
-/// The Heroic Power patch's shape: one ability per power, and a copy has only the one it rolled
-/// (`has`), beside one it always has. The rolled one is `memory.pick`.
+/// Heroic Power's shape: one ability per power, and a copy has only the one it rolled (`has`), beside
+/// one it always has. The rolled one is `memory.pick`.
 pub static chooser: LazyLock<CardDef> = LazyLock::new(|| def("chooser", 4112, "Field Spell", json!({})));
 pub const PICK_KEY: &str = "pick";
 
@@ -517,7 +502,7 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
                         "leave",
                         "Tribute this",
                         ActivationUses::Count(1),
-                        // TS reads the live `ctx.self`: where the card is now that its cost has moved it.
+                        // Reads the live `ctx.self`: where the card is now that its cost has moved it.
                         hook(|ctx| {
                             let zone = ctx.live_self().map_or("none", |card| card.zone.z().as_str());
                             vec![note(format!("left:{zone}"))]
@@ -635,8 +620,7 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
             keeper.id.clone(),
             faces(Script {
                 activations: vec![ActivationDecl {
-                    // TS `recalled({ self, data: {} }, KEEPER_KEY) !== undefined`: with no part path in the
-                    // data, the key is the plain one (`work.partMemoryKey`).
+                    // With no part path in the data, the key is the plain one (`work.partMemoryKey`).
                     can_activate: Some(condition_hook(|c| {
                         c.self_
                             .memory
@@ -678,8 +662,7 @@ pub static ACTIVATE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock:
     ])
 });
 
-/// Every Activate fixture on top of `base`. TS `activateCatalog(base = {})`: pass `CardDefs::new()`
-/// for the default.
+/// Every Activate fixture on top of `base`: pass `CardDefs::new()` for the default.
 pub fn activate_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in ACTIVATE_DEFS.iter() {

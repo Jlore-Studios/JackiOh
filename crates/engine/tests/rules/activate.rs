@@ -2,11 +2,9 @@
 //! abilities, the `activate` action and its alias `activatePower`, the refusal that is also the list,
 //! the costs, the choices, the pauses, and the view.
 //!
-//! Every rule of B3.2 is pinned here through the fixtures of `fixtures/activate.ts`, by observable
-//! behaviour: what the action does to the board, what `legalActions` offers, what `viewFor` shows,
-//! and what survives a prompt, a JSON round trip and a replay.
-//!
-//! Port of `packages/engine/test/activate.test.ts`.
+//! Every rule of B3.2 is pinned here by observable behaviour: what the action does to the board, what
+//! `legalActions` offers, what `viewFor` shows, and what survives a prompt, a JSON round trip and a
+//! replay.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -32,9 +30,7 @@ use crate::rules::fixtures::harness::{
     events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot,
 };
 
-// ---------------------------------------------------------------------------
 // Harness
-// ---------------------------------------------------------------------------
 
 fn register() {
     register_catalog(activate_catalog(registered_catalog().clone()));
@@ -51,7 +47,7 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS's module-level `let nonce = 0`: unique across the file's tests, which Rust runs on many threads.
+/// A nonce unique across the file's tests, which Rust runs on many threads.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act_result(state: &GameState, body: ActionInput) -> ReduceResult {
@@ -132,7 +128,7 @@ fn json_of<T: serde::Serialize>(value: T) -> Value {
     serde_json::to_value(value).unwrap()
 }
 
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
+/// Every key the expected object names matches, recursively; an array
 /// matches element for element and in length.
 fn matches_object(actual: &Value, expected: &Value) -> bool {
     match (actual, expected) {
@@ -146,19 +142,17 @@ fn matches_object(actual: &Value, expected: &Value) -> bool {
     }
 }
 
-/// vitest's `not.toHaveProperty(key)`.
 fn lacks(value: &Value, key: &str) -> bool {
     value.as_object().is_none_or(|object| !object.contains_key(key))
 }
 
-/// TS `whyCannotActivateAbility(…)`: the refusal's text, or `null` (`None`) when it may be activated.
+/// The refusal's text, or `None` when it may be activated.
 fn why_not(state: &GameState, player: PlayerId, instance_id: &str, ability: Option<&str>) -> Option<String> {
     why_cannot_activate_ability(state, player, instance_id, ability)
         .err()
         .map(|error| error.message)
 }
 
-/// The live card (TS held the object itself; Rust looks it up by id).
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
@@ -197,7 +191,7 @@ fn ability_ids(state: &GameState, instance: &str) -> Vec<String> {
         .collect()
 }
 
-/// TS `body.targets?.[0]`, as JSON (null when there is none).
+/// The first target as JSON (null when there is none).
 fn first_target<T: serde::Serialize>(body: &T) -> Value {
     json_of(body)["targets"][0].clone()
 }
@@ -213,7 +207,6 @@ fn ids_of(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// The TS `fuse(sinkFor(state), { ingredients, target })`.
 fn fuse_onto(
     state: &mut GameState,
     ingredients: Vec<CardInstance>,
@@ -233,15 +226,12 @@ fn fuse_onto(
     )
 }
 
-/// TS put the card back on the field as the object the hand still held; Rust takes it out of the
-/// hand first, so it is placed once.
+/// Takes the card out of the hand first, so it is placed once.
 fn take_from_hand(state: &mut GameState, player: PlayerId, id: &str) -> CardInstance {
     let hand = &mut state.players[player].hand;
     let at = hand.iter().position(|held| held.id == id).expect("in the hand");
     hand.remove(at)
 }
-
-// ---------------------------------------------------------------------------
 
 mod r384_b3_2_activate_using_an_ability {
     use super::*;
@@ -326,8 +316,7 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         // Two "Gain 1 mana" uses on top of the refreshed crystal.
         assert_eq!(state.players.p1.mana.current, 3);
 
-        // The Radiant face's "Activate 2" is the face's own count. (TS `put(…, { radiant: true })` set
-        // the flag before placing; these fixtures place the same either way.)
+        // The Radiant face's "Activate 2" is the face's own count.
         let radiant = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 2), json!({}));
         card_mut(&mut state, &radiant.id).radiant = true;
         let face = ACTIVATE_SCRIPTS
@@ -1316,8 +1305,7 @@ mod r384_r752_b3_2_rule_10_activate_power_is_an_alias_of_activate {
         .0;
         assert_eq!(hash_state(&via_alias), hash_state(&via_activate));
 
-        // TS asserted `.not.toBeNull()` on an `error` that is a string or undefined, which holds either
-        // way: what it pins is that the call returns rather than throws (spec-gaps-part-25-1.md).
+        // This call must return rather than panic.
         let _ = act_result(&state, activate(P1, &card.id, json!({ "modes": ["x"] })));
         assert_eq!(
             act_result(&state, activate(P1, &card.id, json!({ "ability": "ping" })))

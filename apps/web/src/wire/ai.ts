@@ -121,6 +121,11 @@ export type AiDeckOptions = {
    * `newestShippedSet()` (R1371, R1373).
    */
   leanSet?: SetName;
+  /**
+   * R1390: the sets the draw never deals from. Default the AI's soft gate (`AI_DECK_GATED_SETS`, empty
+   * since #732 trained the AI on the Meditative set); pass [] beside `banned: []` for a human's random deck.
+   */
+  gatedSets?: readonly SetName[];
 };
 
 export type { AiDeckConstants };

@@ -1,30 +1,13 @@
-//! `src/match/engine.real.ts` — the real `EnginePort`, and until now the only file in `src/` with no
-//! test at all.
+//! The real engine through `actor::engine`: that it is reachable, registered and driveable.
 //!
-//! WHY IT NEEDS ONE. Every other test in this suite installs a scripted port through
-//! `setEnginePort`, which is what lets the actor, the clock and the recovery tests run without the
-//! engine in the process — and is exactly why nothing noticed when this file was missing its
-//! `registerAll()` call. `createGame` looks its card definitions up in the engine's *registered*
-//! catalog (`packages/engine/src/state.ts`: `validateDeck` throws `"core-001" is not in the catalog
-//! (§9.4 L6)` when it is empty), so without that call every real match died on the first card of the
-//! first deck while all 200-odd server tests stayed green. This file is the one that would have
-//! caught it: it builds the port for real, with the real §8 catalog, and plays a card.
+//! Every other test in this suite installs a scripted port, which is why nothing noticed when the
+//! catalog was never registered: `create_game` looks its cards up in the registered catalog
+//! (`validateDeck` fails "not in the catalog (§9.4 L6)" when it is empty). This file builds the port
+//! for real, with the real §8 catalog, and plays a card.
 //!
-//! It asks only what the adapter is responsible for — that the engine is reachable, registered and
-//! driveable through the port's own surface. The rules those calls run are `packages/engine`'s and
-//! `packages/cards`' business, and the fuzz suite plays 1,000 whole games of them (BUILD §4).
-//!
-//! Its two legal decks come from `decksTheEngineAccepts` (`test/fakes/engine.ts`), the probe this
-//! file used to hold privately — the reasoning for probing the size rather than importing
-//! `DECK_SIZE` moved with it, and so did the "refused every deck size" failure that catches an
-//! unregistered catalog. It is shared now because the real-engine blocks of `actor.test.ts` and
-//! `recovery.test.ts` need the same two decks.
-//!
-//! Port of `apps/server/test/match/engine.real.test.ts`. The Rust server has no `EnginePort`, no
-//! dynamic import and no `EngineUnavailableError` (SURFACE §11.3): the port's methods are plain
-//! functions in `actor::engine` that call `jackioh_engine` directly, and this file drives them. The
-//! probe is a private copy here (it is three lines of `support::engine`'s TS original and this file
-//! is its only reason to exist), catching `create_game`'s panic where TS caught its throw.
+//! The rules those calls run belong to the engine and cards crates, and the fuzz suite plays whole
+//! games of them (BUILD §4). The probe for two legal decks is private here and catches
+//! `create_game`'s panic. Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -47,13 +30,12 @@ const NEVER_CHOOSE: &[&str] = &[
     "ceilingReached",
 ];
 
-/// TS `catalog.isToken` (`src/api/catalog.ts`): a token by flag or by tag.
+/// A token by flag or by tag.
 fn is_token(def: &CardDef) -> bool {
     def.token || def.tags.iter().any(|tag| tag.as_str() == "Token")
 }
 
-/// TS `loadCatalog()`'s `cardIds`, tokens filtered out: every deckable id, in catalog order. The
-/// catalog is registered first, as `enginePort()` did.
+/// Every deckable id (tokens filtered out), in catalog order. The catalog is registered first.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
@@ -71,7 +53,7 @@ fn args(seed: &str, decks: &(Vec<String>, Vec<String>)) -> CreateGameArgs {
     }
 }
 
-/// What a caught panic said: `create_game` panics with TS's refusal text (SURFACE §4.4.9).
+/// What a caught panic said: `create_game` panics with the refusal text (SURFACE §4.4.9).
 fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(text) = payload.downcast_ref::<&str>() {
         return (*text).to_string();
@@ -82,18 +64,12 @@ fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
     "a panic without a message".to_string()
 }
 
-/// Two legal, disjoint decks for the **real** engine port — the counterpart of `fakeDeck` for the
-/// files that drive `actor::engine` (`engine_real.rs`, and the real-engine blocks of
-/// `match_actor.rs` and `recovery.rs`).
+/// Two legal, disjoint decks for the **real** engine port, for the files that drive `actor::engine`
+/// (`engine_real.rs`, and the real-engine blocks of `match_actor.rs` and `recovery.rs`).
 ///
-/// The deck size is not written here and not imported either: BUILD §2 keeps `DECK_SIZE` in
-/// `packages/engine/src/config.ts`, nothing restates it, and the port is meant to be the one place
-/// the server reaches the engine's rules. So the size is whatever the engine accepts: the slices grow
-/// until `createGame` stops objecting.
-///
-/// That loop is also an assertion. With the card catalog unregistered *every* size is refused, so
-/// that failure surfaces here as "the real engine refused every deck size", with the engine's own
-/// sentences attached, rather than as a shapeless panic inside whatever called this.
+/// The deck size is whatever the engine accepts (BUILD §2 keeps `DECK_SIZE` in its config): the
+/// slices grow until `createGame` stops objecting. With the catalog unregistered *every* size is
+/// refused, which surfaces here as "the real engine refused every deck size".
 fn decks_the_engine_accepts(pool: &[String], seed: &str) -> (GameState, (Vec<String>, Vec<String>)) {
     let mut refusals: Vec<String> = Vec::new();
     let mut size = 1;
@@ -136,11 +112,7 @@ mod the_real_engine_port_src_match_engine_real_ts {
 
     #[test]
     fn builds_without_the_engine_reporting_a_missing_export() {
-        // TS: `enginePort()` threw `EngineUnavailableError` when `@jackioh/engine` was missing any of
-        // `REQUIRED_ENGINE_EXPORTS`; getting a port back at all was that check passing. Rust links the
-        // engine (SURFACE §11.3), so a missing export is a compile error and naming the port's
-        // functions here is that check. What `enginePort()` did besides is left to check at run time:
-        // the catalog is registered, so the port has cards to deal from.
+        // The catalog is registered, so the port has cards to deal from.
         let _create = create_game;
         let _reduce = reduce;
         let _snapshot = snapshot;
@@ -227,8 +199,8 @@ mod the_real_engine_port_src_match_engine_real_ts {
 }
 
 /// R258's deal, through the real port: `buildAiDeck` over the registered catalog, nothing banned.
-/// The deck size is not imported (see `decks_the_engine_accepts`): it is whatever size the real
-/// engine accepts, and the dealt pair must be a game `createGame` takes as it is.
+/// The deck size is whatever the real engine accepts, and the dealt pair must be a game `createGame`
+/// takes as it is.
 mod all_randoms_deal_r258_src_match_engine_real_ts {
     use super::*;
 
@@ -260,7 +232,6 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
 
         // Seeded: the same seed deals the same deck, in the same order, every time and in any process…
         assert_eq!(deal_random_deck("r258-match:p1-deck", None), p1);
-        // (TS asked a second, freshly built port here; the Rust port is functions, so asking again is it.)
         assert_eq!(deal_random_deck("r258-match:p1-deck", None), p1);
         // …and another seed deals another deck.
         assert_ne!(p2, p1);
@@ -268,8 +239,7 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
 }
 
 /// R376's record, through the real port: a real match played to a concede and summarized off its
-/// log, as `api/game-records.ts` summarizes every live match. What each field means is proved in
-/// `packages/engine` and `packages/cards`; this proves the adapter hands the engine's answer over.
+/// log. This proves the adapter hands the engine's answer over.
 mod a_finished_matchs_record_r376_src_match_engine_real_ts {
     use super::*;
 
@@ -278,7 +248,7 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
             .expect("FoldArgs from TS's literal")
     }
 
-    /// TS's `act`: applies one action as `player`, which must be accepted, and logs it.
+    /// Applies one action as `player`, which must be accepted, and logs it.
     fn act(state: &mut GameState, log: &mut Vec<Action>, player: PlayerId, body: ActionBody) {
         let action = Action::new(body, player, format!("r376-{}", log.len()));
         let result = reduce(state, &action);

@@ -2,8 +2,6 @@
 // attacked, attacked only from its own lane, can't attack or be attacked, Immune to Spells' "doesn't
 // affect it" half, a keyword that holds only while a condition does, and the forced attacks on a
 // random enemy and on the unit's own hero — which skip §4.2 steps 1 to 3 (R53) but obey these.
-//
-// Port of `packages/engine/test/restrictions.test.ts`.
 
 use jackioh_engine::effects::{
     damage, damage_all, destroy, forced_attack_own_hero, forced_attack_random, forced_attacks_on, plague,
@@ -78,8 +76,7 @@ fn with_asker() {
     register_scripts(registry);
 }
 
-/// TS `sinkFor(state)`'s three parts side by side, so the state stays readable between engine calls
-/// (TS read the same object through `state` and `sink.state`).
+/// The three parts of a sink side by side, so the state stays readable between engine calls.
 struct Bench {
     state: GameState,
     events: Vec<GameEvent>,
@@ -100,7 +97,6 @@ impl Bench {
         EngineSink::new(&mut self.state, &mut self.events, &mut self.rng)
     }
 
-    /// `applyEffects(effects, makeContext(sink, self, options))`, `self` read as it stands now.
     fn apply(&mut self, me: Option<&CardInstance>, options: HookOptions, effects: Vec<Effect>) {
         let me = me.map(|card| {
             find_instance(&self.state, &card.id)
@@ -113,7 +109,7 @@ impl Bench {
     }
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).expect("the card is still in the game")
 }
@@ -283,9 +279,7 @@ mod e35_attack_restrictions_section_4_2_step_2 {
             target_ids(&attack_targets(&state, &attacker)),
             vec![other.id.clone(), "p1".to_string()]
         );
-        // TS l.114–120 registered a test-only attack bar with `registerAttackBar`, which SURFACE §6.6
-        // does not port (it was never registered by the engine): those assertions are in
-        // `78f131c^:.fullsend/notes/spec-gaps-part-26-5.md`. With no bar, both targets stay.
+        // No attack bar is registered (docs/v0.3.0/SURFACE.md §6.6): both targets stay.
         assert_eq!(attack_targets(&state, &attacker).len(), 2);
     }
 }
@@ -309,7 +303,6 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
             Default::default(),
         );
         let sweep = in_hand(&mut state, &storm.id, PlayerId::P1, 1).remove(0);
-        // The recorder plays on from this state; TS's `state` stayed the state before the play.
         let mut game = recorder(&state.clone());
         game.play(input(
             json!({ "type": "play", "instanceId": sweep.id, "playerId": "p1" }),
@@ -365,7 +358,6 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         );
         let top = live(&state, &radiant_top).clone();
         let mut b = Bench::sink_for(state);
-        // TS `{ ...makeContext(sink, null, { controller: "p1" }), defId: bolt.id, radiant: false }`.
         let mut sink = b.sink();
         let mut gone = make_context(
             &mut sink,
@@ -379,7 +371,6 @@ mod e35_immune_to_spells_a_spells_effects_pass_it_by {
         gone.radiant = false;
         assert!(effect_is_from_spell(&gone));
         assert!(unaffected_by(&gone, &top));
-        // `{ ...gone, defId: grunt.id }`.
         gone.def_id = Some(grunt.id.clone());
         assert!(!unaffected_by(&gone, &top));
         gone.def_id = Some(bolt.id.clone());
@@ -430,7 +421,6 @@ mod e35_a_keyword_that_holds_only_while_a_condition_does {
             slot(PlayerId::P2, Row::Units, 1),
             Default::default(),
         );
-        // The recorder plays on from this state; TS's `state` stayed the state before the attack.
         let mut game = recorder(&b.state.clone());
         game.play(input(
             json!({ "type": "attack", "attackerId": bull.id, "targetId": victim.id, "playerId": "p1" }),

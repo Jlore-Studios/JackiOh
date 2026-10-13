@@ -1,36 +1,27 @@
 //! The Conquest series (SPEC §9.5, R330–R338, with R262–R264): the store half of `series_rules.rs`.
-//! Port of `apps/server/src/api/series.ts`.
 //!
-//! The rules are pure functions over `SeriesRow` in `series_rules.rs`; this file reads a row,
-//! applies one of them and writes the result back, and does the three things a pure function
-//! cannot:
+//! The rules are pure functions over `SeriesRow`; this file reads a row, applies one and writes it
+//! back, and does what a pure function cannot:
+//!  - **Compare-and-set** (R263). A series has several writers (both players, the sweeper,
+//!    `results.rs`); `series_update` writes only over the version it computed from, and a lost write
+//!    re-reads and re-applies the same transition. A pick is persisted before it is acknowledged and
+//!    leaves the server only in its owner's projection (R331).
+//!  - **The rating move** (R262, R604). A transition that ends a ranked series rates it as one game
+//!    (`ranked.rs`, R603), put on the row by the same compare-and-set. A game inside a series is
+//!    never rated (`results.rs`); an abandoned series and a room's are unrated.
+//!  - **Starting the game** (R331, R263). With both picks in, `next_match_id` starts through
+//!    `app.matches` after the commit, since the actor must never run a game the row does not name;
+//!    the sweeper starts one a crash left unstarted, after `SERIES_START_GRACE_SECONDS`.
+//!  - **A bot's side** (R641000). A ladder bot seated in a series makes its picks from the sweeper,
+//!    each after its delay (`bots::pick`), through `pick_deck` as a person's pick goes; the series'
+//!    rating move rates its side as the bot it is (R610).
 //!
-//!  - **Compare-and-set** (R263). A series has several writers — both players' requests, the
-//!    sweeper, and `results.rs` when a game ends — and `series_update` writes only over the version
-//!    it was computed from. A write that loses re-reads the row and re-applies the same transition to
-//!    it, so the loser's intent lands on the winner's state or is refused by the rules (a pick that
-//!    arrives after the game began finds `playing`). A pick is persisted in the row before it is
-//!    acknowledged, so a restart keeps it, and it leaves the server only in its owner's projection
-//!    (R331).
-//!  - **The rating move** (R262, R604). When a transition ends a ranked series, it is rated as one
-//!    game (`ranked.rs`, R603): planned from both players' current ratings and ranks, put on the row
-//!    (`rating_before`, `rating_after`) by the same compare-and-set, and written only once that has
-//!    won, in the same transaction. A game inside a series is never rated (`results.rs`). An
-//!    abandoned series and a room's series are unrated.
-//!  - **Starting the game** (R331, R263). When both picks are in, the game in `next_match_id` is
-//!    started through `app.matches` with the seats and seed `game_seats` names, and both players'
-//!    in-match flags are set. It happens after the commit, because the actor must never run a game
-//!    the series row does not name; a crash between the two leaves a `playing` series with no match,
-//!    which the sweeper starts once the row has sat unchanged for `SERIES_START_GRACE_SECONDS`.
-//!
-//! Routes (SURFACE §11.2 handlers; TS registered them anonymously in `createSeriesRoutes`, so the
-//! names are this port's): `GET /api/series/:id` → `get_series`, `POST /api/series/:id/pick` →
-//! `pick`, `POST /api/series/:id/forfeit` → `forfeit`, `GET /api/matches/:matchId/series` →
-//! `match_series`, all `active`, in that order. The sweeper is `run_sweeper` (every 5 s).
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2. Sweeper: `run_sweeper` (every 5 s).
 
 use std::sync::Arc;
 use std::time::Duration;
 
+use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
@@ -48,13 +39,14 @@ use crate::api::series_rules::{
     timeout_picks,
 };
 use crate::app::{App, now_ms};
+use crate::bots::pick::{bot_pick, pick_is_due};
 use crate::config::{
     SERIES_START_GIVE_UP_SECONDS, SERIES_START_GRACE_SECONDS, SERIES_SWEEP_INTERVAL_SECONDS,
     SERIES_WRITE_ATTEMPTS,
 };
 use crate::db::store::{
-    MatchSeat, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput, StoreError,
-    Tx,
+    MatchSeat, ProfileKind, RatedGameKind, RatedReason, SeriesRow, SeriesSeat, SeriesStatus, StartMatchInput,
+    StoreError, Tx,
 };
 
 pub use crate::api::series_rules::NewSeriesInput;
@@ -62,12 +54,10 @@ pub use crate::api::series_rules::NewSeriesInput;
 /// Unit conversion, not configuration: the series constants are stated in seconds.
 const MS_PER_SECOND: i64 = 1000;
 
-// ---------------------------------------------------------------------------
-// Errors (TS threw; Rust answers)
-// ---------------------------------------------------------------------------
+// Errors
 
-/// What a series write can fail with: a rules refusal (thrown as it is, TS's `SeriesRefusal`), an
-/// HTTP answer, a store fault, or a plain error (TS's `throw new Error(…)`).
+/// What a series write can fail with: a rules refusal, an HTTP answer, a store fault or a plain
+/// error.
 pub enum SeriesError {
     Refusal(SeriesRefusal),
     Api(ApiError),
@@ -115,7 +105,7 @@ fn other(error: impl std::fmt::Display) -> SeriesError {
 }
 
 /// What the router made of a handler's error: an `ApiError` as it is, anything else logged and
-/// answered 500 "something went wrong" (`http.ts`'s catch).
+/// answered 500 "something went wrong".
 fn to_api(error: SeriesError) -> ApiError {
     match error {
         SeriesError::Api(error) => error,
@@ -127,17 +117,14 @@ fn to_api(error: SeriesError) -> ApiError {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Making a series
-// ---------------------------------------------------------------------------
 
 /// Makes the series in game 1's pick phase and persists it (R331, R333, R263). Called by pairing
 /// (`queue.rs`) and by a Conquest room's join (`actor/rooms.rs`) with the match id they reserved,
 /// which becomes game 1's. No match starts and no in-match flag is set: a series in its pick phase
 /// is not a match, and `assertNotInSeries` is what keeps its players out of the queue meanwhile.
 ///
-/// It writes inside the caller's transaction `t` (TS's optional `store`, which both callers passed),
-/// so the claim and the series land together.
+/// It writes inside the caller's transaction `t`, so the claim and the series land together.
 pub async fn start_series(
     _app: &App,
     input: NewSeriesInput,
@@ -146,11 +133,9 @@ pub async fn start_series(
     let now = now_ms();
     let series = new_series(&input, now);
     t.series_create(&series).await?;
-    // §9.5: a player in a series is in no queue. The queue's own pairing has claimed both tickets
-    // already, but a player may have joined (or hosted) a Conquest room while a ticket of theirs
-    // waited. A match's result cancels such a ticket; a series can end with no game played (a
-    // forfeit or an abandoned pick, R333, R334), and then nothing would, and the stale ticket would
-    // pair them into a match they stopped waiting for. So it goes now, as the series begins.
+    // §9.5: a player in a series is in no queue. A series can end with no game played (R333, R334),
+    // and then no match result would cancel a ticket they joined (or hosted a room) while one
+    // waited, so it would pair them into a match they stopped waiting for. So it goes now.
     for side in [&series.sides.0, &series.sides.1] {
         if let Some(stale) = t.tickets_open_for_profile(&side.profile_id).await? {
             t.tickets_cancel(&stale.id, now).await?;
@@ -166,15 +151,12 @@ pub async fn start_series(
     Ok(series)
 }
 
-// ---------------------------------------------------------------------------
 // Starting a game
-// ---------------------------------------------------------------------------
 
 /// Starts the game `series.next_match_id` names when the series is `playing` and that match is
 /// neither running in this process nor written to the store (R263). Safe to call from several
-/// places at once — the request whose pick completed both, the result whose next game both sides'
-/// automatic picks began (R332), the sweeper — because a start that loses to another start finds the
-/// row the winner wrote and stops.
+/// places at once (the pick request, the result whose automatic picks began the game (R332), the
+/// sweeper): a start that loses finds the row the winner wrote and stops.
 pub async fn ensure_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<(), SeriesError> {
     start_series_game(app, series).await.map(|_| ())
 }
@@ -282,12 +264,12 @@ pub async fn resume_series(app: &Arc<App>, series: Option<&SeriesRow>) {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Writing a transition
-// ---------------------------------------------------------------------------
 
 /// R262, R604: plans a ranked series' one rating move as a game between its two sides, or `None` for
-/// a series that does not move the rating: unranked, abandoned, or not over.
+/// a series that does not move the rating: unranked, abandoned, or not over. A side whose profile is
+/// a ladder bot is rated as the bot it is, on its own row (R610, R641000), as `results.rs` rates a
+/// bot's match.
 async fn plan_series_rating(
     t: &mut Tx<'_>,
     app: &App,
@@ -299,18 +281,29 @@ async fn plan_series_rating(
         return Ok(None);
     };
     let (p1, p2) = &series.sides;
+    let bots: Vec<String> = t
+        .profiles_get_many(&[p1.profile_id.clone(), p2.profile_id.clone()])
+        .await?
+        .into_iter()
+        .filter(|profile| profile.kind == ProfileKind::Bot)
+        .map(|profile| profile.id)
+        .collect();
+    let side_of = |profile_id: &str| {
+        if bots.iter().any(|bot| bot == profile_id) {
+            RankedSideInput::Bot {
+                bot_id: profile_id.to_string(),
+            }
+        } else {
+            RankedSideInput::Player {
+                profile_id: profile_id.to_string(),
+            }
+        }
+    };
     let input = RankedGameInput {
         id: series.id.clone(),
         kind: RatedGameKind::Series,
         catalog_version: series.catalog_version.clone(),
-        sides: (
-            RankedSideInput::Player {
-                profile_id: p1.profile_id.clone(),
-            },
-            RankedSideInput::Player {
-                profile_id: p2.profile_id.clone(),
-            },
-        ),
+        sides: (side_of(&p1.profile_id), side_of(&p2.profile_id)),
         winner_side: if score == 0.5 {
             None
         } else if score == 1.0 {
@@ -405,7 +398,7 @@ async fn write_transition(
         let Some(before) = t.series_get(series_id).await? else {
             return Err(SeriesError::Api(series_not_found()));
         };
-        // A refusal returns here, and dropping `t` rolls the attempt back (TS threw out of its `tx`).
+        // A refusal returns here, and dropping `t` rolls the attempt back.
         let next = transition(&before)?;
         let after = commit_series(&mut t, app, &before, next).await?;
         t.commit().await?;
@@ -423,9 +416,7 @@ async fn write_transition(
     )))
 }
 
-// ---------------------------------------------------------------------------
 // A game's result (called by `results.rs` inside its transaction)
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -456,10 +447,8 @@ fn series_winner_of(series: &SeriesRow, result: &SeriesGameResult) -> Result<Win
 }
 
 /// R334, R263: records the game `result.match_id` in `series` and, when that ends the series, R262's
-/// rating move, all inside `t` — the transaction `results.rs` writes the game's result in, so the
-/// result, the series' record of it and the rating move commit together or not at all. The next
-/// game's match id is minted here, when its pick phase opens. Fails when the write cannot land, which
-/// rolls the result back with it.
+/// rating move, all inside `t`, the transaction `results.rs` writes the result in, so they commit
+/// together or not at all. The next game's match id is minted here, when its pick phase opens.
 pub async fn advance_series_in_tx(
     t: &mut Tx<'_>,
     app: &App,
@@ -496,9 +485,7 @@ pub async fn advance_series_in_tx(
     }
 }
 
-// ---------------------------------------------------------------------------
 // The sweeper (R333, R263)
-// ---------------------------------------------------------------------------
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -506,12 +493,18 @@ pub struct SeriesSweep {
     pub timed_out: Vec<String>,
     pub started: Vec<String>,
     pub abandoned: Vec<String>,
+    /// R641000: the series whose bot side made its pick in this sweep. Left out when none did, so a
+    /// sweep with no bot in it reads as it always has.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub bot_picked: Vec<String>,
 }
 
-/// One series of the sweep. `Ok(())` covers "nothing to do".
+/// One series of the sweep. `bots` holds the ladder bots among the sides of the series in their pick
+/// phase. `Ok(())` covers "nothing to do".
 async fn sweep_one(
     app: &Arc<App>,
     series: &SeriesRow,
+    bots: &IndexSet<String>,
     now: i64,
     swept: &mut SeriesSweep,
 ) -> Result<(), SeriesError> {
@@ -519,6 +512,28 @@ async fn sweep_one(
     let give_up_ms = SERIES_START_GIVE_UP_SECONDS * MS_PER_SECOND;
 
     if matches!(series.status, SeriesStatus::Picking) {
+        // R641000: a bot side picks once its delay has passed, before its clock runs out. A bot
+        // already seated is played whatever `LADDER_BOTS` says now, as its match would be.
+        for seat in [SeriesSeat::P1, SeriesSeat::P2] {
+            let side = if seat == SeriesSeat::P1 {
+                &series.sides.0
+            } else {
+                &series.sides.1
+            };
+            if !bots.contains(&side.profile_id) || !pick_is_due(series, seat, now) {
+                continue;
+            }
+            let Written { after, .. } =
+                write_transition(app, &series.id, |row| bot_pick(row, seat, &app.catalog.defs, now)).await?;
+            swept.bot_picked.push(series.id.clone());
+            tracing::info!(
+                event = "series.bot_picked",
+                seriesId = %series.id,
+                seat = %seat,
+                status = ?after.status,
+            );
+            return Ok(());
+        }
         match series.pick_deadline {
             Some(deadline) if now >= deadline => {}
             _ => return Ok(()),
@@ -559,23 +574,39 @@ async fn sweep_one(
     Ok(())
 }
 
-/// One sweep over every series that is not over:
-///  - a pick phase past its deadline is settled (R333): missing picks are made and the game starts,
-///    or, with no pick at all, the series is abandoned;
-///  - a `playing` series whose match is not running and whose row has not changed for
-///    `SERIES_START_GRACE_SECONDS` gets its match started (R263). The grace is what keeps the
-///    sweeper from racing the request that is starting that match right now;
-///  - one that still has no match row `SERIES_START_GIVE_UP_SECONDS` after its picks is abandoned,
-///    unrated (R263): its game cannot be started, and its players are let go.
-///
-/// One series that fails does not stop the sweep.
+/// One sweep over every series that is not over: a bot side whose pick is due makes it (R641000); a
+/// pick phase past its deadline is settled (R333);
+/// a `playing` series whose match is not running and whose row has sat unchanged for
+/// `SERIES_START_GRACE_SECONDS` gets it started (R263), the grace keeping the sweeper from racing
+/// the starting request; one still without a match row `SERIES_START_GIVE_UP_SECONDS` after its
+/// picks is abandoned, unrated. One series that fails does not stop the sweep.
 pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
     let now = now_ms();
     let mut swept = SeriesSweep::default();
 
     let active = one_tx!(app.db, |t| t.series_active().await?)?;
+    // R641000: which sides in a pick phase are ladder bots, in one read for the sweep.
+    let picking: Vec<String> = active
+        .iter()
+        .filter(|series| matches!(series.status, SeriesStatus::Picking))
+        .flat_map(|series| {
+            [
+                series.sides.0.profile_id.clone(),
+                series.sides.1.profile_id.clone(),
+            ]
+        })
+        .collect();
+    let bots: IndexSet<String> = if picking.is_empty() {
+        IndexSet::new()
+    } else {
+        one_tx!(app.db, |t| t.profiles_get_many(&picking).await?)?
+            .into_iter()
+            .filter(|profile| profile.kind == ProfileKind::Bot)
+            .map(|profile| profile.id)
+            .collect()
+    };
     for series in &active {
-        match sweep_one(app, series, now, &mut swept).await {
+        match sweep_one(app, series, &bots, now, &mut swept).await {
             Ok(()) => {}
             // Another writer moved the series first: the rules refused a transition that no longer
             // applies, which is the sweep having nothing to do.
@@ -588,9 +619,8 @@ pub async fn sweep_series(app: &Arc<App>) -> Result<SeriesSweep, StoreError> {
     Ok(swept)
 }
 
-/// R263: the sweeper, every `SERIES_SWEEP_INTERVAL_SECONDS` (SURFACE §11.2's loop, which `app.rs`
-/// spawns at boot). The wait is `tokio::time`'s, so a test drives it with a paused clock, and a
-/// failed sweep never stops the next one.
+/// R263: the sweeper, every `SERIES_SWEEP_INTERVAL_SECONDS`, spawned at boot by `app.rs`. The wait
+/// is `tokio::time`'s, so a test drives it with a paused clock; a failed sweep never stops the next.
 pub async fn run_sweeper(app: Arc<App>) {
     let interval =
         Duration::from_millis(u64::try_from(SERIES_SWEEP_INTERVAL_SECONDS * MS_PER_SECOND).unwrap_or(0));
@@ -602,7 +632,7 @@ pub async fn run_sweeper(app: Arc<App>) {
     }
 }
 
-/// TS `startSeriesSweeper`'s `{ stop }`.
+/// The sweeper task's stop handle.
 pub struct SeriesSweeper {
     handle: tokio::task::JoinHandle<()>,
 }
@@ -613,16 +643,14 @@ impl SeriesSweeper {
     }
 }
 
-/// TS `startSeriesSweeper`: `run_sweeper` on its own task, with a handle to stop it.
+/// `run_sweeper` on its own task, with a handle to stop it.
 pub fn start_series_sweeper(app: Arc<App>) -> SeriesSweeper {
     SeriesSweeper {
         handle: tokio::spawn(run_sweeper(app)),
     }
 }
 
-// ---------------------------------------------------------------------------
 // Routes
-// ---------------------------------------------------------------------------
 
 /// One answer for a missing series and one the caller is not in, so an id reveals nothing.
 fn series_not_found() -> ApiError {
@@ -713,14 +741,12 @@ pub async fn get_series(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(ok(view(&series, &profile_id)))
 }
 
-/// `POST /api/series/:id/pick` (active): R331: pick a trio slot for the next game,
-/// `{ slot, gameNo? }`. The pick is sealed: final once in, and shown to the other side only as
-/// "picked". The pick that completes both starts the game, and the answer then names it in
-/// `currentMatchId`. The same slot sent again (a retry whose first answer was lost) is answered
-/// with the current view, as the success it was; a pick naming a game other than the one being
-/// picked for is never applied to another game. 409 for a different slot once a pick is in, for
-/// another game's pick, while a game is being played, or after the pick clock ran out (R333); 400
-/// for a slot out of range or one whose deck has won (R330).
+/// `POST /api/series/:id/pick` (active), R331: `{ slot, gameNo? }`. The pick is sealed and shown to
+/// the other side only as "picked"; the one that completes both starts the game and the answer
+/// names it in `currentMatchId`. The same slot sent again is answered with the current view as the
+/// success it was; a pick naming another game is never applied. 409 for a different slot once a
+/// pick is in, another game's pick, a game in play, or after the pick clock ran out (R333); 400 for
+/// a slot out of range or whose deck has won (R330).
 pub async fn pick(app: &Arc<App>, req: Req) -> ApiResult {
     let slot = slot_of(&req.body)?;
     let game_no = game_no_of(&req.body)?;

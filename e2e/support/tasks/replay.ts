@@ -1,16 +1,5 @@
-// `cy.task("replayHash", …)`: determinism check for spec 01.
-//
-// BUILD M8 spec 01 asserts "final state hash equals the vitest replay of the recorded actions",
-// and BUILD M5-T3 asserts "the same seed and actions reproduce the same final state hash in the
-// browser and in vitest". Both are the same claim: fold (seed, decks, log) through
-// the Rust engine outside the browser (`jackioh replay`, docs/v0.3.0/SURFACE.md §12) and compare
-// `hashState`.
-//
-// The fold runs in a child process: the repo's own `tsx` runs support/tasks/replay-runner.ts, which
-// runs `target/release/jackioh replay` (built by `cargo build --release -p jackioh-tools`), the same
-// fold the Rust tests and the server use, so e2e/ needs no workspace entry of its own. The
-// recorded log is also written to e2e/artifacts/<label>.json so the engine team can add a literal
-// vitest replay over it later.
+// `cy.task("replayHash", …)` folds recorded actions through `jackioh replay` outside the browser
+// and compares `hashState` (BUILD M8 spec 01, BUILD M5-T3; docs/v0.3.0/SURFACE.md §12).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -22,12 +11,7 @@ export type ReplayHashPayload = {
   decks: [string[], string[]];
   log: unknown[];
   state: unknown;
-  /**
-   * R180: the game's handicaps, exactly as its `createGame` took them. Spec 13's practice game (R187)
-   * needs them to accept the AI seat's 25- or 30-card deck and to replay its extra mana, opening
-   * card and draws; spec 25's hotseat games carry a fixture's (`window.__jackioh.handicaps`, a 4- or
-   * 60-card library, a bigger opening hand). Absent for every other spec, whose payload is unchanged.
-   */
+  /** R180: `createGame` handicaps; R187 practice and hotseat replays need nonstandard decks, mana, hands and draws. */
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
   /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to `fold` untouched. */
   dealt?: ("p1" | "p2")[];

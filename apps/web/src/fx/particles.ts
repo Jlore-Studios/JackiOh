@@ -1,27 +1,24 @@
 /**
  * The pooled particle system (docs/polish/1-animations.md, S5; B23–B26).
  *
- * Particles live in a struct of arrays: one typed array per field, sized to the capacity, and no
- * object per particle, so a busy board allocates nothing after construction. A ring cursor hands out
- * slots: while there is room it takes the next free slot, and once the pool is full it overwrites
- * the oldest one, so the live count can never pass the capacity. Every random draw comes from the
- * injected `FxRng`, so one seed and one sequence of emits and steps always gives the same particles.
+ * Particles live in a struct of arrays sized to the capacity, so a busy board allocates nothing after
+ * construction. A ring cursor takes the next free slot, or overwrites the oldest once the pool is full.
+ * Every random draw comes from the injected `FxRng`, so one seed gives the same particles.
  */
 import { PARTICLE_PRESETS, PRESET_ORDER, type ParticlePresetSpec } from "./presets.ts";
 import type { FxRng } from "./rng.ts";
 import { createSpriteCache, domSpriteCanvas, type SpriteCache } from "./sprites.ts";
 import type { FxBox, FxPreset, FxSpread } from "./types.ts";
 
-/** `scale` multiplies each particle's size (issue #124's variations on a preset); absent, 1. */
+/** `scale` multiplies each particle's size; absent, 1. */
 export type EmitOptions = { count: number; spread: FxSpread; box: FxBox; power: number; scale?: number };
 
 export type ParticleSystem = {
   /** Emits at (x, y), or across `box` for "area" and around its ellipse for "ring". Returns how many. */
   emit(preset: FxPreset, x: number, y: number, options: EmitOptions): number;
   /**
-   * Moves every particle by `dtMs` (the clamped frame time) and ages it by `ageMs` (the real time
-   * that passed, default `dtMs`): a stalled frame never flings a particle, and never keeps one alive
-   * past its wall-clock life either (R200).
+   * Moves every particle by `dtMs` (the clamped frame time) and ages it by `ageMs` (real time, default
+   * `dtMs`): a stalled frame never flings a particle nor keeps one alive past its wall-clock life (R200).
    */
   step(dtMs: number, ageMs?: number): void;
   /** Draws every live particle; a null sprite falls back to a filled arc in the preset colour. */
@@ -52,11 +49,7 @@ const TUNING = {
   msPerSecond: 1000,
 } as const;
 
-/**
- * Streaks (a preset's `stretch`): a moving particle is drawn `1 + stretch × speed / 1000` times as
- * long as it is wide, along its velocity, capped at `maxLength`, and `thin` times as thick, so a
- * spark reads as a hot scratch of light rather than a dot. Below `minSpeed` it is a plain dot.
- */
+/** Streaks (a preset's `stretch`): `1 + stretch × speed / 1000` times as long as wide, up to `maxLength`. */
 const STREAK = {
   maxLength: 5,
   thin: 0.55,
@@ -124,7 +117,6 @@ function between(range: readonly [number, number], u: number): number {
   return range[0] + (range[1] - range[0]) * u;
 }
 
-/** `sprites` defaults to `createSpriteCache(domSpriteCanvas())`. */
 export function createParticleSystem(options: { capacity: number; rng: FxRng; sprites?: SpriteCache }): ParticleSystem {
   const rng = options.rng;
   const sprites = options.sprites ?? createSpriteCache(domSpriteCanvas());

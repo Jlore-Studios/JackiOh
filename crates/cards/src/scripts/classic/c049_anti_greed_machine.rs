@@ -7,12 +7,9 @@
 //!            all (no card moves, no fatigue, no cast on draw), and with several limits the lowest holds.
 //!            Tunes: Radiant limit 1 ↓ (never below 1)."
 //!
-//! The aura is B5 E3's draw limit (`Script.drawLimit`): the engine asks every card acting on the
-//! field for its limits before each draw (`draw.drawLimitOf`), takes the lowest on the drawing player,
-//! and stops a draw past it (`drawLimited`). So the limit holds only while the Machine acts on the
-//! field — it is lifted the moment it leaves — and Rush is printed on both faces (§10.4 layer 1).
-//! The base face's 1 is printed, not declared: SPEC tunes only the Radiant face's limit, which reads
-//! `param(…, "limit")` (R386, never below 1 by the declaration's `min`).
+//! The aura is B5 E3's draw limit (`Script.drawLimit`), asked of every card acting on the field before
+//! each draw, so it lifts the moment the Machine leaves; Rush is printed on both faces (§10.4 layer 1).
+//! The base face's 1 is printed; the Radiant limit reads `param(…, "limit")` (R386, `min` 1).
 
 use jackioh_engine::prelude::*;
 
@@ -21,7 +18,6 @@ pub const ID: &str = "classic-049";
 /// "Players can't draw more than 1 card each turn": the base face's printed limit, on both players.
 const PLAYERS_LIMIT: i32 = 1;
 
-/// TS `baseLimit: DrawLimitHook`.
 fn base_limit(_args: HookArgs<'_>) -> Vec<DrawLimit> {
     vec![DrawLimit {
         player: DrawLimitPlayer::Both,
@@ -29,7 +25,7 @@ fn base_limit(_args: HookArgs<'_>) -> Vec<DrawLimit> {
     }]
 }
 
-/// "Your opponent can't draw more than {limit} …": the declared, tunable number (TS `radiantLimit`).
+/// "Your opponent can't draw more than {limit} …": the declared, tunable number.
 fn radiant_limit(args: HookArgs<'_>) -> Vec<DrawLimit> {
     vec![DrawLimit {
         player: DrawLimitPlayer::Enemy,
@@ -51,16 +47,10 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #49 Anti-Greed Machine — SPEC §8.6 row 49, BUILD M9 Classic row C 49: "9/9 Rush; Aura: every
-// player's draws beyond 1 in a turn, on either player's turn and the start-of-turn draw included, do
-// not happen at all: no card moves, no fatigue, nothing is cast on draw (§2.4); a draw made earlier
-// that turn counts; with C #4's limit the lowest holds; lifted when it leaves; radiant 18/18 Rush: the
-// opponent only, your draws free; its tuned number (radiant limit, never below 1) reads through
-// `param()` (R386)".
-//
-// The aura is B5 E3's draw limit. "The lowest holds" is shown with C #4 Palantir, which sets the other
-// limit in the set, and with two Machines whose limits differ (a Radiant one tuned to 2 beside a base
-// one). Stockpile (core-005, "Draw 2. Heal your hero 2.") makes the draws.
+// BUILD M9 Classic row C 49 (SPEC §8.6 row 49): draws beyond 1 a turn do not happen at all, no card
+// moves, no fatigue, nothing cast on draw (§2.4); the lowest limit holds, shown with C #4 Palantir and
+// two Machines; lifted when it leaves; radiant: the opponent only, its limit reads `param()` (R386).
+// The aura is B5 E3's draw limit. Stockpile (core-005, "Draw 2. Heal your hero 2.") makes the draws.
 #[cfg(test)]
 mod tests {
     use super::{ID, script};

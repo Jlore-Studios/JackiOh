@@ -1,20 +1,15 @@
-//! Port of `packages/engine/test/control-change.test.ts`.
-//!
 //! R171 and R172 at the verb level (SPEC §4.1, §11; docs/polish/4-edge-cases.md behaviours 7, 8 and
 //! 10 to 14). A change of control on the field is an entry: the card takes the current turn as its
 //! `summonedTurn` and a fresh exertion, on every path that changes control — Steal, Steal all, the
-//! board swap and a rotation across the centre line — and on nothing else. R172 is the other half
-//! the brief asked about: a stolen unit dies as its controller's.
+//! board swap and a rotation across the centre line — and on nothing else. R172 is the other half:
+//! a stolen unit dies as its controller's.
 //!
-//! Engine fixtures only (the engine never depends on `packages/cards`). The real cards prove the
-//! same rows again in `packages/cards/test/control-change.test.ts`, and
-//! `control-change.property.test.ts` checks them over random boards.
+//! Engine fixtures only (the engine never depends on `crates/cards`); `control_change_property.rs`
+//! checks the same rows over random boards.
 //!
-//! Every game here is past both mulligans, in p1's main phase (the `playing()` pattern of
-//! `rulings-b.test.ts`), so `legalActions` and `reduce` answer as they would in a match. The verbs
-//! are applied the way `effects-steal.test.ts` applies them: straight through `effect.apply` with
-//! the actor as the context's controller, which is also how an effect on the opponent's turn is
-//! written (behaviour 12).
+//! Every game is past both mulligans, in p1's main phase, so `legal_actions` and `reduce` answer as
+//! in a match. Verbs go straight through `effect.apply` with the actor as the context's controller,
+//! which is also how an effect on the opponent's turn is written (behaviour 12).
 
 use std::collections::BTreeSet;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -28,9 +23,7 @@ use crate::rules::fixtures::catalog::{spell_def, token_def};
 use crate::rules::fixtures::combat::{charger, plain, rusher, stacker};
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
-// Fixtures.
-// ---------------------------------------------------------------------------
+// Fixtures
 
 /// A face-down backrow card: the board swap moves the backrow row too (R73).
 fn trap() -> CardDef {
@@ -69,7 +62,6 @@ fn reborner_script() -> Script {
     }
 }
 
-/// TS's module `let nonce = 0`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act(state: &GameState, body: Value) -> GameState {
@@ -201,7 +193,7 @@ fn unit(instance: &CardInstance) -> AttackTarget {
     }
 }
 
-/// TS's `string | null` refusal, from the engine's `Result` (SURFACE §4.4.9).
+/// A refusal's message, from the engine's `Result` (SURFACE §4.4.9).
 fn refusal(result: Result<(), EngineError>) -> Option<String> {
     result.err().map(|error| error.message)
 }
@@ -247,11 +239,7 @@ fn card_id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
 
-// ---------------------------------------------------------------------------
-// R171.
-// ---------------------------------------------------------------------------
-
-/// `describe("R171 a change of control is an entry (§4.1)")`.
+// R171
 mod r171_a_change_of_control_is_an_entry_s4_1 {
     use super::*;
 
@@ -720,11 +708,7 @@ fn live_by_id(state: &GameState, id: &str) -> CardInstance {
         .unwrap_or_else(|| panic!("{id} is gone"))
 }
 
-// ---------------------------------------------------------------------------
-// R172.
-// ---------------------------------------------------------------------------
-
-/// `describe("R172 a stolen unit dies as its controller's")`.
+// R172
 mod r172_a_stolen_unit_dies_as_its_controller_s {
     use super::*;
 

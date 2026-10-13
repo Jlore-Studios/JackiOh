@@ -378,6 +378,29 @@ mod e16_cards_handed_from_one_hand_to_the_other_classic_9 {
     }
 
     #[test]
+    fn r1140_give_from_hand_by_ids_in_hand_order() {
+        let mut state = board("give-ids");
+        let theirs = in_hand(&mut state, &plain.id, PlayerId::P2, 3);
+        // Named out of hand order, and one id that is in no hand at all.
+        run(
+            &mut state,
+            give_from_hand(json_as(json!({
+                "from": "enemy",
+                "ids": [theirs[2].id.clone(), "c-nowhere", theirs[0].id.clone()],
+            }))),
+            PlayerId::P1,
+        );
+        assert_eq!(
+            ids(&state.players[PlayerId::P1].hand),
+            vec![theirs[0].id.clone(), theirs[2].id.clone()]
+        );
+        assert_eq!(ids(&state.players[PlayerId::P2].hand), vec![theirs[1].id.clone()]);
+        for card in &state.players[PlayerId::P1].hand {
+            assert_eq!((card.owner, card.controller), (PlayerId::P1, PlayerId::P1));
+        }
+    }
+
+    #[test]
     fn e16_cards_may_be_given_the_other_way_and_at_random() {
         let mut state = board("give-away");
         let mine = in_hand(&mut state, &plain.id, PlayerId::P1, 3);

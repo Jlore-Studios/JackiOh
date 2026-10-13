@@ -1,30 +1,8 @@
-// Degrade and Upgrade on a face (docs/classic-sets.md B3.4, R386), which players read as Nerf and Buff
-// (R1320): what the view says changed on a card, read for the marks a face draws and the words the
-// inspect overlays print. The verdicts keep the engine's words as data (`data-tuned="upgraded"`); the
-// words a player reads are `VERDICT_WORD`'s.
-//
-// The view carries two things about a tuned card (CardView, SPEC §10.8): its declared numbers as they
-// stand now (`params`, which fill the face's `{key}`s) and the record of what Degrade, Upgrade and KY's
-// Constant changed (`tuning`: a stat delta, keywords added and removed, a step per numbered keyword or
-// X, a value set outright). This module compares those with the public catalog and nothing else
-// (CLAUDE.md rule 7), and names each change better or worse for the card's controller:
-//
-// - a stat: up is better;
-// - a keyword: one added is better, one removed is worse (a Buff adds, a Nerf removes, §6.3);
-// - a numbered keyword or X (`tuning.x`): more is better, except Tribute, where less is (§6.3);
-// - a declared number: its live value against the face's printed one, the way its `better` says
-//   (`CardDef.params`, B3.4 rule 5);
-// - a number set outright that is not a declared number (KY's Constant on a numbered keyword) is
-//   neither: it is "set to N".
-//
-// The face marks each by shape as well as colour (cardstate.css): a number that moved sits in a dotted
-// box with ▲ (better) or ▼ (worse) after it, a tuned stat wears the same glyph as a pip, an added
-// keyword is a "+" chip and a removed one a struck "−" chip, and the card as a whole carries a mark
-// that says Buffed (▲, every change better), Nerfed (▼, every change worse) or Tuned (◆, mixed).
-// The cost change is the card's live cost (`CardView.cost`), which the gem already tones (model.ts).
-//
-// `filledText` fills a face's text exactly as `fillParams` does and records where each number that
-// moved stands in the result, so the rules text can box it; a test holds the two to the same string.
+// B3.4, R386; R1320: face marks present Degrade and Upgrade as Nerf and Buff while verdict data keeps
+// the engine's words. Compare `tuning` and `params` with the public catalog only (SPEC §10.8;
+// CLAUDE.md rule 7). Stats and keywords use their player-facing direction; numbered keywords and X are
+// greater-is-better except Tribute (§6.3). Declared numbers use `better` (B3.4 rule 5); constants set
+// outright are neither better nor worse. `filledText` stays identical to `fillParams`.
 
 import {
   PARAM_PLACEHOLDER,
@@ -36,12 +14,13 @@ import {
   type Tuning,
 } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
+import { listSeparator, readerKeyword } from "./chinese.ts";
 import type { TextRange } from "./radiantDiff.ts";
 
 /** Which way a change went for the card's controller. */
 export type TuneWay = "better" | "worse";
 
-/** One change the view says a card carries, as the client words and marks it. */
 export type TuneChange =
   | { kind: "stat"; stat: "attack" | "health"; delta: number; way: TuneWay }
   | { kind: "keyword"; keyword: string; added: boolean; way: TuneWay }
@@ -131,7 +110,6 @@ export function faceTuning(
     changes.push({ kind: "number", key: param.key, printed, value, way: wayOf(value - printed, param.better === "down") });
   }
 
-  // KY's Constant's "to N" on something that is not a declared number (those are read above).
   for (const [key, value] of Object.entries(tuning?.set ?? {})) {
     if (declared.some((param) => param.key === key)) continue;
     changes.push({ kind: "set", key, value });
@@ -148,47 +126,46 @@ function verdictOf(changes: readonly TuneChange[]): TuneVerdict {
   return "tuned";
 }
 
-/** A declared number's key in words: "drawLimit" is "Draw limit". */
+/** A declared number's key in words: "drawLimit" is "Draw limit", in the reader's language. */
 export function keyWords(key: string): string {
   const spaced = key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  return t(spaced.charAt(0).toUpperCase() + spaced.slice(1));
 }
 
 function signed(delta: number): string {
   return delta > 0 ? `+${String(delta)}` : `${MINUS}${String(Math.abs(delta))}`;
 }
 
-/** One change in a player's words: "+2 Attack", "Gained Rush", "Lost Taunt", "Tribute −1", "Damage 2 → 3". */
+/** One change in a player's words: "+2 Attack", "Gained Rush", "Damage 2 → 3". */
 export function changeWords(change: TuneChange): string {
   switch (change.kind) {
     case "stat":
-      return `${signed(change.delta)} ${change.stat === "attack" ? "Attack" : "Health"}`;
+      return change.stat === "attack" ? t("{delta} Attack", { delta: signed(change.delta) }) : t("{delta} Health", { delta: signed(change.delta) });
     case "keyword":
-      return change.added ? `Gained ${change.keyword}` : `Lost ${change.keyword}`;
+      return change.added
+        ? t("Gained {keyword}", { keyword: readerKeyword(change.keyword) })
+        : t("Lost {keyword}", { keyword: readerKeyword(change.keyword) });
     case "count":
-      return `${change.key} ${signed(change.delta)}`;
+      return `${readerKeyword(change.key)} ${signed(change.delta)}`;
     case "number":
       return `${keyWords(change.key)} ${String(change.printed)} → ${String(change.value)}`;
     case "set":
-      return `${keyWords(change.key)} set to ${String(change.value)}`;
+      return t("{label} set to {value}", { label: keyWords(change.key), value: change.value });
   }
 }
 
-/** The card's mark as one line: "Buffed: +2 Attack; Gained Rush". */
 export function tuningSummary(tuning: FaceTuning): string {
-  return `${VERDICT_WORD[tuning.verdict]}: ${tuning.changes.map(changeWords).join("; ")}`;
+  return t("{verdict}: {changes}", { verdict: t(VERDICT_WORD[tuning.verdict]), changes: tuning.changes.map(changeWords).join(listSeparator()) });
 }
 
 /** A moved number's tooltip: "Better than printed: 2" (the number bare, since "(2)" reads as a cost, R432). */
 export function tunedRangeWords(range: Pick<TunedRange, "printed" | "way">): string {
-  return `${range.way === "better" ? "Better" : "Worse"} than printed: ${String(range.printed)}`;
+  return range.way === "better" ? t("Better than printed: {printed}", { printed: range.printed }) : t("Worse than printed: {printed}", { printed: range.printed });
 }
 
 /**
  * A face's text with its `{key}`s filled in, as `fillParams` fills it, and where each number the view
- * moved off its printed value stands in the result (the digits alone, not the words that agree with
- * it). `values` are the view's (`CardView.params`); none, or a number at its printed value, marks
- * nothing.
+ * moved off its printed value stands in the result (the digits alone). `values` is `CardView.params`.
  */
 export function filledText(
   def: Pick<CardDef, "params" | "base" | "radiant">,

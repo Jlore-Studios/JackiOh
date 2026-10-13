@@ -1,8 +1,6 @@
-// B5 E18 (SPEC §10.6): the pickers for patch v0.2.0's prompt kinds — `number`, `answer`, `cell`,
-// `reward` and `pick` — and the two cases E17 and E18 add to the older kinds: a `mode` prompt the
-// other player holds (C #8 Pickle) and the opponent's hand as a chooser's options (C #11 Mind Melt).
-// Every view is a fixture shaped as the engine's `viewFor` builds it (option keys `mode:<x>`,
-// `zone:<player>:<row>:<lane>`, `instance:<id>`); each picker must send exactly
+// B5 E18 (SPEC §10.6): the pickers for the `number`, `answer`, `cell`, `reward` and `pick` prompt kinds,
+// and E17's and E18's two cases on the older kinds: a `mode` prompt the other player holds (C #8 Pickle)
+// and the opponent's hand as a chooser's options (C #11 Mind Melt). Each picker must send exactly
 // `{ type: "answer", choiceId, selection }` with the selections its options name.
 
 import { readFileSync } from "node:fs";
@@ -70,9 +68,7 @@ function answered(onAction: ReturnType<typeof vi.fn>, selection: unknown[]): voi
 
 const NUMBERS = Array.from({ length: 11 }, (_, at) => String(at));
 
-// ---------------------------------------------------------------------------------------------
 // number
-// ---------------------------------------------------------------------------------------------
 
 describe("number (C #18)", () => {
   function numberView(): PlayerView {
@@ -140,9 +136,7 @@ describe("number (C #18)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // answer
-// ---------------------------------------------------------------------------------------------
 
 describe("answer (C+ #42)", () => {
   const PROBLEM = "∫₀¹ 2x dx = ?\n(choose one)";
@@ -187,9 +181,7 @@ describe("answer (C+ #42)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // cell
-// ---------------------------------------------------------------------------------------------
 
 describe("cell (C+ #62)", () => {
   const LANES_LEFT = [1, 3, 4, 5];
@@ -309,9 +301,7 @@ describe("cell (C+ #62)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // reward
-// ---------------------------------------------------------------------------------------------
 
 describe("reward (C #90)", () => {
   it("R404 offers a completed quest's rewards as tiles under Quest complete!, and a tile takes its reward", () => {
@@ -338,9 +328,7 @@ describe("reward (C #90)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // pick
-// ---------------------------------------------------------------------------------------------
 
 describe("pick (C #44)", () => {
   /** C #44 Back from the GY: Units from your graveyard with a total cost of (5) or less. */
@@ -433,9 +421,7 @@ describe("pick (C #44)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // E17 and E18 on the older kinds: the other seat, and the opponent's hand
-// ---------------------------------------------------------------------------------------------
 
 describe("prompts the other seat holds, and the opponent's hand", () => {
   const THEIR_HAND: PendingOption[] = [

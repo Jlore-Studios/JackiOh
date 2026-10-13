@@ -4,8 +4,9 @@
 //! `GET /api/replays?offset=` lists the caller's finished matches whose action log the retention
 //! purge has not taken yet (`MATCH_ACTION_RETENTION_DAYS`), newest first, `REPLAY_LIST_PAGE` to a
 //! page: each one's id, mode, end, the seat the caller began in, the result for the caller, its turns
-//! and steps, both seats' portraits (R641, R642), the opponent's tag as the match screen showed it
-//! (R612), and, when this build cannot show it, part 1's reason (`unavailable`).
+//! and steps, both seats' portraits (R641, R642), the opponent's profile id and username, read now as
+//! the match screen reads them (R1436), and, when this build cannot show it, part 1's reason
+//! (`unavailable`).
 //!
 //! `GET /api/replays/:matchId?from=&count=` answers steps `[from, from + n)` of the caller's replay,
 //! `n` at most `count` and `REPLAY_PAGE_STEPS`, and fewer where a Glitch's swap moves the caller to
@@ -19,7 +20,7 @@
 //!
 //! The fold is the actor's rebuild's (`registry.rs`): the row's seed, frozen decks, last boards and
 //! Glitch boards, its log, and the dealt seats of an All Random match (R433). It is held to the final
-//! hash the result recorded (migration 0028). A match that ended before 0028, or that the reaper
+//! hash the result recorded (migration 0034). A match that ended before 0034, or that the reaper
 //! resolved (R112), has none, so its fold is held to its results row instead: the same winner, reason
 //! and turn count, and then to the hash of the state it ends on.
 //!
@@ -44,7 +45,6 @@ use crate::actor::engine::{self, EngineState};
 use crate::actor::match_actor::last_boards_of;
 use crate::actor::registry::{dealt_for, panic_text};
 use crate::api::collection::caller_profile;
-use crate::api::crypto::player_tag;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, account_key, bad_request, create_rate_limiter, lock,
     log_warn, now_ms, ok_of, rate_limited,
@@ -53,7 +53,7 @@ use crate::app::App;
 use crate::config::{
     REPLAY_CACHE_MATCHES, REPLAY_CACHE_TTL_SECONDS, REPLAY_LIST_PAGE, REPLAY_REQUESTS_PER_MINUTE,
 };
-use crate::db::store::{MatchPhase, QueueMode, ReplayRow, ResultRow};
+use crate::db::store::{MatchPhase, Profile, QueueMode, ReplayRow, ResultRow};
 
 /// Unit conversions, not configuration.
 const MS_PER_SECOND: i64 = 1000;
@@ -145,12 +145,20 @@ pub struct ReplayListing {
     pub steps: i64,
     /// R641, R642: the portraits the seats were dealt, `vanilla` for a match from before them.
     pub portraits: PerPlayer<PortraitId>,
-    /// R612: the opponent's tag, the only name the match screen showed; null once the opponent's
-    /// account is deleted.
-    pub opponent_tag: Option<String>,
+    pub opponent: ReplayOpponent,
     /// R768: why this build cannot show it, when it cannot.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub unavailable: Option<ReplayRefusal>,
+}
+
+/// The other seat of a listed match, as the match screen shows a seat (R1436: keyed by profile id,
+/// shown by username). Both are empty for a seat a deleted account left in Postgres (KNOWN
+/// DIVERGENCES in `db/pg.rs`); the memory store keeps the id and finds no username.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayOpponent {
+    pub profile_id: String,
+    pub username: String,
 }
 
 /// `GET /api/replays`: one page, and where the next starts (null on the last page).
@@ -201,20 +209,24 @@ fn no_such_replay() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "no such replay")
 }
 
-/// §2.5: a hero's death, a concede and a disconnect always name a winner; every other ending is a
-/// draw.
+/// §2.5: the endings that always name a winner, as `DECISIVE_REASONS` in `db/pg.rs` lists them: a
+/// hero's death, a concede, a disconnect and an effect's win (R1412). `alt-win` is a draw when both
+/// players held a win (R850); every other ending is a draw.
 fn names_a_winner(reason: GameOverReason) -> bool {
     matches!(
         reason,
-        GameOverReason::HeroDeath | GameOverReason::Concede | GameOverReason::Disconnect
+        GameOverReason::HeroDeath
+            | GameOverReason::Concede
+            | GameOverReason::Disconnect
+            | GameOverReason::WonByEffect
     )
 }
 
-/// The seat the results row credits with the win (R677: its players are the seats as the game
-/// ended), `Draw` for a draw, `None` when it names a winner no seat holds. A winnerless row whose
-/// reason names a winner is one whose winner has deleted their account since, which empties both
-/// the winner and that seat (migration 0012).
-fn recorded_winner(result: &ResultRow) -> Option<Winner> {
+/// Whether the results row records an ending `winner` won (R677: its players are the seats as the
+/// game ended). A winnerless row whose reason names a winner is one whose winner has deleted their
+/// account since, which empties both the winner and that seat (migration 0012), so the emptied
+/// seat won; a winnerless `alt-win` is a draw or that.
+fn records_winner(result: &ResultRow, winner: Winner) -> bool {
     let seat_of = |profile_id: &str| {
         if profile_id == result.players.0 {
             Some(Winner::P1)
@@ -225,19 +237,23 @@ fn recorded_winner(result: &ResultRow) -> Option<Winner> {
         }
     };
     match result.winner_profile_id.as_deref() {
-        Some(winner) => seat_of(winner),
-        None if names_a_winner(result.reason) => seat_of(""),
-        None => Some(Winner::Draw),
+        Some(won) => seat_of(won) == Some(winner),
+        None if names_a_winner(result.reason) => seat_of("") == Some(winner),
+        None if result.reason == GameOverReason::AltWin => {
+            winner == Winner::Draw || seat_of("") == Some(winner)
+        }
+        None => winner == Winner::Draw,
     }
 }
 
+/// The caller's result, as their record counts it (`results_record_for`): a winnerless row is a
+/// loss when its reason names a winner, and a draw otherwise.
 fn result_for(result: &ResultRow, profile_id: &str) -> ReplayResult {
-    if result.winner_profile_id.as_deref() == Some(profile_id) {
-        ReplayResult::Win
-    } else if recorded_winner(result) == Some(Winner::Draw) {
-        ReplayResult::Draw
-    } else {
-        ReplayResult::Loss
+    match result.winner_profile_id.as_deref() {
+        Some(winner) if winner == profile_id => ReplayResult::Win,
+        Some(_) => ReplayResult::Loss,
+        None if names_a_winner(result.reason) => ReplayResult::Loss,
+        None => ReplayResult::Draw,
     }
 }
 
@@ -248,7 +264,7 @@ fn ends_as_recorded(state: &EngineState, result: &ResultRow) -> bool {
     let Some(ended) = snapshot.result else {
         return false;
     };
-    recorded_winner(result) == Some(ended.winner)
+    records_winner(result, ended.winner)
         && ended.reason == result.reason
         && i64::from(snapshot.turn) == result.turns
 }
@@ -355,6 +371,14 @@ fn home_seat(replay: &ReplayRow, profile_id: &str) -> PlayerId {
     }
 }
 
+/// The profile id in the seat `profile_id` did not begin in.
+fn opponent_of<'a>(replay: &'a ReplayRow, profile_id: &str) -> &'a str {
+    match home_seat(replay, profile_id) {
+        PlayerId::P1 => &replay.row.players.1,
+        PlayerId::P2 => &replay.row.players.0,
+    }
+}
+
 /// `GET /api/replays?offset=`.
 pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
@@ -384,16 +408,20 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
         };
         reads.push((mode, kept, log));
     }
+    // R1436: every read joins the username in, so a rename shows on past games too.
+    let opponents: Vec<String> = rows
+        .iter()
+        .map(|replay| opponent_of(replay, &profile.id))
+        .filter(|opponent| !opponent.is_empty())
+        .map(str::to_string)
+        .collect();
+    let profiles: Vec<Profile> = tx.profiles_get_many(&opponents).await?;
     tx.commit().await?;
 
     let mut replays = Vec::with_capacity(rows.len());
     for (replay, (mode, kept, log)) in rows.iter().zip(reads) {
         let open = open_replay(app, replay, kept, log, mode);
-        let seat = home_seat(replay, &profile.id);
-        let opponent = match seat {
-            PlayerId::P1 => &replay.row.players.1,
-            PlayerId::P2 => &replay.row.players.0,
-        };
+        let opponent = opponent_of(replay, &profile.id);
         let portraits = replay
             .row
             .portraits
@@ -402,13 +430,19 @@ pub async fn list_replays(app: &Arc<App>, req: Req) -> ApiResult {
             match_id: replay.row.id.clone(),
             mode,
             ended_at: replay.result.ended_at,
-            seat,
+            seat: home_seat(replay, &profile.id),
             result: result_for(&replay.result, &profile.id),
             turns: replay.result.turns,
             steps: replay.actions + 1,
             portraits: PerPlayer::new(portraits.0, portraits.1),
-            // A deleted account's seat reads as the empty id (KNOWN DIVERGENCES in `db/pg.rs`).
-            opponent_tag: (!opponent.is_empty()).then(|| player_tag(opponent)),
+            opponent: ReplayOpponent {
+                profile_id: opponent.to_string(),
+                username: profiles
+                    .iter()
+                    .find(|found| found.id == opponent)
+                    .map(Profile::username)
+                    .unwrap_or_default(),
+            },
             unavailable: match open.as_ref() {
                 ReplayOpen::Refused { reason } => Some(*reason),
                 ReplayOpen::Ready { .. } => None,

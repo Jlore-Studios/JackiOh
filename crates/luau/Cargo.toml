@@ -1,0 +1,17 @@
+[package]
+name = "jackioh-luau"
+description = "The Luau host for card scripts (#442 L3–L8): the sandbox, the integer boundary, the lint and one VM per thread. Nothing depends on it yet."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Pure (CLAUDE.md rule 4), as the engine is, plus mlua (#442 L3), which compiles Luau's C++ (`g++`).
+jackioh-engine = { workspace = true }
+mlua = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+jackioh-engine = { workspace = true, features = ["testkit"] }

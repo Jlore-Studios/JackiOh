@@ -12,7 +12,7 @@
 //
 // Each station has two in-game tracks (rotated across matches), a low-health variant (minor, faster,
 // with a low pulse and busier percussion) and a match-start sting. The menu theme, the three result
-// stings with their loops, the nine Mythic themes and the two shared Legendary themes are shared.
+// stings with their loops, the Mythic themes and the two shared Legendary themes are shared.
 // Every Legendary and Mythic card, tokens printed so included, has an intro of its own (R1352, at the
 // end of the file): a few bars on the motif, derived from the card and hand-tuned where it matters.
 
@@ -807,6 +807,185 @@ function portalToThePast() {
   return { song };
 }
 
+/*
+ * The Meditative set's Mythics: the motif sung in the major or minor pentatonic where a theme writes
+ * its line out, with a dulcimer (a yangqin), a kalimba or a pan flute among the forces.
+ */
+
+/** Meditative #8 Reach the Summit: the motif in D major's pentatonic, climbing over two octaves, one step per phrase; back at the foot each time round. */
+const SUMMIT_CLIMB = [
+  [0, 0.5], [1, 0.5], [4, 1.5], [2, 0.5], [1, 0.5], [0, 0.5], [4, 1], [1, 3],
+  [1, 0.5], [2, 0.5], [5, 1.5], [4, 0.5], [2, 0.5], [1, 0.5], [5, 1], [2, 3],
+  [2, 0.5], [4, 0.5], [7, 1.5], [5, 0.5], [4, 0.5], [2, 0.5], [8, 1], [4, 3],
+  [4, 0.5], [5, 0.5], [8, 1.5], [7, 0.5], [5, 0.5], [4, 0.5], [9, 0.5], [11, 0.5], [12, 1], [14, 2],
+];
+
+/** Meditative #8 Reach the Summit: a mountain path, a pan flute over a yangqin, a drone and a taiko's timpani. */
+function reachTheSummit() {
+  const song = createSong({ id: "mythic-reach-the-summit", bpm: 108, key: key("D", "major") });
+  song.reverb = { room: 0.85, damp: 0.3, width: 1, level: 0.66 };
+  instrument(song, 0, GM.panFlute, { volume: 94, pan: 58, reverb: 70 });
+  instrument(song, 1, GM.dulcimer, { volume: 80, pan: 82, reverb: 60 });
+  instrument(song, 2, GM.strings, { volume: 62, reverb: 75 });
+  instrument(song, 3, GM.contrabass, { volume: 82, reverb: 50 });
+  instrument(song, 4, GM.timpani, { volume: 80, reverb: 65 });
+  instrument(song, 5, GM.kalimba, { volume: 70, pan: 36, reverb: 60 });
+  const intro = section(song, "intro", 1, ["I"]);
+  arp(intro, { ch: 1, step: 0.25, pattern: [0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 5, 6, 7], center: 57, vel: 54 });
+  roots(intro, { ch: 4, octave: -2, vel: 66, hits: [[0, 1, 1], [2, 1, 0.7]] });
+  const body = section(song, "body", 8, ["I", "V", "ii", "vi", "IV", "V", ["IV", "V"], "I"]);
+  line(body, { ch: 0, notes: SUMMIT_CLIMB, vel: 80 });
+  arp(body, { ch: 1, step: 0.5, pattern: [0, 1, 2, 4, 3, 2, 1, 2], center: 60, vel: 44 });
+  pad(body, { ch: 2, center: 57, vel: 34 });
+  roots(body, { ch: 3, octave: -2, vel: 62 });
+  roots(body, { ch: 4, octave: -2, vel: 58, hits: [[0, 1, 1], [2.5, 0.5, 0.5]] });
+  arp(body, { ch: 5, step: 1, pattern: [4, 2, 3, 1], center: 74, vel: 34 });
+  return { song };
+}
+
+/** Meditative #17 True Craft a Card: Craft a Card's tune in A major's pentatonic, closing on its climb to the octave. */
+const TRUE_CRAFT = [
+  [4, 0.5], [5, 0.5], [7, 1.5], [5, 0.5], [4, 0.5], [2, 0.5], [1, 0.5], [2, 0.5], [4, 1], [1, 2],
+  [5, 0.5], [7, 0.5], [9, 1.5], [8, 0.5], [7, 0.5], [5, 0.5], [7, 1], [5, 0.5], [4, 0.5], [5, 2],
+  [4, 0.5], [5, 0.5], [7, 1.5], [5, 0.5], [4, 0.5], [2, 0.5], [8, 0.5], [7, 0.5], [5, 1], [4, 2],
+  [7, 0.5], [8, 0.5], [9, 1], [11, 0.5], [9, 0.5], [8, 1], [8, 0.5], [9, 0.5], [11, 0.5], [12, 0.5], [14, 2],
+];
+
+/** Meditative #17 True Craft a Card: Craft a Card's workshop made true, a key higher, a yangqin leading its marimba and kalimba, a bell as the card is done. */
+function trueCraftACard() {
+  const song = createSong({ id: "mythic-true-craft-a-card", bpm: 112, key: key("A", "major") });
+  song.reverb = { room: 0.5, damp: 0.45, width: 0.85, level: 0.45 };
+  instrument(song, 0, GM.dulcimer, { volume: 94, pan: 58, reverb: 45 });
+  instrument(song, 1, GM.kalimba, { volume: 82, pan: 80, reverb: 45 });
+  instrument(song, 2, GM.pizz, { volume: 80, pan: 42, reverb: 40 });
+  instrument(song, 3, GM.marimba, { volume: 84, pan: 50, reverb: 40 });
+  instrument(song, 4, GM.bells, { volume: 64, pan: 70, reverb: 70 });
+  instrument(song, DRUMS, KIT.standard, { volume: 80, reverb: 25 });
+  const intro = section(song, "intro", 1, ["V"]);
+  arp(intro, { ch: 1, step: 0.25, pattern: [0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1], center: 69, vel: 60 });
+  const body = section(song, "body", 8, ["I", "V", "vi", "IV", "I", "V", ["IV", "V"], "I"]);
+  line(body, { ch: 0, notes: TRUE_CRAFT, octave: -1, vel: 82 });
+  arp(body, { ch: 3, step: 0.5, pattern: [0, 2, 1, 2, 3, 2, 1, 2], center: 60, vel: 50 });
+  melody(body, { ch: 1, rhythms: RHYTHMS.folk, range: [4, 10], vel: 50, motifBars: [], start: 7, seed: 2 });
+  bass(body, { ch: 2, pattern: [[0, "R", 0.5, 1], [1, "5", 0.5, 0.8], [2, "8", 0.5, 0.9], [3, "5", 0.5, 0.8]], octave: -1, vel: 70 });
+  note(body, 4, 28, 3, pitch(song.key, 7, 0), 62, { exact: true });
+  drums(body, { pattern: [[0, DR.blockLo, 56], [1, DR.blockHi, 44], [1.5, DR.blockHi, 36], [2, DR.blockLo, 52], [3, DR.blockHi, 44], [3.5, DR.claves, 40]] });
+  return { song };
+}
+
+/** Meditative #20 Aestheticize the Game: three phrases of three bars, one per way to win, closing on vi, then IV, then home. */
+const GARDEN = [
+  [4, 0.5], [5, 0.5], [7, 1], [5, 0.5], [4, 0.5], [1, 1.5], [4, 1.5], [5, 0.5], [4, 0.5], [2, 2],
+  [7, 0.5], [8, 0.5], [7, 1], [5, 0.5], [4, 0.5], [2, 1], [4, 0.5], [5, 0.5], [4, 1], [5, 1], [7, 2],
+  [8, 0.5], [9, 0.5], [8, 1], [5, 1], [4, 1], [2, 0.5], [1, 1.5], [0, 3],
+];
+
+/** Meditative #20 Aestheticize the Game: an ink-wash garden in 3/4, a flute over a koto's harp and a bowed pad, a kalimba's drop at each phrase's end. */
+function aestheticizeTheGame() {
+  const song = createSong({ id: "mythic-aestheticize-the-game", bpm: 96, beatsPerBar: 3, key: key("Eb", "major") });
+  song.reverb = { room: 0.9, damp: 0.35, width: 1, level: 0.7 };
+  instrument(song, 0, GM.flute, { volume: 90, pan: 60, reverb: 70 });
+  instrument(song, 1, GM.harp, { volume: 84, pan: 82, reverb: 70 });
+  instrument(song, 2, GM.bowedPad, { volume: 62, reverb: 80 });
+  instrument(song, 3, GM.cello, { volume: 78, pan: 48, reverb: 60 });
+  instrument(song, 4, GM.kalimba, { volume: 68, pan: 30, reverb: 70 });
+  const intro = section(song, "intro", 1, ["I"]);
+  arp(intro, { ch: 1, step: 0.25, pattern: [8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 4], center: 60, vel: 50 });
+  const body = section(song, "body", 9, ["I", "V", "vi", "IV", "I", "IV", "ii", "V", "I"]);
+  line(body, { ch: 0, notes: GARDEN, vel: 78 });
+  arp(body, { ch: 1, step: 0.5, pattern: [0, 2, 4, 3, 1, 2], center: 55, vel: 44 });
+  pad(body, { ch: 2, center: 60, vel: 38 });
+  bass(body, { ch: 3, pattern: [[0, "R", 2.9, 1]], vel: 60 });
+  line(body, { ch: 4, notes: [[null, 7.5], [5, 0.5], [2, 1], [null, 7.5], [7, 0.5], [5, 1], [null, 7.5], [4, 0.5], [7, 1]], octave: 1, vel: 54 });
+  return { song };
+}
+
+/** Meditative #49 YileGPT Tamed: the AI's phrase on a square wave, in E dorian's pentatonic, and the dulcimer's answer. */
+const YILE_AI = [
+  [4, 0.5], [6, 0.5], [9, 1.5], [7, 0.5], [6, 0.5], [4, 0.5], [null, 4],
+  [4, 0.25], [4, 0.25], [6, 0.5], [9, 1.5], [7, 0.5], [6, 0.5], [4, 0.5], [null, 4],
+  [7, 0.5], [9, 0.5], [11, 1.5], [10, 0.5], [9, 0.5], [7, 0.5], [null, 4],
+  [7, 0.5], [6, 0.5], [4, 0.5], [3, 0.5], [4, 1], [5, 1], [4, 1], [2, 1], [0, 2],
+];
+const YILE_TAMER = [
+  [null, 4], [6, 1], [4, 0.5], [3, 0.5], [3, 2],
+  [null, 4], [7, 1], [5, 0.5], [4, 0.5], [3, 2],
+  [null, 4], [8, 1], [6, 1], [3, 2],
+  [7, 0.5], [6, 0.5], [4, 0.5], [3, 0.5], [4, 1], [5, 1], [4, 1], [2, 1], [0, 2],
+];
+
+/** Meditative #49 YileGPT Tamed: an AI on a leash, a square wave's stuttering phrase answered by a dulcimer bar by bar, until the two play as one. */
+function yileGptTamed() {
+  const song = createSong({ id: "mythic-yilegpt-tamed", bpm: 120, key: key("E", "dorian") });
+  song.reverb = { room: 0.7, damp: 0.4, width: 1, level: 0.55 };
+  instrument(song, 0, GM.square, { volume: 78, pan: 48, reverb: 50 });
+  instrument(song, 1, GM.dulcimer, { volume: 94, pan: 78, reverb: 55 });
+  instrument(song, 2, GM.warmPad, { volume: 66, reverb: 70 });
+  instrument(song, 3, GM.synthBass2, { volume: 80, reverb: 30 });
+  instrument(song, 4, GM.crystal, { volume: 60, pan: 96, reverb: 70 });
+  instrument(song, DRUMS, KIT.electronic, { volume: 72, reverb: 30 });
+  const intro = section(song, "intro", 1, ["i"]);
+  arp(intro, { ch: 4, step: 0.25, pattern: [0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1], center: 64, vel: 50 });
+  line(intro, { ch: 0, notes: [[null, 2], [4, 0.25], [4, 0.25], [4, 0.25], [7, 1.25]], vel: 62 });
+  const body = section(song, "body", 8, ["i", "VII", "i", "IV", "i", "VII", "IV", "i"]);
+  line(body, { ch: 0, notes: YILE_AI, vel: 70 });
+  line(body, { ch: 1, notes: YILE_TAMER, vel: 82 });
+  pad(body, { ch: 2, center: 60, vel: 36 });
+  pulse(body, { ch: 3, step: 0.5, octave: -2, vel: 62, accent: [1, 0.6] });
+  arp(body, { ch: 4, step: 0.25, pattern: [0, 2, 1, 3, 2, 4, 3, 5], center: 72, vel: 28, gate: 0.5 });
+  drums(body, { pattern: [[0, DR.kick, 70], [1, DR.hat, 34], [2, DR.kick, 62], [2.5, DR.hat, 28], [3, DR.hat, 34], [3.5, DR.hat, 26]] });
+  return { song };
+}
+
+/** Meditative #71 Pareto Optimality: a strict tutor's study, a marimba ostinato four notes in five the same (eighty and twenty), a piccolo's lesson and the Cane's crack. */
+function paretoOptimality() {
+  const song = createSong({ id: "mythic-pareto-optimality", bpm: 120, key: key("F", "harmonic") });
+  song.reverb = { room: 0.55, damp: 0.45, width: 0.85, level: 0.45 };
+  instrument(song, 0, GM.piccolo, { volume: 84, pan: 62, reverb: 50 });
+  instrument(song, 1, GM.marimba, { volume: 86, pan: 44, reverb: 40 });
+  instrument(song, 2, GM.pizz, { volume: 82, pan: 70, reverb: 40 });
+  instrument(song, 3, GM.strings, { volume: 60, reverb: 60 });
+  instrument(song, 4, GM.dulcimer, { volume: 70, pan: 84, reverb: 50 });
+  instrument(song, DRUMS, KIT.standard, { volume: 80, reverb: 25 });
+  const intro = section(song, "intro", 1, ["V"]);
+  arp(intro, { ch: 1, step: 0.25, pattern: [0, 0, 0, 0, 2], center: 60, vel: 60 });
+  drums(intro, { pattern: [[3.5, DR.stick, 96]] });
+  const body = section(song, "body", 8, ["i", "VI", "iv", "V", "i", "VI", ["iv", "V"], "i"]);
+  arp(body, { ch: 1, step: 0.25, pattern: [0, 0, 0, 0, 2], center: 60, vel: 50, accent: [1, 0.7, 0.8, 0.7, 1.1] });
+  melody(body, { ch: 0, rhythms: RHYTHMS.folk, range: [4, 11], vel: 72, motifBars: [0, 4], start: 4, seed: 1 });
+  bass(body, { ch: 2, pattern: [[0, "R", 0.45, 1], [1, "5", 0.45, 0.8], [2, "R", 0.45, 0.9], [3, "5", 0.45, 0.8]], octave: -1, vel: 70 });
+  pad(body, { ch: 3, center: 60, vel: 30 });
+  arp(body, { ch: 4, step: 1, pattern: [4, 2, 3, 1], center: 72, vel: 36 });
+  drums(body, { pattern: [[0, DR.blockLo, 50], [1, DR.blockHi, 40], [2, DR.blockLo, 46], [3, DR.blockHi, 40]] });
+  drums(body, { pattern: [[3.5, DR.stick, 96]], skip: (bar) => bar % 4 !== 3 });
+  return { song };
+}
+
+/** Meditative #97 Jlockheed's Evil Blueprints: a villain at the drafting table, synth brass in a sly march over low strings, a bell for each plan pieced together. */
+function evilBlueprints() {
+  const song = createSong({ id: "mythic-evil-blueprints", bpm: 112, key: key("C", "minor") });
+  song.reverb = { room: 0.7, damp: 0.4, width: 0.95, level: 0.55 };
+  instrument(song, 0, GM.synthBrass, { volume: 90, pan: 58, reverb: 55 });
+  instrument(song, 1, GM.strings, { volume: 76, pan: 46, reverb: 60 });
+  instrument(song, 2, GM.contrabass, { volume: 84, reverb: 45 });
+  instrument(song, 3, GM.bells, { volume: 64, pan: 84, reverb: 70 });
+  instrument(song, 4, GM.timpani, { volume: 82, reverb: 60 });
+  instrument(song, 5, GM.bassoon, { volume: 80, pan: 36, reverb: 50 });
+  instrument(song, DRUMS, KIT.orchestra, { volume: 78, reverb: 50 });
+  const intro = section(song, "intro", 1, ["V+"]);
+  roots(intro, { ch: 4, octave: -2, vel: 70, hits: [[0, 0.5, 1], [1, 0.5, 0.6], [2, 0.5, 0.8], [3, 0.25, 0.6], [3.5, 0.25, 0.8]] });
+  line(intro, { ch: 5, notes: [[-3, 1], [-2, 1], [-1, 1], [null, 1]], octave: -1, vel: 64 });
+  const body = section(song, "body", 8, ["i", "iv", "i", "V+", "VI", "iv", ["ii", "V+"], "i"]);
+  melody(body, { ch: 0, rhythms: RHYTHMS.epic, range: [2, 9], vel: 78, motifBars: [0, 4], start: 4, seed: 1 });
+  comp(body, { ch: 1, hits: [[0, 0.3, 1], [1, 0.3, 0.7], [2, 0.3, 0.85], [3, 0.3, 0.7]], center: 55, vel: 52 });
+  bass(body, { ch: 2, pattern: [[0, "R", 0.9, 1], [2, "5", 0.9, 0.85]], vel: 72 });
+  roots(body, { ch: 4, octave: -2, vel: 62, hits: [[0, 0.5, 1], [2, 0.5, 0.7]] });
+  melody(body, { ch: 5, rhythms: RHYTHMS.folk, range: [-5, 2], octave: -1, vel: 58, motifBars: [], start: -3, seed: 2 });
+  for (const bar of [0, 2, 4, 6]) note(body, 3, bar * 4, 2, pitch(song.key, 0, 1), 58, { exact: true });
+  drums(body, { pattern: [[0, DR.snare, 54], [0.75, DR.snare, 30], [1, DR.snare, 40], [2, DR.snare, 54], [2.75, DR.snare, 30], [3, DR.snare, 40], [3.5, DR.snare, 34]], vel: 0.8 });
+  return { song };
+}
+
 /* ------------------------------------------------------------------------------------------- *
  * Shared Legendary entrance themes (src/audio/music-cards.json names which cards play which).
  * One shape for both, brass-forward next to the Mythics' prismatic themes: a two-bar fanfare
@@ -879,7 +1058,7 @@ function legendaryTheme2() {
  *     where music-cards.json gives one, else the first of its tags the card art reads (its tribe),
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
- *     celesta), and a Mythic adds a prismatic shimmer over a soft choir.
+ *     celesta, Meditative a kalimba), and a Mythic adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S and then rings out for
  * INTRO_TAIL_S, the last INTRO_FADE_S of it faded (gen-music.mjs's `tail` and `post.fadeOutS`).
@@ -903,8 +1082,12 @@ const INTRO_SPAN_S = [3, 5];
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
 const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative"];
-/** The set's glint into the cadence (a set not listed here takes Classic+'s). */
-const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta };
+/**
+ * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
+ * kalimba, a plucked run that rings like the set's East-Asian colours (compose.mjs's GM table names no
+ * koto or shamisen).
+ */
+const INTRO_SET_GLINT = { Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba };
 
 /** The first tag that names a family wins, in the card art's order, then the tags it draws none for. */
 const INTRO_TAG_FAMILIES = [
@@ -1727,7 +1910,180 @@ const INTRO_CARDS = [
       palette: { lead: GM.ep2, second: GM.warmPad, bass: GM.synthBass1, color: GM.crystal, style: "synth", center: 72 },
       tonic: "C", mode: "dorian", bpm: 116,
     },
+  },  // ---- Meditative ----
+  {
+    card: "meditative-007", name: "Introspection", set: "Meditative", type: "Field Spell", tags: [], rarity: "Legendary",
+    // Turning inward: a pan flute takes the motif upside down over a choir that swells in.
+    tune: {
+      palette: { lead: GM.panFlute, center: 72 },
+      bpm: 100,
+      melody: [[0, 0.5], [-1, 0.5], [-3, 1.5], [-2, 0.5], [-1, 0.5], [0, 0.5], [2, 1], [1, 0.5], [-1, 0.5], [0, 2]],
+    },
   },
+  {
+    card: "meditative-008", name: "Reach the Summit", set: "Meditative", type: "Spell", tags: ["Quickdraw", "Wincon"], rarity: "Mythic",
+    // Its theme's climb: the motif in D major's pentatonic on the pan flute, then a run up to the summit two octaves on.
+    tune: {
+      palette: { lead: GM.panFlute, second: GM.strings, bass: GM.contrabass, color: GM.dulcimer, style: "swell", center: 74 },
+      tonic: "D", mode: "major", bpm: 108, prog: ["I", ["V", "I"]],
+      melody: [[0, 0.5], [1, 0.5], [4, 1.5], [2, 0.5], [1, 0.5], [0, 0.5], [4, 0.5], [7, 0.5], [8, 0.5], [9, 0.5], [11, 0.5], [14, 1.5]],
+    },
+  },
+  {
+    card: "meditative-011", name: "Double Header", set: "Meditative", type: "Field Spell", tags: [], rarity: "Legendary",
+    // The first card twice: the motif, then its copy (not Radiant) a fourth lower, which lands home.
+    tune: { bpm: 104, melody: [...THEME_MOTIF, ...MOTIF_CELL] },
+  },
+  {
+    card: "meditative-017", name: "True Craft a Card", set: "Meditative", type: "Spell", tags: [], rarity: "Mythic",
+    // Its theme's workshop: Craft a Card's climb to the octave on the yangqin's dulcimer, in A major's pentatonic, a bell as it lands.
+    tune: {
+      palette: { lead: GM.dulcimer, second: GM.marimba, bass: GM.pizz, color: GM.kalimba, style: "bounce", center: 76, extra: GM.bells },
+      tonic: "A", mode: "major", bpm: 112, prog: ["I", ["V", "I"]],
+      melody: [[7, 0.5], [8, 0.5], [11, 1.5], [9, 0.5], [8, 0.5], [7, 0.5], [8, 0.5], [9, 0.5], [11, 0.5], [12, 0.5], [14, 2]],
+      extra: (sec) => note(sec, 7, lastBarOf(sec), 2, pitch(sec.k, 7, 0), 64, { exact: true }),
+    },
+  },
+  {
+    card: "meditative-020", name: "Aestheticize the Game", set: "Meditative", type: "Spell", tags: ["Quickdraw", "Wincon"], rarity: "Mythic",
+    // Its theme's garden: three bars of 3/4, the flute's motif over a koto's harp, a bowed pad holding the close.
+    tune: {
+      palette: { lead: GM.flute, second: GM.harp, bass: GM.cello, color: GM.bowedPad, style: "chime", center: 72 },
+      tonic: "Eb", mode: "major", bpm: 112, beatsPerBar: 3, bars: 3, prog: ["I", "IV", ["V", "I"]],
+      melody: [[4, 0.5], [5, 0.5], [7, 1], [5, 0.5], [4, 0.5], [7, 0.5], [8, 0.5], [7, 1], [5, 0.5], [4, 0.5], [2, 0.5], [1, 0.5], [0, 2]],
+    },
+  },
+  { card: "meditative-026", name: "Alternate Fate", set: "Meditative", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "meditative-039-4", name: "Red Jade", set: "Meditative", type: "Spell", tags: ["CN", "Token"], rarity: "Mythic" },
+  { card: "meditative-039-5", name: "Jade Beauty", set: "Meditative", type: "Unit", tags: ["CN", "Token"], rarity: "Mythic" },
+  {
+    card: "meditative-040", name: "Feng Shui", set: "Meditative", type: "Field Spell", tags: ["CN"], rarity: "Legendary",
+    // The five elements: the motif and its answer on the pentatonic's five tones, one per element (水, 木, 火, 金, 土).
+    tune: {
+      tonic: "G", mode: "major", bpm: 104, prog: ["I", ["V", "I"]],
+      melody: [[0, 0.5], [1, 0.5], [4, 1.5], [2, 0.5], [1, 0.5], [0, 0.5], [5, 0.5], [4, 0.5], [2, 0.5], [1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "meditative-042", name: "CN Flea Market", set: "Meditative", type: "Spell", tags: ["CN"], rarity: "Legendary",
+    // A night market: the dulcimer haggling with a xylophone over hand drums.
+    tune: { palette: { second: GM.xylophone, style: "bounce" }, mode: "major", bpm: 124 },
+  },
+  { card: "meditative-045", name: "Knowledge Breaker", set: "Meditative", type: "Unit", tags: ["CN", "KY", "Catalyst"], rarity: "Legendary" },
+  { card: "meditative-045-1", name: "Knowledge Breaker Prime", set: "Meditative", type: "Unit", tags: ["CN", "KY", "Prime", "Token"], rarity: "Legendary" },
+  {
+    card: "meditative-047", name: "饕餮", set: "Meditative", type: "Unit", tags: ["CN"], rarity: "Legendary",
+    // The glutton of the old bronzes wakes: tuba and trombone in phrygian, an orchestra hit swallowing each downbeat.
+    tune: {
+      palette: { lead: GM.tuba, second: GM.trombone, bass: GM.contrabass, color: GM.orchHit, style: "boom", center: 50 },
+      tonic: "C", mode: "phrygian", bpm: 100,
+    },
+  },
+  {
+    card: "meditative-049", name: "YileGPT Tamed", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed"], rarity: "Mythic",
+    // Its theme's leash: the square wave stutters the motif, and a dulcimer joins it on the way home.
+    tune: {
+      palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 72, extra: GM.dulcimer },
+      tonic: "E", mode: "dorian", bpm: 120, prog: ["i", ["IV", "i"]],
+      melody: [[4, 0.25], [4, 0.25], [6, 0.5], [9, 1.5], [7, 0.5], [6, 0.5], [4, 0.5], [6, 0.5], [4, 0.5], [2, 1], [0, 2]],
+      extra: (sec, s) => line(sec, { ch: 7, notes: [[null, 4], [6, 0.5], [4, 0.5], [2, 1], [0, 2]], octave: s.leadOctave, vel: 84 }),
+    },
+  },
+  {
+    card: "meditative-049-1", name: "YileGPT Unleashed", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed", "Token"], rarity: "Mythic",
+    // Off the leash: the Tamed motif on a saw lead, faster, running on up to the octave.
+    tune: {
+      palette: { lead: GM.saw, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 69 },
+      tonic: "E", mode: "minor", bpm: 140, prog: ["i", ["V+", "i"]],
+      melody: [[4, 0.25], [4, 0.25], [6, 0.5], [9, 1.5], [7, 0.5], [6, 0.5], [4, 0.5], [11, 0.25], [11, 0.25], [10, 0.5], [9, 0.5], [8, 0.5], [7, 2]],
+    },
+  },
+  {
+    card: "meditative-049-2", name: "Yile's Virus", set: "Meditative", type: "Unit", tags: ["CN", "Acclaimed", "Token"], rarity: "Mythic",
+    // A virus in the system: the square lead's pitch glitching in a fast wobble, in phrygian.
+    tune: {
+      palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 67 },
+      mode: "phrygian", bpm: 132,
+      extra: (sec) => wobble(sec, 0, { depth: 700, perBeat: 4 }),
+    },
+  },
+  {
+    card: "meditative-049-3", name: "AI Girlfriend", set: "Meditative", type: "Field Spell", tags: ["CN", "Acclaimed", "Token"], rarity: "Mythic",
+    // A soft voice: an electric piano's motif over vibraphone chimes and a warm pad.
+    tune: {
+      palette: { lead: GM.ep1, second: GM.vibes, bass: GM.fingerBass, color: GM.warmPad, style: "chime", center: 72 },
+      mode: "major", bpm: 100,
+    },
+  },
+  {
+    card: "meditative-051", name: "Devin Bot", set: "Meditative", type: "Unit", tags: [], rarity: "Legendary",
+    // A bot spinning up: a square wave's motif over a sixteenth arpeggio that fills the bar, as its 1/1s fill the board.
+    tune: {
+      palette: { lead: GM.square, second: GM.polysynth, bass: GM.synthBass2, color: GM.crystal, style: "synth", center: 72 },
+      mode: "dorian", bpm: 132,
+    },
+  },
+  { card: "meditative-063", name: "Skull of J'Nari", set: "Meditative", type: "Field Spell", tags: [], rarity: "Legendary" },
+  {
+    card: "meditative-065", name: "Keymaster Keenus", set: "Meditative", type: "Unit", tags: [], rarity: "Legendary",
+    // Every keyword at once: the whole orchestra on the motif, a glockenspiel doubling it an octave up.
+    tune: {
+      palette: { lead: GM.trumpet, second: GM.strings, bass: GM.contrabass, color: GM.choir, style: "orchestral", center: 67 },
+      bpm: 112,
+      extra: (sec, s) => line(sec, { ch: 10, notes: s.melody, octave: s.leadOctave + 1, vel: 48 }),
+    },
+  },
+  {
+    card: "meditative-071", name: "Pareto Optimality", set: "Meditative", type: "Field Spell", tags: [], rarity: "Mythic",
+    // Its theme's study: the piccolo's motif in F harmonic minor over the marimba's four-notes-in-five, the Cane's crack before the cadence.
+    tune: {
+      palette: { lead: GM.piccolo, second: GM.pizz, bass: GM.pizz, color: GM.dulcimer, style: "pizz", center: 79, extra: GM.marimba },
+      tonic: "F", mode: "harmonic", bpm: 120, prog: ["i", ["V", "i"]],
+      melody: [...THEME_MOTIF, [3, 0.5], [2, 0.5], [1, 0.5], [-1, 0.5], [0, 2]],
+      extra: (sec) => {
+        arp(sec, { ch: 7, step: 0.25, pattern: [0, 0, 0, 0, 2], center: 60, vel: 44, until: lastBarOf(sec) });
+        note(sec, DRUMS, lastBarOf(sec) - 0.5, 0.25, DR.stick, 96, { exact: true });
+      },
+    },
+  },
+  {
+    card: "meditative-071-1", name: "The Cane", set: "Meditative", type: "Field Spell", tags: ["CN", "Token"], rarity: "Mythic",
+    // The Cane itself: a side stick's crack on the off-beats.
+    tune: { bpm: 116, extra: (sec) => introDrums(sec, [[1.5, DR.stick, 84], [3.5, DR.stick, 92]], { skip: beforeLastBar(sec) }) },
+  },
+  { card: "meditative-075", name: "Ever Growing Tree", set: "Meditative", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "meditative-079", name: "Touched by KY", set: "Meditative", type: "Unit", tags: ["KY"], rarity: "Legendary" },
+  { card: "meditative-080", name: "Aluneth", set: "Meditative", type: "Field Spell", tags: ["Quickdraw"], rarity: "Legendary" },
+  { card: "meditative-086", name: "Mayor Medinamogger", set: "Meditative", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "meditative-087", name: "Tatches the Totem", set: "Meditative", type: "Unit", tags: ["Human", "Felinor", "KY", "CN", "Jlockeed"], rarity: "Legendary" },
+  {
+    card: "meditative-095", name: "Call to Chaos (Meditative Edition)", set: "Meditative", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary",
+    // Its own slot machine, on the yangqin's dulcimer in D dorian.
+    tune: {
+      palette: { lead: GM.dulcimer, extra: GM.bells },
+      tonic: "D", mode: "dorian", bpm: 140,
+      extra: (sec) => slotMachine(sec, 10, 1),
+    },
+  },
+  {
+    card: "meditative-095-1", name: "CN Golem", set: "Meditative", type: "Unit", tags: ["CN", "Token"], rarity: "Legendary",
+    // Stone on the march, as the Classic Golem, the dulcimer ringing on the close.
+    tune: { palette: { lead: GM.tuba, second: GM.trombone, bass: GM.contrabass, color: GM.dulcimer, style: "march", center: 52 } },
+  },
+  {
+    card: "meditative-097", name: "Jlockheed's Evil Blueprints", set: "Meditative", type: "Spell", tags: ["Jlockeed"], rarity: "Mythic",
+    // Its theme's drafting table: synth brass on the motif in C minor, a sly answer through the raised seventh.
+    tune: {
+      tonic: "C", mode: "minor", bpm: 112, prog: ["i", ["V+", "i"]],
+      melody: [...THEME_MOTIF, [4, 0.5], [1, 0.5], [3, 0.5], [-1, 0.5], [0, 2]],
+    },
+  },
+  {
+    card: "meditative-097-8", name: "Prison", set: "Meditative", type: "Unit", tags: ["Token"], rarity: "Legendary",
+    // A cell door: a trombone over string tremolo, a timpani stroke and a bell's clang falling.
+    tune: { palette: { lead: GM.trombone, second: GM.tremolo, bass: GM.contrabass, color: GM.bells, style: "dark", center: 60 }, mode: "harmonic" },
+  },
+  { card: "meditative-097-9", name: "Jlockheed's Headquarters", set: "Meditative", type: "Unit", tags: ["Jlockeed", "Token"], rarity: "Mythic" },
 ];
 
 /* ------------------------------------------------------------------------------------------- *
@@ -1793,6 +2149,12 @@ export const TRACKS = [
   { id: "mythic-zephrys-zealotism", loop: true, build: zephrysZealotism },
   { id: "mythic-twice-forward", loop: true, build: twiceForward },
   { id: "mythic-portal-to-the-past", loop: true, build: portalToThePast },
+  { id: "mythic-reach-the-summit", loop: true, build: reachTheSummit },
+  { id: "mythic-true-craft-a-card", loop: true, build: trueCraftACard },
+  { id: "mythic-aestheticize-the-game", loop: true, build: aestheticizeTheGame },
+  { id: "mythic-yilegpt-tamed", loop: true, build: yileGptTamed },
+  { id: "mythic-pareto-optimality", loop: true, build: paretoOptimality },
+  { id: "mythic-evil-blueprints", loop: true, build: evilBlueprints },
   { id: "legendary-1", loop: true, build: legendaryTheme1 },
   { id: "legendary-2", loop: true, build: legendaryTheme2 },
   // R1352: each Legendary's and Mythic's own intro, a sting that plays once.

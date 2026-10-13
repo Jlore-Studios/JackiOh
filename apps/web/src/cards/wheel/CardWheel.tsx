@@ -10,6 +10,7 @@ import { useCallback, useRef, useState, type ReactElement } from "react";
 
 import { CardBack } from "../CardBack.tsx";
 import { CardFace } from "../CardFace.tsx";
+import { isZhCn, t } from "../../i18n/i18n.ts";
 import type { FaceModel } from "../model.ts";
 
 import "./wheel.css";
@@ -118,7 +119,7 @@ export default function CardWheel({ items, defaultIndex = 0, ariaLabel, onIndex 
         if (Math.abs(dx) >= WHEEL_SWIPE_PX) go(index + (dx < 0 ? 1 : -1));
       }}
     >
-      <button type="button" className="card-wheel-turn" data-testid={wheelTestid.prev} aria-label="Previous card" onClick={() => go(index - 1)} disabled={single}>
+      <button type="button" className="card-wheel-turn" data-testid={wheelTestid.prev} aria-label={t("Previous card")} onClick={() => go(index - 1)} disabled={single}>
         ‹
       </button>
       <div className="card-wheel-stage" aria-live="polite">
@@ -134,7 +135,7 @@ export default function CardWheel({ items, defaultIndex = 0, ariaLabel, onIndex 
                 data-testid={wheelTestid.card}
                 data-offset={offset}
                 data-face={item.face === null ? "back" : "face"}
-                aria-label={`Show ${item.name}`}
+                aria-label={t("Show {name}", { name: item.name })}
                 aria-hidden={near ? undefined : true}
                 tabIndex={near ? 0 : -1}
                 onClick={() => go(at)}
@@ -156,12 +157,12 @@ export default function CardWheel({ items, defaultIndex = 0, ariaLabel, onIndex 
           );
         })}
       </div>
-      <button type="button" className="card-wheel-turn" data-testid={wheelTestid.next} aria-label="Next card" onClick={() => go(index + 1)} disabled={single}>
+      <button type="button" className="card-wheel-turn" data-testid={wheelTestid.next} aria-label={t("Next card")} onClick={() => go(index + 1)} disabled={single}>
         ›
       </button>
       <div className="card-wheel-meta">
         <span className="card-wheel-position" data-testid={wheelTestid.position} data-index={index} data-count={items.length}>
-          {`${String(index + 1)} of ${String(items.length)}`}
+          {`${String(index + 1)}${isZhCn() ? " / " : " of "}${String(items.length)}`}
         </span>
         {current?.note === undefined ? null : (
           <span className="card-wheel-note" data-testid={wheelTestid.note}>

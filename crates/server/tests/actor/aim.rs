@@ -1,17 +1,11 @@
 //! R738 — the opponent's aim through the actor (§9.5): a top-level `aim` frame, never an
-//! `ActionBody`, shape-checked by `protocol.ts`, relayed to the opponent alone, coalesced to one
-//! relay per `AIM_RELAY_INTERVAL_MS` per seat, and dropped when an end names anything the opponent
-//! may not see.
+//! `ActionBody`, relayed to the opponent alone, coalesced to one relay per `AIM_RELAY_INTERVAL_MS`
+//! per seat, and dropped when an end names anything the opponent may not see.
 //!
-//! Runs on the scripted engine port (`test/fakes/engine.ts`), whose `viewFor` shows the opponent's
-//! hand as a count — the one fact the hidden-information check reads besides the zones.
-//!
-//! Port of `apps/server/test/match/aim.test.ts`. The Rust server has no engine port to script:
 //! `support::engine`'s test cards run as real engine scripts under the testkit's thread-local
-//! override (SURFACE §8, §11.2), so the views here are the real `view_for`'s, which shows the
-//! opponent's hand as a count just as the fake did. The registry, the clock and the results writer
-//! are the test app's own (`support::deps::test_app`), tokio's paused clock stands in for the manual
-//! timers, and every frame is read as the JSON the wire carries (SURFACE §5.1).
+//! override, so the views are the real `view_for`'s, which shows the opponent's hand as a count.
+//! Tokio's paused clock stands in for timers; frames are read as the JSON the wire carries.
+//! Surface contract: docs/v0.3.0/SURFACE.md §5.1, §8, §11.2.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -31,7 +25,6 @@ use crate::support::socket::{FakeSocket, create_fake_socket};
 
 const MATCH_ID: &str = "match-aim";
 
-/// TS `TEST_CATALOG_VERSION` (`test/fakes/deps.ts`).
 const TEST_CATALOG_VERSION: &str = "test-1";
 
 /// How many times `settle` yields: enough for every task woken at this instant to run.
@@ -54,15 +47,13 @@ async fn settle() {
     }
 }
 
-/// TS `deps.timers.advance(ms)`: sleeps on the paused clock, so every timer due by then fires in
-/// deadline order, then lets what it woke run.
+/// Sleeps on the paused clock, so every timer due by then fires in deadline order, then settles.
 async fn advance(ms: i64) {
     tokio::time::sleep(Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0))).await;
     settle().await;
 }
 
 /// One client's end of a fake socket (`support::socket`), read as the JSON frames the server sent.
-/// Every call this file makes on the fake goes through here.
 struct Client(FakeSocket);
 
 impl Client {
@@ -70,7 +61,7 @@ impl Client {
         Client(create_fake_socket())
     }
 
-    /// The half the actor holds. TS handed the fake itself to `attach`; Rust's `Socket` is a struct.
+    /// The half the actor holds.
     fn socket(&self) -> Socket {
         self.0.socket()
     }
@@ -143,7 +134,7 @@ async fn harness() -> Harness {
 }
 
 impl Harness {
-    /// TS `actor.idle()`: the frames sent so far have been handled and what they pushed has arrived.
+    /// The frames sent so far have been handled and what they pushed has arrived.
     async fn idle(&self) {
         settle().await;
         self.actor.idle().await;
@@ -151,7 +142,7 @@ impl Harness {
     }
 }
 
-/// TS `deps.store.tables.matchActions`, for this match: the rows `match_actions` holds, as JSON.
+/// The rows `match_actions` holds for this match, as JSON.
 async fn match_actions(app: &App, match_id: &str) -> Vec<Value> {
     let mut tx = app.db.begin(None).await.expect("a store transaction");
     let rows = tx.matches_actions(match_id).await.expect("matches.actions");
@@ -340,9 +331,7 @@ mod r738_the_opponents_aim_through_the_actor_9_5 {
         assert_eq!(relayed_aims(&h.p2), vec![from_hand("p1", count - 1), Value::Null]);
     }
 
-    /// A real `PlayerView` for `viewer`, its two hands and its lanes cut down to the ones the TS
-    /// test's literal named (`{ viewer, you: { hand, locks }, opponent: { hand, locks } }`): Rust has no
-    /// `as unknown as PlayerView`, so the rest of the view is a real deal's, from the real catalog.
+    /// A real `PlayerView` for `viewer`, its hands and lanes cut down; the rest is a real deal's.
     fn cut_down_view(viewer: PlayerId) -> PlayerView {
         jackioh_cards::register_all();
         let pool: Vec<String> = jackioh_cards::CATALOG

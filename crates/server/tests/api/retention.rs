@@ -2,9 +2,9 @@
 //! What the store then deletes is asserted against both stores in `tests/store/contract.rs`, and in
 //! Postgres by `tests/sql/07_retention_purge.sql`.
 //!
-//! Ported from `apps/server/test/api/retention.test.ts` (part 18). The TS suite ran on
-//! `createTestDeps()`; this one runs on `support::deps::test_app()` (the fake store), with
-//! `tokio::time::pause()` standing in for the manual clock (SURFACE §11.2).
+//! Runs on `support::deps::test_app()` (the fake store), with `tokio::time::pause()` standing in
+//! for the manual clock.
+//! Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -12,19 +12,19 @@ use serde_json::{Value, json};
 
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
-use jackioh_server::config::{CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS};
+use jackioh_server::config::{
+    CODE_ATTEMPT_RETENTION_DAYS, MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+};
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow};
+use jackioh_server::db::store::{CodeAttempt, Db, MatchActionRow, MatchRow, MatchSignalRow};
 
 use crate::support::deps::test_app;
 
 const DAY_MS: i64 = 86_400_000;
 
-// ---------------------------------------------------------------------------
-// Harness (a private copy per file, SURFACE rule 5)
-// ---------------------------------------------------------------------------
+// Harness (a private copy per file)
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// Builds a value from a JSON literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
@@ -33,7 +33,7 @@ fn json_of<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// The fake store's tables behind the test app (TS `deps.store.tables`).
+/// The fake store's tables behind the test app.
 async fn fake(app: &App) -> tokio::sync::MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -62,7 +62,21 @@ fn action_row(match_id: &str) -> MatchActionRow {
     )
 }
 
-/// TS `deps.store.codes.logAttempt(...)`, in a transaction of its own.
+/// R1442: one seat's end-of-game signals, the smallest row of a match's play telemetry.
+fn signals_row(match_id: &str) -> MatchSignalRow {
+    from(json!({
+        "matchId": match_id,
+        "seat": "p1",
+        "drawOffers": 0,
+        "drawAccepted": false,
+        "rematchOffered": false,
+        "rematchAccepted": false,
+        "timeouts": 0,
+        "pilot": "human",
+    }))
+}
+
+/// Logs one code attempt in a transaction of its own.
 async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     let attempt: CodeAttempt = from(
         json!({ "profileId": null, "ipHash": ip_hash, "result": "rejected", "reason": "missing", "at": at }),
@@ -72,23 +86,20 @@ async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     t.commit().await.expect("commit");
 }
 
-// ---------------------------------------------------------------------------
 // The retention purge
-// ---------------------------------------------------------------------------
 
 mod the_retention_purge {
     use super::*;
 
     #[tokio::test(start_paused = true)]
     async fn asks_the_store_for_the_cutoffs_config_ts_names_counted_back_from_now() {
-        // TS swapped `store.purgeExpired` for a spy and compared the input it was handed. The Rust
-        // store is an enum with no such seam, so the same two numbers are pinned from outside: a row
-        // exactly at each cutoff is kept and a row one millisecond older is purged, which holds for
-        // those two cutoffs and for no others.
+        // The store is an enum with no spy seam, so the cutoffs are pinned from outside: a row exactly
+        // at each is kept and one a millisecond older is purged.
         let app = test_app().await;
         let now = now_ms();
         let code_attempts_before = now - CODE_ATTEMPT_RETENTION_DAYS * DAY_MS;
         let match_actions_ended_before = now - MATCH_ACTION_RETENTION_DAYS * DAY_MS;
+        let play_telemetry_ended_before = now - PLAY_TELEMETRY_RETENTION_DAYS * DAY_MS;
 
         log_attempt(&app, "at-cutoff", code_attempts_before).await;
         log_attempt(&app, "past-cutoff", code_attempts_before - 1).await;
@@ -104,10 +115,24 @@ mod the_retention_purge {
             for match_id in ["m-at-cutoff", "m-past-cutoff"] {
                 data.tables.match_actions.push(action_row(match_id));
             }
+            // R1442: the play telemetry's own cutoff, on matches with no log left.
+            data.tables
+                .matches
+                .push(finished_match("t-at-cutoff", Some(play_telemetry_ended_before)));
+            data.tables.matches.push(finished_match(
+                "t-past-cutoff",
+                Some(play_telemetry_ended_before - 1),
+            ));
+            for match_id in ["t-at-cutoff", "t-past-cutoff"] {
+                data.tables.match_signals.push(signals_row(match_id));
+            }
         }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
-        assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            json_of(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 1 })
+        );
         let data = fake(&app).await;
         let attempts: Vec<String> = data
             .tables
@@ -123,6 +148,13 @@ mod the_retention_purge {
             .map(|row| row.match_id.clone())
             .collect();
         assert_eq!(actions, vec!["m-at-cutoff".to_string()]);
+        let signals: Vec<String> = data
+            .tables
+            .match_signals
+            .iter()
+            .map(|row| row.match_id.clone())
+            .collect();
+        assert_eq!(signals, vec!["t-at-cutoff".to_string()]);
     }
 
     #[tokio::test(start_paused = true)]
@@ -150,7 +182,10 @@ mod the_retention_purge {
         }
 
         let purged = purge_expired(&app).await.expect("purgeExpired");
-        assert_eq!(json_of(&purged), json!({ "codeAttempts": 1, "matchActions": 1 }));
+        assert_eq!(
+            json_of(&purged),
+            json!({ "codeAttempts": 1, "matchActions": 1, "playTelemetry": 0 })
+        );
         let data = fake(&app).await;
         let attempts: Vec<String> = data
             .tables

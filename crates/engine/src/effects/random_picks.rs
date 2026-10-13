@@ -14,8 +14,9 @@ use crate::script::Effect;
 use crate::state::CardInstance;
 use crate::zones::active_units_of;
 
-use super::buff::buff;
+use super::buff::{buff, grant_keyword};
 use super::targets::{PlayerSpec, player_of};
+use crate::wire::Keyword;
 
 /// `buffRandomUnit`'s argument: `{ player? } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -55,6 +56,36 @@ pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
             literal.insert("health".into(), json!(health));
         }
         (buff(json_as(Value::Object(literal))).apply)(ctx);
+    })
+}
+
+/// `grantKeywordsRandomUnit`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GrantKeywordsRandomUnitArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    #[serde(default)]
+    pub keywords: Vec<Keyword>,
+}
+
+/// R1085 (M #65 Radiant): one random Unit acting on that side (the tops of the piles, R13), drawn
+/// with the match rng, is granted every named keyword (§10.4) through `grant_keyword`. No Unit
+/// draws nothing (R129).
+pub fn grant_keywords_random_unit(args: GrantKeywordsRandomUnitArgs) -> Effect {
+    Effect::new("grantKeywordsRandomUnit", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let units: Vec<CardInstance> = active_units_of(ctx.state, player).into_iter().cloned().collect();
+        let Some(unit) = ctx.rng.pick(&units).cloned() else {
+            return;
+        };
+        for keyword in &args.keywords {
+            let effect = grant_keyword(json_as(json!({
+                "target": { "of": "instance", "instanceId": unit.id },
+                "keyword": keyword,
+            })));
+            (effect.apply)(ctx);
+        }
     })
 }
 

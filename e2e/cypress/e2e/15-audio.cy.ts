@@ -1,66 +1,33 @@
-// Polish task 2 (docs/polish/2-sound.md) `15-audio.cy.ts` — behaviours B38 and B39, on a real
-// hotseat board in Chrome.
-//
-//   B38  On /dev/hotseat, before any gesture `__jackiohAudio.contextsCreated()` is 0. After one
-//        click on the board it is 1 and `state()` is neither "locked" nor "unsupported", and
-//        playing a unit from hand through the UI appends a `voice` log entry with that defId and
-//        `line: "play"`.
-//   B39  After clicking `audio-toggle` and reloading, the toggle is `aria-pressed="true"` and
-//        playing a card appends nothing to the log, and `GET /audio/voice/core-004-play.m4a`
-//        answers 200 with an `audio/*` content type.
-//
-// What this asserts is the voice REQUEST, never its outcome. Headless Chrome may keep the context
-// suspended with no output device, and a Chromium without AAC falls back to speech; the engine logs
-// an accepted cue either way (docs/polish/2-sound.md, Risks), so the log entry is the one thing that
-// is the same on every machine.
-//
-// House rules (BUILD M8): the seed is set here and overridable with `--expose seed=…`; there is no
-// fixed `cy.wait(ms)` — every wait is `cy.settled()` or a retried assertion; and every selector goes
-// through `ts()`. `e2e/` does not import `apps/`, so the debug handle's shape is declared locally
-// below (it mirrors `AudioDebugHandle` in apps/web/src/audio/debug.ts).
-//
-// The two 01-aggro fixture decks are used because every card in them is choice-free (see spec 01):
-// playing a unit is a hand click plus a zone click and never opens a picker. Which unit is in hand
-// depends on the shuffle, so the spec ends turns until the client offers a unit, and plays that.
-//
-// Run it with:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5172 --strictPort
-//   E2E_BASE_URL=http://localhost:5172 pnpm --dir e2e exec cypress run --browser chrome \
-//     --spec cypress/e2e/15-audio.cy.ts
+// B38 and B39 audio on a Chrome hotseat board (docs/polish/2-sound.md).
+// Assert voice requests, not playback: headless audio outputs differ, but accepted cues are stable.
+// BUILD M8: seed the game, avoid fixed waits, and use `ts()` selectors.
+// The choice-free 01-aggro decks let the test end turns until a unit is offered.
 
 import { seedFor } from "../../support/config.ts";
 import { BOARD, LEGAL, cardId, handCardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
 
-/** Every spec sets a seed (BUILD M8). */
 const SEED = seedFor("15-audio");
 const DECK_A = "01-aggro-a";
 const DECK_B = "01-aggro-b";
 
-/** docs/polish/2-sound.md "Other surfaces". */
 const AUDIO_TOGGLE = "audio-toggle";
 const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 const CORE_004_PLAY_URL = "/audio/voice/core-004-play.m4a";
 
-/**
- * The catalog's `type: "Unit"` cards among 01-aggro-a and 01-aggro-b (crates/cards/catalog.json).
- * The rest of those two decks are Spells and Field Spells, which speak a cast line, not a play line.
- */
+/** Unit ids in the 01-aggro decks; spells use a cast line rather than a play line. */
 const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
   "core-001", "core-003", "core-008", "core-011", "core-015", "core-019", "core-020", "core-025",
   "core-032", "core-045", "core-053", "core-056", "core-077", "core-081", "core-089", "core-091",
   "core-092",
 ]);
 
-/** Player-turns to wait for a unit the client offers. A 1- or 2-cost unit lands well inside it. */
+/** Player-turn budget for finding an offered unit. */
 const TURN_BUDGET = 8;
 
 const LANES: readonly Lane[] = [1, 2, 3, 4, 5];
 
-// ---------------------------------------------------------------------------------------------
-// window.__jackiohAudio, declared locally (e2e/ does not import apps/)
-// ---------------------------------------------------------------------------------------------
+// Locally declared `window.__jackiohAudio` (`e2e/` does not import `apps/`)
 
 type VoiceLineKind = "play" | "attack" | "death" | "cast";
 
@@ -81,10 +48,7 @@ function audioHandle(win: Cypress.AUTWindow): AudioDebugHandleLike | undefined {
   return (win as unknown as { __jackiohAudio?: AudioDebugHandleLike }).__jackiohAudio;
 }
 
-/**
- * Assert on the live debug handle, retried until it holds. The handle is re-read from the window on
- * every retry, so a Game that remounts (a hotseat hand-over) never leaves the check holding a stale one.
- */
+/** Re-read the handle on retry so a hotseat remount cannot leave a stale assertion. */
 function expectAudio(check: (audio: AudioDebugHandleLike) => void): void {
   cy.window({ log: false }).should((win) => {
     const audio = audioHandle(win);
@@ -105,19 +69,16 @@ function voiceCues(audio: AudioDebugHandleLike): Extract<PlayedCueLike, { kind: 
   return audio.log().filter((cue): cue is Extract<PlayedCueLike, { kind: "voice" }> => cue.kind === "voice");
 }
 
-// ---------------------------------------------------------------------------------------------
-// playing a unit through the UI
-// ---------------------------------------------------------------------------------------------
+// Playing a unit through the UI
 
 type HandCard = { id: string; defId: string };
 
-/** Which instance ids might be clicked (setup only; assertions read the DOM or the audio log). */
 function handOf(state: GameStateLike, player: PlayerId): HandCard[] {
   const side = state.players[player] as { hand?: HandCard[] };
   return side.hand ?? [];
 }
 
-/** The first of `testids` the client marks `data-legal="true"` (its copy of `legalActions`). */
+/** The first target the client marks legal. */
 function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null> {
   return cy.get("body", { log: false }).then(($body) => {
     const found = testids.find((testid) => $body.find(`${ts(testid)}${LEGAL}`).length > 0);
@@ -125,7 +86,7 @@ function firstLegal(testids: readonly string[]): Cypress.Chainable<string | null
   });
 }
 
-/** BUILD M5-T3: a hotseat device is handed over, so make sure it is on the seat that has to act. */
+/** BUILD M5-T3: hand the device to the acting seat. */
 function ensureSeat(player: PlayerId): void {
   cy.jackioh().then((handle) => {
     if (handle.seat !== undefined && handle.seat !== player) cy.handOver();
@@ -134,11 +95,7 @@ function ensureSeat(player: PlayerId): void {
 
 type Played = { instanceId: string; defId: string };
 
-/**
- * Play the first unit the client offers from the active seat's hand: a hand click, then the
- * highlighted unit zone. Ends turns (handing the device over) until one is offered. `beforePlay`
- * runs right before the hand click, so the log can be cleared at exactly that point.
- */
+/** Play an offered unit, ending turns until one appears; clear the log immediately before its click. */
 function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TURN_BUDGET): void {
   cy.gameState().then((state) => {
     expect(turnsLeft, "the client offered a unit inside the turn budget").to.be.greaterThan(0);
@@ -173,7 +130,6 @@ function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TUR
           cy.settled();
         }
       });
-      // The play really happened: the card left the hand and stands on the field.
       cy.get(ts(testid)).should("not.exist");
       cy.then(() => {
         cy.get(ts(cardId(played.instanceId))).should("exist");
@@ -182,11 +138,9 @@ function playOfferedUnit(played: Played, beforePlay: () => void, turnsLeft = TUR
   });
 }
 
-// ---------------------------------------------------------------------------------------------
-
 describe("polish 2 — audio on the hotseat board", () => {
   it("B38 no AudioContext exists before a gesture, and one click on the board makes exactly one", () => {
-    // `manual`: nothing is clicked on the way in, so this page has seen no gesture at all.
+    // `manual` avoids an unlocking gesture before the assertion.
     cy.seedGame({ seed: SEED, a: DECK_A, b: DECK_B, mulligan: "manual" });
 
     expectAudio((audio) => {
@@ -195,8 +149,7 @@ describe("polish 2 — audio on the hotseat board", () => {
       expect(audio.log(), "nothing is accepted before a gesture").to.have.length(0);
     });
 
-    // Inside the board's own 8px padding (board.css), clear of the centred mulligan panel and of the
-    // top-right toggle; the prompt scrim is click-through (prompt.css), so the board takes the click.
+    // Board padding avoids the mulligan panel and toggle; the prompt scrim is click-through.
     cy.get(ts(BOARD)).click(4, 4);
 
     expectAudio((audio) => {
@@ -204,7 +157,6 @@ describe("polish 2 — audio on the hotseat board", () => {
       expect(audio.state(), "the engine has left locked").to.not.be.oneOf(["locked", "unsupported"]);
     });
 
-    // Later gestures resume the same context; they never build a second one.
     cy.keepMulligans();
     expectAudio((audio) => {
       expect(audio.contextsCreated(), "still exactly one AudioContext").to.eq(1);
@@ -212,7 +164,7 @@ describe("polish 2 — audio on the hotseat board", () => {
   });
 
   it("B38 playing a unit from hand through the UI logs a voice request for its play line", () => {
-    // `keep` answers the mulligans through the UI: those clicks are the unlocking gesture.
+    // `keep` answers through the UI, supplying the unlocking gesture.
     cy.seedGame({ seed: SEED, a: DECK_A, b: DECK_B });
     expectAudio((audio) => {
       expect(audio.contextsCreated(), "the mulligan clicks unlocked audio").to.eq(1);
@@ -243,7 +195,7 @@ describe("polish 2 — audio on the hotseat board", () => {
       expect(stored?.muted, `localStorage["${AUDIO_SETTINGS_KEY}"].muted`).to.eq(true);
     });
 
-    // The hotseat route finds its decks again in the localStorage copy `seedGame` left.
+    // The hotseat route restores decks from `seedGame`'s localStorage copy.
     cy.reload();
     cy.jackioh().should((handle) => {
       expect(handle.seed, "the same seeded game after the reload").to.eq(SEED);
@@ -251,7 +203,7 @@ describe("polish 2 — audio on the hotseat board", () => {
     cy.settled();
     cy.get(ts(AUDIO_TOGGLE)).should("have.attr", "aria-pressed", "true");
 
-    // Gestures still unlock audio while muted, so an empty log below is the mute and not a lock.
+    // Gestures unlock muted audio, so an empty log proves mute rather than lock.
     cy.keepMulligans();
     expectAudio((audio) => {
       expect(audio.contextsCreated(), "the mulligan clicks unlocked audio").to.eq(1);

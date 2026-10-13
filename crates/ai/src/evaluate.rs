@@ -11,11 +11,11 @@
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
-    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, find_def, has_keyword,
-    hero_armor_of, own_cost, query_cost, subsystems, unit_view,
+    active_brittle_count, active_units_of, animated_kind_of, cannot_attack, card_keywords, credit_lapsing,
+    find_def, has_keyword, hero_armor_of, owed_mana_of, own_cost, query_cost, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -31,10 +31,12 @@ fn hero_value(health: i32, w: &EvalWeights) -> f64 {
 
 /// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
-    let Some(def) = find_def(Some(state), &card.def_id) else {
+    let Some(_def) = find_def(Some(state), &card.def_id) else {
         return false;
     };
-    if def.type_ != CardType::Trap && def.type_ != CardType::FieldTrap {
+    // ME-ALTPLAY, R1046: a set Unit or Spell reads as a Field Trap or Trap.
+    let face = jackioh_engine::faces::card_type_of(state, card);
+    if face != CardType::Trap && face != CardType::FieldTrap {
         return true;
     }
     if card.face_up == Some(true) {
@@ -81,12 +83,30 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights) -> f6
         }
     }
     // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's. Their worth is
-    // the damage they soak, which `face_threat` and the reply already count, so here they are worth
-    // only `positionGrants` of a printed Taunt and a point of printed Armor.
-    if view.position == Position::Def && has_keyword(&view.keywords, KeywordKind::Taunt) {
-        value -= (1.0 - w.position_grants) * (weights.taunt + w.armor_point);
+    // the damage they soak, which `face_threat` and the reply already count, so here they count for
+    // only `positionGrants`. With `defenseOwnTauntKept` a unit's own Taunt, printed or granted
+    // (`card_keywords` leaves the position's grant out), is kept in full, and the Armor discount
+    // applies only when Armor is on the body, so an Indestructible unit, whose Taunt is gone, still
+    // discounts its position Armor. Without it (the frozen baseline), every Taunt in Defense Position
+    // is discounted with a point of Armor.
+    if view.position == Position::Def {
+        let taunts = has_keyword(&view.keywords, KeywordKind::Taunt);
+        if !w.defense_own_taunt_kept {
+            if taunts {
+                value -= (1.0 - w.position_grants) * (weights.taunt + w.armor_point);
+            }
+        } else {
+            if taunts && !has_keyword(&card_keywords(state, unit), KeywordKind::Taunt) {
+                value -= (1.0 - w.position_grants) * weights.taunt;
+            }
+            if view.armor > 0 {
+                value -= (1.0 - w.position_grants) * w.armor_point;
+            }
+        }
     }
-    value * brittle_share(unit, w)
+    // §10.1: the counters on the card are worth their own, outside the Brittle share — Fed Fauci's
+    // Plague Counters are mana it already banked, not part of the body that crumbles.
+    value * brittle_share(unit, w) + w.plague_counter * f64::from(unit.counters.plague.unwrap_or(0))
 }
 
 /// B3.4, R65: the crystals the card's own `costMod` moves its cost by (`own_cost`, floored at 0 as a
@@ -130,7 +150,20 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         value += unit_worth(state, unit, w);
     }
 
+    // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
+    value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
+    // is worth nothing.
+    let lapsing: Vec<String> = if state.active == player {
+        credit_lapsing(state, player)
+    } else {
+        Vec::new()
+    };
+
     for card in side.backrow.iter().flatten() {
+        if lapsing.iter().any(|id| id == &card.id) {
+            continue;
+        }
         let def = find_def(Some(state), &card.def_id);
         match def {
             Some(def) if readable_by(state, card, seat) => {
@@ -139,6 +172,18 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                 // B3.1: a Unit in waiting (`unit_worth` brings its own Brittle share).
                 if w.animated_share != 0.0 && animated_kind_of(state, card).is_some() {
                     value += w.animated_share * unit_worth(state, card, w);
+                }
+                // §10.1, R27/R62: a grade counter's banked steps are worth their own — a Combo-Index
+                // at B is not the fresh one its def prints. On the controller's own turn a rise this
+                // turn's plays already arm counts as banked: the beam can prefer the lines that
+                // spend enough to set it off, as the glow does (`grade_rises`, which reads the same
+                // per-turn log it will fire on).
+                if card.counters.grade.is_some() {
+                    let grade = subsystems::grade_of(card);
+                    if !subsystems::is_terminal_grade(grade) {
+                        let armed = card.controller == state.active && subsystems::grade_rises(state, card);
+                        value += w.grade_counter * f64::from(grade - FIRST_GRADE + i32::from(armed));
+                    }
                 }
             }
             _ => value += w.enemy_face_down,

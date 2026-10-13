@@ -1,17 +1,15 @@
 //! The Conquest series' pure rules (`src/api/series_rules.rs`, SPEC §9.5, R330–R337, R259–R263).
 //!
-//! No store, no clock and no router: every transition is a function of a row and a time, so each
-//! ruling is checked here exhaustively on hand-built rows, and `series.rs` /
-//! `tests/actor/series_recovery.rs` check the same rulings once more through the server.
+//! No store, no clock and no router: every transition is a function of a row and a time, checked
+//! here on hand-built rows; `series.rs` and `tests/actor/series_recovery.rs` check the same rulings
+//! through the server.
 //!
-//! The two trios are built from the owners' names ("alice", "bob"), so "the projection never
-//! carries the opponent's deck names or cards" is a substring search: nothing in bob's view may
-//! contain "alice", whatever state the series is in.
+//! The trios are built from the owners' names ("alice", "bob"), so "the projection never carries
+//! the opponent's deck names or cards" is a substring search: nothing in bob's view may contain
+//! "alice".
 //!
-//! Port of `apps/server/test/api/series-rules.test.ts`. Rows and views are read as their JSON
-//! (TS's keys, camelCase), so the cases depend on the wire shape of `SeriesRow` and `SeriesView`,
-//! not on the Rust field types; the transitions are called with typed arguments. A transition that
-//! TS threw from returns `Result<_, SeriesRefusal>` here, and `refusal_of` reads its `reason`.
+//! Rows and views are read as camelCase JSON, so cases depend on the wire shape, not the Rust field
+//! types. A refused transition returns `Result<_, SeriesRefusal>`; `refusal_of` reads its `reason`.
 
 use jackioh_engine::validator::TRIO_DECKS;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
@@ -32,15 +30,15 @@ const BOB: &str = "profile-bob";
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
-/// TS's `["p1", "p2"] as const`: the two series seats in seat order.
+/// The two series seats in seat order.
 const SEATS: [PlayerId; 2] = [PlayerId::P1, PlayerId::P2];
 
-/// The JSON a row, a view or any port value serialises to (TS's object, as the client sees it).
+/// The JSON a row or a view serialises to, as the client sees it.
 fn j<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("the value serialises")
 }
 
-/// TS's `array.at(-1)`: the last element, or null for an empty or missing array.
+/// The last element, or null for an empty or missing array.
 fn last(array: &Value) -> Value {
     array
         .as_array()
@@ -49,7 +47,6 @@ fn last(array: &Value) -> Value {
         .unwrap_or(Value::Null)
 }
 
-/// TS's `array.map(f)` over a JSON array.
 fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     Value::Array(
         array
@@ -59,7 +56,6 @@ fn map(array: &Value, f: impl Fn(&Value) -> Value) -> Value {
     )
 }
 
-/// TS's `Object.keys(object).sort()`.
 fn keys(object: &Value) -> Vec<String> {
     let mut keys: Vec<String> = object
         .as_object()
@@ -69,13 +65,11 @@ fn keys(object: &Value) -> Vec<String> {
     keys
 }
 
-/// TS's `set.has(x)` over a set read as its JSON array.
 fn has(set: &Value, x: &Value) -> bool {
     set.as_array().is_some_and(|items| items.contains(x))
 }
 
-/// TS's `toMatchObject`: every key `expected` names holds the same value in `actual` (objects
-/// partially, arrays element for element), and nothing else is compared.
+/// Every key `expected` names holds the same value in `actual` (objects partially, arrays whole).
 fn assert_match(actual: &Value, expected: &Value) {
     fn matches(actual: &Value, expected: &Value) -> bool {
         match (actual, expected) {
@@ -91,7 +85,7 @@ fn assert_match(actual: &Value, expected: &Value) {
     assert!(matches(actual, expected), "expected {actual} to match {expected}");
 }
 
-/// A slot or a game number in whatever integer type the rules take (TS: `number`).
+/// A slot or a game number in whatever integer type the rules take.
 fn int<T: TryFrom<i64>>(n: i64) -> T
 where
     T::Error: std::fmt::Debug,
@@ -99,7 +93,7 @@ where
     T::try_from(n).expect("a slot or game number the rules' signature can hold")
 }
 
-/// TS's `seriesScore`, read as a number (`1`, `0.5`, `0`) or `None`.
+/// `series_score` read as a number (`1`, `0.5`, `0`) or `None`.
 fn score(series: &SeriesRow) -> Option<f64> {
     j(&series_score(series)).as_f64()
 }
@@ -118,7 +112,7 @@ fn trio(owner: &str) -> FrozenTrio {
     serde_json::from_value(trio_json(owner)).expect("a FrozenTrio")
 }
 
-/// TS's `fresh(now = NOW)`; no test passes another time, so it is fixed at `NOW`.
+/// A fresh series at `NOW`.
 fn fresh() -> SeriesRow {
     let input: NewSeriesInput = serde_json::from_value(json!({
         "seriesId": "series-1",
@@ -138,8 +132,6 @@ fn fresh() -> SeriesRow {
 /// Both sides pick (when the game is not already under way), then the game ends. A side whose pick
 /// the rules already made (R332) is not asked again, and the test says so when the pick it asked for
 /// is not the one made.
-///
-/// TS's `now` parameter defaulted to `NOW` and no test passes another, so it is fixed here.
 fn play(series: &SeriesRow, slots: [i64; 2], winner: Winner, next_match_id: &str) -> SeriesRow {
     let now = NOW;
     let mut row = series.clone();
@@ -177,13 +169,12 @@ fn lcg(seed: u32) -> impl FnMut() -> f64 {
     }
 }
 
-/// TS's `refusalOf(run)`: the reason a transition was refused, or `None` when it applied. TS also
-/// rethrew any other error; a Rust transition can only fail with a `SeriesRefusal`.
+/// The reason a transition was refused, or `None` when it applied.
 fn refusal_of<T>(run: Result<T, SeriesRefusal>) -> Option<SeriesRefusalReason> {
     run.err().map(|refusal| refusal.reason)
 }
 
-/// TS's `viewOf(series, profileId, now = NOW)`; no test passes another time.
+/// The projection for one profile at `NOW`.
 fn view_of(series: &SeriesRow, profile_id: &str) -> Value {
     match project_series(series, profile_id, NOW) {
         Some(view) => j(&view),
@@ -191,7 +182,7 @@ fn view_of(series: &SeriesRow, profile_id: &str) -> Value {
     }
 }
 
-/// TS's `{ before, after }` rating move, as `rateSeries` takes it.
+/// A rating move, as `rateSeries` takes it.
 fn rating_move(before: (f64, f64), after: (f64, f64)) -> RatingMove {
     RatingMove { before, after }
 }
@@ -502,9 +493,7 @@ mod r331_the_sealed_pick {
             refusal_of(pick_deck(&series, P1, int(3), NOW, None)),
             Some(SeriesRefusalReason::SlotOutOfRange)
         );
-        // TS also sent 1.5 and NaN. `pick_deck` takes an integer slot, so neither can reach it: the
-        // pick route's body check (`slotOf` in series.ts) refuses a slot that is not a whole number
-        // before any rule runs, which `tests/api/series.rs` asserts with 0.5 and "0".
+        // A non-integer slot never reaches `pick_deck`: the route's body check refuses it first.
 
         // R333: the clock closes picking at its deadline.
         assert_eq!(
@@ -1321,7 +1310,7 @@ mod r262_how_a_series_is_rated {
 mod r263_a_series_is_written_by_compare_and_set {
     use super::*;
 
-    /// TS's `step`: the transition moved the version by exactly one and stamped `updatedAt`.
+    /// The transition moved the version by exactly one and stamped `updatedAt`.
     fn step(row: &mut SeriesRow, next: SeriesRow, at: i64) {
         assert_eq!(
             j(&next)["version"].as_i64(),

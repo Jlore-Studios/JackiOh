@@ -1,29 +1,26 @@
-// The rules box's reading floor (fit.ts), against a modelled layout.
-//
-// jsdom has no layout, so `useFitText` is a no-op there (CardFace.test.tsx B15). This file gives a
-// rules box a small model of one instead: a box of a known height, a font that is the base size
-// times the length tier's scale times `--cf-fit` (or the base size times `--cf-fit` in the long
-// layout, as cards.css has it), and text that needs `need × font²` pixels of height. That is enough
-// to drive every branch of the floor: fits as it is, fits once the tier's head start is dropped,
-// fits in the long layout, clamps at the floor, and a face too small for the floor at all. The
-// component specs (card-faces B15, deckbuilder-layout) prove the same thing on real layout. The last
-// describe is the scheduler: fits queued together are read together, round by round.
+// The rules box's reading floor (fit.ts), against a modelled layout. jsdom has no layout, so
+// `useFitText` is a no-op there (CardFace.test.tsx B15); a rules box gets a small model instead: a
+// known box height, a font of base size × tier scale × `--cf-fit` (no tier scale in the long
+// layout, as cards.css has it) and text that needs `need × font²` px of height. The component specs
+// (card-faces B15, deckbuilder-layout) prove the same on real layout. The last describe is the
+// scheduler: fits queued together are read together, round by round.
 
 import { cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FIT_FLOOR_PX, FIT_MIN } from "./constants.ts";
-import { flushFits, LONG_ATTRIBUTE, scheduleFit, SKIPPABLE_ATTRIBUTE, useFitText } from "./fit.ts";
+import { flushFits, LONG_ATTRIBUTE, LONGEST_ATTRIBUTE, scheduleFit, SKIPPABLE_ATTRIBUTE, useFitText } from "./fit.ts";
 
 type Model = {
   /** The font at full size (4.4cqh on a real face), in px. */
   basePx: number;
   /** The length tier's head start (TIER_SCALE). */
   tierScale: number;
-  /** Box heights in px: the ordinary rules box and the long layout's. */
+  /** Box heights in px: the ordinary rules box, the long layout's and the longest layout's (the long one's when absent). */
   box: number;
   longBox: number;
+  longestBox?: number;
   /** Height the text needs is `need × font²`. */
   need: number;
 };
@@ -45,7 +42,9 @@ function fontOf(element: HTMLElement, model: Model): number {
 }
 
 function boxOf(element: HTMLElement, model: Model): number {
-  return element.closest(".cf")?.getAttribute(LONG_ATTRIBUTE) === "true" ? model.longBox : model.box;
+  const face = element.closest(".cf");
+  if (face?.getAttribute(LONGEST_ATTRIBUTE) === "true") return model.longestBox ?? model.longBox;
+  return face?.getAttribute(LONG_ATTRIBUTE) === "true" ? model.longBox : model.box;
 }
 
 /** Counts the layouts a run pays for: a write dirties layout, and the next read of it pays once. */
@@ -149,13 +148,24 @@ describe("the rules box's reading floor", () => {
     // Needs 1.2 × 9² ≈ 97 px: over the 80 px box, inside the 120 px one.
     const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 1.2 });
     expect(face.getAttribute(LONG_ATTRIBUTE)).toBe("true");
+    expect(face.hasAttribute(LONGEST_ATTRIBUTE)).toBe(false);
     expect(font).toBeGreaterThanOrEqual(FIT_FLOOR_PX - 0.05);
     expect(text.hasAttribute("data-clamped")).toBe(false);
   });
 
-  it("clamps at the floor, to the lines the long box holds, when even that is too small", () => {
-    const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, need: 3 });
+  it("takes the longest layout when the long box still cannot hold the text at the floor (#617)", () => {
+    // Needs 1.7 × 9² ≈ 146 px: over the 120 px long box, inside the 160 px longest one.
+    const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 120, longestBox: 160, need: 1.7 });
     expect(face.getAttribute(LONG_ATTRIBUTE)).toBe("true");
+    expect(face.getAttribute(LONGEST_ATTRIBUTE)).toBe("true");
+    expect(font).toBeGreaterThanOrEqual(FIT_FLOOR_PX - 0.05);
+    expect(text.hasAttribute("data-clamped")).toBe(false);
+  });
+
+  it("clamps at the floor, to the lines the longest box holds, when even that is too small", () => {
+    const { text, face, font } = fitted({ basePx: 11, tierScale: 0.62, box: 80, longBox: 100, longestBox: 120, need: 3 });
+    expect(face.getAttribute(LONG_ATTRIBUTE)).toBe("true");
+    expect(face.getAttribute(LONGEST_ATTRIBUTE)).toBe("true");
     expect(text.getAttribute("data-clamped")).toBe("true");
     expect(font).toBeGreaterThanOrEqual(FIT_FLOOR_PX);
     expect(font).toBeLessThan(FIT_FLOOR_PX + 0.05);
@@ -351,8 +361,7 @@ describe("a face the browser skips waits for it (#263)", () => {
 
   /**
    * A skippable item holding one text box. `state.skipped` is what `content-visibility: auto` would
-   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it, as for a box that
-   * is hidden some other way.
+   * say; `checkVisibility({ contentVisibilityAuto: true })` answers false for it.
    */
   function skippable(state: { skipped: boolean }, holder = true): { item: HTMLElement; text: HTMLElement } {
     const item = document.createElement("div");

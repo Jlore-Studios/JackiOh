@@ -3,19 +3,9 @@
 //! can cost the result. The real engine plays the games, through the real registry, actor and
 //! results writer, driven over the match protocol by two in-memory sockets.
 //!
-//! Port of `apps/server/test/api/game-records.test.ts`. What moved, and why (SURFACE §11.3: the
-//! server links the real engine and has no `EnginePort` or `GameRecorder` port):
-//!
-//!  - TS ended its games with the scripted `test-lethal`; here the losing seat concedes once both
-//!    mulligans are in, which ends a real game in one action and needs no scripted card. The record's
-//!    `reason` is therefore `concede`, and its opening hands are the real deal's.
-//!  - The recorder is no longer optional: every live record is filed under the compiled-in patch
-//!    (`jackioh_cards::catalog_version()`, R388's newest), so TS's "nor without a recorder" half and
-//!    its composition-root test (which proved the runtime bound the recorder) have nothing left to
-//!    prove. `loadCurrentPatch`'s file reading went with them; its "the list's order is the order of
-//!    versions" half is the patch-list test below.
-//!  - Log lines are read off the `tracing` JSON the server writes (`log_lines`), not a recording
-//!    logger.
+//! The losing seat concedes once both mulligans are in, which ends a real game in one action:
+//! the record's `reason` is `concede`. Every live record is filed under the compiled-in patch
+//! (`jackioh_cards::catalog_version()`, R388's newest). Surface contract: docs/v0.3.0/SURFACE.md §11.3.
 
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
@@ -39,11 +29,9 @@ const MATCH_ID: &str = "match-records";
 const P1: &str = "profile-1";
 const P2: &str = "profile-2";
 
-// ---------------------------------------------------------------------------------------------
 // Plumbing (private copies: each test file of this binary keeps its own)
-// ---------------------------------------------------------------------------------------------
 
-/// A port value built from TS's own object literal, so the test depends on the JSON shape only.
+/// A port value built from an object literal, so the test depends on the JSON shape only.
 fn from<T: DeserializeOwned>(value: Value) -> T {
     match serde_json::from_value(value.clone()) {
         Ok(parsed) => parsed,
@@ -55,7 +43,6 @@ fn to_json<T: Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// One store call in its own transaction, as every TS `deps.store.<x>.<y>(…)` call was.
 macro_rules! q {
     ($app:expr, $method:ident($($arg:expr),* $(,)?)) => {{
         let mut tx = $app.db.begin(None).await.expect("begin");
@@ -65,7 +52,6 @@ macro_rules! q {
     }};
 }
 
-/// The fake store's tables, for what TS read off `deps.store.tables` and `seedProfile`.
 async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
     match &app.db {
         Db::Fake(data) => data.lock().await,
@@ -73,7 +59,6 @@ async fn fake(app: &App) -> MutexGuard<'_, FakeData> {
     }
 }
 
-/// The JSON lines the server's `tracing` writes while the guard is held (TS's recording logger).
 #[derive(Clone, Default)]
 struct LogLines(Arc<StdMutex<Vec<u8>>>);
 
@@ -97,7 +82,6 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for LogLines {
 }
 
 impl LogLines {
-    /// How many lines name `event` (TS: `log.entries.filter((entry) => entry.event === name)`).
     fn count(&self, event: &str) -> usize {
         let text = String::from_utf8_lossy(&self.0.lock().expect("log buffer")).into_owned();
         let needle = format!("\"{event}\"");
@@ -128,15 +112,13 @@ fn real_decks() -> (Vec<String>, Vec<String>) {
     (pool[..size].to_vec(), pool[size..size * 2].to_vec())
 }
 
-// ---------------------------------------------------------------------------------------------
 // A client on the match protocol
-// ---------------------------------------------------------------------------------------------
 
-/// One seat's end of an in-memory socket: what TS's `actor.submit` reached directly.
+/// One seat's end of an in-memory socket.
 struct Client {
     seat: &'static str,
     socket: Socket,
-    frames: mpsc::UnboundedReceiver<SocketFrame>,
+    frames: mpsc::Receiver<SocketFrame>,
     view: Option<Value>,
     sent: u32,
 }
@@ -329,9 +311,7 @@ async fn game_records(app: &App) -> Value {
     to_json(&fake(app).await.tables.game_records)
 }
 
-// ---------------------------------------------------------------------------------------------
 // live game records (§9.11)
-// ---------------------------------------------------------------------------------------------
 
 mod live_game_records {
     use super::*;
@@ -364,7 +344,6 @@ mod live_game_records {
         assert!(game["turns"].as_i64().is_some(), "turns: {}", game["turns"]);
         assert_eq!(game["seats"]["p1"]["deck"], json!(h.decks.0));
         assert_eq!(game["seats"]["p2"]["deck"], json!(h.decks.1));
-        // Nobody played a card before the concession.
         assert_eq!(game["seats"]["p1"]["played"], json!([]));
         assert_eq!(game["seats"]["p2"]["played"], json!([]));
         assert_eq!(logs.count("game.recorded"), 1);

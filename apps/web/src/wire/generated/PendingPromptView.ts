@@ -12,6 +12,7 @@ export type PendingPromptView = {
 forYou: true, choiceId: string, kind: PromptKind, options: Array<PendingOption>, min: number, max: number, prompt: string, 
 /**
  * B5 E18: a `pick` prompt's budget — the most the picked options' `cost`s may add up to
- * (Classic #44's "total cost of (5) or less"). Absent on every other prompt.
+ * (Classic #44's "total cost of (5) or less") — or a `market` prompt's yuan left (R1000). Absent
+ * on every other prompt.
  */
 budget?: number, };

@@ -23,6 +23,8 @@
 // card in a mulligan or a hand pick, a unit a target reaches — as it stands, and a Discover's card as
 // the game shows it. An option that names no card is its label; a Discover of numbers (#82 KY's
 // Trial, R247) offers exactly that, and each number is drawn on a card back, with no face to read.
+// A card the view says is Chinese (the option's or the listed card's `chinese`, ME-CN, R1301) is
+// named and drawn in the Chinese table's words.
 //
 // #492: one card picker (`CardChoice`) holds every picker whose options are cards, in the middle of
 // the screen: the mulligan, a Discover, a hand pick, a pick, a short "Choose one" (Appropriations'),
@@ -83,13 +85,18 @@ import {
   zoneKey,
   zonesInBoardOrder,
   parseZoneKey,
+  type FaceDownChoice,
   type Interaction,
   type PlagueChoice,
   type PlayBuild,
   type PlayNeed,
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { isZhCn, t, useLocale } from "../i18n/i18n.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
+import { CraftEditor } from "./craft/CraftEditor.tsx";
+import MarketPrompt from "./MarketPrompt.tsx";
 import { liveFace } from "./faces.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, sideOf, testid } from "./contract.ts";
 import { modeText } from "./modeText.ts";
@@ -142,6 +149,8 @@ type PickerItem = {
   /** Set when the option names a card, so the picker can show its real name (`catalog.ts`). */
   defId?: string;
   radiant?: boolean;
+  /** R1301: the option says the card is shown in Chinese (`PendingOption.chinese`). */
+  chinese?: boolean;
   /** The card's cost as the view carries it (`CardView.cost`), for its face's gem. */
   cost?: number;
   /** The card as the view lists it, when it lists it: its face is then the card as it stands. */
@@ -180,6 +189,12 @@ type Picker = {
   title: string;
   /** The card asking, when the picker knows it: its name heads the title ("Pocket Chaos: choose one"). */
   sourceDefId?: string;
+  /**
+   * #617: the card being played, as the view lists it, when the options are words rather than faces
+   * (a "Choose one"): its name in the title opens its preview and long-press sheet, so the card can
+   * be read while its choice is open, on a phone too.
+   */
+  sourceCard?: CardView;
   items: PickerItem[];
   min: number;
   max: number;
@@ -243,17 +258,24 @@ function cardRefFor(view: PlayerView, instanceId: string): CardRef | null {
  */
 function whereOf(view: PlayerView, instanceId: string): string | null {
   for (const side of [view.you, view.opponent]) {
-    const whose = side === view.you ? "Your" : "Enemy";
+    // One whole sentence per side, so "Your" and "Enemy" are the reader's words too.
+    const yours = side === view.you;
     const unitAt = side.units.findIndex((pile) => pile !== null && pile.instanceId === instanceId);
-    if (unitAt >= 0) return `${whose} unit, lane ${String(unitAt + 1)}`;
+    if (unitAt >= 0) {
+      const lane = String(unitAt + 1);
+      return yours ? t("Your unit, lane {lane}", { lane }) : t("Enemy unit, lane {lane}", { lane });
+    }
     const backrowAt = side.backrow.findIndex(
       (slot) => slot !== null && slot.faceDown === false && slot.instanceId === instanceId,
     );
-    if (backrowAt >= 0) return `${whose} backrow, lane ${String(backrowAt + 1)}`;
+    if (backrowAt >= 0) {
+      const lane = String(backrowAt + 1);
+      return yours ? t("Your backrow, lane {lane}", { lane }) : t("Enemy backrow, lane {lane}", { lane });
+    }
     const hand = Array.isArray(side.hand) ? side.hand : [];
-    if (hand.some((card) => card.instanceId === instanceId)) return `${whose} hand`;
-    if (side.graveyard.some((card) => card.instanceId === instanceId)) return `${whose} graveyard`;
-    if (side.exile.some((card) => card.instanceId === instanceId)) return `${whose} exile`;
+    if (hand.some((card) => card.instanceId === instanceId)) return yours ? t("Your hand") : t("Enemy hand");
+    if (side.graveyard.some((card) => card.instanceId === instanceId)) return yours ? t("Your graveyard") : t("Enemy graveyard");
+    if (side.exile.some((card) => card.instanceId === instanceId)) return yours ? t("Your exile") : t("Enemy exile");
   }
   return null;
 }
@@ -270,7 +292,12 @@ function itemForInstance(view: PlayerView, instanceId: string, fallback: string)
 
 /** Lanes are 1-based, as `contract.ts` and the engine's `zones.ts` have them. */
 function zoneLabel(row: string, lane: number): string {
-  return `${row === "units" ? "Unit" : "Backrow"} lane ${lane}`;
+  return row === "units" ? t("Unit lane {lane}", { lane }) : t("Backrow lane {lane}", { lane });
+}
+
+/** A zone grid's row heading: the row's own word, "units" or "backrow". */
+function rowName(row: string): string {
+  return row === "units" ? t("units") : row === "backrow" ? t("backrow") : row;
 }
 
 function selectionLabel(view: PlayerView, selection: Selection): string {
@@ -278,13 +305,19 @@ function selectionLabel(view: PlayerView, selection: Selection): string {
     case "instance":
       return cardRefFor(view, selection.instanceId)?.defId ?? selection.instanceId;
     case "hero":
-      return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} hero`;
-    case "zone":
-      return `${sideOf(view, selection.player) === "you" ? "Your" : "Enemy"} ${zoneLabel(selection.row, selection.lane)}`;
+      return sideOf(view, selection.player) === "you" ? t("Your hero") : t("Enemy hero");
+    case "zone": {
+      const { lane } = selection;
+      const yours = sideOf(view, selection.player) === "you";
+      if (selection.row === "units") return yours ? t("Your Unit lane {lane}", { lane }) : t("Enemy Unit lane {lane}", { lane });
+      return yours ? t("Your Backrow lane {lane}", { lane }) : t("Enemy Backrow lane {lane}", { lane });
+    }
     case "mode":
-      return selection.option;
+      return t(selection.option);
+    case "craft":
+      return `${selection.recipe.adjective} ${selection.recipe.noun}`;
     case "none":
-      return "Nothing";
+      return t("Nothing");
   }
 }
 
@@ -298,17 +331,23 @@ function pickerForPending(
   legal: readonly ActionBody[],
 ): Picker {
   const items = pending.options.map((option): PickerItem => {
-    const base: PickerItem = { key: option.key, label: option.label };
+    // The engine's words for the option, in the reader's language where the dictionary has them.
+    const base: PickerItem = { key: option.key, label: t(option.label) };
     if (option.defId !== undefined) base.defId = option.defId;
     // B5 E17, E18: a card the view lists nowhere (the opponent's hand, C #11) is drawn from the
     // option itself, Radiant and at its cost where the option says so.
     if (option.radiant === true) base.radiant = true;
+    if (option.chinese === true) base.chinese = true;
     if (option.cost !== undefined) base.cost = option.cost;
-    if (option.row !== undefined) base.group = option.row;
+    if (option.row !== undefined) base.group = rowName(option.row);
     // R514: a `cell` is a zone of either side, so its list groups by side and row, lane by lane.
     if (pending.kind === "cell" && option.player !== undefined && option.row !== undefined && option.lane !== undefined) {
-      base.group = `${sideOf(view, option.player) === "you" ? "Your" : "Enemy"} ${option.row}`;
-      base.label = `Lane ${String(option.lane)}`;
+      const yours = sideOf(view, option.player) === "you";
+      base.group =
+        option.row === "units"
+          ? yours ? t("Your units") : t("Enemy units")
+          : yours ? t("Your backrow") : t("Enemy backrow");
+      base.label = t("Lane {lane}", { lane: String(option.lane) });
     }
     if (option.instanceId !== undefined) {
       const ref = cardRefFor(view, option.instanceId);
@@ -335,7 +374,8 @@ function pickerForPending(
   const picker: Picker = {
     chrome,
     ...(cards ? { cards } : {}),
-    title: pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt,
+    // The engine's prompt, in the reader's language where the dictionary has it.
+    title: t(pending.kind === "reward" ? pending.prompt.replace(QUEST_COMPLETE_PREFIX, "") : pending.prompt),
     items,
     min: pending.min,
     max: pending.max,
@@ -394,10 +434,13 @@ function isHandPick(need: PlayNeed, view: PlayerView): boolean {
 
 /** "Pay in mana only", "Spend 2 Plague Counters", and where they come from when several cards pay. */
 function plagueLabel(view: PlayerView, option: PlagueChoice, nameSource: boolean): string {
-  if (option === "none") return "Pay in mana only";
-  const tokens = `Spend ${String(option.tokens)} Plague ${option.tokens === 1 ? "Counter" : "Counters"}`;
+  if (option === "none") return t("Pay in mana only");
+  const n = String(option.tokens);
   const where = nameSource ? whereOf(view, option.from) : null;
-  return where === null ? tokens : `${tokens} (${where})`;
+  if (where === null) return option.tokens === 1 ? t("Spend {n} Plague Counter", { n }) : t("Spend {n} Plague Counters", { n });
+  return option.tokens === 1
+    ? t("Spend {n} Plague Counter ({where})", { n, where })
+    : t("Spend {n} Plague Counters ({where})", { n, where });
 }
 
 /** The card the play (or activation) in flight is building, as the view lists it. */
@@ -424,11 +467,11 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "zone",
-        title: "Choose a zone",
+        title: t("Choose a zone"),
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
           label: zoneLabel(zone.row, zone.lane),
-          group: zone.row,
+          group: rowName(zone.row),
         })),
         submit: (keys) => {
           const zone = keys[0] === undefined ? null : parseZoneKey(keys[0]);
@@ -444,7 +487,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         chrome: "x",
         ...(cards ? { cards } : {}),
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: "Choose X",
+        title: t("Choose X"),
         items: need.values.map((value) => {
           const item: PickerItem = { key: String(value), label: String(value) };
           return played === null ? item : { ...item, ...playedFace(played), caption: `X = ${String(value)}` };
@@ -461,9 +504,9 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         chrome: "embiggen",
         cards: true,
         ...(played === null ? {} : { sourceDefId: played.defId }),
-        title: "Pay the embiggen price?",
+        title: t("Pay the embiggen price?"),
         items: need.values.map((value) => {
-          const label = value ? "Embiggened" : "Normal";
+          const label = value ? t("Embiggened") : t("Normal");
           const item: PickerItem = { key: String(value), label };
           const price: EmbiggenPrice = value ? "embiggen" : "normal";
           return played === null ? item : { ...item, ...playedFace(played), caption: label, price };
@@ -475,9 +518,21 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: "tribute",
-        title: "Choose Tributes",
+        title: t("Choose Tributes"),
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
+      };
+    case "magnetic":
+      // R1086: one zone with both a plain and a Magnetic play asks which.
+      return {
+        ...common,
+        chrome: "mode",
+        title: t("Magnetic or Stack?"),
+        items: need.values.map((value) => ({
+          key: String(value),
+          label: value ? t("Magnetic") : t("Stack"),
+        })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
       };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
@@ -489,7 +544,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       return {
         ...common,
         chrome: inHand ? "hand" : "target",
-        title: inHand ? "Choose a card in your hand" : "Choose a target",
+        title: inHand ? t("Choose a card in your hand") : t("Choose a target"),
         items: need.selections.map((selection) => {
           const key = selectionKey(selection);
           const label = selectionLabel(view, selection);
@@ -521,7 +576,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         ...common,
         chrome: "number",
         variant: "plague",
-        title: "Pay with Plague Counters?",
+        title: t("Pay with Plague Counters?"),
         items: need.options.map((option) => ({
           key: plagueKey(option),
           label: plagueLabel(view, option, sources.size > 1),
@@ -529,6 +584,26 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         submit: (keys) => {
           const choice: PlagueChoice | undefined = keys[0] === undefined ? undefined : byKey.get(keys[0]);
           return choice === undefined ? {} : play({ plague: choice });
+        },
+      };
+    }
+    case "faceDown": {
+      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
+      const labels: Record<FaceDownChoice, string> = {
+        up: t("Play it face-up"),
+        endOfThisTurn: t("Set face-down: reveal at the end of this turn"),
+        startOfNextTurn: t("Set face-down: reveal at the start of your next turn"),
+        endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
+      };
+      return {
+        ...common,
+        chrome: "mode",
+        title: t("Play it how?"),
+        items: need.options.map((option) => ({ key: option, label: labels[option] })),
+        submit: (keys) => {
+          const choice: FaceDownChoice | undefined =
+            keys[0] === undefined ? undefined : (keys[0] as FaceDownChoice);
+          return choice === undefined || !Object.hasOwn(labels, choice) ? {} : play({ faceDown: choice });
         },
       };
     }
@@ -545,10 +620,10 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       const picker: Picker = {
         ...common,
         chrome: numbers ? "number" : isDirection(need.options) ? "direction" : discover ? "discover" : "mode",
-        title: numbers ? "Choose a number" : isDirection(need.options) ? "Choose a direction" : "Choose one",
+        title: numbers ? t("Choose a number") : isDirection(need.options) ? t("Choose a direction") : t("Choose one"),
         items: need.options.map((option): PickerItem => {
           const arrow = DIRECTIONS.find((d) => d === option);
-          if (arrow !== undefined) return { key: option, label: option, arrow };
+          if (arrow !== undefined) return { key: option, label: t(option), arrow };
           const text = modeText(source, option, radiant);
           return text.detail === undefined
             ? { key: option, label: text.label }
@@ -557,6 +632,7 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         submit: (keys) => play({ modes: [...keys] }),
       };
       if (source !== undefined) picker.sourceDefId = source;
+      if (played !== null) picker.sourceCard = played.card;
       return picker;
     }
   }
@@ -597,7 +673,17 @@ function pricedFace(face: FaceModel, price: EmbiggenPrice, card: CardView | unde
 
 /** What an embiggen option pays, in R432's words: "Pay (4)". */
 function priceLine(face: FaceModel): string {
-  return face.cost.text === UNKNOWN_PRICE ? "Pay the embiggen price" : `Pay (${face.cost.text})`;
+  return face.cost.text === UNKNOWN_PRICE ? t("Pay the embiggen price") : t("Pay ({cost})", { cost: face.cost.text });
+}
+
+/** R1301: the view flagged the option's card Chinese, by the option or by the card it lists. */
+function isFlagged(item: PickerItem): boolean {
+  return item.chinese === true || item.card?.chinese === true;
+}
+
+/** A card option's name: the catalog's, or the Chinese table's for a Chinese card (R1301). */
+function nameOf(defId: string, info: { name: string; def?: CardDef }, chinese: boolean): string {
+  return chinese ? chineseName(defId, info.name, info.def) : info.name;
 }
 
 // Polish 6 (a minimal edit to task 7's file, flagged in the PR): a card option draws the card's face,
@@ -612,10 +698,13 @@ function CardOption(props: {
   over?: boolean;
   onPick: () => void;
 }) {
+  useLocale();
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
-  const name = props.item.defId === undefined ? props.item.label : info.name;
+  // faceModel reads the reader's language itself (R711000), so the face gets the raw flag.
+  const flagged = isFlagged(props.item);
+  const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
   // The card in play: as the view lists it when it does, else a definition as the game shows it.
@@ -632,6 +721,7 @@ function CardOption(props: {
             def: info.def,
             name: info.name,
             radiant,
+            chinese: flagged,
             ...(cost === undefined ? {} : { liveCost: cost }),
             inPlay: {},
           });
@@ -648,10 +738,11 @@ function CardOption(props: {
   const verdict = props.verdicts === true ? (props.pressed ? "keep" : "redraw") : undefined;
   // The name, then the cost the gem shows, so a screen reader hears what a sighted player reads, in
   // R432's words ("costs (3)").
-  const faceLabel = `${name}, costs (${face?.cost.text ?? ""})`;
+  const faceLabel = t("{name}, costs ({cost})", { name, cost: face?.cost.text ?? "" });
   const named =
-    face === null ? (number === null ? undefined : `Number ${number}`) : caption === undefined ? faceLabel : `${caption}: ${faceLabel}`;
-  const label = props.over === true && named !== undefined ? `${named}, ${OVER_BUDGET.toLowerCase()}` : named;
+    face === null ? (number === null ? undefined : t("Number {n}", { n: number })) : caption === undefined ? faceLabel : `${caption}: ${faceLabel}`;
+  // R515: OVER_BUDGET's words in lower case after the name.
+  const label = props.over === true && named !== undefined ? t("{name}, over the budget", { name: named }) : named;
   return (
     <>
       <button
@@ -665,7 +756,7 @@ function CardOption(props: {
         aria-pressed={props.pressed}
         aria-disabled={props.over === true ? "true" : undefined}
         aria-label={label}
-        title={props.over === true ? OVER_BUDGET : undefined}
+        title={props.over === true ? t(OVER_BUDGET) : undefined}
         onClick={props.onPick}
         {...inspect.handlers}
       >
@@ -699,7 +790,7 @@ function CardOption(props: {
         )}
         {verdict === undefined ? null : (
           <span className="prompt-card-verdict" aria-hidden="true">
-            {verdict === "keep" ? "Keep" : "Redraw"}
+            {verdict === "keep" ? t("Keep") : t("Redraw")}
           </span>
         )}
       </button>
@@ -711,7 +802,9 @@ function CardOption(props: {
 function ListOption(props: { item: PickerItem; pressed: boolean; onPick: () => void }) {
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const name =
-    props.item.defId === undefined ? props.item.label : `${info.name} — ${props.item.where ?? props.item.label}`;
+    props.item.defId === undefined
+      ? props.item.label
+      : `${nameOf(props.item.defId, info, drawnInChinese(isFlagged(props.item)))} — ${props.item.where ?? props.item.label}`;
   return (
     <li>
       <button
@@ -761,13 +854,24 @@ function arrowFocus(columns: number) {
 }
 
 /** The picker's heading: the asking card's name before it, when the picker knows the card. */
-function PickerTitle(props: { title: string; sourceDefId: string | undefined }) {
-  const info = useCardInfo(props.sourceDefId ?? "", false);
+function PickerTitle(props: { title: string; sourceDefId: string | undefined; sourceCard: CardView | undefined }) {
+  const info = useCardInfo(props.sourceDefId ?? "", props.sourceCard?.radiant === true);
+  const face = props.sourceCard === undefined ? null : liveFace(info, props.sourceCard);
+  const inspect = useInspectTrigger(face === null ? null : { key: `prompt-source:${face.defId}`, face }, { prefer: "above", showLoc: false });
   if (props.sourceDefId === undefined) return <p className="prompt-title">{props.title}</p>;
+  // R711000: the asking card's name as a reader of Chinese reads it.
+  const name = nameOf(props.sourceDefId, info, isZhCn());
   return (
     <p className="prompt-title">
-      <span className="prompt-title-source">{info.name}</span>
+      {face === null ? (
+        <span className="prompt-title-source">{name}</span>
+      ) : (
+        <span className="prompt-title-source prompt-title-source--inspect" data-testid="prompt-title-source" {...inspect.handlers}>
+          {name}
+        </span>
+      )}
       <span className="prompt-title-ask">{props.title}</span>
+      {inspect.overlay}
     </p>
   );
 }
@@ -786,7 +890,7 @@ const BOARD_HINTS: Partial<Record<PromptKind, string>> = {
 
 function BoardHint(props: { chrome: PromptKind }) {
   const hint = BOARD_HINTS[props.chrome];
-  return hint === undefined ? null : <p className="prompt-board-hint">{hint}</p>;
+  return hint === undefined ? null : <p className="prompt-board-hint">{t(hint)}</p>;
 }
 
 /**
@@ -809,7 +913,7 @@ function CardChoice(props: {
     <>
       {budget === undefined ? null : (
         <p className="prompt-budget" data-testid="prompt-budget" role="status">
-          ({props.spent}) of ({budget.limit}) spent
+          {t("({spent}) of ({limit}) spent", { spent: props.spent, limit: budget.limit })}
         </p>
       )}
       <div className="prompt-cards" data-testid="prompt-cards" data-choice={picker.chrome}>
@@ -840,6 +944,7 @@ function PromptModal(props: {
   onCancel?: () => void;
   animating?: string;
 }) {
+  useLocale();
   const { picker } = props;
   const [selected, setSelected] = useState<readonly string[]>(() => picker.initial ?? []);
   /**
@@ -923,7 +1028,7 @@ function PromptModal(props: {
 
     if (picker.variant === "plague") {
       return (
-        <div className="prompt-chips prompt-plague" role="group" aria-label="Plague Counters">
+        <div className="prompt-chips prompt-plague" role="group" aria-label={t("Plague Counters")}>
           {items.map((item) => (
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
           ))}
@@ -986,8 +1091,8 @@ function PromptModal(props: {
       };
       return (
         <>
-          <div className="prompt-stepper" data-testid="x-stepper" role="group" aria-label="Choose X">
-            <button type="button" data-testid="x-minus" aria-label="Lower X" onClick={() => step(-1)}>
+          <div className="prompt-stepper" data-testid="x-stepper" role="group" aria-label={t("Choose X")}>
+            <button type="button" data-testid="x-minus" aria-label={t("Lower X")} onClick={() => step(-1)}>
               −
             </button>
             {/* The number is both typeable and readable: `prompt-x` is the input the value is
@@ -1006,7 +1111,7 @@ function PromptModal(props: {
             <span className="prompt-stepper-value" data-testid="x-value">
               {items[at]?.label ?? ""}
             </span>
-            <button type="button" data-testid="x-plus" aria-label="Raise X" onClick={() => step(1)}>
+            <button type="button" data-testid="x-plus" aria-label={t("Raise X")} onClick={() => step(1)}>
               +
             </button>
           </div>
@@ -1043,7 +1148,7 @@ function PromptModal(props: {
         <div
           className="prompt-numbers"
           role="group"
-          aria-label="Numbers"
+          aria-label={t("Numbers")}
           style={{ "--pad-columns": String(NUMBER_PAD_COLUMNS) } as CSSProperties}
           onKeyDown={arrowFocus(NUMBER_PAD_COLUMNS)}
         >
@@ -1056,7 +1161,7 @@ function PromptModal(props: {
 
     if (picker.chrome === "answer") {
       return (
-        <div className="prompt-answers" role="group" aria-label="Answers" onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
+        <div className="prompt-answers" role="group" aria-label={t("Answers")} onKeyDown={arrowFocus(ANSWER_COLUMNS)}>
           {items.map((item, at) => {
             const letter = ANSWER_LETTERS[at] ?? String(at + 1);
             return (
@@ -1082,7 +1187,7 @@ function PromptModal(props: {
 
     if (picker.chrome === "reward") {
       return (
-        <div className="prompt-rewards" role="group" aria-label="Rewards">
+        <div className="prompt-rewards" role="group" aria-label={t("Rewards")}>
           {items.map((item) => (
             <PlainOption key={item.key} item={item} pressed={pressed(item.key)} onPick={() => pick(item.key)} />
           ))}
@@ -1131,17 +1236,17 @@ function PromptModal(props: {
       >
         {picker.chrome === "reward" ? (
           <p className="prompt-quest-banner" data-testid="prompt-quest-complete">
-            {QUEST_COMPLETE}
+            {t(QUEST_COMPLETE)}
           </p>
         ) : null}
-        <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} />
+        <PickerTitle title={picker.title} sourceDefId={picker.sourceDefId} sourceCard={picker.sourceCard} />
         <p className="prompt-count">
-          Choose {range}: {selected.length} chosen
+          {t("Choose {range}: {count} chosen", { range, count: selected.length })}
         </p>
         {props.status}
         {body()}
         {(picker.chrome === "target" || picker.chrome === "cell") && props.boardTestids.length > 0 ? (
-          <p className="prompt-board-note">Highlighted on the board as well.</p>
+          <p className="prompt-board-note">{t("Highlighted on the board as well.")}</p>
         ) : null}
         {/* Shown only where the picker folds to a bar with no options in it (prompt.css). */}
         {props.source === "play" ? <BoardHint chrome={picker.chrome} /> : null}
@@ -1155,11 +1260,11 @@ function PromptModal(props: {
             }}
           >
             {/* R265: the mulligan's answer is sealed until both seats have given theirs. */}
-            {picker.chrome === "mulligan" ? "Ready" : "Confirm"}
+            {picker.chrome === "mulligan" ? t("Ready") : t("Confirm")}
           </button>
           {props.onCancel === undefined ? null : (
             <button type="button" data-testid="prompt-cancel" onClick={props.onCancel}>
-              Cancel
+              {t("Cancel")}
             </button>
           )}
         </div>
@@ -1174,6 +1279,7 @@ function PromptModal(props: {
  * opponent rather than a seat id: in practice that is the AI, which the HUD already shows thinking.
  */
 function Waiting(props: { pendingFor: PlayerId }) {
+  useLocale();
   return (
     <div className="prompt-scrim" data-testid="prompt-scrim">
       <div
@@ -1183,11 +1289,11 @@ function Waiting(props: { pendingFor: PlayerId }) {
         data-pending-for={props.pendingFor}
         role="dialog"
         aria-modal="true"
-        aria-label="Waiting for choice"
+        aria-label={t("Waiting for choice")}
       >
-        <p className="prompt-title">Waiting for choice</p>
+        <p className="prompt-title">{t("Waiting for choice")}</p>
         <p className="prompt-sub" role="status">
-          Your opponent is choosing…
+          {t("Your opponent is choosing…")}
         </p>
       </div>
     </div>
@@ -1199,6 +1305,7 @@ function Waiting(props: { pendingFor: PlayerId }) {
  * has is all the view says — never what it kept (§9.1).
  */
 function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
+  useLocale();
   const ready = props.mulligan.opponentReady;
   return (
     <p
@@ -1207,13 +1314,14 @@ function OpponentMulliganStatus(props: { mulligan: MulliganView }) {
       data-ready={ready ? "true" : "false"}
       role="status"
     >
-      {ready ? <span data-testid={testid.mulliganOpponentReady}>Opponent is ready</span> : "Opponent is choosing…"}
+      {ready ? <span data-testid={testid.mulliganOpponentReady}>{t("Opponent is ready")}</span> : t("Opponent is choosing…")}
     </p>
   );
 }
 
 /** A hand card on the waiting panel: its face, and the stamp saying whether it stays or goes back. */
 function WaitingCard(props: { card: CardView; keep: boolean }) {
+  useLocale();
   const info = useCardInfo(props.card.defId, props.card.radiant);
   const fieldPower = useFieldPower(props.card.instanceId);
   const copied = useCopiedDef(props.card);
@@ -1222,19 +1330,21 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
     ...(copied === undefined ? {} : { copied }),
   });
   const verdict = props.keep ? "keep" : "redraw";
+  // R711000: the card's name as a reader of Chinese reads it.
+  const name = isZhCn() ? chineseName(props.card.defId, info.name, info.def) : info.name;
   return (
     <span
       className="prompt-card"
       data-testid={`mulligan-waiting-card-${props.card.instanceId}`}
       data-verdict={verdict}
-      aria-label={`${info.name}: ${props.keep ? "kept" : "going back"}`}
+      aria-label={props.keep ? t("{name}: kept", { name }) : t("{name}: going back", { name })}
       role="img"
     >
       <span className="cf-option">
         <CardFace face={face} layout="full" />
       </span>
       <span className="prompt-card-verdict" aria-hidden="true">
-        {props.keep ? "Keep" : "Redraw"}
+        {props.keep ? t("Keep") : t("Redraw")}
       </span>
     </span>
   );
@@ -1246,6 +1356,7 @@ function WaitingCard(props: { card: CardView; keep: boolean }) {
  * with what will happen to it (`kept` is the view's own record of the answer).
  */
 function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
+  useLocale();
   const hand = Array.isArray(props.view.you.hand) ? props.view.you.hand : [];
   const kept = new Set(props.mulligan.kept ?? hand.map((card) => card.instanceId));
   const back = hand.filter((card) => !kept.has(card.instanceId)).length;
@@ -1262,12 +1373,14 @@ function MulliganWaiting(props: { view: PlayerView; mulligan: MulliganView }) {
         aria-labelledby={titleId}
       >
         <p className="prompt-title" id={titleId}>
-          Waiting for your opponent…
+          {t("Waiting for your opponent…")}
         </p>
         <p className="prompt-sub" role="status">
           {back === 0
-            ? "You're ready and keeping your whole hand."
-            : `You're ready. ${String(back)} ${back === 1 ? "card goes" : "cards go"} back and ${back === 1 ? "is" : "are"} redrawn once your opponent is ready too.`}
+            ? t("You're ready and keeping your whole hand.")
+            : back === 1
+              ? t("You're ready. {count} card goes back and is redrawn once your opponent is ready too.", { count: back })
+              : t("You're ready. {count} cards go back and are redrawn once your opponent is ready too.", { count: back })}
         </p>
         <MatchCardsProvider view={props.view}>
           <div className="prompt-cards">
@@ -1286,6 +1399,7 @@ function needKey(need: PlayNeed): string {
 }
 
 export default function Prompt(props: PromptProps) {
+  useLocale();
   const interaction = props.interaction ?? IDLE;
   const boardTestids = [...highlightFor(props.view, props.legal ?? [], interaction).legal].sort();
   const pending = props.view.pending;
@@ -1301,6 +1415,29 @@ export default function Prompt(props: PromptProps) {
   // R243: an option naming a match-made card (a crafted card in a hand pick) reads its definition
   // from the view, and a Heroic Power on the field its power.
   if (pending !== null) {
+    // ME-CRAFT (Meditative #17, R880): a craft prompt opens the block editor, not the picker.
+    if (pending.kind === "craft") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <CraftEditor key={pending.choiceId} pending={pending} onAction={props.onAction} />
+        </MatchCardsProvider>
+      );
+    }
+    // ME-MARKET (Meditative #42, R1000): a night market opens its stall, not the picker.
+    if (pending.kind === "market") {
+      return (
+        <MatchCardsProvider view={props.view}>
+          <MarketPrompt
+            key={pending.choiceId}
+            view={props.view}
+            pending={pending}
+            legal={props.legal ?? []}
+            onAction={props.onAction}
+            {...(props.animating === undefined ? {} : { animating: props.animating })}
+          />
+        </MatchCardsProvider>
+      );
+    }
     return (
       <MatchCardsProvider view={props.view}>
         <PromptModal

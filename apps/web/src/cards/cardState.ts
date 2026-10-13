@@ -14,11 +14,13 @@
 
 import type { CardType, Enchantment, QuestView } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
 import type { IconName } from "./icons.tsx";
 import type { FaceModel } from "./model.ts";
+import { CHINESE_TERMS, readerTerms } from "./chinese.ts";
 import { VERDICT_GLYPH, VERDICT_WORD, tuningSummary } from "./tuning.ts";
 
-export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk";
+export type StateBadgeKind = "brittle" | "quest" | "tuned" | Enchantment["kind"] | "animated" | "berserk" | "created";
 
 export type StateBadge = {
   kind: StateBadgeKind;
@@ -37,7 +39,7 @@ export const PILE_WORDS = "Cards buried under this pile";
 
 /** R385: "Brittle 2: crumbles at 0". */
 export function brittleWords(count: number): string {
-  return `Brittle ${String(count)}: crumbles at 0`;
+  return t("Brittle {n}: crumbles at 0", { n: count });
 }
 
 /** R404: an open quest's progress against its goal, "1/2". */
@@ -47,7 +49,8 @@ export function questProgress(quest: QuestView["open"][number]): string {
 
 /** R404: an open quest in words, "Quest: Draw 2 cards (1/2)". */
 export function questWords(quest: QuestView["open"][number]): string {
-  return `Quest: ${quest.text} (${questProgress(quest)})`;
+  // `quest.text` is the engine's English (the view's), looked up as it is displayed.
+  return t("Quest: {text} ({progress})", { text: t(quest.text), progress: questProgress(quest) });
 }
 
 /**
@@ -57,13 +60,13 @@ export function questWords(quest: QuestView["open"][number]): string {
 export function enchantmentWords(enchantment: Enchantment, radiant = false): string {
   switch (enchantment.kind) {
     case "returnAfterResolve":
-      return `Returns to hand · can't cost less than (${String(enchantment.floor)})`;
+      return t("Returns to hand · can't cost less than ({floor})", { floor: enchantment.floor });
     case "castOnDraw":
-      return "Cast on draw";
+      return t("Cast on draw");
     case "targetEnemies":
-      return "Targets enemies";
+      return t("Targets enemies");
     case "swapsBook":
-      return `End of turn: Become a random other ${radiant ? "Radiant " : ""}Book`;
+      return radiant ? t("End of turn: Become a random other Radiant Book") : t("End of turn: Become a random other Book");
   }
 }
 
@@ -82,8 +85,10 @@ const ENCHANTMENT_ICON: Readonly<Record<Enchantment["kind"], IconName>> = {
  * your turn" card goes back to (`UnitView.animated.home`, a backrow lane).
  */
 export function animatedWords(animated: { home?: number }, type: CardType): string {
-  if (animated.home === undefined) return `Animated: this ${type} stands in a unit zone as a Unit`;
-  return `Animated on your turn: back to its backrow (lane ${String(animated.home)}) at the end of its controller's turn`;
+  if (animated.home === undefined) {
+    return t("Animated: this {type} stands in a unit zone as a Unit", { type: readerTerms()?.types[type] ?? type });
+  }
+  return t("Animated on your turn: back to its backrow (lane {lane}) at the end of its controller's turn", { lane: animated.home });
 }
 
 /** The enchantments a face shows, each distinct one once, in the order the view lists them. */
@@ -155,7 +160,17 @@ export function stateBadges(face: FaceModel): StateBadge[] {
   }
   // B5 E35: a Berserk unit, in its glossary row's words (§6.1).
   if (face.berserk === true) {
-    badges.push({ kind: "berserk", text: null, icon: "sword", words: BERSERK_WORDS, data: { "data-berserk": "true" } });
+    badges.push({ kind: "berserk", text: null, icon: "sword", words: t(BERSERK_WORDS), data: { "data-berserk": "true" } });
+  }
+  // MD-B6, R943: a Created card, made during the game.
+  if (face.created === true) {
+    badges.push({
+      kind: "created",
+      text: face.chinese === true ? CHINESE_TERMS.created : "Created",
+      icon: null,
+      words: t("Created: made during the game"),
+      data: { "data-created": "true" },
+    });
   }
   return badges;
 }

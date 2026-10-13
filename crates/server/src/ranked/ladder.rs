@@ -1,5 +1,5 @@
 //! The visible ladder (SPEC §9.12, R605–R608): the Grape tiers a player climbs, read off the hidden
-//! rating (`glicko2.rs`) without ever showing it (← `apps/server/src/ranked/ladder.ts`).
+//! rating (`glicko2.rs`) without ever showing it.
 //!
 //! A placed player's rank is one integer, `ladder`: the pips they stand above the bottom of Rotten
 //! Grape III. Each tier has `RANK_DIVISIONS_PER_TIER` divisions of `RANK_PIPS_PER_DIVISION` pips, so
@@ -24,8 +24,7 @@ use crate::config::{
     RANK_TIER_PERCENTS, RANK_WIN_PIPS,
 };
 
-/// One Grape tier (TS `GrapeTier`, `(typeof GRAPE_TIERS)[number]`). Declared lowest first, so a
-/// variant's discriminant is its index in `GRAPE_TIERS`.
+/// One Grape tier. Declared lowest first, so a variant's discriminant is its index in `GRAPE_TIERS`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum GrapeTier {
@@ -37,7 +36,6 @@ pub enum GrapeTier {
 }
 
 impl GrapeTier {
-    /// The literal, as TS writes it.
     pub fn as_str(self) -> &'static str {
         match self {
             GrapeTier::Rotten => "rotten",
@@ -97,7 +95,6 @@ impl RankTier {
     }
 }
 
-/// Pips in one Grape tier.
 pub const PIPS_PER_TIER: i32 = RANK_DIVISIONS_PER_TIER * RANK_PIPS_PER_DIVISION;
 /// The highest ladder position: Mythic Grape I with every pip but the last. Wins past it hold it.
 pub const LADDER_TOP: i32 = GRAPE_TIERS.len() as i32 * PIPS_PER_TIER - 1;
@@ -106,7 +103,6 @@ const MYTHIC: i32 = GrapeTier::Mythic as i32;
 
 const PERCENT: i32 = 100;
 
-/// `RANK_TIER_PERCENTS[tier]`.
 const fn percent_of(tier: GrapeTier) -> i32 {
     match tier {
         GrapeTier::Rotten => RANK_TIER_PERCENTS.rotten,
@@ -117,8 +113,7 @@ const fn percent_of(tier: GrapeTier) -> i32 {
     }
 }
 
-// TS checked this when the module loaded and threw; here it is checked when the crate compiles.
-// The percents are integers by type, so "whole" holds already.
+// Checked at compile time; the percents are integers by type, so "whole" holds already.
 const _: () = {
     let mut total = 0;
     let mut index = 0;
@@ -197,7 +192,7 @@ pub fn fresh_rank(season_id: &str, profile_id: &str, at: i64) -> SeasonRank {
     }
 }
 
-/// The Grape tier (an index into `GRAPE_TIERS`) a ladder position is in.
+/// The Grape tier index a ladder position is in.
 pub fn tier_index_of(ladder: i32) -> i32 {
     ladder
         .div_euclid(PIPS_PER_TIER)
@@ -210,7 +205,6 @@ pub fn tier_bottom(tier_index: i32) -> i32 {
     tier_index * PIPS_PER_TIER
 }
 
-/// `GRAPE_TIERS[index] ?? fallback`.
 fn grape_at(index: i32, fallback: GrapeTier) -> GrapeTier {
     usize::try_from(index)
         .ok()
@@ -288,7 +282,6 @@ pub fn target_ladder(percentile: &Percentile) -> i32 {
     LADDER_TOP
 }
 
-/// `pip_delta`'s input (TS's anonymous `{ result, ladder, target, streak }`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PipDeltaInput {
     pub result: GameResult,
@@ -330,7 +323,6 @@ pub fn pip_delta(input: &PipDeltaInput) -> i32 {
     }
 }
 
-/// `apply_ranked_game`'s input (TS's anonymous `{ result, target, at }`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ApplyRankedGameInput {
     pub result: GameResult,
@@ -400,8 +392,7 @@ pub fn jlorious_order(standings: &[Standing]) -> Vec<String> {
                 .is_some_and(|ladder| tier_index_of(ladder) == MYTHIC)
         })
         .collect();
-    // TS `b.rating - a.rating || (a.profileId < b.profileId ? -1 : …)`: a difference of 0 (or NaN)
-    // falls through to the id. Stable, as `Array.prototype.sort` is.
+    // A tie (or NaN) falls through to the id; the sort is stable.
     mythic.sort_by(|a, b| {
         b.rating
             .partial_cmp(&a.rating)
@@ -429,10 +420,10 @@ pub fn with_jlorious_peak(rank: &SeasonRank, position: i32) -> SeasonRank {
 /// What a player is shown as (R612): Raisin with their placements, a Grape tier with its division,
 /// pips and the floor that holds them, or a Jlorious position. Never the rating.
 ///
-/// TS's union is discriminated on `tier`, whose Grape arm takes any of five values, so serde reads
-/// and writes it through [`VisibleRankWire`]: `{ "tier": "raisin", "placementsPlayed", "placementGames" }`,
+/// The Grape arm's `tier` takes any of five values, so serde goes through [`VisibleRankWire`]:
+/// `{ "tier": "raisin", "placementsPlayed", "placementGames" }`,
 /// `{ "tier": <grape>, "division", "pips", "pipsPerDivision", "floor" }` or
-/// `{ "tier": "jlorious", "position" }`, keys in TS's order.
+/// `{ "tier": "jlorious", "position" }`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "VisibleRankWire", try_from = "VisibleRankWire")]
 pub enum VisibleRank {

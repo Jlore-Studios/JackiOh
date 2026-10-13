@@ -1,32 +1,6 @@
-// Polish 1 (docs/polish/1-animations.md): the effects layer in a real browser. B28's real DPR,
-// B35's board shake through `boardShakeSink`, and B40's browser half (the layer takes no click,
-// the canvas really draws, the board still fits).
-//
-// Mounted the way board-layout.cy.tsx mounts the board, for the reasons its header gives: `Game`
-// inside `.app-shell.app-shell--wide`, on `fullBoardView()`. Then rerendered with the same view plus
-// three appended events, which `Game` hands to its runner as new (the first view's window was
-// empty): an 8-damage spell hit on the enemy's 10/10 in lane 5, a summon into the viewer's lane 3,
-// and the viewer's turn starting. The FX layer decorates all three with its production defaults:
-// real `requestAnimationFrame`, `resolveAnchor`, `createSurface` and `boardShakeSink(document)`.
-//
-// Nothing here waits on a clock. The two checks that depend on an effect being on screen are
-// taken in the page, on its own animation frames, by a watcher started before the events arrive
-// (`watchFrames`); the board's inline `translate` while it shakes is recorded by a
-// MutationObserver installed at the same moment. The spec then asserts on what they saw with
-// retried `should`s.
-//
-// Why in the page and in that order. The splat is over the idle card for only
-// FX_SPLAT_HOLD_MS (650 ms): it lands with the bolt at 0.55 of the 300 ms damage entry and the
-// card's own `data-animating` clears at 300 ms. Reading the canvas (`getImageData`) is a
-// synchronous GPU readback, and the first one after the canvas first draws is the expensive one
-// (30 to 70 ms against about 3 ms for the rest, on a loaded machine). This spec once polled pixels
-// first, and on a cold first test under heavy load the page froze for over a second right where
-// those readbacks ran, before the splat was due. By the next frame the splat's whole life had
-// passed, the director rightly skipped it (R200), and the splat check failed. So the watcher
-// looks for the splat first, and reads pixels only after it has seen the splat. A readback
-// returns the canvas as it was at the call, so even a slow one still sees the bolt's burst,
-// which lives 320 to 700 ms from ~180 ms.
-//
+// Polish 1: B28 checks clamped DPR, B35 board shake, and B40 that browser effects draw without blocking the board.
+// Mount a real `Game`, append events, then watch page frames before the effects begin.
+// The watcher must see the splat before synchronous `getImageData`: a delayed read can miss R200's short-lived effect.
 // Run: E2E_COMPONENT_PORT=5281 pnpm --dir e2e test:component --spec cypress/component/fx-layer.cy.tsx
 
 import { FX_MAX_DPR } from "../../../apps/web/src/fx/constants.ts";
@@ -47,10 +21,9 @@ const CANVAS = '[data-testid="fx-canvas"]';
 const FX_DOM = '[data-testid="fx-dom"]';
 const SPLAT = '[data-fx="splat"]';
 
-/** How far around the target card a lit pixel still counts as "near" it, in CSS px. */
 const NEAR_PX = 48;
 
-/** The burst, built from the fixture's own ids so a fixture change cannot leave it pointing at nothing. */
+/** Fixture-derived IDs keep the burst valid if the fixture changes. */
 function burstFor(view: PlayerView): { events: GameEvent[]; targetId: string } {
   const target = view.opponent.units[4];
   if (target === null || target === undefined) throw new Error("fullBoardView() has no enemy unit in lane 5");
@@ -60,7 +33,6 @@ function burstFor(view: PlayerView): { events: GameEvent[]; targetId: string } {
   return {
     targetId: target.instanceId,
     events: [
-      // Non-combat, from a card in the viewer's hand: a spell projectile, then the impact.
       { type: "damage", sourceId: spell.instanceId, targetId: target.instanceId, amount: 8, combat: false },
       { type: "summoned", player: view.viewer, instanceId: "fx-summoned", defId: "core-019", row: "units", lane: 3 },
       { type: "turnStarted", player: view.viewer, turn: view.turn + 1 },
@@ -68,7 +40,6 @@ function burstFor(view: PlayerView): { events: GameEvent[]; targetId: string } {
   };
 }
 
-/** True when any canvas pixel within `margin` CSS px of `box` has a non-zero alpha. */
 function litNear(canvas: HTMLCanvasElement, box: DOMRect, margin: number): boolean {
   const ctx = canvas.getContext("2d");
   if (ctx === null) return false;
@@ -88,18 +59,13 @@ function litNear(canvas: HTMLCanvasElement, box: DOMRect, margin: number): boole
   return false;
 }
 
-/** How long the frame watcher runs before it gives up, in ms of page time: far past every effect's tail. */
+/** Page-time watcher budget, beyond every effect tail. */
 const WATCH_MS = 6_000;
 
-/** What `watchFrames` saw. Every flag only ever turns true. */
 type Seen = {
-  /** A frame showed the splat while the damaged card's own motion was over. */
   splatOverIdleCard: boolean;
-  /** …and on one such frame, `elementFromPoint` at the card's centre was inside the card and the document fitted. */
   clickLandsOnCard: boolean;
-  /** After that, a canvas pixel within NEAR_PX of the card was lit. */
   litNearCard: boolean;
-  /** What the last splat frame found at the card's centre, for the failure message. */
   lastHit: string;
 };
 
@@ -107,11 +73,7 @@ function unseen(): Seen {
   return { splatOverIdleCard: false, clickLandsOnCard: false, litNearCard: false, lastHit: "" };
 }
 
-/**
- * Samples the page once per animation frame, writing into `seen`, until it has seen everything or
- * WATCH_MS pass. The pixel readback runs only once the splat has been seen: see the header for why.
- * Returns its own stop.
- */
+/** Samples animation frames until complete or WATCH_MS; reads pixels only after the splat. */
 function watchFrames(win: Window, card: string, seen: Seen): () => void {
   const doc = win.document;
   const start = win.performance.now();
@@ -167,8 +129,7 @@ describe("Polish 1: the effects layer over a real board", () => {
       const record = { translate: [] as string[], rotate: [] as string[] };
       const prior = { translate: "", rotate: "" };
       let observer: MutationObserver | null = null;
-      // Filled by the frame watcher; `cy.wrap(seen).should(…)` retries against it (an assertion
-      // chained after `.then()` would run once and not retry).
+      // `should` retries the mutable watcher result; an assertion after `.then()` would not.
       const seen = unseen();
       let stopWatching: (() => void) | null = null;
 
@@ -177,7 +138,6 @@ describe("Polish 1: the effects layer over a real board", () => {
           <Game view={view} legal={[]} onAction={noop} />
         </div>,
       ).then(({ rerender }) => {
-        // Before anything plays: the layer is on, holds its canvas, and the board fits.
         cy.get(LAYER).should("have.attr", "data-fx", "on");
         cy.get(CANVAS).should("exist");
         cy.get(FX_DOM).should("exist");
@@ -204,16 +164,14 @@ describe("Polish 1: the effects layer over a real board", () => {
         ));
       });
 
-      // B40: while the splat is still over the card (and the card's own motion, which makes the
-      // card itself pointer-transparent, is over), a click at the card's centre lands on the card.
-      // Then the canvas really draws near the card the spell hit. Both are what the frame watcher saw.
+      // B40: the splat leaves the idle card clickable and lights its canvas area.
       cy.wrap(seen).should((saw: Seen) => {
         expect(saw.splatOverIdleCard, "its damage splat is on screen after the card's own damage motion has finished").to.eq(true);
         expect(saw.clickLandsOnCard, `elementFromPoint at the card's centre is inside the card, and the board fits (last hit: ${saw.lastHit})`).to.eq(true);
         expect(saw.litNearCard, "a lit canvas pixel near the damaged card").to.eq(true);
       });
 
-      // B28: the backing store is the CSS size times the clamped device pixel ratio.
+      // B28: backing store equals CSS size times clamped device pixel ratio.
       cy.window().then((win) => {
         const dpr = Math.min(Math.max(win.devicePixelRatio || 1, 1), FX_MAX_DPR);
         cy.get(CANVAS).should(($canvas) => {
@@ -225,16 +183,13 @@ describe("Polish 1: the effects layer over a real board", () => {
         });
       });
 
-      // The runner settles exactly as it would without effects.
       cy.get("[data-animating]").should("not.exist");
 
-      // Every DOM effect is removed once its tail has run.
       cy.get(FX_DOM).should(($root) => {
         expect(($root[0] as HTMLElement).childElementCount, "fx-dom is empty").to.eq(0);
       });
 
-      // B35: the shake reached the board as an inline translate, and the board's prior inline
-      // values are back.
+      // B35: shake mutates `translate` then restores prior inline values.
       cy.get(BOARD).should(($board) => {
         const board = $board[0] as HTMLElement;
         expect(

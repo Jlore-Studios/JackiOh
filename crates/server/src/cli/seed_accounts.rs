@@ -40,7 +40,9 @@ use jackioh_engine::validator::TRIO_DECKS;
 
 use crate::cli::mint_code::is_integer;
 use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use crate::db::pg::USERNAME_LOCK_SQL;
 use crate::env::{js_number, load_env, quoted};
+use crate::username::username_key;
 
 const DEFAULT_COUNT: i64 = 2;
 const EMAIL_DOMAIN: &str = "example.com";
@@ -49,6 +51,8 @@ const MAX_COUNT: i64 = 20;
 /// How many times, and how far apart, the profile row `app.handle_new_user` writes is looked for.
 const PROFILE_POLL_ATTEMPTS: usize = 20;
 const PROFILE_POLL_INTERVAL: Duration = Duration::from_millis(250);
+/// R1435: the base of every seeded account's fixed username, numbered like its email.
+const FIXTURE_USERNAME_BASE: &str = "Fixture";
 /// The admin listing's first page, which the search for an existing account reads.
 const ADMIN_USERS_PER_PAGE: usize = 200;
 
@@ -125,6 +129,38 @@ pub fn seed_accounts_settings(
         return Err(anyhow!("refusing to seed accounts:\n{}", listed.join("\n")));
     }
     Ok(SeedAccountsSettings { password: secret })
+}
+
+/// R1435: the `index`-th seeded account's username, `Fixture1` and up.
+fn fixture_username(index: i64) -> String {
+    format!("{FIXTURE_USERNAME_BASE}{index}")
+}
+
+/// R1435: gives the `index`-th seeded account its fixed username, `Fixture<index>` bare, with the
+/// prompt after activation already answered and no cooldown running, so it goes straight to the
+/// game and can still be renamed. A second run writes the same name over itself. The key is the
+/// server's own (`username::username_key`), written under the lock every claim of it takes
+/// (`db::pg::USERNAME_LOCK_SQL`, R1434); if another account holds the name bare, the unique index
+/// refuses the write and the seed stops there.
+pub async fn name_seeded_account(client: &mut PgConnection, profile_id: &str, index: i64) -> Result<()> {
+    let username = fixture_username(index);
+    let key = username_key(&username);
+    let mut tx = client.begin().await?;
+    sqlx::query(USERNAME_LOCK_SQL)
+        .bind(&key)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "update public.profiles set username_base = $2, username_key = $3, username_tag = null, \
+         username_changed_at = null, username_prompted = true where id = $1",
+    )
+    .bind(uuid_of(profile_id)?)
+    .bind(&username)
+    .bind(&key)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 fn email_for(index: i64) -> String {
@@ -385,6 +421,8 @@ async fn seed_with(
         .bind(uuid_of(&id)?)
         .execute(&mut *client)
         .await?;
+
+        name_seeded_account(client, &id, i).await?;
 
         save_starter_decks(client, &id, env.catalog_version.as_str()).await?;
         out.push(SeededAccount {

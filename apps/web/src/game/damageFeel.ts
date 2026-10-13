@@ -15,7 +15,7 @@ export type DamageFeel = {
 };
 
 /**
- * The one tuning surface for issue #57. Consumers use this rather than embedding thresholds or
+ * The one tuning surface for damage feel. Consumers use this rather than embedding thresholds or
  * timings in audio, CSS, or effects code, so a feel pass can tune every consequence together.
  */
 export const DAMAGE_FEEL: Readonly<Record<DamageTier, DamageFeel>> = Object.freeze({
@@ -54,7 +54,7 @@ export function damageTier(amount: number): DamageTier {
   return (Object.keys(DAMAGE_FEEL) as DamageTier[]).find((tier) => DAMAGE_FEEL[tier] === feel) ?? "tiny";
 }
 
-/** #185 (R700–R702): how hard a Unit lands, by the size tier `unitSlam.ts` reads off its stats. */
+/** R700–R702: how hard a Unit lands, by the size tier `unitSlam.ts` reads off its stats. */
 export type SlamTier = "tiny" | "small" | "medium" | "large" | "huge" | "massive";
 
 /** What the board does under a landing Unit, from a few grains shifting to a crater. */
@@ -81,7 +81,7 @@ export type SlamFeel = {
 };
 
 /**
- * The one tuning surface for issue #185, beside #57's. The weights: total = Attack + Health
+ * The one tuning surface for Unit slams, beside `DAMAGE_FEEL`. The weights: total = Attack + Health
  * + 2 × Armor + 4 if Indestructible + 4 × each Tribute the card requires.
  */
 export const SLAM_WEIGHTS = Object.freeze({ armor: 2, indestructible: 4, tribute: 4 });
@@ -103,17 +103,17 @@ export const SLAM_TIERS_ASCENDING: readonly SlamTier[] = ["tiny", "small", "medi
  */
 export const SLAM_BURST = Object.freeze({ hitStopMs: 200, shakePx: 12, anticipationMs: 500 });
 
-/** #185: where in its landing motion a Unit hits the table (jk-summon-scale's 55% keyframe). */
+/** Where in its landing motion a Unit hits the table (jk-summon-scale's 55% keyframe). */
 export const SLAM_LAND_AT = 0.55;
 
-/** #185: a slam's pitch varies by up to this much either way. */
+/** A slam's pitch varies by up to this much either way. */
 export const SLAM_PITCH_SPREAD = 0.05;
 
 /**
  * R1363 (MN05): whether a hit's target's Armor took half or more of it — `absorbed` of the whole
- * `absorbed + amount` the hit came in with, which the `damage` event carries (R1360). The sound's
- * dull clank and the effects layer's small shield flash both key on this one test; a hit Armor had
- * no part in (`absorbed` 0 or absent) never passes it, and one Armor took whole is `damageAbsorbed`.
+ * `absorbed + amount` the hit came in with (R1360). The sound's clank and the effects layer's shield
+ * flash both key on this test; a hit with no Armor part never passes it, and one Armor took whole
+ * is `damageAbsorbed`.
  */
 export function armorTookHalf(absorbed: number | undefined, amount: number): boolean {
   const took = absorbed ?? 0;

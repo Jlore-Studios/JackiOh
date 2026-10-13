@@ -2,12 +2,6 @@
 //! starts, when it ticks (on the field only), what a crumble does, what a Vanilla does to it, what the
 //! views show, and a crumble whose Death asks something pausing the settle after the tick (R113), with
 //! the paused game surviving a JSON round trip and resuming identically.
-//!
-//! `turn.ts` runs `brittleTick` as a stage of the start of a turn (the activate-and-turn workstream
-//! wires it); these tests drive the stage directly, setting `state.turn` and `state.active` as a start
-//! of turn would, and settle after it as the stage does.
-//!
-//! Port of `packages/engine/test/brittle.test.ts`.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -22,12 +16,11 @@ use crate::rules::fixtures::combat::{indestructible, plain, stacker};
 use crate::rules::fixtures::harness::{events_of_type, in_hand, put, set_library, sink_for, slot};
 use crate::rules::fixtures::instance_data::{asker, brittle_trap, brittle_unit, instance_game};
 
-/// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
+/// An `ActionInput` from a `json!` object literal (SURFACE §8).
 fn input(body: Value) -> ActionInput {
     json_as(body)
 }
 
-/// TS `makeContext(sink, null, { controller })`'s options.
 fn by(player: PlayerId) -> HookOptions {
     HookOptions {
         controller: Some(player),
@@ -39,7 +32,6 @@ fn json_of(value: impl Serialize) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// `events.map((event) => event.instanceId)`, read off the events' JSON.
 fn instance_ids(events: impl Serialize) -> Vec<String> {
     json_of(events)
         .as_array()
@@ -59,12 +51,10 @@ fn by_id_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).unwrap_or_else(|| panic!("no card {id}"))
 }
 
-/// The card as it stands in `state` now, owned (TS held the live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     by_id(state, id).clone()
 }
 
-/// The live card's count, as TS's `card.brittle?.count`.
 fn count_of(state: &GameState, id: &str) -> Option<i32> {
     by_id(state, id).brittle.map(|brittle| brittle.count)
 }
@@ -73,7 +63,7 @@ fn zone_of(state: &GameState, id: &str) -> ZoneName {
     by_id(state, id).zone.z()
 }
 
-/// A count as TS's object literal writes it (`printed` absent unless `Some(true)`).
+/// A count, its `printed` absent unless `Some(true)`.
 fn counter(count: i32, since: i32, printed: bool) -> BrittleCounter {
     BrittleCounter {
         count,
@@ -82,7 +72,6 @@ fn counter(count: i32, since: i32, printed: bool) -> BrittleCounter {
     }
 }
 
-/// Run `change` on the card `id` names as it stands in `state` (TS wrote through the live object).
 fn with_live(state: &mut GameState, id: &str, change: impl FnOnce(&GameState, &mut CardInstance)) {
     let mut card = live(state, id);
     change(state, &mut card);
@@ -586,11 +575,8 @@ mod r385_b3_3_rule_6_who_sees_the_count {
     }
 }
 
-// ---------------------------------------------------------------------------
 // A crumble whose Death asks (R113, §9.3)
-// ---------------------------------------------------------------------------
 
-/// TS's module `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act(state: &GameState, body: ActionInput, fixed: Option<&str>) -> GameState {

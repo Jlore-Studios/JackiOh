@@ -1,12 +1,5 @@
-// vercel.json against the route table. Vercel sends only the paths vercel.json names to
-// index.html and answers every other path with public/404.html and a 404 status, so a route
-// `paths` serves that vercel.json leaves out would 404 in production on a cold load or a reload.
-// Both copies are read (the root one, and apps/web's, which the project's Root Directory sees), and
-// they must stay byte-identical.
-//
-// Vercel compiles each `source` with path-to-regexp (strict, case-sensitive). The two sources here
-// use one shape each, so this file reads them back into the regular expressions Vercel builds and
-// checks real paths against those.
+// `vercel.json` must cover the route table or cold production loads return a 404.
+// Root and web copies stay byte-identical; Vercel sources are strict and case-sensitive.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -29,7 +22,6 @@ type VercelConfig = {
 
 const config = JSON.parse(readFileSync(WEB_CONFIG, "utf8")) as VercelConfig;
 
-/** `/(a|b){/}?` -> `^/(a|b)/?$`; `/(a|b)/([^/]+){/}?` -> `^/(a|b)/([^/]+)/?$`. Nothing else. */
 function sourceRegex(source: string): RegExp {
   const listed = /^\/\(([a-z|-]+)\)\{\/\}\?$/u.exec(source);
   if (listed !== null) return new RegExp(`^/(${listed[1] ?? ""})/?$`, "u");
@@ -40,7 +32,6 @@ function sourceRegex(source: string): RegExp {
 
 const rewrites = config.rewrites.map((rewrite) => ({ ...rewrite, regex: sourceRegex(rewrite.source) }));
 
-/** Whether Vercel would hand this path to the app (the landing page is index.html itself). */
 function servedByApp(path: string): boolean {
   if (path === "/") return true;
   return rewrites.some(({ regex }) => regex.test(path));
@@ -58,17 +49,17 @@ describe("vercel.json", () => {
 
   it("routes every screen in the route table, with or without a trailing slash", () => {
     const fixed = Object.entries(paths)
-      // Production serves NotFound at /dev/hotseat (main.tsx), so a real 404 there is right.
+      // Production serves a genuine 404 at /dev/hotseat.
       .filter(([name]) => name !== "hotseat")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
-    // R630: the Card Almanac is a public screen like the privacy policy.
+    // R630: the Card Almanac is public.
     expect(fixed).toContain(paths.almanac);
-    // R654: the public statistics page is a public screen like the almanac.
+    // R654: the statistics page is public.
     expect(fixed).toContain(paths.stats);
     for (const path of fixed) {
       expect(servedByApp(path), path).toBe(true);
-      // `currentPath` drops a trailing slash, so the app serves the same screen at both.
+      // `currentPath` drops trailing slashes.
       if (path !== paths.landing) expect(servedByApp(`${path}/`), `${path}/`).toBe(true);
     }
   });
@@ -111,11 +102,10 @@ describe("vercel.json", () => {
     expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
     expect(headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
     const csp = headers.get("content-security-policy") ?? "";
-    // 'wasm-unsafe-eval' lets the page and the practice worker compile the engine's WebAssembly
-    // module (docs/v0.3.0/SURFACE.md §10.3); it allows no string eval.
+    // WebAssembly compilation needs `wasm-unsafe-eval` (docs/v0.3.0/SURFACE.md §10.3).
     expect(csp).toMatch(/script-src 'self' 'wasm-unsafe-eval'(;|$)/u);
     expect(csp).toMatch(/frame-ancestors 'none'/u);
-    // The three origins the bundle talks to: Supabase Auth, and the API and match socket on Render.
+    // The bundle connects only to Auth, the API and the match socket.
     const connect = /connect-src ([^;]+)/u.exec(csp)?.[1] ?? "";
     expect(connect.split(" ")).toEqual(
       expect.arrayContaining([
@@ -128,13 +118,8 @@ describe("vercel.json", () => {
   });
 });
 
-// Vercel's free plan allows 100 deployments a day and counts every push to every branch, [skip ci]
-// or not (the night bot's `bot-state` commits alone used it up). `git.deploymentEnabled` stops the
-// deployment from being created at all for the branches machines push to; `ignoreCommand` is the
-// flag for the rest (scripts/vercel-ignore.sh, held by vercel-ignore.test.ts). The config is read
-// from the commit that is pushed, so `bot-state` (an orphan branch) carries its own copy.
+// Machine branches disable Vercel deployment; other branches defer to `ignoreCommand`.
 
-/** `bot/**` -> every branch under `bot/`; anything else is a branch name taken literally. Nothing else. */
 function branchRegex(pattern: string): RegExp {
   const family = /^([a-z-]+)\/\*\*$/u.exec(pattern);
   if (family !== null) return new RegExp(`^${family[1] ?? ""}/.+$`, "u");
@@ -154,7 +139,7 @@ describe("vercel.json deployment flag", () => {
     for (const branch of [
       "bot-state",
       "bot/issue-63",
-      // Squishy (#60): its state and its issue branches.
+      // Squishy's state and issue branches.
       "squishy-state",
       "squishy/issue-63",
       "claude/stoic-tesla-837kse",
@@ -163,9 +148,9 @@ describe("vercel.json deployment flag", () => {
       "patch/v0.1.1",
       "patches/ship-74c8823",
       "polish/3-ai",
-      // Cloudflare's branch, moved by promote-production.yml; Vercel is staging and builds main.
+      // Cloudflare's branch: Vercel staging builds main.
       "production",
-      // The pull request's head for each merge of main into production, deleted once it merges.
+      // Temporary head for a production merge.
       "promote/20261005-abc1234",
       "wt/engine",
     ]) {

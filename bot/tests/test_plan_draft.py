@@ -102,7 +102,8 @@ class PlanDraftTests(unittest.TestCase):
         self.assertEqual(planned["handoff"]["kind"], "draft")
         self.assertEqual(seen["draft"].strip(), DRAFT)
         self.assertIn("## An unfinished plan from an earlier run", seen["prompt"])
-        self.assertIn("`claude-2` (claude) was cut off before it finished", seen["prompt"])
+        # The lane's weakest planner meeting the floor plans first (#695): Muse, not claude-2.
+        self.assertIn("`muse` (muse) was cut off before it finished", seen["prompt"])
         self.assertIn(f"which is now `{PLAN_DRAFT_FILE}` at the top of your worktree",
                       seen["prompt"])
         self.assertIn("the change is in src/game.txt", seen["prompt"])

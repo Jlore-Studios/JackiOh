@@ -316,7 +316,7 @@ class SectionCases(unittest.TestCase):
         text = dashboard.section(world.ctx)
         self.assertTrue(text.startswith(dashboard.SECTION_START))
         self.assertIn("## 🫧 Squishy", text)
-        self.assertIn("| #50 | one-shot (fullsend) |", text)
+        self.assertIn("| #50 | Huge | one-shot (fullsend) |", text)
         self.assertIn("| #51 | Parent | 1 of 2 closed", text)
         self.assertIn("`claude-squishy`", text)
         self.assertIn("### Last Squishy runs", text)
@@ -363,14 +363,14 @@ class SectionCases(unittest.TestCase):
                 f"([run]({run}/3)), so I am closing it.", "2026-09-30T02:00:00Z")
         text = stats.bot_section(world.ctx)
         self.assertTrue(text.startswith(stats.SECTION_START))
-        self.assertIn("## 🫧 Squishy", text)
+        self.assertIn("🫧 <b>Squishy's record</b>", text)
         self.assertIn("| Runs started | 2 | 2 | 2 | 2 |", text)
         self.assertIn("| One-shot builds started | 1 | 1 | 1 | 1 |", text)
         self.assertIn("| Splits run | 1 | 1 | 1 | 1 |", text)
         self.assertIn("| Sub-issues they opened | 3 | 3 | 3 | 3 |", text)
         self.assertIn("| Trees closed, their end state holding | 1 | 1 | 1 | 1 |", text)
         self.assertIn("`squishy-run.yml` workflow runs", text)
-        self.assertIn("### Its pull requests merged (0)", text)
+        self.assertIn("**Its pull requests merged** (0)", text)
 
 
 if __name__ == "__main__":

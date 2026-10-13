@@ -13,6 +13,7 @@ import { CARD_HOOK_NAMES, VOICE_PRIORITY } from "../../audio/constants.ts";
 import { getAudioEngine } from "../../audio/engine.ts";
 import type { VoiceLineKind } from "../../audio/types.ts";
 import { CARD_AUDIO, lineFor } from "../../audio/voiceData.ts";
+import { t } from "../../i18n/i18n.ts";
 
 function MicIcon(): ReactElement {
   return (
@@ -40,6 +41,8 @@ const LINE_LABELS: Record<VoiceLineKind, string> = {
   attack: "Attack",
   death: "Death",
   cast: "Cast",
+  // R1088: the trigger's numbered lines (`trigger<n>`) preview through `playVoice` like the rest.
+  trigger: "Trigger",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {
@@ -54,11 +57,11 @@ export function VoicePreview({ defId }: { defId: string }): ReactElement | null 
   return (
     <label className="voice-preview">
       <MicIcon />
-      <select data-testid="voice-preview" aria-label="Preview voice line" defaultValue="" onChange={onChange}>
-        <option value="">Voice</option>
+      <select data-testid="voice-preview" aria-label={t("Preview voice line")} defaultValue="" onChange={onChange}>
+        <option value="">{t("Voice")}</option>
         {lines.map((line) => (
           <option key={line} value={line}>
-            {LINE_LABELS[line]}
+            {t(LINE_LABELS[line])}
           </option>
         ))}
       </select>

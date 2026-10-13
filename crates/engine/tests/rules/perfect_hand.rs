@@ -1,14 +1,13 @@
-//! B5 E34, the perfect-hand scorer (`subsystems/perfectHand.ts`; SPEC §8.7 C+ #27, §10.7, R29, R364,
-//! R387, R416), through a fixture card of Classic+ #27's shape: "replace your hand with the perfect
-//! hand, then refresh your mana". The real card's test (packages/cards/test/classic-plus/
-//! 027-zephrys-zealotism.test.ts) covers the card again over the real catalog.
+//! B5 E34, the perfect-hand scorer (SPEC §8.7 C+ #27, §10.7, R29, R364, R387, R416, R1446), through a
+//! fixture card of Classic+ #27's shape: "replace your hand with the perfect hand, then refresh your
+//! mana".
 //!
-//! The pool is pinned: this file registers seven Classic and Classic+ cards on top of the (Core)
-//! fixture catalog and nothing else of those sets, so each ranking is a statement about a fixed state
-//! and pool, never about the scorer's weights. Core #97's scorer is reused unchanged. Defs are `ph-`,
-//! indexed from 4901.
-//!
-//! Port of `packages/engine/test/perfectHand.test.ts`.
+//! The pool is pinned: this file registers its cards on top of the vanilla Core units and nothing
+//! else (no scripted fixture), so each ranking is a statement about a fixed state and pool, never
+//! about the scorer's weights. The pool is every set that ships (R1446): seven cards of Core, Classic
+//! and Classic+, one radiant-only body of each set that ships (read off `SHIPPED_SETS`, so no test lists
+//! the sets), and a giant of a set that does not ship, which stays out. Core #97's scorer is reused
+//! unchanged. Defs are `ph-`, indexed from 4901.
 
 use std::cmp::Ordering;
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
@@ -21,9 +20,9 @@ use jackioh_engine::subsystems::scorer::compare_scored;
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
+use crate::rules::fixtures::catalog::vanilla_catalog;
 use crate::rules::fixtures::harness::{in_hand, new_game};
 
-/// TS `{ ...base, ...extra }`.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
         for (key, value) in extra {
@@ -33,12 +32,11 @@ fn spread(mut base: Value, extra: Value) -> Value {
     base
 }
 
-/// TS `face(text, extra)`.
 fn face(text: &str, extra: Value) -> Value {
     spread(json!({ "keywords": [], "text": text }), extra)
 }
 
-/// TS `def(name, type, set, extra)`; `index` is the value TS's running `nextIndex` (from 4900) gives it.
+/// `index` is the def's running index (from 4900).
 fn def(name: &str, type_: &str, set: &str, index: u32, extra: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -58,7 +56,7 @@ fn def(name: &str, type_: &str, set: &str, index: u32, extra: Value) -> CardDef 
     ))
 }
 
-/// TS `unit(name, set, attack, health, extra)`: `extra.keywords` goes on both faces, the rest on the def.
+/// `extra.keywords` goes on both faces, the rest on the def.
 fn unit(
     name: &str,
     set: &str,
@@ -88,11 +86,11 @@ fn zealot() -> CardDef {
     def("zealot", "Spell", "Classic+", 4901, json!({ "cost": 4 }))
 }
 
-/// A 4/4 Charge for 1: the one card that enables lethal.
+/// A 4/4 Charge for 1: the one card that enables lethal. Core, which the pool reaches since R1446.
 fn charger() -> CardDef {
     unit(
         "charger",
-        "Classic+",
+        "Core",
         4902,
         4,
         4,
@@ -145,9 +143,18 @@ fn quiet_trap() -> CardDef {
     def("quiet-trap", "Trap", "Classic+", 4908, json!({}))
 }
 
-/// Never in the pool: a Core card and a Classic+ token, each better than anything above.
-fn core_giant() -> CardDef {
-    unit("core-giant", "Core", 4909, 20, 20, json!([]), json!({}))
+/// Never in the pool: a card of a set that does not ship (R1420) and a Classic+ token, each better
+/// than anything above.
+fn unshipped_giant() -> CardDef {
+    unit(
+        "unshipped-giant",
+        SetName::Boss.as_str(),
+        4909,
+        20,
+        20,
+        json!([]),
+        json!({}),
+    )
 }
 
 fn plus_token() -> CardDef {
@@ -160,6 +167,28 @@ fn plus_token() -> CardDef {
         json!([]),
         json!({ "token": true, "tags": ["Token"], "rarity": "Token" }),
     )
+}
+
+/// R1446: one body of each set that ships, a 0/1 whose Radiant face is a 25/25, so a perfect Radiant
+/// hand of five holds a card of every set and a base one none of them.
+fn one_of_each_shipped_set() -> Vec<CardDef> {
+    SHIPPED_SETS
+        .iter()
+        .enumerate()
+        .map(|(n, set)| {
+            let name = format!("shipped-{n}");
+            def(
+                &name,
+                "Unit",
+                set.as_str(),
+                4911 + n as u32,
+                json!({
+                    "base": face(&name, json!({ "attack": 0, "health": 1 })),
+                    "radiant": face(&name, json!({ "attack": 25, "health": 25 })),
+                }),
+            )
+        })
+        .collect()
 }
 
 fn pool() -> Vec<CardDef> {
@@ -177,14 +206,14 @@ fn pool() -> Vec<CardDef> {
 fn defs() -> Vec<CardDef> {
     let mut all = vec![zealot()];
     all.extend(pool());
-    all.push(core_giant());
+    all.extend(one_of_each_shipped_set());
+    all.push(unshipped_giant());
     all.push(plus_token());
     all
 }
 
-/// TS `Number.POSITIVE_INFINITY`: as much mana as any refresh could give back. An `i32` holds no
-/// infinity, and the effect adds it to the current mana, so it is a half of `i32::MAX`, far past any
-/// mana pool and short of overflowing the sum.
+/// As much mana as any refresh could give back. An `i32` holds no infinity and the effect adds it to
+/// the current mana, so it is half of `i32::MAX`: past any pool, short of overflowing the sum.
 const ALL_MANA: i32 = i32::MAX / 2;
 
 fn zealot_scripts() -> CardScripts {
@@ -223,7 +252,8 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
     result
 }
 
-/// p1's main phase, both hands empty, 4 of 4 mana, this file's cards registered.
+/// p1's main phase, both hands empty, 4 of 4 mana, the vanilla units and this file's cards the whole
+/// catalog.
 fn playing(seed: &str) -> GameState {
     let mut state = begin_game(&new_game(seed, None)).state;
     for player in [P1, P2] {
@@ -238,7 +268,7 @@ fn playing(seed: &str) -> GameState {
         )
         .state;
     }
-    let mut catalog = registered_catalog().clone();
+    let mut catalog = vanilla_catalog(40, 1);
     for entry in defs() {
         catalog.insert(entry.id.clone(), entry);
     }
@@ -319,7 +349,6 @@ fn json_of<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
 }
 
-/// TS `JSON.parse(JSON.stringify(state))`.
 fn revive(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state revives from its JSON")
 }
@@ -329,19 +358,17 @@ fn sorted(mut ids: Vec<String>) -> Vec<String> {
     ids
 }
 
-/// TS `list.indexOf(id)`: -1 when absent.
 fn index_of(list: &[String], id: &str) -> i64 {
     list.iter()
         .position(|entry| entry == id)
         .map_or(-1, |at| at as i64)
 }
 
-/// `expect(list).toEqual(expect.arrayContaining(expected))`.
 fn contains_all(list: &[String], expected: &[String]) -> bool {
     expected.iter().all(|entry| list.contains(entry))
 }
 
-/// The `defId` of each event of this type (TS `"defId" in e ? e.defId : ""`).
+/// The `defId` of each event of this type.
 fn def_ids_of(events: &[GameEvent], kind: GameEventType) -> Vec<String> {
     events
         .iter()
@@ -354,12 +381,30 @@ mod e34_the_perfect_hand_ranking_r29_r387_r416 {
     use super::*;
 
     #[test]
-    fn r416_ranks_every_non_token_classic_and_classic_card_but_the_asking_card_no_core_card_no_token() {
+    fn r416_r1446_ranks_every_non_token_card_of_every_set_that_ships_but_the_asking_card() {
         let Holding { state, .. } = holding("ph-pool", &[], false, None);
-        assert_eq!(
-            sorted(rank_ids(&state, false)),
-            sorted(pool().into_iter().map(|entry| entry.id).collect())
-        );
+        let expected: Vec<String> = registered_catalog()
+            .values()
+            .filter(|entry| {
+                !entry.token
+                    && !entry.tags.contains(&Tag::Token)
+                    && SHIPPED_SETS.contains(&entry.set)
+                    && entry.id != zealot().id
+            })
+            .map(|entry| entry.id.clone())
+            .collect();
+        let ranked = rank_ids(&state, false);
+        assert_eq!(sorted(ranked.clone()), sorted(expected));
+        let ranked_sets: Vec<SetName> =
+            rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })))
+                .iter()
+                .map(|scored| scored.def.set)
+                .collect();
+        for set in SHIPPED_SETS {
+            assert!(ranked_sets.contains(&set), "{set} is in the pool");
+        }
+        assert!(!ranked.contains(&unshipped_giant().id));
+        assert!(!ranked.contains(&plus_token().id));
         // Asked by nobody in particular, the zealot is a Classic+ card like any other.
         assert!(
             rank_perfect_hand(&state, P1, json_as(json!({})))
@@ -454,7 +499,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
             held,
         } = holding(
             "ph-replace",
-            &[core_giant().id, core_giant().id, quiet_spell().id],
+            &[unshipped_giant().id, unshipped_giant().id, quiet_spell().id],
             false,
             None,
         );
@@ -475,7 +520,7 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
         );
         assert!(contains_all(
             &def_ids_of(&after.events, GameEventType::EnteredGraveyard),
-            &[core_giant().id, quiet_spell().id]
+            &[unshipped_giant().id, quiet_spell().id]
         ));
         for fresh in &after.state.players.p1.hand {
             assert_eq!(fresh.owner, P1);
@@ -550,8 +595,12 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
 
     #[test]
     fn s9_3_the_play_draws_nothing_from_the_match_rng_and_a_json_copy_replays_to_the_same_hash_and_events() {
-        let Holding { state, zealot_id, .. } =
-            holding("ph-replay", &[quiet_spell().id, core_giant().id], false, None);
+        let Holding { state, zealot_id, .. } = holding(
+            "ph-replay",
+            &[quiet_spell().id, unshipped_giant().id],
+            false,
+            None,
+        );
         let thawed = revive(&state);
         let action: Action = json_as(json!({
             "type": "play",
@@ -568,8 +617,12 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
 
     #[test]
     fn r97_the_opponent_sees_the_replaced_cards_reach_the_graveyard_and_never_the_new_cards() {
-        let Holding { state, zealot_id, .. } =
-            holding("ph-hidden", &[quiet_spell().id, core_giant().id], false, None);
+        let Holding { state, zealot_id, .. } = holding(
+            "ph-hidden",
+            &[quiet_spell().id, unshipped_giant().id],
+            false,
+            None,
+        );
         let after = cast(&state, &zealot_id).state;
         let theirs = view_for(&after, P2);
         let added: Vec<Value> = theirs
@@ -579,7 +632,6 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
             .map(json_of)
             .collect();
         assert!(added.len() >= 2);
-        // `/ph-(charger|big-body|tie|sleeper|quiet)/`, alternative by alternative.
         for event in &added {
             let text = serde_json::to_string(event).expect("an event serialises");
             for name in ["ph-charger", "ph-big-body", "ph-tie", "ph-sleeper", "ph-quiet"] {
@@ -588,7 +640,72 @@ mod e34_replace_hand_with_perfect_then_a_refresh_c_27s_shape {
         }
         assert!(contains_all(
             &def_ids_of(&theirs.events, GameEventType::EnteredGraveyard),
-            &[quiet_spell().id, core_giant().id]
+            &[quiet_spell().id, unshipped_giant().id]
         ));
+    }
+}
+
+mod r1446_the_perfect_pool_is_every_set_that_ships {
+    use super::*;
+
+    #[test]
+    fn r1446_a_set_that_has_not_shipped_joins_the_pool_under_preview_and_only_then() {
+        let Holding { state, .. } = holding("ph-preview", &[], false, None);
+        assert!(!rank_ids(&state, false).contains(&unshipped_giant().id));
+        {
+            let _preview = preview_sets(&[SetName::Boss]);
+            // A 20/20 for 1 is the best card in the pool, so it ranks first once it is in.
+            assert_eq!(rank_ids(&state, false).first(), Some(&unshipped_giant().id));
+        }
+        assert!(!rank_ids(&state, false).contains(&unshipped_giant().id));
+    }
+
+    #[test]
+    fn r1446_a_core_card_that_enables_lethal_ranks_first_and_arrives_first() {
+        let Holding {
+            mut state, zealot_id, ..
+        } = holding(
+            "ph-core-lethal",
+            &[quiet_spell().id, quiet_spell().id],
+            false,
+            Some(8),
+        );
+        state.players.p2.hero.health = 4;
+        let ranked = rank_perfect_hand(&state, P1, json_as(json!({ "selfDefId": zealot().id })));
+        let top = ranked.first().expect("a ranking");
+        assert_eq!(top.def.id, charger().id);
+        assert_eq!(top.def.set, SetName::Core);
+        assert_eq!(json_of(top.priority), json!("lethal"));
+        assert_eq!(
+            hand_ids(&cast(&state, &zealot_id).state).first(),
+            Some(&charger().id)
+        );
+    }
+
+    #[test]
+    fn r1446_the_radiant_face_hands_over_radiant_faces_from_every_set() {
+        let held = vec![quiet_spell().id; 5];
+        let Holding { state, zealot_id, .. } = holding("ph-radiant-sets", &held, true, None);
+        let expected: Vec<String> = rank_ids(&state, true).into_iter().take(held.len()).collect();
+        let after = cast(&state, &zealot_id).state;
+        assert_eq!(hand_ids(&after), expected);
+        assert!(after.players.p1.hand.iter().all(|card| card.radiant));
+        let sets: Vec<SetName> = after
+            .players
+            .p1
+            .hand
+            .iter()
+            .map(|card| registered_catalog()[&card.def_id].set)
+            .collect();
+        for set in SHIPPED_SETS {
+            assert!(sets.contains(&set), "the perfect Radiant hand holds a {set} card");
+        }
+        // On the base face the same bodies are 0/1s, and none of them is in the top five.
+        let base: Vec<String> = rank_ids(&state, false).into_iter().take(held.len()).collect();
+        let shipped: Vec<String> = one_of_each_shipped_set()
+            .into_iter()
+            .map(|entry| entry.id)
+            .collect();
+        assert!(base.iter().all(|id| !shipped.contains(id)));
     }
 }

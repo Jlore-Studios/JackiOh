@@ -1,31 +1,7 @@
-// BUILD M8 spec 18 — "Saved decks, deck codes and trios in `/decks` (R250–R252, R255, R256)".
-//
-// Key assertions (BUILD M8, quoted verbatim):
-//
-//     "a deck saves while incomplete and survives a reload; an edit made while the server is
-//      unreachable is kept on the device and saved once it answers; a copied code imports as a new
-//      deck and a damaged one is refused with a sentence; a trio marks every card two of its decks
-//      share with the other deck's name, and is ready once they share none; an eleventh deck cannot
-//      be made"
-//
-// THERE IS NO SAVE BUTTON (R256). Every edit is mirrored to this device at once and saved
-// `DECK_AUTOSAVE_DEBOUNCE_MS` after the last one; the status line (`sync-status`, `data-state`)
-// says saved, saving, offline or error, and a deck row carries `data-unsynced="true"` until the
-// server has confirmed its latest edit. So "saved" is asserted as the row losing that mark and the
-// status line reading saved, and then read back from `GET /api/decks` — the server's copy is the
-// only proof a save happened, the screen being the device's copy.
-//
-// UNREACHABLE is a `cy.intercept` that fails every `PUT /api/decks/:id` at the network, which the
-// client sees exactly as a dropped connection (`ApiUnreachableError`). "Once it answers" is a second
-// intercept that lets the request through: Cypress runs the newest matching handler first and a
-// handler that sends the request on ends the chain, so the failing one is never reached again. The
-// workshop retries a failed transport after `DECK_AUTOSAVE_RETRY_SECONDS` by itself (R256); nothing
-// here nudges it.
-//
-// Every seed is set (BUILD M8), though nothing here starts a game. The trio's readiness is also
-// checked where it is law: its Best-of-3 ticket is taken, then dropped at once.
-//
-// Needs: M6 (the deck endpoints) and TASK 1's deck workshop. See e2e/README.md.
+// BUILD M8 spec 18: drafts, autosave, codes, trios, and deck caps (R250, R252, R255, R256).
+// Autosave is proven from server state after its own retry; trio readiness is also queue-validated.
+// This spec uses p2 because R109 rate-limits accounts and specs 09/19 share p1 (R253).
+// BUILD M6 supplies the deck endpoints.
 
 import {
   DECK_AUTOSAVE_RETRY_SECONDS,
@@ -65,26 +41,17 @@ import {
 } from "../../support/testids.ts";
 import type { FixtureDeck } from "../../support/types.ts";
 
-/**
- * WHOSE WORKSHOP. `e2e-p2`, not `e2e-p1`. R109 limits every account to `API_REQUESTS_PER_MINUTE`
- * requests a minute, and a workshop is a busy screen (three reads per visit, an autosave per edit);
- * specs 09 and 19 lean on `e2e-p1` in the same minute of a suite run, and this file on the same
- * account pushed it past the limit — the lobby's reads then came back 429 in spec 19. Spread over the
- * two fixture accounts, each stays well inside.
- */
 function workshopAccount(): E2EAccount {
   return accounts.p2();
 }
 
-/** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
 
 const DECK_SIZE = constants.DECK_SIZE;
 
-/** A failed save goes again after `DECK_AUTOSAVE_RETRY_SECONDS` (R256); allow one retry and a view. */
+/** Allow one R256 retry plus a view. */
 const RETRY_TIMEOUT_MS = DECK_AUTOSAVE_RETRY_SECONDS * MS_PER_SECOND + timeouts.view;
 
-/** Every deck row in the rail, whatever its id. */
 const DECK_ROWS = `${ts(DECK_LIST)} [data-testid^="${deckRowId("")}"]`;
 
 function api(path: string): string {
@@ -95,13 +62,11 @@ function bearer(account: E2EAccount): Record<string, string> {
   return { authorization: `Bearer ${account.token}` };
 }
 
-/** Open `/decks` and wait for the workshop itself, not for the route. */
 function openWorkshop(account: E2EAccount): void {
   cy.visitAs(account, routes.deckbuilder());
   cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("exist");
 }
 
-/** The open deck's id, off the editor. */
 function openDeckId(): Cypress.Chainable<string> {
   return cy
     .get(ts(DECK_EDITOR), { timeout: timeouts.view })
@@ -112,7 +77,7 @@ function openDeckId(): Cypress.Chainable<string> {
     });
 }
 
-/** R256: the server has confirmed the latest edit of `deckId`, and the status line says so. */
+/** R256 confirmation needs both the saved row and status. */
 function savedOnServer(deckId: string, timeout: number = timeouts.view): void {
   cy.get(ts(deckRowId(deckId)), { timeout }).should("not.have.attr", "data-unsynced");
   cy.get(ts(SYNC_STATUS)).should("have.attr", "data-state", "saved");
@@ -121,8 +86,6 @@ function savedOnServer(deckId: string, timeout: number = timeouts.view): void {
 function legalDeck(fixture: string): Cypress.Chainable<string[]> {
   return cy.fixture<FixtureDeck>(`decks/${fixture}.json`).then((deck) => [...deck.cards]);
 }
-
-// ---------------------------------------------------------------------------------------------
 
 describe("18 deck workshop — drafts, autosave offline, deck codes, trio conflicts and the cap", () => {
   const seed = seedFor("18-deck-workshop");
@@ -155,7 +118,7 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     }
     cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(cards.length));
 
-    // Saved as it is: three cards of twenty, which only the queue would refuse (R250, R253).
+    // R250/R253: saving an incomplete deck is separate from queue validation.
     cy.then(() => {
       savedOnServer(deckId);
       cy.savedDecks(me).should((saved) => {
@@ -186,7 +149,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
       cy.get(ts(deckRowId(deckId))).click();
       cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(before.length));
 
-      // The connection drops.
       cy.intercept({ method: "PUT", url: decksUrl }, { forceNetworkError: true }).as("unreachable");
       cy.get(ts(addPoolId(added))).click();
       cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(before.length + 1));
@@ -197,7 +159,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
         expect(saved.decks[0]?.cards, "the server never got the edit").to.deep.eq(before);
       });
 
-      // Kept on the device: a reload restores the edit over the server's copy.
       cy.reload();
       cy.get(ts(WORKSHOP), { timeout: timeouts.view }).should("exist");
       cy.get(ts(deckRowId(deckId)))
@@ -207,7 +168,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
       cy.get(ts(deckCardId(added))).should("exist");
       cy.get(ts(SYNC_STATUS), { timeout: timeouts.view }).should("have.attr", "data-state", "offline");
 
-      // The server answers again, and the workshop's own retry saves the edit.
       cy.intercept({ method: "PUT", url: decksUrl }, (request) => {
         request.continue();
       }).as("reachable");
@@ -235,7 +195,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
             expect(code, "R255: a deck code").to.match(/^JKO\d+\./);
           });
 
-        // Import it: a NEW deck, with the same cards.
         cy.get(ts(DECK_IMPORT_OPEN)).click();
         cy.get(ts(DECK_IMPORT)).should("be.visible");
         cy.then(() => {
@@ -259,7 +218,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
           });
         });
 
-        // Damage one character of the payload: refused, with a sentence, and nothing to import.
         cy.get(ts(DECK_IMPORT_OPEN)).click();
         cy.then(() => {
           const at = code.length - 4;
@@ -300,7 +258,7 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
                   cy.get(ts(trioRowId(trioId))).should("have.attr", "data-ready", "false").click();
                   cy.get(ts(TRIO_EDITOR)).should("have.attr", "data-trio", trioId);
 
-                  // Every shared card, in both decks, names the OTHER deck.
+                  // Each conflicting card names its counterpart deck.
                   for (const card of shared) {
                     cy.get(ts(trioCardId(1, card)))
                       .should("have.attr", "data-conflict", "true")
@@ -309,12 +267,10 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
                       .should("have.attr", "data-conflict", "true")
                       .and("have.attr", "data-conflict-with", "Alpha");
                   }
-                  // …and nothing else is marked.
                   cy.get(ts(trioCardId(1, inAlphaOnly))).should("have.attr", "data-conflict", "false");
                   cy.get(`${ts(TRIO_COMPARE)} [data-conflict="true"]`).should("have.length", shared.length * 2);
                   cy.get(ts(TRIO_VERDICT)).should("have.attr", "data-ready", "false");
 
-                  // Swap them out of Beta in its editor, opened from the trio.
                   cy.get(ts(trioOpenDeckId(2))).click();
                   cy.get(ts(DECK_EDITOR)).should("have.attr", "data-deck", betaId);
                   for (const card of shared) {
@@ -328,12 +284,10 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
                   cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(DECK_SIZE));
                   savedOnServer(betaId);
 
-                  // The trio shares nothing now, and is ready.
                   cy.get(ts(trioRowId(trioId))).should("have.attr", "data-ready", "true").click();
                   cy.get(ts(TRIO_VERDICT)).should("have.attr", "data-ready", "true");
                   cy.get(`${ts(TRIO_COMPARE)} [data-conflict="true"]`).should("not.exist");
 
-                  // The server agrees: a Best-of-3 ticket is taken, and dropped again.
                   cy.request<{ mode: string }>({
                     method: "POST",
                     url: api("/api/queue"),
@@ -374,7 +328,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     cy.get(ts(DECK_NEW)).should("be.disabled");
     cy.get(ts(DECK_CAP_REASON)).should("be.visible").and("contain.text", String(MAX_SAVED_DECKS));
 
-    // An import is a new deck too, so it is off at the cap as well.
     cy.get(ts(DECK_COPY_CODE)).click();
     cy.get(ts(DECK_CODE_OUTPUT))
       .invoke("val")
@@ -389,7 +342,6 @@ describe("18 deck workshop — drafts, autosave offline, deck codes, trio confli
     cy.get(ts(DECK_IMPORT_SUBMIT)).should("be.disabled");
     cy.get(ts(DECK_IMPORT_CAP_REASON)).should("be.visible");
 
-    // And the server is law: an eleventh PUT is a conflict naming the limit.
     cy.savedDecks(me).then((saved) => {
       cy.request<{ error: { code: string; details?: { limit?: number } } }>({
         method: "PUT",

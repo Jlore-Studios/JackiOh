@@ -1,16 +1,5 @@
-// The device's copy of the player's statistics (SPEC R639), kept the way the tutorial's progress is
-// (tutorial/progress.ts) and the settings are (settings/store.ts):
-//
-//  - `localStorage[PLAYER_STATS_KEY]` holds `{ v: 1, games, wins, losses, draws, cards }`. Nothing
-//    here talks to a server: a statistic is read off views the player was already shown (track.ts),
-//    and no record of it leaves the device, so there is nothing for the server to hold or to leak.
-//  - `localStorage` is untrusted and may be missing. Private windows, blocked site data and sandboxed
-//    frames make it throw on access, and a hand-edited value can hold anything. Every access sits in
-//    try/catch: a failed read means "no statistics", a failed write keeps the in-memory value.
-//  - The parse is tolerant: a value of the wrong shape or version is no statistics, and a count that
-//    is not a whole, non-negative number reads as 0.
-//  - A game is added to the totals as stored, not as this tab last saw them, so two tabs finishing a
-//    game each add theirs. A `storage` event (another tab wrote) re-reads the key and re-renders.
+// Device statistics (SPEC R639) are optional, untrusted localStorage: malformed data is empty and
+// failed persistence stays in memory. Re-read before writes so concurrent tabs retain both games.
 
 import { useSyncExternalStore } from "react";
 
@@ -25,7 +14,6 @@ import {
   type PlayerStats,
 } from "./model.ts";
 
-/** The cached snapshot; `null` until the first read, and again after the test seam. */
 let snapshot: PlayerStats | null = null;
 
 const listeners = new Set<() => void>();
@@ -48,10 +36,7 @@ function parseCounters(raw: unknown): CardCounters | null {
   return CARD_COUNTERS.every((counter) => counters[counter] === 0) ? null : Object.freeze(counters);
 }
 
-/**
- * Tolerant: anything but `{ v: PLAYER_STATS_VERSION, ... }` is no statistics. A JSON string is
- * parsed first. Never throws.
- */
+/** Tolerant parsing: malformed input becomes empty statistics. */
 export function parsePlayerStats(raw: unknown): PlayerStats {
   try {
     let value: unknown = raw;
@@ -103,7 +88,7 @@ function persist(stats: PlayerStats): void {
   try {
     storageOrNull()?.setItem(PLAYER_STATS_KEY, JSON.stringify({ v: PLAYER_STATS_VERSION, ...stats }));
   } catch {
-    // Quota, private mode or blocked storage: the in-memory value stays in force.
+    // Storage unavailable: retain the in-memory value.
   }
 }
 
@@ -111,13 +96,12 @@ function notify(): void {
   for (const listener of [...listeners]) listener();
 }
 
-/** The current snapshot: the same object until something changes. Reads storage on first call. */
 export function readPlayerStats(): PlayerStats {
   if (snapshot === null) snapshot = loadStored();
   return snapshot;
 }
 
-/** R639: fold one finished game into the totals, as stored, and tell the subscribers. */
+/** R639: fold a finished game into stored totals. */
 export function recordGame(log: GameLog, outcome: GameOutcome): PlayerStats {
   const next = addGame(loadStored(), log, outcome);
   snapshot = next;
@@ -126,7 +110,6 @@ export function recordGame(log: GameLog, outcome: GameOutcome): PlayerStats {
   return next;
 }
 
-/** Forget every statistic on this device. */
 export function resetPlayerStats(): PlayerStats {
   snapshot = EMPTY_STATS;
   persist(EMPTY_STATS);
@@ -134,14 +117,12 @@ export function resetPlayerStats(): PlayerStats {
   return EMPTY_STATS;
 }
 
-/** Another tab wrote the key, or cleared storage (`key === null`). */
 function onStorage(event: StorageEvent): void {
   if (typeof event.key === "string" && event.key !== PLAYER_STATS_KEY) return;
   snapshot = typeof event.newValue === "string" ? parsePlayerStats(event.newValue) : loadStored();
   notify();
 }
 
-/** The `storage` listener is on `window` only while someone is subscribed. */
 export function subscribePlayerStats(listener: () => void): () => void {
   listeners.add(listener);
   if (!storageListening) {
@@ -157,12 +138,10 @@ export function subscribePlayerStats(listener: () => void): () => void {
   };
 }
 
-/** The player's statistics, live: a finished game re-renders whoever reads them. */
 export function usePlayerStats(): PlayerStats {
   return useSyncExternalStore(subscribePlayerStats, readPlayerStats, () => EMPTY_STATS);
 }
 
-/** Test seam: drop the cached snapshot so the next read goes back to storage. */
 export function dropPlayerStatsCache(): void {
   snapshot = null;
 }

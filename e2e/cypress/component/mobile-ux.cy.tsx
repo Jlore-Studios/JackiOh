@@ -1,32 +1,6 @@
-// Polish task 7 (docs/polish/7-mobile-ux.md): the part of the mobile layout and the highlights that
-// only a real layout engine can measure.
-//
-//   B18  the glow colours, read from the computed `box-shadow`, End turn's included, and no outer
-//        glow of its own on a Radiant card
-//   B29  44x44 px touch targets at 390x844, 844x390 and 768x1024, and the switch's target at its
-//        zone's corner (#258: out of the card, up to 44x44), which never takes the middle of its
-//        unit's tile, and none at all while it cannot be pressed
-//   B30  the hand fan: inside the hand, >= 28 px (10 cards) / >= 44 px (7 cards) of each card showing
-//        on a phone, and no overlap at 1280x720
-//   B31  the phone-landscape grid, the board's height budget, and the log hidden on phones
-//   B32  the prompt as a bottom sheet on a phone and a centred modal on a desktop
-//   B43  the log opened from the control bar on a phone
-//   B44  a play's board pick as a slim bar on a phone held upright, clear of the hand
-//   B45  lifting a hand card: readable when read, low when played, never over a glowing hero,
-//        and keyboard focus lifts a covered card
-//   B46  the whole game screen, route bar included, fits the viewport at six sizes
-//
-// B28 (no horizontal overflow at the four viewports) is board-layout.cy.tsx's, which this task
-// extends; it is not repeated here.
-//
-// The mount is board-layout.cy.tsx's, for the reason given there: `Game` inside
-// `.app-shell.app-shell--wide` is the narrowest container the board is ever given in the client
-// (routes/dev/hotseat.tsx and routes/match.tsx), so nothing here is measured more generously than
-// the product. Every view comes from apps/web/src/test/fixtures.ts, and no catalog is mounted, so a
-// card's name is its def id.
-//
-// Every measurement is taken inside a `should` callback so it is retried until the layout has
-// settled after `cy.viewport()`.
+// Polish task 7: browser layout checks for B18, B29, B30, B31, B32, B43, B44, B45, and B46.
+// B28 is covered by board-layout.cy.tsx; its mount keeps this suite at the product's narrowest container.
+// Measurements use `should` retries after each viewport change.
 
 import Game from "../../../apps/web/src/game/Game.tsx";
 import { BackLink } from "../../../apps/web/src/routes/nav.tsx";
@@ -78,16 +52,9 @@ function boxShadowOf(element: Element): string {
   return win === null ? "" : win.getComputedStyle(element).boxShadow;
 }
 
-// ---------------------------------------------------------------------------------------------
-// B18: the glow colours
-// ---------------------------------------------------------------------------------------------
+// B18: glow colours
 
-/**
- * g1 is playable (green). y1 is playable and its condition holds (yellow instead). q1's condition
- * holds but it cannot be played (no colour). On the field, fu is a unit and fb a face-up backrow
- * card whose conditions hold (yellow), and sw can only switch position, so it is legal without
- * glowing (no colour).
- */
+/** Fixture separates ready, condition, unavailable, and switch-only cards for glow assertions. */
 function glowView(): View {
   return baseView({
     you: emptySide("p1", {
@@ -245,9 +212,7 @@ describe("B18 End turn turns green once nothing else is left", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B29: touch targets
-// ---------------------------------------------------------------------------------------------
 
 const TOUCH_VIEWPORTS = [
   { label: "phone portrait", width: 390, height: 844 },
@@ -272,24 +237,15 @@ function expectTouchSize($element: JQuery<HTMLElement>, what: string): void {
   expect(box.height, `${what} is at least ${TOUCH_PX} px tall`).to.be.at.least(TOUCH_PX - EPSILON);
 }
 
-/**
- * The switch's target (#258, board.css `.board .zone > .switch-button`): out of the card, at its
- * zone's top-right corner, `SWITCH_TARGET_PX` square wherever the zone has the room, and never
- * nearer its zone's centre lines than `SWITCH_CLEAR_PX` (`--switch-clear`).
- */
+/** Keep switch targets in zone corners, clear of the tile middle. */
 const SWITCH_TARGET_PX = 44;
 const SWITCH_CLEAR_PX = 6;
 
-/** Every one of your units may switch position, as on your own turn: their switches can be pressed. */
 function switchesLegal(view: View): Legal {
   return view.you.units.flatMap((u) => (u === null ? [] : [{ type: "switchPosition" as const, instanceId: u.instanceId }]));
 }
 
-/**
- * A tap at the middle of every unit's tile, and a quarter of the way down it, lands on the card, never
- * on its switch; and a tap on a switch that cannot be pressed (every enemy unit's) lands on the card
- * under it, which is how an enemy unit is picked as a target.
- */
+/** Tile-center taps must remain on cards; disabled enemy switches pass through to their cards. */
 function expectMiddlesToCards(): void {
   cy.get(`${BOARD} .field .card-unit`).should("have.length", 10);
   cy.document({ log: false }).should((doc) => {
@@ -304,8 +260,7 @@ function expectMiddlesToCards(): void {
         const owner = doc.elementFromPoint(x, y)?.closest("[data-testid]") ?? null;
         if (owner !== card) problems.push(`${id} ${label} → ${owner?.getAttribute("data-testid") ?? "nothing"}`);
       }
-      // #258: the switch is the card's sibling in its zone. One that cannot be pressed lets a tap
-      // through to whatever is under it, the card or its zone, never itself.
+      // Disabled switches pass through to the card or zone beneath them.
       const zone = card.parentElement;
       const button = zone?.querySelector<HTMLButtonElement>(":scope > .switch-button") ?? null;
       if (button?.disabled === true) {
@@ -333,11 +288,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       }
     });
 
-    // #258: the switch left the card for its zone's top-right corner, where its target is a full
-    // 44x44 wherever the zone has the room. It stops SWITCH_CLEAR_PX short of the zone's centre
-    // lines, so on a phone's small tile (64x87 here, 72x59 on its side, 45x59 under a lesson's
-    // coach) it shrinks rather than take the middle, where a tap on a unit means attack. Only a
-    // switch that can be pressed takes a tap at all, so these switches are legal.
+    // Switch targets shrink before taking a tile center and accept input only when legal.
     it(`B29 the switch (⟳) takes a tap across a target of up to 44x44 at its zone's corner, short of the tile's middle, at ${where}`, () => {
       cy.viewport(viewport.width, viewport.height);
       const view = fullBoardView();
@@ -349,7 +300,6 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
           cy.wrap($switch, { log: false }).should(($element) => {
             const button = $element[0] as HTMLElement;
             const box = rectOf(button);
-            // It is placed in its zone's padding box: inside the zone's border.
             const zoneElement = button.parentElement as HTMLElement;
             const zone = rectOf(zoneElement);
             const inner = {
@@ -365,7 +315,6 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
             expect(box.right, "at the zone's right edge").to.be.closeTo(inner.right, 1);
             expect(box.top, "at the zone's top edge").to.be.closeTo(inner.top, 1);
             if (viewport.label === "tablet") expectTouchSize($element, `${$switch.attr("data-testid") ?? "a switch"} on a tablet`);
-            // Its inner corners and its middle are the switch's own tap.
             const inset = 2;
             for (const [px, py] of [
               [box.left + inset, box.top + inset],
@@ -391,7 +340,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
       cy.viewport(viewport.width, viewport.height);
       mountGame(fullBoardView());
 
-      // The pill stays small; its ::after is the finger's target (game/inspectable.css).
+      // The pill's ::after pseudo-element is its finger-sized target.
       cy.get(`${BOARD} [data-browsable="true"]`)
         .should("have.length", 3)
         .each(($pile) => {
@@ -429,10 +378,7 @@ describe("B29 touch targets are at least 44x44 px on phones and tablets", () => 
   }
 });
 
-/**
- * The tiles smaller than B29's three sizes give them: a short phone upright (Safari's visible 664),
- * a small one (360x640), a small one on its side, and the desktop, where the switch has no reach.
- */
+/** Extra-small tiles and desktop must also keep switch targets from their centers. */
 const SMALL_TILE_VIEWPORTS = [
   { label: "phone, Safari's visible viewport", width: 390, height: 664 },
   { label: "small phone", width: 360, height: 640 },
@@ -451,13 +397,10 @@ describe("B29 the switch never takes the middle of a small tile", () => {
   }
 });
 
-// ---------------------------------------------------------------------------------------------
-// B30: the hand fan
-// ---------------------------------------------------------------------------------------------
+// B30: hand fan
 
 const FAN_DEFS = ["core-002", "core-005", "core-008", "core-011", "core-019", "core-020", "core-043", "core-053", "core-055", "core-077"];
 
-/** The full fixture board with an `n`-card hand, which is the most crowded screen a phone gets. */
 function fanView(n: number): View {
   const full = fullBoardView();
   const hand = Array.from({ length: n }, (_unused, index) =>
@@ -470,15 +413,10 @@ function fanView(n: number): View {
   };
 }
 
-/** Your hand cards, in hand order. */
 function handCards(hand: HTMLElement): DOMRect[] {
   return [...hand.querySelectorAll('[data-testid^="hand-card-"]')].map(rectOf);
 }
 
-/**
- * How much of each covered card still shows: the horizontal distance from one card's left edge to
- * the next one's, in hand order. The last card is uncovered and is not in the list.
- */
 function exposedStrips(cards: readonly DOMRect[]): number[] {
   const strips: number[] = [];
   for (let index = 0; index + 1 < cards.length; index += 1) {
@@ -540,9 +478,7 @@ describe("B30 the hand fan fits a phone and never overlaps on a desktop", () => 
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B31: the phone grids and the height budget
-// ---------------------------------------------------------------------------------------------
+// B31: phone grids and height budget
 
 describe("B31 the phone layouts fit the height and hide the log", () => {
   it("B31 at 844x390 the controls sit right of the field, the board ends on the screen, and the log is hidden", () => {
@@ -560,8 +496,7 @@ describe("B31 the phone layouts fit the height and hide the log", () => {
       expect(rectOf(controls).left, "the control bar starts at or right of the field's right edge").to.be.at.least(
         rectOf(field).right - EPSILON,
       );
-      // The shell pads a phone 6 px top and bottom (B46), so the board may be 378 px tall; what
-      // matters is that it ends on the screen.
+      // B46's vertical shell padding leaves 378px for the board.
       expect(rectOf(board).height, "the board fits 390 px of height less the shell's padding").to.be.at.most(378);
       expect(rectOf(board).bottom, "the board ends inside the viewport").to.be.at.most(390 + EPSILON);
     });
@@ -586,13 +521,10 @@ describe("B31 the phone layouts fit the height and hide the log", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B32: the prompt as a bottom sheet
-// ---------------------------------------------------------------------------------------------
+// B32: prompt as bottom sheet
 
 type PromptKindUnderTest = "discover" | "target" | "mode";
 
-/** An open prompt of one of three shapes: card options, a list of board picks, plain buttons. */
 function promptView(kind: PromptKindUnderTest): View {
   const options = {
     discover: [
@@ -663,9 +595,7 @@ describe("B32 a prompt is a bottom sheet on a phone and a centred modal on a des
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B43: the log on a phone
-// ---------------------------------------------------------------------------------------------
+// B43: log on a phone
 
 describe("B43 a phone opens the log from the control bar", () => {
   for (const [width, height] of [
@@ -699,15 +629,9 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B44 and B45: tapping a hand card on a phone
-// ---------------------------------------------------------------------------------------------
 
-/**
- * t1 can go into your units lane 2 or 3; t2, at the left end of the hand under your hero, is aimed
- * at either hero; t3 (the right end) and t4 (the middle) cannot be played. Seven cards, so the fan
- * overlaps.
- */
+/** Seven crowded hand cards include board-target, hero-target, and unplayable cases. */
 function tapView(): View {
   return baseView({
     you: emptySide("p1", {
@@ -739,7 +663,7 @@ const PHONES = [
   [844, 390],
 ] as const;
 
-/** The hand card's box once its lift transition has finished (the size stops changing). */
+/** Wait for the lift transition to settle before measuring its card. */
 function settledBox(testid: string, check: (box: DOMRect, element: HTMLElement) => void): void {
   let last = "";
   cy.get(ts(testid)).should(($card) => {
@@ -814,7 +738,7 @@ describe("B45 lifting a hand card on a phone", () => {
     cy.viewport(390, 844);
     mountGame(tapView(), TAP_LEGAL);
 
-    // t1 is playable, so it takes focus (Card.tsx gives a legal card tabIndex 0); t2 covers it.
+    // Legal t1 takes focus while t2 overlaps it.
     cy.get(ts("hand-card-t1")).then(($card) => {
       ($card[0] as HTMLElement & { focus(options?: { focusVisible?: boolean }): void }).focus({ focusVisible: true });
     });
@@ -822,7 +746,7 @@ describe("B45 lifting a hand card on a phone", () => {
       const card = $card[0] as HTMLElement;
       expect(card.matches(":focus-visible"), "the card has keyboard focus").to.eq(true);
       const box = rectOf(card);
-      // At rest the right part of the card is under its neighbour: t5 starts about 44 px in.
+      // At rest, t5 covers the card's right edge.
       const hit = card.ownerDocument.elementFromPoint(box.left + box.width * 0.85, box.top + box.height / 2);
       expect(hit !== null && card.contains(hit), "the focused card is on top of its neighbours").to.eq(true);
     });
@@ -851,7 +775,7 @@ describe("B44 a play's board pick on a phone held upright", () => {
       expect(bar.top, "below the hand").to.be.at.least(hand.bottom - EPSILON);
       expect(bar.top, "below the card that was tapped").to.be.at.least(lifted.bottom - EPSILON);
     });
-    // With no options in it, the bar says where they are, inside its own height.
+    // Without options, the prompt describes board targets within the bar.
     cy.get(ts("prompt-modal"))
       .find(".prompt-board-hint")
       .should("be.visible")
@@ -861,7 +785,6 @@ describe("B44 a play's board pick on a phone held upright", () => {
         const bar = rectOf($hint[0]?.closest(ts("prompt-modal")) as Element);
         expect(hint.bottom, "inside the bar").to.be.at.most(bar.bottom + EPSILON);
       });
-    // The board is still the way to answer it.
     cy.get(ts("zone-you-units-3")).click();
     cy.get(ts("prompt-modal")).should("not.exist");
   });
@@ -879,11 +802,9 @@ describe("B44 a play's board pick on a phone held upright", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B46: the whole game screen fits
-// ---------------------------------------------------------------------------------------------
+// B46: whole game screen fits
 
-/** The match route's chrome around the game (routes/match.tsx): BackLink, the match bar. */
+/** Mirror the match route's BackLink and match bar. */
 function mountMatch(view: View, legal: Legal = []): void {
   cy.mount(
     <div className="app-shell app-shell--wide">
@@ -899,7 +820,7 @@ function mountMatch(view: View, legal: Legal = []): void {
   );
 }
 
-/** The hotseat route's chrome (routes/dev/hotseat.tsx): one bar with the hand-over button. */
+/** Mirror the hotseat route's hand-over bar. */
 function mountHotseat(view: View, legal: Legal = []): void {
   cy.mount(
     <div className="app-shell app-shell--wide">

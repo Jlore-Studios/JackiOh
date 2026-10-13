@@ -24,7 +24,7 @@ const WEB = fileURLToPath(new URL("..", import.meta.url));
 const dist = process.argv[2] ?? join(WEB, "dist");
 
 const REQUIRED = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY", "VITE_SERVER_HTTP_URL", "VITE_SERVER_WS_URL"];
-const SERVED = ["index.html", "404.html", "_redirects", "_headers"];
+const SERVED = ["index.html", "404.html", "_redirects", "_headers", "sitemap.xml", "almanac/index.html"];
 
 const env = loadEnv("production", WEB, "VITE_");
 const problems = [];

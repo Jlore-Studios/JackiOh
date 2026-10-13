@@ -19,8 +19,10 @@ $previous
 ## When you are done
 
 The harness then commits your work, runs these checks and hands the diff to an adversarial
-reviewer who has not seen your reasoning. If the reviewer finds problems, a fresh builder gets
-the findings, so leave nothing half-done.
+reviewer who has not seen your reasoning: a fresh session of your own lane's reviewer, never
+an approval from this session. If the reviewer finds problems, you (or your lane's final
+auditor) get the findings, so leave nothing half-done. Do not launch subagents to review
+your own work: the harness's adversarial review is the review.
 
 $gate_list
 

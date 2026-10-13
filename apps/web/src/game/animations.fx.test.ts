@@ -121,6 +121,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   costChanged: { type: "costChanged", instanceId: "c11", cost: 0 },
   modifierChanged: { type: "modifierChanged", player: "p2", modifierId: "m4", added: true },
   radiantSet: { type: "radiantSet", instanceId: "u3", defId: "core-017", zone: { z: "field", player: "p1", row: "units", lane: 2 } },
+  deradianted: { type: "deradianted", instanceId: "u3", defId: "core-017", zone: { z: "field", player: "p1", row: "units", lane: 2 } },
   transformed: { type: "transformed", instanceId: "u3", fromDefId: "core-017", toDefId: "token-sheep", newInstanceId: "c90" },
   fused: { type: "fused", instanceIds: ["u1", "u2"], resultInstanceId: "c91", defId: "core-088" },
   positionSwitched: { type: "positionSwitched", instanceId: "u3", position: "DEF" },
@@ -132,6 +133,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   attackDeclared: { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false },
   attackCancelled: { type: "attackCancelled", attackerId: "u1", targetId: "u6", byInstanceId: "b5" },
   manaChanged: { type: "manaChanged", player: "p1", current: 2, max: 4 },
+  manaSpent: { type: "manaSpent", player: "p1", amount: 2, for: "activate" },
   turnStarted: { type: "turnStarted", player: "p1", turn: 3 },
   turnEnded: { type: "turnEnded", player: "p1", turn: 3, unspentMana: 2 },
   turnAutoEnded: { type: "turnAutoEnded", player: "p1", turn: 3 },
@@ -139,6 +141,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   promptAnswered: { type: "promptAnswered", player: "p1", choiceId: "ch1" },
   drawOffered: { type: "drawOffered", player: "p2" },
   drawAnswered: { type: "drawAnswered", player: "p1", accept: false },
+  emoted: { type: "emoted", player: "p1", emote: "greetings" },
   gameOver: { type: "gameOver", winner: "p1", reason: "hero-death" },
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: { type: "cardAnnounced", player: "p1", instanceId: "c1", defId: "core-035", cardType: "Spell", costPaid: 1, targets: ["hero-p2"] },
@@ -163,7 +166,14 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   turnCutShort: { type: "turnCutShort", player: "p2", byInstanceId: "b5" },
   marked: { type: "marked", instanceId: "u6", mark: "steal", color: "purple", added: true },
   glitched: { type: "glitched", player: "p1", outcome: "swap" },
+  fengShui: { type: "fengShui", instanceId: "c1", sourceId: "c2", player: "p1", outcome: "positive" },
+  translated: { type: "translated", instanceId: "u6" },
+  discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
+  secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
+  secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
+  predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -203,7 +213,7 @@ function startOf(signal: RunnerSignal | undefined) {
  * B1: the fx column
  * ------------------------------------------------------------------------------------------- */
 
-/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 12 rows that carry no effect. */
+/** S4's table and patch v0.2.0's rows: `type → recipe`, `null` for the 19 rows that carry no effect. */
 const S4_RECIPES: Record<GameEventType, string | null> = {
   cardPlayed: "cast",
   summoned: "summon",
@@ -227,6 +237,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   costChanged: "glint",
   modifierChanged: "glint",
   radiantSet: "radiant",
+  deradianted: null,
+  manaSpent: null,
   transformed: "smoke",
   fused: "fuse",
   controlChanged: "mindControl",
@@ -247,6 +259,7 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   promptAnswered: null,
   drawOffered: null,
   drawAnswered: null,
+  emoted: null,
   gameOver: null,
   // Patch v0.2.0: the new events ride the existing recipes, each with a look of its own (fx/v020.test.ts),
   // and `rolledBack` rewinds the whole board.
@@ -272,8 +285,19 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   turnCutShort: "banner",
   marked: "brand",
   glitched: "banner",
+  fengShui: "banner",
+  // R1301: a translation pulses its card and nothing decorates it.
+  translated: null,
+  // R800: a discard a discard guard stopped fizzles over the hand.
+  discardPrevented: "fizzle",
   // Patch v0.3.X (MN05, R1363): a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
+  // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
+  jadeChanged: null,
+  // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
+  secretChosen: null,
+  secretRevealed: null,
+  predicted: null,
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -341,6 +365,8 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   costChanged: ["jk-gem-tick", 200, "card-<instanceId> | hand-card-<instanceId>"],
   modifierChanged: ["jk-badge-fade", 200, "modifiers-<side>"],
   radiantSet: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  deradianted: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  manaSpent: ["jk-crystal-fill", 150, "mana-<side>"],
   transformed: ["jk-spin-face", 400, "card-<instanceId>"],
   fused: ["jk-fuse-merge", 500, "card-<instanceIds[0]>"],
   positionSwitched: ["jk-rotate-def", 250, "card-<instanceId>"],
@@ -359,6 +385,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   promptAnswered: ["jk-fade-out", 150, "prompt-modal"],
   drawOffered: ["jk-toast-in", 150, "draw-toast"],
   drawAnswered: ["jk-toast-resolve", 300, "draw-toast"],
+  emoted: ["jk-loss-pop", 0, "hero-<side>"],
   gameOver: ["jk-result-overlay", 0, "result-overlay"],
   // Patch v0.2.0 (docs/classic-sets.md B3, B5).
   cardAnnounced: ["jk-card-played", 300, "hand-card-<instanceId> | hand-<side>"],
@@ -383,14 +410,21 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   turnCutShort: ["jk-banner", 600, "turn-banner"],
   marked: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   glitched: ["jk-banner", 600, "turn-banner"],
+  fengShui: ["jk-banner", 600, "turn-banner"],
+  translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
+  discardPrevented: ["jk-fatigue", 300, "hand-<side>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
+  jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
+  secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
+  secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
+  predicted: ["jk-badge-fade", 400, "hero-<side>"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 55 rows of S4, patch v0.2.0, Glitch (R676) and MN05 (R1363) carry fx with the listed recipe and the other 11 carry none", () => {
+  it("B1 exactly the 57 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 19 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(55);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(57);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {
@@ -402,9 +436,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 11 rows without an effect have no fx value at all", () => {
+  it("B1 the 19 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(11);
+    expect(bare).toHaveLength(19);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

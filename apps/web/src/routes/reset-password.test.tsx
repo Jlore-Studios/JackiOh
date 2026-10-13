@@ -1,6 +1,4 @@
-// `/reset-password` (docs/polish/5-sign-in.md, B31). With a recovery session held in memory, the
-// screen sets a new password against the provider and only then stores the session (R193). Without
-// one, it is a dead end no longer: it offers a new link and the way back to sign-in.
+// `/reset-password`: B31; store recovery only after the new password (R193).
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
@@ -214,10 +212,7 @@ describe("B31 with a recovery session", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// B31: "the new password and reset-confirm, each with show and hide". The screen has one toggle,
-// `reset-toggle-password`, and it must reveal the confirmation too, or the two can't be compared.
-// ---------------------------------------------------------------------------------------------
+// B31: password visibility.
 
 describe("B31 show and hide", () => {
   beforeEach(() => {
@@ -253,9 +248,7 @@ describe("B31 show and hide", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// The adversarial panel's findings
-// ---------------------------------------------------------------------------------------------
+// Adversarial-panel findings.
 
 function unsignedJwt(payload: Record<string, unknown>): string {
   const part = (value: unknown): string =>
@@ -323,11 +316,8 @@ describe("B31 the reset form and the browser", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
-// The second panel: a recovery session nobody can come back to, and one a reload does not spend
-// ---------------------------------------------------------------------------------------------
+// Recovery-session disposal and reload.
 
-/** Every call to the provider, with the bearer it carried. */
 function recordProvider(status = 204): { url: string; bearer: string | null }[] {
   const calls: { url: string; bearer: string | null }[] = [];
   vi.stubGlobal(
@@ -357,7 +347,6 @@ describe("R193 leaving the reset screen lets go of the recovery session", () => 
     render(<ResetPasswordRoute />);
     fireEvent.click(screen.getByTestId(testId));
 
-    // One stray tap spends nothing: the link works only once.
     expect(screen.getByTestId(resetTestid.leaveConfirm)).toBeInTheDocument();
     expect(recoverySession()).toEqual({ session: RECOVERY, email: EMAIL });
     expect(window.location.pathname).toBe(paths.resetPassword);
@@ -522,7 +511,6 @@ describe("R194 saving revokes the session the reset replaces", () => {
     await waitFor(() => {
       expect(revoked(calls, aAccess)).toBe(true);
     });
-    // The new session itself is never revoked.
     expect(revoked(calls, RECOVERY.accessToken)).toBe(false);
   });
 });
@@ -557,12 +545,10 @@ describe("B31 a password past the provider's byte limit", () => {
 });
 
 
-// ---------------------------------------------------------------------------------------------
-// R194: a recovery session that runs out while the form is open is renewed, not called spent
-// ---------------------------------------------------------------------------------------------
+// R194: renew a recovery session that expires while the form is open.
 
 describe("R194 a recovery session that runs out while the form is open", () => {
-  /** The provider: PUT /user refuses `expiredToken` as a spent JWT; the refresh grant answers `refresh`. */
+  /** Provider rejects an expired token, then grants a refresh. */
   function renewingProvider(
     expiredToken: string,
     refresh: { status: number; body: unknown },
@@ -618,8 +604,7 @@ describe("R194 a recovery session that runs out while the form is open", () => {
   });
 
   it("R194 one already past its expiry when the screen opens is shown and renewed, not dropped as no link", async () => {
-    // A device whose clock runs fast, or a player who came back to the tab: the access token looks
-    // expired, but the refresh token still renews it, and the one-time link must not be lost.
+    // A live refresh token must preserve an expired access token's link.
     holdRecoverySession({ accessToken: "recovery-access-1", refreshToken: "recovery-refresh-1", expiresAt: Date.now() - 60_000 }, EMAIL);
     const { bearers, refreshes } = renewingProvider("recovery-access-1", RENEWED);
     render(<ResetPasswordRoute />);

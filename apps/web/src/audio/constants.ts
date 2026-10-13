@@ -19,6 +19,8 @@ export const CARD_HOOKS = {
   death: { kinds: ["unit"] },
   /** A Spell or Field Spell cast, a Trap or Field Trap firing (R204). */
   cast: { kinds: ["spell", "trap"] },
+  /** R1088: a card whose effect summons — one of its lines plays for the summon it caused. */
+  trigger: { kinds: ["spell", "trap", "unit"] },
 } as const satisfies Record<string, { kinds: readonly CardKind[] }>;
 export const CARD_HOOK_NAMES = Object.keys(CARD_HOOKS) as readonly CardHook[];
 
@@ -65,10 +67,10 @@ export const FLUSH_MAX_SFX = 4;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
 /** R501: §10.11's cap on the pre-rendered voice set, raised from 3 MiB for Classic and Classic+. */
-export const VOICE_BUDGET_BYTES = 6 * 1024 * 1024;
+export const VOICE_BUDGET_BYTES = 12 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 /** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
-export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8 } as const satisfies Record<CardHook, number>;
+export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8, trigger: 8 } as const satisfies Record<CardHook, number>;
 /** R655: a hook with an effect and a line starts the effect first, and the line this much later. */
 export const CARD_EFFECT_DELAY_MS = 200;
 /** R655: each play of a card's effect shifts its pitch by up to this share either way, so repeats differ. */

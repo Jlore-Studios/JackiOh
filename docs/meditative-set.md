@@ -9,7 +9,7 @@
 > mechanic, what the designer wrote (verbatim in the source note), what it most likely means in this
 > engine, every place the text is ambiguous with the reading chosen, and the order the work is built in.
 >
-> Proposed rulings are numbered **MD-A1, MD-B1, …** (one series per drafting group, A to F). They are
+> Proposed rulings are numbered **MD-A1, MD-B1, …** (one series per drafting group, A to G). They are
 > not `R<n>` rows. The part that proves one takes an R-number from its reserved block (M10) and names its
 > test after it. **⚠ designer** marks a reading the designer should confirm; the build does not wait for
 > it (M9 lists them, each with the default the build uses).
@@ -35,7 +35,8 @@
 Issue #496, "v0.3.X: Large Patch: Meditative & Visuals Pass", verbatim in `JackiOh_Meditative_Cards.md`:
 
 - **A new set, Meditative**: 97 numbered entries plus two unnumbered stubs, 99 cards in all once the
-  numbering is fixed (M2), and the 30 tokens they make: 129 catalog entries.
+  numbering is fixed (M2), and three more the designer added after this brief (issue #571), 102 cards,
+  and the 30 tokens they make: 132 catalog entries.
 - **Keywords**: Degrade is renamed **Nerf** and Upgrade **Buff** (M4).
 - **Cosmetics**: hero portraits can be clicked on and have more vivid art; more emotes, dealt at random
   each game.
@@ -62,8 +63,9 @@ M8 reads each non-card item; M10 turns all of it into parts.
   **Numbers** (the declared params: base → Radiant, ↑ when more is better for the controller), **Check**
   (R275, R276, typos, ⚠ designer items) and **Class** (A keywords or one primitive, B composed
   primitives, C a shared new system, D a subsystem of its own).
-- **The groups.** The card entries were drafted in six groups (A: #1–#24, B: #25–#38 and #98, C: #39–#49,
-  D: #50–#75, E: #76–#94 and #99, F: #95–#97.9) and their MD rulings are numbered per group. Where the
+- **The groups.** The card entries were drafted in seven groups (A: #1–#24, B: #25–#38 and #98, C: #39–#49,
+  D: #50–#75, E: #76–#94 and #99, F: #95–#97.9, and G: #100–#102, the three cards the designer added
+  after the brief, read with issue #571) and their MD rulings are numbered per group. Where the
   groups disagreed, M5's decisions (D1–D13) settled it, and those decisions win over any entry.
 - **Words.** House style as R366, R432 and R373 set it: "Deck" for the library, "Tribute" for Sacrifice,
   "Bounce" for a return from the field to hand ([[R692]]), "(N) Cost" for a cost as a noun and "costs
@@ -84,6 +86,7 @@ M8 reads each non-card item; M10 turns all of it into parts.
 | (0) Small Time Recruits, unnumbered, "Something with 1 costs" | a stub with no number | **#62**, the one hole; read from Hearthstone's Small-Time Recruits (draw three (1) Cost Units from your deck) |
 | (0) Jlarna #89, no text | a stub | #89; read as the J-pun on Klarna, "pay in 4" (⚠ designer) |
 | Empty Plot #100.1 | the nine Blueprint units are #97's | **#97.1** |
+| #98 Gachaholic, #99 Catboy Maid SSR+ and #100 Greaser, added after the brief (issue #571) | #98 and #99 are Showdown's and Paranoia's already | Greaser keeps **#100**; Gachaholic is **#101** and Catboy Maid SSR+ **#102**, the designer's order at the end; the designer accepted it, so M9 has no row |
 | #45.1, #49.1–#49.3, #70.1, #71.1, #91.1, #93.1–#93.3, #95.1, #96.1, #97.1–#97.9 | generated, so Tokens | tokens, `rarity: "Token"`, the designer's rarity as `printedRarity` |
 
 **Types the designer left out or wrote loosely**: #8 Reach the Summit is a Spell (it returns to hand,
@@ -93,12 +96,12 @@ Girlfriend is an Animated Field Spell (it prints stats and is attacked).
 **Tags.** The designer's, with `Jlockheed` read as the existing tag `Jlockeed` ([[R278]]; the names keep
 "Jlockheed"). One new tag, **Wincon** (#8, #20). #69 The Maestro carries Plague, as every card that uses
 Plague Counters does ([[§5]]). #87 Tatches the Totem's "All Tribes" is the five tribal tags at once
-([[R1424]]). Census of the 129 entries: CN 31, Token 30, Human 11, Felinor 10, KY 6, Quickdraw 5,
+([[R1424]]). Census of the 132 entries: CN 33, Token 30, Human 12, Felinor 11, KY 6, Quickdraw 5,
 Acclaimed 4, Jlockeed 3, Wincon 2, Plague 2, Catalyst 2, Prime 2, Fruit 1, Call to Chaos 1.
 
 **Rarity.** The designer's, and for the five with none, §8's rubric: #98 Showdown Rare, #55 Dragon Fruit
 Rare (a Fruit card that generates, as Fruit Basket), #56 House Party Common (one fill, as Friend of
-Felinors), #62 Small Time Recruits Rare, #89 Jlarna Rare. The 99 cards: **26 Common, 29 Rare, 22 Epic,
+Felinors), #62 Small Time Recruits Rare, #89 Jlarna Rare. The 102 cards: **29 Common, 29 Rare, 22 Epic,
 16 Legendary, 6 Mythic**.
 
 **Radiant stats.** [[R275]]'s stat half (a Unit's Radiant attack and health each at least double) holds
@@ -122,7 +125,7 @@ is built there, card by card, without reaching a player until its last part ([[R
 - §9.4's L3 and `create_game` refuse a Meditative card in a deck; the Almanac's shelf and the deck
   builder's pool leave them out; the server neither seeds them nor serves them.
 - `patches check` and `patches ship` read the catalog without them: **a card batch adds no pending
-  fragment**, and the patch that ships the set claims all 129 entries in one fragment.
+  fragment**, and the patch that ships the set claims all 132 entries in one fragment.
 - The testkit can preview the set on one thread (`preview_sets(&[SetName::Meditative])`): a card test
   that needs Meditative cards in a generic pool previews it; the fuzz tool previews every set, so every
   Meditative card is fuzzed from the day it lands; the golden traces deal from the shipped sets, so no
@@ -165,7 +168,7 @@ list (in M6, after its cards) says more.
 | discard guard | "you cannot be forced to discard on your opponent's turn" | #1 | MB02 |
 | computed Echo X | Echo from max mana | #5 | MB02 |
 | ME-TRIG | start/end-of-turn and Cry/Death trigger multipliers; "trigger your end of turn effects" | #9, #10, #12 (#11, #13) | MB03 |
-| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
+| ME-TURN | lost refreshes ("lose all mana next N turns"), extra turns and the once-a-game Rift flag; the zeroed refresh aura (#26); a repayment schedule (#89's credit line) | #18, #19, #19.1; #26; #89; #22 | MB04 (the aura in MB09, the schedule in MB23) |
 | ME-WIN | an effect that wins; chosen alternative win conditions held by the state check | #8, #20 | MB04 |
 | ME-SECRET | a hidden choice kept until a later turn, the opponent's prediction | #22, #22.1 | MB05 |
 | ME-CRAFT | the card crafter: a block editor over the engine's real keywords, hooks and verbs, priced in mana and lines of code, building a transient definition as Fuse does | #17 | MB06 |
@@ -188,6 +191,7 @@ list (in M6, after its cards) says more.
 | Untributable, tribute pool | a keyword; a pool of cards with a Tribute cost | #80, #88 | MB23 |
 | Chaos (Meditative Edition), shuffle memory | the third Call to Chaos table; memory on a shuffled card | #95, #96, #96.1 | MB24 |
 | stack base, wide tribute, lane strike, capture | the Blueprint buildings' mechanics | #97.1, #97.4, #97.5, #97.8 | MB26 |
+| luck-based pool, given Lucky, lucky coins | the Luck-based pool (MD-G1); Lucky given to a card, read by every pool card's roll (MD-G2); coin flips that keep heads with Lucky (MD-G4) | #101, #102 (Core #4, C #65 and the other pool cards) | MB27 |
 
 **Decisions across groups** (these win over any entry in M6):
 
@@ -215,7 +219,8 @@ list (in M6, after its cards) says more.
 
 ## M6. Cards, card by card
 
-Six drafting groups read the designer's list, one range each; their entries follow in number order, each
+Six drafting groups read the designer's list, one range each, and Group G the three cards the designer
+added after it; their entries follow in number order, each
 token after its card. Every entry gives the card's id, cost, type, tags, rarity and stats (base → Radiant),
 then **Text** and **Radiant** (the faces as they go in `catalog.json`), **Engine** (how the script builds
 it, with the verbs and hooks), **Rulings** (the MD proposals it relies on, M7), **Numbers** (its `params`),
@@ -615,7 +620,7 @@ percentile's 24.
   `draw_from_library { instanceId }`, topmost match first (MD-A3). The Radiant draws every match in
   the deck as it stood when the effect began (§2.4's "draw your whole library" reading). The hand
   cap burns the overflow.
-- **Rulings:** **MD-A16:** "Prime indexed" means the card's catalog index is a prime (2, 3, 5 … 97),
+- **Rulings:** **MD-A16:** "Prime indexed" means the card's catalog index is a prime (2, 3, 5 … 101),
   in any set: indices repeat across sets, so Core #2 and Meditative #2 both count. It doesn't mean a
   position in the deck, whose order is hidden.
 - **Numbers:** draws 3 ↑ (base face only).
@@ -817,7 +822,7 @@ percentile's 24.
   {draw} cards.
   You can take only one extra turn from Temporal Rift each game.
 - **Engine:** ME-TURN (extra turns). A new verb, `take_extra_turn`, adds 1 to the caster's
-  `extraTurns` count unless their `gameLog.riftExtraTurn` is set, then sets the flag (public, on the
+  `extraTurns` count unless their `riftExtraTurn` is set, then sets the flag (public, on the
   view). `turn::end_of_turn_cleanup_settle` checks the turn cap, then calls `start_turn(player)` again
   in place of `start_turn(opponent_of(player))` while the player who just ended has an extra turn
   owed, and spends one. Radiant: `gain_mana`, `next_turn_mana` (Core #24's rider) and `draw`.
@@ -1042,8 +1047,9 @@ percentile's 24.
     would.
   - Multipliers don't stack; the highest holds.
 - **ME-TURN** (#18, #19, #19.1; #15, #22 and #22.1 read its "next turn").
-  - **Lost refreshes:** `mana.lostThrough`, a `turnsStarted` index through which the refresh gives 0
-    and spends the next-turn rider. Mana gained later in the turn still counts.
+  - **Lost refreshes:** `lostRefreshThrough` on the player (MB04's name for it, beside the
+    mana), a `turnsStarted` index through which the refresh gives 0 and spends the next-turn rider.
+    Mana gained later in the turn still counts.
   - **Extra turns:** a per-player owed count, spent at the end of that player's turn by starting
     their turn again, so the whole §2.2 turn runs and the turn cap counts it. Next to it is a
     per-player once-a-game Rift flag. Both are public on the view, with an "Extra turn" banner in
@@ -2051,13 +2057,13 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 > Shuffle Radiant Knowledge Breaker Prime into your Deck
 
 - **Text:** Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
   Death: Shuffle a Knowledge Breaker Prime into your deck.
 - **Radiant:** Divine Shield
   Cry: Nerf every other CN or KY card on the field, in each hand and in each deck {times|time|times}.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
   Death: Shuffle a Radiant Knowledge Breaker Prime into your deck.
 - **Engine:**
   - Cry: `degrade { scope: { side: any, zones: [field, hand, library], tags: [CN, KY], excludeSelf },
@@ -2089,6 +2095,10 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 - **Numbers:** `times` 1 → 2 ↑ (on the Radiant face only, R749).
 - **Check:**
   - "field Animated Field Traps" corrected (the first "field" dropped).
+  - "activate at the Start of your turn" printed "reveal at the start of your next turn": R366's
+    vocabulary retires "start of your turn", and the turn meant is the next one (MD-C17). "Into your
+    backrow" is left out, as #99 Paranoia's "play your Spells face-down as Traps" leaves it: a Field
+    Trap is played nowhere else, and the face stays under the longest-text tier.
   - Divine Shield moved to the keyword line.
   - R279: this card's name sits inside its Prime's, so `refs` list both (C+ #38's precedent).
   - R275: stats doubled, Divine Shield added, Nerf twice, Radiant Prime.
@@ -2104,12 +2114,12 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
 
 - **Text:** Rush
   Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
 - **Radiant:** Rush, Poisonous
   Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.
-  Aura: You may play your Units face-down into your backrow as Animated Field Traps that reveal at the
-  start of your turn.
+  Aura: You may play your Units face-down as Animated Field Traps that reveal at the
+  start of your next turn.
 - **Engine:**
   - Cry, in the text's order: first `summon_random { query: { type: TRAP_TYPES } }` five times. These
     are non-token Traps and Field Traps of every set (R380), repeats allowed (R60), placed face-down
@@ -2388,8 +2398,10 @@ cards uses ME-CN: the two Chinese names are simply the cards' names.
   A player's Luck X is the sum of the "You have Luck X" auras acting on their side. It is added to the
   Lucky X of every roll that already has a "best" (`radiant_chance`, the Grapes' roll, Soul Shot's pick
   R414, Book of Tokens' count, Mid Loser's coin, Die Insect, ME-WEIGHTED-ROLL) made by an effect that
-  player controls. A roll with no best (a pool pick, a random target, Gary's coins) is untouched (R32,
-  R130). The value is public, shown by the hero (MD-C12).
+  player controls. A roll with no best (a pool pick, a random target) is untouched (R32,
+  R130). Since MD-G4 (R1440) every coin flip has a best, heads, so Gary's coins and Ace in the Hole's
+  take it too; whichever of #527 and #571 lands second proves that. The value is public, shown by the
+  hero (MD-C12).
 - **ME-MARKET** (#42). A subsystem `subsystems/night_market.rs` (MD-C13, MD-C14) with:
   - the stall roll (3 CN cards, 2 Auspicious Rocks, 1 AI generated card);
   - the yuan price function (`YUAN_PER_COST` 10, `YUAN_PER_RARITY` 5, Radiant ×2);
@@ -2464,8 +2476,9 @@ Researched against `spec/05`–`spec/10`, `crates/cards/README.md`, `crates/engi
 - **Engine:** ME-STATS. The table is `crates/cards/data/win_rates.json`, compiled in by `crates/cards/build.rs`
   next to the catalog and handed to the engine inside the catalog's own `OnceLock`, so rule 4 still has
   two statics. It holds `{ patch, source: "live" | "provisional", cards: [{ id, wins, games }] }`.
-  Its figures are R377's "in deck" breakdown for every mode and every pilot (`unified`), with tutorial
-  games left out. That is the figure `GET /api/stats/cards` ranks by, taken for the newest *shipped*
+  Its figures are R377's "in deck" breakdown for every mode, counting a live game's human seats and
+  both seats of a development game (R1451: a ladder bot's side moves nothing), with tutorial games
+  left out. That is the figure `GET /api/stats/cards` ranks by, taken for the newest *shipped*
   patch under R654's gate: live games only once the patch has `PUBLIC_STATS_MIN_LIVE_GAMES`, otherwise
   live plus dev. This way CN Tech agrees with `/stats`.
   **Refresh:** `cargo jackioh winrates <saved stats response | record files…>` (crates/tools, which may
@@ -3563,34 +3576,47 @@ Twenty-four entries: nineteen cards (#76–#94, #99 Paranoia, the designer's sec
 - **Class:** C (NEW: ME-TRIBUTEPOOL, small).
 
 #### Meditative #89 · Jlarna
-`meditative-089` · (0) Spell · Rare (assigned)
+`meditative-089` · (3) Field Spell · Rare
 
-> **Designer:** (0) Jlarna #89 (a name and a cost only). Read as Klarna, the buy-now-pay-later
-> company, by the house's J-puns (Jlockheed is Lockheed, Jlockwork is Clockwork).
+> **Designer:** (2) Jlarna, Field Spell, Rare, Meditative, #89
+> Combo 2: This costs (2) less.
+> Aura: You can spend mana from next turn. {for AI: lock your next turn’s mana crystals as this happens}
+> If either player doesn’t play a card on a turn, Tribute this.
+> ~~~
+> Combo 2: This costs (2) less.
+> Aura: You can spend mana from next turn.
 
-- **Text:** Choose another card in your hand. It costs (0). Pay its old cost back in
-  {instalments|instalment|instalments}, one at the start of each of your next turns: each is an equal
-  share of that cost, taken from that turn's mana.
-- **Radiant:** Choose another card in your hand. It costs (0). Pay half its old cost back, rounded
-  down, in {instalments|instalment|instalments}, one at the start of each of your next turns: each is an
-  equal share of that half, taken from that turn's mana.
-- **Engine:** a declared hand pick (R81, KY's Constant's) among your other hand cards that are not
-  X-cost (R65) and cost (1) or more now; the old cost C is its price as Jlarna resolves (R65's
-  `effective_cost`); `set_cost_override` 0 on it (kept until it reaches a graveyard or exile, R766).
-  The debt (C, Radiant ⌊C/2⌋) goes on its controller as a **ME-TURN** schedule: at each of their next
-  `instalments` refreshes (§2.3, their own turns, an extra turn counting), that refresh gives the
-  share less mana, Hinder's mechanism on a schedule. With no valid pick it fizzles and still counts as
-  played.
-- **Rulings:** **MD-E13:** the shares split the debt as evenly as possible, larger first (4 in 4 is
-  1, 1, 1, 1; 3 is 1, 1, 1, 0; 6 is 2, 2, 1, 1); mana never goes below 0, so an instalment that finds
-  less mana takes what there is; the debt is the player's and is owed whatever becomes of the card
-  (discarded, stolen or never played); several Jlarnas add their shares turn by turn. The schedule is
-  public (its turns and amounts), as Hinder's is.
-- **Numbers:** `instalments` 4 → 4 ↑ (more instalments, thinner shares).
-- **Check:** **⚠ designer:** the whole card is a proposal from its name: "Pay in 4", and the Radiant
-  face is half price. Rarity Rare by §8's rubric: one idea with a twist (a cost change paid over time),
-  in no family (Jlockeed ___ is Lockheed's) and with no tag.
-- **Class:** C (ME-TURN).
+The designer then made four later changes, kept in the reading below: the brief's "pay in 4" stays
+(M9 row 3, now answered); the Combo line is gone and the cost is (3); a missed instalment is
+forgiven; and the Tribute condition is "If you don't use your credit line", checked on the turn
+Jlarna is played too.
+
+- **Text:** Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at
+  once. Pay it back in {instalments|instalment|instalments}, one at the start of each of your next
+  turns.
+  End of turn: If you didn't use your credit line this turn, Tribute this.
+- **Radiant:** the Aura line only.
+- **Engine:** the Aura, a credit line paid in 4 (MD-E13, rewritten). While Jlarna acts on its
+  controller's field, any mana they spend (a card's price, an X, an Activate's cost) can go past
+  the mana they have: they spend their current mana first, and the shortfall is borrowed. What they
+  owe at once (every instalment not yet taken) can never be more than 4. Everything borrowed during
+  one turn is one debt, split into 4 instalments as evenly as possible, larger first. One
+  instalment falls due at each of the borrower's next four refreshes (§2.3), taken off what the
+  refresh gives; debts from different turns add up on one refresh. The instalments lock in as soon
+  as the mana is borrowed, and the schedule is public. A missed instalment is forgiven: it takes
+  what there is, and the rest is dropped, never carried. The debt stays if Jlarna leaves the field;
+  two or more Jlarnas share one line. The base face is Tributed at the end of a turn its controller
+  borrowed nothing on, the turn it is played included (R1225). One affordability function
+  (`spendable_mana`) decides what a player can pay, read by `legal_actions`, the reducer's refusal
+  and the AI. This reading replaces the brief's old card, MD-E13 and every row that described it.
+- **Rulings:** **MD-E13 (rewritten):** the Aura is now a credit line paid in 4, above. **R1223** the
+  borrowing and its limit; **R1224** the repayment schedule and its forgiveness; **R1225** use it or
+  lose it.
+- **Numbers:** `credit` 4 → 4 ↑; `instalments` 4 → 4 ↑ (more instalments, thinner shares).
+- **Check:** R275 ✓: the Radiant face has no self-Tribute. Rare now by the designer's choice, not
+  the brief's.
+- **Class:** C (ME-TURN's repayment schedule).
+
 
 #### Meditative #90 · Spell Basket
 `meditative-090` · (1) Spell · Common
@@ -3846,9 +3872,12 @@ Twenty-four entries: nineteen cards (#76–#94, #99 Paranoia, the designer's sec
   dropped as its stay in that hand ends (R174), and mark each (R437 on hand cards): the owner sees
   the marks, the other player's hand count carries how many (MD-E2). At its point it runs with the
   cards still watched, and `give_from_hand` gains a selector by instance ids to steal them (R12).
-- **ME-TURN** (#89). Besides "next turn" mana, a per-player schedule of refresh changes keyed to that
-  player's next N turn starts (`turnsStarted + k`), each lowering that refresh by its share, mana
-  floored at 0 (MD-E13). Jlarna's instalments are one schedule. Extra turns count as turns.
+- **ME-TURN** (#89). Besides "next turn" mana, a per-player repayment schedule, `owedInstalments`:
+  the instalment due at each of that player's next refreshes, next first, each refresh taking its
+  share off what it gives, mana floored at 0 (MD-E13, rewritten; R1224). Jlarna's credit line borrows
+  past current mana up to its limit through the one affordability function (`spendable_mana`,
+  R1223), its instalments go on that one schedule, and a missed one is forgiven. Extra turns count as
+  turns.
 - **NEW: ME-TUNEMULT** (#84). A static flag `tuneMultiplier { upgrade?, degrade? }` read off a card's
   running face in every zone, which `tune_effect` passes to `tune_once`. Each menu row then scales by
   it: N cost steps, N × `TUNE_STAT_TOTAL`, N keywords, N X steps, N number steps, still one draw and one
@@ -4180,9 +4209,9 @@ files: `crates/cards/src/scripts/meditative/c095_call_to_chaos_meditative_editio
 > triple the attack against units in the same lane
 
 - **Text:** Tribute 2, Armor 3, Can't attack, First Strike
-  This strikes Units in its lane with {multiplier} times its Attack.
+  This strikes Units in its lane with {multiplier}× its Attack.
 - **Radiant:** Tribute 2, Armor 5, Can't attack, First Strike
-  This strikes Units in its lane with {multiplier} times its Attack.
+  This strikes Units in its lane with {multiplier}× its Attack.
 - **Engine:** NEW: LANE-STRIKE. In `combat::resolve_combat`, where both attacks are read once (R94), a
   combatant whose face declares the lane multiplier has its attack multiplied by `multiplier` when the
   other combatant stands in the opposing unit zone of its own lane (§3.1); the hit then goes through
@@ -4338,6 +4367,144 @@ files: `crates/cards/src/scripts/meditative/c095_call_to_chaos_meditative_editio
   insertion at index 1.
 - **Fill the board at random** (existing pattern: C+ #2's `fill_board_zones` plus `summon_random` per
   lane) — #97.9.
+
+### Group G: Meditative #100 to #102
+
+Three cards the designer added to the list after this brief and the census were written (issue #571,
+part MB27), and a rule the designer added with them: a coin flip is luck-based by default, and heads is
+the Lucky side (MD-G4). The designer numbered them #98, #99 and #100; M2's numbering table gives them
+#100 to #102. No tokens. Script files: `crates/cards/src/scripts/meditative/c100_greaser.rs`,
+`c101_gachaholic.rs`, `c102_catboy_maid_ssr.rs`. Ruling proposals are MD-G1 to MD-G4.
+
+---
+
+#### Meditative #100 · Greaser
+`meditative-100` · (2) Unit · Common · 7/7 → 21/21
+
+> **Designer:** 7/7 ~~~ 21/21
+
+- **Text** and **Radiant:** none. It is a vanilla Unit, and the designer gave it no tags.
+- **Engine:** a script file with no hooks on either face. Its tests check both faces' stats.
+- **Rulings:** none.
+- **Numbers:** none.
+- **Check:** R275 ✓ (21/21 is three times 7/7, as Core #8 Mr. Vanilla's and C #86 Genn's Radiant
+  faces are their tripled stats).
+- **Class:** A.
+
+#### Meditative #101 · Gachaholic
+`meditative-101` · (1) Unit, CN, Human · Common · 1/1 → 2/2
+
+> **Designer:** 1/1 · Cry: Add a random Luck-based card to your hand. Give it Lucky 1. ~~~ 2/2 ·
+> Activate: Add a random Luck-based card to your hand. Give it Lucky 1.
+
+- **Text:** Cry: Add a random Luck-based card to your hand. Give it Lucky {lucky}.
+- **Radiant:** Activate: Add a random Luck-based card to your hand. Give it Lucky {lucky}.
+- **Engine:**
+  - **MD-G1, what counts as a Luck-based card:** a non-token card that prints Lucky on either face
+    (§6.1) or flips a coin (MD-G4). Those are the cards with a roll that Lucky improves.
+    - The pool names no set (R1420). Until the release it holds Core #4 Gary the Gambler, Core #23
+      Reoccurring Dream, Core #42 Eugenics, C #65 Ace in the Hole, C+ #25 Soul Shot, C+ #53 Book of
+      Tokens, C+ #65 Two Grapes and C+ #66 Vine of Grapes. From the release on, it also holds M #36 CN
+      Peptides, M #65 Keymaster Keenus (Lucky 1 is among its every keyword), M #86 Mayor Medinamogger
+      and M #102 Catboy Maid SSR+.
+    - It is a query in `crates/cards/src/query.rs` (`luck_based()`), like every other random pool,
+      over the catalog query's `luckBased` (`CatalogQueryArgs.luck_based`, `is_luck_based` in
+      `crates/engine/src/catalog.rs`): either face's printed keywords hold Lucky, or its text says
+      "Flip a coin". A cross test proves the pool is exactly the non-token cards that print Lucky or
+      flip a coin.
+    - The card arrives on its base face at its printed cost, hidden from the opponent. A full hand
+      burns it (§2.4).
+  - **MD-G2, Lucky given to a card:**
+    - The given Lucky becomes the card's own: it is written on the instance, kept in hand and when the
+      card is played, and shown on its face. It is `add_random_from_catalog`'s `lucky` rider, a granted
+      `Lucky X` put on once the card is in the hand, as R637's Temporary is, with no event, and none on
+      a burned card.
+    - It adds to any Lucky the card already has, so Lucky 1 given to a Lucky 1 card makes Lucky 2.
+    - Every pool card's roll must read the Lucky on its instance (printed plus given,
+      `query::lucky_on`), not a number fixed on its face. Where a script reads the face, this part
+      changes it. For each pool card, a test checks that its base face, given Lucky 1, rolls twice and
+      keeps the better result.
+  - The Radiant face's Activate follows R384: once per turn, on your turn, at no cost. It works on the
+    turn the card is played, since summoning sickness does not apply.
+- **Rulings:** MD-G1, MD-G2; MD-G4 for the coin-flip cards it adds.
+- **Numbers:** `lucky` 1 → 1 ↑ (step 1).
+- **Check:**
+  - #40 Feng Shui gives a player Luck but makes no roll of its own, so it is not in the pool.
+  - R275 ✓: the stats double, and where the Cry gives one card, the Radiant face's Activate gives one
+    every turn.
+  - "Luck-based" joins R381's rules words and gets a §6 glossary row beside Lucky.
+- **Class:** B (a new pool; Lucky given to a card).
+
+#### Meditative #102 · Catboy Maid SSR+
+`meditative-102` · (1) Unit, CN, Felinor · Common · 1/1 → 2/2
+
+> **Designer:** 1/1 · Lucky 1 · Cry: Draw 1-2. +1-4 to your Jade Counter. ~~~ 2/2 · Lucky 2 · Cry: Draw
+> 1-2. +1-10 to your Jade Counter.
+
+- **Text:** Lucky 1
+  Cry: Draw 1-2. Add 1-4 to your Jade Counter.
+- **Radiant:** Lucky 2
+  Cry: Draw 1-2. Add 1-10 to your Jade Counter.
+- **Engine:**
+  - **MD-G3:** the Cry makes two separate rolls, each through `rng.lucky` with the card's Lucky
+    (printed plus given, MD-G2), and higher is better for both. First it rolls how many cards to draw
+    (1 or 2), as C+ #53 Book of Tokens rolls its count. Then it rolls how much to add, uniformly from
+    1–4 (1–10 on the Radiant face).
+  - The draws follow the usual rules: the hand cap burns the extra card, and an empty deck deals
+    fatigue.
+  - The amount goes through #525's ME-JADE verb. So reaching 5 summons a Jade Beauty (MD-C3), and
+    reaching 10 makes it Radiant.
+  - ME-LUCK (#527) adds a player's Luck to every roll that has a best, so it reaches both of these
+    rolls. Whichever of this part and #527 lands second proves that.
+  - Its catalog entry, script and tests, and MD-G3's note, wait for ME-JADE (#525); its census line,
+    fixture row, §8.8, BUILD M10 and audit rows are written now, ceilings until the set ships (R1420).
+- **Rulings:** MD-G3.
+- **Numbers:** none. The ranges are not declared numbers, just as Book of Tokens' count is not. Lucky
+  is a numbered keyword (R386), which a Buff's X row moves.
+- **Check:**
+  - "SSR+" (gacha's top rarity) stays in the name, and the file name drops the "+".
+  - The rules word is "Jade Counter" (R381, MD-C2).
+  - R275 ✓: the stats double, Lucky goes to 2 and the Jade roll goes up to 10.
+- **Class:** B (ME-JADE).
+
+#### Group G's systems
+
+- **NEW: the Luck-based pool** (MD-G1) — #101. `luck_based()` in `crates/cards/src/query.rs` over the
+  catalog query's `luckBased`, read off the definition, so a given Lucky never puts a card in it.
+- **NEW: Lucky given to a card** (MD-G2) — #101. The `lucky` rider of `add_to_hand` and
+  `add_random_from_catalog` (`effects/add_to_hand.rs`), and `query::lucky_on` (the Lucky on an
+  instance: printed as tuning leaves it, plus granted). Every pool card's roll reads it: Core #23's and
+  #42's Radiant faces read it where they read a fixed Lucky 1, and their base faces read it too;
+  C+ #53's and M #36's `lucky_of` and `effects/fruit.rs`'s `lucky_of` (C+ #65, C+ #66) read it in
+  place of the face's Lucky; C+ #25's pick already reads the keywords on its instance. #86 Mayor
+  Medinamogger's roll (MB22, #538) must read `lucky_on` too when it lands.
+- **NEW: coin flips take Lucky** (MD-G4) — Core #4, C #65, C+ #19.3. The flip helper `Rng::lucky_coin`,
+  below.
+- **ME-JADE** (#525, MB10) — #102.
+- **Activate** (existing: `subsystems::activate`, R384) — #101's Radiant face.
+- **Lucky** (existing: `rng.lucky`, §6.1) — #102.
+
+#### Coin flips take Lucky (MD-G4)
+
+The designer's rule: any card that flips a coin can take Lucky, and heads is the Lucky side.
+
+- **A coin flip is a luck-based roll by default.** For each flip, a card with Lucky X flips X more
+  coins and keeps heads if any of them lands heads. Each flip is its own roll, so each of Gary the
+  Gambler's coins rolls separately.
+- **Heads is the better side unless the card's text names another.** #36 CN Peptides keeps its own
+  rule (the result better for the caster, MD-B17).
+- **The Lucky is the flipping card's own:** printed plus given (MD-G2). So Gachaholic's Lucky 1 makes a
+  Gary the Gambler or an Ace in the Hole lucky. ME-LUCK's player Luck (#527) reaches flips as well,
+  since a flip now has a best. Whichever of this part and #527 lands second proves that.
+- **Built once.** A flip helper beside `Rng::coin`, `Rng::lucky_coin(x)`, that is
+  `rng.lucky(x, coin, prefer heads)`, as Mid Loser's `lands_heads` already was. Then:
+  - `effects/coins.rs` (Gary) and every card script whose text flips a coin (Ace in the Hole, Mid
+    Loser) call it with their instance's Lucky;
+  - Mid Loser's `lands_heads` folds into it.
+- **No shipped game changes.** With Lucky 0, the helper draws exactly one number, as `coin` does
+  today. No shipped coin-flip card has Lucky, except Radiant Mid Loser, whose flip already keeps heads.
+- §6.1's Lucky row states the default ("a coin flip is luck-based; heads is its better side unless the
+  card says otherwise"), with this ruling's note.
 
 ## M7. Proposed rulings
 
@@ -4694,10 +4861,12 @@ differently is corrected in its note, not here.
   Tribes card carries every one in `tags`. A face-down play has no tags until revealed.
 - **MD-E12** (#88 The True Sheep): the Discovered card with a Tribute cost goes to your hand. "To
   replace this with" names its use: the Sheep, worth 5, pays any Tribute alone.
-- **MD-E13** (#89 Jlarna): the debt is the chosen card's cost as Jlarna resolves (Radiant half,
-  rounded down), split into `instalments` shares as evenly as possible, larger first. It is taken from
-  the refreshes of the controller's next turns, mana floored at 0, and is owed whatever becomes of the
-  card.
+- **MD-E13** (#89 Jlarna, rewritten): the Aura is a credit line paid in 4. While Jlarna acts on
+  its controller's field, any mana they spend may go past what they have, owing up to 4 at once;
+  one turn's debt is split into 4 instalments as evenly as possible, larger first, one falling due
+  at each of the next four refreshes, taken off what the refresh gives. A missed instalment is
+  forgiven, never carried; the debt is owed whatever becomes of the card; two or more Jlarnas share
+  one line. The base face is Tributed at the end of a turn its controller borrowed nothing on.
 - **MD-E14** (#91 Windfast): with no Unit in hand or no open unit zone, Windfast attacks itself. The
   summoned Unit makes the attack as a forced attack on the same target, and the base face bounces it
   after the combat if it is still on the field. Each Windfury attack does this.
@@ -4792,6 +4961,30 @@ differently is corrected in its note, not here.
   fills its board, summoned with no Cry (R1); the Radiant face's second activation in a turn fills what
   the first left empty.
 
+### Group G
+
+These came with MB27 (issue #571), after the blocks were reserved, so they take the next free numbers
+(M10).
+
+- **MD-G1** (#101 Gachaholic; R1444): A Luck-based card is a non-token card that prints Lucky on either
+  face or whose text says "Flip a coin", read off the definition, so a given Lucky never makes a card
+  Luck-based. The pool names no set (R1420); tokens are out (§5.1), and #40 Feng Shui, which makes no
+  roll of its own, is not in it. The card arrives on its base face at its printed cost, hidden from the
+  opponent, and a full hand burns it.
+- **MD-G2** (#101; R1438): "Give it Lucky X" is a granted Lucky X, put on once the card is in the hand
+  (none on a burned card), with no event. It is the card's own: kept in hand, ridden onto the field and
+  through a Spell's resolution, gone when the card leaves the field (R78) or reaches a graveyard or exile
+  (R215), and shown on its face. It adds to any Lucky the card has, and every pool card's roll reads the
+  Lucky on its instance, printed plus given.
+- **MD-G3** (#102 Catboy Maid SSR+; R1439, its note written with #102's script once #525 lands): The
+  Cry makes two separate rolls, each through `rng.lucky` with the card's Lucky, higher better for both:
+  the draws (1 or 2), then the Jade Counter's amount (1–4, Radiant 1–10), which goes through ME-JADE's
+  verb (MD-C3 at 5 and 10).
+- **MD-G4** (Core #4, C #65, C+ #19.3; R1440): A coin flip is a luck-based roll, its better side heads
+  unless the card's text names another (#36 keeps MD-B17). For each flip, a card with Lucky X flips X
+  more coins and keeps heads if any lands heads; with no Lucky it is exactly one draw, so no shipped
+  game changes. It revises R32 and R130 for coin flips.
+
 ## M8. The visuals, sound, AI, decks and Almanac pass
 
 Each item is a part of its own (M10). Readings, with what exists today:
@@ -4851,11 +5044,16 @@ Each item is a part of its own (M10). Readings, with what exists today:
   knowledge, but every new prompt kind (the crafter, the market, the secret choice, the prediction, …)
   must have answers the AI and the random policy can give, built by the system's part. This part, once
   every card part has merged: the tools learn to preview a set (`arena`, `sweep`, `gate`); the sweep runs
-  over the whole catalog with Meditative previewed, and at most 20% of the 99 Meditative cards may be
-  shadow-banned (so at least 80 stay in the pool); the AI with the new cards plays the previous AI
+  over the whole catalog with Meditative previewed, and at most 20% of the 102 Meditative cards may be
+  shadow-banned (at most 20, so at least 82 stay in the pool); the AI with the new cards plays the previous AI
   (generation 0, built from `main` before the first card part) for 100 games in `arena` with alternating
   seats, and must win at least 40; where it does not, the part improves the AI until it does. The
-  results are recorded in [[§9.9]] and `crates/ai/generation.json`.
+  results are recorded in [[§9.9]] and `crates/ai/generation.json`. As amended on #551: that training is
+  deferred, and until it is done the AI's random decks hold no Meditative card, a soft gate lifted by
+  emptying `AI_DECK_GATED_SETS` ([[R1390]]). As amended on #732 (which superseded #616): the gate is
+  lifted on a sweep of record over the set's 102 cards that may ban at most half of them and no card of
+  an earlier set ([[R732000]]), and an AI that beats random in at least 90 of 100; the match against
+  generation 0 was dropped, and the training lanes carry the work on ([[R732001]]).
 - **MN09 Polish.** The small polish found while the set is built, collected on its issue and done
   together near the end.
 
@@ -4867,7 +5065,7 @@ The build uses the default in each row; each is a guess, and an answer changes t
 | --- | --- | --- | --- |
 | 1 | M2 | Showdown and Paranoia renumbered #98 and #99 (the cards whose tokens did not carry the number move) | as M2 |
 | 2 | #62 | Small Time Recruits' text ("Something with 1 costs") | Draw three (1) Cost Units from your deck; Radiant makes them Radiant |
-| 3 | #89 | Jlarna's text (none given) | Klarna's "pay in 4": choose another card in your hand, it costs (0), and you pay its old cost back in four shares over your next four turns; Radiant pays half |
+| 3 | #89 | Jlarna's text (none given) | answered 2026-10-09: the designer gave the text (a (2) Field Spell Aura, "spend mana from next turn", tributing when a turn passes with no card played), then removed the Combo line, raised the cost to (3), forgave missed instalments, and made the Tribute "if you don't use your credit line", keeping "pay in 4" as the Aura's four instalments |
 | 4 | #12, #59, #83, #93–#93.3, #49.2, #97.5 | Radiant stats the designer kept equal | doubled, R275's stat half |
 | 5 | #69 | The Maestro has no Radiant face | 8/8; two exiles from each zone |
 | 6 | #2 | Rampaging Rhino's Radiant only raises stats | adds Trample |
@@ -4894,7 +5092,7 @@ Every part is an issue under the tracker #496, titled `Patch v0.3.X: Meditative,
 each waiting only for what its "Blocked by" line names. The night bot builds every part but the
 foundation and the release, which the orchestrating session builds.
 
-Two kinds of part. The card parts (MS01, MB01–MB26) and MN08 are parts of the Meditative patch: they
+Two kinds of part. The card parts (MS01, MB01–MB27) and MN08 are parts of the Meditative patch: they
 land behind the release gate ([[R1420]]), so players meet none of their cards before the release (MR),
 and they need no fragment. The other MN parts (MN01–MN07, MN09) change what players see and hear in
 every game, the shipped sets included. Each is a patch of its own (`docs/issues-and-patches.md`, A patch
@@ -4907,7 +5105,8 @@ release and Meditative from it; MN07's set mark and set filter have nothing to s
 R780–R799 up to MB26 R1280–R1299; MS01 R1300–R1319; MN01–MN09 ten each, MN01 R1320–R1329 up to MN09
 R1400–R1409; MR R1410–R1419; the foundation (MF) R1420–R1429, the top block, so that once it is on `main`
 the next free number (`spec/INDEX.md`'s last row plus one) is above every block and work outside #496
-never lands in one. A part that needs more than its block takes the next free number on `main`. The
+never lands in one. A part that needs more than its block takes the next free number on `main`, and
+so does MB27, which came after the blocks were reserved and has none: it took R1438–R1440 and R1444. The
 blocks are listed in docs/issues-and-patches.md, Ruling numbers, so other work can see they are held;
 should a number of a block be on `main` anyway, the part renumbers per that section.
 
@@ -4943,10 +5142,11 @@ policy and the timeout can answer it.
 | MB20 | #536 | buffs: #82 Medina Outfitter, #83 Medina Enforcer, #84 Volatility, #85 Playtester, #87 Tatches the Totem | ME-TUNEMULT: "Buffs and Nerfs are twice as effective on this" (one application, a doubled change, R440 kept); Tatches' deck trigger on a card with a tribal tag (R1424) | #515 | hard |
 | MB21 | #537 | the Felinor chains: #93 Growing Felinor, #93.1 Growing Felinor Sr, #93.2 Growing Felinor Sr Sr, #93.3 Growing Felinor Super Senior, #94 Shrinking Felinor | nothing new: named Death summons and `statsOverride` | #515 | medium |
 | MB22 | #538 | combat replacements: #86 Mayor Medinamogger, #91 Windfast, #91.1 Windfurious Prime, #92 Unan | ME-RANDOMTARGETS: "all targets are random", for both players' targets, attacks and target prompts; attack summons (#91, #91.1); the lethal guard (#92): §4.4 step 4a opening for Units as well as heroes | #515 | hard |
-| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword; a catalog pool of cards with a Tribute cost; ME-TURN's repayment schedule (#89), on MB04's refresh | #515, #520 | hard |
+| MB23 | #539 | the play pipeline: #80 Aluneth, #88 The True Sheep, #89 Jlarna | the Untributable keyword (R1220); a catalog pool of cards with a Tribute cost (R1221); Jlarna's credit line: borrowing past current mana up to its limit through one affordability function (R1223), ME-TURN's repayment schedule taking an instalment off each refresh, a missed one forgiven (R1224), and the turn log's record of borrowing that the base face's Tribute reads (R1225), on MB04's refresh | #515, #520 | hard |
 | MB24 | #540 | chaos and the journey: #95 Call to Chaos (Meditative Edition), #95.1 CN Golem, #96 Meditative Journey, #96.1 Journey Complete | the third Call to Chaos table, `subsystems/call_to_chaos_meditative.rs`, with "for the rest of the game" bounded by a cap and R28, R87, R380, R423 and R436 reworded for three editions (their pools find the Meditative edition once the set ships, R1420); memory written on a shuffled card (#96) | #515, #525 | hard |
 | MB25 | #541 | the plain buildings: #97.2 Wishing Well, #97.3 School, #97.6 University, #97.7 The Great Wall, #97.9 Jlockheed's Headquarters | nothing new beyond an optional `lock_all` | #515 | medium |
 | MB26 | #542 | the blueprint: #97 Jlockheed's Evil Blueprints, #97.1 Empty Plot, #97.4 Mega Church, #97.5 Bunker, #97.8 Prison | stack base (#97.1); wide tribute (#97.4); lane strike (#97.5); capture (#97.8) | #515, #541 | hard |
+| MB27 | #571 | the gacha pulls: #100 Greaser, #101 Gachaholic, #102 Catboy Maid SSR+ | MD-G1's Luck-based pool; MD-G2's Lucky given to a card, read by every pool card's roll; MD-G4's coin flips that keep heads with Lucky (`Rng::lucky_coin`); the set's count to 102 cards and 132 entries | #515, #525 | hard |
 | MN01 | #543 | Nerf and Buff: the keyword renames | Degrade and Upgrade renamed in every player-facing word; a pending fragment for the shipped texts | #515 | medium |
 | MN02 | #544 | hero portraits you can click, with more vivid art | the inspect view of a hero; richer procedural portraits | #515 | medium |
 | MN03 | #545 | more emotes, a hand of 8 dealt each game | a pool of at least 24; the seeded deal; the menu; the AI personas | #515 | hard |
@@ -4954,13 +5154,23 @@ policy and the timeout can answer it.
 | MN05 | #548 | Armor and the other niche sounds | `absorbed` and `damageAbsorbed`; the half and all cues; the niche cues | #515 | hard |
 | MN06 | #549 | random decks that lean on the newest set | `build_ai_deck`'s newest-set floor; the option in practice and All Random | #515 | hard |
 | MN07 | #550 | the Almanac and the set mark | the ensō mark, the filters, Wincon, All Tribes, the glossary, the New ribbon | #515 | medium |
-| MN08 | #551 | the AI with the new cards | the tools' preview; the sweep (at most 19 banned); 40 of 100 against the previous AI | #515, #516–#542, #549 | hard |
+| MN08 | #551 | the AI with the new cards | the tools' preview; the sweep (at most 20 of the 102 banned); 40 of 100 against the previous AI | #515, #516–#542, #549, #571 | hard |
 | MN09 | #552 | polish | every face read and every card played in the browser; the items on its issue | #551, #543, #544, #545, #547, #548, #550 | medium |
-| MR | #553 | the release | the set ships: the gate opens, one fragment, the migration, deck codes, the traces, the audit | every other part | built by the orchestrating session |
+| MR | #553 | the release | the set ships: the gate opens, one fragment, the migration, deck codes, the traces, the audit | every other part (#571 included) | built by the orchestrating session |
 
 **The end state** (MR): every card of [[§8.8]] in the catalog with its script and tests; the set in
-`SHIPPED_SETS`; one pending fragment claiming the 129 entries, shipped by `patches ship`; the migration
-that lets the server seed the new tag; deck and trio codes that know the set's numbers; the golden traces
-re-blessed once and every seed-pinned test re-pinned for the bigger pools; the fuzz tool at 1,000 seeds,
-the AI's gates and the arena result of MN08 green; `cargo jackioh catalog check` holding Meditative to
-every count; REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`.
+`SHIPPED_SETS`; one pending fragment claiming the 132 entries, shipped by `patches ship`; the migrations
+that let the server seed the new tag (0030) and record the two new endings (0031), with `won-by-effect`
+joining `pg.rs`'s `DECISIVE_REASONS` (MB04's note below); deck and trio codes that know the set's numbers;
+the golden traces re-blessed once and every seed-pinned test re-pinned for the bigger pools; the fuzz tool
+at 1,000 seeds and the AI's gates green; `cargo jackioh catalog check` holding Meditative to every count;
+REVIEW.md's audit run (CLAUDE.md rule 8); every required check green on `main`. As amended on #551, MN08's
+sweep and arena result are not part of it: that training is deferred to issue #616, and until it is done
+the AI's random decks hold no Meditative card, a soft gate (`AI_DECK_GATED_SETS`) that #616 lifts by
+emptying the list once the AI meets MN08's bar ([[R1390]]). #732 superseded #616 and lifted it, on the
+bar as amended there ([[R732000]]).
+
+MB04's note for that migration (issue #520): it must also admit `alt-win` and `won-by-effect` in
+`results_reason_check` (0004) and `rated_games_reason_check` (0022), and `won-by-effect` joins
+`pg.rs`'s `DECISIVE_REASONS`. No server game can reach either reason before the gate opens (R1420),
+so no migration ships before MR.

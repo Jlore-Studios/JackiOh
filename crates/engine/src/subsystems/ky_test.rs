@@ -24,8 +24,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
 use crate::config::{
-    HAND_CAP, KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_OPTIONS,
-    KY_TEST_REWARDS, KyTestRewardCount,
+    KY_TEST_DIFFICULTIES, KY_TEST_EASY_ADDENDS, KY_TEST_EASY_MISSES, KY_TEST_OPTIONS, KY_TEST_REWARDS,
+    KyTestRewardCount,
 };
 use crate::prelude::json_as;
 use crate::rng::Rng;
@@ -202,7 +202,10 @@ pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
             return vec![];
         };
         let count = match reward.count {
-            KyTestRewardCount::Fill => HAND_CAP - ctx.sink.state.players[ctx.controller].hand.len() as i32,
+            KyTestRewardCount::Fill => {
+                crate::query::hand_cap_of(ctx.sink.state, ctx.controller)
+                    - ctx.sink.state.players[ctx.controller].hand.len() as i32
+            }
             KyTestRewardCount::N(n) => n,
         };
         if count <= 0 {

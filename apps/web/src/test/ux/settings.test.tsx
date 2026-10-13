@@ -1,18 +1,5 @@
-// The settings store and panel (docs/polish/7-mobile-ux.md, S8):
-//
-//   B19  empty, corrupt or throwing storage reads as DEFAULT_SETTINGS, and no store function throws;
-//   B20  writeSettings merges, persists JSON under `jackioh.settings`, notifies each subscriber once
-//        and returns the new snapshot; parseSettings is tolerant; resetSettings restores defaults;
-//   B21  a `storage` event for the key updates the snapshot and re-renders every `useSetting` user;
-//   B22  `reduceMotion` drives `<html data-reduce-motion>`, and settings.css maps it to
-//        `--anim-scale: 0`;
-//   B23  the game and nav gears open the `settings-panel` dialog; close, Escape and the scrim shut
-//        it and give focus back to the gear that opened it;
-//   B24  the panel's sections, switches, reset and slots;
-//   B41  `reduceMotion` also reaches the animation runner: a new view shows at once, as it does
-//        under the OS preference, not only with the CSS motion stopped.
-//
-// The store is module state, so every test starts from empty storage and a forgotten snapshot.
+// S8; B19, B20, B21, B22, B23, B24 and B41: settings-store and panel contracts.
+// Reset the module-scoped store before every test.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -53,7 +40,6 @@ const DEFAULTS: Settings = {
   muteOpponentEmotes: false,
   publicStats: true,
 };
-// Sorted: what `Object.keys(parsed).sort()` produces — muteOpponentEmotes before publicStats before reduceMotion.
 const KEYS = ["autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "muteOpponentEmotes", "publicStats", "reduceMotion"];
 
 afterEach(() => {
@@ -66,7 +52,7 @@ afterEach(() => {
 
 const noop = (): void => undefined;
 
-/** Put a raw value in storage and forget the snapshot, so the next read is a first load. */
+/** Forget the snapshot so the next read is a first load. */
 function storeRaw(raw: string): void {
   localStorage.setItem(SETTINGS_STORAGE_KEY, raw);
   __resetSettingsForTests();
@@ -82,7 +68,6 @@ function persisted(): unknown {
   return JSON.parse(raw);
 }
 
-/** Another tab wrote `raw` under `key`: the value lands in storage and the event reaches `window`. */
 function storageEventFor(key: string, raw: string | null): void {
   if (raw === null) localStorage.removeItem(key);
   else localStorage.setItem(key, raw);
@@ -123,9 +108,7 @@ function throwingStorage(): void {
   });
 }
 
-// ---------------------------------------------------------------------------------------------
 // B19: defaults, whatever storage holds
-// ---------------------------------------------------------------------------------------------
 
 describe("B19 the store falls back to the defaults", () => {
   it("B19 with empty storage it reads drag on, confirm off, hover previews on, reduce motion off", () => {
@@ -195,9 +178,7 @@ describe("B19 the store falls back to the defaults", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B20: write, persist, notify, parse, reset
-// ---------------------------------------------------------------------------------------------
 
 describe("B20 writing, parsing and resetting", () => {
   it("B20 writeSettings merges the patch, persists every key as JSON and returns the new snapshot", () => {
@@ -249,7 +230,6 @@ describe("B20 writing, parsing and resetting", () => {
 
     expect(c).not.toBe(a);
     expect(readSettings()).toBe(c);
-    // The old snapshot was not mutated in place.
     expect(a).toEqual(DEFAULTS);
   });
 
@@ -310,9 +290,7 @@ describe("B20 writing, parsing and resetting", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B21: other tabs
-// ---------------------------------------------------------------------------------------------
 
 describe("B21 a storage event from another tab", () => {
   it("B21 for jackioh.settings, it updates readSettings and notifies subscribers", () => {
@@ -353,7 +331,7 @@ describe("B21 a storage event from another tab", () => {
     const stop = subscribeSettings(noop);
     const before = readSettings();
 
-    // Storage for our key moved without its own event; an unrelated event must not pick it up.
+    // An unrelated storage event must not pick up this unannounced change.
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ ...DEFAULTS, dragToPlay: false }));
     storageEventFor("some.other.key", "1");
 
@@ -380,9 +358,7 @@ describe("B21 a storage event from another tab", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B22: reduce motion on <html>, and its CSS
-// ---------------------------------------------------------------------------------------------
 
 describe("B22 reduce motion", () => {
   it("B22 true sets <html data-reduce-motion='true'>, and false removes it", () => {
@@ -428,11 +404,9 @@ describe("B22 reduce motion", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B41: the setting reaches the animation queue, not only the CSS
-// ---------------------------------------------------------------------------------------------
 
-/** A turn later, with the `turnStarted` event that animates the banner for 600 ms. */
+/** A later turn with a `turnStarted` event. */
 function nextTurn(view: ReturnType<typeof baseView>): ReturnType<typeof baseView> {
   return { ...view, turn: view.turn + 1, events: [{ type: "turnStarted", player: "p1", turn: view.turn + 1 }] };
 }
@@ -482,9 +456,7 @@ describe("B41 reduce motion drains the animation queue at once, as the OS prefer
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B23: the gears and the dialog
-// ---------------------------------------------------------------------------------------------
 
 function renderGame(): void {
   render(<Game view={baseView()} legal={[{ type: "endTurn" }, { type: "concede" }]} onAction={noop} />);
@@ -508,7 +480,6 @@ describe("B23 the settings gears open and close the dialog", () => {
     expect(gear).toHaveAttribute("aria-label", "Settings");
     expect(gear).toHaveAttribute("aria-haspopup", "dialog");
     expect(gear).toHaveAttribute("aria-expanded", "false");
-    // A drawn gear, not the U+2699 glyph that rendered as a dot (integration QA).
     expect(gear.querySelector("svg path")).not.toBeNull();
     expectClosed();
 
@@ -563,7 +534,7 @@ describe("B23 the settings gears open and close the dialog", () => {
       fireEvent.keyDown(switchFor("dragToPlay"), { key: "Escape" });
 
       expectClosed();
-      // stopPropagation(): a window-level Escape handler (the drag layer's) never sees it.
+      // Escape must not reach the drag layer's window handler.
       expect(seen).not.toHaveBeenCalled();
       await waitFor(() => expect(document.activeElement).toBe(gear));
     } finally {
@@ -618,9 +589,7 @@ describe("B23 the settings gears open and close the dialog", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // B24: the panel's contents
-// ---------------------------------------------------------------------------------------------
 
 describe("B24 the panel's sections, switches, reset and slots", () => {
   const SWITCHES: [SettingKey, string][] = [
@@ -632,17 +601,13 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     ["muteOpponentEmotes", "Mute opponent emotes"],
   ];
 
-  /** The tab each switch lives on; the gameplay tab is the default. */
   const TAB_FOR: Partial<Record<SettingKey, "visuals" | "audio">> = {
     reduceMotion: "visuals",
     muteOpponentEmotes: "audio",
   };
 
   it("B24 shows gameplay (drag, confirm, auto end, hover), visuals (reduce motion) and audio (mute opponent emotes), and no empty section", () => {
-    // Integration mounts tasks 1, 2 and 6's controls through SETTINGS_SLOTS (settings-wiring.test.tsx);
-    // with no slots the panel is task 7's alone. The audio section still draws: R643's device-wide
-    // "Mute opponent emotes" is a built-in switch of it. No account section exists since #303, so
-    // none is drawn.
+    // R643 (§5): the built-in Audio switch keeps its section visible; there is no account section.
     render(<SettingsPanel onClose={noop} slots={[]} />);
 
     const gameplay = screen.getByTestId("settings-section-gameplay");
@@ -665,8 +630,6 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     render(<SettingsPanel onClose={noop} />);
 
     for (const [key, label] of SWITCHES) {
-      // A switch is reachable on its own tab: Reduce motion is on Visuals, Mute opponent emotes on
-      // Audio, the rest on Gameplay.
       fireEvent.click(screen.getByTestId(`settings-tab-${TAB_FOR[key] ?? "gameplay"}`));
       const input = switchFor(key);
       expect(input.type, key).toBe("checkbox");
@@ -749,7 +712,6 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(toggleEl.checked).toBe(true);
     expect(persisted()).toMatchObject({ muteOpponentEmotes: true });
 
-    // Stored per device like the rest of this store: a reload reads it back (R643, issue §5).
     __resetSettingsForTests();
     expect(readSettings().muteOpponentEmotes).toBe(true);
   });
@@ -768,7 +730,6 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     expect(audio.tagName).toBe("SECTION");
     expect(within(audio).getByRole("heading", { level: 2, hidden: true })).toBeInTheDocument();
     expect(audio.contains(screen.getByTestId("slot-master-volume"))).toBe(true);
-    // The built-in sections are still there.
     expect(screen.getByTestId("settings-section-gameplay")).toBeInTheDocument();
     expect(screen.getByTestId("settings-section-visuals")).toBeInTheDocument();
   });
@@ -791,8 +752,6 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
     for (const key of ["dragToPlay", "confirmEndTurn", "hoverPreviews"] as const) {
       expect(switchFor(key).compareDocumentPosition(extra) & Node.DOCUMENT_POSITION_FOLLOWING, key).toBeTruthy();
     }
-    // No account section exists since #303. (Audio stays drawn without a slot:
-    // "Mute opponent emotes" is a built-in switch of it, since R643.)
     expect(screen.queryByTestId("settings-section-account")).toBeNull();
     expect(screen.getByTestId("settings-section-audio").contains(switchFor("muteOpponentEmotes"))).toBe(true);
   });
@@ -810,9 +769,7 @@ describe("B24 the panel's sections, switches, reset and slots", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // R345: "End turn automatically" is sent to the engine, which holds it
-// ---------------------------------------------------------------------------------------------
 
 describe("R345 the End turn automatically switch reaches the engine as setAutoEndTurn", () => {
   function sentPreferences(onAction: ReturnType<typeof vi.fn>): unknown[] {

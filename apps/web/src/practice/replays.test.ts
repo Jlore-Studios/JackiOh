@@ -13,7 +13,7 @@ import type { Action, PlayerId } from "@jackioh/shared";
 
 import { replaySeatRun } from "./core.ts";
 import type { PracticeCoreEnv } from "./core.ts";
-import { PRACTICE_REPLAYS_KEPT } from "./config.ts";
+import { PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { createPracticeHost } from "./host.ts";
 import type { PracticeHost } from "./host.ts";
 import type {
@@ -113,7 +113,7 @@ describe("R768 practice replays", () => {
       let last = snapshotOf(await host.request({ type: "start", config: config(seed, { portraits }) }));
       const live = [last];
       const rng = createRng(`${seed}:human`);
-      for (let n = 0; n < 40; n += 1) {
+      for (let n = 0; n < 40 && last.view.result === null; n += 1) {
         const { state } = await debug(host);
         let response: PracticeResponse;
         if (last.aiToAct) response = await host.request({ type: "aiStep" });
@@ -125,9 +125,14 @@ describe("R768 practice replays", () => {
         last = snapshotOf(response);
         if ((await debug(host)).log.length === live.length) live.push(last);
       }
-      expect(last.view.result, "the walk leaves the game in progress").toBeNull();
-      last = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
-      live.push(last);
+      // The walk plays the shipping AI, which a training lane's promotion changes, so it may win
+      // inside the walk: the human concedes only a game still in progress.
+      if (last.view.result === null) {
+        last = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
+        live.push(last);
+      }
+      const winner = last.view.result?.winner;
+      const result = winner === "draw" ? "draw" : winner === HUMAN ? "win" : "loss";
 
       const setup = await debug(host);
       const log = setup.log;
@@ -135,7 +140,7 @@ describe("R768 practice replays", () => {
       expect(log.length).toBeGreaterThan(REPLAY_PAGE_STEPS);
 
       const replays = await listed(host);
-      expect(replays).toEqual([{ game: 1, endedAt: 0, result: "loss", turns: last.view.turn, steps: live.length, portraits }]);
+      expect(replays).toEqual([{ game: 1, endedAt: 0, result, turns: last.view.turn, steps: live.length, portraits }]);
       expect(Object.keys(replays[0] ?? {}).sort()).toEqual(["endedAt", "game", "portraits", "result", "steps", "turns"]);
 
       const { steps, total, wire } = await allSteps(host, 1);
@@ -225,7 +230,7 @@ describe("R768 practice replays", () => {
     },
   );
 
-  it("R768 a kept game from another catalog version, or one that no longer folds to its hash, is listed unavailable and refused", async () => {
+  it("R768 a kept game from another catalog version is listed unavailable without a fold, one that no longer folds to its hash once it has been opened, and both are refused", async () => {
     const source = memorySaveStore();
     await concededGame(hostOn(source), "r768-unavailable");
     const [kept] = source.readReplays();
@@ -239,15 +244,48 @@ describe("R768 practice replays", () => {
     const saves = memorySaveStore(null, [copy(1, { catalog: "v0.0.0-earlier" }), copy(2, { hash: "00000000" }), copy(3, {})]);
     const host = hostOn(saves);
 
-    const replays = await listed(host);
-    expect(replays.map((replay) => [replay.game, replay.unavailable])).toEqual([
+    // The list folds nothing (issue #650): game 2's hash is checked only when it is opened.
+    expect((await listed(host)).map((replay) => [replay.game, replay.unavailable])).toEqual([
       [3, undefined],
-      [2, "rules_changed"],
+      [2, undefined],
       [1, "earlier_patch"],
     ]);
     expect(await failed(host, { type: "replay", game: 1, from: 0, count: 16 })).toContain("earlier_patch");
     expect(await failed(host, { type: "replay", game: 2, from: 0, count: 16 })).toContain("rules_changed");
+    expect((await listed(host)).map((replay) => [replay.game, replay.unavailable])).toEqual([
+      [3, undefined],
+      [2, "rules_changed"],
+      [1, "earlier_patch"],
+    ]);
     expect((await page(host, 3, 0, REPLAY_PAGE_STEPS)).steps.length).toBeGreaterThan(0);
+  });
+
+  it("R768 going back to a game opened recently reuses its fold, and only the last PRACTICE_REPLAYS_CACHED opened are held", async () => {
+    const source = memorySaveStore();
+    await concededGame(hostOn(source), "r768-cached");
+    const [kept] = source.readReplays();
+    if (kept === undefined) throw new Error("the conceded game was not kept");
+
+    const games = Array.from({ length: PRACTICE_REPLAYS_CACHED + 1 }, (_, k) => k + 1);
+    const saves = memorySaveStore(
+      null,
+      games.map((game): PracticeReplay => ({ ...structuredClone(kept), summary: { ...kept.summary, game } })),
+    );
+    const host = hostOn(saves);
+    // A wrong hash refuses any fresh fold of the game, so a page of it can come only from a fold held from before.
+    const tamper = (game: number): void => {
+      saves.writeReplays(saves.readReplays().map((replay) => (replay.summary.game === game ? { ...replay, hash: "00000000" } : replay)));
+    };
+
+    await page(host, 1, 0, 1);
+    await page(host, 2, 0, 1);
+    tamper(1);
+    expect((await page(host, 1, 0, 1)).game, "game 1's fold outlives opening game 2").toBe(1);
+    // Game 2 is now the one opened longest ago, so opening the rest drops it and keeps game 1.
+    for (const game of games.slice(2)) await page(host, game, 0, 1);
+    expect((await page(host, 1, 0, 1)).game, "game 1, opened again since game 2, is held").toBe(1);
+    tamper(2);
+    expect(await failed(host, { type: "replay", game: 2, from: 0, count: 1 }), "game 2 was dropped and is folded again").toContain("rules_changed");
   });
 
   it("R768 a page follows the seat the human played at each step and stops at a Glitch swap (R677)", () => {

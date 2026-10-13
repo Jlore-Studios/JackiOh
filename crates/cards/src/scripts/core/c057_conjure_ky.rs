@@ -1,24 +1,16 @@
 //! #57 Conjure KY (SPEC §8.3): Spell, cost 2, tag KY. "Add 3 random KY cards to your hand" /
 //! radiant "2 random plus 2 random Radiant KY cards". Engine cell: "KY pool = #31, #51, #82 (no
-//! tokens, not #57); repeats allowed" — and since patch v0.2.0 every set's KY cards (R380).
+//! tokens, not #57); repeats allowed" — and every set's KY cards (R380), Classic+'s and, since
+//! v0.3.5, Meditative's.
 //!
-//! The pool is §5.1's one query and nothing else: `{ tags: ["KY"] }` already leaves out the Token-
-//! tagged KY card (#51.1 KY's Empty Notebook), because "random pools never include Token-tagged
-//! cards", and `excludeDefId: def.id` is §5.1's other half — "never include the generating card's own
-//! definition" (R387). In Core that leaves #31 KY's Math Equation, #51 KY's Private Tutor and #82
-//! KY's Trial, which is the Engine cell verbatim and BUILD M4-T4's must-pass row.
-//!
-//! R60: "Cards generated from the catalog may repeat unless the card says 'different'". This card
-//! does not say different, so three picks may land on one def — that is `count`, not a shuffle.
-//! R4: the hand caps at 10 and extra adds are burned to the graveyard; the add-to-hand pipeline owns
-//! that (engine/src/draw.rs), so neither face counts hand space here.
-//! R74/§5.2: a card generated "Radiant" is Radiant — an instance flag on the created card, not a
-//! separate def, which is why the radiant face is two calls rather than one with a ratio.
-//!
-//! A hook may not roll dice itself — `ctx.rng.*` advances `rngCursor`, which is state — so the picks
-//! happen inside `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), shared with #54 Straaza
-//! and #59 Unbiased Immigration. It picks `count` defs from the pool with `ctx.rng`, repeats allowed
-//! (R60), and creates each in the hand through the same pipeline `add_to_hand` uses (§2.4, R4).
+//! The pool is §5.1's one query: `{ tags: ["KY"] }` already leaves out the Token-tagged KY card
+//! ("random pools never include Token-tagged cards"), and `excludeDefId` is §5.1's other half: never
+//! the generating card's own definition (R387).
+//! R60: generated cards may repeat unless the card says "different"; this one does not.
+//! R4: the hand caps at 10 and extra adds are burned; the add-to-hand pipeline owns that (§2.4).
+//! R74/§5.2: a card generated "Radiant" is Radiant — an instance flag, so the radiant face is two calls.
+//! A hook may not roll dice itself (`ctx.rng.*` advances state), so the picks happen inside
+//! `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), shared with #54 Straaza and #59.
 
 use jackioh_engine::effects::add_random_from_catalog;
 use jackioh_engine::prelude::*;
@@ -26,9 +18,7 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "core-057";
 
 /// §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeDefId`, R387).
-/// `add_random_from_catalog` already excludes the running card's own id, as `discover_from_catalog`
-/// does (`catalog.excludingDefId`), so naming it here repeats it and the pool comes out the same.
-/// (TS `const KY_POOL: CatalogQueryArgs`, written as the literal the effect's argument takes.)
+/// `add_random_from_catalog` already excludes the running card's own id, so naming it here repeats it.
 fn ky_pool() -> Value {
     json!({ "tags": ["KY"], "excludeDefId": ID })
 }
@@ -61,14 +51,11 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: "Pool exactly #31, #51, #82 with repeats allowed;
-// radiant 2 base + 2 radiant"). The Engine cell is "KY pool = #31, #51, #82 (no tokens, not #57);
-// repeats allowed" — and, since patch v0.2.0's one format (R380), the KY cards of every set — so the
-// pool itself is asserted twice: once against §5.1's query directly, and once through seeded play.
-//
-// Rulings proved here: R60 (catalog-generated cards may repeat), R4 (hand cap 10, extras burned),
-// R74/§5.2 (a generated Radiant card carries the instance flag), §5.1 (no tokens, never the
-// generating card).
+// #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: pool #31, #51, #82 with repeats allowed; radiant 2
+// base + 2 radiant). The pool, every set's KY cards (R380), is asserted twice: against §5.1's query
+// directly and through seeded play.
+// Also proved: R60 (generated cards may repeat), R4 (hand cap 10, extras burned), R74/§5.2 (a generated
+// Radiant card carries the instance flag), §5.1 (no tokens, never the generating card).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -81,22 +68,28 @@ mod tests {
         g.hand(P1).iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// R380: the KY tag of every set — Core #31, #51, #82 and Classic+ #41, #42, #62 — no token, never #57.
-    const KY_POOL: [&str; 6] = [
+    /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62 and Meditative #34
+    /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
+    /// tribes) — no token, never #57. Re-pinned for v0.3.5: the Meditative set joins the pool.
+    const KY_POOL: [&str; 11] = [
         "core-031",
         "core-051",
         "core-082",
         "classicplus-041",
         "classicplus-042",
         "classicplus-062",
+        "meditative-034",
+        "meditative-038",
+        "meditative-045",
+        "meditative-079",
+        "meditative-087",
     ];
 
-    /// TS `pool(ownId, args).map((def) => def.id)` (`crate::query`, SPEC §5.1).
+    /// The def ids `crate::query::pool` returns (SPEC §5.1).
     fn pool_ids(own_id: &str, args: Value) -> Vec<String> {
         crate::query::pool(own_id, &json_as(args)).iter().map(|def| def.id.clone()).collect()
     }
 
-    /// TS `query(args).map((def) => def.id)`.
     fn query_ids(args: Value) -> Vec<String> {
         crate::query::query(&json_as(args)).iter().map(|def| def.id.clone()).collect()
     }
@@ -109,7 +102,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_and_classic_n41_n42_n62() {
+        fn r380_s5_1_the_ky_pool_is_exactly_core_n31_n51_n82_classic_n41_n42_n62_and_meditative_n34_n38_n45_n79_n87() {
             crate::register_all();
             assert_eq!(pool_ids("core-057", json!({ "tags": ["KY"] })), KY_POOL);
         }
@@ -121,10 +114,15 @@ mod tests {
 
             assert!(!ids.iter().any(|id| id == "core-051-1"));
             assert!(!ids.iter().any(|id| id == "classicplus-042-1"));
+            assert!(!ids.iter().any(|id| id == "meditative-045-1"));
             assert!(!ids.iter().any(|id| id == "core-057"));
-            // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift) are only reachable by naming the token
-            // pool, which this card never does.
-            assert_eq!(query_ids(json!({ "tags": ["KY", "Token"] })), ["core-051-1", "classicplus-042-1"]);
+            // The KY tokens (Core #51.1, Classic+ #42.1 KY's Gift, Meditative #45.1 Knowledge Breaker
+            // Prime) are only reachable by naming the token pool, which this card never does. Re-pinned
+            // for v0.3.5: the Meditative set joins the pool.
+            assert_eq!(
+                query_ids(json!({ "tags": ["KY", "Token"] })),
+                ["core-051-1", "classicplus-042-1", "meditative-045-1"]
+            );
         }
     }
 
@@ -231,7 +229,7 @@ mod tests {
             let mut g = scenario(json!({ "p1": { "hand": ["core-057"] } }));
 
             // The setup builder takes `radiant` on the field and the backrow only, so a radiant card that
-            // has to be PLAYED is flagged on the hand instance (reported as a harness gap).
+            // has to be PLAYED is flagged on the hand instance.
             g.card_mut("core-057").radiant = true;
             g.play("core-057", json!({}));
 

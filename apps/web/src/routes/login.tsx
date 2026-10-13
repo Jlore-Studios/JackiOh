@@ -1,107 +1,11 @@
-// `/login` — sign in, create an account, or ask for a password reset, against the auth provider
-// directly (SPEC §9.2's first arrow out of the browser). `net/auth.ts` is the only thing here that
-// talks to it; this file is the form.
-//
-// WHAT IT DOES NOT DECIDE. Nothing here judges whether a password is wrong, whether an email is
-// verified, or whether the account is pending: `net/auth.ts` reduces every refusal to one of its own
-// sentences (R160, R192), `/api/auth/me` answers the status, and the gate in `main.tsx` acts on it.
-// Signing in sends the player to the main menu, whichever screen sent them here (issue #479); from
-// there the gate sends a pending account on to `/invite` from any gated screen. A sign-in that fails
-// stays here, with its sentence above the form and the form as the player left it.
-// The checks in `auth/validation.ts` only save a round trip; the provider still has the last word.
-//
-// HOW THE SCREEN CAN BE OPENED.
-//   - Plainly, from the landing page or the gate.
-//   - `/login?reason=expired`: the gate's renewal was refused (R194), so say why the player is here.
-//   - `/login?mode=forgot`: straight onto the forgot-password form (the reset screen's way back).
-//   - From an emailed link (R193). `main.tsx` reads the tokens and scrubs them from the address bar
-//     at boot, before anything renders, and sends a link that landed on any other path here;
-//     `consumeAuthRedirect` hands this screen the cached reading. A link comes back with a one-time
-//     PKCE code (R323), which this screen exchanges for the link's session with the verifier this
-//     browser kept when it asked for the link, and then treats exactly as an implicit-flow link's
-//     session (below), which a link mailed before the switch still is (R324). A code this browser
-//     holds no verifier for was asked for on another device or browser: the provider confirmed the
-//     address before it sent the player here, so the screen says so and asks for a sign-in, never
-//     an error (R324).
-//
-// A LINK'S ADDRESS IS CHECKED BEFORE IT IS TRUSTED. The address in a link's token is only a claim:
-// its payload is readable, not verified, and anyone can write a link whose token names any address
-// next to a real refresh token of their own. So before a link's address decides anything, the
-// server is asked who the token belongs to (`GET /api/auth/me`, which verifies every token it is
-// given), and only that answer is compared. Then:
-//   - A CONFIRMATION link never signs this browser in: the address is confirmed, and the player
-//     signs in with the password they chose. Accepting a token from any link would let an attacker
-//     sign a victim into the attacker's pending account (login CSRF). And even the link for the
-//     sign-up this browser started is not proof of the password: the provider leaves an existing
-//     unconfirmed account's password alone when the same address signs up again, so an attacker
-//     who registered the victim's address first would keep their own password on the account the
-//     victim confirmed and activated. Signing in by hand exposes that (the victim's password is
-//     refused, and the reset that follows replaces the attacker's).
-//   - A RECOVERY link is held (for this tab only, for `/reset-password`) for an address this
-//     browser asked to reset (`pendingReset`). A reset asked for on another device, or in another
-//     browser, is the common case, so any other recovery link asks the player to type their
-//     account's address first, and is held only when that matches the checked address. Someone sent
-//     another person's link types their own address, which does not match, so the guard against
-//     being signed into someone else's account stands without a dead end for the owner. Nothing is
-//     held until then, and leaving the question revokes the link.
-//   - An INVITE sent from the provider's dashboard is for an account with no password yet, so it
-//     opens the forgot-password form, never "sign in".
-//   - A token the server refuses is a spent or broken link. One that could not be checked at all
-//     (the server unreachable) decides nothing and says so; a recovery link is kept, for this
-//     screen only, so "Try again" can check it once the server answers, since it works only once.
-//     A check that runs past `GATE_SLOW_NOTICE_SECONDS` says why (a sleeping server) and asks the
-//     player to wait for it.
-// NOTHING FROM A LINK IS FILLED IN. Not even the checked address: a link can be anyone's, and a
-// mailer form holding an address the player never typed arms this browser's guard with it at one
-// click ("Send reset link" remembers the address as the reset this browser asked for), after which
-// the same person's next link would be accepted. The player types their own address.
-// A LINK IS RENEWED AS SOON AS IT IS READ. Its tokens came in a URL, and the browser's history keeps
-// the URL a page loaded with, so the link's refresh token is spent (renewed once) before anything
-// else, the server's check included: the copy in history is then worth nothing after the provider's
-// reuse interval, whatever this tab does next (a tab closed while "Checking your link…" included).
-// Everything after that (the check, holding, revoking) uses the renewal. A renewal the provider
-// refuses means the link was opened before; one that cannot reach the provider leaves the link's
-// own session in use, and a later "Try again" renews it then.
-// A LINK'S SESSION THAT IS NOT KEPT IS REVOKED. A link this screen does not hold (every
-// confirmation, someone else's reset, an invite, one the player moved on from, a confirmation that
-// could not be checked, an unchecked or unclaimed reset the player left) is revoked at the
-// provider, renewed first if its access token has run out (R194), since the provider refuses to
-// revoke with an expired one.
-// NOTHING IS PREFILLED FROM STORAGE either: `/login?mode=forgot` is a public link, and a reset
-// address another person left on a shared computer is not this player's to see.
-// ANOTHER ACCOUNT ON THIS BROWSER. Signing in replaces (and revokes) whatever session the browser
-// holds, so the screen says which account that is, with its account screen and sign-out beside it.
-// A failed link shows our own sentence and the two ways forward (resend, reset) right beside it,
-// since mail scanners spend one-time links.
-// The query is read BEFORE the scrub, and no destination is ever read from it (B35): every
-// navigation out of this screen goes to a `paths` value.
-//
-// THE OTHER WAYS IN (issue #267). Each ends where a password sign-in does, at the gate in `main.tsx`,
-// with an account the server gates exactly the same (§9.4): none of them makes an account active.
-//   - AN EMAIL CODE (R664): "Sign in with an email code instead" mails a link and a code to a
-//     confirmed account (`requestEmailSignIn`, one neutral sentence whatever the provider answered).
-//     The code, typed here, signs in. The link comes back with a PKCE code and signs in only the
-//     browser that asked: its code exchanges only with this browser's `magiclink` verifier. That is
-//     the one way a link's session is kept, and it is not R193's case: R193 refuses a session from
-//     a link because anyone can send one, while a PKCE sign-in link can only finish where it began.
-//   - AN OAUTH PROVIDER (R666): one button per provider the build names (`oauthProviders`). It leaves
-//     for the provider with a PKCE challenge, and the code it comes back with is exchanged, and kept,
-//     the same way; a provider that sends the player back with an error says so in our words.
-//   - TWO-STEP SIGN-IN (R665): whatever the way in, a session for an account with an authenticator
-//     app is held here, in memory, until its code is typed (`mode: "mfa"`), and only the `aal2`
-//     session that comes back is kept; cancelling revokes the held one. A recovery link for such an
-//     account asks for the code too, before the server is asked whose it is (it refuses `aal1`).
-//
-// NO DEAD ENDS. `BackLink` is on the screen in every mode, the forgot form has its own way back,
-// and the resend and reset mailers answer the same neutral sentence whether or not the address has
-// an account (R192), then wait out the provider's per-address interval before offering again. That
-// interval belongs to the ADDRESS: a sign-up starts it for the confirmation resend, and a corrected
-// address can be sent to at once. It is counted on the clock from when the address was mailed
-// (`auth/cooldown.ts`), so a reload, or a tab the phone put to sleep, neither restarts nor stalls it.
-//
-// WHAT HAPPENED IS SAID FIRST. The notice and the error sit above the form, and a sign-up that
-// succeeded moves focus to its notice (the form it leaves behind reads "Sign in", which is the step
-// after the inbox). A refused field takes focus. A sign-in goes to the main menu.
+// `/login` presents provider-auth forms; `net/auth.ts` and the server decide account state and use
+// neutral failures (SPEC §9.2; R160, R192).
+// Scrub redirect links before rendering and exchange a PKCE code only with its originating browser (R323, R324).
+// Check each link token's account at `/api/auth/me`, never trust its readable address claim; confirmation links
+// never sign in (R193). Hold recovery links only after the player types the checked address; never prefill it.
+// Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
+// Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
+// Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -135,6 +39,7 @@ import {
   revokeSignedOutSession,
   secondFactorFor,
   signIn,
+  signInWithUsername,
   signUp,
   startOAuthSignIn,
   verifyEmailCode,
@@ -143,6 +48,7 @@ import {
   type OAuthProvider,
 } from "../net/auth.ts";
 import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
+import { t } from "../i18n/i18n.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
 import {
   forgetPendingEmail,
@@ -904,7 +810,7 @@ export default function LoginRoute(): ReactElement {
       nextPasswordError = newPasswordProblem(password);
     } else if (mode === "signIn") {
       // An existing password is whatever the account has: sign-in only asks for something typed.
-      nextEmailError = requiredProblem(address, "email");
+      nextEmailError = requiredProblem(address, "email or username");
       nextPasswordError = requiredProblem(password, "password");
     } else {
       nextEmailError = emailProblem(email);
@@ -966,13 +872,17 @@ export default function LoginRoute(): ReactElement {
 
     // Read before the attempt: a successful sign-in forgets it.
     const justSignedUp = pendingEmail();
-    signIn(address, password)
+    // R1432: a username never holds @, so what was typed says which door it goes to (R1443).
+    const byUsername = !address.includes("@");
+    (byUsername ? signInWithUsername(address, password) : signIn(address, password))
       .then((result) => {
         // Kept at once, or (R665) once its authenticator code has been typed.
         signInWith(result.session, result.secondFactor);
       })
       .catch((cause: unknown) => {
         setError(messageOf(cause));
+        // The resend link and the confirm-first hint below are for an address.
+        if (byUsername) return;
         // An unconfirmed address reads as `credentials` (R160), so the way forward for it is
         // offered after any such refusal rather than only after a telling one. Not after a network
         // failure or a rate limit, which say nothing about the address and which a mailer would not
@@ -997,30 +907,37 @@ export default function LoginRoute(): ReactElement {
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
   let title: string;
-  if (signingUp) title = "Create an account";
-  else if (forgot || claiming) title = "Reset your password";
-  else if (emailCode) title = "Sign in with an email code";
-  else if (secondFactor) title = "Two-step sign-in";
-  else title = "Sign in";
+  if (signingUp) title = t("Create an account");
+  else if (forgot || claiming) title = t("Reset your password");
+  else if (emailCode) title = t("Sign in with an email code");
+  else if (secondFactor) title = t("Two-step sign-in");
+  else title = t("Sign in");
 
   let submitLabel: string;
   if (signingUp) {
-    submitLabel = busy ? "Creating…" : "Create account";
+    submitLabel = busy ? t("Creating…") : t("Create account");
   } else if (forgot) {
     // "Send", not "Send again": the interval may have been started before a reload.
     // The wait is said once, in the line under the button (as the confirmation resend says it),
     // so the button keeps its name while it is locked (integration QA: the countdown was twice).
-    submitLabel = busy ? "Sending…" : "Send reset link";
+    submitLabel = busy ? t("Sending…") : t("Send reset link");
   } else if (claiming) {
-    submitLabel = "Continue";
+    submitLabel = t("Continue");
   } else if (emailCode) {
-    if (codeAsked) submitLabel = busy ? "Signing in…" : "Sign in";
-    else submitLabel = busy ? "Sending…" : "Email me a sign-in code";
+    if (codeAsked) submitLabel = busy ? t("Signing in…") : t("Sign in");
+    else submitLabel = busy ? t("Sending…") : t("Email me a sign-in code");
   } else if (secondFactor) {
-    submitLabel = busy ? "Checking…" : "Verify";
+    submitLabel = busy ? t("Checking…") : t("Verify");
   } else {
-    submitLabel = busy ? "Signing in…" : "Sign in";
+    submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
+
+  // Sentences with a link or an address inside: one entry each, split around what is inserted, so
+  // English keeps the text nodes it always had.
+  const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
+  const [agreeBefore = "", agreeBetween = "", agreeAfter = ""] = t(
+    "By creating an account you agree to the {terms} and {privacy}.",
+  ).split(/\{terms\}|\{privacy\}/);
 
   const forgotButton = (
     <button
@@ -1031,7 +948,7 @@ export default function LoginRoute(): ReactElement {
         switchMode("forgot");
       }}
     >
-      {claiming ? "Ask for a new link instead" : "Forgot your password?"}
+      {claiming ? t("Ask for a new link instead") : t("Forgot your password?")}
     </button>
   );
 
@@ -1040,7 +957,7 @@ export default function LoginRoute(): ReactElement {
       {/* R160 makes an unconfirmed address and a wrong password read alike, so the button says
           who it is for rather than hinting at which one this was. */}
       <span className="auth-hint" data-testid={loginTestid.resendLead}>
-        Just signed up? Confirm your email first:
+        {t("Just signed up? Confirm your email first:")}
       </span>
       <button
         type="button"
@@ -1049,11 +966,11 @@ export default function LoginRoute(): ReactElement {
         disabled={resendBusy || resendWait > 0}
         onClick={onResend}
       >
-        {resendBusy ? "Sending…" : "Resend the confirmation email"}
+        {resendBusy ? t("Sending…") : t("Resend the confirmation email")}
       </button>
       {resendWait > 0 ? (
         <span className="auth-cooldown" data-testid={loginTestid.resendCooldown} data-seconds={resendWait}>
-          You can send another in {resendWait} s.
+          {t("You can send another in {seconds} s.", { seconds: resendWait })}
         </span>
       ) : null}
     </div>
@@ -1073,62 +990,62 @@ export default function LoginRoute(): ReactElement {
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">
-              {AUTH_NOTICES.mfaRequired}
+              {t(AUTH_NOTICES.mfaRequired)}
             </p>
           ) : null}
 
           {(signingIn || signingUp) && oauthFailed ? (
             <p className="notice" data-testid={loginTestid.oauthError} role="alert">
-              {AUTH_MESSAGES.oauthFailed}
+              {t(AUTH_MESSAGES.oauthFailed)}
             </p>
           ) : null}
 
           {signingIn && sessionExpired ? (
             <p className="notice" data-testid={loginTestid.sessionExpired} role="status">
-              {AUTH_NOTICES.sessionExpired}
+              {t(AUTH_NOTICES.sessionExpired)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "checking" ? (
             <p className="notice" data-testid={loginTestid.checkingLink} role="status">
-              {AUTH_NOTICES.checkingLink}
+              {t(AUTH_NOTICES.checkingLink)}
             </p>
           ) : null}
 
           {signingIn && checkingLong ? (
             <p className="auth-hint" data-testid={loginTestid.checkingSlow}>
-              {AUTH_NOTICES.checkingSlow}
+              {t(AUTH_NOTICES.checkingSlow)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "confirmed" ? (
             <p className="notice" data-testid={loginTestid.confirmed} role="status">
-              {AUTH_NOTICES.emailConfirmed}
+              {t(AUTH_NOTICES.emailConfirmed)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "emailChanged" ? (
             <p className="notice" data-testid={loginTestid.emailChanged} role="status">
-              {AUTH_NOTICES.emailChanged}
+              {t(AUTH_NOTICES.emailChanged)}
             </p>
           ) : null}
 
           {forgot && linkOutcome === "invited" ? (
             <p className="notice" data-testid={loginTestid.invited} role="status">
-              {AUTH_NOTICES.inviteNeedsPassword}
+              {t(AUTH_NOTICES.inviteNeedsPassword)}
             </p>
           ) : null}
 
           {claiming && linkOutcome === "recoveryClaim" ? (
             <p className="notice" data-testid={loginTestid.recoveryClaim} role="status">
-              {AUTH_NOTICES.recoveryClaim}
+              {t(AUTH_NOTICES.recoveryClaim)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "recoveryRefused" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryRefused} role="alert">
-                {AUTH_NOTICES.recoveryElsewhere}
+                {t(AUTH_NOTICES.recoveryElsewhere)}
               </p>
               <div className="auth-actions">{forgotButton}</div>
             </div>
@@ -1137,11 +1054,11 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "recoveryUnchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryUnchecked} role="alert">
-                {AUTH_NOTICES.recoveryUnchecked}
+                {t(AUTH_NOTICES.recoveryUnchecked)}
               </p>
               <div className="auth-actions">
                 <button type="button" data-testid={loginTestid.linkRetry} onClick={retryLinkCheck}>
-                  Try again
+                  {t("Try again")}
                 </button>
                 {forgotButton}
               </div>
@@ -1151,7 +1068,7 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "unchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.linkUnchecked} role="alert">
-                {AUTH_NOTICES.linkUnchecked}
+                {t(AUTH_NOTICES.linkUnchecked)}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1164,12 +1081,12 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-link-error">
               {/* Our sentence only: the link's `error_description` is never read (R193). */}
               <p className="notice" data-testid={loginTestid.linkError} role="alert">
-                {AUTH_MESSAGES.linkExpired}
+                {t(AUTH_MESSAGES.linkExpired)}
               </p>
               {/* Mail scanners open links before the player does: a confirmation link they spent
                   has still confirmed the address, and signing in is all that is left. */}
               <p className="auth-hint" data-testid={loginTestid.linkErrorSignIn}>
-                If you already confirmed your email, just sign in below.
+                {t("If you already confirmed your email, just sign in below.")}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1180,19 +1097,19 @@ export default function LoginRoute(): ReactElement {
 
           {notice !== null ? (
             <p className="notice" data-testid={loginTestid.notice} role="status" ref={noticeRef} tabIndex={-1}>
-              {notice}
+              {t(notice)}
             </p>
           ) : null}
 
           {error !== null ? (
             <p className="notice" data-testid={loginTestid.error} role="alert">
-              {error}
+              {t(error)}
             </p>
           ) : null}
 
           {signingIn && error !== null && confirmFirst ? (
             <p className="auth-hint" data-testid={loginTestid.confirmFirst}>
-              {AUTH_NOTICES.confirmFirst}
+              {t(AUTH_NOTICES.confirmFirst)}
             </p>
           ) : null}
 
@@ -1201,17 +1118,17 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-signed-in" data-testid={loginTestid.signedInAs}>
               <p className="auth-hint">
                 {signedInAs === "" ? (
-                  "This browser is already signed in to an account."
+                  t("This browser is already signed in to an account.")
                 ) : (
                   <>
-                    This browser is signed in as{" "}
+                    {signedInBefore}
                     <strong>
                       <Address value={signedInAs} />
                     </strong>
-                    .
+                    {signedInAfter}
                   </>
                 )}{" "}
-                {signingUp ? "Creating an account does not change that." : "Signing in here signs it out of that account."}
+                {signingUp ? t("Creating an account does not change that.") : t("Signing in here signs it out of that account.")}
               </p>
               <div className="auth-actions">
                 <a
@@ -1220,7 +1137,7 @@ export default function LoginRoute(): ReactElement {
                   data-testid={loginTestid.signedInAccount}
                   onClick={followInApp(paths.account)}
                 >
-                  Go to that account
+                  {t("Go to that account")}
                 </a>
                 <button
                   type="button"
@@ -1239,14 +1156,13 @@ export default function LoginRoute(): ReactElement {
 
           {forgot ? (
             <p className="auth-hint">
-              Enter the address you signed up with. If it has an account, we&rsquo;ll email a link to
-              choose a new password.
+              {t("Enter the address you signed up with. If it has an account, we’ll email a link to choose a new password.")}
             </p>
           ) : null}
           {signingUp ? (
             // Said before the player has an account, not after they have confirmed one.
             <p className="auth-hint" data-testid={loginTestid.inviteOnly}>
-              {AUTH_NOTICES.inviteOnly}
+              {t(AUTH_NOTICES.inviteOnly)}
             </p>
           ) : null}
         </div>
@@ -1262,12 +1178,21 @@ export default function LoginRoute(): ReactElement {
           >
             {secondFactor ? null : (
               <>
-                <label htmlFor="login-email">{claiming ? "Your account's email" : "Email"}</label>
+                <label htmlFor="login-email">
+                  {claiming ? t("Your account's email") : signingIn ? t("Email or username") : t("Email")}
+                </label>
                 <input
                   id="login-email"
                   data-testid={loginTestid.email}
-                  type="email"
+                  // R1443: sign-in takes a username too, which an email field would refuse. As text
+                  // it keeps an email field's keyboard (its @) and, like one, is never capitalised,
+                  // corrected or spell-checked by a phone keyboard.
+                  type={signingIn ? "text" : "email"}
+                  inputMode="email"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   value={email}
                   aria-invalid={emailError !== null}
                   aria-describedby={emailError !== null ? "login-email-error" : undefined}
@@ -1278,7 +1203,7 @@ export default function LoginRoute(): ReactElement {
                 />
                 {emailError !== null ? (
                   <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
-                    {emailError}
+                    {t(emailError)}
                   </p>
                 ) : null}
               </>
@@ -1287,7 +1212,7 @@ export default function LoginRoute(): ReactElement {
             {codeAsked || secondFactor ? (
               <>
                 <label htmlFor="login-code">
-                  {secondFactor ? "Code from your authenticator app" : "Code from the email"}
+                  {secondFactor ? t("Code from your authenticator app") : t("Code from the email")}
                 </label>
                 <input
                   id="login-code"
@@ -1310,7 +1235,7 @@ export default function LoginRoute(): ReactElement {
                 />
                 {codeError !== null ? (
                   <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
-                    {codeError}
+                    {t(codeError)}
                   </p>
                 ) : null}
               </>
@@ -1318,7 +1243,7 @@ export default function LoginRoute(): ReactElement {
 
             {signingIn || signingUp ? (
               <>
-                <label htmlFor="login-password">Password</label>
+                <label htmlFor="login-password">{t("Password")}</label>
                 <div className="input-with-affix">
                   <input
                     id="login-password"
@@ -1345,13 +1270,13 @@ export default function LoginRoute(): ReactElement {
                     className="affix-button"
                     data-testid={loginTestid.togglePassword}
                     // Announced, not just drawn: the icon alone tells a screen reader nothing.
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? t("Hide password") : t("Show password")}
                     aria-pressed={showPassword}
                     onClick={() => {
                       setShowPassword((shown) => !shown);
                     }}
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {showPassword ? t("Hide") : t("Show")}
                   </button>
                 </div>
                 {passwordError !== null ? (
@@ -1360,7 +1285,7 @@ export default function LoginRoute(): ReactElement {
                     className="auth-field-error"
                     data-testid={loginTestid.passwordError}
                   >
-                    {passwordError}
+                    {t(passwordError)}
                   </p>
                 ) : null}
               </>
@@ -1382,41 +1307,41 @@ export default function LoginRoute(): ReactElement {
                   disabled={busy || codeWait > 0}
                   onClick={sendEmailCode}
                 >
-                  Send a new code
+                  {t("Send a new code")}
                 </button>
               </div>
             ) : null}
             {emailCode && codeWait > 0 ? (
               // Only the wait: whether a mail went out is the neutral notice's to say (R192).
               <p className="auth-hint" data-testid={loginTestid.codeCooldown} data-seconds={codeWait}>
-                You can ask for another in {codeWait} s.
+                {t("You can ask for another in {seconds} s.", { seconds: codeWait })}
               </p>
             ) : null}
             {signingUp ? (
               <p className="auth-hint" data-testid={signUpPrivacyTestid}>
-                By creating an account you agree to the{" "}
+                {agreeBefore}
                 <a href={paths.terms} onClick={followInApp(paths.terms)}>
-                  Terms
-                </a>{" "}
-                and{" "}
-                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-                  Privacy Policy
+                  {t("Terms")}
                 </a>
-                .
+                {agreeBetween}
+                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+                  {t("Privacy Policy")}
+                </a>
+                {agreeAfter}
               </p>
             ) : null}
             {forgot && resetWait > 0 ? (
               // Only the wait: whether a mail went out is the neutral notice's to say (R192).
               <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
-                You can ask for another in {resetWait} s.
+                {t("You can ask for another in {seconds} s.", { seconds: resetWait })}
               </p>
             ) : null}
           </form>
 
           {(signingIn || signingUp) && providers.length > 0 ? (
             // R666: only the providers this build names, so none appears before it is set up.
-            <div className="auth-oauth" role="group" aria-label="Other ways to sign in">
-              <p className="auth-hint">Or continue with</p>
+            <div className="auth-oauth" role="group" aria-label={t("Other ways to sign in")}>
+              <p className="auth-hint">{t("Or continue with")}</p>
               <div className="auth-actions">
                 {providers.map((provider) => (
                   <button
@@ -1447,7 +1372,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("emailCode");
                 }}
               >
-                Sign in with an email code instead
+                {t("Sign in with an email code instead")}
               </button>
             ) : null}
             {(signingIn &&
@@ -1467,7 +1392,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("signIn");
                 }}
               >
-                {secondFactor ? "Cancel and sign in again" : emailCode ? "Sign in with a password" : "Back to sign in"}
+                {secondFactor ? t("Cancel and sign in again") : emailCode ? t("Sign in with a password") : t("Back to sign in")}
               </button>
             ) : (
               <button
@@ -1478,7 +1403,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode(signingUp ? "signIn" : "signUp");
                 }}
               >
-                {signingUp ? "Already have an account? Sign in" : "No account? Create one"}
+                {signingUp ? t("Already have an account? Sign in") : t("No account? Create one")}
               </button>
             )}
           </div>

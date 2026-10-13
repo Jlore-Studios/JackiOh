@@ -31,8 +31,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use jackioh_engine::{
-    ActionBody, ActionType, Aim, EmoteId, PlayerId, PlayerView, PortraitId, PromptKind, Row, Selection,
-    ZoneChoice, is_emote_id, parse_aim,
+    ActionBody, ActionType, Aim, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId, PromptKind,
+    RevealAt, Row, Selection, ZoneChoice, is_emote_id, parse_aim,
 };
 
 use crate::db::store::MatchClocks;
@@ -98,10 +98,14 @@ pub struct MalformedMessage {
 /// R79: `timeout`, `disconnectExpired` and `ceilingReached` are server-only — "never sent by a
 /// client" (`wire/actions.rs`). Accepting one from a socket would let a player end their
 /// opponent's turn or the match, so parsing rejects them outright.
+///
+/// MD-D29, R1127: `emote` is the server's own too. The actor mints it from an emote message that
+/// passed R643's rate gate, so a socket can never send it as an action and bypass the gate.
 pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
     ActionType::Timeout,
     ActionType::DisconnectExpired,
     ActionType::CeilingReached,
+    ActionType::Emote,
 ];
 
 /// Everything else in the §10.2 union that a socket may carry: every type `legal_actions` can list
@@ -370,6 +374,16 @@ fn parse_zone(value: &Value) -> Option<ZoneChoice> {
     Some(ZoneChoice { row, lane })
 }
 
+fn parse_plague(value: &Value) -> Option<PlagueSpend> {
+    let record = value.as_object()?;
+    let from = is_string(record.get("from"))?;
+    let tokens = non_negative_int(record.get("tokens"))?;
+    Some(PlagueSpend {
+        from: from.to_string(),
+        tokens,
+    })
+}
+
 fn parse_selection(value: &Value) -> Option<Selection> {
     let record = (value).as_object()?;
     match record.get("pick").and_then(Value::as_str) {
@@ -386,6 +400,12 @@ fn parse_selection(value: &Value) -> Option<Selection> {
         Some("mode") => is_string(record.get("option")).map(|option| Selection::Mode {
             option: option.to_string(),
         }),
+        // ME-CRAFT (Meditative #17, R880): a recipe the block editor answers with. Structural
+        // validation only — whether it crafts is the reducer's call — so a malformed recipe is
+        // refused here and an over-budget one by the engine.
+        Some("craft") => serde_json::from_value(record.get("recipe")?.clone())
+            .ok()
+            .map(|recipe| Selection::Craft { recipe }),
         Some("none") => Some(Selection::None),
         _ => None,
     }
@@ -408,6 +428,12 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
         return Err(malformed(r#""action.type" must be a string"#));
     };
     let parsed = type_.parse::<ActionType>().ok();
+    // MD-D29, R1127: an emote rides its own message, never the action channel.
+    if parsed == Some(ActionType::Emote) {
+        return Err(malformed(
+            r#""emote" is an emote message, never an action (R1127)"#,
+        ));
+    }
     if parsed.is_some_and(|kind| SERVER_ONLY_ACTION_TYPES.contains(&kind)) {
         return Err(malformed(format!(r#""{type_}" is a server-only action (R79)"#)));
     }
@@ -447,6 +473,14 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 };
                 embiggen = Some(parsed);
             }
+            // R1086: a Magnetic play onto one of the player's Units.
+            let mut magnetic = None;
+            if let Some(value) = raw.get("magnetic") {
+                let Some(parsed) = is_bool(Some(value)) else {
+                    return Err(malformed(r#""play.magnetic" must be a boolean"#));
+                };
+                magnetic = Some(parsed);
+            }
             let mut tributes = None;
             if let Some(value) = raw.get("tributes") {
                 let Some(parsed) = is_string_list(Some(value)) else {
@@ -468,16 +502,34 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
                 };
                 modes = Some(parsed);
             }
-            // TS's whitelist has no `plague`: a client play never carries one.
+            // B5 E11, R454: the Plague Counters that pay for a play from the graveyard (Classic #74
+            // Corpse Plantation), as `legal_actions` lists them; whether they may pay is the reducer's.
+            let mut plague = None;
+            if let Some(value) = raw.get("plague") {
+                let Some(parsed) = parse_plague(value) else {
+                    return Err(malformed(r#""play.plague" must be { from, tokens }"#));
+                };
+                plague = Some(parsed);
+            }
+            // ME-ALTPLAY, R1044: the face-down timing travels as `faceDown`.
+            let mut face_down = None;
+            if let Some(value) = raw.get("faceDown") {
+                let Ok(parsed) = serde_json::from_value::<RevealAt>(value.clone()) else {
+                    return Err(malformed(r#""play.faceDown" must be a reveal timing"#));
+                };
+                face_down = Some(parsed);
+            }
             Ok(ActionBody::Play {
                 instance_id: instance_id.to_string(),
                 zone,
                 x,
                 embiggen,
+                magnetic,
                 tributes,
                 targets,
                 modes,
-                plague: None,
+                plague,
+                face_down,
             })
         }
         ActionType::Attack => {
@@ -585,9 +637,10 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
             Ok(ActionBody::SetAutoEndTurn { enabled })
         }
         // Unreachable: `CLIENT_ACTION_TYPES` admitted none of these.
-        ActionType::Timeout | ActionType::DisconnectExpired | ActionType::CeilingReached => {
-            Err(malformed(format!(r#""{type_}" is not an action type"#)))
-        }
+        ActionType::Timeout
+        | ActionType::DisconnectExpired
+        | ActionType::CeilingReached
+        | ActionType::Emote => Err(malformed(format!(r#""{type_}" is not an action type"#))),
     }
 }
 

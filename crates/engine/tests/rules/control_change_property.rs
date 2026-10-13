@@ -1,29 +1,16 @@
-//! Port of `packages/engine/test/control-change.property.test.ts`.
-//!
 //! R171 over random boards (SPEC §4.1, §11; docs/polish/4-edge-cases.md "fast-check properties").
 //!
-//! Each case builds a random board — per side and per lane, optionally one keyword body in either
-//! position, entered this turn, last turn or never marked, with any exertion, and optionally a Stack
-//! card on top of it — then applies one to three random control changes for either player: a steal
-//! of one of the actor's enemy top units, Steal all, the board swap, or a rotation in either
-//! direction on either face. The actor may be the inactive player, which is the opponent's-turn case.
-//!
-//! Four properties, each read from outside the code under test:
-//!   P1 bookkeeping: a card that got a `controlChanged` and is still on the field took this turn and
-//!      a fresh exertion; every other card on the field kept exactly what it started with; a card's
-//!      controller only changes with a `controlChanged`; nobody's owner changes.
-//!   P2 the §6.1 oracle: a unit that crossed, or started the turn freshly entered, is sick, so with
-//!      neither Rush nor Charge it has no target and without Charge it cannot aim at the hero; one
-//!      that crossed with Charge and nothing else stopping it has a target (the fresh exertion).
+//! Each case builds a random board (per side and lane, optionally a keyword body entered this turn,
+//! last turn or never marked, with any exertion, and optionally a Stack card on top), then applies
+//! one to three random control changes for either player, the inactive one too: a steal, Steal all,
+//! the board swap, or a rotation either way on either face. Four properties are read from outside:
+//!   P1 bookkeeping: only a card that crossed takes this turn and a fresh exertion; a controller
+//!      changes only with a `controlChanged`; no owner changes.
+//!   P2 the §6.1 oracle: a unit that crossed or entered this turn is sick (no target without Rush
+//!      or Charge, no hero without Charge); one that crossed with Charge has a target.
 //!   P3 `legalActions` offers exactly the attacks `reduce` accepts.
 //!   P4 R53: a forced attack by a unit that crossed still happens and spends nothing.
-//!
-//! Every run is reproducible from PROPERTY_SEED (CLAUDE.md rules 4 and 9 in spirit).
-//!
-//! fast-check is a TS library with no Rust counterpart in the workspace (SURFACE §2), so the cases
-//! are drawn here from the engine's own seeded `Rng`, one stream per run (`"<PROPERTY_SEED>:<run>"`),
-//! with the arbitraries' shapes and frequencies kept (fast-check's `fc.option` builds its nil one
-//! time in five); a failing run names its index, which reproduces it alone. The run counts are TS's.
+//! Runs reproduce from PROPERTY_SEED (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -124,7 +111,7 @@ struct Case {
     verbs: Vec<Verb>,
 }
 
-// ---- The arbitraries (fast-check's, drawn from a seeded `Rng`) ----------------------------------
+// The arbitraries: seeded `Rng` draws, since the workspace has no fast-check (SURFACE §2)
 
 /// `fc.option(arb)`: nil one time in five (fast-check's default `freq`).
 fn option<T>(rng: &mut Rng, arb: impl FnOnce(&mut Rng) -> T) -> Option<T> {
@@ -200,11 +187,8 @@ fn case_arb(run: u32) -> Case {
     Case { board, verbs }
 }
 
-// ---------------------------------------------------------------------------
-// Building and running a case.
-// ---------------------------------------------------------------------------
+// Building and running a case
 
-/// TS's module `let nonce = 0`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act(state: &GameState, body: Value) -> ReduceResult {
@@ -213,7 +197,7 @@ fn act(state: &GameState, body: Value) -> ReduceResult {
     reduce(state, &input.with_nonce(format!("ccp{nonce}")))
 }
 
-/// Past both mulligans, in p1's main phase of turn 1, with an empty board (rulings-b's `playing`).
+/// Past both mulligans, in p1's main phase of turn 1, with an empty board.
 fn playing() -> GameState {
     let mut state = begin_game(&new_game("control-change-property", None)).state;
     for player in PLAYER_IDS {
@@ -230,8 +214,8 @@ fn playing() -> GameState {
     state
 }
 
-/// TS's module `const BASE = playing()`. Built once per test, on the test's own thread, because the
-/// fixture registries `new_game` installs are the testkit's thread-local override (SURFACE §8).
+/// Built once per test, on the test's own thread, because the fixture registries `new_game`
+/// installs are the testkit's thread-local override (SURFACE §8).
 fn base() -> GameState {
     playing()
 }
@@ -392,11 +376,7 @@ fn run(base: &GameState, sample: &Case) -> Ran {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The properties.
-// ---------------------------------------------------------------------------
-
-/// `describe("R171 over random boards and random control changes (fast-check)")`.
+// The properties
 mod r171_over_random_boards_and_random_control_changes_fast_check {
     use super::*;
 

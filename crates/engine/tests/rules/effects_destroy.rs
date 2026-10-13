@@ -1,8 +1,6 @@
 //! Destroy and Sacrifice (SPEC §6.3, §4.5, R11, R12, R46, R78, BUILD M3-T1).
 //! The fixture defs and scripts these tests need are registered here, on top of the shared fixture
 //! catalog, so no shared fixture has to grow for them (CLAUDE.md, BUILD §0).
-//!
-//! Port of `packages/engine/test/effects-destroy.test.ts`.
 
 use jackioh_engine::effects::damage;
 use jackioh_engine::effects::destroy::{destroy, sacrifice};
@@ -12,12 +10,9 @@ use crate::rules::fixtures::catalog::token_def;
 use crate::rules::fixtures::combat::indestructible;
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-// ---------------------------------------------------------------------------
 // Fixture cards.
-// ---------------------------------------------------------------------------
 
-/// TS `unitDefOf(name, overrides)`: `nextIndex` starts at 750 and is bumped once per call, in the
-/// order the TS file declares its defs; `overrides` is spread over the literal (a shallow merge).
+/// `overrides` is spread over the literal (a shallow merge).
 fn unit_def_of(name: &str, index: u32, overrides: Value) -> CardDef {
     let mut def = json!({
         "id": format!("ds-{name}"),
@@ -75,7 +70,6 @@ fn field_spell() -> CardDef {
     )
 }
 
-/// TS `tokenDef("rush")` (its `tags` default, `["Token"]`, written out).
 fn rush_token() -> CardDef {
     token_def("rush", [Tag::Token])
 }
@@ -144,7 +138,6 @@ fn game(seed: &str) -> GameState {
     state
 }
 
-/// TS `game()`'s default seed.
 fn default_game() -> GameState {
     game("effects-destroy")
 }
@@ -156,14 +149,13 @@ struct RunOptions {
 }
 
 /// A sink plus `apply`, so one test can run an effect and then the state check on the same events.
-/// TS's sink held the state; here the state is lent to each call, so the test reads it in between as
-/// TS read its live objects.
+/// The state is lent to each call, so the test reads it in between.
 struct Runner {
     events: Vec<GameEvent>,
     rng: Rng,
 }
 
-/// TS `runner(state)`: a sink whose rng starts at the state's cursor, as reduce does.
+/// A sink whose rng starts at the state's cursor, as reduce does.
 fn runner(state: &GameState) -> Runner {
     Runner {
         events: Vec::new(),
@@ -211,7 +203,7 @@ fn chosen() -> Value {
     json!({ "of": "chosen" })
 }
 
-/// The card as it stands in the state now (TS held the live object).
+/// The card as it stands in the state now.
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).expect("the card is in the state")
 }
@@ -220,7 +212,6 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).expect("the card is in the state")
 }
 
-/// `cardAt(state, ref)?.id`.
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
 }
@@ -229,7 +220,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// One field of each event, as TS's `.map((e) => e.<key>)` read it.
+/// One field of each event.
 fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     match serde_json::to_value(events).expect("events serialise") {
         Value::Array(items) => items
@@ -240,14 +231,11 @@ fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
     }
 }
 
-// ---------------------------------------------------------------------------
 // destroy
-// ---------------------------------------------------------------------------
 
 mod destroy_m3_t1 {
     use super::*;
 
-    /// TS: "§6.3 marks the card and leaves it on the field until the state check moves it".
     #[test]
     fn marks_the_card_and_leaves_it_on_the_field_until_the_state_check_moves_it() {
         let mut state = default_game();
@@ -296,7 +284,7 @@ mod destroy_m3_t1 {
         );
     }
 
-    /// TS: "§4.5 two cards marked by one effect die in the same state check (R59)".
+    /// R59: both marked cards die in the same state check.
     #[test]
     fn r59_two_cards_marked_by_one_effect_die_in_the_same_state_check() {
         let mut state = default_game();
@@ -358,7 +346,6 @@ mod destroy_m3_t1 {
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
     }
 
-    /// TS: "§4.5 marks a backrow card, which the state check collects too".
     #[test]
     fn marks_a_backrow_card_which_the_state_check_collects_too() {
         let mut state = default_game();
@@ -439,7 +426,6 @@ mod destroy_m3_t1 {
         assert!(events_of_type(&run.events, GameEventType::EnteredGraveyard).is_empty());
     }
 
-    /// TS: "§6.3 marks nothing for a card that is not on the field".
     #[test]
     fn marks_nothing_for_a_card_that_is_not_on_the_field() {
         let mut state = default_game();
@@ -465,14 +451,11 @@ mod destroy_m3_t1 {
     }
 }
 
-// ---------------------------------------------------------------------------
 // sacrifice
-// ---------------------------------------------------------------------------
 
 mod sacrifice_m3_t1 {
     use super::*;
 
-    /// TS: "§6.3 moves your own unit from the field to the graveyard at once, with no state check".
     #[test]
     fn moves_your_own_unit_from_the_field_to_the_graveyard_at_once_with_no_state_check() {
         let mut state = default_game();
@@ -507,7 +490,6 @@ mod sacrifice_m3_t1 {
         );
     }
 
-    /// TS: "§6.3 counts as a death: the destroyed counter rises and the Death trigger fires".
     #[test]
     fn counts_as_a_death_the_destroyed_counter_rises_and_the_death_trigger_fires() {
         let mut state = default_game();
@@ -534,7 +516,6 @@ mod sacrifice_m3_t1 {
         );
     }
 
-    /// TS: "§6.3 bypasses Indestructible, which a destroy mark cannot".
     #[test]
     fn bypasses_indestructible_which_a_destroy_mark_cannot() {
         let mut state = default_game();
@@ -619,7 +600,6 @@ mod sacrifice_m3_t1 {
         assert!(events_of_type(&run.events, GameEventType::EnteredGraveyard).is_empty());
     }
 
-    /// TS: "§6.3 refuses an enemy unit unless a Tribute allows it (#55)".
     #[test]
     fn refuses_an_enemy_unit_unless_a_tribute_allows_it_55() {
         let mut state = default_game();
@@ -695,7 +675,6 @@ mod sacrifice_m3_t1 {
         assert_eq!(state.players[PlayerId::P1].graveyard.len(), 0);
     }
 
-    /// TS: "§6.3 does nothing for a card that is not on the field".
     #[test]
     fn does_nothing_for_a_card_that_is_not_on_the_field() {
         let mut state = default_game();

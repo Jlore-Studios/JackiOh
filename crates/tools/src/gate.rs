@@ -1,44 +1,30 @@
 //! `cargo jackioh gate [--full] [--shard k/K] [--out dir]` and `cargo jackioh gate merge [dir]`: the
-//! AI's quality gates (docs/polish/3-ai.md B28–B31, B42, SPEC §9.9; SURFACE §12). Port of
-//! `packages/ai/test/gate-random.test.ts`, `gate-greedy.test.ts`, `gate-hard-easy.test.ts`,
-//! `gate-perf.test.ts`, their shard helper `test/_shard.ts` and `packages/ai/scripts/gate-merge.ts`.
-//! The gate modules' games are played and measured by `jackioh_ai::gate` (part 17); this file turns
-//! a run into a pass or a fail, as the TS gate files did.
+//! AI's quality gates (docs/polish/3-ai.md B28–B31, B42, SPEC §9.9). Surface contract:
+//! docs/v0.3.0/SURFACE.md §12. `jackioh_ai::gate` plays and measures the games; this file turns a run
+//! into a pass or a fail.
 //!
-//! Three matchups, each a run of seeded games in which the subject (the AI, or the Hard AI)
-//! alternates seats, every game folded back from its log to prove it replays (B31):
+//! Three matchups of seeded games, the subject alternating seats, every game folded back from its
+//! log to prove it replays (B31):
 //!
 //! - `ai-vs-random` (B28): the AI on Easy at AI_GATE_BUDGET against §10.7's random policy.
-//! - `ai-vs-greedy` (B29): the AI on Easy against the one-ply greedy baseline at equal (Easy)
-//!   resources.
-//! - `hard-vs-easy` (R180, B30): the same AI with Hard's handicap against itself on Easy. The tiers
-//!   differ in resources alone, so the only thing separating the two seats is the handicap.
+//! - `ai-vs-greedy` (B29): the AI on Easy against the one-ply greedy baseline at equal resources.
+//! - `hard-vs-easy` (R180, B30): the same AI with Hard's handicap against itself on Easy.
 //!
-//! The subject must win at least `gateNeeded(matchup, n)` of its n games (the rule SPEC §9.9 gives
-//! every gate's count, held here by `check_gate_rule`). Only wins count, in every gate: a draw at the
-//! turn cap is reported beside the wins (`turnCapDraws`) and counts for nothing. Without `--full` the
-//! command plays the smoke size (AI_GATE.smokeSeeds per matchup, what `pnpm test` played); `--full`
-//! (or `JACKIOH_AI_GATE=full`, as `pnpm ai:gate` set it) plays AI_GATE.fullSeeds[matchup]. A failure
-//! names the seeds the subject did not win, which replay exactly through `gameConfig(matchup, n)`.
-//! Every game also has to be clean (B31): nothing rejected, nothing thrown, no fallback, a real
-//! result, and a log that folds back to the live hash.
+//! The subject must win at least `gateNeeded(matchup, n)` of n games (`check_gate_rule`). Only wins
+//! count: a draw at the turn cap is reported (`turnCapDraws`) and counts for nothing. Without `--full`
+//! it plays AI_GATE.smokeSeeds per matchup; `--full` (or `JACKIOH_AI_GATE=full`) plays
+//! AI_GATE.fullSeeds[matchup]. A failure names the seeds not won. Every game must be clean (B31):
+//! nothing rejected, thrown or fallen back, a real result, a log that folds to the live hash.
+//! The perf gate (B42) then checks that a decision at the browser's budget stays under
+//! AI_GATE.maxDecisionMs (`perf_gate`).
 //!
-//! After the matchups the perf gate (B42) runs: a decision at the browser's budget stays under
-//! AI_GATE.maxDecisionMs as the development machine would time it (`perf_gate`).
-//!
-//! CI plays the full gates in shards so no job runs for long (.github/workflows/ci.yml).
-//! `--shard k/K` (or `JACKIOH_AI_GATE_SHARD=k/K`) makes each gate play only its share of the games
-//! (`gateShardGames`): every game it plays must still be clean (B31) and the perf gate still times
-//! every decision of its games, but a win-rate threshold is a property of the whole run, so a shard
-//! writes its games to `--out` (or `JACKIOH_AI_GATE_OUT`, default `ai-gate-shards/`) and
-//! `cargo jackioh gate merge` holds the wins of all shards together against `gateNeeded`.
-//! Unsharded, every gate plays and judges its whole run as before.
-//!
-//! The games of one matchup are played in parallel (rayon), one game per task: a gate game is a pure
-//! function of its matchup and number, so the run, its order and its verdict are exactly what one
-//! sequential `runGateGames` gives. The perf gate times one decision at a time, never in parallel.
-//!
-//! Output goes to stdout; a failed gate returns `Err` naming every problem (exit 1).
+//! CI plays the full gates in shards (.github/workflows/ci.yml). `--shard k/K` (or
+//! `JACKIOH_AI_GATE_SHARD`) plays a share of the games (`gateShardGames`). A win-rate threshold
+//! belongs to the whole run, so a shard writes its games to `--out` (or `JACKIOH_AI_GATE_OUT`,
+//! default `ai-gate-shards/`) and `gate merge` holds all shards' wins against `gateNeeded`.
+//! Games of one matchup run in parallel (rayon); a game is a pure function of matchup and number, so
+//! the verdict matches a sequential run. Output goes to stdout; a failed gate returns `Err` naming
+//! every problem (exit 1).
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -94,7 +80,6 @@ pub enum GateCommand {
 /// Where a shard writes its games, and where `gate merge` reads them, unless told otherwise.
 const DEFAULT_SHARD_DIR: &str = "ai-gate-shards";
 
-/// The three matchups, in the order every gate file and `gate-merge.ts` listed them.
 const MATCHUP_NAMES: [&str; 3] = ["ai-vs-random", "ai-vs-greedy", "hard-vs-easy"];
 
 /// The games of n 1..=GAME_CONFIG_PROBES whose seating every gate's first check reads.
@@ -109,23 +94,17 @@ const GREEDY_PROBE_ACTIONS: usize = 120;
 /// B29: greedy has to have acted in its main phase more often than this for the check to mean anything.
 const GREEDY_PROBE_MIN_STATES: usize = 3;
 
-/// `toBeCloseTo(x, 12)`: equal within half of 10^-12.
 const CLOSE_TO_12: f64 = 0.5e-12;
-/// `toBeCloseTo(x, 10)`.
 const CLOSE_TO_10: f64 = 0.5e-10;
 
 pub(crate) const MS_PER_SECOND: f64 = 1000.0;
 
-// ---------------------------------------------------------------------------
 // Matchups, seats and the gate's numbers
-// ---------------------------------------------------------------------------
 
-/// A matchup's literal as TS wrote it (`"ai-vs-random"` …).
 pub(crate) fn matchup_name(matchup: Matchup) -> String {
     matchup.as_str().to_string()
 }
 
-/// The matchup a literal names (`"ai-vs-greedy"` …), or an error listing the three.
 pub(crate) fn parse_matchup(text: &str) -> Result<Matchup> {
     serde_json::from_value(Value::String(text.to_string())).map_err(|_| {
         anyhow!(
@@ -135,13 +114,11 @@ pub(crate) fn parse_matchup(text: &str) -> Result<Matchup> {
     })
 }
 
-/// The three matchups, in TS's order.
 pub(crate) fn matchups() -> Vec<Matchup> {
     Matchup::ALL.to_vec()
 }
 
-/// A serialised string union's literal (a matchup, a decision reason, a sweep flag); any other value
-/// as its JSON text.
+/// A serialised string union's literal; any other value as its JSON text.
 pub(crate) fn literal<T: Serialize>(value: &T) -> String {
     match serde_json::to_value(value) {
         Ok(Value::String(text)) => text,
@@ -155,22 +132,19 @@ pub(crate) fn subject_seat_of(n: i32) -> PlayerId {
     if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
 }
 
-/// AI_GATE.fullSeeds[matchup].
 fn full_seeds(matchup: Matchup) -> i32 {
     AI_GATE.full_seeds[matchup]
 }
 
-/// AI_GATE.smokeSeeds.
 fn smoke_seeds() -> i32 {
     AI_GATE.smoke_seeds
 }
 
-/// `gateNeeded(matchup, games)`.
 fn needed(matchup: Matchup, games: i32) -> i32 {
     gate_needed(matchup, games) as i32
 }
 
-/// `Math.ceil(AI_GATE.briefRate[matchup] * games)`: the most any count may ask for.
+/// The most any count may ask for: `ceil(AI_GATE.briefRate[matchup] * games)`.
 fn brief_count(matchup: Matchup, games: i32) -> i32 {
     (AI_GATE.brief_rate[matchup] * f64::from(games)).ceil() as i32
 }
@@ -180,7 +154,6 @@ fn gate_seed(matchup: Matchup, n: i32) -> String {
     format!("{}:{}:{n}", AI_GATE.seed_series, matchup_name(matchup))
 }
 
-/// `config.decks[at(seat)]`.
 fn deck_of(config: &MatchConfig, seat: PlayerId) -> &Vec<String> {
     match seat {
         PlayerId::P1 => &config.decks.0,
@@ -188,7 +161,6 @@ fn deck_of(config: &MatchConfig, seat: PlayerId) -> &Vec<String> {
     }
 }
 
-/// `config.handicaps?.[seat] ?? HUMAN_HANDICAP`.
 fn handicap_of(config: &MatchConfig, seat: PlayerId) -> Handicap {
     config
         .handicaps
@@ -198,8 +170,7 @@ fn handicap_of(config: &MatchConfig, seat: PlayerId) -> Handicap {
         .unwrap_or(HUMAN_HANDICAP)
 }
 
-/// Every seat's deck rule (R186 included): `buildAiDeck(createRng(`${seed}:deck:${seat}`),
-/// handicap.deckSize, { manaCap: handicap.manaCap })`.
+/// Every seat's deck rule (R186 included): `build_ai_deck` seeded by `{seed}:deck:{seat}`.
 fn gate_deck(seed: &str, seat: PlayerId, handicap: &Handicap) -> Vec<String> {
     let mut rng = Rng::new(&format!("{seed}:deck:{seat}"), 0);
     build_ai_deck(
@@ -212,7 +183,7 @@ fn gate_deck(seed: &str, seat: PlayerId, handicap: &Handicap) -> Vec<String> {
     )
 }
 
-/// TS's `expect(…).toBe(…)` as a check: `Err` naming the label and both sides.
+/// `Err` naming the label and both sides when they differ.
 fn expect_eq<T: PartialEq + std::fmt::Debug>(actual: T, expected: T, label: &str) -> Result<()> {
     if actual == expected {
         Ok(())
@@ -221,12 +192,10 @@ fn expect_eq<T: PartialEq + std::fmt::Debug>(actual: T, expected: T, label: &str
     }
 }
 
-/// TS's `expect(cond, label).toBe(true)` as a check.
 fn expect_that(holds: bool, label: impl FnOnce() -> String) -> Result<()> {
     if holds { Ok(()) } else { Err(anyhow!(label())) }
 }
 
-/// A game's result as `JSON.stringify(game.record.result)` wrote it.
 fn result_json(result: &Option<jackioh_engine::GameResult>) -> String {
     serde_json::to_string(result).unwrap_or_else(|error| format!("<{error}>"))
 }
@@ -236,17 +205,12 @@ fn is_turn_cap_draw(result: &Option<jackioh_engine::GameResult>) -> bool {
     matches!(result, Some(r) if r.winner == Winner::Draw && r.reason == GameOverReason::TurnCap)
 }
 
-// ---------------------------------------------------------------------------
-// Shards (test/_shard.ts)
-// ---------------------------------------------------------------------------
+// Shards
 //
-// CI plays the full gates in shards so no job runs for long (.github/workflows/ci.yml). A shard plays
-// only its share of the games (`gateShardGames`): every game it plays must still be clean (B31) and
-// the perf gate still times every decision of its games, but a win-rate threshold is a property of
-// the whole run, so a shard writes its games out and `gate merge` holds the wins of all shards
-// together against `gateNeeded`. A shard keeps the whole run's allowance rather than a share of it:
-// one game can take minutes on its own (a perf game of patch v0.2.0 outran 180 s), and the CI job's
-// own timeout bounds a shard.
+// CI plays the full gates in shards (.github/workflows/ci.yml). A shard plays only its share of the
+// games, but a win-rate threshold belongs to the whole run, so it writes its games out and `gate
+// merge` judges them together. A shard keeps the whole run's allowance, not a share: one game can
+// take minutes, and the CI job's own timeout bounds a shard.
 
 /// One shard of a gate run: shard `index` of `count`, both 1-based.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -350,17 +314,12 @@ fn write_shard(
     Ok(path)
 }
 
-// ---------------------------------------------------------------------------
-// gate merge (scripts/gate-merge.ts)
-// ---------------------------------------------------------------------------
+// gate merge
 //
-// The full quality gates' verdict when CI has played them in shards (.github/workflows/ci.yml). Each
-// shard wrote the games it played, one file per matchup, to `dir` (default `ai-gate-shards/`); this
-// reads them all and, per matchup, holds the run to exactly what one unsharded `gate --full` would:
-// every game 1..AI_GATE.fullSeeds[matchup] played exactly once, and at least
-// `gateNeeded(matchup, games)` won. The shards have already checked each game is clean (B31) and
-// timed every perf decision (B42), which need no merging. A failure names the first problem: a
-// missing or doubled game, or too few wins with the seeds lost.
+// The full gates' verdict when CI has played them in shards. Reads every shard's files in `dir`
+// (default `ai-gate-shards/`) and holds each matchup to what one unsharded `gate --full` would:
+// every game 1..fullSeeds played exactly once, at least `gateNeeded` won. The shards already checked
+// B31 and timed every perf decision (B42). A failure names the first problem.
 
 /// Every `.json` file under `dir`, recursively, in a stable (sorted) order.
 fn json_files(dir: &Path) -> Result<Vec<PathBuf>> {
@@ -380,7 +339,6 @@ fn json_files(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(found)
 }
 
-/// `gate merge <dir>`.
 fn merge(dir: &Path) -> Result<()> {
     let files = json_files(dir)?
         .iter()
@@ -459,13 +417,10 @@ fn merge(dir: &Path) -> Result<()> {
     }
 }
 
-// ---------------------------------------------------------------------------
-// The matchups (gate-random.test.ts, gate-greedy.test.ts, gate-hard-easy.test.ts)
-// ---------------------------------------------------------------------------
+// The matchups
 
-/// Plays the listed games of a matchup (1-based, as `gameConfig` numbers them), each folded with its
-/// handicaps by `runGateGames` to fill replayHash/replayErrors. One game per rayon task, collected in
-/// the listed order.
+/// Plays the listed games of a matchup (1-based), each folded with its handicaps to fill
+/// replayHash/replayErrors; one game per rayon task, collected in the listed order.
 fn play_gate(matchup: Matchup, played: &[i32]) -> GateReport {
     let per_game: Vec<Vec<GateGame>> = played
         .par_iter()
@@ -509,9 +464,7 @@ fn losing_seeds(run: &GateReport) -> String {
 }
 
 /// B28/B29/R180 B30: `gameConfig` seats the subject and its opponent as the matchup says, alternating
-/// seats, both on the specified handicaps and decks. ai-vs-random: the Easy AI against the random
-/// policy; ai-vs-greedy: the Easy AI against the greedy baseline at equal resources; hard-vs-easy:
-/// Hard's handicap against Easy's, the same AI and budget on both.
+/// seats, on the specified handicaps and decks. Hard-vs-easy runs the same AI and budget on both.
 fn check_game_config(matchup: Matchup) -> Result<()> {
     let name = matchup_name(matchup);
     let hard_vs_easy = name == "hard-vs-easy";
@@ -662,15 +615,11 @@ fn check_series(matchup: Matchup) -> Result<()> {
 
 /// B29: the greedy baseline keeps its own frozen weights, so tuning the AI's never moves it.
 ///
-/// TS proved it by turning AI_EVAL upside down at run time and asking greedy for every decision of a
-/// game again. Rust's AI_EVAL and GREEDY_EVAL are constants, which nothing can change while the
-/// program runs: that greedy reads GREEDY_EVAL and nothing else is a fact of `baselines.rs`'s source,
-/// which no run can contradict. What a run can still prove is kept: the two tables differ, greedy acts
-/// in its main phase, and every greedy decision is a function of its state and its rng alone (asked
-/// twice, it answers the same).
+/// AI_EVAL and GREEDY_EVAL are constants, so that greedy reads GREEDY_EVAL alone is a fact of
+/// `baselines.rs`'s source. A run can still prove the two tables differ, greedy acts in its main
+/// phase, and every greedy decision is a function of its state and rng alone.
 fn check_greedy_frozen(matchup: Matchup) -> Result<()> {
     expect_that(GREEDY_EVAL != AI_EVAL, || "GREEDY_EVAL is AI_EVAL".to_string())?;
-    // Greedy plays both seats here, so the states come quickly.
     let config = game_config(matchup, GREEDY_PROBE_GAME, AI_GATE_BUDGET, AI_GATE.seed_series);
     let greedy_seat = PlayerId::P1;
     expect_eq(
@@ -782,7 +731,7 @@ fn check_clean(run: &GateReport) -> Result<()> {
     Ok(())
 }
 
-/// The checks that read no game, per matchup, in the order its TS gate file ran them.
+/// The checks that read no game, per matchup.
 fn config_checks(matchup: Matchup) -> Vec<Result<()>> {
     match matchup_name(matchup).as_str() {
         "ai-vs-random" => vec![
@@ -805,7 +754,6 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
     let name = matchup_name(matchup);
     let games = if full { full_seeds(matchup) } else { smoke_seeds() };
     let needed = needed(matchup, games);
-    // The games this process plays: all of them, or its shard's when CI splits the run.
     let played = games_to_play(games, shard);
     let shard_label = match shard {
         None => String::new(),
@@ -831,8 +779,8 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
         problems.push(format!("{name}: {error:#}"));
     }
 
-    // A shard's wins are a share of the run's, so `gate merge` holds them against NEEDED together with
-    // the other shards'. The games' cleanliness is still checked here (B31).
+    // A shard's wins are a share of the run's: `gate merge` holds them against NEEDED together.
+    // B31 is still checked here.
     if let Some(shard) = shard {
         match write_shard(&run, games, shard, &played, out) {
             Ok(path) => println!(
@@ -861,34 +809,23 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
     problems
 }
 
-// ---------------------------------------------------------------------------
-// The perf gate (gate-perf.test.ts)
-// ---------------------------------------------------------------------------
+// The perf gate
 //
-// Quality gate: a decision at the browser's budget stays under AI_GATE.maxDecisionMs as the
-// development machine would time it (docs/polish/3-ai.md "Budgets", SPEC §9.9). Budgets count nodes,
-// so what a decision does is fixed and the node budget is asserted exactly; only its speed depends on
-// the machine. The states are every decision the Easy AI faced in real gate games against the greedy
-// baseline, the opponent's reply included.
+// Quality gate (docs/polish/3-ai.md "Budgets", SPEC §9.9): a decision at the browser's budget stays
+// under AI_GATE.maxDecisionMs as the development machine would time it. Budgets count nodes, so the
+// node budget is asserted exactly; only speed depends on the machine.
 //
-// The clock is read against a yardstick, not on its own: a wall-clock limit failed whenever the
-// machine was busy (1,520 ms in a full `pnpm test` at load 26, 5,523 ms beside an e2e run) and passed
-// alone. So each run of a decision is timed right after a fixed piece of engine work
-// (`AI_GATE.calibrationGames` random-policy games), and the decision's cost is its time over the
-// yardstick's, times the yardstick's time on the development machine (`calibrationRefMs`). Load, or a
-// slower CI runner, slows both, and the ratio stands. Each state is decided up to AI_GATE.perfRepeats
-// times and its smallest ratio counts, so a burst of load during one run fails nothing, while a
-// decision that is slow on its own still does. The runs stop at the first one under
-// AI_GATE.maxDecisionMs: a decision fails only when every run is over, so the runs after a passing one
-// cannot change the verdict, and they were two thirds of a shard's perf time (#188).
+// The clock is read against a yardstick, since a wall-clock limit failed whenever the machine was
+// busy. Each run of a decision is timed right after a fixed piece of engine work
+// (`AI_GATE.calibrationGames` random-policy games); its cost is its time over the yardstick's, times
+// the yardstick's time on the development machine (`calibrationRefMs`). Each state is decided up to
+// AI_GATE.perfRepeats times and its smallest ratio counts; runs stop at the first under
+// AI_GATE.maxDecisionMs, since later ones cannot change the verdict.
 //
-// `gate` times the decisions of AI_GATE.perfSmokeGames games; `gate --full` times
-// AI_GATE.perfFullGames.
-//
-// Ordinary games seldom reach the worst case, so two hand-built wide boards are timed as well: five
-// units a side and a hand of X-cost and targeted spells beside a Lava Golem, at Hard's seven crystals
-// and at Easy's four. There the lethal solver's best-first walk runs to its allowance and every
-// candidate list runs to hundreds of entries.
+// The states are every decision the Easy AI faced in real ai-vs-greedy gate games
+// (AI_GATE.perfSmokeGames of them, AI_GATE.perfFullGames with `--full`). Two hand-built wide boards
+// are timed too, the worst case: five units a side and a hand of X-cost and targeted spells beside
+// a Lava Golem, at Hard's seven crystals and Easy's four.
 
 /// One decision's timing.
 #[derive(Serialize, Clone, Debug)]
@@ -948,10 +885,8 @@ const WIDE_HARD_MANA: i32 = 7;
 const WIDE_EASY_MANA: i32 = 4;
 /// The enemy hero's health on the wide boards.
 const WIDE_ENEMY_HEALTH: i32 = 30;
-/// Wide enough to be the worst case the header describes: 195 candidates at Easy's four crystals,
-/// more at Hard's seven. Easy's count was above 250 until task 4's `TargetDecl.forModes` (R90) stopped
-/// listing Efficiency Dividend's mana mode once per target it never reads, and 232 until R348 (patch
-/// v0.1.1) dropped Efficiency Dividend's and Adaptive UI's X = 0 plays.
+/// Wide enough to be the worst case: 195 candidates at Easy's four crystals, more at Hard's seven
+/// (R90, R348).
 const WIDE_MIN_CANDIDATES: usize = 190;
 
 /// The two wide boards' scenario options, by name.
@@ -968,7 +903,6 @@ fn wide_boards() -> Vec<(&'static str, Value)> {
     ]
 }
 
-/// The wide board `name`'s state: `scenario({ seed: `perf-${name}`, active: "p1", turn: 9, ...setup })`.
 fn wide_state(name: &str, setup: &Value) -> GameState {
     let mut options = json!({ "seed": format!("perf-{name}"), "active": "p1", "turn": WIDE_TURN });
     if let (Some(into), Some(from)) = (options.as_object_mut(), setup.as_object()) {
@@ -998,8 +932,8 @@ fn yardstick_ms() -> Result<f64> {
 }
 
 /// Up to AI_GATE.perfRepeats runs of one decision, each timed right after the yardstick, stopping at
-/// the first under AI_GATE.maxDecisionMs: the smallest ratio of the two, in the development machine's
-/// milliseconds, with the node count (the same on every run: budgets count nodes).
+/// the first under AI_GATE.maxDecisionMs: the smallest ratio, in the development machine's ms, with
+/// the node count.
 fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Timing> {
     let reference = AI_GATE.calibration_ref_ms;
     let limit = AI_GATE.max_decision_ms;
@@ -1037,11 +971,10 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
     })
 }
 
-/// B42: every decision of the perf games this process times (all of them, or its shard's: every
-/// decision is judged on its own, so the shards together time exactly what one run would) stays within
-/// the node budget and under AI_GATE.maxDecisionMs, and so does a decision on each wide board (timed in
-/// every shard). `judge_time` false checks the node budget and the boards' width but not the clock
-/// (the unit tests' unoptimised build). Answers the problems found.
+/// B42: every decision of the perf games this process times (all, or its shard's) stays within the
+/// node budget and under AI_GATE.maxDecisionMs, and so does a decision on each wide board (timed in
+/// every shard). `judge_time` false skips the clock (the unit tests' unoptimised build). Answers the
+/// problems found.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
     let games = if full {
         AI_GATE.perf_full_games
@@ -1136,11 +1069,9 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     problems
 }
 
-// ---------------------------------------------------------------------------
 // The command
-// ---------------------------------------------------------------------------
 
-/// A switch's value from its flag, else its environment variable (the TS gates' only way in).
+/// A switch's value from its flag, else its environment variable.
 fn flag_or_env(flag: Option<String>, variable: &str) -> Option<String> {
     flag.or_else(|| std::env::var(variable).ok())
 }
@@ -1174,9 +1105,8 @@ pub fn run(args: Args) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    //! The gates' smoke run: every check that reads no game, and 4 games of each matchup held to the
-    //! same rule as the full run (`gateNeeded(matchup, 4)`) and to B31. `cargo jackioh gate` plays the
-    //! smoke size (AI_GATE.smokeSeeds) and `--full` the full one.
+    //! The gates' smoke run: every check that reads no game, and 4 games of each matchup held to
+    //! `gateNeeded(matchup, 4)` and B31.
 
     use super::*;
 

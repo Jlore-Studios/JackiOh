@@ -2,66 +2,21 @@
 //! 10/10 → 20/20, Mythic.
 //!   Base:    "Cry: exile all other permanents on both sides. Costs 1 less per card drawn, played,
 //!             destroyed or exiled this game by either player"
-//!   Radiant: "Charge. Cry: …; same" — §8 Conventions: "Plus X" adds keyword X to the base keywords
-//!            and restates no clause, so both clauses above are kept unchanged. The differences are
-//!            catalog data on the radiant face: the printed Charge, and R275's doubled stats.
+//!   Radiant: "Charge. Cry: …; same" — §8 Conventions: "Plus X" restates no clause. The Charge and
+//!            R275's doubled stats are catalog data on the radiant face.
 //!   Engine:  "Four game-level counters; cost recomputed on read; floor 0".
 //!
-//! THE COST (R55, R65, §10.9). R55: "Count both players' draws, plays, destructions and exiles from
-//! the start of the game". Those four counters are `state.counters` — `{ drawn, played, destroyed,
-//! exiled }` — which §10.1 puts on `GameState` for this card alone, so the discount is one
-//! subtraction over the whole game rather than anything this card has to record. §10.9 gives it the
-//! one `cost` hook in the catalog ("`cost` is Ceaseless Void's computed cost, R55"), and R65 starts
-//! its calculation from it: "start from `costOverride`, else the printed cost (Ceaseless Void's
-//! computed cost, …); add `costMod`; add player discounts; apply Professor Curvature if the result is
-//! then 4; floor at 0". So the hook returns the printed 100 minus the four counters and nothing else:
-//! `costMod`, the player's discounts and #77's clamp are all `effectiveCost`'s, applied after this.
-//!
-//! "Cost recomputed on read" is what a hook *is* — `mana.printedCost` calls it on every read — so
-//! nothing is ever stored. The floor is here as well as in `printedCost` and `effectiveCost`,
-//! because §8.5's Engine cell puts it on this card ("floor 0") and a negative number should never
-//! leave the hook.
-//!
-//! The printed 100 is read from the catalog through `queryCost(def)` rather than written down: a
-//! script never restates its own cost, and `queryCost` is R65's out-of-play reading of a definition,
-//! which for a plain number is that number.
-//!
-//! WHICH PLAYS COUNT. `state.counters.played` is bumped by `resolve.countAsPlayed`, which every play
-//! and every Cast goes through, so R70's "a cast … counts as a play for every rule that counts or
-//! reacts to plays … (Ceaseless Void)" is already true, and `move.counter` rolls the counter back for
-//! a Countered card that "is treated as never played" (§6.3). Exiles likewise: `move.exile` bumps
-//! `counters.exiled` only when the card actually reaches an exile pile, so a unit token that ceased
-//! to exist instead is not counted (R11). None of that is this card's to enforce.
-//!
-//! PLAYING IT COUNTS TOO, but after the fact: §10.5 pays the cost at step 2 and increments the play
-//! counter at step 4, so the card is never 1 cheaper for having been played.
-//!
-//! THE CRY. "Exile all other permanents on both sides": both rows of §3.1 on both sides — §5.1's
-//! permanents are Unit, Field Spell, Trap and Field Trap, which is exactly "everything in the unit
-//! zones and the backrow" — with this unit itself excluded. Exile takes no Death trigger (§6.3) and
-//! Indestructible does not stop it ("can be exiled or sacrificed", §6.1), so there is nothing to
-//! filter and nothing to sequence: one effect, and the state check after it (R59).
-//!
-//! `exileAll({ side, rows, excludeSelf })` is the board-wide exile (`effects/move.ts`), written in
-//! the shared `BoardScope` of `effects/targets.ts` — the same scope #2, #17, #43 and #88 use for the
-//! destroy half of the same shape. It exiles every card the scope matches in R68's order, each one
-//! through the path `exile` itself uses: `moveToZone` to the exile pile, `state.counters.exiled`
-//! bumped per card that gets there, an `exiled` event each, a unit token ceasing to exist instead
-//! (R11). It matches only cards on the field, so a card dormant under a Stack pile is not one (R13);
-//! the promotion that leaves behind is a rule the spec has not made — see the report.
-//!
-//! THE GLOW (R662). In hand it lights up once the reductions have brought it within its controller's
-//! mana: what a play of it costs now (`playCost`, R65, with this card's own computed cost and every
-//! discount) is no more than the mana they hold. The cost itself is on the face (R280), and the glow
-//! marks the moment the count has done its work, whether or not a zone is free; the same on both faces.
+//! THE COST (R55, R65, §10.9): the `cost` hook returns the printed 100 (`query_cost`, never
+//! restated) minus `state.counters`' four counts (§10.1), floored at 0, recomputed on every read;
+//! `costMod`, discounts and #77's clamp are `effectiveCost`'s. The engine counts plays, casts (R70)
+//! and exiles (R11); playing it counts after the cost is paid (§10.5 steps 2 and 4).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-100";
 
-/// R65's reading of the printed cost — 100 — taken from the catalog, never restated. TS's module
-/// constant `PRINTED_COST = queryCost(def)`: read once, when the script is built (`script()`), and
-/// carried into the cost hook.
+/// R65's reading of the printed cost — 100 — taken from the catalog, never restated: read once, when
+/// the script is built, and carried into the cost hook.
 fn printed_cost_of_def() -> i32 {
     query_cost(&crate::card_def(ID))
 }
@@ -75,9 +30,10 @@ fn cost_now(state: &GameState, printed_cost: i32, discount: i32) -> i32 {
     (printed_cost - discount * spent).max(0)
 }
 
-/// "Cry: exile all other permanents on both sides" — §3.1's two rows, both sides, this unit
-/// excluded. `excludeSelf` is what "other" means here; R11 makes a unit token cease to exist
-/// rather than reach the pile, so it is not counted (§3.2).
+/// "Cry: exile all other permanents on both sides": §3.1's two rows of both sides (§5.1's
+/// permanents), this unit excluded. No Death trigger (§6.3), and Indestructible does not stop it
+/// (§6.1): one effect in R68's order, then the state check (R59). Only the field matches, so a card
+/// dormant under a Stack pile is not one (R13); a unit token ceases to exist uncounted (R11, §3.2).
 fn exile_every_other_permanent() -> Vec<Effect> {
     vec![exile_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"], "excludeSelf": true })))]
 }
@@ -90,7 +46,8 @@ pub fn script() -> CardScripts {
     let void_ = Script {
         cost: Some(cost_hook(move |args| cost_now(args.state, printed_cost, param(&args, "discount")))),
         cry: Some(hook(|_ctx| exile_every_other_permanent())),
-        // R662: the reductions have brought it within its controller's mana.
+        // R662: lit in hand once `play_cost` (R65, every discount) is within its controller's mana,
+        // whether or not a zone is free (the cost itself is on the face, R280).
         condition_met: Some(condition_hook(|ctx| {
             ctx.zone == ConditionZone::Hand
                 && play_cost(ctx.state, ctx.self_) <= unspent_mana_of(ctx.state, ctx.controller)
@@ -103,21 +60,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// #100 Ceaseless Void — SPEC §8.5, §6.3 (Cost, Exile), §10.4, §10.5, R11, R55, R65, R70.
-//
-// BUILD M4-T4 row 100: "Cost = 100 − (drawn + played + destroyed + exiled by both players),
-// floor 0 (R55); Cry exiles every other permanent; radiant Charge". R275 doubles the radiant face's
-// stats: it is a 20/20 with Charge.
-//
-// The cost half is complete and is tested THROUGH the cost pipeline — `printedCost`,
-// `effectiveCost` and the play validator's own refusal — never by reading the hook's return value
-// or the catalog's 100 back to itself.
-//
-// The Cry is `exileAll({ side: "any", rows: ["units", "backrow"], excludeSelf: true })`, the
-// board-wide exile the effects barrel exports.
-//
-// R662's yellow glow (`conditionMet`): in hand once what a play of it costs now is within its
-// controller's mana, both faces, at the end of this file.
+// #100 Ceaseless Void — SPEC §8.5, §6.3 (Cost, Exile), §10.4, §10.5, R11, R55, R65, R70; BUILD M4-T4
+// row 100. R275 doubles the radiant face's stats: a 20/20 with Charge. The cost is tested THROUGH
+// the pipeline (`printedCost`, `effectiveCost`, the play validator's refusal), never by reading the
+// hook's return value or the catalog's 100 back; R662's glow (`conditionMet`) is at the end.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -146,7 +92,7 @@ mod tests {
     /// #21 Hinder casts itself on the draw (R40, R70), so it counts as a play nobody played.
     const HINDER: &str = "core-021";
 
-    /// TS's `type Counters` is the engine's `GameCounters` (R55's four game counters).
+    /// R55's four game counters.
     type Counters = GameCounters;
 
     fn must<T>(value: Option<T>, what: &str) -> T {
@@ -188,8 +134,8 @@ mod tests {
         s.state().counters
     }
 
-    /// TS `voidScenario({ radiantFace?, p1?, p2? })`: p1 holds the Void (on the face asked for) and the
-    /// spare, ahead of any hand `p1` names, with 4 mana unless `p1` says otherwise.
+    /// p1 holds the Void (on the face asked for) and the spare, ahead of any hand `p1` names, with 4
+    /// mana unless `p1` says otherwise.
     fn void_scenario(opts: Value) -> Scenario {
         let radiant_face = opts["radiantFace"] == json!(true);
         let mut p1 = json!({ "mana": 4 });
@@ -214,13 +160,13 @@ mod tests {
         must(s.hand(P1).into_iter().find(|card| card.def_id == VOID), "the Void in hand")
     }
 
-    /// TS wrote through `held(s)`, the live instance; here the hand card is reached by id.
+    /// The live hand card, reached by id.
     fn held_mut(s: &mut Scenario) -> &mut CardInstance {
         let id = held(s).id;
         must(find_instance_mut(s.state_mut(), &id), "the Void in hand")
     }
 
-    /// `eventsOf(s, "cardPlayed")[0]?.costPaid`.
+    /// The first `cardPlayed` event's `costPaid`.
     fn first_cost_paid(s: &Scenario) -> Option<i32> {
         events_of(s, GameEventType::CardPlayed).first().and_then(|event| match event {
             GameEvent::CardPlayed { cost_paid, .. } => Some(*cost_paid),
@@ -236,7 +182,7 @@ mod tests {
         cards.iter().map(|card| card.def_id.clone()).collect()
     }
 
-    /// TS `Object.keys(script)`: the TS names of the fields a script sets.
+    /// The names of the fields a script sets.
     fn set_fields(script: &Script) -> Vec<&'static str> {
         let mut keys = Vec::new();
         let mut put = |set: bool, key: &'static str| {
@@ -283,9 +229,7 @@ mod tests {
         keys
     }
 
-    // ---------------------------------------------------------------------------
     // The card.
-    // ---------------------------------------------------------------------------
 
     mod n100_ceaseless_void_the_card {
         use super::*;
@@ -313,7 +257,7 @@ mod tests {
             // kept.
             let scripts = script();
             let (void_base, void_radiant) = (&scripts.base, &scripts.radiant);
-            // TS `toBe`: the radiant face's hooks are the base face's own (shared `Arc`s).
+            // The radiant face's hooks are the base face's own (shared `Arc`s).
             assert!(Arc::ptr_eq(void_radiant.cost.as_ref().unwrap(), void_base.cost.as_ref().unwrap()));
             assert!(Arc::ptr_eq(void_radiant.cry.as_ref().unwrap(), void_base.cry.as_ref().unwrap()));
             assert!(Arc::ptr_eq(
@@ -340,9 +284,7 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
     // The cost (R55, R65). Tested through the pipeline and the play validator.
-    // ---------------------------------------------------------------------------
 
     mod n100_ceaseless_void_the_cost_r55_r65 {
         use super::*;
@@ -520,9 +462,7 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
-    // The Cry (§8.5, §6.3 Exile, R11). FAILING: `exileAll` is not re-exported by effects/index.ts.
-    // ---------------------------------------------------------------------------
+    // The Cry (§8.5, §6.3 Exile, R11).
 
     mod n100_ceaseless_void_the_cry_exiles_every_other_permanent {
         use super::*;
@@ -638,9 +578,7 @@ mod tests {
         }
     }
 
-    // ---------------------------------------------------------------------------
     // The radiant face: "Plus Charge" (§6.1).
-    // ---------------------------------------------------------------------------
 
     mod n100_ceaseless_void_radiant_plus_charge {
         use super::*;
@@ -691,7 +629,6 @@ mod tests {
     mod n100_ceaseless_void_glows_once_the_count_brings_it_within_your_mana_r662 {
         use super::*;
 
-        /// TS's `for (const radiantFace of [false, true])` body, first `it`.
         fn glows_at_97_and_can_be_played(radiant_face: bool) {
             crate::register_all();
             let mut s = void_scenario(json!({ "radiantFace": radiant_face }));
@@ -701,7 +638,6 @@ mod tests {
             s.expect_in_zone(VOID, "field");
         }
 
-        /// TS's `for (const radiantFace of [false, true])` body, second `it`.
         fn does_not_glow_at_95(radiant_face: bool) {
             crate::register_all();
             let mut s = void_scenario(json!({ "radiantFace": radiant_face }));

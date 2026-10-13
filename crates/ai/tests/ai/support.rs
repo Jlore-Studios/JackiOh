@@ -1,12 +1,8 @@
 //! Helpers shared by the AI tests (docs/polish/3-ai.md §Tests). Not a test file itself.
 //!
-//! Port of `packages/ai/test/_support.ts`, with `packages/ai/test/setup.ts`'s `registerAll()` as
-//! `register_cards` (every helper below that needs the catalog calls it first; a test that builds a
-//! `scenario` itself calls it before).
-//!
-//! Every state an AI test builds comes from the real engine and the real 110-card catalog:
-//! `scenario()` from the testkit for hand-built boards, and `create_game`/`begin_game` plus §10.7's
-//! random policy for real mid-game states.
+//! `register_cards` loads the real catalog and card scripts: every helper below that needs them
+//! calls it first, and a test that builds a `scenario` itself calls it before. Real mid-game states
+//! come from `create_game`/`begin_game` plus §10.7's random policy.
 //!
 //! Scenario ids start at `c1` and follow the setup literal. `redact` also hides a card in the
 //! seat's OWN library whose id was minted for the opponent's opening deck (R73), and `create_game`
@@ -28,7 +24,7 @@ use jackioh_engine::testkit::{
 
 pub use jackioh_engine::testkit::scenario;
 
-/// TS `setup.ts`/`_support.ts`'s `registerAll()`: the real catalog and card scripts, once per process.
+/// The real catalog and card scripts, once per process.
 pub fn register_cards() {
     jackioh_cards::register_all();
 }
@@ -38,9 +34,7 @@ pub const AI: PlayerId = PlayerId::P1;
 /// The human's seat in every scenario-built test.
 pub const HUMAN: PlayerId = PlayerId::P2;
 
-// ---------------------------------------------------------------------------------------------
 // Card lookups
-// ---------------------------------------------------------------------------------------------
 
 /// Every non-token id of every set, sorted: the pool AI decks and determinizations draw from (R380).
 pub fn ai_pool() -> Vec<String> {
@@ -103,9 +97,7 @@ pub fn in_graveyard(state: &GameState, player: PlayerId, def_id: &str) -> bool {
         .any(|card| card.def_id == def_id)
 }
 
-// ---------------------------------------------------------------------------------------------
 // Actions
-// ---------------------------------------------------------------------------------------------
 
 /// Whether `action` is one of `legal_actions(state, seat)`, compared by `action_key`.
 pub fn is_legal(state: &GameState, seat: PlayerId, action: impl Borrow<ActionBody>) -> bool {
@@ -116,11 +108,11 @@ pub fn is_legal(state: &GameState, seat: PlayerId, action: impl Borrow<ActionBod
 }
 
 thread_local! {
-    /// TS's module `let nonceCounter`: one count per test thread, so every default nonce is fresh.
+    /// One count per test thread, so every default nonce is fresh.
     static NONCE_COUNTER: Cell<u32> = const { Cell::new(0) };
 }
 
-/// One action through `reduce`, panicking with the engine's refusal (TS threw).
+/// One action through `reduce`, panicking with the engine's refusal.
 pub fn act(state: &GameState, player_id: PlayerId, body: impl Borrow<ActionBody>) -> GameState {
     let count = NONCE_COUNTER.with(|counter| {
         counter.set(counter.get() + 1);
@@ -129,7 +121,7 @@ pub fn act(state: &GameState, player_id: PlayerId, body: impl Borrow<ActionBody>
     act_with_nonce(state, player_id, body, &format!("support-{count}"))
 }
 
-/// `act` with TS's optional `nonce` given.
+/// `act` with the nonce given.
 pub fn act_with_nonce(
     state: &GameState,
     player_id: PlayerId,
@@ -148,9 +140,7 @@ pub fn clone(state: &GameState) -> GameState {
     state.clone()
 }
 
-// ---------------------------------------------------------------------------------------------
 // Puzzles (P1–P14)
-// ---------------------------------------------------------------------------------------------
 
 pub struct PuzzleRun {
     /// The scenario's state before the AI moved.
@@ -163,12 +153,12 @@ pub struct PuzzleRun {
 
 /// The puzzle runner: `scenario({ active: "p1", turn: 9, … })` with the AI as p1, then one AI turn
 /// through `play_ai_turn` at `AI_BUDGET` (the budget the browser plays at). `setup` is the scenario
-/// literal; its keys win over the three defaults, as TS's spread did.
+/// literal; its keys win over the three defaults.
 pub fn run_puzzle(name: &str, setup: Value) -> PuzzleRun {
     run_puzzle_with(name, setup, AI_BUDGET)
 }
 
-/// `run_puzzle` with TS's optional `budget` given.
+/// `run_puzzle` with the budget given.
 pub fn run_puzzle_with(name: &str, setup: Value, budget: SearchBudget) -> PuzzleRun {
     register_cards();
     let mut options = json!({ "seed": format!("puzzle-{name}"), "active": AI, "turn": 9 });
@@ -200,14 +190,10 @@ pub fn trace(turn: &AiTurnResult) -> String {
         .join(" | ")
 }
 
-/// P8–P10's scripted reply: `attacker` attacks with everything it has. Each step takes an attack on
-/// the enemy hero when one is legal, otherwise the first attack `legal_actions` lists (a Taunt, when
-/// one stands in the way). A prompt, whoever holds it, is answered with its first legal answer. It
-/// plays no card and never ends the turn, and stops when the game is over, when it is not the
-/// attacker's main phase, when no attack is left, or when the turn it started on is over. That last
-/// one matters because R82 auto-ends a turn with nothing left to do: once the attacker's last swing
-/// ends its turn, the defender's empty turn can end inside the same action and hand the attacker a
-/// fresh main phase, which is a later turn than the one "next turn" means (B18).
+/// P8–P10's scripted reply: `attacker` attacks with everything it has (the enemy hero first) and
+/// answers any prompt with its first legal answer. It stops once its starting turn is over: R82
+/// auto-ends a turn with nothing left to do, so the defender's empty turn can end in the same
+/// action and give the attacker a later turn's main phase (B18).
 pub fn all_out_attack(start: &GameState, attacker: PlayerId) -> GameState {
     let mut state = start.clone();
     let hero_target = format!("hero-{}", opponent_of(attacker));
@@ -248,18 +234,15 @@ pub fn all_out_attack(start: &GameState, attacker: PlayerId) -> GameState {
     panic!("the scripted all-out attack did not finish in 200 steps");
 }
 
-// ---------------------------------------------------------------------------------------------
 // Real games
-// ---------------------------------------------------------------------------------------------
 
 /// Two distinct-card decks from one seeded shuffle (the fuzz suite's construction), of Core cards so
-/// that the fixed deals the tests were written against stay the same. TS's default sizes,
-/// `[DECK_SIZE, DECK_SIZE]`.
+/// that the fixed deals the tests were written against stay the same.
 pub fn random_decks(seed: &str) -> (Vec<String>, Vec<String>) {
     random_decks_sized(seed, (DECK_SIZE, DECK_SIZE))
 }
 
-/// `random_decks` with TS's optional `sizes` given.
+/// `random_decks` with the deck sizes given.
 pub fn random_decks_sized(seed: &str, sizes: (i32, i32)) -> (Vec<String>, Vec<String>) {
     register_cards();
     let mut core: Vec<String> = query(&json_as::<CatalogQueryArgs>(json!({ "set": "Core" })))

@@ -7,8 +7,9 @@
 // is sent to the screen §9.4 says the account may see.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import { announceAccountChange } from "../net/gate.ts";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 
@@ -19,7 +20,7 @@ it("vitest runs in MODE=test, which is what main.tsx's mount guard keys on", () 
   expect(import.meta.env.MODE).toBe("test");
 });
 
-const { App, Gated, redirectFor } = await import("../main.tsx");
+const { App, Gated, redirectFor, resetUsernamePromptForTests } = await import("../main.tsx");
 
 // ---------------------------------------------------------------------------------------------
 // the stubbed server
@@ -35,18 +36,22 @@ function jsonResponse(status: number, body: unknown): Response {
   } as unknown as Response;
 }
 
-function meBody(status: Status) {
+/** R1435: the caller's own username on `/api/auth/me`; omitted, as a server before it would. */
+type OwnUsername = { name: string; nextChangeAt: number | null; promptOwed: boolean };
+
+function meBody(status: Status, username?: OwnUsername) {
   return {
     profile: { id: "profile-1", status },
     needsInviteCode: status === "pending",
     emailVerified: true,
     currentMatchId: null,
     email: "player@example.test",
+    ...(username === undefined ? {} : { username }),
   };
 }
 
 /** Stub `/api/auth/me` (and the catalog the match route reads) for one account status. */
-function serveAs(status: Status | "unauthorized"): void {
+function serveAs(status: Status | "unauthorized", username?: OwnUsername): void {
   vi.stubGlobal(
     "fetch",
     vi.fn((input: unknown) => {
@@ -57,7 +62,7 @@ function serveAs(status: Status | "unauthorized"): void {
             jsonResponse(401, { error: { code: "unauthorized", message: "sign in first" } }),
           );
         }
-        return Promise.resolve(jsonResponse(200, meBody(status)));
+        return Promise.resolve(jsonResponse(200, meBody(status, username)));
       }
       if (url.endsWith("/api/catalog")) {
         return Promise.resolve(jsonResponse(200, { version: "v1", defs: {} }));
@@ -115,6 +120,7 @@ function pathname(): string {
 
 beforeEach(() => {
   window.localStorage.clear();
+  resetUsernamePromptForTests();
   at("/");
 });
 
@@ -239,6 +245,150 @@ describe("the gate, as specs 09 and 10 read it", () => {
     );
     expect(screen.getByTestId("gate-loading")).toBeInTheDocument();
     expect(pathname()).toBe("/decks");
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// the username prompt (R1435)
+// ---------------------------------------------------------------------------------------------
+
+describe("R1435 the username prompt at the gate", () => {
+  const OWED: OwnUsername = { name: "Player#7", nextChangeAt: null, promptOwed: true };
+
+  it("R1435 an active account that owes the prompt meets it before the screen it asked for", async () => {
+    signedIn();
+    serveAs("active", OWED);
+    at("/decks");
+    render(<App />);
+
+    const prompt = await screen.findByTestId("username-prompt", undefined, SLOW);
+    expect(prompt).toHaveTextContent("You’re Player#7 for now.");
+    expect(screen.getByTestId("username-prompt-skip")).toBeInTheDocument();
+    expect(pathname(), "the prompt stands in place, it does not move the browser").toBe("/decks");
+  });
+
+  it("R1435 the prompt stands in front of a gated screen's own content", async () => {
+    signedIn();
+    serveAs("active", OWED);
+    render(<Gated>{() => <p>the gate opened</p>}</Gated>);
+
+    expect(await screen.findByTestId("username-prompt", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("the gate opened")).toBeNull();
+  });
+
+  it("R1435 an active account that has picked or skipped goes straight through", async () => {
+    signedIn();
+    serveAs("active", { ...OWED, promptOwed: false });
+    render(<Gated>{() => <p>the gate opened</p>}</Gated>);
+
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a server that sends no username owes no prompt", async () => {
+    signedIn();
+    serveAs("active");
+    render(<Gated>{() => <p>the gate opened</p>}</Gated>);
+
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a re-read that finds the prompt owed once the screen is up leaves the screen in place", async () => {
+    signedIn();
+    serveAs("active");
+    render(<Gated>{({ me }) => <p>{me.username === undefined ? "the gate opened" : "the gate read again"}</p>}</Gated>);
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+
+    // A server that now owes the prompt (one that gained usernames meanwhile), read in the background:
+    // the screen takes the new read and stays.
+    serveAs("active", OWED);
+    announceAccountChange();
+    expect(await screen.findByText("the gate read again", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a screen shown to the account keeps the prompt off every screen after it on the page", async () => {
+    signedIn();
+    serveAs("active");
+    render(<Gated>{() => <p>the first screen</p>}</Gated>);
+    expect(await screen.findByText("the first screen", undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+
+    // The server now owes the prompt, and the player moves on (the match a queue just paired): the
+    // next screen's own gate reads it, and opens its screen all the same.
+    serveAs("active", OWED);
+    render(<Gated>{({ me }) => <p>{me.username?.promptOwed === true ? "the next screen" : "a stale read"}</p>}</Gated>);
+    expect(await screen.findByText("the next screen", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 an account in a match or a Conquest series goes to its screen, prompt owed or not", async () => {
+    for (const playing of [{ currentMatchId: "m-1" }, { currentSeriesId: "s-1" }]) {
+      signedIn();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn((input: unknown) =>
+          String(input).endsWith("/api/auth/me")
+            ? Promise.resolve(jsonResponse(200, { ...meBody("active", OWED), ...playing }))
+            : Promise.resolve(jsonResponse(404, { error: { code: "not_found", message: "no stub" } })),
+        ),
+      );
+      render(<Gated>{() => <p>the board</p>}</Gated>);
+      expect(await screen.findByText("the board", undefined, SLOW)).toBeInTheDocument();
+      expect(screen.queryByTestId("username-prompt")).toBeNull();
+      cleanup();
+      resetUsernamePromptForTests();
+    }
+  });
+
+  it("R1435 a skip opens the screen, even when the read of the account after it fails", async () => {
+    signedIn();
+    let skipped = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: unknown) => {
+        const url = String(input);
+        if (url.endsWith("/api/username/skip")) {
+          skipped = true;
+          return Promise.resolve(jsonResponse(200, { username: { ...OWED, promptOwed: false } }));
+        }
+        if (url.endsWith("/api/auth/me") && !skipped) return Promise.resolve(jsonResponse(200, meBody("active", OWED)));
+        return Promise.resolve(jsonResponse(503, { error: { code: "internal", message: "down" } }));
+      }),
+    );
+    render(<Gated>{() => <p>the gate opened</p>}</Gated>);
+    fireEvent.click(await screen.findByTestId("username-prompt-skip", undefined, SLOW));
+
+    expect(await screen.findByText("the gate opened", undefined, SLOW)).toBeInTheDocument();
+    expect(skipped).toBe(true);
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
+  });
+
+  it("R1435 a redemption on a screen open to the pending account is followed by the prompt", async () => {
+    signedIn();
+    serveAs("pending");
+    render(<Gated allowPending>{() => <p>the code screen</p>}</Gated>);
+    expect(await screen.findByText("the code screen", undefined, SLOW)).toBeInTheDocument();
+
+    serveAs("active", OWED);
+    announceAccountChange();
+    expect(await screen.findByTestId("username-prompt", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("the code screen")).toBeNull();
+  });
+
+  it("R1435 a pending account sees only the code screen, never the prompt", async () => {
+    signedIn();
+    serveAs("pending", OWED);
+    at("/decks");
+    render(<App />);
+
+    await waitFor(() => {
+      expect(pathname()).toBe("/invite");
+    }, SLOW);
+    await gateOpened();
+    expect(await screen.findByTestId("invite-code-input", undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("username-prompt")).toBeNull();
   });
 });
 

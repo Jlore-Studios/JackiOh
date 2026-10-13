@@ -33,6 +33,7 @@ import initWasm, {
   catalog_version,
   choose_action,
   constants,
+  craft_preview,
   create_game,
   deal_emote_hand,
   engine_tables,
@@ -43,6 +44,7 @@ import initWasm, {
   initSync,
   last_board_for,
   legal_actions,
+  preview_sets,
   reduce as reduce_action,
   replay_open,
   replay_page,
@@ -53,6 +55,8 @@ import initWasm, {
 } from "./pkg/jackioh_wasm.js";
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
+import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -271,6 +275,18 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
   return call("dealEmoteHand", () => parsed<EmoteId[]>(deal_emote_hand(seed, seat)));
 }
 
+/**
+ * R1420: from now on the module treats `sets` as sets that ship (a deck may hold their cards, a pool
+ * that names no set reaches them), as the testkit previews a set on a test's thread. Only a module
+ * built with crates/wasm's `preview` feature can (scripts/build-wasm.sh; the production bundle's is
+ * built without it and throws). The hotseat route calls it for its E2E injection's `preview` alone.
+ */
+export function previewSets(sets: readonly SetName[]): void {
+  call("previewSets", () => {
+    preview_sets(json(sets));
+  });
+}
+
 let catalogCache: CardDefs | null = null;
 
 /** The registered catalog (TypeScript's `registeredCatalog()`): the same object on every call. */
@@ -326,6 +342,8 @@ export type AiDeckRequest = StreamAt & {
   boost?: { ids: readonly string[]; by: number };
   /** R1370: a set at least `AI_DECK.leanMinShare` of the deck comes from; absent, none. */
   leanSet?: SetName;
+  /** R1390: the sets the draw never deals from; default the AI's soft gate, [] for a human's random deck. */
+  gatedSets?: readonly SetName[];
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
@@ -337,6 +355,15 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
   return call("chooseAction", () =>
     parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
+}
+
+/**
+ * ME-CRAFT (Meditative #17, R880): the engine's own verdict on a recipe at the chosen cost — a
+ * `CraftPreview` — so the block editor shows what the reducer will say and the client decides
+ * nothing (CLAUDE.md rule 7).
+ */
+export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
+  return call("craftPreview", () => parsed<CraftPreview>(craft_preview(json(recipe), cost)));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
@@ -382,6 +409,7 @@ export function aiConstants(): AiConstants {
 export type EngineTables = {
   chaosEffects: readonly { label: string }[];
   chaosPlusEffects: readonly { label: string }[];
+  chaosMedEffects: readonly { label: string }[];
   heroPowerNames: readonly string[];
   heroPowers: readonly {
     name: string;

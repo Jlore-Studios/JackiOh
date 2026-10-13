@@ -3,4 +3,4 @@
 /**
  * `instead.redirect` (on `lethalHit`).
  */
-export type InsteadRedirect = "enemyHero";
+export type InsteadRedirect = "enemyHero" | "self";

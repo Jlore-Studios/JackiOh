@@ -1,27 +1,7 @@
-// Spec 14: the landing page and the way in (docs/polish/5-sign-in.md, end to end for B16-B18, B22,
-// B23, B29-B31, B37 and B40, and issue #479's failed sign-in).
-//
-// NO SERVER AND NO PROVIDER. Every `${apiUrl}/api/*` call is answered by `cy.intercept` (matched on
-// the path, so the host the bundle was built against does not matter), sessions are seeded under
-// the fixture key in `onBeforeLoad`, and emailed links are visited as `/login#…` or `/login?…`. A
-// `build:e2e` bundle has no `VITE_SUPABASE_URL`, so nothing here ever submits to the auth provider:
-// every form below is refused by client-side validation, never submitted, or (#479's sign-ins)
-// refused by the client before any request because the bundle names no provider.
-//
-// The API is cross-origin (the client on :5175, the API on its own port) and every call carries a
-// bearer token, so the browser preflights it. The catch-all below answers the preflight itself
-// with the CORS headers, and every stub sets `access-control-allow-origin`, so the spec does not
-// lean on how Cypress treats preflights.
-//
-// Paste is a dispatched `ClipboardEvent` carrying a `DataTransfer`, built in the page's own realm.
-// An untrusted paste event has no default action, so only a paste the field recognises as a code
-// (and fills itself) is observable here; the fall-through path is the unit tests' job.
-//
-// Run it:
-//   pnpm build:e2e
-//   pnpm --dir apps/web exec vite preview --port 5175 --strictPort
-//   E2E_BASE_URL=http://localhost:5175 pnpm --dir e2e exec cypress run \
-//     --spec cypress/e2e/14-landing-and-sign-in.cy.ts
+// Spec 14: landing and sign-in (B16-B18, B22, B23, B29-B31, B37 and B40).
+// No server or provider: API calls are intercepted, sessions seed in `onBeforeLoad`, and links use
+// `/login` hashes or queries. The CORS stub handles client/API preflights.
+// Paste uses a realm-local `ClipboardEvent`; unit tests cover the unhandled path.
 
 import {
   AUTH_PASSWORD_MIN_LENGTH,
@@ -47,14 +27,12 @@ import {
 } from "../../../apps/web/src/net/session.ts";
 import { SESSION_STORAGE_KEY as FIXTURE_SESSION_KEY, routes } from "../../support/config.ts";
 
-// ---------------------------------------------------------------------------------------------
-// values, all built from config
-// ---------------------------------------------------------------------------------------------
+// Values from config
 
 const TOKEN = "e2e-token-spec-14";
 const EMAIL = "e2e-spec14@jackioh.test";
 
-/** R104's alphabet has letters enough for a whole code with no digit in it. */
+/** R104: a code with no digit. */
 const LETTERS = CODE_ALPHABET.replace(/[0-9]/g, "");
 const BARE_CODE = LETTERS.slice(0, INVITE_CODE_LENGTH);
 
@@ -68,20 +46,17 @@ function grouped(characters: string, separator = INVITE_CODE_SEPARATOR): string 
 
 const FULL_CODE = grouped(BARE_CODE);
 
-/** ASCII letters and digits the alphabet leaves out: R104's 0, 1, I and O. */
+/** R104 excludes 0, 1, I and O. */
 const EXCLUDED = [..."0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"].filter((c) => !CODE_ALPHABET.includes(c));
 
-/** Stands for whatever sentence the server's 429 carries; the screen must relay it verbatim. */
+/** A server 429 sentence the screen must relay verbatim. */
 const SERVER_RATE_SENTENCE = "Too many attempts. Wait, then try again. (spec 14 stub)";
 const WINDOW_MS = CODE_ATTEMPT_WINDOW_SECONDS * 1000;
 
 /** Provider text that must never reach the page (R193). */
 const PROVIDER_TEXT = "PROVIDER-SAYS-7f3a Email link is invalid or has expired";
 
-/**
- * The routes support/config.ts does not carry. `paths` in apps/web/src/net/navigate.ts is the
- * source; it is spelled here because navigate.ts is a React module and e2e type-checks on its own.
- */
+/** Routes omitted from support/config.ts, copied from navigate.ts because e2e type-checks alone. */
 const LANDING = "/";
 const PRACTICE = "/practice";
 const RESET_PASSWORD = "/reset-password";
@@ -90,9 +65,7 @@ function byTestid(testid: string): string {
   return `[data-testid="${testid}"]`;
 }
 
-// ---------------------------------------------------------------------------------------------
-// the stubbed API
-// ---------------------------------------------------------------------------------------------
+// Stubbed API
 
 type MeState = "pending" | "active" | "banned" | "failing";
 
@@ -100,11 +73,7 @@ type Api = {
   me: MeState;
   attemptsRemaining: number;
   redeem: "rateLimited" | "invalid";
-  /**
-   * Who the "server" says a token belongs to, for a token whose payload says otherwise (a forged
-   * one). Any other token is answered with the address its own payload names, and a fixture token
-   * (not a JWT) with EMAIL: the real server verifies every token, so two tokens are two accounts.
-   */
+  /** Server-owned address by bearer token; a forged JWT payload must not choose the account. */
   accounts: Record<string, string>;
 };
 
@@ -130,7 +99,6 @@ function meBody(status: "pending" | "active" | "banned", email: string = EMAIL) 
   };
 }
 
-/** The `email` claim of an unsigned JWT's payload, or null for anything else (a fixture token). */
 function payloadEmail(token: string): string | null {
   const payload = token.split(".")[1];
   if (payload === undefined || payload.length === 0) return null;
@@ -143,21 +111,16 @@ function payloadEmail(token: string): string | null {
   }
 }
 
-/** The bearer token a stubbed request carried. */
 function bearerOf(header: string | string[] | undefined): string {
   const value = Array.isArray(header) ? (header[0] ?? "") : (header ?? "");
   return value.replace(/^Bearer /, "");
 }
 
-/**
- * Stubs every `/api/*` call. The returned object is live: a test changes a field inside `cy.then`
- * and the next request sees it (React's StrictMode may read twice, so a counter would not do).
- */
+/** A live API state: StrictMode may read twice, so tests change fields rather than a counter. */
 function stubApi(initial: Partial<Api> = {}): Api {
   const api: Api = { me: "pending", attemptsRemaining: 5, redeem: "rateLimited", accounts: {}, ...initial };
 
-  // Oldest first: Cypress tries the newest matching route first, so this only answers what the
-  // routes below do not, preflights included.
+  // Cypress tries newest routes first; this catch-all must be registered first.
   cy.intercept({ pathname: /^\/api\// }, (req) => {
     const headers = corsHeaders(req.headers.origin);
     if (req.method === "OPTIONS") {
@@ -210,7 +173,7 @@ function stubApi(initial: Partial<Api> = {}): Api {
   return api;
 }
 
-/** Nothing may be sent to the auth provider. A bundle with no provider URL never tries. */
+/** No request may reach the auth provider. */
 function forbidProvider(): void {
   cy.intercept({ pathname: /\/auth\/v1\// }, () => {
     throw new Error("spec 14 must never reach the auth provider");
@@ -227,21 +190,19 @@ function visitSignedIn(path: string): void {
 
 function sessionKeysIn(win: Window): { real: string | null; fixture: string | null } {
   return {
-    // R632: a real sign-in is kept in the tab's sessionStorage; an older build kept it in localStorage.
+    // R632: a real sign-in stays in sessionStorage.
     real: win.sessionStorage.getItem(SESSION_STORAGE_KEY) ?? win.localStorage.getItem(SESSION_STORAGE_KEY),
     fixture: win.localStorage.getItem(FIXTURE_SESSION_KEY),
   };
 }
 
-// ---------------------------------------------------------------------------------------------
-// emailed links
-// ---------------------------------------------------------------------------------------------
+// Emailed links
 
 function base64url(text: string): string {
   return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-/** An unsigned three-part JWT whose payload carries an email; the client never verifies it. */
+/** An unsigned JWT for link tests; the client never verifies it. */
 function unsignedJwt(email: string): string {
   const header = base64url(JSON.stringify({ alg: "none", typ: "JWT" }));
   const payload = base64url(
@@ -272,9 +233,7 @@ function expectScrubbed(secret: string): void {
   cy.location("href").should("not.contain", secret);
 }
 
-// ---------------------------------------------------------------------------------------------
-// the code field
-// ---------------------------------------------------------------------------------------------
+// Code field
 
 function codeInput(): Cypress.Chainable<JQuery<HTMLElement>> {
   return cy.get(byTestid(inviteTestid.input));
@@ -300,9 +259,7 @@ function openInviteScreen(api: Partial<Api> = {}): Api {
   return live;
 }
 
-// =============================================================================================
-// B37: the landing page
-// =============================================================================================
+// B37: landing page
 
 describe("B37 the landing page", () => {
   it("B37 anonymous: the three CTAs link to /practice, /play and /decks, and the corner offers sign-in", () => {
@@ -344,9 +301,7 @@ describe("B37 the landing page", () => {
   });
 });
 
-// =============================================================================================
 // B16-B18: typing and pasting a code
-// =============================================================================================
 
 describe("B16-B18 the code field", () => {
   it("B16 typing eight lower-case letters shows two upper-case groups, the separator added, caret at the end", () => {
@@ -421,9 +376,7 @@ describe("B16-B18 the code field", () => {
   });
 });
 
-// =============================================================================================
 // B22: a rate limit is a rate limit (R192)
-// =============================================================================================
 
 describe("B22 a rate-limited redemption", () => {
   it("B22 shows the server's sentence and the wait, disables submit, and never shows R145's error", () => {
@@ -456,11 +409,9 @@ describe("B22 a rate-limited redemption", () => {
   });
 });
 
-// =============================================================================================
-// B23: the code screen always has a way out
-// =============================================================================================
+// B23: code-screen exit
 
-/** `navTestid.back` in `apps/web/src/routes/nav.tsx`, which is JSX and stays out of this bundle. */
+/** `navTestid.back` is in JSX, outside this bundle. */
 const NAV_BACK = "nav-back";
 
 describe("B23 the invite screen's way out", () => {
@@ -487,14 +438,8 @@ describe("B23 the invite screen's way out", () => {
   });
 });
 
-// =============================================================================================
-// Issue #479: a failed sign-in stays on the sign-in screen
-// =============================================================================================
-//
-// This bundle names no auth provider, so every sign-in submitted here fails before any request is
-// made, and the screen treats it as it treats one the provider refused: it stays, says why and keeps
-// the form. That a successful sign-in lands on the main menu, wherever it started, is the web
-// client's unit tests' (`routes/sign-in-landing.test.tsx`) and spec 99's.
+// Failed sign-in keeps the sign-in screen
+// Without a provider, submissions fail before a request; the screen must retain the form.
 
 const PASSWORD = "e2e-spec14-password";
 
@@ -504,7 +449,6 @@ function submitSignIn(): void {
   cy.get(byTestid(loginTestid.submit)).click();
 }
 
-/** Still on `/login`: the sentence above the form, the form as the player left it, nothing stored. */
 function expectStillSigningIn(): void {
   cy.get(byTestid(loginTestid.error)).should("be.visible").and("have.attr", "role", "alert");
   cy.get(byTestid(loginTestid.error)).invoke("text").should("not.be.empty");
@@ -518,7 +462,6 @@ function expectStillSigningIn(): void {
   });
 }
 
-/** Every value this origin keeps in the tab's and the browser's storage. */
 function storedValues(win: Window): string[] {
   const values: string[] = [];
   for (const storage of [win.sessionStorage, win.localStorage]) {
@@ -549,33 +492,28 @@ describe("#479 a failed sign-in stays on the sign-in screen", () => {
 
     submitSignIn();
     expectStillSigningIn();
-    // A sign-in lands on the main menu whichever screen sent the player, so none is remembered.
+    // A sign-in returns to the main menu, not its protected origin.
     cy.window().then((win) => {
       for (const value of storedValues(win)) expect(value).not.to.contain(routes.play());
     });
 
-    // The main menu is one press away, as from every sign-in.
     cy.get(byTestid(NAV_BACK)).click();
     cy.location("pathname").should("eq", LANDING);
     cy.get(byTestid(landingTestid.root)).should("be.visible");
   });
 });
 
-// =============================================================================================
 // B29, B30: emailed links (R193)
-// =============================================================================================
 
 describe("B29 a confirmation link", () => {
   it("R193 B29 whose email matches the sign-up this browser started still signs nothing in: the player signs in with their password", () => {
-    // An address someone else registered first keeps their password when the player signs up
-    // again (the provider leaves an unconfirmed account alone), so the link is never proof of it.
+    // A link is not proof that this browser owns the address.
     stubApi({ me: "pending" });
     forbidProvider();
     const jwt = unsignedJwt(EMAIL);
 
     cy.visit(tokenLink("signup", jwt), {
       onBeforeLoad() {
-        // Spec and page share an origin, so this writes the page's own storage, as a sign-up would.
         rememberPendingEmail(EMAIL);
       },
     });
@@ -599,7 +537,7 @@ describe("B29 a confirmation link", () => {
     cy.visit(tokenLink("signup", jwt));
 
     cy.get(byTestid(loginTestid.confirmed)).should("be.visible");
-    // A link can be anyone's: an address from it, filled in, would arm this browser's guard.
+    // A link could be anyone's; its address must not arm this browser's guard.
     cy.get(byTestid(loginTestid.email)).should("have.value", "");
     cy.location("pathname").should("eq", routes.login());
     expectScrubbed(jwt);
@@ -630,7 +568,7 @@ describe("B29 a confirmation link", () => {
   it("R193 a token whose payload names the remembered address, but which the server says is another account's, stores nothing", () => {
     const api = stubApi();
     forbidProvider();
-    // The payload is readable, never verified: it claims the victim's address.
+    // The readable, unverified payload claims the victim's address.
     const jwt = unsignedJwt(EMAIL);
     api.accounts[jwt] = "attacker@jackioh.test";
 
@@ -684,7 +622,6 @@ describe("B30 a recovery link and an expired link", () => {
     cy.location("pathname").should("eq", routes.login());
     expectScrubbed(jwt);
 
-    // Someone sent another person's link types their own address: refused beside the field.
     cy.get(byTestid(loginTestid.email)).type(EMAIL);
     cy.get(byTestid(loginTestid.submit)).click();
     cy.get(byTestid(loginTestid.emailError)).should("be.visible");
@@ -763,9 +700,7 @@ describe("B30 a recovery link and an expired link", () => {
   });
 });
 
-// =============================================================================================
 // B31: /reset-password
-// =============================================================================================
 
 describe("B31 the reset screen", () => {
   function openWithRecoveryLink(): void {
@@ -843,9 +778,7 @@ describe("B31 the reset screen", () => {
   });
 });
 
-// =============================================================================================
 // B40: no dead ends in the shell
-// =============================================================================================
 
 describe("B40 the shell's exits", () => {
   it("B40 the gate's error panel offers retry, home and sign-out; retry opens the gate once /api/auth/me answers", () => {

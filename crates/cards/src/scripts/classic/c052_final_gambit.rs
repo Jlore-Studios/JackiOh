@@ -10,10 +10,10 @@
 //!            does not (R18). Either player's turn.
 //!
 //! The replacement is data (`Script.replacements`); its `then` step is owed on `state.work` and runs
-//! after the hit has landed — never, when that hit ended the game (R216). A play's or a combat's state
-//! check usually ends the game first; where none runs before the step (owed work drained at the start
-//! of a turn), the step itself finds the enemy hero at 0 or less and does nothing. That is what stops a
-//! Final Gambit fused into a Field Trap that stays (C+ #74) from re-aiming its own fatigue for ever.
+//! after the hit has landed, never when that hit ended the game (R216). Where no state check runs
+//! before the step (owed work drained at the start of a turn), the step finds the enemy hero at 0 or
+//! less and does nothing: that stops a Final Gambit fused into a Field Trap that stays (C+ #74) from
+//! re-aiming its own fatigue for ever.
 
 use jackioh_engine::effects::{draw, heal};
 use jackioh_engine::prelude::*;
@@ -69,24 +69,19 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: "Face-down (R33); fires at §4.4
-// step 4a when one hit would leave your hero at 0 or less, judged after Armor, multipliers and caps,
-// this hit alone (R44's reading); fatigue counts, while losing health (R18) and set health (C #29)
-// never open it; a hit that isn't lethal leaves it set; the hit is re-aimed at the enemy hero as a new
-// instance from the same source (`redirected`), through their Armor, multipliers and caps; then heal
-// your hero 10 and draw 3; a redirected hit that kills the opponent ends the game at the state check,
-// a draw if both heroes are at 0 (§2.5); radiant: heal 20 and draw your whole deck (R58), most of it
-// burning (R317); its tuned numbers (heal, draw) read through `param()` (R386)".
+// C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
+// step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
+// caps (R44); fatigue counts, while losing health (R18) and set health (C #29) never open it; the hit
+// is re-aimed at the enemy hero as a new instance from the same source (`redirected`), through their
+// Armor, multipliers and caps; then heal 10 and draw 3; a redirected hit that kills the opponent ends
+// the game at the state check, a draw if both heroes are at 0 (§2.5); radiant: heal 20 and draw your
+// whole deck (R58), most of it burning (R317); tuned numbers (heal, draw) read through `param()` (R386).
 //
-// The hits come from Core cards with their own tests: attacks by Mr. Vanilla (4/4), Pointmaster (7/1)
-// and Midrange Menace (9/9), Lunar Eclipse's 3, and fatigue on an empty deck. Going Long (Armor 2),
-// C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either hero's side. Blood
-// Ridden Glowy Jelly Bean loses health on draw (R18), C #29 Book of Vital Kill sets a hero's health to
-// 13, and Hinder, drawn by the follow-up, discards at random with no prompt (R682).
-//
-// "A draw if both heroes are at 0" (§2.5) needs a second hit inside the same effect, after the trap is
-// spent: Prem Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health
-// opponent and whose second then lands on you.
+// Going Long (Armor 2), C #75 Argusland (halved) and Anti-oneshot Armor (a cap of 5) stand on either
+// hero's side; Hinder, drawn by the follow-up, discards at random with no prompt (R682). "A draw if
+// both heroes are at 0" needs a second hit inside the same effect, after the trap is spent: Prem
+// Panther's "draw 2" into an empty deck, whose first fatigue the trap re-aims at a 1-health opponent and
+// whose second then lands on you.
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -128,12 +123,12 @@ mod tests {
         s.events().iter().map(js).filter(|event| event["type"] == "trapFired").collect()
     }
 
-    /// `opts[key]`, or `fallback` where the TS default (`??`) applies.
+    /// `opts[key]`, or `fallback` where it is absent.
     fn or(opts: &Value, key: &str, fallback: Value) -> Value {
         if opts[key].is_null() { fallback } else { opts[key].clone() }
     }
 
-    /// `base` with every key of `extra` laid over it, as a TS object spread (`{ ...base, ...extra }`).
+    /// `base` with every key of `extra` laid over it.
     fn spread(base: Value, extra: &Value) -> Value {
         let mut out = base;
         if let (Some(fields), Some(over)) = (out.as_object_mut(), extra.as_object()) {
@@ -146,8 +141,8 @@ mod tests {
 
     /// p2 attacks p1's hero with `attacker`. p1 has `health`, a Final Gambit set face-down beside the rest
     /// of its backrow, a card in hand and a deck to draw from; p2 has whatever `p2` adds.
-    /// `opts`: `attacker`, `health`, `gambit`, `p1Backrow`, `p1`, `p2`, as the TS helper's (a `Gambit` is a
-    /// bare id or a `{ def, radiant? }` object).
+    /// `opts`: `attacker`, `health`, `gambit`, `p1Backrow`, `p1`, `p2` (a `Gambit` is a bare id or a
+    /// `{ def, radiant? }` object).
     fn lethal_attack(opts: Value) -> Scenario {
         let attacker = opts["attacker"].as_str().expect("an attacker").to_string();
         let mut backrow = vec![spread(as_entry(&or(&opts, "gambit", json!(GAMBIT))), &json!({ "faceUp": false }))];
@@ -177,8 +172,7 @@ mod tests {
             assert_eq!(def["type"], "Trap");
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
-                // TS `toEqual([{ id, on, instead, then }])`: a `ReplacementDef` holds a hook, so it is
-                // compared field by field, the absent ones absent.
+                // A `ReplacementDef` holds a hook, so it is compared field by field, the absent ones absent.
                 assert_eq!(face.replacements.len(), 1);
                 let only = &face.replacements[0];
                 assert_eq!(only.id, "final-gambit");

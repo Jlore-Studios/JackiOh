@@ -704,7 +704,8 @@
     "v0.1.0c",
     "v0.1.0d",
     "v0.1.1",
-    "v0.2.0"
+    "v0.2.0",
+    "v0.3.5"
   ],
   "core-095-1": [
     "v0.1.0",
@@ -723,7 +724,8 @@
     "v0.1.0",
     "v0.1.0d",
     "v0.1.1",
-    "v0.2.0"
+    "v0.2.0",
+    "v0.3.6"
   ],
   "core-098": [
     "v0.1.0",
@@ -1331,7 +1333,8 @@
     "v0.2.1"
   ],
   "classicplus-027": [
-    "v0.2.0"
+    "v0.2.0",
+    "v0.3.6"
   ],
   "classicplus-028": [
     "v0.2.0"
@@ -1561,7 +1564,8 @@
   ],
   "classicplus-073": [
     "v0.2.0",
-    "v0.3.4"
+    "v0.3.4",
+    "v0.3.5"
   ],
   "classicplus-073-1": [
     "v0.2.0",
@@ -1629,5 +1633,401 @@
   ],
   "classic-t-glitch": [
     "v0.2.8"
+  ],
+  "meditative-001": [
+    "v0.3.5"
+  ],
+  "meditative-002": [
+    "v0.3.5"
+  ],
+  "meditative-003": [
+    "v0.3.5"
+  ],
+  "meditative-004": [
+    "v0.3.5"
+  ],
+  "meditative-005": [
+    "v0.3.5"
+  ],
+  "meditative-006": [
+    "v0.3.5"
+  ],
+  "meditative-007": [
+    "v0.3.5"
+  ],
+  "meditative-008": [
+    "v0.3.5"
+  ],
+  "meditative-009": [
+    "v0.3.5"
+  ],
+  "meditative-010": [
+    "v0.3.5"
+  ],
+  "meditative-011": [
+    "v0.3.5"
+  ],
+  "meditative-012": [
+    "v0.3.5"
+  ],
+  "meditative-013": [
+    "v0.3.5"
+  ],
+  "meditative-014": [
+    "v0.3.5"
+  ],
+  "meditative-015": [
+    "v0.3.5"
+  ],
+  "meditative-016": [
+    "v0.3.5"
+  ],
+  "meditative-017": [
+    "v0.3.5"
+  ],
+  "meditative-018": [
+    "v0.3.5"
+  ],
+  "meditative-019": [
+    "v0.3.5"
+  ],
+  "meditative-019-1": [
+    "v0.3.5"
+  ],
+  "meditative-020": [
+    "v0.3.5"
+  ],
+  "meditative-021": [
+    "v0.3.5"
+  ],
+  "meditative-022": [
+    "v0.3.5"
+  ],
+  "meditative-022-1": [
+    "v0.3.5"
+  ],
+  "meditative-023": [
+    "v0.3.5"
+  ],
+  "meditative-024": [
+    "v0.3.5"
+  ],
+  "meditative-025": [
+    "v0.3.5"
+  ],
+  "meditative-026": [
+    "v0.3.5"
+  ],
+  "meditative-027": [
+    "v0.3.5"
+  ],
+  "meditative-028": [
+    "v0.3.5"
+  ],
+  "meditative-028-1": [
+    "v0.3.5"
+  ],
+  "meditative-029": [
+    "v0.3.5"
+  ],
+  "meditative-030": [
+    "v0.3.5"
+  ],
+  "meditative-030-1": [
+    "v0.3.5"
+  ],
+  "meditative-031": [
+    "v0.3.5"
+  ],
+  "meditative-032": [
+    "v0.3.5"
+  ],
+  "meditative-033": [
+    "v0.3.5"
+  ],
+  "meditative-034": [
+    "v0.3.5"
+  ],
+  "meditative-035": [
+    "v0.3.5"
+  ],
+  "meditative-036": [
+    "v0.3.5"
+  ],
+  "meditative-037": [
+    "v0.3.5"
+  ],
+  "meditative-038": [
+    "v0.3.5"
+  ],
+  "meditative-039": [
+    "v0.3.5"
+  ],
+  "meditative-039-1": [
+    "v0.3.5"
+  ],
+  "meditative-039-2": [
+    "v0.3.5"
+  ],
+  "meditative-039-3": [
+    "v0.3.5"
+  ],
+  "meditative-039-4": [
+    "v0.3.5"
+  ],
+  "meditative-039-5": [
+    "v0.3.5"
+  ],
+  "meditative-040": [
+    "v0.3.5"
+  ],
+  "meditative-041": [
+    "v0.3.5"
+  ],
+  "meditative-042": [
+    "v0.3.5"
+  ],
+  "meditative-043": [
+    "v0.3.5"
+  ],
+  "meditative-044": [
+    "v0.3.5"
+  ],
+  "meditative-045": [
+    "v0.3.5"
+  ],
+  "meditative-045-1": [
+    "v0.3.5"
+  ],
+  "meditative-046": [
+    "v0.3.5"
+  ],
+  "meditative-047": [
+    "v0.3.5"
+  ],
+  "meditative-048": [
+    "v0.3.5"
+  ],
+  "meditative-049": [
+    "v0.3.5"
+  ],
+  "meditative-049-1": [
+    "v0.3.5"
+  ],
+  "meditative-049-2": [
+    "v0.3.5"
+  ],
+  "meditative-049-3": [
+    "v0.3.5"
+  ],
+  "meditative-050": [
+    "v0.3.5"
+  ],
+  "meditative-051": [
+    "v0.3.5"
+  ],
+  "meditative-052": [
+    "v0.3.5"
+  ],
+  "meditative-053": [
+    "v0.3.5"
+  ],
+  "meditative-054": [
+    "v0.3.5"
+  ],
+  "meditative-055": [
+    "v0.3.5"
+  ],
+  "meditative-056": [
+    "v0.3.5"
+  ],
+  "meditative-057": [
+    "v0.3.5"
+  ],
+  "meditative-058": [
+    "v0.3.5"
+  ],
+  "meditative-059": [
+    "v0.3.5"
+  ],
+  "meditative-060": [
+    "v0.3.5"
+  ],
+  "meditative-061": [
+    "v0.3.5"
+  ],
+  "meditative-062": [
+    "v0.3.5"
+  ],
+  "meditative-063": [
+    "v0.3.5"
+  ],
+  "meditative-064": [
+    "v0.3.5"
+  ],
+  "meditative-065": [
+    "v0.3.5"
+  ],
+  "meditative-066": [
+    "v0.3.5"
+  ],
+  "meditative-067": [
+    "v0.3.5"
+  ],
+  "meditative-068": [
+    "v0.3.5"
+  ],
+  "meditative-069": [
+    "v0.3.5"
+  ],
+  "meditative-070": [
+    "v0.3.5"
+  ],
+  "meditative-070-1": [
+    "v0.3.5"
+  ],
+  "meditative-071": [
+    "v0.3.5"
+  ],
+  "meditative-071-1": [
+    "v0.3.5"
+  ],
+  "meditative-072": [
+    "v0.3.5"
+  ],
+  "meditative-073": [
+    "v0.3.5"
+  ],
+  "meditative-074": [
+    "v0.3.5"
+  ],
+  "meditative-075": [
+    "v0.3.5"
+  ],
+  "meditative-076": [
+    "v0.3.5"
+  ],
+  "meditative-077": [
+    "v0.3.5"
+  ],
+  "meditative-078": [
+    "v0.3.5"
+  ],
+  "meditative-079": [
+    "v0.3.5"
+  ],
+  "meditative-080": [
+    "v0.3.5"
+  ],
+  "meditative-081": [
+    "v0.3.5"
+  ],
+  "meditative-082": [
+    "v0.3.5"
+  ],
+  "meditative-083": [
+    "v0.3.5"
+  ],
+  "meditative-084": [
+    "v0.3.5"
+  ],
+  "meditative-085": [
+    "v0.3.5"
+  ],
+  "meditative-086": [
+    "v0.3.5"
+  ],
+  "meditative-087": [
+    "v0.3.5"
+  ],
+  "meditative-088": [
+    "v0.3.5"
+  ],
+  "meditative-089": [
+    "v0.3.5"
+  ],
+  "meditative-090": [
+    "v0.3.5"
+  ],
+  "meditative-091": [
+    "v0.3.5"
+  ],
+  "meditative-091-1": [
+    "v0.3.5"
+  ],
+  "meditative-092": [
+    "v0.3.5"
+  ],
+  "meditative-093": [
+    "v0.3.5"
+  ],
+  "meditative-093-1": [
+    "v0.3.5"
+  ],
+  "meditative-093-2": [
+    "v0.3.5"
+  ],
+  "meditative-093-3": [
+    "v0.3.5"
+  ],
+  "meditative-094": [
+    "v0.3.5"
+  ],
+  "meditative-095": [
+    "v0.3.5"
+  ],
+  "meditative-095-1": [
+    "v0.3.5"
+  ],
+  "meditative-096": [
+    "v0.3.5"
+  ],
+  "meditative-096-1": [
+    "v0.3.5"
+  ],
+  "meditative-097": [
+    "v0.3.5"
+  ],
+  "meditative-097-1": [
+    "v0.3.5"
+  ],
+  "meditative-097-2": [
+    "v0.3.5"
+  ],
+  "meditative-097-3": [
+    "v0.3.5"
+  ],
+  "meditative-097-4": [
+    "v0.3.5"
+  ],
+  "meditative-097-5": [
+    "v0.3.5"
+  ],
+  "meditative-097-6": [
+    "v0.3.5"
+  ],
+  "meditative-097-7": [
+    "v0.3.5"
+  ],
+  "meditative-097-8": [
+    "v0.3.5"
+  ],
+  "meditative-097-9": [
+    "v0.3.5"
+  ],
+  "meditative-098": [
+    "v0.3.5"
+  ],
+  "meditative-099": [
+    "v0.3.5"
+  ],
+  "meditative-100": [
+    "v0.3.5"
+  ],
+  "meditative-101": [
+    "v0.3.5"
+  ],
+  "meditative-102": [
+    "v0.3.5"
   ]
 }

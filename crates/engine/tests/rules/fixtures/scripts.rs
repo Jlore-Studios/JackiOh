@@ -1,7 +1,5 @@
-//! Port of `packages/engine/test/fixtures/scripts.ts`.
-//!
 //! Test-only cards for M1-M3 engine tests (BUILD §0): each reproduces one behaviour of a real card
-//! through the effects library. The real cards, with their own tests, arrive in M4.
+//! through the effects library.
 
 use std::sync::LazyLock;
 
@@ -9,7 +7,7 @@ use jackioh_engine::effects;
 use jackioh_engine::subsystems::hero_power::{POWER_RESUME, STEADY_SHOT_PARAM, hero_power, power_abilities};
 use jackioh_engine::testkit::*;
 
-/// TS's `{ ...a, ...b }` on two object literals: `b`'s keys replace `a`'s.
+/// `b`'s keys replace `a`'s.
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Some(into), Value::Object(from)) = (base.as_object_mut(), extra) {
         for (key, value) in from {
@@ -46,7 +44,7 @@ fn damage_all_enemies(amount: i32) -> Effect {
     })
 }
 
-/// TS `def(overrides)`: `id`, `index`, `name` and `type` are the overrides' own.
+/// `id`, `index`, `name` and `type` are the overrides' own.
 fn def(overrides: Value) -> CardDef {
     json_as(spread(
         json!({
@@ -271,7 +269,6 @@ fn going_long_scripts() -> CardScripts {
     }
 }
 
-/// TS `export const HERO_POWERS = HERO_POWER_NAMES`: the thirteen power names.
 pub use jackioh_engine::subsystems::hero_power::HERO_POWER_NAMES as HERO_POWERS;
 
 /// #98 Heroic Power (R752): costs (0), rolls one of the thirteen powers at start of game, and each power
@@ -424,7 +421,7 @@ pub static FIXTURE_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::
     table
 });
 
-/// `fixtureCatalog(base = {})`: `base` with every fixture definition over it.
+/// `base` with every fixture definition over it.
 pub fn fixture_catalog(base: CardDefs) -> CardDefs {
     let mut defs = base;
     for entry in FIXTURE_DEFS.iter() {
@@ -433,7 +430,7 @@ pub fn fixture_catalog(base: CardDefs) -> CardDefs {
     defs
 }
 
-/// This file's scripts, by id (the brief's `scripts()`): `FIXTURE_SCRIPTS`.
+/// This file's scripts, by id.
 pub fn scripts() -> IndexMap<String, CardScripts> {
     FIXTURE_SCRIPTS.clone()
 }

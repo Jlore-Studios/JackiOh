@@ -1,28 +1,9 @@
-// Drag to play with unified pointer events (docs/polish/7-mobile-ux.md S9, B36-B39), and to aim an
-// activation (R384, R510): a press on an Activate control, a Heroic Power's button, or a card of
-// yours with nothing to attack, draws the targeting arrow to the activation's targets.
-//
-// One pointer at a time, mouse, pen and touch alike. A press on a hand card or on one of your
-// units is only a *press* until it has travelled DRAG_THRESHOLD_PX; below that it is a click and
-// the board's own click handlers run exactly as they always have, so click-click works in every
-// mode. Past the threshold the press becomes a drag: the interaction the source click would have
-// started is lifted (unsettled, `model.ts`), the board glows where it may land, and the release
-// is handed to the same `onClickTarget` a second click would reach. Nothing here decides a rule
-// (CLAUDE.md rule 7), and nothing is sent until the release.
-//
-// The listeners sit on `window`. Pointer events are taken in the capture phase so nothing on the
-// board can hide a press or a release from the drag; keys and the context menu are taken in the
-// bubble phase so a dialog that handles Escape itself (the settings panel) can keep it.
-//
-// R658: a play or an activation a drop (or a click) has narrowed but not finished is lifted again
-// by a press on one of its picks (the zone the card was dropped in, a Tribute, a target), so a Unit
-// dropped in its zone has its Cry aimed by a second drag. A backrow card of yours whose ability aims
-// at nothing is dragged onto the board like a spell with no target. A prompt's options are dragged
-// out of its panel (OptionDrag.tsx).
-//
-// A drop that sends a play leaves the card where it was dropped (`drag-landing`) and out of the
-// fan (landing.ts) until the board shows a newer view: the runner holds the old one back while the
-// play's events animate, and the card flying back into the hand for that time read as a refusal.
+// Pointer drag and targeting (docs/polish/7-mobile-ux.md S9, B36-B39; R384, R510, R658).
+// A press below the threshold stays a click; a drag lifts its interaction and releases through the
+// usual target path. Window capture always sees pointer press/release, while bubble keys and menus
+// let dialogs handle them. Nothing here decides a rule (CLAUDE.md rule 7) or sends until release.
+// `drag-landing` keeps a played card out of the fan until a newer view arrives, so animation delay
+// does not look like a refusal.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
@@ -54,37 +35,23 @@ export type DragLayerProps = {
 };
 
 type Point = { x: number; y: number };
-/** The drop target under the pointer: its centre, its size, and the ring drawn on it. */
 type Box = { x: number; y: number; size: number; width: number; height: number };
-/**
- * What marks the target an arrow or a card is aimed at: Hearthstone's crosshair "ring" on a hero's
- * gem, a lit "frame" round a card, and a "pad" filling the zone a card being placed lands in.
- */
 type ReticleShape = "ring" | "frame" | "pad";
-/** Where an arrow over a target stops: the edge of its ring (a circle) or of its frame (a box). */
 type ArrowStop = { shape: "circle" | "box"; halfWidth: number; halfHeight: number };
 
-/** A press that has not yet travelled far enough to be a drag. `testid` is what was pressed (R658). */
 type Press = { pointerId: number; start: Point; source: ClickTarget; testid: string; element: Element };
 
-/** A drag in flight: everything the overlay draws. */
 type Flight = {
   pointerId: number;
   plan: DragPlan;
   element: Element;
   pointer: Point;
-  /** The centre of the source element, where the arrow starts. */
   from: Point;
   touch: boolean;
   spot: DropSpot;
-  /** Where the reticle sits: the centre of the drop target the pointer is over. */
   reticle: Box | null;
 };
 
-/**
- * A card a drop has just played, drawn where it landed until the board shows a newer view than
- * `view` (the one showing when it was dropped).
- */
 type Landed = { instanceId: string; card: CardView | null; at: Point; view: PlayerView };
 
 const BOARD = '[data-testid="board"]';
@@ -94,26 +61,17 @@ const BOARD = '[data-testid="board"]';
  * coming (a networked match whose clock ran out as the card was dropped).
  */
 const LANDING_TIMEOUT_MS = 4_000;
-/** The smallest reticle drawn, so a small target still gets a visible ring (a touch target's size). */
 const RETICLE_MIN_PX = 44;
-/**
- * A hero's health gem, which its reticle rings; the room the ring leaves round the gem; and the
- * smallest gem ring. It hugs the gem, because a wider ring covered the first letter of the hero's
- * name beside it and the pile count below.
- */
+/** A hero ring hugs its health gem to avoid covering the nearby name and pile count. */
 const HERO_GEM = ".hero-health";
 const RETICLE_GEM_MARGIN_PX = 10;
 const RETICLE_GEM_MIN_PX = 36;
-/** How far a card target's frame stands off the card, so it rings the card without covering it. */
 const RETICLE_FRAME_OUTSET_PX = 6;
 const ARROW_HEAD_PX = 30;
 const ARROW_HEAD_HALF_WIDTH_PX = 19;
-/** How far the head's back edge is notched in toward its tip, so it reads as an arrowhead. */
 const ARROW_HEAD_NOTCH_PX = 9;
-/** How far the arrow bows away from a straight line, as a share of its length, and at most. */
 const ARROW_BEND_SHARE = 0.22;
 const ARROW_BEND_MAX_PX = 90;
-/** The glow's blur, and the margin its filter region keeps round the arrow so the blur is not cut. */
 const ARROW_GLOW_BLUR_PX = 4;
 const ARROW_GLOW_MARGIN_PX = 40;
 
@@ -131,12 +89,7 @@ function byTestid(id: string): Element | null {
   return document.querySelector(`[data-testid="${id.replace(/["\\]/g, "\\$&")}"]`);
 }
 
-/**
- * Where the reticle goes on a drop target. A hero is a wide plate with its name in the middle, so
- * its ring locks onto the health gem, the thing an attack takes from, and the name stays readable.
- * Anything else is ringed at its centre. `width` and `height` are always the whole target's, for
- * the pad a card being placed lights up.
- */
+/** Heroes are ringed at their health gem; other targets are ringed at centre. */
 function reticleFor(spot: DropSpot): Box | null {
   if (spot.at !== "target") return null;
   const element = byTestid(spot.testid);
@@ -162,7 +115,7 @@ function isValidSpot(plan: DragPlan, spot: DropSpot): boolean {
   return spot.at === "board" && plan.freeDrop;
 }
 
-/** #37: a card dropped on a Locked zone is refused with a mark where it landed (BlockedMark.tsx). */
+/** A card dropped on a Locked zone is refused with a mark where it landed (BlockedMark.tsx). */
 export default function DragLayer(props: DragLayerProps): ReactElement {
   const [blocked, setBlocked] = useState<Blocked | null>(null);
   const clearBlocked = useCallback(() => setBlocked(null), []);
@@ -178,16 +131,14 @@ export default function DragLayer(props: DragLayerProps): ReactElement {
 let blockedKey = 0;
 
 function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => void }): ReactElement | null {
-  // The listeners are attached once and read the newest props through this ref, so a re-render
-  // mid-drag (the lifted interaction arriving back as a prop) never drops the drag.
+  // Listeners read this ref so a mid-drag render does not drop the drag.
   const latest = useRef(props);
   latest.current = props;
 
   const [drawn, setDrawn] = useState<Flight | null>(null);
   const [landed, setLanded] = useState<Landed | null>(null);
 
-  // The landed card goes as soon as the board shows any view newer than the one it was dropped
-  // on, or after LANDING_TIMEOUT_MS, and never outlives the layer.
+  // A landed card leaves on a newer view or timeout, never after this layer.
   useEffect(() => {
     if (landed === null) return undefined;
     if (props.view !== landed.view) {
@@ -198,7 +149,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     return () => clearTimeout(timer);
   }, [landed, props.view]);
 
-  // A layout effect, so the card leaves the fan in the same frame the landed copy is drawn.
+  // Keep the card out of the fan in the landing frame.
   useLayoutEffect(() => {
     setLanding(landed === null ? null : landed.instanceId);
   }, [landed]);
@@ -209,10 +160,9 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     const root = document.documentElement;
     let press: Press | null = null;
     let flight: Flight | null = null;
-    /** Armed when a drag ends: the click the release produces is not a second click. */
     let swallowClick = false;
 
-    /** Topmost first. jsdom has no elementsFromPoint, so tests stub it on `document`. */
+    /** jsdom lacks `elementsFromPoint`, so tests stub it on `document`. */
     function hits(x: number, y: number): readonly Element[] {
       try {
         return document.elementsFromPoint(x, y);
@@ -258,8 +208,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
 
     function onPointerDown(event: PointerEvent): void {
       if (flight !== null) {
-        // A second finger while dragging is ignored; the same pointer pressing again means its
-        // release was lost somewhere, so the stale drag is dropped.
+        // A repeated pointer means its release was lost, so drop the stale drag.
         if (event.pointerId !== flight.pointerId) return;
         cancel();
       }
@@ -274,9 +223,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       const hit = targetFromElement(target);
       if (hit === null) return;
       const source = hit.target;
-      // A hand card, a card of yours on the field (an attack, or its one Activate ability), or an
-      // Activate control (a card's own or a Heroic Power's, R384). R658: while a play or an
-      // activation is being built, anything it may have picked, which `planDrag` sorts out.
       const yours = (source.on === "unit" || source.on === "backrow") && source.side === "you";
       const building = isBuilding(latest.current.interaction);
       if (source.on !== "hand" && source.on !== "activate" && !yours && !building) return;
@@ -290,7 +236,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         testid: hit.testid,
         element,
       };
-      // Never preventDefault: below the threshold this press is a click.
     }
 
     function onPointerMove(event: PointerEvent): void {
@@ -322,7 +267,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       const element = press.element;
       const start = press.start;
       press = null;
-      // Nothing to drag: the press stays a press, and whatever click follows goes through.
       if (plan === null) return;
 
       onInteraction(plan.lifted);
@@ -331,7 +275,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       try {
         element.setPointerCapture(event.pointerId);
       } catch {
-        // jsdom has no pointer capture, and a pointer that is already gone cannot be captured.
+        // jsdom lacks pointer capture; an already-gone pointer cannot be captured.
       }
 
       const pointer = { x: event.clientX, y: event.clientY };
@@ -357,8 +301,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         const result = resolveDrop(view, legal, flight.plan, spot);
         const refused = result.action === undefined ? lockedZoneAt(hits(event.clientX, event.clientY), flight.plan) : null;
         const { plan } = flight;
-        // Where the card lands: the middle of the zone or target it was dropped on, or the pointer
-        // for a drop anywhere on the board.
         const reticle = reticleFor(spot);
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
         stopDragging();
@@ -387,7 +329,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         }
         return;
       }
-      // A press released before the threshold: the click that follows is the player's.
       if (press !== null && event.pointerId === press.pointerId) press = null;
     }
 
@@ -404,7 +345,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
     }
 
     function onKeyDown(event: KeyboardEvent): void {
-      // No click is pending once a key is pressed; a keyboard "click" must never be swallowed.
       swallowClick = false;
       if (event.key !== "Escape") return;
       if (flight !== null) {
@@ -436,11 +376,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
       event.preventDefault();
     }
 
-    /**
-     * A native HTML5 drag (an image, a link, anything still `draggable`) starting under a press
-     * would make the browser send `pointercancel` and kill the pointer drag, so it never starts
-     * while this layer is tracking one. The deckbuilder's own drag is outside the board.
-     */
+    /** Native HTML5 drag cancels pointer drag, so block it while tracking one. */
     function onDragStart(event: DragEvent): void {
       if (press === null && flight === null) return;
       const target = event.target;
@@ -502,8 +438,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
 
   const { plan, spot } = drawn;
   const valid = isValidSpot(plan, spot);
-  // Over a target the arrow locks onto it, as Hearthstone's does: its tip is the reticle's centre,
-  // not wherever on the target the pointer happens to be.
   const locked = spot.at === "target" ? drawn.reticle : null;
   const shape: ReticleShape =
     spot.at !== "target" || !plan.arrow ? "pad" : spot.testid.startsWith("card-") ? "frame" : "ring";
@@ -522,8 +456,6 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
           to={locked === null ? drawn.pointer : { x: locked.x, y: locked.y }}
           sourceTestid={plan.sourceTestid}
           valid={valid}
-          // Over a target the reticle is the arrow's tip, as in Hearthstone: the shaft stops at
-          // the ring or the frame and no head is drawn on top of it.
           stop={locked === null ? null : arrowStop(locked, shape)}
         />
       ) : (
@@ -560,7 +492,6 @@ function handCard(view: PlayerView, instanceId: string): CardView | null {
   return hand.find((card) => card.instanceId === instanceId) ?? null;
 }
 
-/** The card a ghost draws: a hand card, or (R658) a face-up backrow card of yours dragged onto the board. */
 function sourceCard(view: PlayerView, instanceId: string): CardView | null {
   const inHand = handCard(view, instanceId);
   if (inHand !== null) return inHand;
@@ -570,19 +501,13 @@ function sourceCard(view: PlayerView, instanceId: string): CardView | null {
   return null;
 }
 
-/**
- * The card being placed, following the pointer: a small face (cost, name, rules text and, for a
- * unit, its attack and health), so it reads as that card and not as a face-down one. It is the
- * card in play (faces.ts): a hand Unit's grown stats, a Heroic Power's rolled power, a crafted
- * card's own text. Carries no card testid, so nothing mistakes it for the card.
- */
+/** The ghost has no card testid, so it cannot be mistaken for the card it represents. */
 function DragGhost(props: {
   card: CardView | null;
   instanceId: string;
   at: Point;
   touch: boolean;
   valid: boolean;
-  /** The card a drop has played, settled where it landed rather than following the pointer. */
   landing?: boolean;
   testId?: string;
 }): ReactElement {
@@ -616,12 +541,6 @@ function DragGhost(props: {
   );
 }
 
-/**
- * Hearthstone's targeting arrow: a bowed, lit shaft from the source's centre to the pointer, and a
- * notched head. The shaft brightens from its tail to its tip, has a pale core and a glow, and a
- * faint pulse runs along it toward the target. `stop` ends it at a reticle's edge instead of the
- * pointer, and then draws no head.
- */
 function DragArrow(props: {
   from: Point;
   to: Point;
@@ -634,7 +553,6 @@ function DragArrow(props: {
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
 
-  // Bow the shaft upward, whichever way it points.
   const bend = Math.min(ARROW_BEND_MAX_PX, length * ARROW_BEND_SHARE);
   let nx = -dy / length;
   let ny = dx / length;
@@ -645,7 +563,6 @@ function DragArrow(props: {
   const cx = (from.x + to.x) / 2 + nx * bend;
   const cy = (from.y + to.y) / 2 + ny * bend;
 
-  // The head points along the curve's tangent at its end: from the control point to the tip.
   const tx = to.x - cx;
   const ty = to.y - cy;
   const tangent = Math.hypot(tx, ty) || 1;
@@ -654,7 +571,6 @@ function DragArrow(props: {
 
   const withHead = props.stop === null;
   const head = Math.min(ARROW_HEAD_PX, length);
-  // Where the shaft ends: under the head's notch, or at the reticle's edge.
   const cut =
     props.stop === null ? head - ARROW_HEAD_NOTCH_PX : Math.min(stopDistance(props.stop, ux, uy), length * 0.6);
   const endX = to.x - ux * cut;
@@ -677,8 +593,7 @@ function DragArrow(props: {
     `${round(rightX)},${round(rightY)}`,
   ].join(" ");
 
-  // The glow's filter region, in screen space round the whole arrow: a region sized off the
-  // arrow's own box would collapse to nothing for a straight vertical or horizontal arrow.
+  // Use screen space: an arrow-sized region collapses for straight arrows.
   const glowX = Math.min(from.x, to.x, cx) - ARROW_GLOW_MARGIN_PX;
   const glowY = Math.min(from.y, to.y, cy) - ARROW_GLOW_MARGIN_PX;
   const glowW = Math.max(from.x, to.x, cx) + ARROW_GLOW_MARGIN_PX - glowX;
@@ -735,7 +650,6 @@ function DragArrow(props: {
   );
 }
 
-/** How far back from the target's centre, along the arrow's final direction, its reticle's edge is. */
 function stopDistance(stop: ArrowStop, ux: number, uy: number): number {
   if (stop.shape === "circle") return stop.halfWidth;
   const alongX = Math.abs(ux) < 1e-6 ? Infinity : stop.halfWidth / Math.abs(ux);
@@ -743,13 +657,7 @@ function stopDistance(stop: ArrowStop, ux: number, uy: number): number {
   return Math.min(alongX, alongY);
 }
 
-/**
- * What marks the drop target the pointer is on. A "ring" is Hearthstone's crosshair on a hero's
- * health gem. A "frame" rings a card an arrow is aimed at, standing just off it, so the card's name
- * and its attack and health stay readable: a crosshair the card's size covered both. A "pad" lights
- * the whole zone a card being placed will land in, so the spot under the card still reads while
- * the card covers its middle.
- */
+/** A frame keeps a targeted card's name and stats readable; a pad marks a placement zone. */
 function Reticle(props: { testid: string; box: Box | null; shape: ReticleShape }): ReactElement {
   const { box } = props;
   const style: CSSProperties =

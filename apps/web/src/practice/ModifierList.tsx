@@ -10,6 +10,7 @@ import { createPortal } from "react-dom";
 
 import type { PlayerView } from "@jackioh/shared";
 
+import { t } from "../i18n/i18n.ts";
 import { practiceTestid } from "./testids.ts";
 
 type ModifierListProps = { view: PlayerView };
@@ -53,8 +54,12 @@ export function ModifierList({ view }: ModifierListProps): ReactElement | null {
         data-count={count}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={`${String(count)} active ${count === 1 ? "modifier" : "modifiers"}`}
-        title="Active modifiers"
+        aria-label={
+          count === 1
+            ? t("{count} active modifier", { count: String(count) })
+            : t("{count} active modifiers", { count: String(count) })
+        }
+        title={t("Active modifiers")}
         onClick={() => {
           setOpen((was) => !was);
         }}
@@ -70,18 +75,18 @@ export function ModifierList({ view }: ModifierListProps): ReactElement | null {
           id={panelId}
           data-testid={practiceTestid.modifiersPanel}
           role="group"
-          aria-label="Active modifiers"
+          aria-label={t("Active modifiers")}
         >
           {[
-            { key: "you", title: "You", list: yours },
-            { key: "opponent", title: "AI", list: theirs },
+            { key: "you", title: t("You"), list: yours },
+            { key: "opponent", title: t("AI"), list: theirs },
           ].map((side) =>
             side.list.length === 0 ? null : (
               <span key={side.key} className="practice-modifiers__side" data-side={side.key}>
                 <span className="practice-modifiers__who">{side.title}</span>
                 {side.list.map((modifier) => (
                   <span key={modifier.id} className="practice-modifiers__item" data-modifier-id={modifier.id}>
-                    {modifier.label}
+                    {t(modifier.label)}
                   </span>
                 ))}
               </span>

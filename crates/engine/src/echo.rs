@@ -25,7 +25,7 @@ use crate::config::TUNE_MIN_AMOUNT;
 use crate::faces::card_type_of;
 use crate::mana::modifier_is_live;
 use crate::modifiers::{install_lasting_modifiers, remove_modifier};
-use crate::script::EngineSink;
+use crate::script::{EngineSink, HookArgs};
 use crate::state::{
     CardInstance, EchoItem, GameState, ModifierKind, PlayerModifier, find_instance, find_instance_mut,
 };
@@ -146,12 +146,27 @@ pub fn drop_echo_repeats(state: &mut GameState, instance_id: &str) {
 ///
 /// TS's `state` was optional; every caller passed it, and Rust needs it to read the card's script
 /// (fused scripts are built from the state, SURFACE §6.6), so it is required here.
+///
+/// R802: a card whose script computes its Echo X (`Script.echo_x`, Meditative #5) prints the larger of
+/// that and `staticFlags.echo`. The pipeline reads this once, as the card is played (§10.5 step 4,
+/// `queue_echo_repeats`), so the X it queues stays fixed while the card resolves.
 pub fn printed_echo(card: &CardInstance, state: &GameState) -> i32 {
+    let computed = crate::scripts::script_of(state, card)
+        .echo_x
+        .as_ref()
+        .map_or(0, |hook| {
+            hook(HookArgs {
+                state,
+                self_: card,
+                radiant: card.radiant,
+            })
+        });
+    let printed = crate::scripts::flags_of(state, card)
+        .echo
+        .unwrap_or(0)
+        .max(computed);
     // B3.4: Echo X is a numbered keyword Degrade and Upgrade move, read through the card's tuning.
-    let own = 0.max(tuned_echo(
-        card,
-        crate::scripts::flags_of(state, card).echo.unwrap_or(0),
-    ));
+    let own = 0.max(tuned_echo(card, printed));
     own + copied_echo(state, card)
 }
 

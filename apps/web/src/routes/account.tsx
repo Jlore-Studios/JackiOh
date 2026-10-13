@@ -19,6 +19,11 @@
 // (`auth/tavern.css`): the board, the gold call to action, wood for the rest. A status is said in
 // a player's words; the raw value rides on `data-status` for tests.
 //
+// THE USERNAME (R1435, R1436) comes from the gate's read too (`me.username`), with when it may next
+// change. An active account changes it here through the same field as the prompt after activation
+// (`auth/UsernameField.tsx`), or is told when it may during the cooldown. Every name on the screen,
+// the rank line's included, is drawn through `auth/Username.tsx`.
+//
 // DELETING THE ACCOUNT. "Delete my account" asks first: the player types DELETE, then confirms.
 // `DELETE /api/account` does the deleting, at the server, which decides what goes and answers 204.
 // Only then does this device forget the session, the way signing out does, and load the landing
@@ -27,14 +32,27 @@
 import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
 
 import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
-import { deleteAccount, getOwnRank, getProfile, type MeResponse, type OwnRankResponse, type ProfileResponse } from "../net/api.ts";
+import {
+  deleteAccount,
+  getOwnRank,
+  getProfile,
+  type MeResponse,
+  type OwnRankResponse,
+  type OwnUsername,
+  type ProfileResponse,
+} from "../net/api.ts";
 import { revokeSignedOutSession, sessionNearExpiry } from "../net/auth.ts";
+import { announceAccountChange } from "../net/gate.ts";
+import { t } from "../i18n/i18n.ts";
 import { badgeWords, rankWords } from "../rank/rank.ts";
 import { paths } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses, readSession } from "../net/session.ts";
 import ChangeEmail from "../settings/ChangeEmail.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import TwoStepSettings from "../auth/TwoStepSettings.tsx";
+import { useSecondsUntil } from "../auth/cooldown.ts";
+import Username from "../auth/Username.tsx";
+import UsernameField, { nextChangeSentence } from "../auth/UsernameField.tsx";
 
 import "../auth/tavern.css";
 import "./account.css";
@@ -43,6 +61,9 @@ export const accountTestid = {
   screen: "account-screen",
   email: "account-email",
   status: "account-status",
+  /** R1435: the account's username, and when a change is next allowed during the cooldown. */
+  username: "account-username",
+  usernameCooldown: "account-username-cooldown",
   rank: "account-rank",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
@@ -66,11 +87,11 @@ export const DELETE_CONFIRM_WORD = "DELETE";
 export function statusWords(status: MeResponse["profile"]["status"]): string {
   switch (status) {
     case "pending":
-      return "Waiting for an invite code";
+      return t("Waiting for an invite code");
     case "active":
-      return "Active";
+      return t("Active");
     case "banned":
-      return "Banned";
+      return t("Banned");
   }
 }
 
@@ -172,7 +193,7 @@ export function useSigningOut(): boolean {
 
 /** The label a Sign out button shows. */
 export function signOutLabel(busy: boolean): string {
-  return busy ? "Signing out…" : "Sign out";
+  return busy ? t("Signing out…") : t("Sign out");
 }
 
 export type AccountRouteProps = {
@@ -183,6 +204,7 @@ export type AccountRouteProps = {
 
 export default function AccountRoute({ token, me }: AccountRouteProps): ReactElement {
   const pending = me !== undefined && me.profile.status === "pending";
+  const username = me?.username;
   const leaving = useSigningOut();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
@@ -208,7 +230,8 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
     return () => {
       cancelled = true;
     };
-  }, [token, pending]);
+    // The name too: a rename read back by the gate shows on the rank line at once (R1436).
+  }, [token, pending, username?.name]);
 
   const played = profile === null ? 0 : profile.record.wins + profile.record.losses + profile.record.draws;
 
@@ -220,18 +243,22 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
         <div className="brand">
           <h1>JackiOh</h1>
         </div>
-        <h2>Your account</h2>
+        <h2>{t("Your account")}</h2>
 
         {error !== null ? (
           <p className="notice" data-testid={accountTestid.error} role="alert">
-            {error}
+            {t(error)}
           </p>
+        ) : null}
+
+        {username !== undefined ? (
+          <AccountUsername token={token} own={username} canChange={me?.profile.status === "active"} />
         ) : null}
 
         {pending && me !== undefined ? (
           <>
             <AccountIdentity email={me.email} status={me.profile.status} />
-            <p>Online play opens once this account has redeemed an invite code.</p>
+            <p>{t("Online play opens once this account has redeemed an invite code.")}</p>
             <div className="account-actions">
               <a
                 className="button-primary"
@@ -239,7 +266,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                 data-testid={accountTestid.redeem}
                 onClick={followInApp(paths.invite)}
               >
-                Redeem an invite code
+                {t("Redeem an invite code")}
               </a>
             </div>
           </>
@@ -247,7 +274,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
         {!pending && profile === null && error === null ? (
           <p className="notice shell-panel__loading" data-testid={accountTestid.loading} role="status">
-            Loading your account…
+            {t("Loading your account…")}
           </p>
         ) : null}
 
@@ -255,16 +282,17 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           <>
             <AccountIdentity email={profile.email} status={profile.status} />
 
-            <h3 className="account-heading">Rank</h3>
+            <h3 className="account-heading">{t("Rank")}</h3>
             {rank !== null ? (
               <>
                 <p data-testid={accountTestid.rank}>
-                  {rank.tag} · {rankWords(rank.rank)} · Season {rank.season}
+                  <Username name={rank.username} /> ·{" "}
+                  {t("{rank} · Season {season}", { rank: rankWords(rank.rank), season: rank.season })}
                 </p>
                 <p data-testid={accountTestid.badges}>
                   {rank.badges.length === 0
-                    ? "No season best yet — finish placements to earn one."
-                    : `Season best: ${rank.badges.map((badge) => badgeWords(badge)).join(", ")}`}
+                    ? t("No season best yet — finish placements to earn one.")
+                    : t("Season best: {badges}", { badges: rank.badges.map((badge) => badgeWords(badge)).join(t(", ")) })}
                 </p>
                 <div className="account-actions">
                   <a
@@ -273,32 +301,32 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
                     data-testid={accountTestid.leaderboard}
                     onClick={followInApp(paths.leaderboard)}
                   >
-                    Leaderboard
+                    {t("Leaderboard")}
                   </a>
                 </div>
               </>
             ) : null}
 
-            <h3 className="account-heading">Record</h3>
+            <h3 className="account-heading">{t("Record")}</h3>
             <div className="stat-row">
               <div className="stat">
                 <span className="stat-value" data-testid={accountTestid.winRate}>
                   {formatWinRate(profile.winRate)}
                 </span>
-                <span className="stat-label">Win rate</span>
+                <span className="stat-label">{t("Win rate")}</span>
               </div>
               <div className="stat">
                 <span className="stat-value" data-testid={accountTestid.record}>
                   {profile.record.wins}–{profile.record.losses}–{profile.record.draws}
                 </span>
-                <span className="stat-label">W–L–D</span>
+                <span className="stat-label">{t("W–L–D")}</span>
               </div>
               <div className="stat">
                 <span className="stat-value">{played}</span>
-                <span className="stat-label">Played</span>
+                <span className="stat-label">{t("Played")}</span>
               </div>
             </div>
-            {played === 0 ? <p>No finished matches yet.</p> : null}
+            {played === 0 ? <p>{t("No finished matches yet.")}</p> : null}
           </>
         ) : null}
 
@@ -310,8 +338,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
 
         <div className="account-session">
           <p>
-            Signing out ends this session: this device forgets it, and it is revoked so no copy of it
-            works again. Your account and decks are unaffected.
+            {t("Signing out ends this session: this device forgets it, and it is revoked so no copy of it works again. Your account and decks are unaffected.")}
           </p>
           <div className="account-actions">
             <button
@@ -371,9 +398,9 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
       {asking ? (
         <form className="form-card account-delete__form" onSubmit={onConfirm} noValidate>
           <p>
-            This deletes your account for good and signs this device out. You can&rsquo;t undo it.
+            {t("This deletes your account for good and signs this device out. You can’t undo it.")}
           </p>
-          <label htmlFor="account-delete-input">Type {DELETE_CONFIRM_WORD} to confirm</label>
+          <label htmlFor="account-delete-input">{t("Type {word} to confirm", { word: DELETE_CONFIRM_WORD })}</label>
           <input
             id="account-delete-input"
             data-testid={accountTestid.deleteInput}
@@ -391,7 +418,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
           />
           {error !== null ? (
             <p className="notice" data-testid={accountTestid.deleteError} role="alert">
-              {error}
+              {t(error)}
             </p>
           ) : null}
           <div className="account-actions">
@@ -402,7 +429,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
               disabled={!confirmed || busy}
               aria-busy={busy}
             >
-              {busy ? "Deleting…" : "Delete my account for good"}
+              {busy ? t("Deleting…") : t("Delete my account for good")}
             </button>
             <button
               type="button"
@@ -415,7 +442,7 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
                 setError(null);
               }}
             >
-              Cancel
+              {t("Cancel")}
             </button>
           </div>
         </form>
@@ -429,9 +456,48 @@ function DeleteAccount({ token }: { token: string }): ReactElement {
               setAsking(true);
             }}
           >
-            Delete my account
+            {t("Delete my account")}
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * R1435: the username, from the gate's read of the account, and the way to change it: the field
+ * while a change is allowed, and during the cooldown the moment the next one is. A save is announced,
+ * so the gate reads the account again and this shows the new name and its cooldown. Only an active
+ * account may change it (the preview and the save are `auth: "active"`).
+ */
+function AccountUsername({
+  token,
+  own,
+  canChange,
+}: {
+  token: string;
+  own: OwnUsername;
+  canChange: boolean;
+}): ReactElement {
+  const nextChangeAt = own.nextChangeAt;
+  // Read from the clock at every render, so a page left open past the cooldown offers the field again.
+  const waiting = useSecondsUntil(nextChangeAt) > 0;
+  return (
+    <div className="account-username">
+      <p className="account-label">{t("Username")}</p>
+      <p className="account-username__name" data-testid={accountTestid.username}>
+        <Username name={own.name} />
+      </p>
+      {!canChange ? null : waiting && nextChangeAt !== null ? (
+        <p data-testid={accountTestid.usernameCooldown}>{nextChangeSentence(nextChangeAt)}</p>
+      ) : (
+        <UsernameField
+          token={token}
+          label={t("Change your username")}
+          onSaved={() => {
+            announceAccountChange();
+          }}
+        />
       )}
     </div>
   );
@@ -447,9 +513,9 @@ function AccountIdentity({
 }): ReactElement {
   return (
     <div className="account-identity">
-      <p className="account-label">Signed in as</p>
+      <p className="account-label">{t("Signed in as")}</p>
       <p data-testid={accountTestid.email} className="account-email">
-        {email ?? "(no email on this account)"}
+        {email ?? t("(no email on this account)")}
       </p>
       <p className="account-status" data-testid={accountTestid.status} data-status={status}>
         {statusWords(status)}

@@ -1,7 +1,5 @@
 //! The heal effect (BUILD M3-T1): §6.3's three readings of Heal — "heal X", "heal to full" and
 //! "heal up to N" — over R19's target set, a unit capped at its max health and a hero uncapped (§3).
-//!
-//! Port of `packages/engine/test/effects-heal.test.ts`.
 
 use jackioh_engine::effects::heal::heal;
 use jackioh_engine::testkit::*;
@@ -9,9 +7,8 @@ use jackioh_engine::testkit::*;
 use crate::rules::fixtures::combat::{big_body, plain};
 use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
-/// TS `sinkFor(state)`: the events and rng of a sink over `state`, the rng starting at the state's
-/// cursor as reduce does. The state is lent to it call by call, so a test reads the state between
-/// runs as TS read its live objects.
+/// The events and rng of a sink over `state`, the rng starting at the state's cursor as `reduce`
+/// does. The state is lent to it call by call, so a test reads the state between runs.
 struct Sink {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -24,8 +21,8 @@ fn sink_for(state: &GameState) -> Sink {
     }
 }
 
-/// TS `run`'s options: `self` (the card under this id as it stands when the run starts; TS passed the
-/// live object), and the rest handed to `makeContext` as they are.
+/// `self_` is the card under this id as it stands when the run starts; the rest go to
+/// `make_context` as they are.
 #[derive(Default)]
 struct RunOptions {
     self_: Option<String>,
@@ -33,7 +30,6 @@ struct RunOptions {
     targets: Option<Vec<Selection>>,
 }
 
-/// `effect.apply(makeContext(sink, self, rest))`.
 fn run(sink: &mut Sink, state: &mut GameState, effect: Effect, options: RunOptions) {
     let self_: Option<CardInstance> = options.self_.as_ref().map(|id| {
         find_instance(&*state, id)
@@ -88,7 +84,6 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
     find_instance_mut(state, id).expect("the card is in the state")
 }
 
-/// `unitView(state, unit).health` for the card as it stands now.
 fn health_of(state: &GameState, id: &str) -> i32 {
     unit_view(state, live(state, id)).health
 }
@@ -156,7 +151,7 @@ mod heal_x_r19_m3_t1 {
         assert_eq!(healed_count(&sink), 2);
     }
 
-    /// TS: "§10.4: the cap a unit heals to is its buffed max health, read through the layers".
+    /// §10.4: the cap is the max health read through the layers.
     #[test]
     fn the_cap_a_unit_heals_to_is_its_buffed_max_health_read_through_the_layers() {
         let mut state = new_game("heal-buffed", None);
@@ -277,7 +272,6 @@ mod heal_x_r19_m3_t1 {
 mod heal_to_full_and_heal_up_to_n_m3_t1 {
     use super::*;
 
-    /// TS: "#19: heal to full removes all of a unit's damage".
     #[test]
     fn heal_to_full_removes_all_of_a_unit_s_damage_19() {
         let mut state = new_game("heal-full", None);
@@ -314,7 +308,6 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
         assert_eq!(healed_count(&sink), 1);
     }
 
-    /// TS: "§3: a hero has no maximum health, so heal to full leaves it alone".
     #[test]
     fn a_hero_has_no_maximum_health_so_heal_to_full_leaves_it_alone() {
         let mut state = new_game("heal-full-hero", None);
@@ -332,7 +325,6 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
         assert_eq!(sink.events.len(), 0);
     }
 
-    /// TS: "§6.3: heal up to N raises a hero to N and never lowers one already above it".
     #[test]
     fn heal_up_to_n_raises_a_hero_to_n_and_never_lowers_one_already_above_it() {
         let mut state = new_game("heal-upto-hero", None);
@@ -370,7 +362,6 @@ mod heal_to_full_and_heal_up_to_n_m3_t1 {
         assert_eq!(state.players[PlayerId::P2].hero.health, 45);
     }
 
-    /// TS: "§6.3: heal up to N on a unit stops at N, and at the unit's max health".
     #[test]
     fn heal_up_to_n_on_a_unit_stops_at_n_and_at_the_unit_s_max_health() {
         let mut state = new_game("heal-upto-unit", None);

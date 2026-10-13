@@ -1,26 +1,20 @@
-//! The match clock (BUILD M7-T1, SPEC §9.5, R79). Port of `apps/server/src/match/clock.ts`.
+//! The match clock (BUILD M7-T1, SPEC §9.5, R79).
 //!
-//! Five independent deadlines, all of them scheduled on `tokio::time` (TS: the injected `Timers`
-//! port) and none of them visible to the engine — SPEC §9.3 keeps time out of `reduce`, so an expiry
-//! here only reports *which* clock ran out and the actor turns that into the `timeout`,
-//! `disconnectExpired` or `ceilingReached` action that the engine does see:
+//! Five independent deadlines on `tokio::time`, none visible to the engine (SPEC §9.3 keeps time
+//! out of `reduce`): an expiry only reports *which* clock ran out, and the actor turns that into
+//! the `timeout`, `disconnectExpired` or `ceilingReached` action the engine sees:
 //!
-//!  - the turn clock (R79: `TURN_CLOCK_SECONDS`), which belongs to the active player, is reset when
-//!    the turn changes, and **pauses while a prompt is open for the non-active player**;
-//!  - that non-active holder's prompt clock (R79: `PROMPT_CLOCK_SECONDS`), whose expiry answers only
-//!    that prompt;
+//!  - the turn clock (R79: `TURN_CLOCK_SECONDS`), the active player's, reset when the turn changes
+//!    and **paused while a prompt is open for the non-active player**;
+//!  - that holder's prompt clock (R79: `PROMPT_CLOCK_SECONDS`), whose expiry answers only that prompt;
 //!  - the mulligan clock (R268: `MULLIGAN_CLOCK_SECONDS`), one deadline for both seats while both
-//!    mulligans are open (R265). Setup is nobody's turn, so the turn clock does not run under it;
-//!    it is reported as the prompt deadline, which it is for both seats at once;
-//!  - a disconnect grace countdown per player (§9.5: `DISCONNECT_GRACE_SECONDS`), which does **not**
-//!    pause the turn clock — §9.5: "The clock keeps running while a player is disconnected";
-//!  - the hard wall-clock ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`.
+//!    mulligans are open (R265), reported as the prompt deadline; the turn clock does not run then;
+//!  - a disconnect grace per player (§9.5: `DISCONNECT_GRACE_SECONDS`), which does **not** pause
+//!    the turn clock;
+//!  - the hard ceiling (R79: `MATCH_CEILING_MINUTES`), measured from `started_at`.
 //!
-//! Nothing in this file reads the system clock directly: `now_ms()` (`app::now_ms`) reads tokio's clock, which is
-//! what makes the M7-T1 tests exact rather than approximate (`tokio::time::pause()` and `advance()`
-//! replace TS's manual timers, SURFACE §11.2).
-//!
-//! Every number comes from `crate::config` (`src/config.ts`), so R79's values are stated once.
+//! No system clock: `now_ms()` reads tokio's, so tests are exact with `tokio::time::pause()` and
+//! `advance()` (docs/v0.3.0/SURFACE.md §11.2). Every number comes from `crate::config` (R79).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, Weak};
@@ -42,15 +36,12 @@ use crate::db::store::MatchClocks;
 const MS_PER_SECOND: i64 = 1000;
 const MS_PER_MINUTE: i64 = 60 * MS_PER_SECOND;
 
-// ---------------------------------------------------------------------------
-// Time (TS's `Timers` port: `now()` and `after(ms, fn) → { cancel }`)
-// ---------------------------------------------------------------------------
+// Time
 
 static NEXT_TIMER_ID: AtomicU64 = AtomicU64::new(1);
 
-/// TS `Timer`: one scheduled callback. Dropping it cancels it (TS `cancel()`), so a countdown
-/// cancels by letting go of its timer. The callback is handed its timer's id, so a callback that
-/// was already running when it was cancelled can see that it is stale.
+/// One scheduled callback. Dropping it cancels it. The callback is handed its timer's id, so a
+/// callback already running when it was cancelled can see that it is stale.
 pub(crate) struct Timer {
     id: u64,
     handle: Option<tokio::task::JoinHandle<()>>,
@@ -61,7 +52,6 @@ impl Timer {
         self.id
     }
 
-    /// TS `timer.cancel()`.
     pub(crate) fn cancel(self) {
         drop(self);
     }
@@ -80,8 +70,8 @@ impl Drop for Timer {
     }
 }
 
-/// TS `timers.after(ms, fn)`: runs `f` once `ms` milliseconds of tokio time have passed (at once
-/// for `ms <= 0`). Must be called inside a tokio runtime.
+/// Runs `f` once `ms` milliseconds of tokio time have passed (at once for `ms <= 0`). Must be
+/// called inside a tokio runtime.
 pub(crate) fn after(ms: i64, f: impl FnOnce(u64) + Send + 'static) -> Timer {
     let id = NEXT_TIMER_ID.fetch_add(1, Ordering::Relaxed);
     let wait = Duration::from_millis(u64::try_from(ms.max(0)).unwrap_or(0));
@@ -95,9 +85,7 @@ pub(crate) fn after(ms: i64, f: impl FnOnce(u64) + Send + 'static) -> Timer {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The match row's clocks
-// ---------------------------------------------------------------------------
 
 /// R79: the ceiling is one deadline measured from the moment the match started.
 pub fn match_ceiling_at(started_at: i64) -> i64 {
@@ -116,16 +104,13 @@ pub fn initial_clocks(started_at: i64) -> MatchClocks {
     }
 }
 
-// ---------------------------------------------------------------------------
 // The clock
-// ---------------------------------------------------------------------------
 
 struct Countdown {
     timer: Option<Timer>,
     deadline: Option<i64>,
 }
 
-/// TS `idle()`.
 fn idle() -> Countdown {
     Countdown {
         timer: None,
@@ -134,7 +119,6 @@ fn idle() -> Countdown {
 }
 
 impl Countdown {
-    /// TS `cancel(countdown)`.
     fn cancel(&mut self) {
         if let Some(timer) = self.timer.take() {
             timer.cancel();
@@ -181,17 +165,12 @@ struct ClockState {
     holder: Option<PlayerId>,
     prompt: Countdown,
 
-    // R268: the mulligan clock. `deadline` is set the first time the window is seen and never moved
-    // again — not when one seat answers, and not when a later `sync` reports the window still open —
-    // so the seat that answers second gets no more time than the one that answered first. Like the
-    // prompt clock's `holder`, `expired` outlives the timer: the window is still open after the clock
-    // runs out (the actor times the owing seats out), and nothing re-arms a second window over it.
+    // R268: the mulligan clock. `deadline` is set the first time the window is seen and never moved,
+    // so the seat that answers second gets no more time than the first. Like the prompt clock's
+    // `holder`, `expired` outlives the timer: nothing re-arms a second window over an open one.
     //
-    // R268: a rebuilt actor (§9.5) builds a new clock, which sees the window for the first time and
-    // arms a fresh full deadline, exactly as the turn clock restarts from full on a rebuild. A
-    // crash in the window therefore gives both seats at most one more `MULLIGAN_CLOCK_SECONDS`;
-    // reading the stored `promptDeadline` back instead would be stricter, but the stored row is
-    // written after the fact and may be stale, and only the disconnect grace reads its stored
+    // R268: a rebuilt actor (§9.5) arms a fresh full deadline, as the turn clock does, so a crash
+    // gives both seats at most one more window; only the disconnect grace reads its stored
     // deadline back (R744).
     mulligan: Countdown,
     mulligan_open: bool,
@@ -205,8 +184,8 @@ struct ClockState {
 }
 
 /// A timer's callback: under the lock, `update` brings the clock up to date and names the expiry to
-/// report, if any (TS's `report`: nothing once stopped). The report goes out after the lock is let
-/// go, so the actor's handler never runs inside the clock.
+/// report, if any (nothing once stopped). The report goes out after the lock is let go, so the
+/// actor's handler never runs inside the clock.
 fn fire(me: &Weak<Mutex<ClockState>>, update: impl FnOnce(&mut ClockState) -> Option<ClockExpiry>) {
     let Some(state) = me.upgrade() else { return };
     let report = {
@@ -357,9 +336,8 @@ impl ClockState {
 
         // R265, R268: both mulligans open at once. Setup is nobody's turn (§2.1), so neither the turn
         // clock nor a prompt clock runs; the one mulligan deadline covers both seats. The turn clock is
-        // paused rather than reset, so a question a card asks during setup on either side of the
-        // window (a cast-on-draw card in the deal or in a replacement draw, §2.4) is still timed by
-        // R79 as before, and turn 1 starts a fresh turn clock when the turn key changes.
+        // paused, not reset, so a question a card asks during setup (§2.4) is still timed by R79, and
+        // turn 1 starts a fresh turn clock when the turn key changes.
         if pending_for.is_none() && !view.mulligan_owed.is_empty() {
             self.clear_prompt();
             self.pause_turn();
@@ -447,10 +425,8 @@ impl ClockState {
 
     /// The acting deadline this player is under. The mulligan clock, while it runs, is both seats'
     /// (R268). Otherwise a prompt clock they hold outranks the turn clock, and a paused turn clock
-    /// still reports its banked remainder, which is the frozen number the clients render while
-    /// R79's pause is in effect. The grace countdowns are read from `snapshot().grace_deadline`: they
-    /// are not a deadline to act by, they are a deadline to come back by, and both clients show them
-    /// for both players.
+    /// still reports its banked remainder, the frozen number clients render during R79's pause. Grace
+    /// countdowns are read from `snapshot().grace_deadline`: a deadline to come back by, not to act by.
     fn remaining_for(&self, player: PlayerId) -> Option<i64> {
         if self.stopped {
             return None;
@@ -477,8 +453,8 @@ impl ClockState {
     }
 }
 
-/// TS `MatchClock`: a cheap handle (`Clone`) on one match's clock. Dropping the last handle cancels
-/// every outstanding timer.
+/// A cheap handle (`Clone`) on one match's clock. Dropping the last handle cancels every outstanding
+/// timer.
 #[derive(Clone)]
 pub struct MatchClock {
     state: Arc<Mutex<ClockState>>,
@@ -524,7 +500,7 @@ impl MatchClock {
     }
 }
 
-/// TS `createMatchClock`. Must be called inside a tokio runtime (it arms the ceiling at once).
+/// Must be called inside a tokio runtime (it arms the ceiling at once).
 pub fn create_match_clock(input: CreateMatchClockInput) -> MatchClock {
     let CreateMatchClockInput {
         started_at,

@@ -10,8 +10,11 @@
 //! and the 8 the e2e specs import in multi-line lists (`05-reconnect`, `06-room-code`,
 //! `10-invite-gate`, `19-queue-modes-and-series`; v0.3.0 part 36). A name added to it needs a
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
-//! them for the lobby's room links (R767), and `REPLAY_LIST_PAGE` and `REPLAY_REQUESTS_PER_MINUTE`
-//! for the online replays' list and allowance (R768).
+//! them for the lobby's room links (R767), the four `USERNAME_*` hints for the username field
+//! (R1432, R1435), the three `WS_*` heartbeat numbers for the match client's wake probe and the
+//! tests that read them (R1441), `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442), and
+//! `REPLAY_LIST_PAGE` and `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance
+//! (R768).
 
 use serde_json::{Value, json};
 
@@ -62,6 +65,7 @@ fn constants() -> Vec<(&'static str, Value)> {
                 "Core": c::CATALOG_NUMBER_SET_OFFSETS.core,
                 "Classic": c::CATALOG_NUMBER_SET_OFFSETS.classic,
                 "Classic+": c::CATALOG_NUMBER_SET_OFFSETS.classic_plus,
+                "Meditative": c::CATALOG_NUMBER_SET_OFFSETS.meditative,
             }),
         ),
         ("CODE_ALPHABET", json!(c::CODE_ALPHABET)),
@@ -122,11 +126,15 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("MAX_SAVED_DECKS", json!(c::MAX_SAVED_DECKS)),
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
         ("MULLIGAN_CLOCK_MS", json!(c::MULLIGAN_CLOCK_MS)),
+        (
+            "PLAY_TELEMETRY_RETENTION_DAYS",
+            json!(c::PLAY_TELEMETRY_RETENTION_DAYS),
+        ),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
         (
-            "RATING_WINDOW_UNCAPPED_AFTER_SECONDS",
-            json!(c::RATING_WINDOW_UNCAPPED_AFTER_SECONDS),
+            "RATING_WINDOW_FULL_AFTER_SECONDS",
+            json!(c::RATING_WINDOW_FULL_AFTER_SECONDS),
         ),
         ("REDEMPTION_IDENTICAL_ERROR", json!(c::REDEMPTION_IDENTICAL_ERROR)),
         (
@@ -158,6 +166,19 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("TRIO_CODE_VERSION", json!(c::TRIO_CODE_VERSION)),
         ("TURN_CLOCK_MS", json!(c::TURN_CLOCK_MS)),
         ("TURN_CLOCK_SECONDS", json!(c::TURN_CLOCK_SECONDS)),
+        (
+            "USERNAME_CHANGE_COOLDOWN_SECONDS",
+            json!(c::USERNAME_CHANGE_COOLDOWN_SECONDS),
+        ),
+        ("USERNAME_MAX_LENGTH", json!(c::USERNAME_MAX_LENGTH)),
+        ("USERNAME_MIN_LENGTH", json!(c::USERNAME_MIN_LENGTH)),
+        (
+            "USERNAME_PREVIEW_DEBOUNCE_MS",
+            json!(c::USERNAME_PREVIEW_DEBOUNCE_MS),
+        ),
+        ("WS_IDLE_TIMEOUT_SECONDS", json!(c::WS_IDLE_TIMEOUT_SECONDS)),
+        ("WS_OUTBOX_MAX_FRAMES", json!(c::WS_OUTBOX_MAX_FRAMES)),
+        ("WS_PING_INTERVAL_SECONDS", json!(c::WS_PING_INTERVAL_SECONDS)),
     ]
 }
 
@@ -179,9 +200,12 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 53,
-        "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), and \
-         REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768)"
+        listed, 61,
+        "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
+         four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
+         telemetry's retention for the privacy policy (R1442), and REPLAY_LIST_PAGE and \
+         REPLAY_REQUESTS_PER_MINUTE (R768), with RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped \
+         window's RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
     );
 }
 

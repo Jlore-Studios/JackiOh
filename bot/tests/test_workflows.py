@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from harness import config, providers
+from harness import config, dashboard, providers
 
 WORKFLOWS = config.REPO_ROOT / ".github" / "workflows"
 
@@ -238,15 +238,16 @@ class StatusIssueStepTests(unittest.TestCase):
 
 
 class StatusLoopWorkflowTests(unittest.TestCase):
-    """bot-status keeps the pinned status issue current every ten minutes, whatever GitHub does
+    """bot-status keeps the pinned status issue current every five minutes, whatever GitHub does
     with schedules: one job loops and starts the next loop itself."""
 
     text = read("bot-status.yml")
 
-    def test_one_job_rewrites_it_every_ten_minutes(self):
+    def test_one_job_rewrites_it_every_five_minutes(self):
         refresh = job(self.text, "refresh")
         self.assertIn("runs-on: ubuntu-latest", refresh)
-        self.assertIn('EVERY_SECONDS: "600"', self.text)
+        self.assertIn('EVERY_SECONDS: "300"', self.text)
+        self.assertEqual(dashboard.EVERY_MINUTES * 60, 300)  # what the issue says it does
         self.assertIn('python -m harness dashboard --sweep --stats --companions \\\n'
                       '            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"', refresh)
         # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.
@@ -271,72 +272,42 @@ class StatusLoopWorkflowTests(unittest.TestCase):
 
 
 class TriageWorkflowTests(unittest.TestCase):
+    """#664: one job on GitHub's runner, from fixed rules: no model, no machine, no wait."""
+
     text = read("triage.yml")
 
     def grants(self, name: str) -> dict[str, str]:
         block = re.search(r"permissions:\n((?:\s{6}.*\n)+)", job(self.text, name)).group(1)
         return dict(re.findall(r"^\s+([\w-]+):\s*(\w+)", block, re.M))
 
-    def test_issues_on_a_method_label_pull_requests_when_opened_never_their_code(self):
-        self.assertRegex(self.text, r"issues:\n\s+types: \[labeled, opened\]")
+    def test_issues_and_pull_requests_when_opened_never_their_code(self):
+        self.assertRegex(self.text, r"issues:\n\s+types: \[opened, labeled\]")
         self.assertRegex(self.text, r"pull_request_target:\n\s+types: \[opened\]")
-        # A person can call it on any thread by number; the gate reads that thread read-only.
+        # A person can call it on any thread by number.
         self.assertRegex(self.text, r"workflow_dispatch:\n\s+inputs:\n\s+number:")
-        self.assertIn("|| inputs.number }}", self.text)
         self.assertNotRegex(self.text, r"^  pull_request:", "would run the pull request's code")
         refs = re.findall(r"ref: (.*)", self.text)
-        self.assertEqual(len(refs), 4)
-        self.assertTrue(all("default_branch" in ref for ref in refs), refs)
-        self.assertEqual(self.text.count("persist-credentials: false"), 4)
+        self.assertEqual(len(refs), 1)
+        self.assertIn("default_branch", refs[0])
+        self.assertIn("persist-credentials: false", self.text)
         self.assertNotIn("secrets.", self.text)
 
-    def test_a_label_that_is_no_method_label_never_cancels_the_method_run(self):
-        """#307: only a method label (or `bot:approved`, a person's yes to a suggestion) starts
-        the gate, and a `difficulty:*` label a person adds in the two-minute wait runs in a group
-        of its own, so it cancels nothing."""
-        self.assertIn("if: github.event_name != 'issues' || startsWith(github.event.label.name, "
-                      "'method:') || github.event.label.name == 'bot:approved'",
-                      job(self.text, "gate"))
-        self.assertIn("!startsWith(github.event.label.name, 'method:') && "
-                      "github.event.label.name != 'bot:approved' && "
-                      "format('-{0}', github.run_id)", self.text)
-        self.assertIn("cancel-in-progress: ${{ github.event_name == 'issues' }}", self.text)
-
-    def test_the_model_runs_on_muses_runner_and_cannot_write(self):
-        classify = job(self.text, "classify")
-        self.assertIn("runs-on: night-vm-muse", classify)
-        self.assertIn("if: needs.gate.outputs.go == 'true'", classify)
-        self.assertEqual(self.grants("classify"),
-                         {"contents": "read", "issues": "read", "pull-requests": "read"})
-        for name in ("gate", "apply"):
-            self.assertIn("runs-on: ubuntu-latest", job(self.text, name), name)
-        self.assertEqual(self.grants("gate"),
-                         {"contents": "read", "issues": "read", "pull-requests": "read"})
-        self.assertEqual(self.grants("apply"),
+    def test_one_job_on_githubs_runner_that_runs_no_model(self):
+        self.assertEqual(re.findall(r"(?m)^  (\w[\w-]*):$", self.text.split("\njobs:\n", 1)[1]),
+                         ["triage"])
+        triage_job = job(self.text, "triage")
+        self.assertIn("runs-on: ubuntu-latest", triage_job)
+        self.assertNotIn("night-vm", self.text)
+        self.assertNotIn("muse", self.text.lower())
+        self.assertEqual(self.grants("triage"),
                          {"contents": "read", "issues": "write", "pull-requests": "write"})
-        self.assertIn("always() && needs.gate.outputs.go == 'true'", job(self.text, "apply"))
-
-    def test_an_issue_forms_answers_become_labels_and_start_triage(self):
-        """#187: a trusted person's form issue gets its dropdowns as labels (`form_labels`), the
-        method last, then a dispatch of triage, since labels this workflow's token puts on start
-        no workflow. The body reaches Python through the environment, never the script."""
-        form = job(self.text, "form")
-        self.assertIn("github.event.action == 'opened'", form)
-        self.assertIn("""contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), """
-                      "github.event.issue.author_association)", form)
-        self.assertEqual(self.grants("form"),
-                         {"contents": "read", "issues": "write", "actions": "write"})
-        self.assertIn("BODY: ${{ github.event.issue.body }}", form)
-        self.assertEqual(self.text.count("github.event.issue.body"), 1)
-        self.assertIn("from harness.triage import form_labels", form)
-        self.assertIn('gh workflow run triage.yml -R "$REPO" --ref "$DEFAULT_BRANCH" -f number="$NUMBER"',
-                      form)
-        self.assertLess(form.index("--add-label \"$label\""), form.index("--add-label \"$method\""))
-
-    def test_every_job_has_a_timeout_and_actionlint_reads_it(self):
-        for name in ("gate", "classify", "apply", "form"):
-            self.assertIn("timeout-minutes:", job(self.text, name), name)
+        self.assertIn('python3 -m harness triage --payload "$GITHUB_EVENT_PATH"', triage_job)
+        self.assertIn("timeout-minutes:", triage_job)
         self.assertIn(".github/workflows/triage.yml", read("bot-selftest.yml"))
+
+    def test_only_human_of_the_labels_starts_it(self):
+        self.assertIn("if: github.event_name != 'issues' || github.event.action == 'opened' || "
+                      "github.event.label.name == 'human'", job(self.text, "triage"))
 
 
 class RequiredChecksTests(unittest.TestCase):

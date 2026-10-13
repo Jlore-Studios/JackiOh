@@ -1,33 +1,15 @@
-//! The player's game settings on the account (SPEC §9.1, R633, R634). Port of
-//! `apps/server/src/api/settings.ts`.
+//! The player's game settings on the account (SPEC §9.1, R633, R634).
 //!
-//! The device keeps the switches, volumes and choices a player has set in the settings dialog in
-//! `localStorage`. An active account keeps the same on the server too, so a player who signs in on
-//! another device, or clears site data, finds them there, and the client merges the two copies
-//! (R634). This file is the account's half: two routes, both `Active` (a pending account has the
-//! code screen and nothing else, §9.4), both keyed on the profile the verified token names and
-//! never on anything in the body.
+//! The device keeps the settings in `localStorage`; an active account keeps the same on the server
+//! and the client merges the two copies (R634). Two routes, both `Active` (§9.4), keyed on the
+//! profile the token names and never on the body: `GET /api/settings` and `PUT /api/settings` with
+//! `{ groups: { <id>: { at, values } } }`, answering `{ settings: { groups } }` after the merge.
 //!
-//!   GET /api/settings  -> { settings: { groups } }
-//!   PUT /api/settings  <- { groups: { <id>: { at, values } } }
-//!                      -> { settings: { groups } } as it stands after the merge
-//!
-//! A group is one of the client's stores (gameplay, audio, effects, card display): `values` is a
-//! flat object of its settings and `at` the time, on the writing device's clock, that it last
-//! changed. A PUT merges and never replaces (R634): each group sent replaces the stored one only
-//! when its `at` is strictly later, and a group the write does not name is left alone, so a stale
-//! device can never undo a newer change and a change to one group never undoes another's. The same
-//! body sent twice changes nothing, so a client may retry it freely. The merge is the store's
-//! (`app.merge_player_settings`, migration 0018), under a lock on the profile, so two devices
-//! writing at once cannot lose each other's group.
-//!
-//! The server does not know the settings: they are the client's, and a setting added there needs no
-//! change here. So a body is checked for its shape only — at most `PLAYER_SETTINGS_GROUPS_MAX`
-//! groups, each a slug of at most `PLAYER_SETTINGS_NAME_MAX_LENGTH` characters holding at most
-//! `PLAYER_SETTINGS_KEYS_MAX` settings named by short words, each a boolean, a finite number or a
-//! text of at most `PLAYER_SETTINGS_TEXT_MAX_LENGTH` characters — and an account holds at most
-//! `PLAYER_SETTINGS_BYTES_MAX` bytes of them. None of it is a rule: nothing the engine does reads
-//! a setting.
+//! A PUT merges and never replaces (R634): a group replaces the stored one only when its `at` is
+//! strictly later, and a group not named is left alone. The same body twice changes nothing. The
+//! merge is the store's (`app.merge_player_settings`, migration 0018), under a lock on the profile.
+//! The server does not know the settings, so a body is checked for shape only (`PLAYER_SETTINGS_*`
+//! limits). None of it is a rule: nothing the engine does reads a setting.
 
 use std::sync::Arc;
 
@@ -49,8 +31,6 @@ use crate::db::store::{
 };
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).
-///
-/// TS `/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/u`.
 fn is_group_id_shape(id: &str) -> bool {
     let mut words = id.split('-');
     let Some(head) = words.next() else {
@@ -72,8 +52,6 @@ fn is_group_id_shape(id: &str) -> bool {
 }
 
 /// R633: a setting's name is a camelCase or lower-case word (`dragToPlay`, `master`).
-///
-/// TS `/^[a-zA-Z][a-zA-Z0-9]*$/u`.
 fn is_setting_name_shape(name: &str) -> bool {
     let mut chars = name.chars();
     chars.next().is_some_and(|ch| ch.is_ascii_alphabetic()) && chars.all(|ch| ch.is_ascii_alphanumeric())
@@ -125,7 +103,7 @@ fn read_value(group: &str, name: &str, value: &Value) -> Result<PlayerSettingVal
     Ok(serde_json::from_value(value.clone())?)
 }
 
-/// TS `typeof at === "number" && Number.isSafeInteger(at) && at >= 0`.
+/// A whole number of epoch milliseconds, or `None`.
 fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
     const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
     let number = value?.as_f64()?;
@@ -136,10 +114,9 @@ fn epoch_ms_of(value: Option<&Value>) -> Option<i64> {
 }
 
 /// R633, R634: `groups` is an object of at most `PLAYER_SETTINGS_GROUPS_MAX` groups, each
-/// `{ at, values }`: `at` a whole number of epoch milliseconds, the writing device's clock, and
-/// `values` a flat object of at most `PLAYER_SETTINGS_KEYS_MAX` settings. An `at` after the server's
-/// own clock is taken as now, as R320 does for a choice: a device whose clock runs ahead could
-/// otherwise make its settings win over every later change for as long as its clock stays ahead.
+/// `{ at, values }`: `at` a whole number of epoch ms on the writing device's clock, `values` a flat
+/// object of at most `PLAYER_SETTINGS_KEYS_MAX` settings. An `at` after the server's clock is taken
+/// as now (R320's way): a fast clock could otherwise win over every later change.
 pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSettingsGroup>, ApiError> {
     let Some(raw) = body
         .get("groups")
@@ -199,9 +176,8 @@ pub fn read_groups(body: &Value, now: i64) -> Result<IndexMap<String, PlayerSett
     Ok(groups)
 }
 
-// TS's `createSettingsRoutes()` is two rows of `app.rs`'s `ROUTES`, `GET` and `PUT /api/settings`
-// (→ get_settings, put_settings). Both `AuthLevel::Active`, so a pending account gets 403 from each
-// (§9.4).
+// `GET` and `PUT /api/settings` are two rows of `app.rs`'s `ROUTES`, both `AuthLevel::Active`, so a
+// pending account gets 403 from each (§9.4).
 
 /// `GET /api/settings`.
 pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {

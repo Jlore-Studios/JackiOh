@@ -1,16 +1,12 @@
-//! `DELETE /api/account` (`src/api/auth.rs`): a player deletes their own account
-//! (← `apps/server/test/api/account.test.ts`).
+//! `DELETE /api/account` (`src/api/auth.rs`): a player deletes their own account.
 //!
-//! The contract the web client builds against: the route is authenticated like every other
-//! (`user`, so a pending account can leave too), answers 204 with no body when the account is
-//! gone, and answers the API's one error shape otherwise. What the delete does to each table in
-//! Postgres is `tests/sql/06_account_deletion.sql` and `tests/store/contract.rs`; here the question
-//! is the route's own: who may call it, what it refuses, and the order it does its two deletes in.
+//! The route is authenticated like every other (`user`, so a pending account can leave too), answers
+//! 204 with no body when the account is gone, and the API's one error shape otherwise. What the
+//! delete does to each table is `tests/sql/06_account_deletion.sql` and `tests/store/contract.rs`;
+//! here: who may call it, what it refuses, and the order of its two deletes.
 //!
-//! TS ran these on its scripted auth, whose `deleteUser` a test could swap or remove. Only the
-//! Supabase provider deletes users in v0.3.0 (the E2E fixture auth cannot, as in TS), so the route
-//! is driven through it, against the scripted GoTrue of `super::auth`, and the "cannot delete"
-//! case through the fixture auth itself.
+//! Only the Supabase provider deletes users, so the route is driven through it against the scripted
+//! GoTrue of `super::auth`; the "cannot delete" case goes through the fixture auth.
 
 use std::sync::Arc;
 
@@ -25,16 +21,15 @@ use crate::support::deps::{call, test_app};
 const PROFILE: &str = "p-leaving";
 const OTHER: &str = "p-staying";
 
-/// The suite's server on a scripted GoTrue, with the two active accounts TS's `beforeEach` made.
+/// The suite's server on a scripted GoTrue, with two active accounts.
 struct Setup {
     h: Harness,
     app: Arc<App>,
     token: String,
 }
 
-/// The GoTrue user id behind a profile: TS wrote `user-<id>`, which its admin double took; the real
-/// admin client asks only for a UUID (supabase-js's `validateUUID`), so the id is one, derived from
-/// the profile id (FNV-1a) so each profile keeps its own.
+/// The GoTrue user id behind a profile: the admin client asks for a UUID, so the id is one,
+/// derived from the profile id (FNV-1a) so each profile keeps its own.
 fn user_of(id: &str) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
     for byte in id.bytes() {
@@ -44,10 +39,10 @@ fn user_of(id: &str) -> String {
     format!("00000000-0000-4000-8000-{:012x}", hash & 0xffff_ffff_ffff)
 }
 
-/// GoTrue's id for TS's `user-a`.
+/// GoTrue's id for the first user.
 const USER_A: &str = "aaaaaaaa-0000-4000-8000-000000000001";
 
-/// TS `profileWith`: a profile row seeded with the profile's user id and a token that verifies as it.
+/// A profile row seeded with the profile's user id and a token that verifies as it.
 async fn profile_with(h: &Harness, app: &Arc<App>, id: &str, status: &str) -> String {
     let user_id = user_of(id);
     fake_of(app)
@@ -88,8 +83,8 @@ mod delete_api_account {
 
     #[tokio::test]
     async fn is_declared_user_beside_the_other_account_routes() {
-        // TS read the route table; here the declaration shows in what the route lets through: a
-        // pending account (which an `active` route refuses with 403) is let in.
+        // The declaration shows in what the route lets through: a pending account (which an
+        // `active` route refuses with 403) is let in.
         let setup = setup().await;
         let pending = profile_with(&setup.h, &setup.app, "p-pending", "pending").await;
         let (status, _) = remove(&setup.app, Some(&pending)).await;
@@ -237,7 +232,6 @@ mod delete_api_account {
 
     #[tokio::test]
     async fn refuses_a_player_in_a_conquest_series_that_is_not_over_with_409_and_deletes_nothing() {
-        // TS swapped `store.series.activeFor`; here the series is a real row the store finds.
         let setup = setup().await;
         let app = &setup.app;
         let trio = json!({
@@ -279,9 +273,8 @@ mod delete_api_account {
 
     #[tokio::test]
     async fn answers_503_on_a_server_whose_auth_provider_cannot_delete_users_and_deletes_nothing() {
-        // The E2E fixture auth is that server: it has three accounts and no way to remove one, as
-        // TS's `createE2EAuth` had no `deleteUser`. `support::deps::test_app()` switches deletion on
-        // (TS's test fake had it), so it is switched back off here (TS: `delete deps.auth.deleteUser`).
+        // The E2E fixture auth is that server: it has no way to remove an account.
+        // `support::deps::test_app()` switches deletion on, so it is switched back off here.
         let app = test_app().await;
         let Auth::E2e(fixtures) = &app.auth else {
             panic!("support::deps::test_app() runs on the fixture auth");
@@ -328,7 +321,7 @@ mod delete_api_account {
 mod the_supabase_providers_delete_user {
     use super::*;
 
-    /// TS `provider(deletion)`: the admin lookup answers `user-a` (`USER_A`), confirmed.
+    /// The admin lookup answers `USER_A`, confirmed.
     async fn provider(deletion: DeletionReply) -> Harness {
         let h = Harness::new().await;
         h.gotrue

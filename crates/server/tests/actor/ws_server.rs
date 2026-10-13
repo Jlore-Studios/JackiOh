@@ -5,15 +5,12 @@
 //!    library's default ceiling is far larger);
 //!  - one client address holds at most `WS_MAX_CONNECTIONS_PER_ADDRESS` sockets, handshakes
 //!    included;
-//!  - the token travels as `?token=` (SURFACE §11.3: the `Sec-WebSocket-Protocol` and
-//!    `Authorization` paths are gone), and `WS_SUBPROTOCOL` is still echoed when it is offered.
+//!  - the token travels as `?token=`, and `WS_SUBPROTOCOL` is still echoed when it is offered.
 //!
-//! Port of `apps/server/test/match/ws-server.test.ts`. TS ran `attachWebSocketServer` over a Node
-//! listener with a mocked registry `attach`; here the whole app is served (`app::router`, which
-//! mounts `/ws/match`, SURFACE §11.2) and the registry is the real one, so "attach was called for
-//! `match-1` and `profile-1`" is read off the socket itself: the actor's first `view` frame names
-//! the seat (`viewer: "p1"`). The client is a small hand-rolled RFC 6455 client over a
-//! `TcpStream`, since no WebSocket client crate is on SURFACE §2's list.
+//! The whole app is served (`app::router`, which mounts `/ws/match`) and the registry is the real
+//! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
+//! hand-rolled RFC 6455 client over a `TcpStream`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §2, §11.2, §11.3.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,16 +32,14 @@ use crate::support::deps::{add_user, test_app};
 /// real I/O, so tokio's clock is not paused in this file.
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The per-address count may be process-wide (TS kept one map per attached server, vitest one
-/// process per file), so the tests of this file run one at a time: each opens up to the cap from
-/// 127.0.0.1.
+/// The per-address count may be process-wide, so the tests of this file run one at a time: each opens
+/// up to the cap from 127.0.0.1.
 static SERIAL: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn from<T: serde::de::DeserializeOwned>(value: Value) -> T {
     serde_json::from_value(value.clone()).unwrap_or_else(|error| panic!("{error}: {value}"))
 }
 
-/// The fake store behind the test app (SURFACE §11.2's `Db::Fake`).
 fn fake(app: &App) -> Arc<tokio::sync::Mutex<FakeData>> {
     match &app.db {
         Db::Fake(data) => Arc::clone(data),
@@ -74,7 +69,7 @@ fn deck_size() -> usize {
 }
 
 /// A token is opaque; it is percent-encoded into the query so any token survives the URL.
-fn encode_query(raw: &str) -> String {
+pub(super) fn encode_query(raw: &str) -> String {
     raw.bytes()
         .map(|byte| match byte {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => (byte as char).to_string(),
@@ -83,7 +78,6 @@ fn encode_query(raw: &str) -> String {
         .collect()
 }
 
-/// A listener over a test app, and the port it serves.
 struct Listening {
     port: u16,
     server: tokio::task::JoinHandle<()>,
@@ -91,15 +85,15 @@ struct Listening {
 
 impl Drop for Listening {
     fn drop(&mut self) {
-        // TS's `afterEach`: every client terminated, the sockets closed and the listener released.
+        // Every client terminated, the sockets closed and the listener released.
         self.server.abort();
     }
 }
 
 /// One active player per seat of `matches` live matches, `profile-<k>` (user `user-<k>`) in
-/// `match-<m>` with `k` = 2m − 1 and 2m, every match started on the real registry. Returns the
-/// listener and each profile's token, in profile order.
-async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+/// `match-<m>` with `k` = 2m − 1 and 2m, every match started on the real registry. Returns the app
+/// and each profile's token, in profile order.
+pub(super) async fn seed_matches(matches: usize) -> (Arc<App>, Vec<String>) {
     let app = test_app().await;
     let pool = playable();
     let size = deck_size();
@@ -138,7 +132,12 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
             .await
             .expect("the registry starts the match");
     }
+    (app, tokens)
+}
 
+/// `seed_matches` served on a real listener. Returns the listener and each profile's token.
+async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
+    let (app, tokens) = seed_matches(matches).await;
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
     let port = listener.local_addr().expect("a bound address").port();
     let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
@@ -148,7 +147,6 @@ async fn listen_with(matches: usize) -> (Listening, Vec<String>) {
     (Listening { port, server }, tokens)
 }
 
-/// TS's `listen()`: one active player in `match-1`, whose socket the registry keeps open.
 async fn listen() -> (Listening, String) {
     let (listening, tokens) = listen_with(1).await;
     let token = tokens.into_iter().next().expect("profile-1's token");
@@ -177,14 +175,12 @@ impl Opened {
     }
 }
 
-/// A WebSocket client: the handshake, masked text frames out, frames in (RFC 6455).
 struct Client {
     stream: TcpStream,
     /// The `Sec-WebSocket-Protocol` the server echoed, if any.
     protocol: Option<String>,
 }
 
-/// Opens `ws://127.0.0.1:<port>/ws/match?<query>`, offering `protocols`.
 async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
     let mut stream = TcpStream::connect(("127.0.0.1", port))
         .await
@@ -232,7 +228,6 @@ async fn open(port: u16, query: &str, protocols: &[&str]) -> Opened {
     Opened::Open(Client { stream, protocol })
 }
 
-/// The query that names `match-1` and carries `token`.
 fn query(match_id: &str, token: &str) -> String {
     format!("matchId={}&token={}", encode_query(match_id), encode_query(token))
 }
@@ -317,7 +312,6 @@ impl Client {
         }
     }
 
-    /// The next text frame, parsed; `None` once the socket closes or stays silent for `wait`.
     async fn next_message(&mut self, wait: Duration) -> Option<Value> {
         loop {
             match self.read_frame(wait).await {
@@ -341,7 +335,7 @@ impl Client {
         }
     }
 
-    /// TS's `readyState === OPEN` after `wait`: every frame that arrives meanwhile is read (the
+    /// Whether the socket is still open after `wait`: every frame that arrives meanwhile is read (the
     /// `malformed` answer among them), and none of them may be a close or the end of the stream.
     async fn still_open_after(&mut self, wait: Duration) -> bool {
         let deadline = tokio::time::Instant::now() + wait;
@@ -359,7 +353,6 @@ impl Client {
     }
 }
 
-/// One read off the socket.
 enum Read {
     Frame(u8, Vec<u8>),
     /// Nothing arrived in the time given.
@@ -368,7 +361,7 @@ enum Read {
     Ended,
 }
 
-/// TS's `vi.waitFor` around an open: a slot is freed when the server has seen its socket close,
+/// A slot is freed when the server has seen its socket close,
 /// which may land a moment after the client saw it.
 async fn open_when_free(port: u16, query: &str, protocols: &[&str]) -> Client {
     for _ in 0..50 {
@@ -466,9 +459,8 @@ mod sockets_per_client_address {
 }
 
 mod the_token_on_the_handshake {
-    //! TS: "the token in Sec-WebSocket-Protocol". SURFACE §11.3 keeps one token path, `?token=`
-    //! (what the browser and the e2e Node player send), and still echoes `jackioh.v1` when it is
-    //! offered; these hold the server to exactly that.
+    //! SURFACE §11.3: one token path, `?token=` (what the browser and the e2e Node player send), and
+    //! `jackioh.v1` is still echoed when it is offered; these hold the server to exactly that.
     use super::*;
 
     #[tokio::test]
@@ -479,7 +471,7 @@ mod the_token_on_the_handshake {
             .await
             .open();
         assert_eq!(client.protocol.as_deref(), Some(WS_SUBPROTOCOL));
-        // attach("match-1", "profile-1", …): profile-1 holds seat p1 of match-1.
+        // profile-1 holds seat p1 of match-1.
         let view = client.first_view().await;
         assert_eq!(view["viewer"], "p1");
     }
@@ -488,7 +480,7 @@ mod the_token_on_the_handshake {
     async fn reads_the_token_from_the_query_and_never_from_the_protocol_header() {
         let _serial = SERIAL.lock().await;
         let (listening, token) = listen().await;
-        // A token offered beside the protocol name is not a credential any more: the socket is
+        // A token offered beside the protocol name is not a credential: the socket is
         // refused as one with no token at all, and the token is never echoed.
         let mut client = open(listening.port, "matchId=match-1", &[WS_SUBPROTOCOL, &token])
             .await
@@ -505,5 +497,117 @@ mod the_token_on_the_handshake {
         let mut plain = open(listening.port, &query("match-1", &token), &[]).await.open();
         assert_eq!(plain.protocol, None);
         assert_eq!(plain.first_view().await["viewer"], "p1");
+    }
+}
+
+mod a_finished_matchs_seats_may_reopen_its_socket {
+    //! §9.5: every ending clears both seats' in-match state, but the rematch window keeps a
+    //! finished match's seats coming back — presence is the opponent's socket being open, so a
+    //! seat that left may reopen its socket and read as here again. Anyone else is still
+    //! refused (§9.1).
+    use super::*;
+
+    use jackioh_server::app::now_ms;
+    use jackioh_server::db::store::MatchRow;
+
+    /// The finished match's clocks, as `tests/api/rematch.rs` seeds them.
+    fn clocks(now: i64) -> Value {
+        json!({
+            "turnDeadline": null,
+            "promptDeadline": null,
+            "graceDeadline": { "p1": null, "p2": null },
+            "ceilingAt": now + 3_600_000,
+        })
+    }
+
+    /// Two profiles with tokens and no in-match state, and the finished match between them:
+    /// exactly what a recorded result leaves behind. Returns the app and both seats' tokens.
+    async fn seed_finished_seats() -> (Arc<App>, String, String) {
+        let app = test_app().await;
+        let pool = playable();
+        let size = deck_size();
+        let mut tokens = Vec::new();
+        for k in [1, 2] {
+            let profile_id = format!("reopen-profile-{k}");
+            let user_id = format!("reopen-user-{k}");
+            tokens.push(add_user(&app, &user_id, &format!("{user_id}@example.test"), true));
+            fake(&app).lock().await.seed_profile(json!({
+                "id": profile_id,
+                "userId": user_id,
+                "status": "active",
+            }));
+        }
+        let now = now_ms();
+        let row: MatchRow = from(json!({
+            "id": "match-reopened",
+            "seed": "seed-reopened",
+            "players": ["reopen-profile-1", "reopen-profile-2"],
+            "decks": [pool[..size].to_vec(), pool[size..size * 2].to_vec()],
+            "catalogVersion": jackioh_cards::catalog_version(),
+            "ranked": false,
+            "status": "finished",
+            "createdAt": now,
+            "finishedAt": now,
+            "clocks": clocks(now),
+            "portraits": ["vanilla", "vanilla"],
+        }));
+        let mut tx = app.db.begin(None).await.expect("begin");
+        tx.matches_create(&row).await.expect("matches_create");
+        tx.commit().await.expect("commit");
+        let mut tokens = tokens.into_iter();
+        (
+            app,
+            tokens.next().expect("seat one's token"),
+            tokens.next().expect("seat two's token"),
+        )
+    }
+
+    /// `seed_finished_seats`'s app served on a real listener.
+    async fn serve_finished(app: Arc<App>) -> Listening {
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let port = listener.local_addr().expect("a bound address").port();
+        let service = router(app).into_make_service_with_connect_info::<std::net::SocketAddr>();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, service).await.expect("the listener serves");
+        });
+        Listening { port, server }
+    }
+
+    #[tokio::test]
+    async fn a_seat_reopens_its_socket_on_its_finished_match() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, p2) = seed_finished_seats().await;
+        let listening = serve_finished(app).await;
+        let mut client = open(listening.port, &query("match-reopened", &p2), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        assert_eq!(client.first_view().await["viewer"], "p2");
+    }
+
+    #[tokio::test]
+    async fn another_profiles_finished_match_is_still_refused() {
+        let _serial = SERIAL.lock().await;
+        let (app, _p1, _p2) = seed_finished_seats().await;
+        let user_id = "reopen-user-3";
+        let token = add_user(&app, user_id, &format!("{user_id}@example.test"), true);
+        fake(&app).lock().await.seed_profile(json!({
+            "id": "reopen-profile-3",
+            "userId": user_id,
+            "status": "active",
+        }));
+        let listening = serve_finished(app).await;
+        let mut client = open(
+            listening.port,
+            &query("match-reopened", &token),
+            &[WS_SUBPROTOCOL],
+        )
+        .await
+        .open();
+        let refusal = client
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
+        assert_eq!(refusal["type"], "error");
+        assert_eq!(client.close_code().await, 4403);
     }
 }

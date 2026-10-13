@@ -1,21 +1,7 @@
-// Lesson "basics" as data (SPEC §9.10, R291): ../lessons.ts says what every field means and the
-// rules every lesson keeps. Its coach script is ../scripts/basics.ts.
-//
-// The deal. The seed's shuffle moves list positions, not cards, so the lists below are in the order
-// that deals this (`scripts/lesson-deal.ts basics` prints it):
-//
-//  - You: Mr. Vanilla, Duplicating Felinors and Gary the Gambler in hand, then Gravedigger,
-//    Jlockeed Shredder-10, 4-mana 7/7, Professor Curvature, Midrange Menace and Reno — a unit for
-//    every mana on turns 1 to 4, and only units with a line of text or less in the nine cards the
-//    coach line sees. The cards with prompts, Rush, Charge or more sit below them.
-//  - The AI: Gravedigger, Archivist, Professor Curvature and Moths to the Flame in hand (and The
-//    Coin), then Mr. Vanilla, Gary the Gambler, Carnivorous Cube, Prejudiced Postdoc and Duplicating
-//    Felinors; Straaza, 4-mana 7/7 and the Big D-fender wall are at the bottom. Lesson 1 allows it
-//    plain units only (R291), which leaves few. Patch v0.1.1 made Mr. Vanilla a 4/4 on both sides of
-//    the table, and the old deal's AI then walled the player's Mr. Vanilla on its first turn (a
-//    Postdoc copy in Defense Position), so the coach's turn-2 hero hit never came; this deal opens
-//    the AI with 2-drops, so its first turn is The Coin and Archivist, its second Moths to the Flame
-//    and an attack, and its Postdoc comes on its fourth.
+// Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/basics.ts is the coach.
+// Deck order determines this seed's deal (`scripts/lesson-deal.ts basics`); changing it changes the
+// scripted opening. The human gets units for turns 1–4, while Lesson 1's AI gets plain units only
+// (R291): The Coin and Archivist first, then Moths to the Flame.
 
 import type { TutorialLesson } from "../lessons.ts";
 

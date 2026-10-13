@@ -3,10 +3,7 @@
 //! KY's Constant set and the steps after it, a fused card's ingredients each reading their own
 //! declaration (R102), a number tuned on the Radiant face only (R749) or the base face only (R1431),
 //! and a card resolving with the number as it stands.
-//!
-//! Port of `packages/engine/test/params.test.ts`. TS handed `param` plain objects shaped like a
-//! context (`{ state, self, radiant, defId, data }`); here each is an `EffectContext` with those
-//! fields set. A TS `throw` is a panic with the same message (SURFACE §4.4.9), caught by `panic_text`.
+//! Surface contract: docs/v0.3.0/SURFACE.md §4.4.9.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -28,36 +25,31 @@ fn game() -> GameState {
     state
 }
 
-/// The one card `in_hand` added (TS `const [card] = inHand(…)`).
 fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("no card")
 }
 
-/// The card as it stands in `state` now (TS held the live object).
 fn live(state: &GameState, card: &CardInstance) -> CardInstance {
     find_instance(state, &card.id)
         .cloned()
         .unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
-/// The card in `state`, to write through (TS wrote to the live object).
+/// The card in `state`, to write through.
 fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
     find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("no card {}", card.id))
 }
 
-/// TS `paramValue(state, card, key)`, on the card as it stands.
 fn value(state: &GameState, card: &CardInstance, key: &str) -> i32 {
     param_value(state, Some(&live(state, card)), key, ParamValueOptions::default())
 }
 
-/// TS `{ [PART_KEY]: path }`.
 fn part(path: &[usize]) -> IndexMap<String, Value> {
     let mut data = IndexMap::new();
     data.insert(PART_KEY.to_string(), json!(path));
     data
 }
 
-/// The message a TS `throw` (a Rust panic) carried.
 fn panic_text(run: impl FnOnce() -> i32) -> String {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(run)) {
         Ok(value) => panic!("expected a throw, got {value}"),
@@ -69,7 +61,6 @@ fn panic_text(run: impl FnOnce() -> i32) -> String {
     }
 }
 
-/// TS `{ state, self: null, radiant, defId? }`: a context with no card of its own.
 fn bare_context<'a>(state: &'a mut GameState, radiant: bool, def_id: Option<&str>) -> EffectContext<'a> {
     let mut ctx = EffectContext::new(sink_for(state), P1);
     ctx.self_ = None;
@@ -78,7 +69,6 @@ fn bare_context<'a>(state: &'a mut GameState, radiant: bool, def_id: Option<&str
     ctx
 }
 
-/// B3.4 rule 5: declared numbers (R386)
 mod r386_b3_4_rule_5_declared_numbers {
     use super::*;
 
@@ -135,7 +125,6 @@ mod r386_b3_4_rule_5_declared_numbers {
         assert_eq!(value(&state, &card, "times"), 1);
         set_param(live_mut(&mut state, &card), "times", 3);
         assert_eq!(value(&state, &card, "times"), 1);
-        // The Radiant face prints it, so it is tuned as any number is.
         let shining = one(in_hand(&mut state, &radiant_number.id, P1, 1));
         live_mut(&mut state, &shining).radiant = true;
         assert_eq!(value(&state, &shining, "times"), 2);
@@ -185,7 +174,6 @@ mod r386_b3_4_rule_5_declared_numbers {
             params_view(&state, &live(&state, &shining)).and_then(|view| view.get("cards").copied()),
             Some(2)
         );
-        // The base face prints it, so it is tuned as any number is.
         let card = one(in_hand(&mut state, &base_number.id, P1, 1));
         assert_eq!(value(&state, &card, "cards"), 2);
         assert_eq!(
@@ -277,7 +265,6 @@ mod r386_b3_4_rule_5_declared_numbers {
             let mut sink = sink_for(&mut state);
             let mut ctx = make_context(&mut sink, Some(&now), HookOptions::default());
             assert_eq!(param(&ctx, "damage"), 4);
-            // TS `{ ...ctx, radiant: true }`.
             ctx.radiant = true;
             assert_eq!(param(&ctx, "damage"), 6);
             ctx.radiant = false;
@@ -404,7 +391,6 @@ mod r386_b3_4_rule_5_declared_numbers {
     }
 }
 
-/// TS's module `let nonce`.
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
 fn act(state: &GameState, action: ActionInput) -> GameState {
@@ -416,7 +402,6 @@ fn act(state: &GameState, action: ActionInput) -> GameState {
     result.state
 }
 
-/// B3.4 rule 5: a card resolves with its number as it stands (R386)
 mod r386_b3_4_rule_5_a_card_resolves_with_its_number_as_it_stands {
     use super::*;
 

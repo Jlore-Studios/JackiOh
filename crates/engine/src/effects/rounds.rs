@@ -9,8 +9,6 @@
 //! Each round is a part (`lazy_part`) holding the next, built when the list reaches it. A Death hook
 //! that asks parks the rest on `state.work` (R113); the part's memo is the destroyed count it began
 //! with, so a resumed part rebuilds exactly as it ran and the round after it decides afresh.
-//!
-//! Port of `packages/engine/src/effects/rounds.ts`.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -36,7 +34,7 @@ pub enum StormSide {
     Enemy,
 }
 
-/// `damageRoundsUntilDeath`'s arguments (TS `type Storm`).
+/// `damageRoundsUntilDeath`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Storm {
@@ -46,7 +44,7 @@ pub struct Storm {
     pub side: Option<StormSide>,
 }
 
-/// TS `typeof memo === "number"`: the destroyed count a part began with, when one was recorded.
+/// The destroyed count a part began with, when one was recorded.
 fn memo_count(memo: &Memo) -> Option<i32> {
     let value: &Value = memo.as_ref()?;
     if let Some(n) = value.as_i64() {
@@ -97,11 +95,9 @@ pub fn damage_rounds_until_death(args: Storm) -> Effect {
     round(args, 0, None)
 }
 
-// ---------------------------------------------------------------------------
 // Casts in rounds until a Unit dies (SPEC §8.7 C+ #32.3 Blade Storm's base face, R652)
-// ---------------------------------------------------------------------------
 
-/// `castRoundsUntilDeath`'s arguments (TS `type CastStorm`): the Spell to cast, and how many rounds.
+/// `castRoundsUntilDeath`'s arguments: the Spell to cast, and how many rounds.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct CastStorm {

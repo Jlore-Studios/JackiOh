@@ -1,45 +1,8 @@
-// BUILD M8 spec 06 — "Create room, second player joins via `cy.task(\"wsPlayer\")`".
-//
-// Key assertions (BUILD M8, quoted verbatim):
-//
-//     "both see the board; actions round-trip; game ends and both are queue-eligible"
-//
-// This is also the M6 gate: "`e2e/06` (room-code match) passes with the second player driven by a
-// Node WebSocket client via `cy.task`."
-//
-// THE ROOM CODE. R79 and §9.5 make it 6 characters (`ROOM_CODE_LENGTH`) from the invite-code
-// alphabet, and R104 writes that alphabet out: `23456789ABCDEFGHJKLMNPQRSTUVWXYZ`. R104 exists
-// because §9.4's "32-symbol alphabet without 0/O/1/I/l" is unsatisfiable as written — dropping
-// 0, 1, I, O *and* L from the 36 alphanumerics leaves 31 — so the resolution keeps 32 symbols by
-// dropping four and normalising input to upper case. Neither the length nor the alphabet is
-// spelled in this file: both are imported from `crates/server/src/config.rs`, and the spec also
-// checks that `support/config.ts`'s own mirror of the length has not drifted from it.
-//
-// R110: a room code is unique only among matches that are not yet `over`, so a finished match
-// releases its code rather than burning it. That is not directly observable from a browser (the
-// suite cannot make the server mint a chosen code), so what this spec asserts is R110's visible
-// consequence and BUILD's actual criterion: once the match is over, both profiles are out of a
-// match and can enter the queue again. The reuse of the code itself belongs to a server test.
-//
-// HOW SEAT 2 JOINS. Not over the socket. `crates/server/src/actor/protocol.rs` accepts a `joinRoom`
-// frame "only so a client that speaks it gets a pointed `error` instead of 'malformed': joining a
-// room is `POST /api/rooms/:code/join`, because the atomic single-claim and the loadout re-check
-// are HTTP concerns and a socket is opened for a match that already exists." So seat 2 claims the
-// room over HTTP and only then opens its socket onto the match id it was given. The
-// `cy.wsPlayer({ action: "joinRoom" })` command in `support/commands.ts` cannot work against this
-// protocol — see the hand-off report.
-//
-// HIDDEN INFORMATION. CLAUDE.md rule 7: the client renders `viewFor` and never sees hidden
-// information. Two assertions hold the line: seat 2's view must report its opponent's hand as a
-// bare count (§10.8), and the browser must render exactly as many hand cards as that count says
-// seat 1 holds — no more.
-//
-// A ROOM SHARED AS A LINK (R767). The second `it` hands the room over the way the room ticket's
-// "Copy invite link" does: the guest opens `/play?room=CODE&mode=bo1` in the browser, finds the code
-// filled in and the deck choice focused, picks a deck, presses Join and both players reach the
-// match. The host stays a Node client; the browser is the guest, who is the one the link is for.
-//
-// Needs: M6 (server, match actor, WS protocol). See e2e/README.md.
+// BUILD M8 06: browser and Node client complete a room-code match (M6; e2e/README.md).
+// R79/R104 define the imported room-code length and alphabet; R110 makes finished players queueable.
+// Seat 2 claims `POST /api/rooms/:code/join` before opening its socket (§9.5).
+// CLAUDE.md rule 7/§10.8: Node sees the opponent's hand count, while the browser renders its own.
+// R767 covers a guest following the room link and choosing its deck.
 
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
@@ -61,10 +24,7 @@ import {
 import type { InstalledLoadout } from "../../support/commands.ts";
 import type { ActionInput, Lane, PlayerId, Row, Side } from "../../support/types.ts";
 
-// ---------------------------------------------------------------------------------------------
-// Local scaffolding. Items marked ASK belong in `e2e/support/**` (one place to change) and are
-// listed in the hand-off report for this spec.
-// ---------------------------------------------------------------------------------------------
+// Local scaffolding; ASK items belong in `e2e/support/**`.
 
 /** ASK (support/commands.ts + support/config.ts): `cy.signIn(account)` and the session key. */
 const SESSION_STORAGE_KEY = "jackioh.e2e.session";
@@ -108,7 +68,7 @@ function visitAs(token: string, path: string): void {
   });
 }
 
-// --- reading seat 2's view --------------------------------------------------------------------
+// Reading seat 2's view.
 
 type CardLike = { instanceId: string };
 type SideLike = {
@@ -188,8 +148,6 @@ function renderedHandCards(): Cypress.Chainable<number> {
   );
 }
 
-// ---------------------------------------------------------------------------------------------
-
 describe("06 room code — a networked match between a browser and a Node client", () => {
   it("opens a room, plays it out and leaves both players queue-eligible", () => {
     const seed = seedFor("06-room-code");
@@ -200,9 +158,7 @@ describe("06 room code — a networked match between a browser and a Node client
     let seatOneDecks: InstalledLoadout | null = null;
     let seatTwoDecks: InstalledLoadout | null = null;
 
-    // --- both seats are free and have this spec's fixture saved as a deck (§9.4, R250) ---------
-    // `cy.freeAccount`: the E2E server keeps its state for its whole life, so a match or series an
-    // earlier spec left behind would answer `POST /api/rooms` with 409 `already_in_match`.
+    // Persistent E2E accounts need freeing; save each fixture deck (§9.4, R250).
     cy.freeAccount(seatOne);
     cy.freeAccount(seatTwo);
     cy.installLoadout(seatOne, "06-room-a").then((installed) => {
@@ -212,21 +168,8 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // --- create the room ---------------------------------------------------------------------
-    // ASK (support/testids.ts + apps/web): the room screen has no testids yet, so the room is
-    // created over the endpoint §9.5 defines rather than by clicking.
-    //
-    // `seed` is BUILD M8's "every spec sets a seed". A networked match's seed is normally minted
-    // by the server (§9.3, `deps.ids.seed()`); R143 makes it an optional field that an end-to-end
-    // server honours and every other server REFUSES with a 400 — never ignores, so a production
-    // caller cannot quietly get an unseeded match while believing it asked for one. A room is
-    // created before anyone joins, so the host's seed is held against the code until the join
-    // consumes it (`match/rooms.ts` `rememberSeed`), and `apps/server/test/match/rooms.test.ts`
-    // proves the join uses it verbatim. This comment used to say the field was ignored and that
-    // the fixture decks were therefore written not to need it; the first half is no longer true,
-    // and the second is kept because it costs nothing and is one less thing to depend on.
-    //
-    // R264: a room carries a mode, and a Best-of-1 room is made with one saved deck, by id.
+    // ASK: create through §9.5's endpoint until the room screen has testids. R143 requires the
+    // E2E server to honour this §9.3 seed; R264 makes a Best-of-1 room carry one deck id.
     cy.then(() => {
       cy.request<{ code: string; expiresAt: number; mode: string }>({
         method: "POST",
@@ -256,7 +199,7 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // --- seat 2 claims it: `app.join_room`'s atomic single-claim (§9.5) -----------------------
+    // Seat 2 atomically claims the room (§9.5).
     cy.then(() => {
       cy.request<{ matchId: string; seriesId: string | null; code: string; seat: string; mode: string }>({
         method: "POST",
@@ -273,10 +216,9 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // --- both connect ------------------------------------------------------------------------
+    // Both connect.
     cy.then(() => {
-      // `seat` is omitted: `tasks/wsPlayer.ts` defaults it to "p2", and support/commands.ts's
-      // `WsPlayerCommand` does not yet carry the field its own task accepts (ASK).
+      // `wsPlayer` defaults the omitted seat to p2 (ASK: type its `seat` field).
       cy.wsPlayer({
         action: "connect",
         name: SEAT_TWO,
@@ -284,14 +226,14 @@ describe("06 room code — a networked match between a browser and a Node client
         token: seatTwo.token,
         matchId,
       }).should((result) => {
-        // The actor pushes a fresh full view on attach (§9.5), so the socket has one already.
+        // Attach pushes a fresh §9.5 view.
         const view = asView(result.view);
         expect(view.viewer, "seat 2's view is seat 2's").to.eq(SEAT_TWO_ID);
       });
       visitAs(seatOne.token, routes.match(matchId));
     });
 
-    // --- "both see the board" ----------------------------------------------------------------
+    // Both see the board.
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(heroId("opponent"))).should("be.visible");
     for (const side of SIDES) {
@@ -322,12 +264,7 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // --- "actions round-trip": browser -> actor -> Node ---------------------------------------
-    // R265: both mulligans are open from the deal, in either order (spec 20 drives both orders).
-    // Seat 1 answers in the browser first, and seat 2's view saying "opponent ready" is that answer
-    // having reached the actor and come back out to Node — R266 makes readiness the one thing about
-    // it the other seat is told. Seat 2's own prompt was open all along; its answer is the second,
-    // which resolves both and starts turn 1.
+    // R265 mulligans are simultaneous; R266 lets Node observe seat 1's browser answer.
     cy.keepMulligans();
     cy.then(() => {
       cy.wsPlayer({
@@ -339,16 +276,12 @@ describe("06 room code — a networked match between a browser and a Node client
     seatTwoKeepsMulligan();
     waitForMyTurn();
 
-    // Mana is asserted HERE and not with the rest of the board, because §2.1 puts the mulligan
-    // before turn 1 and §2.3 makes max mana the number of turns the player has started — so during
-    // the mulligan `you.mana` is correctly `{current: 0, max: 0}` and `Board.tsx` renders no
-    // crystals at all. "Both see the board" is satisfied above; this is the first moment a crystal
-    // is a thing that ought to exist.
+    // §2.1/§2.3 place mana crystals after mulligan, when a player has started a turn.
     cy.get(`${ts(manaId("you"))} ${MANA_CRYSTAL}`)
       .its("length")
       .should("be.within", 1, constants.MAX_MANA);
 
-    // CLAUDE.md rule 7: the browser renders seat 1's hand and nothing more.
+    // CLAUDE.md rule 7: browser renders only seat 1's hand.
     cy.then(() => {
       cy.wsPlayer({ action: "view", name: SEAT_TWO }).then((result) => {
         const held = opponentHandCount(result.view);
@@ -365,13 +298,10 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // --- ...and Node -> actor -> browser ------------------------------------------------------
+    // Node -> actor -> browser.
     cy.endTurn();
     cy.then(() => {
-      // `where` omits `turnAtLeast`, which `tasks/wsPlayer.ts` supports and support/commands.ts's
-      // `WsPlayerCommand` does not yet declare (ASK); the turn is asserted off the view instead.
-      // The actor pushes both views before it acks (`applyAction`), so a view read after an ack is
-      // never the pre-action one.
+      // ASK: type `turnAtLeast`; a post-ack view is not pre-action.
       cy.wsPlayer({ action: "awaitView", name: SEAT_TWO, where: { active: SEAT_TWO_ID } }).should(
         (result) => {
           expect(
@@ -398,9 +328,7 @@ describe("06 room code — a networked match between a browser and a Node client
       );
     });
 
-    // --- "game ends" --------------------------------------------------------------------------
-    // §2.5: a draw offer is answered by the opponent. The fixture decks cannot kill a hero, so
-    // this is the only way this match reaches a result before R79's ceiling.
+    // §2.5 draw answer ends this nonlethal fixture before R79's ceiling.
     cy.offerDraw();
     cy.then(() => {
       cy.wsPlayer({
@@ -421,12 +349,7 @@ describe("06 room code — a networked match between a browser and a Node client
       );
     });
 
-    // --- "both are queue-eligible" -----------------------------------------------------------
-    // §9.5: "Every ending records a result and clears both players' in-match state." `POST
-    // /api/queue` is the assertion, because enqueue is exactly the endpoint that refuses an
-    // account that is still in a match (`already_in_match`) or whose deck no longer validates (R253).
-    // Each player is dequeued again before the next one enqueues, so this never pairs them into a
-    // second match. R110's released room code is the same clearing, seen from the code's side.
+    // §9.5 clears both players; queue verifies it without pairing them. R253/R110 apply.
     for (const seat of [
       { token: seatOne.token, decks: () => seatOneDecks },
       { token: seatTwo.token, decks: () => seatTwoDecks },
@@ -472,7 +395,7 @@ describe("06 room code — a networked match between a browser and a Node client
       seatTwoDecks = installed;
     });
 
-    // The host makes a Best-of-1 room over HTTP, as the first test does, and hands over its link.
+    // Host makes a Best-of-1 room and hands over its link.
     cy.then(() => {
       cy.request<{ code: string; mode: string }>({
         method: "POST",
@@ -485,8 +408,7 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // The guest follows the link. It fills in the join form and leaves the address bar clean, says
-    // what to pick and focuses it, and joins nothing by itself.
+    // The guest link fills the form without joining.
     cy.then(() => {
       visitAs(seatTwo.token, inviteLink(roomCode, "bo1"));
       cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.play());
@@ -525,7 +447,7 @@ describe("06 room code — a networked match between a browser and a Node client
       });
     });
 
-    // Leave both accounts free for the next spec.
+    // Free both accounts for the next spec.
     cy.then(() => {
       cy.concedeAs(seatOne, matchId).its("ok").should("eq", true);
     });

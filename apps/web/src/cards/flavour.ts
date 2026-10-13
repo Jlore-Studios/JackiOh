@@ -6,10 +6,8 @@
 //
 // A card's flavour line and its artist are words about the card, not the card, so an edit to
 // `flavour.json` changes no rule, no def and no patch. The Rust catalog checks hold the file to its
-// contract (every key a catalog card or token, every card and token with a flavour line, an entry
-// carrying only `flavour` and `artist`, each a trimmed, non-empty, single-line string under its cap
-// below); `flavour.test.tsx` also proves the lines speak no rules words, as the voice lines must
-// not (issue #115). The entry type and the two caps live here since v0.3.0: the web is their one reader.
+// contract (each string trimmed, non-empty, single-line and under its cap below);
+// `flavour.test.tsx` also proves the lines speak no rules words, as the voice lines must not.
 
 import flavourJson from "@jackioh/cards/flavour.json";
 

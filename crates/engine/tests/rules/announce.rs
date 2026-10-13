@@ -1,16 +1,14 @@
-//! Port of `packages/engine/test/announce.test.ts`.
-//!
 //! The announce window and Counter (docs/classic-sets.md B5 E1, E2; R448): §10.5 gains a step between 3
 //! and 4 — the paid-for card moves to its player's resolving zone, `cardAnnounced` goes out, and a
 //! window runs in which Counters answer it, traps first and then the other triggers the announce woke.
 //! The first Counter cancels the play, which then never resolves and is never counted; the card goes to
 //! its owner's graveyard, to exile, or to the countering player's hand as theirs (E2).
 //!
-//! Pinned here, on fixture cards of the shapes Classic #4, #10, #17, #72 and #87 and AI Refusal have
-//! (`fixtures/playPipelineA.ts`): the timing, what a countered play does not do, the second Counter that
-//! stays set, a non-trap response, a cast's announce, the card out of a discard's reach, a question in
-//! the window (pause, JSON round trip, replay from the log), the steal and its hand cap, and the
-//! redaction of a face-down card's announce.
+//! Pinned here, on fixture cards of the shapes Classic #4, #10, #17, #72 and #87 and AI Refusal have:
+//! the timing, what a countered play does not do, the second Counter that stays set, a non-trap
+//! response, a cast's announce, the card out of a discard's reach, a question in the window (pause,
+//! JSON round trip, replay from the log), the steal and its hand cap, and the redaction of a face-down
+//! card's announce.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -42,7 +40,7 @@ fn game(seed: &str) -> GameState {
     ready
 }
 
-/// TS `must(state, playerId, body)`: `{ ...body, playerId, nonce }` reduced, and a refusal throws.
+/// `{ ...body, playerId, nonce }` reduced; a refusal panics.
 fn must(state: &GameState, player_id: PlayerId, body: Value) -> ReduceResult {
     let n = NONCE.fetch_add(1, Ordering::SeqCst) + 1;
     let mut action = body;
@@ -62,7 +60,7 @@ fn types_of(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-/// TS `order.indexOf(type)`: -1 when absent.
+/// -1 when `kind` is absent.
 fn index_in(order: &[String], kind: &str) -> i64 {
     order
         .iter()
@@ -77,7 +75,7 @@ fn hand(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {
         .expect("no card")
 }
 
-/// `eventsOfType(events, type)`, each event as its JSON, so TS's `toEqual` literals compare key for key.
+/// The events of one type, each as its JSON, so literals compare key for key.
 fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
@@ -85,7 +83,6 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
         .collect()
 }
 
-/// `eventsOfType(events, type).map((event) => event[key])`.
 fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
     of_type(events, kind)
         .iter()
@@ -93,7 +90,6 @@ fn pluck(events: &[GameEvent], kind: GameEventType, key: &str) -> Vec<Value> {
         .collect()
 }
 
-/// `eventsOfType(events, type)[0]?.[key]`.
 fn first_field(events: &[GameEvent], kind: GameEventType, key: &str) -> Option<Value> {
     of_type(events, kind).first().map(|event| event[key].clone())
 }
@@ -102,8 +98,7 @@ fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
 }
 
-/// TS `sinkFor(state)`: a sink's events and rng (from the state's cursor), lent with the state to one
-/// engine call at a time.
+/// A sink's events and rng (from the state's cursor), lent with the state to one engine call at a time.
 struct Bench {
     events: Vec<GameEvent>,
     rng: Rng,
@@ -671,7 +666,6 @@ mod e2_a_counter_that_steals_the_card_goes_to_the_thiefs_hand_and_the_thief_owns
 mod r448_a_question_in_the_window_classic_4_palantirs_shape {
     use super::*;
 
-    /// TS `paused(seed)`: `{ state, bolt, palantir }`.
     fn paused(seed: &str) -> (GameState, CardInstance, CardInstance) {
         let mut state = game(seed);
         let palantir = put(
@@ -903,7 +897,6 @@ mod r448_a_question_in_the_window_classic_4_palantirs_shape {
 mod r448_r97_r227_a_card_being_set_face_down_is_its_players_alone_while_it_waits {
     use super::*;
 
-    /// TS `setting(seed, trapDef)`: `{ state, trap }`.
     fn setting(seed: &str, trap_def: &str) -> (GameState, CardInstance) {
         let mut state = game(seed);
         put(

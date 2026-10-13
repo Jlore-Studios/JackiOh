@@ -15,7 +15,7 @@ One note per top-level section, its subsections inside:
 - [[§5]] [05-card-types.md](05-card-types.md): card anatomy, the card types, Radiant, the catalog's data decisions.
 - [[§6]] [06-keywords.md](06-keywords.md): the keyword glossary: unit keywords, triggers and timing words, actions and verbs.
 - [[§7]] [07-tokens.md](07-tokens.md): the tokens.
-- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic and Classic+, and of Meditative, in the catalog before it ships ([[R1420]]).
+- [[§8]] [08-catalog.md](08-catalog.md): every card of Core, Classic, Classic+ and Meditative ([[R1420]]).
 - [[§9]] [09-architecture.md](09-architecture.md): trust, topology, accounts, matchmaking, abuse, the practice AI, the tutorial, card statistics, the ranked ladder.
 - [[§10]] [10-engine-guide.md](10-engine-guide.md): the engine: state, actions, events, layers, playing a card, prompts, randomness, the view, card scripts, the client's rendering and audio.
 - [[§11]] [11-rulings.md](11-rulings.md): where the rulings came from; the rulings themselves are the notes in [rulings/](rulings/).
@@ -25,7 +25,7 @@ One note per top-level section, its subsections inside:
 
 A section note is the section's text as SPEC.md had it, starting at its `## N.` heading, with its `### N.M` subsections inside. Those headings are the section ids: `[[§10.3]]` links the `### 10.3` heading, `[[§8]]` the `## 8.` one.
 
-A ruling note is `rulings/R<nnnn>.md`, the number four digits and zero-padded (`R0195.md` is R195), and holds one ruling:
+A ruling note is `rulings/R<nnnn>.md`, the number zero-padded to four digits at least (`R0195.md` is R195, `R690000.md` is R690000), and holds one ruling:
 
 ```markdown
 ---
@@ -47,9 +47,9 @@ The ruling, with every ruling it names written as a link and every section as a 
 
 When a decision the spec does not make is needed (CLAUDE.md rule 3), follow Hearthstone semantics and, in the same change:
 
-1. Write `rulings/R<nnnn>.md` with the next free number (the last row of [INDEX.md](INDEX.md) plus one): its front matter as above and the ruling as its text. Numbers are never reused or renumbered.
+1. Write `rulings/R<nnnn>.md` with the lowest number free in its issue's block: issue N owns R(N×1000) to R(N×1000+999), so issue #690's first ruling is R690000 ([[R690000]]; `docs/issues-and-patches.md`, Ruling numbers, covers sub-issues and clashes): its front matter as above and the ruling as its text. Numbers are never reused or renumbered.
 2. Name the proving test after it, `fn r<n>_…` in Rust or `it("R<n> …")` in TypeScript, and list its file in `proven_in`.
 3. Say in [11-rulings.md](11-rulings.md) where the ruling came from, and edit the sections it changes, linking it.
 4. Run `cargo jackioh spec index` to rewrite [INDEX.md](INDEX.md), then `cargo jackioh spec check`.
 
-`cargo jackioh spec check` fails when a note's `id` does not match its file name or repeats another's; when a `proven_in` path is missing or holds no test named after the ruling; when an `r<n>` test name or an `R<n>` cited anywhere in `crates/`, `apps/web/src/` or `e2e/` (comments included) has no note; and when a `[[…]]` link resolves to no note or section. It reads ids, file names and test names, never the wording, so a reworded sentence fails nothing (#133).
+`cargo jackioh spec check` fails when a note's `id` does not match its file name or repeats another's; when a `proven_in` path is missing or holds no test named after the ruling; when an `r<n>` test name or an `R<n>` cited anywhere in `crates/`, `apps/web/src/` or `e2e/` (comments included) has no note; when a `[[…]]` link resolves to no note or section; when a note's `title` or `cards` is missing or empty; and when [INDEX.md](INDEX.md) is not what `cargo jackioh spec index` writes from the notes. It reads ids, file names and test names, never the wording, so a reworded sentence fails nothing (#133).

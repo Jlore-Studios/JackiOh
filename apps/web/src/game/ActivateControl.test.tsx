@@ -22,9 +22,7 @@ import { DRAG_THRESHOLD_PX } from "./drag/model.ts";
 
 const lookup = lookupFromDefs(CATALOG);
 
-// ---------------------------------------------------------------------------------------------
 // Fixtures
-// ---------------------------------------------------------------------------------------------
 
 const PING: ActivationView = { ability: "ping", label: "Deal {damage} damage.", usesLeft: 1, usable: true };
 const PING_TWICE: ActivationView = { ability: "ping", label: "Deal {damage} damage.", usesLeft: 2, usable: true };
@@ -131,9 +129,7 @@ afterEach(() => {
   }
 });
 
-// ---------------------------------------------------------------------------------------------
 // The control
-// ---------------------------------------------------------------------------------------------
 
 describe("R510 the Activate control on the card", () => {
   it("R510 a card listing one ability wears one control: the glyph, its uses left, its words filled in, live and glowing", () => {
@@ -232,9 +228,7 @@ describe("R510 the Activate control on the card", () => {
   });
 });
 
-// ---------------------------------------------------------------------------------------------
 // Building an activation through the board
-// ---------------------------------------------------------------------------------------------
 
 describe("R384 an activation is built through the board as a play is", () => {
   it("R384 one listed activation: a press sends exactly that body", () => {

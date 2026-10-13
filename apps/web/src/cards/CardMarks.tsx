@@ -1,21 +1,18 @@
 // R437: a card's marks, drawn on the card while the view lists them (#50 K-Pop Fanatic's pending
 // steal on its target, on both seats).
 //
-// A corruption aura in the mark's colours sits over the card: a slow shimmering vignette, a crackling
-// edge and motes that drift up through it. It takes no pointer event, so every click still reaches the
-// card. Beside it, one badge per mark carries the mark by shape as well as colour: a sparkle, a
-// tooltip, and hidden text a screen reader reads, all from the mark → words table (marks.ts). The
-// colours come from the colour key → palette table, an unknown key falling back to the default, so
-// another card's mark in another colour needs one row there and nothing here.
+// A corruption aura in the mark's colours sits over the card and takes no pointer event, so every
+// click still reaches the card. Beside it, one badge per mark carries the mark by shape as well as
+// colour, its words from marks.ts; an unknown colour key falls back to the default palette.
 //
-// It moves only under full motion: the media query and the settings panel's "Reduce motion"
-// (`<html data-reduce-motion="true">`) hold every part still, the aura and badge still drawn
-// (marks.css). It reads the marks it is given and nothing else (CLAUDE.md rule 7).
+// It moves only under full motion: the media query and "Reduce motion" hold every part still, the
+// aura and badge still drawn (marks.css). It reads the marks it is given only (CLAUDE.md rule 7).
 
 import type { CSSProperties, ReactElement } from "react";
 
 import type { CardMark } from "@jackioh/shared";
 
+import { t, useLocale } from "../i18n/i18n.ts";
 import { MARK_GLYPH, MARK_MOTES, markColorOf, markWords, paletteFor } from "./marks.ts";
 import "./marks.css";
 
@@ -32,6 +29,7 @@ function paletteStyle(color: string): CSSProperties {
 export type CardMarksProps = { marks: readonly CardMark[]; instanceId: string };
 
 export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactElement | null {
+  useLocale();
   const first = marks[0];
   if (first === undefined) return null;
   return (
@@ -58,13 +56,13 @@ export default function CardMarks({ marks, instanceId }: CardMarksProps): ReactE
               className="card-mark-badge"
               data-mark={entry.mark}
               data-mark-color={markColorOf(entry.color)}
-              title={words.text}
+              title={t(words.text)}
               style={paletteStyle(entry.color)}
             >
               <span className="card-mark-badge__glyph" aria-hidden="true">
                 {MARK_GLYPH}
               </span>
-              <span className="card-mark-badge__text">{words.text}</span>
+              <span className="card-mark-badge__text">{t(words.text)}</span>
             </span>
           );
         })}

@@ -9,11 +9,9 @@
 
 use hmac::{Hmac, KeyInit, Mac};
 use jackioh_engine::wire::codes::{canonical_code, normalize_code_text};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
-use crate::config::{
-    CODE_ALPHABET, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE, INVITE_CODE_SEPARATOR, PLAYER_TAG_LENGTH,
-};
+use crate::config::{CODE_ALPHABET, INVITE_CODE_FORMAT, INVITE_CODE_GROUP_SIZE, INVITE_CODE_SEPARATOR};
 
 const _: () = assert!(
     CODE_ALPHABET.len() == 32,
@@ -131,16 +129,6 @@ pub fn create_hashes(code_pepper: &str, ip_pepper: &str) -> Hashes {
 /// builds it from `app.env.code_pepper`.)
 pub fn hashes_for_pepper(pepper: &str) -> Hashes {
     create_hashes(&format!("{pepper}:code"), &format!("{pepper}:ip"))
-}
-
-/// SPEC §11 R612: a player's public tag on the leaderboard and the match screen, `PLAYER_TAG_LENGTH`
-/// symbols of the code alphabet read off the SHA-256 of the profile id. Players have no public name,
-/// and the profile id is never sent to anyone but its owner, so the tag stands in for both: stable,
-/// the same on every screen, and no way back to the id or the account's email.
-pub fn player_tag(profile_id: &str) -> String {
-    let hash = Sha256::digest(profile_id.as_bytes());
-    let length = PLAYER_TAG_LENGTH.min(hash.len());
-    code_from_bytes(&hash[..length])
 }
 
 /// TS `Ids`: every id and every seed comes from here.

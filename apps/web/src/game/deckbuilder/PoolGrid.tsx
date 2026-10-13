@@ -15,6 +15,9 @@
 // runs with `hover: false` and hands both gestures to `onInspect`. Adding takes one gesture still:
 // the "+", or a drag onto the deck.
 //
+// A card of the newest shipped set wears a small "New" ribbon (`.db-new`) for the patch that ships
+// the set and the one after (R1383, patches/ribbon.ts); its accessible name says "new".
+//
 // The card's accessible name is the card, not just its name: cost, type, rarity, the deck that
 // holds it, and what a click does. The face inside is decoration to a screen reader (it repeats
 // the name), and the detail view reads the rules out in full.
@@ -26,11 +29,14 @@
 
 import { useMemo, type DragEvent, type ReactElement } from "react";
 
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, SetName } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { CARD_TABLES, readerName } from "../../cards/chinese.ts";
 import { costText } from "../../patches/diff.ts";
+import { NEW_RIBBON_SET } from "../../patches/ribbon.ts";
+import { getLocale, t, useLocale } from "../../i18n/i18n.ts";
 import { CARD_POOL, addPoolId, poolCardId } from "./testids.ts";
 import type { Holder } from "./workshop.ts";
 
@@ -43,6 +49,8 @@ type PoolGridBaseProps = {
   ids: readonly string[];
   catalog: CatalogSnapshot;
   onInspect: (cardId: string) => void;
+  /** R1383: the set whose cards wear the "New" ribbon; `NEW_RIBBON_SET` when absent, null for none. */
+  ribbon?: SetName | null;
 };
 
 /** The deck editor's half: the open deck, ownership, the "+" and the drag. */
@@ -82,32 +90,43 @@ type PoolItemProps = {
   cardId: string;
   def: CardDef;
   deck: PoolItemDeck | null;
+  /** R1383: the card wears the "New" ribbon. */
+  fresh: boolean;
   onInspect: (cardId: string) => void;
 };
 
 /** The badge on a card that is already somewhere: "In deck", or "In <compared deck>". */
 export function placeWords(place: PoolPlace): string | null {
   if (place === null) return null;
-  return place === "deck" ? "In deck" : `In ${place.name}`;
+  return place === "deck" ? t("In deck") : t("In {name}", { name: place.name });
 }
 
 /**
  * The pool card's accessible name: "Bigot, Unit, (2) Cost, Common, in Control, unavailable. Show details" (R432).
  * A read-only card (the almanac) has no place and no ownership: "Bigot, Unit, (2) Cost, Common. Show details".
  */
-export function poolCardLabel(def: CardDef, place: PoolPlace = null, owned: boolean | null = null): string {
-  const parts = [def.name, def.type, costText(def.cost), def.rarity];
-  if (place === "deck") parts.push("in this deck");
-  else if (place !== null) parts.push(`in ${place.name}, unavailable`);
-  if (owned === false) parts.push("not in your collection");
-  return `${parts.join(", ")}. Show details`;
+export function poolCardLabel(
+  def: CardDef,
+  place: PoolPlace = null,
+  owned: boolean | null = null,
+  fresh = false,
+): string {
+  // The type and rarity in the card frame's own words (cards/chinese.ts, R1303).
+  const terms = CARD_TABLES[getLocale()]?.terms;
+  const parts = [readerName(def), terms?.types[def.type] ?? def.type, t(costText(def.cost)), terms?.rarities[def.rarity] ?? def.rarity];
+  if (fresh) parts.push(t("new"));
+  if (place === "deck") parts.push(t("in this deck"));
+  else if (place !== null) parts.push(t("in {deck}, unavailable", { deck: place.name }));
+  if (owned === false) parts.push(t("not in your collection"));
+  return t("{card}. Show details", { card: parts.join(t(", ")) });
 }
 
-function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement {
+function PoolItem({ cardId, def, deck, fresh, onInspect }: PoolItemProps): ReactElement {
+  const locale = useLocale();
   const place = deck?.place ?? null;
   const badge = placeWords(place);
 
-  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def]);
+  const face = useMemo(() => faceModel({ defId: cardId, def, radiant: false }), [cardId, def, locale]);
   const inspect = useInspectTrigger(
     { key: poolCardId(cardId), face },
     {
@@ -139,7 +158,7 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         data-owned={deck === null || deck.owned === null ? undefined : deck.owned ? "true" : "false"}
         data-rarity={def.rarity}
         aria-disabled={deck === null ? undefined : place !== null}
-        aria-label={poolCardLabel(def, place, deck?.owned ?? null)}
+        aria-label={poolCardLabel(def, place, deck?.owned ?? null, fresh)}
         draggable={deck === null ? undefined : true}
         onDragStart={
           deck === null
@@ -159,6 +178,11 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
         <span className="db-card-face" aria-hidden="true" data-skippable="">
           <CardFace face={face} layout="full" lazyArt />
         </span>
+        {fresh ? (
+          <span className="db-new" data-new-set={def.set} aria-hidden="true">
+            {t("New")}
+          </span>
+        ) : null}
         {badge === null ? null : (
           <span className="db-held" data-place={place === "deck" ? "deck" : "other"} aria-hidden="true">
             {badge}
@@ -172,8 +196,8 @@ function PoolItem({ cardId, def, deck, onInspect }: PoolItemProps): ReactElement
           data-testid={addPoolId(cardId)}
           // Already placed: the same refusal a drag gets, so it still reports why, but says it is off.
           aria-disabled={place !== null}
-          aria-label={`Add ${def.name} to ${deck.deckName}`}
-          title={`Add to ${deck.deckName}`}
+          aria-label={t("Add {card} to {deck}", { card: readerName(def), deck: deck.deckName })}
+          title={t("Add to {deck}", { deck: deck.deckName })}
           onClick={() => {
             deck.onAdd(cardId);
           }}
@@ -202,14 +226,23 @@ function itemDeck(props: PoolGridProps, cardId: string): PoolItemDeck | null {
 }
 
 export default function PoolGrid(props: PoolGridProps): ReactElement {
-  const { ids, catalog, onInspect } = props;
+  const { ids, catalog, onInspect, ribbon = NEW_RIBBON_SET } = props;
 
   return (
-    <section className="db-pool" aria-label="Card pool" data-testid={CARD_POOL}>
+    <section className="db-pool" aria-label={t("Card pool")} data-testid={CARD_POOL}>
       {ids.map((cardId) => {
         const def = catalog.cards[cardId];
         if (def === undefined) return null;
-        return <PoolItem key={cardId} cardId={cardId} def={def} deck={itemDeck(props, cardId)} onInspect={onInspect} />;
+        return (
+          <PoolItem
+            key={cardId}
+            cardId={cardId}
+            def={def}
+            deck={itemDeck(props, cardId)}
+            fresh={ribbon !== null && def.set === ribbon}
+            onInspect={onInspect}
+          />
+        );
       })}
     </section>
   );

@@ -2,15 +2,8 @@
 //!
 //! A saved deck or trio is a draft: the save checks only its structure (D1–D5, T1–T3), and the
 //! legality rules run when it is queued — L2, L3, L5 and L6 for a Best-of-1 deck, L1–L6 for a trio.
-//! The limits a caller passes (`nameMaxLength`) come from its own config in the apps; the tests pass
-//! a value of their own so this package states no server number. The portrait roster D5 checks
-//! against is the caller's too — the wire's `is_portrait_id`, which the server and the
-//! deckbuilder both pass.
-//!
-//! Port of `packages/validator/test/drafts.test.ts` (part 5). The validator's inputs that are plain
-//! data are built from the TS object literals with `json_as`, and its answers are compared as the
-//! JSON TS returned (`{ ok: true }`, `[{ rule, message, … }]`), which is what the server and the
-//! client read.
+//! The limits a caller passes (`nameMaxLength`) come from its own config, so the tests pass a value
+//! of their own. The portrait roster D5 checks against is the caller's too: the wire's `is_portrait_id`.
 
 use std::sync::Arc;
 
@@ -27,17 +20,17 @@ use super::fixtures::validator_loadouts::{
 
 const NAME_MAX: usize = 12;
 
-/// `catalog()`, as the JSON the validator is handed.
+/// The catalog as the JSON the validator is handed.
 fn snapshot() -> Value {
     serde_json::to_value(catalog()).expect("the fixture catalog serialises")
 }
 
-/// `collection()`, as JSON, so a test can set one id's count as TS's spread did.
+/// The collection as JSON, so a test can set one id's count.
 fn owned() -> Value {
     serde_json::to_value(collection()).expect("the fixture collection serialises")
 }
 
-/// The TS test's `isDeckable`: in the snapshot and not a Token, by the flag or the tag.
+/// In the snapshot and not a Token, by the flag or the tag.
 fn is_deckable() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
     let snapshot = snapshot();
     Arc::new(move |card_id: &str| match snapshot["cards"].get(card_id) {
@@ -51,17 +44,16 @@ fn is_deckable() -> Arc<dyn Fn(&str) -> bool + Send + Sync> {
     })
 }
 
-/// TS `(portrait: unknown) => boolean`: the roster predicate a draft check is handed.
+/// The roster predicate a draft check is handed.
 type PortraitCheck = Arc<dyn Fn(&str) -> bool + Send + Sync>;
 
-/// The roster predicate a caller passes for D5: the wire's `is_portrait_id`, which reads any JSON
-/// value (TS's `unknown`).
+/// The roster predicate a caller passes for D5: the wire's `is_portrait_id`, which reads any JSON value.
 fn is_portrait() -> PortraitCheck {
     Arc::new(|portrait: &str| is_portrait_id(&json!(portrait)))
 }
 
-/// `checkDeckDraft`'s issues for a deck draft with the test's `isDeckable` and `NAME_MAX`. The
-/// input borrows its predicates (`DeckDraftInput<'a>`), so it is built and checked here, where they live.
+/// The issues for a deck draft with `isDeckable` and `NAME_MAX`. The input borrows its predicates
+/// (`DeckDraftInput<'a>`), so it is built and checked here, where they live.
 fn draft_issues(
     name: &str,
     cards: &[String],
@@ -82,7 +74,7 @@ fn draft_issues(
     issues_of(&input)
 }
 
-/// `checkDeckDraft`'s issues, as the JSON TS returned.
+/// The deck draft's issues, as JSON.
 fn issues_of(input: &DeckDraftInput) -> Value {
     serde_json::to_value(check_deck_draft(input)).expect("draft issues serialise")
 }
@@ -91,7 +83,7 @@ fn draft(cards: &[String], name: &str) -> Value {
     draft_issues(name, cards, None, None)
 }
 
-/// `issues.map((issue) => issue.rule)`.
+/// The rule of each issue.
 fn rule_list(issues: &Value) -> Vec<String> {
     issues
         .as_array()
@@ -103,7 +95,7 @@ fn rule_list(issues: &Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// `issues.map((issue) => [issue.rule, issue.cardId])`.
+/// The rule and card of each issue.
 fn rules_and_cards(issues: &Value) -> Value {
     Value::Array(
         issues
@@ -117,7 +109,7 @@ fn rules_and_cards(issues: &Value) -> Value {
     )
 }
 
-/// The TS test's `rules(result)`: the distinct rules a result failed, sorted; none when it is ok.
+/// The distinct rules a result failed, sorted; none when it is ok.
 fn rules(result: &Value) -> Vec<String> {
     if result["ok"] == json!(true) {
         return Vec::new();
@@ -460,8 +452,7 @@ mod r253_what_may_be_queued_a_best_of_1_deck_passes_l2_l3_l5_and_l6 {
 
     #[test]
     fn r253_checks_a_trio_with_l1_l6_a_trio_is_s9_4s_loadout() {
-        // TS: `expect(validateTrio).toBe(validateLoadout)`. Rust compares the two functions by what
-        // they answer, on a legal trio and on a short one.
+        // Compared by what the two functions answer, on a legal trio and on a short one.
         let all: Vec<Value> = legal_decks()
             .iter()
             .map(|cards| json!({ "cards": cards }))
@@ -497,7 +488,7 @@ mod r340_room_for_an_imported_trio {
         import_room(json!({ "saved": saved, "limits": limits(), "adding": adding }))
     }
 
-    /// `toMatchObject`: every key of `expected` is in `actual` with the same value.
+    /// Every key of `expected` is in `actual` with the same value.
     fn matches_object(actual: &Value, expected: &Value) -> bool {
         expected
             .as_object()
