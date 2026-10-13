@@ -373,7 +373,10 @@ class _Cli:
 
     def _with_usage(self, result: RunResult, request: RunRequest) -> RunResult:
         """`result` with a fresh reading, for a CLI that `polls_usage`, after any call its login
-        and binary let run. A refusal that named no reset waits for the full window's instead."""
+        and binary let run. A refusal that named no reset waits for the full window's instead,
+        and a failed call whose reading has a window full is that window's refusal, whatever the
+        CLI said: agy's and Muse's caps are 100% (#798), so their own limit ends such a call,
+        and Muse's words for it are not known."""
         if not self.polls_usage or result.infra:
             return result
         usage = self.read_usage(request.model)
@@ -381,6 +384,8 @@ class _Cli:
             result.usage = usage
             if result.reset_at == DEFAULT_PARK:
                 result.reset_at = _exhausted_reset(usage) or DEFAULT_PARK
+            elif not result.ok and not result.reset_at:
+                result.reset_at = _exhausted_reset(usage)
         return result
 
     def _watch(self, proc: subprocess.Popen, raw: Path, request: RunRequest,
