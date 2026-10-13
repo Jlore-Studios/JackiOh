@@ -4632,25 +4632,12 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [
-          "gemini"
-        ],
-        "builder": "gemini",
-        "rejections": [
-          "claude"
-        ],
-        "reviews": [
-          {
-            "family": "gemini",
-            "run": "38253510716",
-            "tier": "medium"
-          }
-        ],
-        "sha": "3c3427085cdf323b59487a3ce953e3ff5b999ed1",
-        "tiers": {
-          "claude": "strong",
-          "gemini": "medium"
-        }
+        "approvals": [],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [],
+        "sha": "52f6e45fa01c2dcdfcbd55d10b3d1d44f8f8d4c1",
+        "tiers": {}
       }
     },
     "737": {
