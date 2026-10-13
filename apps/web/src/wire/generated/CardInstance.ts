@@ -128,10 +128,10 @@ chinese?: true,
  */
 created?: true, 
 /**
- * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
- * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
- * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
- * with the card leaving the field (R1045). Absent on every other card.
+ * R783004, R1040, R1044: the card was played face-down into the backrow as a Trap by its Cloaked
+ * (printed, or lent by an aura such as Knowledge Breaker's or Paranoia's) and has not finished
+ * revealing. Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes
+ * it off with the card leaving the field (R1045). Absent on every other card.
  */
 setAs?: SetAs, 
 /**
