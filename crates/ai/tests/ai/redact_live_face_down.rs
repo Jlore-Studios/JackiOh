@@ -182,10 +182,15 @@ mod r602_a_determinization_agrees_with_the_board_it_was_dealt_from {
         for id in &auras {
             assert!(!picked.contains(id), "{id}");
         }
-        // R762 keeps every sample at the shown (2); of those, only the ones R602 rules out are gone.
+        // R762 keeps every sample at the shown (2); of those, only the ones R602 rules out are gone. A
+        // card that prints Cloaked may be the hidden card too (R783009): Cloaked Toe Cracker, whose
+        // cost aura is dormant while it is set.
         let mut sorted: Vec<String> = picked.into_iter().collect();
         sorted.sort();
-        let expected: Vec<String> = trap_pool()
+        let mut candidates = trap_pool();
+        candidates.extend(jackioh_engine::alt_play::printed_cloaked_def_ids());
+        candidates.sort();
+        let expected: Vec<String> = candidates
             .into_iter()
             .filter(|id| def_of(Some(&state), id).cost == CardCost::Fixed(2) && !auras.contains(id))
             .collect();
