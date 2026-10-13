@@ -670,6 +670,18 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
 };
 
+/** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */
+type AnyCueRow = { cues: (event: GameEvent, ctx: CueContext) => readonly SoundCue[] };
+
+/**
+ * The table's row for `type`, or `undefined` for an event type this build has never seen: a tab
+ * left open on an older bundle can receive one a newer patch added (issue #769). The table stays a
+ * total map over `GameEventType`; the widening cast lives at this lookup and nowhere else.
+ */
+export function soundRow(type: string): AnyCueRow | undefined {
+  return (SOUND_CUES as unknown as Partial<Record<string, AnyCueRow>>)[type];
+}
+
 /**
  * R669: the unit an event is about, by instance id, for its pan: the one that arrives, is hit, dies,
  * attacks or is changed. An event about a hero, a hand or a player has none and stays centred.
@@ -739,8 +751,9 @@ function panned(event: GameEvent, ctx: CueContext, cues: readonly SoundCue[]): r
   return cues.map((cue) => (cue.kind === "sfx" ? { ...cue, params: { ...cue.params, pan: at } } : cue));
 }
 
-/** The cues for one event, panned to the lane of the unit it is about (R669). */
+/** The cues for one event, panned to the lane of the unit it is about (R669). An unknown type sounds nothing (issue #769). */
 export function cuesFor(event: GameEvent, ctx: CueContext): readonly SoundCue[] {
-  const row = SOUND_CUES[event.type] as { cues: (e: GameEvent, c: CueContext) => readonly SoundCue[] };
+  const row = soundRow(event.type);
+  if (row === undefined) return NONE;
   return panned(event, ctx, row.cues(event, ctx));
 }
