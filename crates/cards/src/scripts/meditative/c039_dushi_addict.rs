@@ -102,3 +102,40 @@ mod tests {
         assert!(rock.radiant, "the Radiant face adds a Radiant Rock");
     }
 }
+
+#[cfg(test)]
+mod scratch_r469_repro {
+    use jackioh_engine::testkit::*;
+
+    /// Scratch: a Radiant Fusion Lab fuses a random Radiant card into a base Midrange Menace in hand;
+    /// find a seed whose ingredient is 赌石 Addict, play the fused Menace, and print the Rock's face.
+    #[test]
+    fn scratch_radiant_addict_ingredient_in_a_base_fusion() {
+        crate::register_all();
+        for seed in 1..20000 {
+            let mut s = scenario(json!({
+                "seed": format!("scratch-{seed}"),
+                "p1": { "hand": [{ "def": "classicplus-031", "radiant": true }, "core-019"] },
+            }));
+            let menace = s.card("core-019").id.clone();
+            s.play("classicplus-031", json!({}));
+            s.activate("classicplus-031", json!({ "targets": [{ "pick": "instance", "instanceId": menace }] }));
+            let kept = s.card(&menace).clone();
+            let specs = fused_id_specs(Some(s.state()), &kept.def_id).unwrap_or_default();
+            if specs.first().map(|spec| spec.def_id.as_str()) != Some("meditative-039") {
+                continue;
+            }
+            println!("seed {seed}: fused {} radiant={} specs={:?}", kept.def_id, kept.radiant, specs.iter().map(|s| (s.def_id.clone(), s.radiant)).collect::<Vec<_>>());
+            s.play(&menace, json!({ "zone": 1 }));
+            let rocks: Vec<(String, bool)> = s
+                .hand(PlayerId::P1)
+                .into_iter()
+                .filter(|card| card.def_id == "meditative-039-1")
+                .map(|card| (card.id, card.radiant))
+                .collect();
+            println!("SCRATCH RESULT rocks in hand (id, radiant): {rocks:?}");
+            return;
+        }
+        panic!("no seed fused Addict");
+    }
+}
