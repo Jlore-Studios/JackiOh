@@ -140,6 +140,17 @@ mod stats_cards_options {
         assert_eq!(filter_json(&dev)["source"], json!("dev"));
     }
 
+    #[test]
+    fn r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named() {
+        for source in ["dev", "all"] {
+            let flag = format!("--source={source}");
+            let options = parse_card_stats_args(&args(&[flag.as_str()])).expect("the source parses");
+            assert_eq!(filter_json(&options)["pilot"], json!("unified"), "{flag}");
+        }
+        let named = parse_card_stats_args(&args(&["--source=dev", "--pilot=ai"])).expect("both parse");
+        assert_eq!(filter_json(&named)["pilot"], json!("ai"));
+    }
+
     fn refusal(argv: &[&str]) -> String {
         parse_card_stats_args(&args(argv))
             .expect_err("the arguments are refused")
@@ -236,6 +247,43 @@ mod stats_cards_report {
             first_in_deck(&prerelease),
             json!({ "games": 2, "wins": 1, "draws": 0 })
         );
+    }
+
+    /// The cards a report has rows for, by id.
+    fn cards_of(report: &jackioh_engine::wire::CardStatsReport) -> Vec<&str> {
+        report.cards.iter().map(|stats| stats.card.as_str()).collect()
+    }
+
+    #[tokio::test]
+    async fn r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked() {
+        // A live game as `api::game_records` files one against a ladder bot (tests/api/bots.rs):
+        // p1 a person holding core-001, p2 the bot holding core-002.
+        let db = Db::fake();
+        let record = game_record("live-bot", json!({ "pilots": { "p1": "human", "p2": "ai" } }));
+        let mut tx = db.begin(None).await.expect("a transaction");
+        tx.game_records_insert(&record)
+            .await
+            .expect("the record is written");
+        tx.commit().await.expect("the record commits");
+
+        let people = card_stats_report(&db, &options(&[])).await.expect("a report");
+        assert_eq!((people.games, people.decks), (1, 1));
+        assert_eq!(cards_of(&people), ["core-001"]);
+        let bots = card_stats_report(&db, &options(&["--pilot=ai"]))
+            .await
+            .expect("a report");
+        assert_eq!((bots.games, bots.decks), (1, 1));
+        assert_eq!(cards_of(&bots), ["core-002"]);
+        let every = card_stats_report(&db, &options(&["--pilot=unified"]))
+            .await
+            .expect("a report");
+        assert_eq!((every.games, every.decks), (1, 2));
+        assert_eq!(cards_of(&every), ["core-001", "core-002"]);
+        // A development query reads no live game, whoever piloted it.
+        let dev = card_stats_report(&db, &options(&["--source=dev"]))
+            .await
+            .expect("a report");
+        assert_eq!(dev.games, 0);
     }
 
     /// JS `line.split(/\s{2,}/)`: the line cut at every run of two or more whitespace characters.

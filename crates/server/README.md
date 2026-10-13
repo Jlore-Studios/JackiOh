@@ -220,6 +220,9 @@ cargo jackioh stats report live.jsonl --json                                # th
 counts the human seats when it reads live data alone and every seat when it reads development data,
 so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified`, or with `--source=all`,
 which counts every seat of both sources unless a pilot is named (R1451).
+The training box's gather lane (`training/README.md`, The gather lane) runs `cargo jackioh stats` without
+end under its own series and loads each finished day with `stats-import`, so `stats-cards --source=dev
+--patch=<version>` reads its games.
 
 `stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
 one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
