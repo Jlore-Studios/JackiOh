@@ -5493,6 +5493,7 @@
       "planned_by_id": "claude-6",
       "planned_tier": "strong",
       "provider": "claude-6",
+      "question": "every file this issue changes is under `bot/` (`bot/harness/commands.py`, `bot/tests/test_basics.py`, `bot/tests/squishy_cases.py`), and the bot may not change that directory. A person makes the change from this plan. Before that, as the issue asks, the bot hands the issue over: it takes its own labels off, unassigns itself, assigns @MaxGoetzmann and @jgoetzmann, puts on `human required` with the colour and description from `config.LABELS`, and leaves a comment naming both of them.",
       "queued_at": "2026-10-13T20:55:22Z",
       "requested_by": "jgoetzmann",
       "run_id": "38466664547",
