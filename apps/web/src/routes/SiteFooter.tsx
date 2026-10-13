@@ -1,5 +1,5 @@
-// The site footer: the privacy policy, the patch notes (R388), the Card Almanac (R630), and a way to
-// reach the people who run JackiOh.
+// The site footer: the privacy policy, the terms, the accessibility and copyright pages, the patch
+// notes (R388), the Card Almanac (R630), and a way to reach the people who run JackiOh.
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
 // email address. Kept off the board. The contact is the repository's public issue tracker until
@@ -7,6 +7,7 @@
 
 import type { ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { followInApp } from "./nav.tsx";
 
@@ -20,6 +21,7 @@ export const siteFooterTestid = {
   privacy: "site-footer-privacy",
   terms: "site-footer-terms",
   accessibility: "site-footer-accessibility",
+  copyright: "site-footer-copyright",
   patchNotes: "site-footer-patch-notes",
   almanac: "site-footer-almanac",
   stats: "site-footer-stats",
@@ -29,31 +31,34 @@ export const siteFooterTestid = {
 export function SiteFooter(): ReactElement {
   return (
     <footer className="site-footer" data-testid={siteFooterTestid.root}>
-      <nav className="site-footer__links" aria-label="About JackiOh">
+      <nav className="site-footer__links" aria-label={t("About JackiOh")}>
         <a href={paths.privacy} data-testid={siteFooterTestid.privacy} onClick={followInApp(paths.privacy)}>
-          Privacy
+          {t("Privacy")}
         </a>
         <a href={paths.terms} data-testid={siteFooterTestid.terms} onClick={followInApp(paths.terms)}>
-          Terms
+          {t("Terms")}
         </a>
         <a
           href={paths.accessibility}
           data-testid={siteFooterTestid.accessibility}
           onClick={followInApp(paths.accessibility)}
         >
-          Accessibility
+          {t("Accessibility")}
+        </a>
+        <a href={paths.copyright} data-testid={siteFooterTestid.copyright} onClick={followInApp(paths.copyright)}>
+          {t("Copyright")}
         </a>
         <a href={paths.patchNotes} data-testid={siteFooterTestid.patchNotes} onClick={followInApp(paths.patchNotes)}>
-          Patch notes
+          {t("Patch notes")}
         </a>
         <a href={paths.almanac} data-testid={siteFooterTestid.almanac} onClick={followInApp(paths.almanac)}>
-          Card almanac
+          {t("Card almanac")}
         </a>
         <a href={paths.stats} data-testid={siteFooterTestid.stats} onClick={followInApp(paths.stats)}>
-          Stats
+          {t("Stats")}
         </a>
         <a href={CONTACT_URL} data-testid={siteFooterTestid.contact} rel="noopener noreferrer">
-          Contact us on GitHub
+          {t("Contact us on GitHub")}
         </a>
       </nav>
     </footer>

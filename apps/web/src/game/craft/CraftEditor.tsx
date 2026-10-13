@@ -22,6 +22,8 @@ import {
 } from "../../wire/engineConfig.ts";
 import { craftPreview } from "../../wire/engine.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../../cards/index.ts";
+import { readerTerms } from "../../cards/chinese.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 
 import {
   HAT_LABELS,
@@ -81,35 +83,47 @@ type DragPayload =
 
 type DragState = { payload: DragPayload; label: string; x: number; y: number; moved: boolean };
 
+/** A card type in the card frame's own words in the reader's language (cards/chinese.ts, R1303). */
+function typeName(type: CardType): string {
+  return readerTerms()?.types[type] ?? type;
+}
+
+/** A keyword in the card frame's own words in the reader's language. */
+function keywordName(kind: Keyword["kind"]): string {
+  return readerTerms()?.keywords[kind] ?? kind;
+}
+
+// The prices are read where they are drawn, never at module scope, so a language switch changes them.
 function verbPriceText(verb: CraftVerb): string {
   const row = CRAFT_VERB_PRICES.find((entry) => entry.verb === verb);
   if (row === undefined) return "";
   const points = row.perN > 0 ? `${row.points}+${row.perN}×N` : `${row.points}`;
-  const halved = row.halve ? ", halved" : "";
-  return `${points} pts${halved} · ${row.lines} lines${row.targeted ? " · targets" : ""}`;
+  const halved = row.halve ? t(", halved") : "";
+  return `${t("{points} pts", { points })}${halved} · ${t("{lines} lines", { lines: row.lines })}${row.targeted ? ` · ${t("targets")}` : ""}`;
 }
 
 function keywordPriceText(kind: Keyword["kind"]): string {
   const row = CRAFT_KEYWORD_PRICES.find((entry) => entry.kind === kind);
   if (row === undefined) return "";
-  return row.perN > 0 ? `${row.perN}×N pts` : `${row.points} pts`;
+  return row.perN > 0 ? t("{points} pts", { points: `${row.perN}×N` }) : t("{points} pts", { points: row.points });
 }
 
 function hatPriceText(hat: CraftHatKind): string {
   const row = CRAFT_HAT_PRICES.find((entry) => entry.hat === hat);
   if (row === undefined) return "";
-  return `${row.lines} lines${row.multiplier > 1 ? ` · ×${row.multiplier} pts` : ""}`;
+  return `${t("{lines} lines", { lines: row.lines })}${row.multiplier > 1 ? ` · ${t("×{n} pts", { n: row.multiplier })}` : ""}`;
 }
 
 function effectText(effect: CraftEffect): string {
-  const label = VERB_LABELS[effect.verb];
-  if (effect.n !== undefined) return `${label} ${effect.n}`;
-  if (effect.keyword !== undefined) return `${label}: ${effect.keyword}`;
-  if (effect.cardType !== undefined) return `${label}: ${effect.cardType}`;
+  const label = t(VERB_LABELS[effect.verb]);
+  if (effect.n !== undefined) return t("{label} {n}", { label, n: effect.n });
+  if (effect.keyword !== undefined) return t("{label}: {keyword}", { label, keyword: keywordName(effect.keyword) });
+  if (effect.cardType !== undefined) return t("{label}: {type}", { label, type: typeName(effect.cardType) });
   return label;
 }
 
 export function CraftEditor(props: { pending: PendingPromptView; onAction: (body: ActionBody) => void }) {
+  useLocale();
   const presets: PendingOption[] = props.pending.options;
   const cost = props.pending.budget ?? 0;
   const radiant = presets.some((option) => option.radiant === true);
@@ -244,13 +258,13 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
         data-layout={sheet ? "sheet" : "panel"}
         role="dialog"
         aria-modal="true"
-        aria-label="Craft a card"
+        aria-label={t("Craft a card")}
       >
-        <p className="prompt-title">Craft a card</p>
+        <p className="prompt-title">{t("Craft a card")}</p>
         <div className="craft-columns">
-          <nav className="craft-palette" aria-label="Blocks" data-drop-palette="true">
-            <section aria-label="Type and stats">
-              <h3>Type and stats</h3>
+          <nav className="craft-palette" aria-label={t("Blocks")} data-drop-palette="true">
+            <section aria-label={t("Type and stats")}>
+              <h3>{t("Type and stats")}</h3>
               <div className="craft-row">
                 {TYPES.map((type) => (
                   <button
@@ -260,20 +274,20 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     aria-pressed={recipe.type === type}
                     onClick={() => setRecipe((prev) => setType(prev, type))}
                   >
-                    {type}
+                    {typeName(type)}
                   </button>
                 ))}
               </div>
               {recipe.type === "Unit" && (
                 <div className="craft-row">
-                  <Stepper label="Attack" value={recipe.attack} onStep={(delta) => setRecipe((prev) => stepStat(prev, "attack", delta))} />
-                  <Stepper label="Health" value={recipe.health} onStep={(delta) => setRecipe((prev) => stepStat(prev, "health", delta))} />
+                  <Stepper label={t("Attack")} value={recipe.attack} onStep={(delta) => setRecipe((prev) => stepStat(prev, "attack", delta))} />
+                  <Stepper label={t("Health")} value={recipe.health} onStep={(delta) => setRecipe((prev) => stepStat(prev, "health", delta))} />
                 </div>
               )}
               {recipe.type === "Spell" && (
                 <div className="craft-row">
                   <Stepper
-                    label="Echo"
+                    label={t("Echo")}
                     value={recipe.echo}
                     onStep={(delta) =>
                       setRecipe((prev) => ({ ...prev, echo: Math.min(CRAFT_MAX_N, Math.max(0, prev.echo + delta)) }))
@@ -283,7 +297,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
               )}
               <div className="craft-row">
                 <label>
-                  Name{" "}
+                  {t("Name")}{" "}
                   <select
                     data-testid="craft-adjective"
                     value={recipe.adjective}
@@ -300,7 +314,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                   <select
                     data-testid="craft-noun"
                     value={recipe.noun}
-                    aria-label="Second name word"
+                    aria-label={t("Second name word")}
                     onChange={(event) => setRecipe((prev) => ({ ...prev, noun: event.target.value }))}
                   >
                     {CRAFT_NOUNS.map((word) => (
@@ -312,19 +326,19 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                 </label>
               </div>
             </section>
-            <section aria-label="Keywords">
-              <h3>Keywords</h3>
+            <section aria-label={t("Keywords")}>
+              <h3>{t("Keywords")}</h3>
               {recipe.keywords.length > 0 && (
-                <div className="craft-row" aria-label="Chosen keywords">
+                <div className="craft-row" aria-label={t("Chosen keywords")}>
                   {recipe.keywords.map((block) => (
                     <span key={block.kind} className="craft-chosen">
-                      {block.kind === "Armor" ? `Armor ${block.n ?? 1}` : block.kind}
+                      {block.kind === "Armor" ? t("Armor {n}", { n: block.n ?? 1 }) : keywordName(block.kind)}
                       {block.kind === "Armor" && (
-                        <span className="craft-stepper" role="group" aria-label="Armor">
-                          <button type="button" aria-label="Decrease Armor" onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", -1))}>
+                        <span className="craft-stepper" role="group" aria-label={t("Armor")}>
+                          <button type="button" aria-label={t("Decrease {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", -1))}>
                             −
                           </button>
-                          <button type="button" aria-label="Increase Armor" onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", 1))}>
+                          <button type="button" aria-label={t("Increase {label}", { label: t("Armor") })} onClick={() => setRecipe((prev) => stepKeywordN(prev, "Armor", 1))}>
                             +
                           </button>
                         </span>
@@ -342,15 +356,15 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     aria-pressed={recipe.keywords.some((block) => block.kind === row.kind)}
                     title={keywordPriceText(row.kind)}
                     onClick={() => clickGuard(() => setRecipe((prev) => toggleKeyword(prev, row.kind)))}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, `Give a unit ${row.kind}`)}
+                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: "grantKeyword" }, t("Give a unit {keyword}", { keyword: keywordName(row.kind) }))}
                   >
-                    {row.kind} · {keywordPriceText(row.kind)}
+                    {keywordName(row.kind)} · {keywordPriceText(row.kind)}
                   </button>
                 ))}
               </div>
             </section>
-            <section aria-label="Hats">
-              <h3>Hats</h3>
+            <section aria-label={t("Hats")}>
+              <h3>{t("Hats")}</h3>
               <div className="craft-row">
                 {CRAFT_HAT_PRICES.filter((row) => (HATS_FOR_TYPE[recipe.type] ?? []).includes(row.hat)).map((row) => (
                   <button
@@ -358,16 +372,16 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     type="button"
                     className="craft-block"
                     title={hatPriceText(row.hat)}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, HAT_LABELS[row.hat])}
+                    onPointerDown={(event) => beginDrag(event, { from: "palette-hat", hat: row.hat }, t(HAT_LABELS[row.hat]))}
                     onClick={() => clickGuard(() => setRecipe((prev) => addHat(prev, row.hat)))}
                   >
-                    {HAT_LABELS[row.hat]} · {hatPriceText(row.hat)}
+                    {t(HAT_LABELS[row.hat])} · {hatPriceText(row.hat)}
                   </button>
                 ))}
               </div>
             </section>
-            <section aria-label="Effects">
-              <h3>Effects</h3>
+            <section aria-label={t("Effects")}>
+              <h3>{t("Effects")}</h3>
               <div className="craft-row">
                 {CRAFT_VERB_PRICES.map((row) => (
                   <button
@@ -375,7 +389,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     type="button"
                     className="craft-block"
                     title={verbPriceText(row.verb)}
-                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: row.verb }, VERB_LABELS[row.verb])}
+                    onPointerDown={(event) => beginDrag(event, { from: "palette-effect", verb: row.verb }, t(VERB_LABELS[row.verb]))}
                     onClick={() =>
                       clickGuard(() =>
                         setRecipe((prev) => {
@@ -385,25 +399,25 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                       )
                     }
                   >
-                    {VERB_LABELS[row.verb]} · {verbPriceText(row.verb)}
+                    {t(VERB_LABELS[row.verb])} · {verbPriceText(row.verb)}
                   </button>
                 ))}
               </div>
             </section>
           </nav>
-          <div className="craft-canvas" aria-label="Your card">
+          <div className="craft-canvas" aria-label={t("Your card")}>
             {recipe.hats.map((hat, hi) => (
               <section
                 key={`${hat.hat}-${hi}`}
                 className="craft-hat"
                 data-drop-hat={hi}
                 aria-pressed={hi === hatIndex}
-                aria-label={`${HAT_LABELS[hat.hat]} hat`}
+                aria-label={t("{hat} hat", { hat: t(HAT_LABELS[hat.hat]) })}
                 onClick={() => setSelectedHat(hi)}
               >
                 <header>
-                  <strong>{HAT_LABELS[hat.hat]}</strong>
-                  <button type="button" aria-label={`Remove ${HAT_LABELS[hat.hat]} hat`} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
+                  <strong>{t(HAT_LABELS[hat.hat])}</strong>
+                  <button type="button" aria-label={t("Remove {hat} hat", { hat: t(HAT_LABELS[hat.hat]) })} onClick={() => setRecipe((prev) => removeHat(prev, hi))}>
                     ×
                   </button>
                 </header>
@@ -415,7 +429,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                     data-drop-at={ei}
                     tabIndex={0}
                     role="button"
-                    aria-label={`${effectText(effect)} under ${HAT_LABELS[hat.hat]}`}
+                    aria-label={t("{effect} under {hat}", { effect: effectText(effect), hat: t(HAT_LABELS[hat.hat]) })}
                     onPointerDown={(event) => beginDrag(event, { from: "canvas", hat: hi, effect: ei }, effectText(effect))}
                     onClick={() => clickGuard(() => setSelectedHat(hi))}
                     onKeyDown={(event) => {
@@ -431,18 +445,18 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                   >
                     <span>{effectText(effect)}</span>
                     {effect.n !== undefined && (
-                      <span className="craft-stepper" role="group" aria-label="Number">
-                        <button type="button" aria-label="Decrease number" onClick={() => setRecipe((prev) => stepN(prev, hi, ei, -1))}>
+                      <span className="craft-stepper" role="group" aria-label={t("Number")}>
+                        <button type="button" aria-label={t("Decrease number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, -1))}>
                           −
                         </button>
-                        <button type="button" aria-label="Increase number" onClick={() => setRecipe((prev) => stepN(prev, hi, ei, 1))}>
+                        <button type="button" aria-label={t("Increase number")} onClick={() => setRecipe((prev) => stepN(prev, hi, ei, 1))}>
                           +
                         </button>
                       </span>
                     )}
                     {effect.verb === "grantKeyword" && (
                       <select
-                        aria-label="Granted keyword"
+                        aria-label={t("Granted keyword")}
                         value={effect.keyword ?? ""}
                         onChange={(event) =>
                           setRecipe((prev) =>
@@ -455,17 +469,17 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                           )
                         }
                       >
-                        <option value="">Choose</option>
+                        <option value="">{t("Choose")}</option>
                         {CRAFT_KEYWORD_PRICES.filter((row) => row.kind !== "Armor").map((row) => (
                           <option key={row.kind} value={row.kind}>
-                            {row.kind}
+                            {keywordName(row.kind)}
                           </option>
                         ))}
                       </select>
                     )}
                     {(effect.verb === "addRandom" || effect.verb === "discover") && (
                       <select
-                        aria-label="Card type"
+                        aria-label={t("Card type")}
                         value={effect.cardType ?? ""}
                         onChange={(event) =>
                           setRecipe((prev) =>
@@ -476,15 +490,15 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
                           )
                         }
                       >
-                        <option value="">Any</option>
+                        <option value="">{t("Any")}</option>
                         {TYPES.map((type) => (
                           <option key={type} value={type}>
-                            {type}
+                            {typeName(type)}
                           </option>
                         ))}
                       </select>
                     )}
-                    <button type="button" aria-label={`Remove ${effectText(effect)}`} onClick={() => setRecipe((prev) => removeEffect(prev, hi, ei))}>
+                    <button type="button" aria-label={t("Remove {effect}", { effect: effectText(effect) })} onClick={() => setRecipe((prev) => removeEffect(prev, hi, ei))}>
                       ×
                     </button>
                   </div>
@@ -496,22 +510,22 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
           <aside className="craft-side">
             <p className="craft-meters">
               <span data-testid="craft-points">
-                {preview.points}/{preview.pointsBudget} pts
+                {t("{points}/{budget} pts", { points: preview.points, budget: preview.pointsBudget })}
               </span>{" "}
               <span data-testid="craft-loc">
-                {preview.loc}/{preview.locBudget} lines
+                {t("{loc}/{budget} lines", { loc: preview.loc, budget: preview.locBudget })}
               </span>
             </p>
-            <ul className="craft-reasons" role="status" aria-label="Why this recipe is refused">
+            <ul className="craft-reasons" role="status" aria-label={t("Why this recipe is refused")}>
               {preview.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
+                <li key={reason}>{t(reason)}</li>
               ))}
             </ul>
             <span className="craft-face" data-testid="craft-face" {...inspect.handlers}>
               <CardFace face={face} />
             </span>
             {inspect.overlay}
-            <div className="craft-suggestions" aria-label="Suggestions">
+            <div className="craft-suggestions" aria-label={t("Suggestions")}>
               {presets.map((option, index) =>
                 option.recipe === undefined ? null : (
                   <button
@@ -532,7 +546,7 @@ export function CraftEditor(props: { pending: PendingPromptView; onAction: (body
               aria-disabled={!preview.valid}
               onClick={send}
             >
-              Craft
+              {t("Craft")}
             </button>
           </aside>
         </div>
@@ -546,10 +560,10 @@ function Stepper(props: { label: string; value: number; onStep: (delta: number) 
   return (
     <span className="craft-stepper" role="group" aria-label={props.label}>
       <span aria-hidden="true">{props.label} {props.value}</span>
-      <button type="button" aria-label={`Decrease ${props.label}`} onClick={() => props.onStep(-1)}>
+      <button type="button" aria-label={t("Decrease {label}", { label: props.label })} onClick={() => props.onStep(-1)}>
         −
       </button>
-      <button type="button" aria-label={`Increase ${props.label}`} onClick={() => props.onStep(1)}>
+      <button type="button" aria-label={t("Increase {label}", { label: props.label })} onClick={() => props.onStep(1)}>
         +
       </button>
     </span>

@@ -4,6 +4,8 @@
 
 import type { ActionBody, PlayerView, UnitView } from "@jackioh/shared";
 
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { t } from "../i18n/i18n.ts";
 import type { CoachAnchor, CoachCtx, CoachStep } from "./coach.ts";
 import { heroTargetId, myMain, unitsOf } from "./steps.ts";
 
@@ -188,32 +190,46 @@ export function moveAnchor(ctx: CoachCtx, move: Move | undefined): CoachAnchor |
   }
 }
 
+/** A card's name as the reader reads it: the Chinese table's for a reader of Chinese, else `english`. */
+export function readerCardName(defId: string, english: string): string {
+  return drawnInChinese(false) ? chineseName(defId, english) : english;
+}
+
 /** Fall back to the definition id when the page has no catalog. */
 export function cardName(ctx: CoachCtx, defId: string): string {
-  return ctx.nameOf?.(defId) ?? defId;
+  return readerCardName(defId, ctx.nameOf?.(defId) ?? defId);
 }
 
 export function moveText(ctx: CoachCtx, move: Move | undefined): string {
-  if (move === undefined) return "Watch the board: nothing to do right now.";
+  if (move === undefined) return t("Watch the board: nothing to do right now.");
   switch (move.kind) {
     case "play":
-      return `Play ${cardName(ctx, move.defId)}: spend your mana every turn you can.`;
+      return t("Play {card}: spend your mana every turn you can.", { card: cardName(ctx, move.defId) });
     case "trade":
-      return `Attack the enemy's ${cardName(ctx, move.trade.target.defId)} with your ${cardName(ctx, move.trade.attacker.defId)}: it destroys that unit and survives.`;
+      return t("Attack the enemy's {target} with your {attacker}: it destroys that unit and survives.", {
+        target: cardName(ctx, move.trade.target.defId),
+        attacker: cardName(ctx, move.trade.attacker.defId),
+      });
     case "hero":
       return move.lethal
-        ? `Your attacks can finish the enemy hero this turn: attack it with your ${cardName(ctx, move.attacker.defId)}.`
-        : `Attack the enemy hero with your ${cardName(ctx, move.attacker.defId)}: every point counts.`;
-    case "clear":
+        ? t("Your attacks can finish the enemy hero this turn: attack it with your {attacker}.", { attacker: cardName(ctx, move.attacker.defId) })
+        : t("Attack the enemy hero with your {attacker}: every point counts.", { attacker: cardName(ctx, move.attacker.defId) });
+    case "clear": {
+      const names = { target: cardName(ctx, move.trade.target.defId), attacker: cardName(ctx, move.trade.attacker.defId) };
       return move.trade.survives
-        ? `A Taunt unit guards the hero: attack the enemy's ${cardName(ctx, move.trade.target.defId)} with your ${cardName(ctx, move.trade.attacker.defId)} to clear the way.`
-        : `A Taunt unit guards the hero: attack the enemy's ${cardName(ctx, move.trade.target.defId)} with your ${cardName(ctx, move.trade.attacker.defId)}. Both fall, but the way is clear.`;
+        ? t("A Taunt unit guards the hero: attack the enemy's {target} with your {attacker} to clear the way.", names)
+        : t("A Taunt unit guards the hero: attack the enemy's {target} with your {attacker}. Both fall, but the way is clear.", names);
+    }
     case "chip":
       return move.trade.pops
-        ? `A Taunt unit guards the hero, behind a Divine Shield. Break the shield: attack it with your ${cardName(ctx, move.trade.attacker.defId)}.`
-        : `A Taunt unit guards the hero. Wear it down: attack it with your ${cardName(ctx, move.trade.attacker.defId)}. Damage stays.`;
+        ? t("A Taunt unit guards the hero, behind a Divine Shield. Break the shield: attack it with your {attacker}.", {
+            attacker: cardName(ctx, move.trade.attacker.defId),
+          })
+        : t("A Taunt unit guards the hero. Wear it down: attack it with your {attacker}. Damage stays.", {
+            attacker: cardName(ctx, move.trade.attacker.defId),
+          });
     case "end":
-      return "Nothing useful left this turn: press End turn.";
+      return t("Nothing useful left this turn: press End turn.");
   }
 }
 

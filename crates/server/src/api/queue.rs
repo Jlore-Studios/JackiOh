@@ -2,8 +2,8 @@
 //!
 //! §9.5: enqueue asserts the account is active and not in a match, validates the loadout, freezes the
 //! chosen deck into the ticket and returns its id. Pairing runs on enqueue plus a sweeper every few
-//! seconds; the window widens ±50 rating every 10 s from ±100 and is uncapped after 60 s; both tickets
-//! are claimed in one atomic statement.
+//! seconds; the window widens ±50 rating every 10 s from ±100 and stops at `MAX_FAIR_GAP` (R640001,
+//! which replaced its going uncapped after 60 s); both tickets are claimed in one atomic statement.
 //!
 //! R257 adds the mode: Best of 1 (one saved deck), Conquest (a trio, played as a series, R330) and
 //! All Random (R258). A ticket pairs only with a ticket of its own mode; inside a mode the window
@@ -11,9 +11,13 @@
 //! match on the two frozen decks, an All Random match on two dealt ones, or a Conquest series whose
 //! first game waits for both players to pick (`series.rs`).
 //!
-//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a Best-of-1 or All Random ticket that
-//! has waited past its fallback time with no person to pair with is paired with a ladder bot, after
-//! every pair of people the sweep could make (`pair_with_bots`, `bots::fallback`).
+//! R1453 adds the empty-queue fallback: with `LADDER_BOTS=on`, a ticket that has waited past its
+//! fallback time with no person to pair with is paired with a ladder bot, after every pair of people
+//! the sweep could make (`pair_with_bots`, `bots::fallback`). Since the window stops at
+//! `MAX_FAIR_GAP` (R640001), a bot is that ticket's opponent rather than a person further from its
+//! rating. A Conquest ticket and its bot (R641000) become a series, claimed and written in one
+//! transaction (`start_bot_series`), whose picks the bot makes through the series sweeper
+//! (`bots::pick`); a bot that is a side of a series not over is seated nowhere else.
 //!
 //! Three pieces: the endpoints, one pairing sweep (`try_pair`) and the sweeper (`run_matchmaker`).
 //! Two invariants:
@@ -27,7 +31,8 @@
 //!
 //! The window is `rating_window` from `config.rs`, so its numbers are written down once. The route
 //! table is `app.rs`'s (SURFACE §11.2): `enqueue` (`POST /api/queue`, active), `dequeue` (`DELETE`,
-//! active) and `population` (`GET /api/queue/population`, user).
+//! active) and `population` (`GET /api/queue/population`, user): the queue readout, each mode's
+//! expected wait and the last hour's games (R640002).
 
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Duration;
@@ -44,9 +49,13 @@ use crate::api::series::start_series;
 use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 use crate::app::{App, now_ms};
 use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
-use crate::config::{BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, rating_window};
+use crate::config::{
+    BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS,
+    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
+};
 use crate::db::store::{
-    BotRow, FrozenTrio, MatchSeat, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket, TicketStatus,
+    BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
+    TicketStatus,
 };
 
 /// Unit conversion, not configuration: `rating_window` speaks seconds, tickets are stamped in ms.
@@ -269,7 +278,8 @@ async fn enqueue_ticket(
 
 // Pairing
 
-/// §9.5's widening window, read for one ticket at one instant.
+/// §9.5's widening window, read for one ticket at one instant. It stops at `MAX_FAIR_GAP`
+/// (R640001), so two people further apart than that never pair, however long they wait.
 fn window_for(ticket: &Ticket, now: i64) -> f64 {
     let waited_seconds = (now - ticket.enqueued_at).max(0) as f64 / MS_PER_SECOND;
     rating_window(waited_seconds)
@@ -562,14 +572,15 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         .filter(|profile| profile.in_match_id.is_some())
         .map(|profile| profile.id)
         .collect();
-    for series in tx
+    // R641000: the sides of every series not over, a bot's included, which no bot claim may seat.
+    let in_series: IndexSet<String> = tx
         .series_active()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?
-    {
-        busy.insert(series.sides.0.profile_id.clone());
-        busy.insert(series.sides.1.profile_id.clone());
-    }
+        .into_iter()
+        .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
+        .collect();
+    busy.extend(in_series.iter().cloned());
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
@@ -647,7 +658,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
     // R1453: only after every pair of people this sweep could make, so a person inside the window
     // always comes before a bot.
     if app.env.ladder_bots {
-        made += pair_with_bots(app, &open, &mut taken, now).await?;
+        made += pair_with_bots(app, &open, &mut taken, &in_series, now).await?;
     }
 
     Ok(made)
@@ -655,12 +666,15 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
 
 /// R1453: pairs each ticket still open and past its fallback time, oldest first, with the bot
 /// `choose_bot` names for it, claimed in one statement as a pair of tickets is
-/// (`tickets_claim_for_bot`). A claim that loses (the ticket went, or the bot was taken) is not an
-/// error: that ticket waits for the next sweep. Answers how many matches it made.
+/// (`tickets_claim_for_bot`; a Conquest ticket's in `start_bot_series`, R641000). A claim that loses
+/// (the ticket went, or the bot was taken) is not an error: that ticket waits for the next sweep.
+/// `in_series` holds the sides of every series not over: a bot among them is taken already. Answers
+/// how many matches and series it made.
 async fn pair_with_bots(
     app: &Arc<App>,
     open: &[Ticket],
     taken: &mut IndexSet<String>,
+    in_series: &IndexSet<String>,
     now: i64,
 ) -> Result<usize, ApiError> {
     let due: Vec<&Ticket> = open
@@ -683,7 +697,7 @@ async fn pair_with_bots(
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     let hour = hour_of(now);
-    let mut busy: IndexSet<String> = IndexSet::new();
+    let mut busy: IndexSet<String> = in_series.clone();
     let mut made = 0;
     for ticket in due {
         let recent = {
@@ -705,6 +719,15 @@ async fn pair_with_bots(
             continue;
         };
         let match_id = new_uuid();
+        if ticket.mode == QueueMode::Bo3 {
+            if !start_bot_series(app, ticket, bot, &match_id, now).await? {
+                continue;
+            }
+            taken.insert(ticket.id.clone());
+            busy.insert(bot.profile_id.clone());
+            made += 1;
+            continue;
+        }
         let won = {
             let mut tx = app
                 .db
@@ -729,6 +752,75 @@ async fn pair_with_bots(
         made += 1;
     }
     Ok(made)
+}
+
+/// R641000: the series a Conquest ticket and its bot play, as `start_paired_series` makes a pair's,
+/// with the claim (`tickets_claim_for_bot_series`) and the series row in one transaction: between
+/// games the bot is in no match, and the series is all that holds it, so a claim must never land
+/// without its series. The person is series p1 and goes first in odd games, as the older ticket of a
+/// pair does (R335, R1453); the bot is p2 with the trio the pool dealt it. The series is ranked
+/// (R604) and opens on game 1's pick phase; `bots::pick` makes the bot's picks from the sweeper.
+/// Answers false, with nothing written, when the bot holds no trio or the claim lost.
+async fn start_bot_series(
+    app: &Arc<App>,
+    ticket: &Ticket,
+    bot: &BotRow,
+    match_id: &str,
+    now: i64,
+) -> Result<bool, ApiError> {
+    let person_trio = trio_of(ticket)?;
+    let Some(bot_trio) = bot.trio.clone() else {
+        return Ok(false);
+    };
+    let mut tx = app
+        .db
+        .begin(None)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    let won = tx
+        .tickets_claim_for_bot_series(&ticket.id, &bot.profile_id, match_id, now)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    if !won {
+        // Dropping `tx` rolls it back.
+        return Ok(false);
+    }
+    // R143 and R259: the server mints the series seed, unless an end-to-end enqueue supplied one.
+    let seed_base = seeds().shift_remove(&ticket.id).unwrap_or_else(new_seed);
+    let input = NewSeriesInput {
+        series_id: new_uuid(),
+        first_match_id: match_id.to_string(),
+        sides: (
+            NewSeriesSide {
+                profile_id: ticket.profile_id.clone(),
+                trio: person_trio,
+            },
+            NewSeriesSide {
+                profile_id: bot.profile_id.clone(),
+                trio: bot_trio,
+            },
+        ),
+        seed_base,
+        catalog_version: app.catalog.version.clone(),
+        // R604: a series the queue pairs is ranked, whoever it was paired with.
+        ranked: true,
+    };
+    let series = start_series(app, input, &mut tx)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    tracing::info!(
+        event = "queue.paired_bot",
+        mode = "bo3",
+        seriesId = %series.id,
+        firstMatchId = %match_id,
+        ticket = %ticket.id,
+        botId = %bot.profile_id,
+        ratings = %json_list(&[ticket.rating, bot.rating]),
+    );
+    Ok(true)
 }
 
 /// R1453: the match a ticket and the bot it was claimed for play, as `start_paired_match` starts a
@@ -925,13 +1017,10 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     } else {
         None
     };
-    let population = tx
-        .tickets_count_open()
-        .await
-        .map_err(|error| ApiError::internal(error.to_string()))?;
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
+    // R640002: no count of open tickets, which would tell a lone queuer that a bot came.
     Ok(json(
         200,
         json!({
@@ -939,7 +1028,6 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
             "status": status,
             "matchId": match_id,
             "seriesId": series_id,
-            "population": population,
             "mode": ticket.mode,
         }),
     ))
@@ -987,33 +1075,64 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
     Ok(json(200, json!({ "cancelled": true, "ticketId": ticket.id })))
 }
 
-/// `GET /api/queue/population` (user): §9.5's queue population instead of an endless spinner.
+/// R640002: the expected wait, in seconds, that `waits_ms` (each a claimed ticket's wait, in ms)
+/// calls for: the `QUEUE_WAIT_QUANTILE` of them, rounded up to the next whole `QUEUE_WAIT_STEP_SECONDS`
+/// (a wait on a step goes to the one past it, so "under" holds). `None` below
+/// `QUEUE_WAIT_MIN_SAMPLES` waits, which is too few to say anything.
+pub fn expected_wait_seconds(waits_ms: &[i64]) -> Option<i64> {
+    if waits_ms.len() < QUEUE_WAIT_MIN_SAMPLES {
+        return None;
+    }
+    let mut sorted = waits_ms.to_vec();
+    sorted.sort_unstable();
+    let rank = ((QUEUE_WAIT_QUANTILE * sorted.len() as f64).ceil() as usize).clamp(1, sorted.len());
+    let step_ms = QUEUE_WAIT_STEP_SECONDS * MS_PER_SECOND as i64;
+    Some((sorted[rank - 1].max(0) / step_ms + 1) * QUEUE_WAIT_STEP_SECONDS)
+}
+
+/// `GET /api/queue/population` (user): §9.5's readout instead of an endless spinner.
 ///
-/// `AuthLevel::User`, not `Active` or `None`: the count is one aggregate that names nobody, and §9.4's
+/// `AuthLevel::User`, not `Active` or `None`: the readout is aggregates that name nobody, and §9.4's
 /// "no queue" is about joining, which `POST /api/queue` still refuses. `None` would give an
 /// anonymous caller a live-traffic feed.
 ///
-/// R257: the total, and per mode, so the lobby can say how many are waiting for each.
+/// R640002: every number in it was counted over the last `QUEUE_READOUT_WINDOW_SECONDS`: per mode
+/// (R257), the expected wait the tickets claimed in it call for (`expected_wait_seconds`, null when
+/// too few were), and the games that ended in it. A pairing with a bot is a claim and a game against
+/// one is a game, like any other. No count of open tickets: one told a lone queuer that a bot came.
 pub async fn population(app: &Arc<App>, _req: Req) -> ApiResult {
     population_route(app).await
 }
 
 async fn population_route(app: &App) -> ApiResult {
+    let since = now_ms() - QUEUE_READOUT_WINDOW_SECONDS * MS_PER_SECOND as i64;
     let mut tx = app
         .db
         .begin(None)
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
-    let population = tx
-        .tickets_count_open()
+    let waits = tx
+        .tickets_recent_waits(since)
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
-    let by_mode = tx
-        .tickets_count_open_by_mode()
+    let games = tx
+        .results_count_since(since)
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
-    Ok(json(200, json!({ "population": population, "byMode": by_mode })))
+    let mut by_mode: PerMode<Vec<i64>> = PerMode::default();
+    for wait in &waits {
+        by_mode[wait.mode].push(wait.waited_ms);
+    }
+    let expected = PerMode {
+        bo1: expected_wait_seconds(&by_mode.bo1),
+        bo3: expected_wait_seconds(&by_mode.bo3),
+        random: expected_wait_seconds(&by_mode.random),
+    };
+    Ok(json(
+        200,
+        json!({ "gamesLastHour": games, "expectedWaitSeconds": expected }),
+    ))
 }

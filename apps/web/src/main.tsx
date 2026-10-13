@@ -14,7 +14,9 @@
 // knows to show the code screen", and send the browser to the screen that will actually work. It
 // lives in exactly one place so there is one thing to change when §9.4 grows a status. The same
 // read says whether an active account still owes the username prompt (R1435), which the gate then
-// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`).
+// shows in place of the screen until the player picks a name or skips (`auth/UsernamePrompt.tsx`),
+// and whether the account owes the age check or agreement to the terms in force (R757000, R757001),
+// which comes first (`auth/ConsentPrompt.tsx`).
 //
 // NO DEAD ENDS (docs/polish/5-sign-in.md, B40). Every panel this file draws itself — the gate's
 // error, the banned account, the 404, a screen whose code failed to load, and a check that is
@@ -45,6 +47,10 @@
 // they wait. The route table's own `useQueueFollow` (`net/liveGame.ts`) watches the account on every
 // screen but `/play`, which watches for itself, and when the queue pairs them it says so over the
 // screen (`QueueFound`) and takes them to the game.
+//
+// THE ENGINE LOADS ALONGSIDE (#778). The engine's module is 2.31 MB gzipped, and the landing, sign-in,
+// the reset and code screens and the legal pages never call it. The page paints once the language is
+// in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
 
 import {
   Component,
@@ -62,8 +68,11 @@ import { createRoot } from "react-dom/client";
 import { GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "./auth/cooldown.ts";
 import { adoptAuthRedirect, sessionIdFromToken } from "./auth/redirect.ts";
+import { dropStaleSignUpConsent } from "./auth/consent.ts";
+import ConsentPrompt from "./auth/ConsentPrompt.tsx";
 import { shellTestid } from "./auth/testids.ts";
 import UsernamePrompt from "./auth/UsernamePrompt.tsx";
+import { initLocale, t, useLocale } from "./i18n/i18n.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -86,7 +95,7 @@ import { QueueFound } from "./routes/GameBanner.tsx";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
-import { loadWasm } from "./wasm/index.ts";
+import { loadWasm, wasmLoaded } from "./wasm/index.ts";
 
 import "./index.css";
 import "./auth/tavern.css";
@@ -96,6 +105,8 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
 // Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
 // behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
 const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
+// The replay player's dev list (#511), left out of a production build the same way.
+const DevReplaysRoute = DEV_ONLY ? lazy(() => import("./routes/dev/replays.tsx")) : null;
 const LoginRoute = lazy(() => import("./routes/login.tsx"));
 const ResetPasswordRoute = lazy(() => import("./routes/reset-password.tsx"));
 const InviteRoute = lazy(() => import("./routes/invite.tsx"));
@@ -107,6 +118,7 @@ const PracticeRoute = lazy(() => import("./routes/practice.tsx"));
 const PrivacyRoute = lazy(() => import("./routes/privacy.tsx"));
 const TermsRoute = lazy(() => import("./routes/terms.tsx"));
 const AccessibilityRoute = lazy(() => import("./routes/accessibility.tsx"));
+const CopyrightRoute = lazy(() => import("./routes/copyright.tsx"));
 const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
@@ -140,7 +152,7 @@ export function ShellPanel({ testId, children }: { testId?: string; children: Re
 }
 
 /** "Home": back to the landing page, in place on a plain click and a real link otherwise. */
-function HomeLink({ testId, label = "Home" }: { testId: string; label?: string }): ReactElement {
+function HomeLink({ testId, label }: { testId: string; label?: string }): ReactElement {
   return (
     <a
       className="button-secondary"
@@ -148,7 +160,7 @@ function HomeLink({ testId, label = "Home" }: { testId: string; label?: string }
       data-testid={testId}
       onClick={followInApp(paths.landing)}
     >
-      {label}
+      {label ?? t("Home")}
     </a>
   );
 }
@@ -173,14 +185,20 @@ function SignOutButton(): ReactElement {
 
 /** A path the client serves nothing at. Said in a player's words; the path is shown, never followed. */
 function NotFound({ path }: { path: string }): ReactElement {
+  // Split around the path, so the sentence is one entry and English reads as it always did.
+  const [nothingBefore = "", nothingAfter = ""] = t("There is nothing at {path}. The link may be wrong or out of date.").split(
+    "{path}",
+  );
   return (
     <ShellPanel testId={shellTestid.notFound}>
-      <p className="notice">That page doesn&rsquo;t exist.</p>
+      <p className="notice">{t("That page doesn’t exist.")}</p>
       <p className="auth-hint">
-        There is nothing at <code>{path}</code>. The link may be wrong or out of date.
+        {nothingBefore}
+        <code>{path}</code>
+        {nothingAfter}
       </p>
       <div className="row">
-        <HomeLink testId={shellTestid.notFoundHome} label="Back to the start" />
+        <HomeLink testId={shellTestid.notFoundHome} label={t("Back to the start")} />
       </div>
     </ShellPanel>
   );
@@ -215,13 +233,13 @@ export function Loading({ what, slow = false, testId, children }: LoadingProps):
   return (
     <ShellPanel {...(testId === undefined ? {} : { testId })}>
       <p className="notice shell-panel__loading" data-testid={shellTestid.loading} role="status">
-        {what}
+        {t(what)}
       </p>
       {children}
       {late ? (
         <>
           <p className="notice" data-testid={shellTestid.slow}>
-            This is taking a while. The server may be waking up, which can take up to a minute.
+            {t("This is taking a while. The server may be waking up, which can take up to a minute.")}
           </p>
           <div className="row">
             <HomeLink testId={shellTestid.home} />
@@ -254,8 +272,8 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
   return (
     <ShellPanel>
       <p className="notice" data-testid={shellTestid.error} role="alert">
-        {account.message}
-        {wait > 0 ? ` You can try again in ${String(wait)} s.` : null}
+        {t(account.message)}
+        {wait > 0 ? ` ${t("You can try again in {seconds} s.", { seconds: String(wait) })}` : null}
       </p>
       <div className="row">
         <button
@@ -268,7 +286,7 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
             account.retry?.();
           }}
         >
-          {wait > 0 ? `Try again in ${String(wait)} s` : "Try again"}
+          {wait > 0 ? t("Try again in {seconds} s", { seconds: String(wait) }) : t("Try again")}
         </button>
         <HomeLink testId={shellTestid.home} />
         <SignOutButton />
@@ -302,7 +320,7 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
     return (
       <ShellPanel testId={shellTestid.loadFailed}>
         <p className="notice" role="alert">
-          This screen didn&rsquo;t load. Check your connection, then reload the page.
+          {t("This screen didn’t load. Check your connection, then reload the page.")}
         </p>
         <div className="row">
           <button
@@ -313,15 +331,74 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
               window.location.reload();
             }}
           >
-            Reload
+            {t("Reload")}
           </button>
           <a className="button-secondary" href={paths.landing} data-testid={shellTestid.loadFailedHome}>
-            Home
+            {t("Home")}
           </a>
         </div>
       </ShellPanel>
     );
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The engine's module (#778)
+// ---------------------------------------------------------------------------------------------
+
+/** Where the engine's WebAssembly module stands, for a screen that calls it. */
+type EngineLoad = "loading" | "ready" | "failed";
+
+/**
+ * Holds a screen that calls the engine until its module is in, in the panel a lazy screen waits in.
+ * A module that did not arrive gets a panel whose retry asks `loadWasm()` again in place: a failed
+ * download is not cached (`wasm/index.ts`), so the next call fetches it anew.
+ */
+function EngineGate({ children }: { children: ReactNode }): ReactElement {
+  const [load, setLoad] = useState<EngineLoad>(() => (wasmLoaded() ? "ready" : "loading"));
+  useEffect(() => {
+    if (load !== "loading") return;
+    let live = true;
+    void loadWasm().then(
+      () => {
+        if (live) setLoad("ready");
+      },
+      (cause: unknown) => {
+        if (!live) return;
+        console.error("the engine's WebAssembly module did not load", cause);
+        setLoad("failed");
+      },
+    );
+    return () => {
+      live = false;
+    };
+  }, [load]);
+
+  if (load === "loading") return <Loading what="Loading…" slow testId={shellTestid.engineLoading} />;
+  if (load === "failed") {
+    return (
+      <ShellPanel testId={shellTestid.engineFailed}>
+        <p className="notice" role="alert">
+          {t("The game didn’t load. Check your connection, then try again.")}
+        </p>
+        <div className="row">
+          <button
+            type="button"
+            className="button-primary"
+            data-testid={shellTestid.retry}
+            onClick={() => {
+              setLoad("loading");
+            }}
+          >
+            {t("Try again")}
+          </button>
+          <HomeLink testId={shellTestid.home} />
+          {readSession() === null ? null : <SignOutButton />}
+        </div>
+      </ShellPanel>
+    );
+  }
+  return <>{children}</>;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -336,6 +413,11 @@ export type GatedProps = {
    * Everything else is `active`-only.
    */
   allowPending?: boolean;
+  /**
+   * R757001: `/account` opens whether or not the account owes the consent screen, so a player who
+   * will not agree can still delete their account or sign out there.
+   */
+  consentExempt?: boolean;
   children: (account: ReadyAccount) => ReactElement;
 };
 
@@ -364,13 +446,24 @@ export function redirectFor(account: Account, allowPending: boolean): string | n
  */
 const usernamePromptPassed = new Set<string>();
 
-/** Test seam: a new page, which has let no profile past the prompt yet. */
+/**
+ * R757000, R757001: the profiles that answered the consent screen on this page. The answer counts
+ * at once, as the username prompt's does, whatever the re-read after it finds.
+ */
+const consentAnswered = new Set<string>();
+
+/** Test seam: a new page, which has let no profile past either prompt yet. */
 export function resetUsernamePromptForTests(): void {
   usernamePromptPassed.clear();
+  consentAnswered.clear();
 }
 
-export function Gated({ allowPending = false, children }: GatedProps): ReactElement {
+export function Gated({ allowPending = false, consentExempt = false, children }: GatedProps): ReactElement {
   const account = useAccount();
+  // R757001: this gate has shown its screen to an active account that owed nothing. A later read
+  // that finds the terms owed (they changed while the player was here) leaves the screen up, and
+  // the next screen asks. Per gate, since each screen mounts its own (ONE GATE PER SCREEN).
+  const [screenShown] = useState(() => new Set<string>());
   // R634: an active account's game settings are kept level with this device's, on every gated screen.
   useSettingsAccountSync(account);
   const target = redirectFor(account, allowPending);
@@ -400,7 +493,7 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
     return (
       <ShellPanel>
         <p className="notice" data-testid={shellTestid.error} role="alert">
-          This account is banned.
+          {t("This account is banned.")}
         </p>
         <div className="row">
           <HomeLink testId={shellTestid.home} />
@@ -416,6 +509,30 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   // waits for the next sign-in like any other screen it found open.
   const profileId = account.me.profile.id;
   const playing = account.me.currentMatchId !== null || (account.me.currentSeriesId ?? null) !== null;
+  // R757000, R757001: an account owing the age check or agreement to the terms in force meets the
+  // consent screen first, the server's `ageCheckOwed` and `termsOwed` (a server that sends neither
+  // owes none). A pending account meets it before the code screen, whose redemption the server
+  // refuses until it is answered. Never on `/account`, never while in a match or a series, and
+  // never over a screen this gate already showed an active account.
+  const consentOwed = account.me.ageCheckOwed === true || account.me.termsOwed === true;
+  if (
+    consentOwed &&
+    !consentExempt &&
+    !playing &&
+    !consentAnswered.has(profileId) &&
+    !(status === "active" && screenShown.has(profileId))
+  ) {
+    return (
+      <ConsentPrompt
+        token={account.token}
+        me={account.me}
+        onAnswered={() => {
+          consentAnswered.add(profileId);
+          setAnswered((count) => count + 1);
+        }}
+      />
+    );
+  }
   if (
     status === "active" &&
     account.me.username?.promptOwed === true &&
@@ -435,7 +552,10 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
   }
   // Remembered from the render itself, so the screen's first render already counts. Adding a member
   // the set may hold already is the same however often React renders this.
-  if (status === "active") usernamePromptPassed.add(profileId);
+  if (status === "active") {
+    usernamePromptPassed.add(profileId);
+    screenShown.add(profileId);
+  }
 
   return children({ token: account.token, me: account.me });
 }
@@ -450,6 +570,8 @@ export function Gated({ allowPending = false, children }: GatedProps): ReactElem
  * page that does not exist.
  */
 function useDocumentHead(path: string): void {
+  // The tab title is in the reader's language and follows a switch (#711).
+  const locale = useLocale();
   useEffect(() => {
     document.title = documentTitleFor(path);
     const href = canonicalUrlFor(path);
@@ -464,7 +586,7 @@ function useDocumentHead(path: string): void {
       document.head.append(link);
     }
     link.href = href;
-  }, [path]);
+  }, [path, locale]);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -480,6 +602,9 @@ function sessionKeyOf(token: string): string {
 }
 
 export function App(): ReactElement {
+  // The whole tree redraws in the new language when the reader switches (#711): the screens' `t()`
+  // calls run again, and nothing below remounts, so a match in progress keeps its socket.
+  useLocale();
   // Before the first read of the path: an emailed link is scrubbed, and moved to `/login` (R193).
   useState(() => adoptAuthRedirect(paths.login));
   // R767: a room link leaves the address bar and waits in this tab before the gate can send a signed-out visitor to sign in.
@@ -489,6 +614,7 @@ export function App(): ReactElement {
   // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.
   const found = useQueueFollow(path);
 
+  // #778: every screen but the seven engine-free ones waits in EngineGate, inside the account gate so its redirects do not wait.
   const route = ((): ReactElement => {
     if (path === paths.landing) return <LandingRoute />;
     if (path === paths.login) return <LoginRoute />;
@@ -498,39 +624,98 @@ export function App(): ReactElement {
     if (path === paths.invite) {
       return <Gated key={path} allowPending>{(account) => <InviteRoute account={account} />}</Gated>;
     }
-    if (path === paths.decks) return <Gated key={path}>{() => <DecksRoute />}</Gated>;
-    if (path === paths.play) return <Gated key={path}>{(account) => <PlayRoute token={account.token} />}</Gated>;
+    if (path === paths.decks) {
+      return (
+        <Gated key={path}>
+          {() => (
+            <EngineGate>
+              <DecksRoute />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+    if (path === paths.play) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <PlayRoute token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
     // `allowPending`: a pending account still has an email, a status and a way to sign out,
     // and being unable to sign out of the screen that tells you to redeem a code is the trap
     // this route exists to remove.
     if (path === paths.account) {
       return (
-        <Gated key={path} allowPending>
-          {(account) => <AccountRoute token={account.token} me={account.me} />}
+        <Gated key={path} allowPending consentExempt>
+          {(account) => (
+            <EngineGate>
+              <AccountRoute token={account.token} me={account.me} />
+            </EngineGate>
+          )}
         </Gated>
       );
     }
 
-    if (path === paths.practice) return <PracticeRoute />;
+    if (path === paths.practice) {
+      return (
+        <EngineGate>
+          <PracticeRoute />
+        </EngineGate>
+      );
+    }
     if (path === paths.leaderboard) {
-      return <Gated key={path}>{(account) => <LeaderboardRoute token={account.token} />}</Gated>;
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <LeaderboardRoute token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
     }
     if (path === paths.privacy) return <PrivacyRoute />;
     if (path === paths.terms) return <TermsRoute />;
     if (path === paths.accessibility) return <AccessibilityRoute />;
+    if (path === paths.copyright) return <CopyrightRoute />;
     // R388: the patch history is public, like the catalog it records.
-    if (path === paths.patchNotes) return <PatchNotesRoute />;
+    if (path === paths.patchNotes) {
+      return (
+        <EngineGate>
+          <PatchNotesRoute />
+        </EngineGate>
+      );
+    }
     // R630: the Card Almanac is public, like the catalog it shows.
-    if (path === paths.almanac) return <AlmanacRoute />;
+    if (path === paths.almanac) {
+      return (
+        <EngineGate>
+          <AlmanacRoute />
+        </EngineGate>
+      );
+    }
     // R654: public statistics page is public, like the almanac.
-    if (path === paths.stats) return <StatsRoute />;
+    if (path === paths.stats) {
+      return (
+        <EngineGate>
+          <StatsRoute />
+        </EngineGate>
+      );
+    }
 
     const matchId = matchIdOf(path);
     if (matchId !== null) {
       return (
         <Gated key={path}>
           {(account) => (
-            <MatchRoute key={sessionKeyOf(account.token)} matchId={matchId} token={account.token} />
+            <EngineGate>
+              <MatchRoute key={sessionKeyOf(account.token)} matchId={matchId} token={account.token} />
+            </EngineGate>
           )}
         </Gated>
       );
@@ -539,12 +724,28 @@ export function App(): ReactElement {
     // R338: the Conquest series screen, behind the same gate as the board it leads to.
     const seriesId = seriesIdOf(path);
     if (seriesId !== null) {
-      return <Gated key={path}>{(account) => <SeriesRoute seriesId={seriesId} token={account.token} />}</Gated>;
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <SeriesRoute seriesId={seriesId} token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
     }
 
     if (path === paths.hotseat) {
       if (HotseatRoute === null) return <NotFound path={path} />;
-      return <HotseatRoute />;
+      return (
+        <EngineGate>
+          <HotseatRoute />
+        </EngineGate>
+      );
+    }
+    if (path === paths.devReplays) {
+      if (DevReplaysRoute === null) return <NotFound path={path} />;
+      return <DevReplaysRoute />;
     }
     return <NotFound path={path} />;
   })();
@@ -563,10 +764,8 @@ export function App(): ReactElement {
 /**
  * `index.html` loads this module as its only script, so the mount is a module side effect.
  *
- * The engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3), and the deck builder calls its validator
- * synchronously, so the first render waits for `loadWasm()`. A module that fails to load still
- * renders the app: the screens that need no engine (the landing, sign-in, the code screen) work, and
- * one that does need it throws into the route's error panel, which offers a retry.
+ * The engine is WebAssembly (docs/v0.3.0/SURFACE.md §10.3). Its download starts here beside the
+ * language's, and the first render waits only for the language: see THE ENGINE LOADS ALONGSIDE.
  *
  * Vitest imports the module to reach `App`, `Gated` and `redirectFor`, and a second React root
  * mounted into the test's own document would duplicate every query and every `/api/auth/me` round
@@ -580,16 +779,18 @@ if (import.meta.env.MODE !== "test") {
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();
-  const mount = (): void => {
+  // R757000: a sign-up's held birth answer past its time leaves this browser.
+  dropStaleSignUpConsent();
+  // The language's dictionary is in before the first paint, so a Chinese reader never sees English flash by (#711).
+  const localeReady = initLocale();
+  // #778: the engine's module downloads alongside; EngineGate reports a failure, and asks again, on the screens that need it.
+  void loadWasm().catch(() => undefined);
+  void localeReady.then(() => {
     createRoot(host).render(
       <StrictMode>
         <App />
       </StrictMode>,
     );
-  };
-  loadWasm().then(mount, (cause: unknown) => {
-    console.error("the engine's WebAssembly module did not load", cause);
-    mount();
   });
   // Polish 2: UI ticks and the audio unlock on every screen, off the first paint (audio/appAudio.ts).
   void import("./audio/appAudio.ts").then((audio) => audio.retainAppAudio());

@@ -11,12 +11,24 @@ export type PatchChange = {
   readonly fields?: readonly string[];
 };
 
+/** R724001: what players read of a patch, apart from its record: a title and one fact per line. */
+export type PlayerNote = {
+  readonly title: string;
+  readonly new: readonly string[];
+  readonly balance: readonly string[];
+  readonly changes: readonly string[];
+  readonly text: readonly string[];
+  readonly fixes: readonly string[];
+};
+
 export type Patch = {
   readonly version: string;
   readonly date: string;
   readonly title: string;
   readonly source: string;
   readonly notes: string;
+  /** R724001: every shipped patch has one (`cargo jackioh patches check`); a fixture may not. */
+  readonly player?: PlayerNote;
   readonly changes: readonly PatchChange[];
 };
 

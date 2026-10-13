@@ -52,7 +52,10 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(dashboard.update(self.ctx), f"rewrote #{number}")
         self.assertEqual(opened(self.gh), [number])  # no second issue, no second pin
         self.assertEqual(self.gh.pinned, [f"I_{number}"])
-        self.assertIn("| #7 | build | easy | high |", self.gh.threads[number]["body"])
+        body = self.gh.threads[number]["body"]
+        row = next(line for line in body.splitlines() if line.startswith("| #7 |"))
+        self.assertIn("| plan, then build | 🟢 easy → medium<br/><sub>a plan first</sub> | "
+                      "▶️ **starts at the next run** on `claude-1` (`sonnet`, medium) | high |", row)
 
     def test_a_lost_number_adopts_a_trusted_issue_never_a_strangers(self):
         body = f"old\n\n{dashboard.MARKER}"
@@ -101,7 +104,7 @@ class DashboardTests(unittest.TestCase):
         self.assertIn(muse_row, body)
         self.assertIn(claude_row, body)
         self.assertLess(body.index(muse_row), body.index(claude_row))
-        self.assertIn("by `bot-status`, which rewrites this issue every ten minutes", body)
+        self.assertIn("by `bot-status`, which rewrites this issue every 5 minutes", body)
         # A timeline of the runs going now: GitHub's runners, then the machine.
         self.assertIn("```mermaid\ngantt\n    title Runs going now, as of 22:00 (Central time)",
                       body)
@@ -111,15 +114,20 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("    section The night box\n    muse · revising 49 · 2h 03m :active, ", body)
         gantt = body.split("```mermaid\ngantt")[1].split("```")[0]
         self.assertNotIn("#", gantt)  # a gantt chart reads `#` as a comment
-        # The lanes as boxes: each Claude account, then each slot on the machine.
+        # Every subscription as a box, with what it does or why not and its usage, always:
+        # the Claude accounts, then the night box's.
         self.assertIn('subgraph hosted["Claude accounts, on GitHub\'s runners: 1 of 7 working"]',
                       body)
-        self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37<br/>since 21:13"]:::busy', body)
+        self.assertIn('h0["<b>claude-1</b><br/>🟢 building #37 · since 21:13<br/>5h ▰▰▱▱▱ 30%"]'
+                      ':::busy', body)
+        self.assertIn('h1["<b>claude-2</b><br/>⚫ off: no secret set<br/>5h not read yet · cap 90%'
+                      '<br/>7d not read yet · cap 90%"]:::off', body)
         slots = self.ctx.cfg.pool.machine_parallel
         self.assertIn(f'subgraph machine["The night box: 1 of {slots} slots in use"]', body)
-        self.assertIn('m0["<b>muse</b><br/>revising #49<br/>since 19:57"]:::busy', body)
-        self.assertIn('m5["free"]:::free', body)
-        self.assertIn(" ~~~ ".join(f"m{i}" for i in range(slots)), body)
+        self.assertIn('m3["<b>muse</b><br/>🟢 revising #49 · since 19:57<br/>5h not read yet · '
+                      'cap 95%<br/>7d not read yet"]:::busy', body)
+        self.assertIn("m0 ~~~ m1 ~~~ m2 ~~~ m3", body)
+        self.assertNotIn(":::free", body)  # no empty slot is drawn as a free subscription
         # The AI's training lanes run outside the harness: no box of theirs here.
         self.assertNotIn("training", body)
         # GitHub's lanes count claude-1's run; Muse's is in the night box's slots.
@@ -127,10 +135,13 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("pie", body)
         # Each subscription, with its usage as a bar.
         self.assertIn("| `claude-1` |", body)
-        self.assertIn("🟢 #37", body)
+        self.assertIn("| `claude-1` | 🟢 building #37 |", body)
         self.assertIn("▰▰▰▱▱▱▱▱▱▱ 30%", body)
         # The queue and the last runs.
-        self.assertIn("| #9 | revise | hard | — | Make it so |", body)
+        self.assertIn("| #9 | Make it so | revise | 🔴 hard → strong | ⏳ **a strong model (Opus)**: "
+                      "busy `claude-1` | — |", body)
+        self.assertIn("> 🟢 **2 running** · 📋 **1 queued**: 1 waits for a strong model · 🔋 "
+                      "**none of 11 subscriptions can start work now**", body)
         self.assertIn('| <span title="took 4m">Tue 21:30</span> | schedule | ✅ '
                       '| [812](https://github.com/x/y/actions/runs/200) |', body)
         # The full status, folded.
@@ -146,15 +157,15 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("Nothing is queued.", body)
 
     def test_the_loop_rewrites_it_every_ten_minutes_and_outlives_a_bad_tick(self):
-        """`harness dashboard --every 600 --for 1200`, as bot-status runs it (with longer
-        figures): a rewrite now and every ten minutes until the time is up, and a tick that fails
+        """`harness dashboard --every 600 --for 1200`, as bot-status runs it (with other
+        figures): a rewrite now and every `--every` until the time is up, and a tick that fails
         is only a warning."""
         from unittest import mock
         import harness.__main__ as main_mod
         clock = [1000.0]
         ticks = []
 
-        def update(ctx, extra=()):
+        def update(ctx, extra=(), **_):
             ticks.append(clock[0])
             if len(ticks) == 2:
                 raise RuntimeError("network down")
@@ -188,7 +199,7 @@ class DashboardTests(unittest.TestCase):
                 raise RuntimeError("rate limited")
             return ["started a night run"]
 
-        def update(ctx, extra=()):
+        def update(ctx, extra=(), **_):
             order.append(("rewrite", clock[0]))
             return "rewrote #148"
 
@@ -206,6 +217,24 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("::warning::the sweep failed: rate limited", out.getvalue())
         self.assertIn("sweep: started a night run", out.getvalue())
 
+    def test_the_loop_carries_the_statistics_and_harness_stats_counts_them_now(self):
+        """`--stats` puts them in the status issue at each rewrite (counted when due); `harness
+        stats --force` rewrites the issue now with them counted afresh."""
+        calls = []
+
+        def update(ctx, extra=(), **kwargs):
+            calls.append(kwargs)
+            return "rewrote #148"
+
+        out = io.StringIO()
+        with mock.patch.object(dashboard, "update", update), offline(), \
+                contextlib.redirect_stdout(out):
+            cmd_dashboard(make_config(), argparse.Namespace(stats=True))
+            main_mod.cmd_stats(make_config(), argparse.Namespace(force=True))
+        self.assertEqual([(c["stats"], c.get("force_stats", False)) for c in calls],
+                         [(True, False), (True, True)])
+        self.assertIn("dashboard: rewrote #148", out.getvalue())
+
     def test_each_idle_account_says_why_in_its_box(self):
         """A Claude account with no run: open, at a cap, outside its hours, resting after a run
         that could not work, or off, each with the time it changes."""
@@ -221,16 +250,14 @@ class DashboardTests(unittest.TestCase):
         state = self.ctx.store.load()
         pool = self.ctx.cfg.pool
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-1")),
-                         ("open", "⚪ open"))
+                         ("idle", "⚪ idle"))
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-2")),
-                         ("paused", "⏸️ 5-hour 95%, cap 90%<br/>free 23:10"))
+                         ("paused", "⏸️ 5-hour 95% of its 90% cap<br/>starts again 23:10"))
         self.assertEqual(dashboard._account(self.ctx, state, pool.get("claude-3")),
-                         ("broken", "⛔ last run could not work<br/>tries again 23:50"))
+                         ("broken", "⛔ its last run could not work<br/>tries again 23:50"))
         day = make_ctx(self.gh, at=NIGHT + timedelta(hours=12), cfg=self.ctx.cfg)
-        self.assertEqual(dashboard._account(day, day.store.load(), pool.get("claude-1"))[0],
-                         "closed")
-        self.assertIn("🌙 opens 21:00", dashboard._account(day, day.store.load(),
-                                                          pool.get("claude-1"))[1])
+        self.assertEqual(dashboard._account(day, day.store.load(), pool.get("claude-1")),
+                         ("closed", "🌙 outside its hours<br/>opens 21:00"))
         unset = make_ctx(self.gh, at=NIGHT, cfg=make_config(env={"HARNESS_SECRETS_SET": ""}))
         self.assertEqual(dashboard._account(unset, state, unset.cfg.pool.get("claude-4")),
                          ("off", "⚫ off: no secret set"))
@@ -248,18 +275,19 @@ class DashboardTests(unittest.TestCase):
         state = ctx.store.load()
         pool = cfg.pool
         self.assertEqual(dashboard._account(ctx, state, pool.get("claude-4")),
-                         ("paused", "⏸️ 5-hour 49%, cap 50%<br/>starts under 45%; reviews only"
-                                    "<br/>free 03:00"))
+                         ("paused", "⏸️ 5-hour 49% of its 50% cap<br/>long runs start under 45%; "
+                                    "reviews only<br/>starts again 03:00"))
         self.assertEqual(dashboard._account(ctx, state, pool.get("claude-6")),
-                         ("paused", "⏸️ 5-hour 45%, cap 50%<br/>starts under 45%; reviews only"
-                                    "<br/>free 02:50"))
+                         ("paused", "⏸️ 5-hour 45% of its 50% cap<br/>long runs start under 45%; "
+                                    "reviews only<br/>starts again 02:50"))
         body = dashboard.render(ctx)
-        self.assertNotIn('"]:::open', body)  # no account box says open
-        self.assertIn("| Subscription | Models (tier) | Hours | Now | 5-hour session | "
-                      "7-day week | Read |", body)
-        self.assertIn("| ⏸️ 5-hour 49%, cap 50%<br/>starts under 45%; reviews only<br/>free 03:00 "
-                      "| ▰▰▰▰▰▱▱▱▱▱ 49%<br/><sub>cap 50% now, 70% in its hours · builds and "
-                      "plans start under 45% · resets 04:10</sub> | — | "
+        self.assertNotIn("⚪ idle", body.split("## 📋 Queue")[0].split("claude-4")[1][:80])
+        self.assertIn("| Subscription | Now | 5-hour session | 7-day week | Read | Models (tier) "
+                      "| Hours |", body)
+        self.assertIn("| `claude-4` | ⏸️ 5-hour 49% of its 50% cap<br/>long runs start under 45%; "
+                      "reviews only<br/>starts again 03:00 | ▰▰▰▰▰▱▱▱▱▱ 49%<br/><sub>cap 50% now, "
+                      "70% in its hours · builds and plans start under 45% · resets 04:10</sub> "
+                      "| —<br/><sub>not reported</sub> | "
                       '<span title="read at Thu 23:37">1h 22m ago</span> |', body)
         self.assertIn("`claude-4` (claude: `opus` strong, `sonnet` medium; 03:00–15:00 "
                       "America/Chicago, outside them up to 50% of 5-hour): 5-hour usage is 49%, "
@@ -292,6 +320,66 @@ class DashboardTests(unittest.TestCase):
         self.assertIn("::warning::the status issue was not updated", out.getvalue())
 
 
+class StatisticsTests(unittest.TestCase):
+    """The statistics live in the status issue (#148; they had an issue of their own, #190):
+    counted afresh every 30 minutes, kept as they are between counts, and cut to fit GitHub's
+    limit on an issue's body."""
+
+    def test_counted_every_30_minutes_and_kept_between(self):
+        from harness import stats
+        from tests.support import DAY
+        from tests.test_stats import world
+        gh, ctx = world()
+        note = dashboard.update(ctx, stats=True)
+        [number] = opened(gh)
+        self.assertEqual(note, f"opened #{number} and pinned it, with the statistics counted afresh")
+        body = gh.threads[number]["body"]
+        block = stats.kept(body)
+        self.assertIn("## 📊 What it has done", block)
+        self.assertIn("| Runs started | 4 | 5 | 6 | 6 |", block)
+        self.assertLess(body.index("## 🏃 Last night-bot runs"), body.index(stats.BLOCK_START))
+        self.assertLess(body.index(stats.BLOCK_END), body.index(dashboard.MARKER))
+        self.assertEqual(ctx.store.load()["statistics"], {"at": iso(DAY)})
+        # Twenty minutes on, nothing is counted: the block the issue holds is kept as it is.
+        soon = make_ctx(gh, at=DAY + timedelta(minutes=20))
+        with mock.patch.object(stats, "collect", side_effect=AssertionError("counted")):
+            self.assertEqual(dashboard.update(soon, stats=True), f"rewrote #{number}")
+        self.assertEqual(stats.kept(gh.threads[number]["body"]), block)
+        self.assertIn("Updated 2026-09-29 12:20 CDT", gh.threads[number]["body"])
+        # Forced, or once 30 minutes have passed, they are counted afresh.
+        self.assertTrue(dashboard.update(soon, stats=True, force_stats=True).endswith("afresh"))
+        later = make_ctx(gh, at=DAY + timedelta(minutes=51))
+        self.assertTrue(dashboard.update(later, stats=True).endswith("afresh"))
+        # No issue of their own: one pinned issue, and no "Night bot statistics" in it.
+        self.assertEqual(opened(gh), [number])
+        self.assertEqual(gh.pinned, [f"I_{number}"])
+        self.assertFalse(any(t["title"] == "Night bot statistics" for t in gh.threads.values()))
+        # Without --stats (Squishy's own loop, a test) the issue carries none.
+        dashboard.update(later)
+        self.assertIsNone(stats.kept(gh.threads[number]["body"]))
+
+    def test_a_body_too_long_for_github_lists_fewer_merges_then_none(self):
+        from harness import stats
+        from tests.test_stats import merged_pull, world
+        gh, ctx = world()
+        for n in range(100, 160):
+            merged_pull(gh, n, 3, opened="2026-09-29T12:00:00Z", merged="2026-09-29T15:00:00Z",
+                        additions=1, deletions=1)
+        facts = stats.collect(ctx)
+        view = dashboard.look(ctx)
+        full = dashboard.render(ctx, (), stats.block(ctx, facts), view)
+
+        def draw(shown):
+            return stats.block(ctx, facts, shown=shown)
+        with mock.patch.object(dashboard, "MAX_BODY", len(full) - 1):
+            body = dashboard.fit(ctx, view, (), draw)
+        self.assertIn(f"_… and {64 - stats.MERGES_SHOWN // 2} older ones._", body)
+        with mock.patch.object(dashboard, "MAX_BODY", len(dashboard.render(ctx, (), "", view))):
+            body = dashboard.fit(ctx, view, (), draw)
+        self.assertIsNone(stats.kept(body))  # left out last of all
+        self.assertTrue(body.endswith(dashboard.MARKER))
+
+
 class FreshEachTickTests(unittest.TestCase):
     """The loop's job runs for hours, and GitHub fixes its secrets when its run is created (hours
     before it starts, for a run queued behind the last loop): each tick reads the subscriptions
@@ -301,7 +389,7 @@ class FreshEachTickTests(unittest.TestCase):
         seen = []
         clock = [0.0]
 
-        def update(ctx, extra=()):
+        def update(ctx, extra=(), **_):
             seen.append(ctx.cfg)
             between(len(seen))
             return "rewrote #148"

@@ -1,5 +1,5 @@
-// `/privacy`, the footer that links it, the line under "Create account", and the tab title and
-// canonical link `App` keeps for every path.
+// `/privacy`, `/terms`, `/accessibility` and `/copyright`, the footer that links them, the terms box
+// on "Create account" (R757001), and the tab title and canonical link `App` keeps for every path.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -9,11 +9,13 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PLAY_TELEMETRY_RETENTION_DAYS } from "@jackioh/server-config";
+import { MIN_ACCOUNT_AGE_YEARS, PLAY_TELEMETRY_RETENTION_DAYS, TERMS_VERSION } from "@jackioh/server-config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
+import { consentTestid } from "../auth/testids.ts";
 import { SITE_ORIGIN, paths } from "../net/navigate.ts";
 import AccessibilityRoute, { ACCESSIBILITY_LAST_UPDATED, accessibilityTestid } from "./accessibility.tsx";
+import CopyrightRoute, { COPYRIGHT_LAST_UPDATED, copyrightTestid } from "./copyright.tsx";
 import LandingRoute from "./landing.tsx";
 import LoginRoute, { signUpPrivacyTestid } from "./login.tsx";
 import PrivacyRoute, { PRIVACY_LAST_UPDATED, privacyTestid } from "./privacy.tsx";
@@ -57,17 +59,53 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-10");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-13");
+  });
+
+  it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    expect(page.querySelector("[data-owner-slot]"), "no slot left for the owner").toBeNull();
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const children = section(/children/i);
+    expect(children).toContain(`at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old`);
+    expect(children).toMatch(/we keep only that you passed/);
+    expect(children).toMatch(/delete it the way .Delete my account. does/);
+    const collected = section(/what we collect/i);
+    expect(collected).toMatch(/passed the age check, when, and the minimum age/);
+    expect(collected).toMatch(/don.t keep your date of birth/);
+    expect(collected).toMatch(/version of the Terms and of this policy you agreed to/);
+    expect(section(/what stays on your device/i)).toMatch(/month and year of birth you gave/);
+    expect(section(/what stays on your device/i)).toMatch(/no cookies/i);
+    expect(section(/deleting your account/i)).toMatch(/record of your age check and of the terms you agreed to/);
+  });
+
+  it("R757001 TERMS_VERSION is the terms' date, then the privacy policy's", () => {
+    // A change to either page's text changes its date, so every account is asked to agree again.
+    expect(TERMS_VERSION).toBe(`${TERMS_LAST_UPDATED}/${PRIVACY_LAST_UPDATED}`);
   });
 
   it("names what is collected, who handles it, and how to delete an account", () => {
     render(<PrivacyRoute />);
     const page = screen.getByTestId(privacyTestid.screen);
-    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
+    for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Cloudflare/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
       expect(page.textContent).toMatch(fact);
     }
     expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);
   });
+
+    it("names Cloudflare as the website's host and Vercel as its test copy's (#770)", () => {
+      render(<PrivacyRoute />);
+      const page = screen.getByTestId(privacyTestid.screen);
+      const section = within(page).getByRole("heading", { name: /who handles it/i }).closest("section");
+      const items = [...(section?.querySelectorAll("li") ?? [])].map((item) => item.textContent ?? "");
+      expect(items).toContain("Cloudflare hosts this website at jackioh.com.");
+      expect(items).toContain("Vercel hosts a test copy of it at jackioh.vercel.app.");
+      expect(items).toHaveLength(4);
+      expect(section?.textContent).toMatch(/We use four services to run JackiOh:/);
+      expect(page.textContent).not.toMatch(/Vercel hosts this website/);
+    });
 
   it("R1442 names the play telemetry, how long it is kept, and that deleting an account deletes it", () => {
     render(<PrivacyRoute />);
@@ -127,8 +165,14 @@ describe("the legal pages", () => {
     );
   });
 
+  it("R640001 the terms say ranked may pair a player with an AI opponent", () => {
+    render(<TermsRoute />);
+    const ranked = screen.getByRole("region", { name: "Ranked play" });
+    expect(ranked).toHaveTextContent("When no suitable opponent is available, ranked may pair you with an AI opponent.");
+  });
+
   it("open as drafts for the owner: their first source lines say so", () => {
-    for (const file of ["terms.tsx", "accessibility.tsx"]) {
+    for (const file of ["terms.tsx", "accessibility.tsx", "copyright.tsx"]) {
       const source = readFileSync(join(HERE, file), "utf8");
       expect(source.split("\n")[0], file).toBe("// DRAFT — needs owner and legal review");
     }
@@ -138,9 +182,34 @@ describe("the legal pages", () => {
     const sitemap = sitemapXml(PUBLIC_PAGES);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/terms</loc>`);
     expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/accessibility</loc>`);
+    expect(sitemap).toContain(`<loc>${SITE_ORIGIN}/copyright</loc>`);
   });
 
-  it("serves /terms and /accessibility with no account needed", async () => {
+  it("the terms name the minimum age, what a player submits, and link the copyright page", () => {
+    render(<TermsRoute />);
+    expect(screen.getByRole("region", { name: "Who can have an account" })).toHaveTextContent(
+      `You must be at least ${String(MIN_ACCOUNT_AGE_YEARS)} years old to have an account.`,
+    );
+    expect(screen.getByRole("region", { name: "Agreeing to these terms" })).toHaveTextContent(/ticking the box/);
+    const submitted = screen.getByRole("region", { name: "What you submit" });
+    expect(submitted).toHaveTextContent(/username you choose/);
+    expect(submitted).toHaveTextContent(/We remove content that infringes/);
+    expect(within(submitted).getByRole("link", { name: "Copyright" })).toHaveAttribute("href", paths.copyright);
+  });
+
+  it("the copyright page says how to send a notice, leaves the agent to the owner, and shows its date", () => {
+    render(<CopyrightRoute />);
+    const page = screen.getByTestId(copyrightTestid.screen);
+    expect(screen.getByTestId(copyrightTestid.updated)).toHaveTextContent(`Last updated ${COPYRIGHT_LAST_UPDATED}`);
+    const report = screen.getByRole("region", { name: /reporting content that infringes your copyright/i });
+    // 17 U.S.C. § 512(c)(3)'s six elements.
+    expect(within(report).getAllByRole("listitem")).toHaveLength(6);
+    expect(page.querySelector('[data-owner-slot="dmca-agent"]')).not.toBeNull();
+    expect(screen.getByRole("region", { name: /if your content was removed/i })).toHaveTextContent(/counter-notice/);
+    expect(screen.getByRole("region", { name: /repeat infringers/i })).toHaveTextContent(/close the accounts/);
+  });
+
+  it("serves /terms, /accessibility and /copyright with no account needed", async () => {
     at(paths.terms);
     render(<App />);
     expect(await screen.findByTestId(termsTestid.screen, undefined, SLOW)).toBeInTheDocument();
@@ -148,6 +217,10 @@ describe("the legal pages", () => {
     at(paths.accessibility);
     render(<App />);
     expect(await screen.findByTestId(accessibilityTestid.screen, undefined, SLOW)).toBeInTheDocument();
+    cleanup();
+    at(paths.copyright);
+    render(<App />);
+    expect(await screen.findByTestId(copyrightTestid.screen, undefined, SLOW)).toBeInTheDocument();
   });
 });
 
@@ -161,6 +234,7 @@ describe("the site footer", () => {
       "href",
       paths.accessibility,
     );
+    expect(within(footer).getByTestId(siteFooterTestid.copyright)).toHaveAttribute("href", paths.copyright);
     expect(within(footer).getByTestId(siteFooterTestid.contact)).toHaveAttribute("href", CONTACT_URL);
   });
 
@@ -181,14 +255,24 @@ describe("the site footer", () => {
 });
 
 describe("under Create account", () => {
-  it("links the privacy policy, and only on the sign-up form", async () => {
+  it("R757001 an unticked box agrees to the Terms and the Privacy Policy, and only on the sign-up form", async () => {
     render(<LoginRoute />);
     expect(screen.queryByTestId(signUpPrivacyTestid)).toBeNull();
     await userEvent.click(screen.getByTestId("login-mode"));
     const line = screen.getByTestId(signUpPrivacyTestid);
-    expect(line).toHaveTextContent("By creating an account you agree to the Terms and Privacy Policy.");
-    expect(within(line).getByRole("link", { name: "Terms" })).toHaveAttribute("href", paths.terms);
-    expect(within(line).getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", paths.privacy);
+    const box = within(line).getByRole("checkbox", { name: "I agree to the Terms and the Privacy Policy." });
+    expect(box).toBe(screen.getByTestId(consentTestid.agree));
+    expect(box).not.toBeChecked();
+    // Each link opens its page in a new tab, so reading it loses nothing typed.
+    for (const [name, href] of [
+      ["Terms", paths.terms],
+      ["Privacy Policy", paths.privacy],
+    ] as const) {
+      const link = within(line).getByRole("link", { name });
+      expect(link).toHaveAttribute("href", href);
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
   });
 });
 
@@ -204,6 +288,7 @@ describe("the tab title and the canonical link", () => {
     expect(documentTitleFor(paths.privacy)).toBe("Privacy · JackiOh");
     expect(documentTitleFor(paths.terms)).toBe("Terms · JackiOh");
     expect(documentTitleFor(paths.accessibility)).toBe("Accessibility · JackiOh");
+    expect(documentTitleFor(paths.copyright)).toBe("Copyright · JackiOh");
     expect(documentTitleFor(paths.match("m-1"))).toBe("Match · JackiOh");
     expect(documentTitleFor("/nope")).toBe("Page not found · JackiOh");
   });

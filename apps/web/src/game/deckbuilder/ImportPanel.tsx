@@ -9,6 +9,7 @@ import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from "
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { DECK_CODE_VERSION } from "@jackioh/server-config";
+import { t } from "../../i18n/i18n.ts";
 import { DECK_CODE_PREFIX, decodeDeckCode, type DroppedCards } from "./deckCode.ts";
 import { DECK_SIZE, MAX_COPIES } from "./deckSize.ts";
 import {
@@ -20,6 +21,7 @@ import {
   DECK_IMPORT_SUBMIT,
   WORKSHOP_BACK,
 } from "./testids.ts";
+import { cardNames, cardsWord } from "./workshop.ts";
 
 export type ImportPanelProps = {
   catalog: CatalogSnapshot;
@@ -31,36 +33,33 @@ export type ImportPanelProps = {
   onCancel: () => void;
 };
 
-/** "1 card", "3 cards". */
-function cards(count: number): string {
-  return `${String(count)} ${count === 1 ? "card" : "cards"}`;
-}
-
-/** Card names, as the preview lists them: "Bigot, Fruit Bat and Coin Toss". */
-function namesOf(ids: readonly string[], catalog: CatalogSnapshot): string {
-  const names = ids.map((id) => catalog.cards[id]?.name ?? id);
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
-}
-
 /** One sentence per kind of card the code had and the new deck will not. */
 export function droppedLines(dropped: DroppedCards, catalog: CatalogSnapshot): string[] {
   const lines: string[] = [];
   if (dropped.unknown.length > 0) {
-    const numbers = dropped.unknown.map((number) => `#${String(number)}`).join(", ");
-    lines.push(`Left out ${cards(dropped.unknown.length)} this version of JackiOh doesn’t know (${numbers}).`);
+    const numbers = dropped.unknown.map((number) => `#${String(number)}`).join(t(", "));
+    lines.push(t("Left out {cards} this version of JackiOh doesn’t know ({numbers}).", { cards: cardsWord(dropped.unknown.length), numbers }));
   }
   if (dropped.tokens.length > 0) {
-    lines.push(`Left out ${namesOf(dropped.tokens, catalog)}: a Token never goes in a deck.`);
+    lines.push(t("Left out {names}: a Token never goes in a deck.", { names: cardNames(dropped.tokens, catalog) }));
   }
   if (dropped.duplicates.length > 0) {
     const count = dropped.duplicates.length;
+    const names = cardNames([...new Set(dropped.duplicates)], catalog);
     lines.push(
-      `Left out ${String(count)} extra ${count === 1 ? "copy" : "copies"} (a deck holds ${String(MAX_COPIES)} of each card): ${namesOf([...new Set(dropped.duplicates)], catalog)}.`,
+      count === 1
+        ? t("Left out {count} extra copy (a deck holds {max} of each card): {names}.", { count, max: MAX_COPIES, names })
+        : t("Left out {count} extra copies (a deck holds {max} of each card): {names}.", { count, max: MAX_COPIES, names }),
     );
   }
   if (dropped.overflow.length > 0) {
-    lines.push(`Left out ${cards(dropped.overflow.length)} past the ${String(DECK_SIZE)} a deck holds: ${namesOf(dropped.overflow, catalog)}.`);
+    lines.push(
+      t("Left out {cards} past the {size} a deck holds: {names}.", {
+        cards: cardsWord(dropped.overflow.length),
+        size: DECK_SIZE,
+        names: cardNames(dropped.overflow, catalog),
+      }),
+    );
   }
   return lines;
 }
@@ -86,15 +85,15 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
     <section className="ws-editor ws-import" data-testid={DECK_IMPORT} aria-labelledby={titleId}>
       <div className="ws-editor-head">
         <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onCancel}>
-          ← All decks
+          {t("← All decks")}
         </button>
         <h2 className="ws-import-title" id={titleId}>
-          Import a deck
+          {t("Import a deck")}
         </h2>
       </div>
-      <p className="ws-hint">Paste a deck code someone shared. It becomes a new deck; nothing you have is changed.</p>
+      <p className="ws-hint">{t("Paste a deck code someone shared. It becomes a new deck; nothing you have is changed.")}</p>
       <label className="ws-field-label" htmlFor={inputId}>
-        Deck code
+        {t("Deck code")}
       </label>
       <textarea
         ref={input}
@@ -122,9 +121,9 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
           <>
             <p className="ws-import-name">
               <strong>{decoded.name}</strong>
-              {` · ${String(decoded.cards.length)}/${String(DECK_SIZE)} cards`}
+              {` · ${t("{count}/{size} cards", { count: decoded.cards.length, size: DECK_SIZE })}`}
             </p>
-            {decoded.nameFellBack ? <p>The code’s name couldn’t be used, so the deck gets this one. You can rename it.</p> : null}
+            {decoded.nameFellBack ? <p>{t("The code’s name couldn’t be used, so the deck gets this one. You can rename it.")}</p> : null}
             <ul className="ws-import-notes">
               {droppedLines(decoded.dropped, catalog).map((line) => (
                 <li key={line} data-kind="dropped">
@@ -133,21 +132,29 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
               ))}
               {decoded.unowned.length === 0 ? null : (
                 <li data-kind="unowned">
-                  {`${cards(decoded.unowned.length)} you don’t own yet ${decoded.unowned.length === 1 ? "is" : "are"} kept: ${namesOf(decoded.unowned, catalog)}. You’ll need ${decoded.unowned.length === 1 ? "it" : "them"} before this deck can queue.`}
+                  {decoded.unowned.length === 1
+                    ? t("{cards} you don’t own yet is kept: {names}. You’ll need it before this deck can queue.", {
+                        cards: cardsWord(decoded.unowned.length),
+                        names: cardNames(decoded.unowned, catalog),
+                      })
+                    : t("{cards} you don’t own yet are kept: {names}. You’ll need them before this deck can queue.", {
+                        cards: cardsWord(decoded.unowned.length),
+                        names: cardNames(decoded.unowned, catalog),
+                      })}
                 </li>
               )}
             </ul>
           </>
         ) : (
           <p className="notice" role="alert">
-            {decoded.message}
+            {t(decoded.message)}
           </p>
         )}
       </div>
 
       {atCap ? (
         <p className="ws-cap-note" id={reasonId} data-testid={DECK_IMPORT_CAP_REASON}>
-          {`You have ${String(deckLimit)} decks, the most you can keep. Delete one to import this.`}
+          {t("You have {count} decks, the most you can keep. Delete one to import this.", { count: deckLimit })}
         </p>
       ) : null}
 
@@ -163,10 +170,10 @@ export default function ImportPanel(props: ImportPanelProps): ReactElement {
             onImport(decoded.name, decoded.cards);
           }}
         >
-          Import as new deck
+          {t("Import as new deck")}
         </button>
         <button type="button" className="ws-action" data-testid={DECK_IMPORT_CANCEL} onClick={onCancel}>
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </section>

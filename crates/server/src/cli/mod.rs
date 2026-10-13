@@ -6,6 +6,7 @@
 //! arguments after the subcommand (`main.rs`).
 //! Written once by part 1 (SURFACE §1).
 
+pub mod balance_watch;
 pub mod card_stats;
 pub mod export_records;
 pub mod import_dev_records;

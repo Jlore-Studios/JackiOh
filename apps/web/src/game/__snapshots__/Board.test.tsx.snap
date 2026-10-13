@@ -97,6 +97,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         class="modifiers"
         data-count="1"
         data-testid="modifiers-opponent"
+        role="group"
       >
         <span
           class="modifier-badge"
@@ -152,6 +153,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Deck
         </span>
+         
         <span
           class="pile-n"
           data-testid="library-count-opponent"
@@ -173,6 +175,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Graveyard
         </span>
+         
         <span
           class="pile-n"
           data-testid="graveyard-count-opponent"
@@ -190,6 +193,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Exile
         </span>
+         
         <span
           class="pile-n"
           data-testid="exile-count-opponent"
@@ -233,6 +237,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -299,6 +304,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -365,6 +371,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -431,6 +438,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -497,6 +505,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -563,6 +572,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           aria-label="Face-down card"
           class="card card-back card-hand"
           data-face-down="true"
+          role="img"
         >
           <span
             aria-hidden="true"
@@ -644,6 +654,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="opponent"
         data-testid="zone-opponent-backrow-1"
+        role="group"
       >
         <div
           aria-keyshortcuts="I"
@@ -719,6 +730,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="opponent"
         data-testid="zone-opponent-units-1"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -847,6 +859,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="you"
         data-testid="zone-you-units-1"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -978,6 +991,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="you"
         data-testid="zone-you-backrow-1"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -1052,6 +1066,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="opponent"
         data-testid="zone-opponent-backrow-2"
+        role="group"
       >
         <div
           aria-keyshortcuts="I"
@@ -1128,6 +1143,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="opponent"
         data-testid="zone-opponent-units-2"
+        role="group"
       >
         <svg
           aria-label="Locked zone"
@@ -1270,6 +1286,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="you"
         data-testid="zone-you-units-2"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2043,6 +2060,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="you"
         data-testid="zone-you-backrow-2"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2126,6 +2144,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="opponent"
         data-testid="zone-opponent-backrow-3"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2195,6 +2214,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="opponent"
         data-testid="zone-opponent-units-3"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2313,6 +2333,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="you"
         data-testid="zone-you-units-3"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2424,6 +2445,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="you"
         data-testid="zone-you-backrow-3"
+        role="group"
       >
         <svg
           aria-label="Locked zone"
@@ -2536,6 +2558,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="opponent"
         data-testid="zone-opponent-backrow-4"
+        role="group"
       >
         <div
           aria-keyshortcuts="I"
@@ -2611,6 +2634,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="opponent"
         data-testid="zone-opponent-units-4"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2726,6 +2750,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="you"
         data-testid="zone-you-units-4"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -2868,6 +2893,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="you"
         data-testid="zone-you-backrow-4"
+        role="group"
       >
         <div
           aria-keyshortcuts="I"
@@ -2948,6 +2974,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="opponent"
         data-testid="zone-opponent-backrow-5"
+        role="group"
       >
         <div
           aria-keyshortcuts="I"
@@ -3023,6 +3050,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="opponent"
         data-testid="zone-opponent-units-5"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -3198,6 +3226,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="units"
         data-side="you"
         data-testid="zone-you-units-5"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -3323,6 +3352,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         data-row="backrow"
         data-side="you"
         data-testid="zone-you-backrow-5"
+        role="group"
       >
         <div
           aria-disabled="true"
@@ -3500,6 +3530,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         class="modifiers"
         data-count="2"
         data-testid="modifiers-you"
+        role="group"
       >
         <span
           class="modifier-badge"
@@ -3566,6 +3597,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Deck
         </span>
+         
         <span
           class="pile-n"
           data-testid="library-count-you"
@@ -3587,6 +3619,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Graveyard
         </span>
+         
         <span
           class="pile-n"
           data-testid="graveyard-count-you"
@@ -3608,6 +3641,7 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
         >
           Exile
         </span>
+         
         <span
           class="pile-n"
           data-testid="exile-count-you"
@@ -4022,6 +4056,21 @@ exports[`Board > renders the full board from a PlayerView 1`] = `
           d="M18.5 7a7 7 0 0 1 0 10"
         />
       </svg>
+    </button>
+    <button
+      aria-label="EN. Language: English. Switch to 简体中文."
+      class="language-button language-button--game"
+      data-locale="en"
+      data-testid="language-game"
+      title="Language"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        lang="en"
+      >
+        EN
+      </span>
     </button>
     <button
       aria-expanded="false"

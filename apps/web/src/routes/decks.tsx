@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode }
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardDefsProvider } from "../cards/index.ts";
+import { t } from "../i18n/i18n.ts";
 import DeckWorkshop from "../game/deckbuilder/DeckWorkshop.tsx";
 import { collectionFrom } from "../game/deckbuilder/loadout.ts";
 import type { DeckSyncApi } from "../game/deckbuilder/sync.ts";
@@ -41,7 +42,7 @@ type Screen =
 function Shell({ children }: { children: ReactNode }) {
   return (
     <div className="app-shell">
-      <h1>JackiOh — decks</h1>
+      <h1>{t("JackiOh — decks")}</h1>
       {children}
     </div>
   );
@@ -131,7 +132,7 @@ export default function DecksRoute() {
     return (
       <Shell>
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
-          {account.message}
+          {t(account.message)}
         </p>
       </Shell>
     );
@@ -140,7 +141,7 @@ export default function DecksRoute() {
   if (account.kind === "loading" || account.kind === "anonymous" || blocked) {
     return (
       <Shell>
-        <p data-testid={DECKBUILDER_LOADING}>Loading…</p>
+        <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
       </Shell>
     );
   }
@@ -150,7 +151,7 @@ export default function DecksRoute() {
     return (
       <Shell>
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
-          This account cannot edit decks.
+          {t("This account cannot edit decks.")}
         </p>
       </Shell>
     );
@@ -160,7 +161,7 @@ export default function DecksRoute() {
     return (
       <Shell>
         <p className="notice" data-testid={DECKBUILDER_ERROR}>
-          {screen.message}
+          {t(screen.message)}
         </p>
       </Shell>
     );
@@ -169,7 +170,7 @@ export default function DecksRoute() {
   if (screen.kind === "loading") {
     return (
       <Shell>
-        <p data-testid={DECKBUILDER_LOADING}>Loading…</p>
+        <p data-testid={DECKBUILDER_LOADING}>{t("Loading…")}</p>
       </Shell>
     );
   }

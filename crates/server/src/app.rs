@@ -57,6 +57,8 @@ pub struct App {
     /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter
     /// (TS kept it in `createCodesRoutes()`'s closure).
     pub breaker: Mutex<api::codes::BreakerState>,
+    /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
+    pub replays: api::replays::Replays,
 }
 
 // ---------------------------------------------------------------------------
@@ -231,6 +233,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::auth::delete_account),
     ),
     ("GET", "/api/auth/me", AuthLevel::User, h!(api::auth::get_me)),
+    // api/consent.rs (R757000, R757001)
+    (
+        "POST",
+        "/api/account/consent",
+        AuthLevel::User,
+        h!(api::consent::post_consent),
+    ),
     // api/catalog.rs
     (
         "GET",
@@ -440,6 +449,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // api/replays.rs
+    (
+        "GET",
+        "/api/replays",
+        AuthLevel::Active,
+        h!(api::replays::list_replays),
+    ),
+    (
+        "GET",
+        "/api/replays/:matchId",
+        AuthLevel::Active,
+        h!(api::replays::get_replay),
+    ),
 ];
 
 /// TS `allRoutes()`.
@@ -515,6 +537,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
+        replays: api::replays::Replays::default(),
     });
 
     if app.env.e2e {

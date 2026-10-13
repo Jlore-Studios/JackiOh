@@ -37,6 +37,8 @@ enum Command {
     SeasonStart(Rest),
     /// Card win rates off the game records (TS `stats:cards`).
     StatsCards(Rest),
+    /// Flag outlier card win rates as Markdown to paste into #699 (SPEC §9.11): advisory, nothing changed.
+    BalanceWatch(Rest),
     /// Load an `ai:stats` development run's game records (TS `stats:import`).
     StatsImport(Rest),
     /// Write the game records `stats-cards` reads to a JSONL file.
@@ -68,6 +70,7 @@ async fn main() -> ExitCode {
         Command::SeedAccounts(rest) => cli::seed_accounts::run(rest.args).await,
         Command::SeasonStart(rest) => cli::season_start::run(rest.args).await,
         Command::StatsCards(rest) => cli::card_stats::run(rest.args).await,
+        Command::BalanceWatch(rest) => cli::balance_watch::run(rest.args).await,
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
         Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
         Command::InviteClusters(rest) => cli::invite_clusters::run(rest.args).await,

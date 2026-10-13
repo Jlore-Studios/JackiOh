@@ -74,14 +74,18 @@ otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of t
 hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
 was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
 chosen by. `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
-`AI_DECK_GATED_SETS` in `src/config.rs` (the Meditative set, until the AI is trained on its cards), so
-every AI deck holds none of them whatever ships or a thread previews, and a lean on a gated set leans
-on the newest ungated set that ships (`ungated_lean`). A player's random deck passes `Some(vec![])`
-beside `banned: Some(vec![])`; an `include` still forces a gated card in by name. Emptying the list
-lifts the gate and deals every deck as before it. `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
+`AI_DECK_GATED_SETS` in `src/config.rs`, so every AI deck holds none of them whatever ships or a
+thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
+A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
+gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
+#732 did once it had measured the AI on the Meditative set, the list's one set until then: the list is
+empty, and gating a set that ships before the AI is trained on it is listing it there.
+`src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand: run
 `cargo jackioh sweep` and copy the printed rows and header line into the file. The ban governs AI deck
-building and nothing else: a banned card stays legal for every player.
+building and nothing else: a banned card stays legal for every player. Since #732 the ban holds
+Meditative cards only, at most half of the set (R732000): no sweep, lane or person adds a card of an
+earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 ## Matches and the quality gates
 

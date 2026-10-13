@@ -6,11 +6,23 @@
 // Renew URL tokens immediately, revoke every unheld link session (R194), and navigate only to fixed `paths` (B35).
 // Email-code sign-in (R664), OAuth (R666), and MFA (R665) retain only their proven session; §9.4 still gates it.
 // Keep neutral resend/reset notices, per-address cooldowns, an escape from every mode, and notices before their forms.
+// Sign-up asks the month and year of birth and for the unticked terms box before the provider is called, refuses
+// an answer under the minimum on this device for good, and holds a passing one for the first sign-in (R757000, R757001).
 
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
 
-import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS } from "@jackioh/server-config";
+import { AUTH_EMAIL_RESEND_COOLDOWN_SECONDS, GATE_SLOW_NOTICE_SECONDS, TERMS_VERSION } from "@jackioh/server-config";
 import Address from "../auth/Address.tsx";
+import { holdSignUpConsent, oldEnough, refuseSignUpHere, signUpRefusedHere } from "../auth/consent.ts";
+import {
+  BirthMonthYear,
+  CONSENT_MESSAGES,
+  NO_BIRTH_ANSWER,
+  SignUpRefused,
+  TermsAgree,
+  birthOf,
+  type BirthAnswer,
+} from "../auth/ConsentFields.tsx";
 import { addressKey, deadlineAfter, useAddressCooldown } from "../auth/cooldown.ts";
 import {
   clearConsumedAuthRedirect,
@@ -48,6 +60,7 @@ import {
   type OAuthProvider,
 } from "../net/auth.ts";
 import { forgetVerifier, newestFlow } from "../auth/pkce.ts";
+import { t } from "../i18n/i18n.ts";
 import { loginModeOf, loginReasonOf, navigate, paths } from "../net/navigate.ts";
 import {
   forgetPendingEmail,
@@ -69,7 +82,7 @@ import "../auth/tavern.css";
 /** Re-exported so every existing `import { loginTestid } from "./login.tsx"` keeps working. */
 export { loginTestid };
 
-/** The line under "Create account" that links the privacy policy. */
+/** The terms box on "Create account", whose sentence links the Terms and the Privacy Policy (R757001). */
 export const signUpPrivacyTestid = "login-sign-up-privacy";
 
 /**
@@ -367,6 +380,14 @@ export default function LoginRoute(): ReactElement {
   const noticeRef = useRef<HTMLParagraphElement>(null);
   /** Set when a notice should take focus once it renders (a sign-up that moved the form on). */
   const focusNotice = useRef(false);
+  /** R757000: the sign-up form's month and year of birth, nothing chosen at first. */
+  const [birth, setBirth] = useState<BirthAnswer>(NO_BIRTH_ANSWER);
+  const [birthError, setBirthError] = useState<string | null>(null);
+  /** R757001: the terms box, unticked at first. */
+  const [agreed, setAgreed] = useState(false);
+  const [agreeError, setAgreeError] = useState<string | null>(null);
+  /** R757000: this device refused a sign-up under the minimum age, now or before. */
+  const [signUpRefused, setSignUpRefused] = useState(signUpRefusedHere);
 
   useEffect(() => {
     if (notice === null || !focusNotice.current) return;
@@ -723,6 +744,8 @@ export default function LoginRoute(): ReactElement {
     setNotice(null);
     setEmailError(null);
     setPasswordError(null);
+    setBirthError(null);
+    setAgreeError(null);
     setLinkError(false);
     setSessionExpired(false);
     setLinkOutcome("none");
@@ -804,9 +827,14 @@ export default function LoginRoute(): ReactElement {
       else sendEmailCode();
       return;
     }
+    let nextBirthError: string | null = null;
+    let nextAgreeError: string | null = null;
     if (mode === "signUp") {
       nextEmailError = emailProblem(email);
       nextPasswordError = newPasswordProblem(password);
+      // R757000, R757001: asked before any account exists, each problem at its own field.
+      nextBirthError = birthOf(birth) === null ? CONSENT_MESSAGES.birthMissing : null;
+      nextAgreeError = agreed ? null : CONSENT_MESSAGES.agreeMissing;
     } else if (mode === "signIn") {
       // An existing password is whatever the account has: sign-in only asks for something typed.
       nextEmailError = requiredProblem(address, "email or username");
@@ -816,9 +844,28 @@ export default function LoginRoute(): ReactElement {
     }
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
-    if (nextEmailError !== null || nextPasswordError !== null) {
+    setBirthError(nextBirthError);
+    setAgreeError(nextAgreeError);
+    const problems: [string | null, string][] = [
+      [nextEmailError, "login-email"],
+      [nextPasswordError, "login-password"],
+      [nextBirthError, birth.month === "" ? "login-birth-month" : "login-birth-year"],
+      [nextAgreeError, "login-agree"],
+    ];
+    const firstProblem = problems.find(([problem]) => problem !== null);
+    if (firstProblem !== undefined) {
       // The first field to fix, for a keyboard or a screen reader.
-      document.getElementById(nextEmailError !== null ? "login-email" : "login-password")?.focus();
+      document.getElementById(firstProblem[1])?.focus();
+      return;
+    }
+
+    const born = mode === "signUp" ? birthOf(birth) : null;
+    if (born !== null && !oldEnough(born.birthYear, born.birthMonth)) {
+      // R757000: no account, and no provider call. The device remembers, so going back and
+      // choosing another year does not work; what it says names no age.
+      refuseSignUpHere();
+      setSignUpRefused(true);
+      setPassword("");
       return;
     }
 
@@ -832,6 +879,8 @@ export default function LoginRoute(): ReactElement {
     };
 
     if (mode === "signUp") {
+      // R757000, R757001: held for the account's first sign-in, which records it at the server.
+      if (born !== null) holdSignUpConsent({ email: address, ...born, termsVersion: TERMS_VERSION });
       signUp(address, password)
         .then(() => {
           // §9.4 step 1 requires a verified email before a code can be redeemed, so the next step
@@ -897,6 +946,8 @@ export default function LoginRoute(): ReactElement {
   }
 
   const signingUp = mode === "signUp";
+  /** R757000: sign-up on this device was refused, so the form is not offered again. */
+  const refusedHere = signingUp && signUpRefused;
   const forgot = mode === "forgot";
   const signingIn = mode === "signIn";
   const claiming = mode === "claimReset";
@@ -906,30 +957,34 @@ export default function LoginRoute(): ReactElement {
   const codeAsked = emailCode && codeSentTo !== null && sameAddress(normalizeEmail(email), codeSentTo);
 
   let title: string;
-  if (signingUp) title = "Create an account";
-  else if (forgot || claiming) title = "Reset your password";
-  else if (emailCode) title = "Sign in with an email code";
-  else if (secondFactor) title = "Two-step sign-in";
-  else title = "Sign in";
+  if (signingUp) title = t("Create an account");
+  else if (forgot || claiming) title = t("Reset your password");
+  else if (emailCode) title = t("Sign in with an email code");
+  else if (secondFactor) title = t("Two-step sign-in");
+  else title = t("Sign in");
 
   let submitLabel: string;
   if (signingUp) {
-    submitLabel = busy ? "Creating…" : "Create account";
+    submitLabel = busy ? t("Creating…") : t("Create account");
   } else if (forgot) {
     // "Send", not "Send again": the interval may have been started before a reload.
     // The wait is said once, in the line under the button (as the confirmation resend says it),
     // so the button keeps its name while it is locked (integration QA: the countdown was twice).
-    submitLabel = busy ? "Sending…" : "Send reset link";
+    submitLabel = busy ? t("Sending…") : t("Send reset link");
   } else if (claiming) {
-    submitLabel = "Continue";
+    submitLabel = t("Continue");
   } else if (emailCode) {
-    if (codeAsked) submitLabel = busy ? "Signing in…" : "Sign in";
-    else submitLabel = busy ? "Sending…" : "Email me a sign-in code";
+    if (codeAsked) submitLabel = busy ? t("Signing in…") : t("Sign in");
+    else submitLabel = busy ? t("Sending…") : t("Email me a sign-in code");
   } else if (secondFactor) {
-    submitLabel = busy ? "Checking…" : "Verify";
+    submitLabel = busy ? t("Checking…") : t("Verify");
   } else {
-    submitLabel = busy ? "Signing in…" : "Sign in";
+    submitLabel = busy ? t("Signing in…") : t("Sign in");
   }
+
+  // Sentences with a link or an address inside: one entry each, split around what is inserted, so
+  // English keeps the text nodes it always had.
+  const [signedInBefore = "", signedInAfter = ""] = t("This browser is signed in as {address}.").split("{address}");
 
   const forgotButton = (
     <button
@@ -940,7 +995,7 @@ export default function LoginRoute(): ReactElement {
         switchMode("forgot");
       }}
     >
-      {claiming ? "Ask for a new link instead" : "Forgot your password?"}
+      {claiming ? t("Ask for a new link instead") : t("Forgot your password?")}
     </button>
   );
 
@@ -949,7 +1004,7 @@ export default function LoginRoute(): ReactElement {
       {/* R160 makes an unconfirmed address and a wrong password read alike, so the button says
           who it is for rather than hinting at which one this was. */}
       <span className="auth-hint" data-testid={loginTestid.resendLead}>
-        Just signed up? Confirm your email first:
+        {t("Just signed up? Confirm your email first:")}
       </span>
       <button
         type="button"
@@ -958,11 +1013,11 @@ export default function LoginRoute(): ReactElement {
         disabled={resendBusy || resendWait > 0}
         onClick={onResend}
       >
-        {resendBusy ? "Sending…" : "Resend the confirmation email"}
+        {resendBusy ? t("Sending…") : t("Resend the confirmation email")}
       </button>
       {resendWait > 0 ? (
         <span className="auth-cooldown" data-testid={loginTestid.resendCooldown} data-seconds={resendWait}>
-          You can send another in {resendWait} s.
+          {t("You can send another in {seconds} s.", { seconds: resendWait })}
         </span>
       ) : null}
     </div>
@@ -982,62 +1037,62 @@ export default function LoginRoute(): ReactElement {
 
           {secondFactor ? (
             <p className="notice" data-testid={loginTestid.notice} role="status">
-              {AUTH_NOTICES.mfaRequired}
+              {t(AUTH_NOTICES.mfaRequired)}
             </p>
           ) : null}
 
           {(signingIn || signingUp) && oauthFailed ? (
             <p className="notice" data-testid={loginTestid.oauthError} role="alert">
-              {AUTH_MESSAGES.oauthFailed}
+              {t(AUTH_MESSAGES.oauthFailed)}
             </p>
           ) : null}
 
           {signingIn && sessionExpired ? (
             <p className="notice" data-testid={loginTestid.sessionExpired} role="status">
-              {AUTH_NOTICES.sessionExpired}
+              {t(AUTH_NOTICES.sessionExpired)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "checking" ? (
             <p className="notice" data-testid={loginTestid.checkingLink} role="status">
-              {AUTH_NOTICES.checkingLink}
+              {t(AUTH_NOTICES.checkingLink)}
             </p>
           ) : null}
 
           {signingIn && checkingLong ? (
             <p className="auth-hint" data-testid={loginTestid.checkingSlow}>
-              {AUTH_NOTICES.checkingSlow}
+              {t(AUTH_NOTICES.checkingSlow)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "confirmed" ? (
             <p className="notice" data-testid={loginTestid.confirmed} role="status">
-              {AUTH_NOTICES.emailConfirmed}
+              {t(AUTH_NOTICES.emailConfirmed)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "emailChanged" ? (
             <p className="notice" data-testid={loginTestid.emailChanged} role="status">
-              {AUTH_NOTICES.emailChanged}
+              {t(AUTH_NOTICES.emailChanged)}
             </p>
           ) : null}
 
           {forgot && linkOutcome === "invited" ? (
             <p className="notice" data-testid={loginTestid.invited} role="status">
-              {AUTH_NOTICES.inviteNeedsPassword}
+              {t(AUTH_NOTICES.inviteNeedsPassword)}
             </p>
           ) : null}
 
           {claiming && linkOutcome === "recoveryClaim" ? (
             <p className="notice" data-testid={loginTestid.recoveryClaim} role="status">
-              {AUTH_NOTICES.recoveryClaim}
+              {t(AUTH_NOTICES.recoveryClaim)}
             </p>
           ) : null}
 
           {signingIn && linkOutcome === "recoveryRefused" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryRefused} role="alert">
-                {AUTH_NOTICES.recoveryElsewhere}
+                {t(AUTH_NOTICES.recoveryElsewhere)}
               </p>
               <div className="auth-actions">{forgotButton}</div>
             </div>
@@ -1046,11 +1101,11 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "recoveryUnchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.recoveryUnchecked} role="alert">
-                {AUTH_NOTICES.recoveryUnchecked}
+                {t(AUTH_NOTICES.recoveryUnchecked)}
               </p>
               <div className="auth-actions">
                 <button type="button" data-testid={loginTestid.linkRetry} onClick={retryLinkCheck}>
-                  Try again
+                  {t("Try again")}
                 </button>
                 {forgotButton}
               </div>
@@ -1060,7 +1115,7 @@ export default function LoginRoute(): ReactElement {
           {signingIn && linkOutcome === "unchecked" ? (
             <div className="auth-link-error">
               <p className="notice" data-testid={loginTestid.linkUnchecked} role="alert">
-                {AUTH_NOTICES.linkUnchecked}
+                {t(AUTH_NOTICES.linkUnchecked)}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1073,12 +1128,12 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-link-error">
               {/* Our sentence only: the link's `error_description` is never read (R193). */}
               <p className="notice" data-testid={loginTestid.linkError} role="alert">
-                {AUTH_MESSAGES.linkExpired}
+                {t(AUTH_MESSAGES.linkExpired)}
               </p>
               {/* Mail scanners open links before the player does: a confirmation link they spent
                   has still confirmed the address, and signing in is all that is left. */}
               <p className="auth-hint" data-testid={loginTestid.linkErrorSignIn}>
-                If you already confirmed your email, just sign in below.
+                {t("If you already confirmed your email, just sign in below.")}
               </p>
               <div className="auth-actions">
                 {resendControls}
@@ -1089,19 +1144,19 @@ export default function LoginRoute(): ReactElement {
 
           {notice !== null ? (
             <p className="notice" data-testid={loginTestid.notice} role="status" ref={noticeRef} tabIndex={-1}>
-              {notice}
+              {t(notice)}
             </p>
           ) : null}
 
           {error !== null ? (
             <p className="notice" data-testid={loginTestid.error} role="alert">
-              {error}
+              {t(error)}
             </p>
           ) : null}
 
           {signingIn && error !== null && confirmFirst ? (
             <p className="auth-hint" data-testid={loginTestid.confirmFirst}>
-              {AUTH_NOTICES.confirmFirst}
+              {t(AUTH_NOTICES.confirmFirst)}
             </p>
           ) : null}
 
@@ -1110,17 +1165,17 @@ export default function LoginRoute(): ReactElement {
             <div className="auth-signed-in" data-testid={loginTestid.signedInAs}>
               <p className="auth-hint">
                 {signedInAs === "" ? (
-                  "This browser is already signed in to an account."
+                  t("This browser is already signed in to an account.")
                 ) : (
                   <>
-                    This browser is signed in as{" "}
+                    {signedInBefore}
                     <strong>
                       <Address value={signedInAs} />
                     </strong>
-                    .
+                    {signedInAfter}
                   </>
                 )}{" "}
-                {signingUp ? "Creating an account does not change that." : "Signing in here signs it out of that account."}
+                {signingUp ? t("Creating an account does not change that.") : t("Signing in here signs it out of that account.")}
               </p>
               <div className="auth-actions">
                 <a
@@ -1129,7 +1184,7 @@ export default function LoginRoute(): ReactElement {
                   data-testid={loginTestid.signedInAccount}
                   onClick={followInApp(paths.account)}
                 >
-                  Go to that account
+                  {t("Go to that account")}
                 </a>
                 <button
                   type="button"
@@ -1148,193 +1203,209 @@ export default function LoginRoute(): ReactElement {
 
           {forgot ? (
             <p className="auth-hint">
-              Enter the address you signed up with. If it has an account, we&rsquo;ll email a link to
-              choose a new password.
+              {t("Enter the address you signed up with. If it has an account, we’ll email a link to choose a new password.")}
             </p>
           ) : null}
-          {signingUp ? (
+          {signingUp && !refusedHere ? (
             // Said before the player has an account, not after they have confirmed one.
             <p className="auth-hint" data-testid={loginTestid.inviteOnly}>
-              {AUTH_NOTICES.inviteOnly}
+              {t(AUTH_NOTICES.inviteOnly)}
             </p>
           ) : null}
         </div>
 
         <div className="auth-board__body">
-          <form
-            className="form-card"
-            data-testid={loginTestid.form}
-            data-mode={mode}
-            onSubmit={onSubmit}
-            // Our own messages, next to the field, rather than the browser's bubble.
-            noValidate
-          >
-            {secondFactor ? null : (
-              <>
-                <label htmlFor="login-email">
-                  {claiming ? "Your account's email" : signingIn ? "Email or username" : "Email"}
-                </label>
-                <input
-                  id="login-email"
-                  data-testid={loginTestid.email}
-                  // R1443: sign-in takes a username too, which an email field would refuse. As text
-                  // it keeps an email field's keyboard (its @) and, like one, is never capitalised,
-                  // corrected or spell-checked by a phone keyboard.
-                  type={signingIn ? "text" : "email"}
-                  inputMode="email"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  value={email}
-                  aria-invalid={emailError !== null}
-                  aria-describedby={emailError !== null ? "login-email-error" : undefined}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    setEmailError(null);
-                  }}
-                />
-                {emailError !== null ? (
-                  <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
-                    {emailError}
-                  </p>
-                ) : null}
-              </>
-            )}
-
-            {codeAsked || secondFactor ? (
-              <>
-                <label htmlFor="login-code">
-                  {secondFactor ? "Code from your authenticator app" : "Code from the email"}
-                </label>
-                <input
-                  id="login-code"
-                  data-testid={loginTestid.code}
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  // Focused when the step opens: it is the one thing to do there.
-                  autoFocus={secondFactor}
-                  value={code}
-                  aria-invalid={codeError !== null}
-                  aria-describedby={codeError !== null ? "login-code-error" : undefined}
-                  onChange={(event) => {
-                    setCode(event.target.value);
-                    setCodeError(null);
-                  }}
-                />
-                {codeError !== null ? (
-                  <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
-                    {codeError}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
-
-            {signingIn || signingUp ? (
-              <>
-                <label htmlFor="login-password">Password</label>
-                <div className="input-with-affix">
+          {refusedHere ? (
+            <SignUpRefused />
+          ) : (
+            <form
+              className="form-card"
+              data-testid={loginTestid.form}
+              data-mode={mode}
+              onSubmit={onSubmit}
+              // Our own messages, next to the field, rather than the browser's bubble.
+              noValidate
+            >
+              {secondFactor ? null : (
+                <>
+                  <label htmlFor="login-email">
+                    {claiming ? t("Your account's email") : signingIn ? t("Email or username") : t("Email")}
+                  </label>
                   <input
-                    id="login-password"
-                    data-testid={loginTestid.password}
-                    // The whole point of the toggle: a password you cannot read is a password you
-                    // cannot check before submitting, which matters most while CREATING one.
-                    type={showPassword ? "text" : "password"}
-                    autoComplete={signingUp ? "new-password" : "current-password"}
-                    // Shown as text, a phone keyboard would otherwise capitalise, correct and
-                    // spell-check (remotely, with enhanced spell-check) the password.
+                    id="login-email"
+                    data-testid={loginTestid.email}
+                    // R1443: sign-in takes a username too, which an email field would refuse. As text
+                    // it keeps an email field's keyboard (its @) and, like one, is never capitalised,
+                    // corrected or spell-checked by a phone keyboard.
+                    type={signingIn ? "text" : "email"}
+                    inputMode="email"
+                    autoComplete="username"
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck={false}
-                    value={password}
-                    aria-invalid={passwordError !== null}
-                    aria-describedby={passwordError !== null ? "login-password-error" : undefined}
+                    value={email}
+                    aria-invalid={emailError !== null}
+                    aria-describedby={emailError !== null ? "login-email-error" : undefined}
                     onChange={(event) => {
-                      setPassword(event.target.value);
-                      setPasswordError(null);
+                      setEmail(event.target.value);
+                      setEmailError(null);
                     }}
                   />
+                  {emailError !== null ? (
+                    <p id="login-email-error" className="auth-field-error" data-testid={loginTestid.emailError}>
+                      {t(emailError)}
+                    </p>
+                  ) : null}
+                </>
+              )}
+
+              {codeAsked || secondFactor ? (
+                <>
+                  <label htmlFor="login-code">
+                    {secondFactor ? t("Code from your authenticator app") : t("Code from the email")}
+                  </label>
+                  <input
+                    id="login-code"
+                    data-testid={loginTestid.code}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    // Focused when the step opens: it is the one thing to do there.
+                    autoFocus={secondFactor}
+                    value={code}
+                    aria-invalid={codeError !== null}
+                    aria-describedby={codeError !== null ? "login-code-error" : undefined}
+                    onChange={(event) => {
+                      setCode(event.target.value);
+                      setCodeError(null);
+                    }}
+                  />
+                  {codeError !== null ? (
+                    <p id="login-code-error" className="auth-field-error" data-testid={loginTestid.codeError}>
+                      {t(codeError)}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+
+              {signingIn || signingUp ? (
+                <>
+                  <label htmlFor="login-password">{t("Password")}</label>
+                  <div className="input-with-affix">
+                    <input
+                      id="login-password"
+                      data-testid={loginTestid.password}
+                      // The whole point of the toggle: a password you cannot read is a password you
+                      // cannot check before submitting, which matters most while CREATING one.
+                      type={showPassword ? "text" : "password"}
+                      autoComplete={signingUp ? "new-password" : "current-password"}
+                      // Shown as text, a phone keyboard would otherwise capitalise, correct and
+                      // spell-check (remotely, with enhanced spell-check) the password.
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      value={password}
+                      aria-invalid={passwordError !== null}
+                      aria-describedby={passwordError !== null ? "login-password-error" : undefined}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setPasswordError(null);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="affix-button"
+                      data-testid={loginTestid.togglePassword}
+                      // Announced, not just drawn: the icon alone tells a screen reader nothing.
+                      aria-label={showPassword ? t("Hide password") : t("Show password")}
+                      aria-pressed={showPassword}
+                      onClick={() => {
+                        setShowPassword((shown) => !shown);
+                      }}
+                    >
+                      {showPassword ? t("Hide") : t("Show")}
+                    </button>
+                  </div>
+                  {passwordError !== null ? (
+                    <p
+                      id="login-password-error"
+                      className="auth-field-error"
+                      data-testid={loginTestid.passwordError}
+                    >
+                      {t(passwordError)}
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+
+              {signingUp ? (
+                <>
+                  <BirthMonthYear
+                    idPrefix="login"
+                    value={birth}
+                    disabled={busy}
+                    error={birthError}
+                    onChange={(next) => {
+                      setBirth(next);
+                      setBirthError(null);
+                    }}
+                  />
+                  <TermsAgree
+                    idPrefix="login"
+                    testId={signUpPrivacyTestid}
+                    checked={agreed}
+                    disabled={busy}
+                    error={agreeError}
+                    onChange={(next) => {
+                      setAgreed(next);
+                      setAgreeError(null);
+                    }}
+                  />
+                </>
+              ) : null}
+
+              <button
+                type="submit"
+                data-testid={loginTestid.submit}
+                disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
+              >
+                {submitLabel}
+              </button>
+              {codeAsked ? (
+                <div className="auth-resend">
                   <button
                     type="button"
-                    className="affix-button"
-                    data-testid={loginTestid.togglePassword}
-                    // Announced, not just drawn: the icon alone tells a screen reader nothing.
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                    onClick={() => {
-                      setShowPassword((shown) => !shown);
-                    }}
+                    className="link-button"
+                    data-testid={loginTestid.codeSend}
+                    disabled={busy || codeWait > 0}
+                    onClick={sendEmailCode}
                   >
-                    {showPassword ? "Hide" : "Show"}
+                    {t("Send a new code")}
                   </button>
                 </div>
-                {passwordError !== null ? (
-                  <p
-                    id="login-password-error"
-                    className="auth-field-error"
-                    data-testid={loginTestid.passwordError}
-                  >
-                    {passwordError}
-                  </p>
-                ) : null}
-              </>
-            ) : null}
+              ) : null}
+              {emailCode && codeWait > 0 ? (
+                // Only the wait: whether a mail went out is the neutral notice's to say (R192).
+                <p className="auth-hint" data-testid={loginTestid.codeCooldown} data-seconds={codeWait}>
+                  {t("You can ask for another in {seconds} s.", { seconds: codeWait })}
+                </p>
+              ) : null}
+              {forgot && resetWait > 0 ? (
+                // Only the wait: whether a mail went out is the neutral notice's to say (R192).
+                <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
+                  {t("You can ask for another in {seconds} s.", { seconds: resetWait })}
+                </p>
+              ) : null}
+            </form>
+          )}
 
-            <button
-              type="submit"
-              data-testid={loginTestid.submit}
-              disabled={busy || (forgot && resetWait > 0) || (emailCode && !codeAsked && codeWait > 0)}
-            >
-              {submitLabel}
-            </button>
-            {codeAsked ? (
-              <div className="auth-resend">
-                <button
-                  type="button"
-                  className="link-button"
-                  data-testid={loginTestid.codeSend}
-                  disabled={busy || codeWait > 0}
-                  onClick={sendEmailCode}
-                >
-                  Send a new code
-                </button>
-              </div>
-            ) : null}
-            {emailCode && codeWait > 0 ? (
-              // Only the wait: whether a mail went out is the neutral notice's to say (R192).
-              <p className="auth-hint" data-testid={loginTestid.codeCooldown} data-seconds={codeWait}>
-                You can ask for another in {codeWait} s.
-              </p>
-            ) : null}
-            {signingUp ? (
-              <p className="auth-hint" data-testid={signUpPrivacyTestid}>
-                By creating an account you agree to the{" "}
-                <a href={paths.terms} onClick={followInApp(paths.terms)}>
-                  Terms
-                </a>{" "}
-                and{" "}
-                <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
-                  Privacy Policy
-                </a>
-                .
-              </p>
-            ) : null}
-            {forgot && resetWait > 0 ? (
-              // Only the wait: whether a mail went out is the neutral notice's to say (R192).
-              <p className="auth-hint" data-testid={loginTestid.resetCooldown} data-seconds={resetWait}>
-                You can ask for another in {resetWait} s.
-              </p>
-            ) : null}
-          </form>
-
-          {(signingIn || signingUp) && providers.length > 0 ? (
+          {(signingIn || signingUp) && !refusedHere && providers.length > 0 ? (
             // R666: only the providers this build names, so none appears before it is set up.
-            <div className="auth-oauth" role="group" aria-label="Other ways to sign in">
-              <p className="auth-hint">Or continue with</p>
+            <div className="auth-oauth" role="group" aria-label={t("Other ways to sign in")}>
+              <p className="auth-hint">{t("Or continue with")}</p>
               <div className="auth-actions">
                 {providers.map((provider) => (
                   <button
@@ -1365,7 +1436,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("emailCode");
                 }}
               >
-                Sign in with an email code instead
+                {t("Sign in with an email code instead")}
               </button>
             ) : null}
             {(signingIn &&
@@ -1385,7 +1456,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode("signIn");
                 }}
               >
-                {secondFactor ? "Cancel and sign in again" : emailCode ? "Sign in with a password" : "Back to sign in"}
+                {secondFactor ? t("Cancel and sign in again") : emailCode ? t("Sign in with a password") : t("Back to sign in")}
               </button>
             ) : (
               <button
@@ -1396,7 +1467,7 @@ export default function LoginRoute(): ReactElement {
                   switchMode(signingUp ? "signIn" : "signUp");
                 }}
               >
-                {signingUp ? "Already have an account? Sign in" : "No account? Create one"}
+                {signingUp ? t("Already have an account? Sign in") : t("No account? Create one")}
               </button>
             )}
           </div>

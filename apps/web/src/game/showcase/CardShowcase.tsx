@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace, costPhrase } from "../../cards/index.ts";
+import { chineseName, drawnInChinese } from "../../cards/chinese.ts";
 import { chaosNames, type ChaosRoll } from "../../fx/chaos.ts";
 import { FX_BANNER_TAIL_MS } from "../../fx/constants.ts";
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
@@ -44,6 +45,7 @@ import {
   type ShowcaseKind,
 } from "./constants.ts";
 import { capQueue, chaosRollsIn, eventsSince, showcasePlays, type ShowcasePlay } from "./plan.ts";
+import { t } from "../../i18n/i18n.ts";
 import "./showcase.css";
 
 export type CardShowcaseProps = {
@@ -70,29 +72,43 @@ const CAPTION: Readonly<Record<Exclude<ShowcaseKind, "cast" | "multicast">, stri
 };
 
 function castCaption(play: ShowcasePlay, viewer: PlayerId): string {
-  if (play.player === viewer) return CAST_ON_DRAW_TEXT.you;
-  return play.defId === null ? CAST_ON_DRAW_TEXT.hidden : CAST_ON_DRAW_TEXT.opponent;
+  if (play.player === viewer) return t(CAST_ON_DRAW_TEXT.you);
+  return play.defId === null ? t(CAST_ON_DRAW_TEXT.hidden) : t(CAST_ON_DRAW_TEXT.opponent);
 }
 
 function multicastCaption(byName: string | undefined): string {
-  return byName === undefined ? MULTICAST_TEXT.unknown : `${MULTICAST_TEXT.by} ${byName}`;
+  return byName === undefined ? t(MULTICAST_TEXT.unknown) : t(`${MULTICAST_TEXT.by} {name}`, { name: byName });
 }
 
 function captionOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, byName: string | undefined): string {
   if (kind === "cast") return castCaption(play, viewer);
-  return kind === "multicast" ? multicastCaption(byName) : CAPTION[kind];
+  return kind === "multicast" ? multicastCaption(byName) : t(CAPTION[kind]);
+}
+
+/**
+ * A multicast's sentence: "Fireball cast Frostbolt (2)", with "A card" / "a card" for a name the view
+ * hides. Each is one sentence for the dictionary, worded from the constants the tests read.
+ */
+function multicastSaid(byName: string | undefined, name: string | undefined, ordinal: string): string {
+  const said = MULTICAST_TEXT.said;
+  if (byName === undefined) {
+    return name === undefined ? t(`A card ${said} a card ({ordinal})`, { ordinal }) : t(`A card ${said} {name} ({ordinal})`, { name, ordinal });
+  }
+  return name === undefined
+    ? t(`{by} ${said} a card ({ordinal})`, { by: byName, ordinal })
+    : t(`{by} ${said} {name} ({ordinal})`, { by: byName, name, ordinal });
 }
 
 function saidOf(play: ShowcasePlay, kind: ShowcaseKind, viewer: PlayerId, name: string | undefined, byName: string | undefined): string {
-  if (kind === "multicast") {
-    const ordinal = play.castBy?.ordinal ?? 1;
-    return `${byName ?? "A card"} ${MULTICAST_TEXT.said} ${name ?? "a card"} (${String(ordinal)})`;
-  }
+  if (kind === "multicast") return multicastSaid(byName, name, String(play.castBy?.ordinal ?? 1));
   if (kind === "cast") {
     const drew = castCaption(play, viewer);
-    return play.defId === null ? `${drew}: ${CAST_ON_DRAW_TEXT.said}` : `${drew} ${name ?? "a card"}: ${CAST_ON_DRAW_TEXT.said}`;
+    const said = CAST_ON_DRAW_TEXT.said;
+    if (play.defId === null) return t(`{drew}: ${said}`, { drew });
+    return name === undefined ? t(`{drew} a card: ${said}`, { drew }) : t(`{drew} {name}: ${said}`, { drew, name });
   }
-  return kind === "played" ? `${CAPTION.played} ${name ?? "a card"}` : CAPTION[kind];
+  if (kind !== "played") return t(CAPTION[kind]);
+  return name === undefined ? t("Opponent played a card") : t("Opponent played {name}", { name });
 }
 
 function effectsDrawing(): boolean {
@@ -120,7 +136,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const lookup = useContext(CatalogContext);
   const [showing, setShowing] = useState<Showing | null>(null);
   const [chaos, setChaos] = useState<ChaosShowing | null>(null);
-  const [chaosSaid, setChaosSaid] = useState("");
+  const [chaosSaid, setChaosSaid] = useState<readonly string[] | null>(null);
   const current = useRef<Showing | null>(null);
   const waiting = useRef<ShowcasePlay[]>([]);
   const seen = useRef(new Map<PlayerId, readonly GameEvent[]>());
@@ -175,7 +191,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
   const announceChaos = useCallback((roll: ChaosRoll) => {
     const names = chaosNames(roll);
     counter.current += 1;
-    setChaosSaid(`${CHAOS_TEXT.said}: ${names.join(", ")}`);
+    setChaosSaid(names);
     setChaos({ names, seq: counter.current, holdMs: chaosHoldMs(getFxSettings().speed), still: !effectsDrawing() });
   }, []);
 
@@ -333,8 +349,14 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         });
   const kind = play === null ? null : kindOf(play);
   const castBy = play?.castBy;
+  const castDefId = castBy?.defId ?? null;
+  const byInfo = castDefId === null ? undefined : lookup?.(castDefId, false);
+  const byEnglish = castDefId === null ? undefined : (byInfo?.name ?? view.defs?.[castDefId]?.name);
+  // The caster's name as the reader reads it: Chinese for a reader of Chinese (R711000).
   const byName =
-    castBy === undefined || castBy.defId === null ? undefined : (lookup?.(castBy.defId, false)?.name ?? view.defs?.[castBy.defId]?.name);
+    castDefId !== null && byEnglish !== undefined && drawnInChinese(false)
+      ? chineseName(castDefId, byEnglish, byInfo?.def ?? view.defs?.[castDefId])
+      : byEnglish;
   const said = play === null || kind === null || showing === null ? "" : saidOf(play, kind, showing.viewer, face?.name, byName);
 
   // Inline click-through keeps the board usable before its stylesheet loads.
@@ -351,7 +373,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
         {said}
       </p>
       <p className="showcase-live" data-testid={showcaseTestid.chaosLive} role="status" aria-live="polite">
-        {chaosSaid}
+        {chaosSaid === null ? "" : t(`${CHAOS_TEXT.said}: {names}`, { names: chaosSaid.map((name) => t(name)).join(t(", ")) })}
       </p>
       {chaos !== null && chaos.still ? <ChaosBanner key={chaos.seq} names={chaos.names} seq={chaos.seq} /> : null}
       {showing !== null && kind !== null
@@ -385,7 +407,7 @@ export default function CardShowcase({ view, queue }: CardShowcaseProps): ReactE
                       className="facedown-cost facedown-cost--large"
                       data-testid={showcaseTestid.cost}
                       data-cost={showing.play.cost}
-                      title={costPhrase(showing.play.cost)}
+                      title={t(costPhrase(showing.play.cost))}
                     >
                       {showing.play.cost}
                     </span>
@@ -413,7 +435,7 @@ function CastOrdinal({ ordinal }: { ordinal: number }): ReactElement {
 function CastRibbon(): ReactElement {
   return (
     <span className="showcase-ribbon" data-testid={showcaseTestid.ribbon}>
-      {CAST_ON_DRAW_TEXT.ribbon}
+      {t(CAST_ON_DRAW_TEXT.ribbon)}
     </span>
   );
 }

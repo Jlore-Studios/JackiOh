@@ -13,6 +13,7 @@ import type { CardDef } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
 import { FACE_ASPECT, REF_PANEL_FACE_HEIGHT_PX } from "../constants.ts";
 import { faceModel, type FaceModel } from "../model.ts";
+import { t } from "../../i18n/i18n.ts";
 import { RefsInteractive, useDefResolver } from "../refContext.tsx";
 import { findRefs } from "../refs.ts";
 import { INSPECT_REFS } from "./testids.ts";
@@ -44,7 +45,7 @@ export function References({ face }: { face: FaceModel }): ReactElement | null {
   const width = REF_PANEL_FACE_HEIGHT_PX * FACE_ASPECT;
   return (
     <div className="inspect-refs" data-testid={INSPECT_REFS}>
-      <p className="inspect-refs-label">Mentions</p>
+      <p className="inspect-refs-label">{t("Mentions")}</p>
       <div className="inspect-refs-faces">
         <RefsInteractive enabled={false}>
           {named.map(({ def, radiant }) => (

@@ -6,8 +6,9 @@
 import { useLayoutEffect, useRef } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { createPortal } from "react-dom";
-import type { CardDef } from "@jackioh/shared";
+import type { CardDef, CardType } from "@jackioh/shared";
 import { CardFace } from "../CardFace.tsx";
+import { readerTerms } from "../chinese.ts";
 import { textTier } from "../fit.ts";
 import { faceModel, locWords, type FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
@@ -18,6 +19,7 @@ import { Flavour } from "./Flavour.tsx";
 import { Glossary, mergeGlossary } from "./Glossary.tsx";
 import { CardStatsBlock } from "../../stats/CardStatsBlock.tsx";
 import { VoicePreview } from "./VoicePreview.tsx";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { closeInspect, OVERLAY_ROOT_PROPS, registerDetail, useModalOverlay } from "./store.ts";
 import {
   INSPECT_CLOSE,
@@ -37,6 +39,8 @@ export type CardDetailProps = {
   historyOpen?: boolean;
   /** SPEC §9.11, R654: render the compact card statistics block (deckbuilder and almanac). */
   showStats?: boolean;
+  /** R711000: the card is one a match flagged Chinese (R1301): its faces are Chinese, and a Chinese reader gets the easter egg line. */
+  easter?: boolean;
 };
 
 /**
@@ -44,10 +48,16 @@ export type CardDetailProps = {
  * Radiant face with a type of its own (B2.7, Classic+ #22) says so: "Trap (Radiant: Field Trap)".
  */
 export function detailMetaLine(def: CardDef): string {
+  // R711000: the frame's words in the reader's language (chinese.ts), the catalog's English otherwise.
+  const terms = readerTerms();
+  const typeWord = (type: CardType): string => terms?.types[type] ?? type;
   const radiantType = def.radiant.type;
-  const type = radiantType !== undefined && radiantType !== def.type ? `${def.type} (Radiant: ${radiantType})` : def.type;
-  const parts = [`#${def.index}`, def.set, def.rarity, type];
-  if (def.tags.length > 0) parts.push(def.tags.join(", "));
+  const type =
+    radiantType !== undefined && radiantType !== def.type
+      ? t("{type} (Radiant: {radiant})", { type: typeWord(def.type), radiant: typeWord(radiantType) })
+      : typeWord(def.type);
+  const parts = [`#${def.index}`, t(def.set), terms?.rarities[def.rarity] ?? def.rarity, type];
+  if (def.tags.length > 0) parts.push(def.tags.map((tag) => terms?.tags[tag] ?? tag).join(t(", ")));
   if (def.loc !== undefined) parts.push(locWords(def.loc));
   return parts.join(" · ");
 }
@@ -67,17 +77,17 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
     <div className="inspect-rules" data-long={long ? "true" : "false"}>
       {base.text.full === "" ? null : (
         <p className="inspect-rules-line">
-          <span className="inspect-rules-label">Base</span>
+          <span className="inspect-rules-label">{t("Base")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={base.text.full} refs={base.refs} />
+            <RulesText text={base.text.full} refs={base.refs} chinese={base.chinese === true} />
           </span>
         </p>
       )}
       {radiantLine === null ? null : (
         <p className="inspect-rules-line inspect-rules-line--radiant">
-          <span className="inspect-rules-label">Radiant</span>
+          <span className="inspect-rules-label">{t("Radiant")}</span>
           <span className="inspect-rules-text">
-            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} />
+            <RulesText text={radiantLine.full} marks={radiantLine.marks} refs={radiant.refs} chinese={radiant.chinese === true} />
           </span>
         </p>
       )}
@@ -85,7 +95,16 @@ function DetailRules({ base, radiant }: { base: FaceModel; radiant: FaceModel })
   );
 }
 
-export function CardDetail({ def, onClose, actions, meta, historyOpen = false, showStats = false }: CardDetailProps): ReactElement {
+export function CardDetail({
+  def,
+  onClose,
+  actions,
+  meta,
+  historyOpen = false,
+  showStats = false,
+  easter = false,
+}: CardDetailProps): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
   const onCloseRef = useRef(onClose);
@@ -100,8 +119,8 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
     return registerDetail(`inspect-detail:${def.id}`, () => onCloseRef.current());
   }, [def.id]);
 
-  const base = faceModel({ defId: def.id, def, radiant: false });
-  const radiant = faceModel({ defId: def.id, def, radiant: true });
+  const base = faceModel({ defId: def.id, def, radiant: false, chinese: easter });
+  const radiant = faceModel({ defId: def.id, def, radiant: true, chinese: easter });
   const glossary = mergeGlossary(glossaryFor(base), glossaryFor(radiant));
 
   return createPortal(
@@ -124,13 +143,13 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_BASE}>
                   <CardFace face={base} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Base</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Base")}</figcaption>
               </figure>
               <figure className="inspect-detail-face inspect-detail-face--radiant">
                 <div className="inspect-face inspect-face--detail" data-testid={INSPECT_FACE_RADIANT}>
                   <CardFace face={radiant} layout="full" />
                 </div>
-                <figcaption className="inspect-detail-caption">Radiant</figcaption>
+                <figcaption className="inspect-detail-caption">{t("Radiant")}</figcaption>
               </figure>
             </div>
             {/* Everything but the faces, as one column: under the faces on a tall screen, beside
@@ -141,7 +160,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
               </p>
               <DetailRules base={base} radiant={radiant} />
               <Glossary entries={glossary} />
-              <Flavour defId={def.id} />
+              <Flavour defId={def.id} easter={easter} />
               {showStats ? <CardStatsBlock key={`stats-${def.id}`} cardId={def.id} /> : null}
               {meta === undefined || meta === null ? null : <div className="inspect-detail-meta">{meta}</div>}
               <CardHistory key={def.id} cardId={def.id} initiallyOpen={historyOpen} />
@@ -158,7 +177,7 @@ export function CardDetail({ def, onClose, actions, meta, historyOpen = false, s
             data-testid={INSPECT_CLOSE}
             {...modal.dismissProps}
           >
-            Close
+            {t("Close")}
           </button>
         </div>
       </div>

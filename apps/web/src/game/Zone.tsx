@@ -32,6 +32,7 @@ import {
 } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
 import LockIcon from "./LockIcon.tsx";
+import { t } from "../i18n/i18n.ts";
 
 export type ZoneProps = {
   view: PlayerView;
@@ -43,6 +44,12 @@ export type ZoneProps = {
   onClick?: (target: ClickTarget) => void;
   pops?: ReadonlyMap<string, Pops>;
 };
+
+/** A zone's accessible name: "you units lane 3". */
+function zoneLabel(side: Side, row: Row, lane: number): string {
+  if (side === "you") return row === "units" ? t("you units lane {lane}", { lane }) : t("you backrow lane {lane}", { lane });
+  return row === "units" ? t("opponent units lane {lane}", { lane }) : t("opponent backrow lane {lane}", { lane });
+}
 
 export default function Zone(props: ZoneProps): ReactElement {
   const { view, side, row, lane } = props;
@@ -60,6 +67,9 @@ export default function Zone(props: ZoneProps): ReactElement {
   // Lanes are 1-based (`contract.ts`, matching the engine); the view's arrays are 0-based.
   const unit = row === "units" ? (seat.units[laneIndex(lane)] ?? null) : null;
   const backrow = row === "backrow" ? (seat.backrow[laneIndex(lane)] ?? null) : null;
+  // WCAG 4.1.2 (#757): a zone the player may pick is a button, unless a card in it takes focus of
+  // its own, which a button may not hold; otherwise it is a named group of what it holds.
+  const role = legal && unit === null && backrow === null ? "button" : "group";
 
   return (
     <div
@@ -74,8 +84,9 @@ export default function Zone(props: ZoneProps): ReactElement {
       data-glow={glowAttr(props.highlight, testId)}
       data-selected={selected ? "true" : undefined}
       data-animating={props.animating?.get(testId)}
+      role={role}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`${side} ${row} lane ${lane}`}
+      aria-label={zoneLabel(side, row, lane)}
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
         if (!legal) return;
@@ -89,7 +100,7 @@ export default function Zone(props: ZoneProps): ReactElement {
       }}
     >
       {locked && <LockIcon />}
-      {reserved && !locked && <span className="lock-icon reserved-icon" aria-label="Reserved zone" title="Held for a Reborn unit" />}
+      {reserved && !locked && <span className="lock-icon reserved-icon" aria-label={t("Reserved zone")} title={t("Held for a Reborn unit")} />}
       {unit !== null && (
         <Card
           testId={testid.card(unit.instanceId)}

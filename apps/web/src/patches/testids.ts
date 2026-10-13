@@ -1,5 +1,5 @@
-// Test ids of the Patch notes page and the History section (R388, R507). Every id starts with
-// `patch-`, never `card-` or `hand-card-`, so no board selector can resolve to one of them.
+// Test ids of the Patch notes page and the History section (R388, R507, R724000). Every id starts
+// with `patch-`, never `card-` or `hand-card-`, so no board selector can resolve to one of them.
 
 export const patchTestid = {
   /** The page's root (routes/patch-notes.tsx). */
@@ -9,8 +9,18 @@ export const patchTestid = {
   retry: "patch-notes-retry",
   /** "There are no patch notes yet." */
   empty: "patch-notes-empty",
+  /** One release line, `data-set` its id (R724000). */
+  set: "patch-set",
+  /** A release line's open / shut control. */
+  setToggle: "patch-set-toggle",
+  /** A release line's technical changes. */
+  technical: "patch-technical",
   /** One patch, `data-version` its version. */
   patch: "patch-entry",
+  /** A patch's player note (R724001). */
+  note: "patch-note",
+  /** One heading of a player note, `data-section` its key. */
+  noteSection: "patch-note-section",
   /** A patch's Show / Hide the cards control. */
   toggle: "patch-toggle",
   /** A patch's cards, once shown. */

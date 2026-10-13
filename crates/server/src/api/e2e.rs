@@ -33,8 +33,8 @@ use serde_json::json;
 use crate::api::crypto::{hashes_for_pepper, is_well_formed_code, normalize_code, system_ids};
 use crate::api::http::{ApiError, log_info, now_ms};
 use crate::app::App;
-use crate::config::{INVITE_CODE_LENGTH, RATING_START};
-use crate::db::store::{Db, InviteCode, ProfileCreateInput, ProfileStatus};
+use crate::config::{INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, RATING_START, TERMS_VERSION};
+use crate::db::store::{Db, InviteCode, ProfileCreateInput, ProfileStatus, TermsSource};
 
 // ---------------------------------------------------------------------------
 // Fixture accounts (`e2e/support/config.ts`, `accounts`)
@@ -242,6 +242,12 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         if account.status == E2EAccountStatus::Active {
             tx.profiles_set_status(&profile.id, ProfileStatus::Active).await?;
         }
+        // R757000, R757001: each fixture signed up through the age screen and the terms box, so no
+        // spec meets the consent screen unless it asks for it.
+        tx.consent_record_age(&profile.id, MIN_ACCOUNT_AGE_YEARS, now)
+            .await?;
+        tx.consent_record_terms(&profile.id, TERMS_VERSION, TermsSource::Signup, now)
+            .await?;
         tx.commit().await?;
         // R1435: a fixed name and the prompt answered, as `seed-accounts` names its accounts.
         store.lock().await.name_fixture(&profile.id, account.username);

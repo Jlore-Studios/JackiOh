@@ -39,7 +39,10 @@ use sqlx::{Connection, Row};
 use jackioh_engine::validator::TRIO_DECKS;
 
 use crate::cli::mint_code::is_integer;
-use crate::config::{AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS};
+use crate::config::{
+    AUTH_PASSWORD_MAX_LENGTH, AUTH_PASSWORD_MIN_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS,
+    MIN_ACCOUNT_AGE_YEARS, TERMS_VERSION,
+};
 use crate::db::pg::USERNAME_LOCK_SQL;
 use crate::env::{js_number, load_env, quoted};
 use crate::username::username_key;
@@ -157,6 +160,29 @@ pub async fn name_seeded_account(client: &mut PgConnection, profile_id: &str, in
     .bind(uuid_of(profile_id)?)
     .bind(&username)
     .bind(&key)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// R757000, R757001: a seeded account counts as having passed the age screen and agreed to the
+/// terms in force at sign-up, as an account that signed up through the form has, so it meets no
+/// consent screen. Rows already there stay as they are.
+pub async fn record_seeded_consent(client: &mut PgConnection, profile_id: &str) -> Result<()> {
+    let id = uuid_of(profile_id)?;
+    let mut tx = client.begin().await?;
+    sqlx::query("insert into public.age_checks (profile_id, min_age) values ($1, $2) on conflict do nothing")
+        .bind(id)
+        .bind(i16::try_from(MIN_ACCOUNT_AGE_YEARS)?)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "insert into public.terms_acceptances (profile_id, terms_version, source) \
+         values ($1, $2, 'signup') on conflict do nothing",
+    )
+    .bind(id)
+    .bind(TERMS_VERSION)
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
@@ -423,6 +449,7 @@ async fn seed_with(
         .await?;
 
         name_seeded_account(client, &id, i).await?;
+        record_seeded_consent(client, &id).await?;
 
         save_starter_decks(client, &id, env.catalog_version.as_str()).await?;
         out.push(SeededAccount {

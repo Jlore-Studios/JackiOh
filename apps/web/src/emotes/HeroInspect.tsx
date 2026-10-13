@@ -16,9 +16,11 @@ import { createPortal } from "react-dom";
 import type { EmoteGate, EmoteId, PortraitId } from "@jackioh/shared";
 import { PORTRAITS } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { flavourFor } from "../cards/flavour.ts";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "../cards/inspect/store.ts";
 import "../cards/inspect/inspect.css";
+import { t } from "../i18n/i18n.ts";
 import { PortraitArt } from "./PortraitArt.tsx";
 import { PORTRAIT_DEFS } from "./portraits.ts";
 import { EmoteMenu, MuteMenu } from "./ui.tsx";
@@ -84,12 +86,12 @@ export function HeroInspect({
         <span className="hero-inspect-portrait">
           <PortraitArt portrait={portrait} />
         </span>
-        <span className="hero-inspect-seat">{side === "you" ? "Your hero" : "Opponent's hero"}</span>
+        <span className="hero-inspect-seat">{side === "you" ? t("Your hero") : t("Opponent's hero")}</span>
         <h2 id={nameId} className="hero-inspect-name" data-testid={HERO_INSPECT_NAME}>
-          {def.name}
+          {readerName(def)}
         </h2>
         <p className="hero-inspect-title" data-testid={HERO_INSPECT_TITLE}>
-          {PORTRAITS[portrait].flavour}
+          {t(PORTRAITS[portrait].flavour)}
         </p>
         {flavour === undefined ? null : (
           <p className="hero-inspect-flavour" data-testid={HERO_INSPECT_FLAVOUR}>
@@ -98,11 +100,11 @@ export function HeroInspect({
         )}
         <dl className="hero-inspect-stats">
           <div className="hero-inspect-stat" data-testid={HERO_INSPECT_HEALTH} data-health={health}>
-            <dt>Health</dt>
+            <dt>{t("Health")}</dt>
             <dd>{Math.max(0, health)}</dd>
           </div>
           <div className="hero-inspect-stat" data-testid={HERO_INSPECT_ARMOR} data-armor={armor}>
-            <dt>Armor</dt>
+            <dt>{t("Armor")}</dt>
             <dd>{armor}</dd>
           </div>
         </dl>
@@ -118,7 +120,7 @@ export function HeroInspect({
           data-testid={HERO_INSPECT_CLOSE}
           {...modal.dismissProps}
         >
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>,

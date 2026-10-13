@@ -143,6 +143,21 @@ The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `re
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
 
+The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
+device and, signed in, the account's online replays (first page), and opens one in the replay player.
+Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
+production build serves a 404 there and ships neither, and a test keeps every import of `src/replay/`
+inside it and the dev routes (the real entry points come with the result screens, #430).
+
+```
+src/replay/
+  source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
+  sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
+  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  config.ts replay.css
+```
+
 ## Decks, the lobby and the series
 
 The screens an account uses between games (SPEC §9.4, §9.5, R250–R264, R330–R341). None of them
@@ -401,9 +416,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `wasm32-unknown-unknown` target and downloads the pinned `wasm-bindgen` CLI only when they are
   missing, and cargo rebuilds only what changed. The package's `pre` scripts run it, so `dev`,
   `build`, `build:e2e` and `test` always load a fresh module.
-- `src/wasm/index.ts` is the module's only caller. `main.tsx` awaits `loadWasm()` before the first
-  render (the deck builder calls the validator synchronously), the practice worker before its first
-  message, and `test/setup.ts` loads it synchronously for jsdom.
+- `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
+  `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
+  calls the validator synchronously), the practice worker awaits it before its first message, and
+  `test/setup.ts` loads it synchronously for jsdom.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
@@ -417,6 +433,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
   (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`), with `tutorial/harness.ts` for tests.
+
+## Internationalisation
+
+The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English.
 
 ## `PlayerView` gaps found while building M5 (SPEC §10.8)
 

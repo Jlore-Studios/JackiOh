@@ -1,0 +1,24 @@
+/* The replay player's controls (#511), in the board's notice slot: buttons, scrubber and readout wrap
+   as one centred row, so a phone puts the scrubber on a row of its own. */
+.replay-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.replay-controls input[type="range"] {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.replay-readout {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Nothing on a replay's board is clickable, which is not a reason to dim it as a live board's idle cards are. */
+.game[data-replay="true"] .card[data-legal="false"] {
+  opacity: 1;
+}

@@ -6,9 +6,12 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from "rea
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { useSecondsUntil } from "../auth/cooldown.ts";
+import { t } from "../i18n/i18n.ts";
 import { ApiRequestError, forfeitSeries, getSeries, pickSeriesDeck, type SeriesView } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "./nav.tsx";
+import ConquestExplainer, { conquestExplainerTestid } from "./ConquestExplainer.tsx";
+import { conquestText, isExplainerDismissed, setExplainerDismissed } from "./conquestCopy.ts";
 import { SERIES_OUTCOME_HEADLINE } from "./SeriesBanner.tsx";
 import SeriesPicker, { deckStanding, seriesPickerTestid } from "./SeriesPicker.tsx";
 import "../auth/tavern.css";
@@ -37,6 +40,10 @@ export const seriesTestid = {
   result: "series-result",
   game: (gameNo: number): string => `series-game-${String(gameNo)}`,
   backToPlay: "series-back-to-play",
+  explainer: conquestExplainerTestid.explainer,
+  explainerDismiss: conquestExplainerTestid.dismiss,
+  explainerToggle: "conquest-explainer-toggle",
+  endReminder: "series-end-reminder",
 } as const;
 
 type SeriesResult = NonNullable<SeriesView["result"]>;
@@ -58,28 +65,38 @@ export function endReasonWords(
     case "decided": {
       const winner = wins === undefined ? winsNeeded : result.outcome === "win" ? wins.you : wins.opponent;
       if (winner < winsNeeded) {
-        return `${result.outcome === "win" ? "You" : "Your opponent"} reached ${String(winner)} game wins, which took the series under the Best-of-3 rules it began with.`;
+        return result.outcome === "win"
+          ? t("You reached {wins} game wins, which took the series under the Best-of-3 rules it began with.", {
+              wins: String(winner),
+            })
+          : t("Your opponent reached {wins} game wins, which took the series under the Best-of-3 rules it began with.", {
+              wins: String(winner),
+            });
       }
       return result.outcome === "win"
-        ? `You won a game with each of your ${String(winsNeeded)} decks.`
-        : `Your opponent won a game with each of their ${String(winsNeeded)} decks.`;
+        ? t("You won a game with each of your {count} decks.", { count: String(winsNeeded) })
+        : t("Your opponent won a game with each of their {count} decks.", { count: String(winsNeeded) });
     }
     case "exhausted":
-      if (result.outcome === "draw") return `The series reached its ${String(maxGames)}-game limit with the wins level.`;
-      return `The series reached its ${String(maxGames)}-game limit, and ${result.outcome === "win" ? "you" : "your opponent"} had won more games.`;
+      if (result.outcome === "draw") {
+        return t("The series reached its {max}-game limit with the wins level.", { max: String(maxGames) });
+      }
+      return result.outcome === "win"
+        ? t("The series reached its {max}-game limit, and you had won more games.", { max: String(maxGames) })
+        : t("The series reached its {max}-game limit, and your opponent had won more games.", { max: String(maxGames) });
     case "forfeit":
-      return result.outcome === "win" ? "Your opponent forfeited the series." : "You forfeited the series.";
+      return result.outcome === "win" ? t("Your opponent forfeited the series.") : t("You forfeited the series.");
     case "abandoned":
-      return "The series ended without a winner: nobody picked a deck in time, or a game could not be started.";
+      return t("The series ended without a winner: nobody picked a deck in time, or a game could not be started.");
   }
 }
 
 /** R262, R604, R612: the server decides the ranked result; no rating value reaches this view. */
 export function ratingWords(result: SeriesResult): string {
   if (result.outcome === "abandoned" || !result.ranked) {
-    return "Unrated: no rating changed.";
+    return t("Unrated: no rating changed.");
   }
-  return "Ranked series: counted as one rated game.";
+  return t("Ranked series: counted as one rated game.");
 }
 
 function messageOf(cause: unknown): string {
@@ -106,8 +123,8 @@ function SeriesHero(): ReactElement {
       <div className="brand">
         <h1>JackiOh</h1>
       </div>
-      <p className="play-hero__title">Conquest</p>
-      <p className="play-hero__lead">Win a game with each of your three decks. A deck that wins is locked.</p>
+      <p className="play-hero__title">{t("Conquest")}</p>
+      <p className="play-hero__lead">{t("Win a game with each of your three decks. A deck that wins is locked.")}</p>
     </header>
   );
 }
@@ -120,6 +137,12 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [showExplainer, setShowExplainer] = useState(() => !isExplainerDismissed());
+
+  function onDismissExplainer(): void {
+    setExplainerDismissed(true);
+    setShowExplainer(false);
+  }
 
   // Request order keeps a stale poll from undoing a pick.
   const sent = useRef(0);
@@ -214,11 +237,11 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
         <SeriesHero />
         {loadError === null ? (
           <p className="notice" data-testid={seriesTestid.loading} role="status">
-            Loading the series…
+            {t("Loading the series…")}
           </p>
         ) : (
           <p className="notice" data-testid={seriesTestid.error} role="alert">
-            {loadError}
+            {t(loadError)}
           </p>
         )}
       </div>
@@ -229,16 +252,32 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
   const picking = view.status === "picking";
   const yourDecks = [...you.decks].sort((a, b) => a.slot - b.slot);
   const theirDecks = [...opponent.decks].sort((a, b) => a.slot - b.slot);
-  const deckName = (slot: number): string => you.decks.find((deck) => deck.slot === slot)?.name ?? `Deck ${String(slot + 1)}`;
+  const deckName = (slot: number): string =>
+    you.decks.find((deck) => deck.slot === slot)?.name ?? t("Deck {number}", { number: String(slot + 1) });
 
   return (
     <div className="app-shell tavern lobby play-screen series" data-testid={seriesTestid.screen} data-status={view.status}>
       <BackLink to={paths.play} />
       <SeriesHero />
 
+      {showExplainer ? (
+        <ConquestExplainer onDismiss={onDismissExplainer} />
+      ) : (
+        <button
+          type="button"
+          className="link-button series-explainer-toggle"
+          data-testid={seriesTestid.explainerToggle}
+          onClick={() => {
+            setShowExplainer(true);
+          }}
+        >
+          {conquestText("toggleOpen")}
+        </button>
+      )}
+
       {actionError === null ? null : (
         <p className="notice" data-testid={seriesTestid.error} role="alert">
-          {actionError}
+          {t(actionError)}
         </p>
       )}
 
@@ -258,7 +297,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
           {view.status === "playing" && view.currentMatchId !== null ? (
             <section className="lobby-card play-panel series-panel" aria-labelledby="series-game-heading">
               <h2 id="series-game-heading" className="play-panel__heading">
-                Game {String(view.gameNo)} is on
+                {t("Game {game} is on", { game: String(view.gameNo) })}
               </h2>
               <a
                 className="button-primary play-cta series-open"
@@ -266,10 +305,10 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                 data-testid={seriesTestid.openMatch}
                 onClick={followInApp(paths.match(view.currentMatchId))}
               >
-                Open game {String(view.gameNo)}
+                {t("Open game {game}", { game: String(view.gameNo) })}
               </a>
               {/* R334: a game is conceded on the board; the series can only be forfeited between games. */}
-              <p className="lobby-note">To give up this game, concede it on the board.</p>
+              <p className="lobby-note">{t("To give up this game, concede it on the board.")}</p>
             </section>
           ) : null}
 
@@ -279,16 +318,21 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
               data-testid={seriesTestid.result}
               data-outcome={view.result.outcome}
             >
-              <span className="series-result__word">{SERIES_OUTCOME_HEADLINE[view.result.outcome]}</span>
+              <span className="series-result__word">{t(SERIES_OUTCOME_HEADLINE[view.result.outcome])}</span>
               <p>{endReasonWords(view.result, view.winsNeeded, view.maxGames, { you: you.wins, opponent: opponent.wins })}</p>
               <p>{ratingWords(view.result)}</p>
+              {view.result.ranked && view.result.outcome !== "abandoned" ? (
+                <p className="lobby-note" data-testid={seriesTestid.endReminder}>
+                  {conquestText("seriesEndRatingReminder")}
+                </p>
+              ) : null}
               <a
                 className="button-primary play-cta"
                 href={paths.play}
                 data-testid={seriesTestid.backToPlay}
                 onClick={followInApp(paths.play)}
               >
-                Back to the lobby
+                {t("Back to the lobby")}
               </a>
             </section>
           )}
@@ -297,7 +341,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
         <div className="play-side">
           <section className="lobby-card play-panel series-panel" aria-labelledby="series-standing-heading">
             <h2 id="series-standing-heading" className="play-panel__heading">
-              The series
+              {t("The series")}
             </h2>
             <p
               className="series-score"
@@ -305,16 +349,20 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
               data-you={you.wins}
               data-opponent={opponent.wins}
             >
-              <span>
-                You {String(you.wins)} – {String(opponent.wins)} Opponent
-              </span>
+              <span>{t("You {you} – {them} Opponent", { you: String(you.wins), them: String(opponent.wins) })}</span>
               <span className="series-score__first">
-                Win with all {String(view.winsNeeded)} decks · game {String(view.gameNo)} of at most {String(view.maxGames)}
+                {t("Win with all {count} decks · game {game} of at most {max}", {
+                  count: String(view.winsNeeded),
+                  game: String(view.gameNo),
+                  max: String(view.maxGames),
+                })}
               </span>
             </p>
 
-            <h3 className="series-panel__label">Your decks · {you.trioName}</h3>
-            <ul className="play-trio-decks" aria-label="Your decks">
+            <h3 className="series-panel__label">
+              {t("Your decks")} · {you.trioName}
+            </h3>
+            <ul className="play-trio-decks" aria-label={t("Your decks")}>
               {yourDecks.map((deck) => {
                 const isPick = you.pick === deck.slot;
                 return (
@@ -327,15 +375,15 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                     title={deckStanding(deck)}
                   >
                     <span className="series-deck__name">{deck.name}</span>
-                    <span className="series-deck__standing">{deck.won ? "won · locked" : isPick ? "your pick" : deckStanding(deck).toLowerCase()}</span>
+                    <span className="series-deck__standing">{deck.won ? t("won · locked") : isPick ? t("your pick") : deckStanding(deck).toLowerCase()}</span>
                   </li>
                 );
               })}
             </ul>
-            <p className="lobby-note">A deck that wins a game is locked for the rest of the series.</p>
+            <p className="lobby-note">{t("A deck that wins a game is locked for the rest of the series.")}</p>
 
-            <h3 className="series-panel__label">Their decks</h3>
-            <ul className="play-trio-decks" aria-label="Your opponent's decks">
+            <h3 className="series-panel__label">{t("Their decks")}</h3>
+            <ul className="play-trio-decks" aria-label={t("Your opponent's decks")}>
               {theirDecks.map((deck) => (
                 <li
                   key={deck.slot}
@@ -343,8 +391,8 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                   data-testid={seriesTestid.opponentDeck(deck.slot)}
                   data-won={deck.won ? "true" : "false"}
                 >
-                  <span className="series-deck__name">Deck {String(deck.slot + 1)}</span>
-                  <span className="series-deck__standing">{deck.won ? "won · locked" : "not won yet"}</span>
+                  <span className="series-deck__name">{t("Deck {number}", { number: String(deck.slot + 1) })}</span>
+                  <span className="series-deck__standing">{deck.won ? t("won · locked") : t("not won yet")}</span>
                 </li>
               ))}
             </ul>
@@ -353,16 +401,20 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
           {view.games.length === 0 ? null : (
             <section className="lobby-card play-panel series-panel" aria-labelledby="series-games-heading">
               <h2 id="series-games-heading" className="play-panel__heading play-panel__heading--sub">
-                Games
+                {t("Games")}
               </h2>
               <ol className="series-history">
                 {view.games.map((game) => (
                   <li key={game.gameNo} data-testid={seriesTestid.game(game.gameNo)} data-result={game.result ?? "pending"}>
-                    Game {String(game.gameNo)}: {deckName(game.yourSlot)} vs their deck {String(game.opponentSlot + 1)} —{" "}
+                    {t("Game {game}: {deck} vs their deck {theirs} —", {
+                      game: String(game.gameNo),
+                      deck: deckName(game.yourSlot),
+                      theirs: String(game.opponentSlot + 1),
+                    })}{" "}
                     <span className="series-history__result">
-                      {game.result === null ? "in progress" : GAME_RESULT_WORD[game.result]}
+                      {game.result === null ? t("in progress") : t(GAME_RESULT_WORD[game.result])}
                     </span>{" "}
-                    · {game.youWentFirst ? "you went first" : "they went first"}
+                    · {game.youWentFirst ? t("you went first") : t("they went first")}
                   </li>
                 ))}
               </ol>
@@ -370,16 +422,16 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
           )}
 
           {picking ? (
-            <section className="lobby-card play-panel series-panel" aria-label="Leave the series">
+            <section className="lobby-card play-panel series-panel" aria-label={t("Leave the series")}>
               {confirming ? (
-                <div className="row" role="alertdialog" aria-label="Forfeit the series?">
+                <div className="row" role="alertdialog" aria-label={t("Forfeit the series?")}>
                   <p>
                     {view.ranked
-                      ? "Forfeit the series? Your opponent wins it, and your rating moves as for a loss."
-                      : "Forfeit the series? Your opponent wins it."}
+                      ? t("Forfeit the series? Your opponent wins it, and your rating moves as for a loss.")
+                      : t("Forfeit the series? Your opponent wins it.")}
                   </p>
                   <button type="button" data-testid={seriesTestid.forfeitConfirm} disabled={busy} onClick={onForfeit}>
-                    Forfeit
+                    {t("Forfeit")}
                   </button>
                   <button
                     type="button"
@@ -389,7 +441,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                       setConfirming(false);
                     }}
                   >
-                    Keep playing
+                    {t("Keep playing")}
                   </button>
                 </div>
               ) : (
@@ -402,7 +454,7 @@ export default function SeriesRoute({ seriesId, token }: SeriesRouteProps): Reac
                     setConfirming(true);
                   }}
                 >
-                  Forfeit the series
+                  {t("Forfeit the series")}
                 </button>
               )}
             </section>

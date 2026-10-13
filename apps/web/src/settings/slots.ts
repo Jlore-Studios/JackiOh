@@ -8,7 +8,8 @@ import { DEFAULT_AUDIO_SETTINGS, writeAudioSettings } from "../audio/settings.ts
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { DEFAULT_FX_SETTINGS, setFxSettings } from "../fx/settings.ts";
 import { DEFAULT_HAPTICS_SETTINGS, writeHapticsSettings } from "../haptics/settings.ts";
-import { AnimatedFoilSwitch, FxControls, VibrationSwitch } from "./controls.tsx";
+import { resetLocale } from "../i18n/i18n.ts";
+import { AnimatedFoilSwitch, FxControls, LanguageSelect, VibrationSwitch } from "./controls.tsx";
 
 export type SettingsSectionId = "gameplay" | "visuals" | "audio";
 
@@ -52,6 +53,14 @@ export const SETTINGS_SLOTS: readonly SettingsSlot[] = [
     render: () => createElement(AudioControls, { className: "settings-audio" }),
     reset: () => {
       writeAudioSettings({ ...DEFAULT_AUDIO_SETTINGS });
+    },
+  },
+  {
+    section: "gameplay",
+    id: "language",
+    render: () => createElement(LanguageSelect),
+    reset: () => {
+      void resetLocale();
     },
   },
 ];

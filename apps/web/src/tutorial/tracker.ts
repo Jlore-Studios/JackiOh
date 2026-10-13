@@ -4,6 +4,7 @@
 import type { ActionBody } from "@jackioh/shared";
 
 import { newEventsSince } from "../game/animations.ts";
+import { subscribeLocale } from "../i18n/i18n.ts";
 import type { PracticeController } from "../practice/controller.ts";
 import type { PracticeSnapshot } from "../practice/protocol.ts";
 import {
@@ -108,6 +109,10 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
   }
 
   const unsubscribe = source.subscribe(observe);
+  // A step's words are looked up when the display is built, so a language switch builds it again.
+  const unsubscribeLocale = subscribeLocale(() => {
+    if (!disposed && ctx !== null) publish();
+  });
   observe();
 
   return {
@@ -131,6 +136,7 @@ export function createCoachTracker(source: CoachSource, script: LessonScript): C
       if (disposed) return;
       disposed = true;
       unsubscribe();
+      unsubscribeLocale();
       hold(false);
       listeners.clear();
     },

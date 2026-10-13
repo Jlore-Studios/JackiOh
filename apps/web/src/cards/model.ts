@@ -1,6 +1,7 @@
 // What a card face shows, computed once from a catalog def and the live view (docs/polish/6-cards.md,
-// Surface B). Pure: no React, no DOM, no settings. Every component that draws a card — the board's
-// Card.tsx, the inspect overlays, the deck builder — builds a FaceModel here and hands it down.
+// Surface B). Pure: no React, no DOM, no settings, except the reader's language (R711000). Every
+// component that draws a card — the board's Card.tsx, the inspect overlays, the deck builder —
+// builds a FaceModel here and hands it down.
 //
 // Two kinds of face come out of it (SPEC §10.10). A face with no `inPlay` is the card as printed:
 // the collection's, both faces of it in the catalog's words. A face with `inPlay` is the card as the
@@ -35,8 +36,9 @@
 // with the numbers it reads on the card, in place of its own copying sentence; it keeps its own name,
 // cost, type and art, and `copying` names the card it copies for the inspect notes.
 //
-// ME-CN, R1301: a card the view says is Chinese (`FaceSource.chinese`) prints its name and both
-// faces' texts from the Chinese table (chinese.ts), a copier's copied text and a fused card's
+// ME-CN, R1301, R711000: a card the view says is Chinese (`FaceSource.chinese`), or any card when the
+// reader reads Chinese (`drawnInChinese`), prints its name and both faces' texts from the Chinese
+// table (chinese.ts), a copier's copied text and a fused card's
 // ingredients' included, filled with the same numbers; its preview labels are the table's too. A
 // Radiant face's gold diff compares the two Chinese faces (R1302). The English face's name and text
 // ride along (`englishName`, `englishText`), never printed: the art's motif and the glossary's terms
@@ -70,7 +72,8 @@ import {
   powerText,
   type RolledPower,
 } from "./inPlay.ts";
-import { chineseDef, chinesePreviewLabel } from "./chinese.ts";
+import { isZhCn, t } from "../i18n/i18n.ts";
+import { CHINESE_COMMA, chineseDef, chineseKeyword, chinesePreviewLabel, drawnInChinese } from "./chinese.ts";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
@@ -207,6 +210,8 @@ export type FaceModel = {
   copying?: { defId: string; name: string; radiant: boolean } | null;
   /** ME-CN, R1301: the face prints its words in Chinese (`FaceSource.chinese`). Absent otherwise. */
   chinese?: boolean;
+  /** R711000: the view flagged the card Chinese (R1301), as opposed to a Chinese reader's own language. */
+  flagged?: boolean;
   /** R1301: on a Chinese face, the name the English face prints, which picks the art's motif (R503). */
   englishName?: string;
   /** R1301: on a Chinese face, the text the English face prints, whose terms the glossary explains. */
@@ -271,7 +276,10 @@ export type FaceSource = {
   live?: { attack: number; health: number; maxHealth: number; keywords: readonly Keyword[] };
   /** Set on every face drawn in a game, absent in the collection (see the header). */
   inPlay?: InPlay;
-  /** ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's. */
+  /**
+   * ME-CN, R1301: the view says the card is Chinese (`CardView.chinese`); its words are the table's,
+   * whatever the reader's language. A reader who reads Chinese has every face drawn so (R711000).
+   */
   chinese?: boolean;
   /** MD-B15, R923: the view's tags where they differ from the definition's (a granted tag). */
   tags?: readonly Tag[];
@@ -284,12 +292,15 @@ const UNKNOWN_COST = "?";
 const UNKNOWN_TYPE: CardType = "Unit";
 
 export function faceModel(source: FaceSource): FaceModel {
+  return faceIn(source, drawnInChinese(source.chinese === true));
+}
+
+function faceIn(source: FaceSource, chinese: boolean): FaceModel {
   // R102, B3.4: a fused definition declares no numbers of its own, and its text still writes its
   // ingredients' `{key}`s; in play the view's numbers fill them (and are, for it, the printed ones).
   const filled = withViewParams(source.def, source.inPlay?.params);
   // ME-CN, R1301: a Chinese card's name and texts are the table's; its numbers, keywords and all else
   // stay the definition's.
-  const chinese = source.chinese === true;
   const def = chinese && filled !== undefined ? chineseDef(filled) : filled;
   const printed = def === undefined ? undefined : source.radiant ? def.radiant : def.base;
   // B2.7: a face may carry its own type (Classic+ #22 Blood Moon's Radiant face is a Field Trap), and
@@ -306,7 +317,7 @@ export function faceModel(source: FaceSource): FaceModel {
   const viewCopies = inPlay?.copies;
   const copies = viewCopies === undefined || !chinese ? viewCopies : { ...viewCopies, def: chineseDef(viewCopies.def) };
   const liveText = copies === undefined ? ownText : copiedText(ownText, def, textOf(copies.def, copies.radiant, copies.params));
-  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay);
+  const text = inPlay === undefined ? printedText : textInPlay(def, source.radiant, liveText, inPlay, chinese);
   // B5 E38, R1438: a hand card's keywords are the view's where it gives them (a Lucky given in hand).
   const keywords = source.live?.keywords ?? inPlay?.handKeywords ?? printed?.keywords ?? [];
   // The values belong to the card's own words, its numbers as they stand included: a formula play
@@ -323,7 +334,7 @@ export function faceModel(source: FaceSource): FaceModel {
       ? preview.map((entry) => ({ ...entry, label: chinesePreviewLabel(filled, source.radiant, entry.label, inPlay?.params) }))
       : preview;
   // R1301: the same card's English face, for what is read off its words and never printed.
-  const english = chinese ? faceModel({ ...source, chinese: false }) : null;
+  const english = chinese ? faceIn(source, false) : null;
 
   return {
     defId: source.defId,
@@ -367,6 +378,7 @@ export function faceModel(source: FaceSource): FaceModel {
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
     ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),
+    ...(source.chinese === true ? { flagged: true } : {}),
   };
 }
 
@@ -407,7 +419,7 @@ function withViewParams(def: CardDef | undefined, values: Readonly<Record<string
 
 /** E36: "27 lines of code", "1 line of code". */
 export function locWords(loc: number): string {
-  return `${String(loc)} ${loc === 1 ? "line" : "lines"} of code`;
+  return loc === 1 ? t("{n} line of code", { n: loc }) : t("{n} lines of code", { n: loc });
 }
 
 /** R243: a hand card's stats are its face plus what it gained in hand, with nothing on the field's layers. */
@@ -471,19 +483,24 @@ function concealed(def: CardDef | undefined): boolean {
  * What the rules box prints in play (inPlay.ts). A Vanilla unit's text is gone; a Call to Chaos is
  * "???"; a #98 Heroic Power is the power it rolled. Anything else prints its printed text.
  */
-function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay): FaceText {
-  if (inPlay.vanilla === true) return { full: VANILLA_TEXT, marks: [] };
+function textInPlay(def: CardDef | undefined, radiant: boolean, printedText: FaceText, inPlay: InPlay, chinese: boolean): FaceText {
+  // R711000: a face drawn in Chinese for a reader of Chinese says it in the reader's words; the English
+  // face (`englishText`, what the glossary's terms are found in) keeps the English.
+  const reader = chinese && isZhCn();
+  if (inPlay.vanilla === true) return { full: reader ? t(VANILLA_TEXT) : VANILLA_TEXT, marks: [] };
   if (def === undefined) return printedText;
   if (concealed(def)) return { full: concealedText(def.id, radiant), marks: [] };
   if (inPlay.power !== undefined && def.id === HEROIC_POWER_ID) {
     const face = radiant ? def.radiant : def.base;
     // B3.4: Steady Shot's {shot} is the card's number as it stands (the view's), else as printed.
     const values = inPlay.params ?? printedValues(def, radiant);
-    const words = powerText(inPlay.power, radiant, face.keywords.map(keywordKey).join(", "), values);
+    const kinds = (list: readonly Keyword[]): string =>
+      reader ? list.map(chineseKeyword).join(CHINESE_COMMA) : list.map(keywordKey).join(", ");
+    const words = powerText(inPlay.power, radiant, kinds(face.keywords), values, reader);
     if (words !== null) {
       // R277: a Radiant power is marked against the same power's base words.
       const baseWords = radiant
-        ? powerText(inPlay.power, false, def.base.keywords.map(keywordKey).join(", "), printedValues(def, false))
+        ? powerText(inPlay.power, false, kinds(def.base.keywords), printedValues(def, false), reader)
         : null;
       return { full: words, marks: baseWords === null ? [] : radiantMarks(baseWords, words) };
     }

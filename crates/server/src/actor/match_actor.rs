@@ -65,9 +65,10 @@ use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
     BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS,
+    MATCH_VOIDED_CLOSE_CODE,
 };
-use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
+use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
@@ -109,6 +110,9 @@ pub struct MatchActorInput {
     /// R639000: by home seat, the turn each bot last moved in, which a rebuild reads off `log`
     /// (`bot_moved_turns`); a new match has none.
     pub bot_moved_turn: PerPlayer<Option<i32>>,
+    /// R641000: the match is a game of a Conquest series, which offers no rematch (R672), so a bot
+    /// draws no rematch plan when it ends: the series' next pick phase is what comes next.
+    pub series_game: bool,
 }
 
 /// R417, R678: the boards a match was created with — its seats' last boards and the two other
@@ -331,6 +335,8 @@ struct Shared {
     on_voided: Option<Box<dyn Fn() + Send + Sync>>,
     /// R1452: the ladder bot at each home seat, played by this actor; `None` for a person.
     bots: PerPlayer<Option<BotRow>>,
+    /// R641000: a game of a Conquest series (`MatchActorInput::series_game`).
+    series_game: bool,
     core: Mutex<Core>,
 }
 
@@ -416,6 +422,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         telemetry,
         bots,
         bot_moved_turn,
+        series_game,
     } = input;
     let seats = (
         MatchSeat {
@@ -547,6 +554,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         inbox,
         on_voided,
         bots,
+        series_game,
         core: Mutex::new(core),
     });
     let actor = MatchActor { shared };
@@ -822,7 +830,23 @@ impl MatchActor {
             // rebuild, so a rebuilt actor cannot collide with a nonce already in the log. Its prefix is
             // one no client may send (R270), so no client can pre-empt it.
             let nonce = format!("{SERVER_NONCE_PREFIX}{}-{next_seq}", expiry.kind());
-            self.apply_action(player, nonce, body).await;
+            let reply = self.apply_action(player, nonce, body).await;
+            // R776000: a row the store did not take. The clock that ran out runs out again, and the
+            // action is derived again then, under the same nonce while no other row has taken its seq.
+            // The `return` ends R268's loop: the retried mulligan expiry derives the seats still owing.
+            if matches!(
+                reply,
+                ServerMessage::Error {
+                    code: SocketErrorCode::Internal,
+                    ..
+                }
+            ) {
+                if !self.lock().stopped {
+                    tracing::warn!(event = "match.clock.retrying", matchId = %self.match_id_str(), kind = expiry.kind(), player = %player, inMs = MATCH_SERVER_ACTION_RETRY_MS);
+                    self.shared.clock.retry(expiry, MATCH_SERVER_ACTION_RETRY_MS);
+                }
+                return;
+            }
         }
     }
 
@@ -1032,7 +1056,7 @@ impl MatchActor {
     async fn on_terminal(&self, snapshot: &MatchSnapshot) {
         let Some(result) = snapshot.result else { return };
         let at = now_ms();
-        let (swapped, last_boards) = {
+        let (swapped, last_boards, final_hash) = {
             let mut core = self.lock();
             if core.finished {
                 return;
@@ -1049,7 +1073,11 @@ impl MatchActor {
             if result.reason != GameOverReason::Voided {
                 self.plan_bot_rematches(&mut core, at);
             }
-            (core.swapped, engine::last_boards(&core.state))
+            (
+                core.swapped,
+                engine::last_boards(&core.state),
+                engine::hash_state(&core.state),
+            )
         };
         // R679: the one ending that records nothing. Only the engine's state reaches it.
         if result.reason == GameOverReason::Voided {
@@ -1068,6 +1096,8 @@ impl MatchActor {
             at,
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
+            // R768: the final state's hash, which the match's replay is held to.
+            final_hash: Some(final_hash),
         };
         // The write finishes the match row in the same transaction, so nothing else here does: a row
         // finished apart from it would outlive a failed write, with no result and both players stuck
@@ -1107,7 +1137,8 @@ impl MatchActor {
     /// socket does, and meets a person's offer as `on_rematch_offer` says. An end whose result never
     /// lands lets the actor go (`let_go_unrecorded`), and its plan with it.
     fn plan_bot_rematches(&self, core: &mut Core, at: i64) {
-        if self.shared.match_row.ranked != Some(true) {
+        // R641000: a series game offers no rematch, so its bot stays for none.
+        if self.shared.match_row.ranked != Some(true) || self.shared.series_game {
             return;
         }
         for home in PLAYERS {
@@ -1215,6 +1246,19 @@ impl MatchActor {
         tracing::warn!(event = "match.result.unrecorded", matchId = %self.match_id_str());
     }
 
+    /// R776000: the log holds a row at the seq this actor was about to write (a write that committed and
+    /// whose answer was lost, or a second writer), so the actor is behind its log. It lets go as
+    /// `let_go_unrecorded` does, and the next socket folds `(seed, log)`, that row included. An actor
+    /// already stopped lets nothing go: the registry may hold its rebuilt successor by now.
+    fn let_go_diverged(&self) {
+        if self.lock().stopped {
+            return;
+        }
+        self.shared.deps.matches.forget(self.match_id_str());
+        self.halt();
+        tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
+    }
+
     /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
     /// log row at the next gapless seq, then push.
     async fn apply_action(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
@@ -1261,6 +1305,9 @@ impl MatchActor {
             .await?);
         if let Err(error) = appended {
             tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
+            if matches!(error, StoreError::SeqClash(_)) {
+                self.let_go_diverged();
+            }
             return error_message(
                 SocketErrorCode::Internal,
                 "the action could not be recorded; try again",

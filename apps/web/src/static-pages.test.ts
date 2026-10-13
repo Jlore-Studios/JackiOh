@@ -22,9 +22,11 @@ import { almanacShelf } from "./game/deckbuilder/shelf.ts";
 import { SITE_ORIGIN, originOf, paths, siteOrigin } from "./net/navigate.ts";
 import { canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { newestFirst } from "./patches/history.ts";
+import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch } from "./patches/source.ts";
 import AccessibilityRoute from "./routes/accessibility.tsx";
+import CopyrightRoute from "./routes/copyright.tsx";
 import PrivacyRoute from "./routes/privacy.tsx";
 import TermsRoute from "./routes/terms.tsx";
 import { SHIPPED_SETS } from "./wire/catalog.ts";
@@ -158,15 +160,26 @@ describe("the static pages", () => {
   it.each([
     ["the fixture history and a patch added to it", [...FIXTURE_PATCHES, ADDED_PATCH]],
     ["the real history", REAL_PATCHES],
-  ])("R388 list every patch on /patch-notes, newest first (%s)", (_name, patches) => {
+  ])("R388 R724000 list every patch on /patch-notes by release line, newest first, with its player note (%s)", (_name, patches) => {
     const { doc } = build({}, patches)(paths.patchNotes);
-    expect([...doc.querySelectorAll(".static-body h2")].map((h) => h.textContent)).toEqual(
-      newestFirst(patches).map((patch) => `${patch.version} ${patch.title}`),
+    expect([...doc.querySelectorAll(".static-body section > h2")].map((h) => h.textContent)).toEqual(
+      releaseGroups(patches, RELEASES).map(({ release }) => release.name),
+    );
+    expect([...doc.querySelectorAll(".static-body article h3")].map((h) => h.textContent)).toEqual(
+      newestFirst(patches).map((patch) => `${patch.version} ${playerTitle(patch)}`),
     );
     const text = doc.body.textContent ?? "";
     for (const patch of patches) {
       expect(text, patch.version).toContain(patch.date);
-      expect(text, patch.version).toContain(patch.notes);
+      for (const { key } of NOTE_SECTIONS) {
+        for (const line of patch.player?.[key] ?? []) expect(text, patch.version).toContain(line);
+      }
+      // The record's notes are never what players read (R724001).
+      expect(text, patch.version).not.toContain(patch.notes);
+    }
+    for (const { release } of releaseGroups(patches, RELEASES)) {
+      expect(text, release.id).toContain(release.summary);
+      for (const line of release.technical) expect(text, release.id).toContain(line);
     }
   });
 
@@ -265,12 +278,13 @@ describe("the static pages", () => {
     }
   });
 
-  it("quote /privacy, /terms and /accessibility word for word from their own pages", () => {
+  it("quote /privacy, /terms, /accessibility and /copyright word for word from their own pages", () => {
     const page = build(CATALOG, REAL_PATCHES);
     const cases = [
       [PrivacyRoute, paths.privacy],
       [TermsRoute, paths.terms],
       [AccessibilityRoute, paths.accessibility],
+      [CopyrightRoute, paths.copyright],
     ] as const;
     for (const [Route, path] of cases) {
       const { unmount } = render(createElement(Route));

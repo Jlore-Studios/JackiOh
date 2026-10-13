@@ -4,7 +4,8 @@
 
 import type { ActionBody, PlayerView } from "@jackioh/shared";
 
-import { moveText, nextMove, yourMove } from "../advice.ts";
+import { t } from "../../i18n/i18n.ts";
+import { moveText, nextMove, readerCardName, yourMove } from "../advice.ts";
 import type { CoachCtx, CoachStep, LessonScript } from "../coach.ts";
 import {
   freshOf,
@@ -33,6 +34,13 @@ const RADIANT_SAINTESS = "core-081";
 const RENO = "core-053";
 
 type Play = Extract<ActionBody, { type: "play" }>;
+
+/** The lesson's cards as the reader reads their names (the English is what the coach's lines print). */
+const rock = (): string => readerCardName(THE_ROCK, "The Rock");
+const coin = (): string => readerCardName(COIN, "The Coin");
+const fiender = (): string => readerCardName(FELINOR_FIENDER, "Felinor Fiender");
+const token = (): string => readerCardName(FELINOR_TOKEN, "Felinor Token");
+const saintess = (): string => readerCardName(RADIANT_SAINTESS, "Radiant Saintess");
 
 function pastMulligan(view: PlayerView): boolean {
   return view.phase !== "mulligan" && view.phase !== "setup";
@@ -105,7 +113,11 @@ function playStep(options: Parameters<typeof playCard>[0] & { possible?: (ctx: C
 const makeRadiant: CoachStep = {
   id: "make-radiant",
   title: "Make it Radiant",
-  text: "Play Glowy Jelly Bean, then pick The Rock in your hand. The card you pick becomes Radiant.",
+  text: () =>
+    t("Play {bean}, then pick {rock} in your hand. The card you pick becomes Radiant.", {
+      bean: readerCardName(GLOWY_JELLY_BEAN, "Glowy Jelly Bean"),
+      rock: rock(),
+    }),
   kind: "act",
   anchor: { kind: "handCard", defId: GLOWY_JELLY_BEAN },
   when: (ctx) => myMain(ctx) && beanOnRock(ctx).length > 0,
@@ -119,8 +131,8 @@ const playRock: CoachStep = {
   title: "Pay the Tribute",
   text: (ctx) =>
     myTokens(ctx.view).length > 0
-      ? "Play The Rock: pick a Felinor Token as its Tribute, then an empty zone. The token is tributed to pay for it."
-      : "Play The Rock: pick your weakest unit as its Tribute, then an empty zone. That unit is tributed to pay for it.",
+      ? t("Play {rock}: pick a {token} as its Tribute, then an empty zone. The token is tributed to pay for it.", { rock: rock(), token: token() })
+      : t("Play {rock}: pick your weakest unit as its Tribute, then an empty zone. That unit is tributed to pay for it.", { rock: rock() }),
   kind: "act",
   anchor: { kind: "handCard", defId: THE_ROCK },
   when: (ctx) => myMain(ctx) && rockPlays(ctx).length > 0,
@@ -159,8 +171,11 @@ export const script: LessonScript = {
     // First turn: The Coin.
     info({
       id: "coin",
-      title: "The Coin",
-      text: "The AI went first. To make up for it, you started with one extra card and got The Coin: a free spell that gives 1 extra mana, this turn only.",
+      title: coin,
+      text: () =>
+        t("The AI went first. To make up for it, you started with one extra card and got {coin}: a free spell that gives 1 extra mana, this turn only.", {
+          coin: coin(),
+        }),
       anchor: { kind: "handCard", defId: COIN },
       when: (ctx) => myMain(ctx) && inHand(ctx.view, COIN) !== undefined,
       moot: (ctx, since) => since === null && pastMulligan(ctx.view) && inHand(ctx.view, COIN) === undefined,
@@ -169,8 +184,8 @@ export const script: LessonScript = {
     {
       ...playStep({
         id: "play-coin",
-        title: "Play The Coin",
-        text: "Play The Coin now, so you have 2 mana on your very first turn.",
+        title: () => t("Play {coin}", { coin: coin() }),
+        text: () => t("Play {coin} now, so you have 2 mana on your very first turn.", { coin: coin() }),
         defId: COIN,
       }),
       moot: (ctx, since) => (since === null && inHand(ctx.view, COIN) === undefined) || myTurnNumber(ctx.view) > 1,
@@ -179,7 +194,7 @@ export const script: LessonScript = {
       ...playStep({
         id: "play-fiender",
         title: "A turn early",
-        text: "With 2 mana you can play Felinor Fiender, a (2) Cost unit, a whole turn before you normally could.",
+        text: () => t("With 2 mana you can play {name}, a (2) Cost unit, a whole turn before you normally could.", { name: fiender() }),
         defId: FELINOR_FIENDER,
       }),
       moot: (ctx, since) =>
@@ -191,7 +206,7 @@ export const script: LessonScript = {
       ...restOfTurn("end-first"),
       text: (ctx) => {
         const move = nextMove(ctx);
-        return move?.kind === "end" && ctx.view.you.mana.current === 0 ? "That is all your mana. End the turn." : moveText(ctx, move);
+        return move?.kind === "end" && ctx.view.you.mana.current === 0 ? t("That is all your mana. End the turn.") : moveText(ctx, move);
       },
     },
 
@@ -200,7 +215,10 @@ export const script: LessonScript = {
       ...info({
         id: "tribes",
         title: "Tribes",
-        text: "Some cards belong to a tribe, named at the bottom of the card, like Felinor. Felinor Fiender adds the stats of all your Felinors to its own.",
+        text: () =>
+          t("Some cards belong to a tribe, named at the bottom of the card, like Felinor. {name} adds the stats of all your Felinors to its own.", {
+            name: fiender(),
+          }),
         anchor: { kind: "unit", side: "you", defId: FELINOR_FIENDER },
         when: (ctx) => myMain(ctx) && fienderOnField(ctx),
       }),
@@ -209,13 +227,18 @@ export const script: LessonScript = {
     playStep({
       id: "play-friend",
       title: "Felinor Tokens",
-      text: "Play Friend of Felinors: it fills every empty zone on your side with a Felinor Token, a small unit the card makes.",
+      text: () =>
+        t("Play {name}: it fills every empty zone on your side with a {token}, a small unit the card makes.", {
+          name: readerCardName(FRIEND_OF_FELINORS, "Friend of Felinors"),
+          token: token(),
+        }),
       defId: FRIEND_OF_FELINORS,
     }),
     info({
       id: "fiender-grew",
       title: "It grew",
-      text: "Every Felinor Token is a Felinor, so Felinor Fiender counts them all. Look how much bigger it is now.",
+      text: () =>
+        t("Every {token} is a Felinor, so {name} counts them all. Look how much bigger it is now.", { token: token(), name: fiender() }),
       anchor: { kind: "unit", side: "you", defId: FELINOR_FIENDER },
       when: (ctx) => fienderOnField(ctx) && myTokens(ctx.view).length > 0,
       moot: (ctx, since) => since === null && (!fienderOnField(ctx) || myTokens(ctx.view).length === 0),
@@ -226,7 +249,7 @@ export const script: LessonScript = {
     info({
       id: "radiant",
       title: "Radiant cards",
-      text: "Every card has a stronger Radiant form with a gold face. Look at The Rock in your hand and note its stats.",
+      text: () => t("Every card has a stronger Radiant form with a gold face. Look at {rock} in your hand and note its stats.", { rock: rock() }),
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => myMain(ctx) && beanOnRock(ctx).length > 0,
       moot: (ctx) => outOfReach(ctx, (now) => beanOnRock(now).length > 0),
@@ -235,7 +258,10 @@ export const script: LessonScript = {
     info({
       id: "radiant-after",
       title: "Stronger",
-      text: "The Rock is Radiant now: a gold face and stronger stats. Compare them with before. It stays Radiant for the rest of the game.",
+      text: () =>
+        t("{rock} is Radiant now: a gold face and stronger stats. Compare them with before. It stays Radiant for the rest of the game.", {
+          rock: rock(),
+        }),
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => rockRadiant(ctx.view),
       moot: (ctx, since) => since === null && !rockRadiant(ctx.view),
@@ -246,7 +272,10 @@ export const script: LessonScript = {
     info({
       id: "tribute",
       title: "Tribute",
-      text: "The Rock has Tribute 1: besides its mana, playing it costs one of your own units, which is tributed. A token is perfect for that.",
+      text: () =>
+        t("{rock} has Tribute 1: besides its mana, playing it costs one of your own units, which is tributed. A token is perfect for that.", {
+          rock: rock(),
+        }),
       anchor: { kind: "handCard", defId: THE_ROCK },
       when: (ctx) => myMain(ctx) && rockPlays(ctx).length > 0,
       moot: (ctx) => outOfReach(ctx, (now) => rockPlays(now).length > 0),
@@ -255,7 +284,7 @@ export const script: LessonScript = {
     info({
       id: "indestructible",
       title: "Indestructible",
-      text: "The Rock is Indestructible: it never takes damage and can't be destroyed. Next turn it can attack.",
+      text: () => t("{rock} is Indestructible: it never takes damage and can't be destroyed. Next turn it can attack.", { rock: rock() }),
       anchor: { kind: "unit", side: "you", defId: THE_ROCK },
       when: (ctx) => unitOf(ctx.view, "you", THE_ROCK) !== undefined,
       moot: (ctx, since) => since === null && unitOf(ctx.view, "you", THE_ROCK) === undefined,
@@ -266,7 +295,10 @@ export const script: LessonScript = {
     playStep({
       id: "play-reno",
       title: "Glowing yellow",
-      text: "Reno glows yellow: its condition is met right now. Your hero is below 30, so its Cry sets it back to 30. Play it.",
+      text: () =>
+        t("{name} glows yellow: its condition is met right now. Your hero is below 30, so its Cry sets it back to 30. Play it.", {
+          name: readerCardName(RENO, "Reno"),
+        }),
       defId: RENO,
       possible: renoReady,
     }),
@@ -278,7 +310,11 @@ export const script: LessonScript = {
     tip({
       id: "fewer-felinors",
       title: "Fewer Felinors",
-      text: "A Felinor Token is gone, so Felinor Fiender shrank: it counts only the Felinors you have right now. Tokens never go to the graveyard.",
+      text: () =>
+        t("A {token} is gone, so {name} shrank: it counts only the Felinors you have right now. Tokens never go to the graveyard.", {
+          token: token(),
+          name: fiender(),
+        }),
       anchor: { kind: "unit", side: "you", defId: FELINOR_FIENDER },
       when: (ctx) =>
         fienderOnField(ctx) && freshOf(ctx, "destroyed").some((event) => event.defId === FELINOR_TOKEN && event.owner === ctx.view.viewer),
@@ -297,8 +333,8 @@ export const script: LessonScript = {
     }),
     tip({
       id: "saintess",
-      title: "Radiant Saintess",
-      text: "Radiant Saintess died, so all your other units became Radiant: gold faces and stronger stats.",
+      title: saintess,
+      text: () => t("{name} died, so all your other units became Radiant: gold faces and stronger stats.", { name: saintess() }),
       anchor: { kind: "units", side: "you" },
       when: (ctx) =>
         freshOf(ctx, "destroyed").some((event) => event.defId === RADIANT_SAINTESS && event.owner === ctx.view.viewer) &&

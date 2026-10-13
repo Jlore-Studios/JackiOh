@@ -8,9 +8,11 @@ import type { KeyboardEvent, MouseEvent, ReactElement } from "react";
 
 import { fillParams, type ActivationView, type CardView } from "@jackioh/shared";
 
+import { chineseName } from "../cards/chinese.ts";
 import { useCardInfo, type CardInfo } from "./catalog.ts";
 import { NO_HIGHLIGHT, namedAbility, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
 import { glowAttr } from "./glow.ts";
+import { isZhCn, t } from "../i18n/i18n.ts";
 
 import "./activate.css";
 
@@ -30,13 +32,13 @@ export function usesText(usesLeft: number | null): string {
 }
 
 function usesWords(usesLeft: number | null): string {
-  if (usesLeft === null) return "unlimited uses this turn";
-  return usesLeft === 1 ? "1 use left this turn" : `${String(usesLeft)} uses left this turn`;
+  if (usesLeft === null) return t("unlimited uses this turn");
+  return usesLeft === 1 ? t("1 use left this turn") : t("{count} uses left this turn", { count: String(usesLeft) });
 }
 
-/** The words as one sentence, ending in a single full stop however the label ended. */
+/** The words as one sentence, ending in a single full stop however the label ended ("。" for a Chinese reader). */
 function sentence(text: string): string {
-  return `${text.replace(/[\s.]+$/, "")}.`;
+  return `${text.replace(/[\s.。]+$/, "")}${t(".")}`;
 }
 
 function capitalised(text: string): string {
@@ -74,8 +76,8 @@ export default function ActivateControls(props: ActivateControlsProps): ReactEle
         <ActivateButton
           key={activation.ability}
           card={card}
-          name={info.name}
-          label={abilityLabel(info, card, activation.label)}
+          name={isZhCn() ? chineseName(card.defId, info.name, info.def) : info.name}
+          label={t(abilityLabel(info, card, activation.label))}
           activation={activation}
           ability={namedAbility(activations.length, activation.ability)}
           highlight={props.highlight ?? NO_HIGHLIGHT}
@@ -101,7 +103,7 @@ function ActivateButton(props: {
   const testId = testid.activate(card.instanceId, ability);
   const legal = props.highlight.legal.has(testId);
   const selected = props.highlight.selected.has(testId);
-  const why = legal ? null : capitalised(activation.reason ?? NOT_NOW);
+  const why = legal ? null : capitalised(t(activation.reason ?? NOT_NOW));
   const target: ClickTarget =
     ability === undefined ? { on: "activate", instanceId: card.instanceId } : { on: "activate", instanceId: card.instanceId, ability };
 
@@ -133,8 +135,12 @@ function ActivateButton(props: {
       data-uses={activation.usesLeft ?? "unlimited"}
       data-flash={props.flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={legal ? undefined : "true"}
-      aria-label={`Activate ${props.name}: ${sentence(props.label)} ${sentence(capitalised(uses))}${why === null ? "" : ` ${sentence(why)}`}`}
-      title={why === null ? `Activate: ${props.label} (${uses})` : `Activate: ${props.label} — ${why}`}
+      aria-label={`${t("Activate {name}: {ability} {uses}", { name: props.name, ability: sentence(props.label), uses: sentence(capitalised(uses)) })}${why === null ? "" : ` ${sentence(why)}`}`}
+      title={
+        why === null
+          ? t("Activate: {ability} ({uses})", { ability: props.label, uses })
+          : t("Activate: {ability} — {why}", { ability: props.label, why })
+      }
       onClick={press}
       onKeyDown={key}
     >

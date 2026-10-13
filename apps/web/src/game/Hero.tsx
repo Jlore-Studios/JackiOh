@@ -40,6 +40,7 @@ import type { ReactElement } from "react";
 
 import { DEFAULT_PORTRAIT } from "@jackioh/shared";
 
+import { readerName } from "../cards/chinese.ts";
 import { useInspectTrigger } from "../cards/inspect/index.ts";
 import { HeroInspect } from "../emotes/HeroInspect.tsx";
 import { HeroPortrait, usePortraitReaction } from "../emotes/Portrait.tsx";
@@ -62,6 +63,7 @@ import {
 import { glowAttr } from "./glow.ts";
 import { useOsReducedMotion } from "./useOsReducedMotion.ts";
 import { secretBadgeText } from "./secrets.ts";
+import { t } from "../i18n/i18n.ts";
 import type { HeroPowerView, PlayerView } from "@jackioh/shared";
 
 export type { HeroEmotes } from "./contract.ts";
@@ -93,7 +95,7 @@ export default function Hero(props: HeroProps): ReactElement {
   const portrait = emotes?.portrait ?? DEFAULT_PORTRAIT;
   const menu = emotes?.menu ?? null;
   const inspect = emotes?.inspect === true;
-  const portraitName = PORTRAIT_DEFS[portrait].def.name;
+  const portraitName = readerName(PORTRAIT_DEFS[portrait].def);
 
   const testId = testid.hero(side);
   const legal = isLegal(props.highlight, testId);
@@ -138,7 +140,7 @@ export default function Hero(props: HeroProps): ReactElement {
       // No aria-disabled while the hero is not a target, as a card carries: the hero holds controls
       // of its own (the portrait's button, its menu, the Heroic Power), and a disabled ancestor would
       // have assistive tech read every one of them as disabled (R1449). Not being a tab stop says it.
-      aria-label={side === "you" ? "Your hero" : "Opponent hero"}
+      aria-label={side === "you" ? t("Your hero") : t("Opponent hero")}
       tabIndex={legal ? 0 : undefined}
       onClick={() => {
         // Issue §2: targeting always wins. A legal hero is a target, so the click lands on it; a
@@ -174,10 +176,18 @@ export default function Hero(props: HeroProps): ReactElement {
           <button
             type="button"
             className="hero-portrait-open"
-            aria-label={`${side === "you" ? "Emotes" : "Mute emotes"} for ${portraitName}, ${side === "you" ? "your hero" : "the opponent's hero"}; hold, or Shift+F10, to inspect`}
+            aria-label={
+              side === "you"
+                ? t("Emotes for {name}, your hero; hold, or Shift+F10, to inspect", { name: portraitName })
+                : t("Mute emotes for {name}, the opponent's hero; hold, or Shift+F10, to inspect", { name: portraitName })
+            }
             aria-haspopup="menu"
             aria-expanded={menu !== null}
-            title={`${portraitName}: click for ${side === "you" ? "emotes" : "the mute"}, hold to inspect`}
+            title={
+              side === "you"
+                ? t("{name}: click for emotes, hold to inspect", { name: portraitName })
+                : t("{name}: click for the mute, hold to inspect", { name: portraitName })
+            }
             // A legal hero is the one tab stop (its own tabIndex), the button reached only by a pointer.
             tabIndex={legal ? -1 : undefined}
             onKeyDown={(event) => {
@@ -199,9 +209,9 @@ export default function Hero(props: HeroProps): ReactElement {
           <MuteMenu muted={emotes.muted} onMute={emotes.onMute} onClose={emotes.onCloseMenu} />
         )}
       </HeroPortrait>
-      <span className="hero-seat">{side === "you" ? "You" : "Opponent"}</span>
+      <span className="hero-seat">{side === "you" ? t("You") : t("Opponent")}</span>
       {(seat.jade ?? 0) > 0 && (
-        <span className="hero-jade" data-jade={seat.jade} title="Jade Counter">
+        <span className="hero-jade" data-jade={seat.jade} title={t("Jade Counter")}>
           {seat.jade}
         </span>
       )}
@@ -212,7 +222,7 @@ export default function Hero(props: HeroProps): ReactElement {
           <PowerButton power={hero.power} testId={testid.power} props={props} />
         ) : (
           <span className="power-tag" data-used={hero.power.usedThisTurn ? "true" : "false"} data-x={hero.power.x}>
-            {hero.power.title}
+            {t(hero.power.title)}
             <span className="power-x">{hero.power.x}</span>
           </span>
         ))}
@@ -231,7 +241,7 @@ export default function Hero(props: HeroProps): ReactElement {
               data-used={power.usedThisTurn ? "true" : "false"}
               data-x={power.x}
             >
-              {power.title}
+              {t(power.title)}
               <span className="power-x">{power.x}</span>
             </span>
           ),
@@ -245,16 +255,18 @@ export default function Hero(props: HeroProps): ReactElement {
         data-testid={modifiersId}
         data-count={modifiers.length}
         data-animating={props.animating?.get(modifiersId)}
-        aria-label={side === "you" ? "Your modifiers" : "Opponent modifiers"}
+        // WCAG 4.1.2 (#757): a name needs a role.
+        role="group"
+        aria-label={side === "you" ? t("Your modifiers") : t("Opponent modifiers")}
       >
         {modifiers.map((modifier) => (
           <span
             key={modifier.id}
             className="modifier-badge"
             data-modifier-id={modifier.id}
-            title={modifier.label}
+            title={t(modifier.label)}
           >
-            {modifier.label}
+            {t(modifier.label)}
           </span>
         ))}
       </span>
@@ -331,14 +343,14 @@ function PowerButton({
       data-flash={flashing ? ACTIVATED_EVENT : undefined}
       aria-disabled={live ? undefined : "true"}
       disabled={!live}
-      title={`${power.title}: Activate, spend (${power.x})`}
+      title={t("{power}: Activate, spend ({x})", { power: t(power.title), x: power.x })}
       onClick={(event) => {
         event.stopPropagation();
         if (!live) return;
         props.onClick?.({ on: "activate", instanceId: power.instanceId });
       }}
     >
-      {power.title}
+      {t(power.title)}
       <span className="power-x">{power.x}</span>
     </button>
   );

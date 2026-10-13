@@ -6,6 +6,7 @@
 
 import type { ReactElement } from "react";
 
+import { t } from "../i18n/i18n.ts";
 import { practiceTestid } from "./testids.ts";
 import "./practice.css";
 
@@ -18,7 +19,7 @@ export function ThinkIndicator({ thinking }: ThinkIndicatorProps): ReactElement 
       <span className="practice-thinking__orb" aria-hidden="true">
         <span className="practice-thinking__core" />
       </span>
-      <span className="practice-thinking__text">AI is thinking…</span>
+      <span className="practice-thinking__text">{t("AI is thinking…")}</span>
     </span>
   );
 }

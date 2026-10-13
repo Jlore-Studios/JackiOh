@@ -782,8 +782,9 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
 `dealEmoteHand`, …).
-`apps/web/src/main.tsx` awaits `loadWasm()` before the first render (the deck builder calls the
-validator synchronously); `practice.worker.ts` awaits it before handling a message.
+`apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
+calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
+`practice.worker.ts` awaits it before handling a message.
 
 ### 10.4 `apps/web/src/wire/` and the aliases
 
@@ -1085,17 +1086,20 @@ cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh>
 `source: "dev"`, `mode: "random"`, `pilots` naming the two agents) to `--out` (default
 `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout).
 
-`promote` plays `TRAINING_GAMES` (100) games against `random` (SPEC §10.7's policy,
-`jackioh_ai::random_action`) and `TRAINING_GAMES` against the parent, seats alternating (candidate
-`p1` on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src`
-(so committing `generation.json` does not change the seeds), the same seeds against both opponents,
-each seat's deck `build_ai_deck` over all three sets minus **its own** AI's shadow-ban list, no
-handicap (Easy both). It promotes when:
+`promote` plays `TRAINING_GAMES` (100) games against the parent, seats alternating (candidate `p1`
+on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
+committing `generation.json` does not change the seeds), each seat's deck `build_ai_deck` over every
+set that ships minus **its own** AI's shadow-ban list, no handicap (Easy both). It promotes when:
 
-| Lane | vs random | vs parent | shadow bans |
-|---|---|---|---|
-| `improve` | ≥ `TRAINING_IMPROVE.vs_random` = 90 | ≥ `TRAINING_IMPROVE.vs_parent` = 75 | — |
-| `unban` | ≥ `TRAINING_UNBAN.vs_random` = 90 | ≥ `TRAINING_UNBAN.vs_parent` = 65 | strictly fewer than the parent's |
+| Lane | vs parent | shadow bans |
+|---|---|---|
+| `improve` | ≥ `TRAINING_IMPROVE.vs_parent` = 65 | — |
+| `unban` | ≥ `TRAINING_UNBAN.vs_parent` = 60 | strictly fewer than the parent's |
+
+It played `TRAINING_GAMES` more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
+needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
+90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
+The daily quality gates (`cargo jackioh gate --full`) still play random.
 
 A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` are constants in
 `crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9; part 1 writes them). Without

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from harness import config, providers
+from harness import config, dashboard, providers
 
 WORKFLOWS = config.REPO_ROOT / ".github" / "workflows"
 
@@ -238,15 +238,16 @@ class StatusIssueStepTests(unittest.TestCase):
 
 
 class StatusLoopWorkflowTests(unittest.TestCase):
-    """bot-status keeps the pinned status issue current every ten minutes, whatever GitHub does
+    """bot-status keeps the pinned status issue current every five minutes, whatever GitHub does
     with schedules: one job loops and starts the next loop itself."""
 
     text = read("bot-status.yml")
 
-    def test_one_job_rewrites_it_every_ten_minutes(self):
+    def test_one_job_rewrites_it_every_five_minutes(self):
         refresh = job(self.text, "refresh")
         self.assertIn("runs-on: ubuntu-latest", refresh)
-        self.assertIn('EVERY_SECONDS: "600"', self.text)
+        self.assertIn('EVERY_SECONDS: "300"', self.text)
+        self.assertEqual(dashboard.EVERY_MINUTES * 60, 300)  # what the issue says it does
         self.assertIn('python -m harness dashboard --sweep --stats --companions \\\n'
                       '            --every "${EVERY_SECONDS}" --for "${LOOP_SECONDS}"', refresh)
         # The loop ends inside GitHub's six-hour cap, ahead of its own timeout.

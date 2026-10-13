@@ -102,6 +102,7 @@ describe("SETTINGS_SLOTS mounts every task's controls in its own section", () =>
       ["visuals", "fx"],
       ["visuals", "card-foil"],
       ["audio", "audio"],
+      ["gameplay", "language"],
     ]);
     // Every slot's store has a reset.
     for (const slot of SETTINGS_SLOTS) {

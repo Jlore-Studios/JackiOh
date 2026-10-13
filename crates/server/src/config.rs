@@ -164,6 +164,25 @@ pub const GATE_SLOW_NOTICE_SECONDS: i64 = 5;
 pub const CODE_STATUS_RECHECK_FLOOR_SECONDS: i64 = 1;
 
 // ---------------------------------------------------------------------------------------------
+// The age screen and the terms a player agrees to (SPEC §9.4, R757000, R757001). Public: the
+// sign-up form, the consent screen and the privacy policy read them.
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §11 R757000: the youngest age, in whole years, at which a person may hold an account. The
+/// owner's to choose: 13 meets COPPA; 16 if players in the EU are expected (GDPR art. 8 lets each
+/// member state pick between 13 and 16, and 16 is the default). Changing it asks no existing
+/// account again: each account's age check records the minimum it was checked against.
+pub const MIN_ACCOUNT_AGE_YEARS: i32 = 13;
+/// R757000: the earliest birth year the age screen offers and the server accepts.
+pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
+/// SPEC §11 R757001: the version of the Terms and the Privacy Policy a player agrees to: the terms'
+/// "Last updated" date, then the privacy policy's (`TERMS_LAST_UPDATED` in
+/// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
+/// holds it to). Changing either page's text changes its date and so this, and every account is
+/// asked to agree again.
+pub const TERMS_VERSION: &str = "2026-10-13/2026-10-13";
+
+// ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
 // ---------------------------------------------------------------------------------------------
 
@@ -201,6 +220,22 @@ pub const MATCH_ACTION_RETENTION_DAYS: i64 = 90;
 pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 /// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
+
+// ---------------------------------------------------------------------------------------------
+// Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
+// the client reads the list's page and the routes' allowance.
+// ---------------------------------------------------------------------------------------------
+
+/// How many finished matches one page of `GET /api/replays` lists, newest first.
+pub const REPLAY_LIST_PAGE: usize = 10;
+/// How many opened replays (each its folded log's checkpoints, R768) the server keeps in memory at
+/// once; opening another drops the one used longest ago.
+pub const REPLAY_CACHE_MATCHES: usize = 16;
+/// How long an opened replay stays in memory after it was opened, in seconds.
+pub const REPLAY_CACHE_TTL_SECONDS: i64 = 600;
+/// Requests per minute per account to the two replay routes together, on top of R109's
+/// API-wide allowance: opening a replay folds a whole game.
+pub const REPLAY_REQUESTS_PER_MINUTE: usize = 60;
 
 // ---------------------------------------------------------------------------------------------
 // Constant-time failure (§9.4, BUILD M6-T1).
@@ -268,8 +303,15 @@ pub const RATING_WINDOW_START: i64 = 100;
 pub const RATING_WINDOW_WIDEN_BY: i64 = 50;
 /// §9.5: the cadence, in seconds, at which the rating window widens.
 pub const RATING_WINDOW_WIDEN_EVERY_SECONDS: i64 = 10;
-/// §9.5: past this many seconds waited, the rating window is uncapped (any opponent qualifies).
-pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
+/// SPEC §11 R640001: the widest the rating window gets, in rating points: its width at the 60 s mark
+/// where it used to go uncapped. Two people further apart than this never pair, however long they
+/// wait; past it the empty-queue fallback (R1453) seats a bot instead.
+pub const MAX_FAIR_GAP: i64 = 400;
+/// R640001: the seconds a ticket waits before its window reaches `MAX_FAIR_GAP`. The gap is a whole
+/// number of widenings past `RATING_WINDOW_START`, so the window reaches it exactly at a widening.
+/// PUBLIC: e2e spec 19 reads it.
+pub const RATING_WINDOW_FULL_AFTER_SECONDS: i64 =
+    (MAX_FAIR_GAP - RATING_WINDOW_START) / RATING_WINDOW_WIDEN_BY * RATING_WINDOW_WIDEN_EVERY_SECONDS;
 
 // SPEC §9.5: "Pairing runs on enqueue plus a sweeper every few seconds" — the exact cadence is
 // not fixed by SPEC.
@@ -278,20 +320,27 @@ pub const RATING_WINDOW_UNCAPPED_AFTER_SECONDS: i64 = 60;
 // widen before being reconsidered, without hammering the ticket table.
 pub const MATCHMAKER_SWEEP_INTERVAL_SECONDS: i64 = 3;
 
+/// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
+/// claimed in it and the games that ended in it.
+pub const QUEUE_READOUT_WINDOW_SECONDS: i64 = 3600;
+/// R640002: the share of a mode's counted waits the expected wait is at least as long as: the upper
+/// quartile, so "usually under" holds for three waits in four.
+pub const QUEUE_WAIT_QUANTILE: f64 = 0.75;
+/// R640002: the fewest counted waits a mode needs before the readout states an expected wait.
+pub const QUEUE_WAIT_MIN_SAMPLES: usize = 5;
+/// R640002: the expected wait is rounded up to the next multiple of this many seconds.
+pub const QUEUE_WAIT_STEP_SECONDS: i64 = 10;
+
 /// §9.5: the half-width of the acceptable rating gap for a ticket that has waited
 /// `waited_seconds`. Shared by the pairing query and its tests so both read one implementation.
 ///
 /// At `waited_seconds = 0` this is `RATING_WINDOW_START`; it widens by `RATING_WINDOW_WIDEN_BY`
-/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS`, and returns `f64::INFINITY` (TS
-/// `Number.POSITIVE_INFINITY`) once `waited_seconds` passes `RATING_WINDOW_UNCAPPED_AFTER_SECONDS`
-/// (any opponent qualifies).
+/// every `RATING_WINDOW_WIDEN_EVERY_SECONDS` and stops at `MAX_FAIR_GAP` (R640001), which it
+/// reaches at `RATING_WINDOW_FULL_AFTER_SECONDS`.
 pub fn rating_window(waited_seconds: f64) -> f64 {
-    if waited_seconds >= RATING_WINDOW_UNCAPPED_AFTER_SECONDS as f64 {
-        return f64::INFINITY;
-    }
     let clamped_wait = waited_seconds.max(0.0);
     let widen_steps = (clamped_wait / RATING_WINDOW_WIDEN_EVERY_SECONDS as f64).floor();
-    RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64
+    (RATING_WINDOW_START as f64 + widen_steps * RATING_WINDOW_WIDEN_BY as f64).min(MAX_FAIR_GAP as f64)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -480,6 +529,10 @@ pub const MATCH_RECORD_RESULT_ATTEMPTS: usize = 3;
 /// SPEC §11 R1437: the wait before the match actor's second try at a result, doubled before each
 /// try after it (250 ms, then 500 ms).
 pub const MATCH_RECORD_RESULT_BACKOFF_MS: i64 = 250;
+/// SPEC §11 R776000: how long a clock's server action whose log row the store failed to write waits
+/// before its clock runs out again, so a store that keeps failing is retried at this pace until the
+/// row lands, the match ends or the actor stops, never in a loop.
+pub const MATCH_SERVER_ACTION_RETRY_MS: i64 = 1_000;
 
 // ---------------------------------------------------------------------------------------------
 // Glitch (issue #170; SPEC §7, R678, R679).
@@ -653,6 +706,24 @@ pub const PUBLIC_STATS_MIN_LIVE_GAMES: i64 = 1000;
 /// SPEC §11 R654: minimum sample of games for a card row to display a win-rate percentage. Below it,
 /// the row displays "not enough games".
 pub const CARD_STATS_MIN_SAMPLE: i64 = 20;
+
+/// SPEC §9.11 (R377): the fewest in-deck games a card needs before `jackioh-server balance-watch`
+/// may flag it. Sits above `CARD_STATS_MIN_SAMPLE` (20): a card under 20 games counts toward the
+/// report's not-enough-games list and is never flagged, and a card with 20–39 games shows its
+/// figures as watched but is never flagged either — the same 55% is noise at 20 games and a signal
+/// at hundreds, so the flag reads a z-score against 50% (draws count as not won), not a fixed
+/// win-rate cut-off.
+pub const BALANCE_WATCH_MIN_GAMES: i64 = 40;
+/// SPEC §9.11 (R377): the |z-score| against 50% at and above which `jackioh-server balance-watch`
+/// flags a card with at least `BALANCE_WATCH_MIN_GAMES` in-deck games as too strong (high) or too
+/// weak (low). Advisory only: the report files nothing and changes no card.
+pub const BALANCE_WATCH_Z_THRESHOLD: f64 = 2.5;
+/// SPEC §9.11 (R377): the |played delta| (played win rate minus drawn-but-not-played win rate, in
+/// fraction points) at and above which `jackioh-server balance-watch` flags a card with at least
+/// `BALANCE_WATCH_MIN_GAMES` in-deck games, whatever its in-deck win rate. A big gap here is the
+/// sign of a card the AI pilot cannot use (trap timing, hand-dump spells), so the flag asks for
+/// live human games, not a change.
+pub const BALANCE_WATCH_PLAYED_DELTA_THRESHOLD: f64 = 0.15;
 
 /// SPEC §11 R654: cost bucket boundary for card statistics filters.
 /// Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
@@ -928,7 +999,7 @@ pub const BOT_POOL_PER_WEEKLY_ACTIVE: f64 = 0.25;
 pub const BOT_POOL_ACTIVE_WINDOW_DAYS: i64 = 7;
 /// R1454: how often the server sizes the pool again (and once as it boots).
 pub const BOT_POOL_REFRESH_INTERVAL_SECONDS: i64 = 3600;
-/// R1453: the shortest a Best of 1 or All Random ticket waits before it may pair with a bot.
+/// R1453, R641000: the shortest a ticket of any mode waits before it may pair with a bot.
 pub const BOT_FALLBACK_MIN_SECONDS: i64 = 15;
 /// R1453: the longest; each ticket's wait is drawn from its id and the server's key between the
 /// two, inclusive.
@@ -1026,6 +1097,15 @@ pub const BOT_REMATCH_LINGER_MAX_MS: i64 = 15_000;
 pub const BOT_REMATCH_DELAY_MIN_MS: i64 = 1_500;
 /// R639000: the longest; always under `BOT_REMATCH_LINGER_MIN_MS`, so an offer goes inside the linger.
 pub const BOT_REMATCH_DELAY_MAX_MS: i64 = 3_500;
+/// R641000: the soonest a bot seated in a Conquest series makes its sealed pick after the pick
+/// phase opens, as a person reads the matchup first.
+pub const BOT_PICK_DELAY_MIN_MS: i64 = 4_000;
+/// R641000: the latest; with one more series sweep (`SERIES_SWEEP_INTERVAL_SECONDS`) still well
+/// inside `SERIES_PICK_SECONDS`, so a bot never lets the pick clock run out.
+pub const BOT_PICK_DELAY_MAX_MS: i64 = 20_000;
+/// R641000: the share of a bot's picks that follow its rule (the fastest deck on the play, the
+/// slowest on the draw); the rest are uniform over the decks that have not won.
+pub const BOT_PICK_RULE_SHARE: f64 = 0.75;
 /// R1452: the quickest a bot moves, decision included.
 pub const BOT_THINK_MIN_MS: i64 = 600;
 /// R1452: the longest it waits before a move.

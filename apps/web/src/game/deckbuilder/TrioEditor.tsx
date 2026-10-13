@@ -11,6 +11,8 @@ import type { CardCost } from "@jackioh/shared";
 import type { CatalogSnapshot, Collection } from "@jackioh/validator";
 
 import { CardArt } from "../../cards/index.ts";
+import { readerName } from "../../cards/chinese.ts";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder } from "./filters.ts";
 import { UNTITLED_TRIO, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
@@ -23,6 +25,7 @@ import {
   TRIO_DELETE_CANCEL,
   TRIO_DELETE_CONFIRM,
   TRIO_EDITOR,
+  TRIO_L4_HINT,
   TRIO_NAME_INPUT,
   TRIO_VERDICT,
   WORKSHOP_BACK,
@@ -32,7 +35,8 @@ import {
   trioSlotId,
 } from "./testids.ts";
 import { encodeTrioCode } from "./trioCode.ts";
-import { clampName, deckLabel, trioLabel, trioSharedCards, trioSlots, trioVerdict } from "./workshop.ts";
+import { clampName, deckLabel, joinNames, trioLabel, trioSharedCards, trioSlots, trioVerdict } from "./workshop.ts";
+import { conquestText } from "../../routes/conquestCopy.ts";
 import type { TrioSlots } from "../../net/api.ts";
 
 export type TrioEditorProps = {
@@ -59,14 +63,9 @@ function tileCost(cost: CardCost | undefined): string {
   return String(cost.base);
 }
 
-/** "Control", "Control and Midrange". */
-function joinNames(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? "";
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1) ?? ""}`;
-}
-
 export default function TrioEditor(props: TrioEditorProps): ReactElement {
   const { trio, decks, catalog, collection, limits, refusal, onRename, onSlots, onDelete, onOpenDeck, onBack } = props;
+  useLocale();
   const label = trioLabel(trio, limits.nameLength);
   const [confirming, setConfirming] = useState(false);
   const [codeShown, setCodeShown] = useState(false);
@@ -133,20 +132,20 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
   };
 
   return (
-    <section className="ws-editor ws-editor--trio" data-testid={TRIO_EDITOR} data-trio={trio.id} aria-label={`Trio: ${label}`}>
+    <section className="ws-editor ws-editor--trio" data-testid={TRIO_EDITOR} data-trio={trio.id} aria-label={t("Trio: {trio}", { trio: label })}>
       <div className="ws-trio">
         <div className="ws-editor-head">
           <button type="button" className="ws-back" data-testid={WORKSHOP_BACK} onClick={onBack}>
-            ← All decks
+            {t("← All decks")}
           </button>
           <label className="ws-name" htmlFor={nameId}>
-            <span className="ws-field-label">Trio name</span>
+            <span className="ws-field-label">{t("Trio name")}</span>
             <input
               id={nameId}
               className="ws-name-input"
               data-testid={TRIO_NAME_INPUT}
               value={trio.name}
-              placeholder={UNTITLED_TRIO}
+              placeholder={t(UNTITLED_TRIO)}
               autoComplete="off"
               spellCheck={false}
               onChange={(event) => {
@@ -159,22 +158,22 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
           </label>
           {refusal === null ? null : (
             <p className="notice ws-save-error" role="alert">
-              {refusal}
+              {t(refusal)}
             </p>
           )}
         </div>
 
-        <p className="ws-hint">
-          Three decks with no card in common make a trio for Conquest: win a game with each of them. You pick one before each game.
+        <p className="ws-hint" data-testid={TRIO_L4_HINT}>
+          {conquestText("trioL4Hint")}
         </p>
 
-        <div className="ws-slots" role="group" aria-label="The trio's decks">
+        <div className="ws-slots" role="group" aria-label={t("The trio's decks")}>
           {trio.deckIds.map((deckId, slot) => {
             const selectId = `${slotIdBase}-${String(slot)}`;
             const deck = slots[slot] ?? null;
             return (
               <div key={slot} className="ws-slot">
-                <label className="ws-field-label" htmlFor={selectId}>{`Deck ${String(slot + 1)}`}</label>
+                <label className="ws-field-label" htmlFor={selectId}>{t("Deck {number}", { number: slot + 1 })}</label>
                 <div className="ws-slot-row">
                   <select
                     id={selectId}
@@ -185,13 +184,13 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                       setSlot(slot, event.target.value === "" ? null : event.target.value);
                     }}
                   >
-                    <option value="">Empty</option>
+                    <option value="">{t("Empty")}</option>
                     {decks.map((candidate) => {
                       const elsewhere = trio.deckIds.some((id, other) => other !== slot && id === candidate.id);
                       return (
                         <option key={candidate.id} value={candidate.id} disabled={elsewhere}>
                           {elsewhere
-                            ? `${deckLabel(candidate, limits.nameLength)} (in another slot)`
+                            ? t("{deck} (in another slot)", { deck: deckLabel(candidate, limits.nameLength) })
                             : deckLabel(candidate, limits.nameLength)}
                         </option>
                       );
@@ -202,12 +201,12 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                       type="button"
                       className="ws-action"
                       data-testid={trioOpenDeckId(slot + 1)}
-                      aria-label={`Open ${deckLabel(deck, limits.nameLength)}`}
+                      aria-label={t("Open {deck}", { deck: deckLabel(deck, limits.nameLength) })}
                       onClick={() => {
                         onOpenDeck(deck.id);
                       }}
                     >
-                      Open
+                      {t("Open")}
                     </button>
                   )}
                 </div>
@@ -218,7 +217,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
 
         <section className="ws-verdict" data-testid={TRIO_VERDICT} data-ready={verdict.ok ? "true" : "false"} aria-labelledby={verdictTitleId}>
           <h3 className="ws-verdict-title" id={verdictTitleId}>
-            {verdict.ok ? "Ready for Conquest" : "Before this trio can queue Conquest"}
+            {verdict.ok ? t("Ready for Conquest") : t("Before this trio can queue Conquest")}
           </h3>
           <ul
             className="db-errors"
@@ -236,31 +235,31 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                 data-card={issue.cardId}
                 data-source="client"
               >
-                {issue.message}
+                {t(issue.message)}
               </li>
             ))}
           </ul>
           {collection === null ? (
-            <p className="ws-hint">Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.</p>
+            <p className="ws-hint">{t("Your collection couldn’t be loaded, so cards you don’t own aren’t flagged here.")}</p>
           ) : null}
         </section>
 
-        <div className="ws-compare-grid" data-testid={TRIO_COMPARE} role="group" aria-label="The three decks side by side">
+        <div className="ws-compare-grid" data-testid={TRIO_COMPARE} role="group" aria-label={t("The three decks side by side")}>
           {slots.map((deck, slot) => {
             const cards = deck === null ? [] : deckListOrder(deck.cards, catalog);
             const clashes = shared[slot] ?? new Map<string, readonly string[]>();
             return (
-              <section key={slot} className="ws-compare-col" data-slot={String(slot + 1)} aria-label={deck === null ? `Deck ${String(slot + 1)}: empty` : deckLabel(deck, limits.nameLength)}>
+              <section key={slot} className="ws-compare-col" data-slot={String(slot + 1)} aria-label={deck === null ? t("Deck {number}: empty", { number: slot + 1 }) : deckLabel(deck, limits.nameLength)}>
                 <header className="ws-compare-head">
-                  <span className="ws-compare-name">{deck === null ? "Empty slot" : deckLabel(deck, limits.nameLength)}</span>
+                  <span className="ws-compare-name">{deck === null ? t("Empty slot") : deckLabel(deck, limits.nameLength)}</span>
                   {deck === null ? null : (
                     <span className="ws-compare-count">{`${String(deck.cards.length)}/${String(DECK_SIZE)}`}</span>
                   )}
                 </header>
                 {deck === null ? (
-                  <p className="ws-hint">Pick a deck for this slot.</p>
+                  <p className="ws-hint">{t("Pick a deck for this slot.")}</p>
                 ) : cards.length === 0 ? (
-                  <p className="ws-hint">No cards yet.</p>
+                  <p className="ws-hint">{t("No cards yet.")}</p>
                 ) : (
                   <ul className="ws-compare-list">
                     {cards.map((cardId, position) => {
@@ -279,7 +278,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                             <span className="db-tile-cost" data-digits={tileCost(def?.cost).length >= 3 ? "3" : undefined}>
                               {tileCost(def?.cost)}
                             </span>
-                            <span className="db-tile-name">{def?.name ?? cardId}</span>
+                            <span className="db-tile-name">{def === undefined ? cardId : readerName(def)}</span>
                             <span className="db-tile-art">
                               {def === undefined ? null : (
                                 <CardArt defId={cardId} radiant={false} tags={def.tags} type={def.type} shape="strip" />
@@ -288,7 +287,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                             {with_ === undefined ? null : <span className="db-tile-flag" aria-hidden="true" />}
                             <span className="db-tile-pip" data-rarity={def?.rarity} aria-hidden="true" />
                           </span>
-                          {with_ === undefined ? null : <span className="ws-also">{`Also in ${joinNames(with_)}`}</span>}
+                          {with_ === undefined ? null : <span className="ws-also">{t("Also in {deck}", { deck: joinNames(with_) })}</span>}
                         </li>
                       );
                     })}
@@ -301,7 +300,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
 
         <div className="ws-actions ws-actions--trio">
           <button type="button" className="ws-action" data-testid={TRIO_COPY_CODE} onClick={copyCode}>
-            Copy trio code
+            {t("Copy trio code")}
           </button>
           <button
             type="button"
@@ -312,17 +311,17 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
               setConfirming(true);
             }}
           >
-            Delete trio
+            {t("Delete trio")}
           </button>
         </div>
         {codeStatus === null ? null : (
           <p className="ws-hint" role="status">
-            {codeStatus}
+            {t(codeStatus)}
           </p>
         )}
         {codeShown ? (
           <label className="ws-code">
-            <span className="ws-field-label">Trio code</span>
+            <span className="ws-field-label">{t("Trio code")}</span>
             <input
               className="ws-code-input"
               data-testid={TRIO_CODE_OUTPUT}
@@ -336,10 +335,10 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
         ) : null}
         {confirming ? (
           <div className="ws-confirm" role="group" aria-labelledby={confirmTextId}>
-            <p id={confirmTextId}>{`Delete “${label}”? Its decks stay saved. This can’t be undone.`}</p>
+            <p id={confirmTextId}>{t("Delete “{trio}”? Its decks stay saved. This can’t be undone.", { trio: label })}</p>
             <div className="ws-confirm-actions">
               <button type="button" className="ws-action ws-action--danger" data-testid={TRIO_DELETE_CONFIRM} onClick={onDelete}>
-                Delete
+                {t("Delete")}
               </button>
               <button
                 ref={keepButton}
@@ -350,7 +349,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
                   setConfirming(false);
                 }}
               >
-                Keep it
+                {t("Keep it")}
               </button>
             </div>
           </div>

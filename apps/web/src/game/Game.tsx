@@ -58,7 +58,7 @@ import {
   type AnimationEntry,
   type AnimationQueue,
 } from "./animations.ts";
-import { sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
+import { NO_HIGHLIGHT, sideView, testid, type BoardControl, type ClickTarget } from "./contract.ts";
 import { CatalogContext } from "./catalog.ts";
 import { damageFeel, damageTier, SLAM_LAND_AT, UNIT_SLAM, type DamageTier } from "./damageFeel.ts";
 import { slamSand } from "./SandSurface.tsx";
@@ -71,6 +71,7 @@ import { useSetting } from "../settings/index.ts";
 import "./animations.css";
 import { useGameAudio, usePickupSound, useVoiceSpeaking } from "../audio/index.ts";
 import { useGameStats } from "../stats/useGameStats.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 
 /**
  * The `turnStarted` / `turnAutoEnded` banner. `Board` deliberately does not render it — one
@@ -86,17 +87,17 @@ function bannerText(
   startedFor?: PlayerId,
   extra?: boolean,
 ): string | null {
-  if (view.result !== null) return "Game over";
-  if (lastType === "turnAutoEnded") return "No moves left. Turn ended.";
+  if (view.result !== null) return t("Game over");
+  if (lastType === "turnAutoEnded") return t("No moves left. Turn ended.");
   // #37: while a `turnStarted` entry plays, the board is still the view from before the turn began,
   // so its banner names the turn that is starting, not the one (or the mulligan) being left.
   // R845: an extra turn's banner says so.
   if (startedFor !== undefined) {
-    if (extra === true) return startedFor === view.viewer ? "Your extra turn" : "Opponent's extra turn";
-    return startedFor === view.viewer ? "Your turn" : "Opponent's turn";
+    if (extra === true) return startedFor === view.viewer ? t("Your extra turn") : t("Opponent's extra turn");
+    return startedFor === view.viewer ? t("Your turn") : t("Opponent's turn");
   }
-  if (view.phase === "mulligan") return "Mulligan";
-  return view.active === view.viewer ? "Your turn" : "Opponent's turn";
+  if (view.phase === "mulligan") return t("Mulligan");
+  return view.active === view.viewer ? t("Your turn") : t("Opponent's turn");
 }
 
 export type GameProps = {
@@ -139,6 +140,11 @@ export type GameProps = {
    * opponent's as last relayed, drawn as its arrow. Online play sets it; hotseat and tests do not.
    */
   aim?: GameAim;
+  /**
+   * #511: the board is a replay's, a view to look at: no prompt, drag, glow or R345 preference. The
+   * route passes no legal actions either, so no control is offered. Absent, off.
+   */
+  replay?: boolean;
 };
 
 /** What Game needs of a route that shows aims both ways (R738). */
@@ -178,7 +184,9 @@ export default function Game({
   emotes,
   trackStats = false,
   aim,
+  replay = false,
 }: GameProps): ReactElement {
+  useLocale();
   const [interaction, setInteraction] = useState<Interaction>(IDLE);
   const root = useRef<HTMLDivElement>(null);
   /**
@@ -275,7 +283,7 @@ export default function Game({
   const engineAutoEndTurn = view.autoEndTurn !== false;
   const autoEndTurnSent = useRef<string | null>(null);
   useEffect(() => {
-    if (view.result !== null) return;
+    if (replay || view.result !== null) return;
     if (autoEndTurn === engineAutoEndTurn) {
       autoEndTurnSent.current = null;
       return;
@@ -284,7 +292,7 @@ export default function Game({
     if (autoEndTurnSent.current === sent) return;
     autoEndTurnSent.current = sent;
     onAction({ type: "setAutoEndTurn", enabled: autoEndTurn });
-  }, [view.viewer, view.result, autoEndTurn, engineAutoEndTurn, onAction]);
+  }, [replay, view.viewer, view.result, autoEndTurn, engineAutoEndTurn, onAction]);
 
   // Polish task 7: the "Reduce motion" setting does what the OS preference does, so every duration
   // is 0 and the queue drains synchronously (BUILD M5-T4). The queue reads it once, when it is
@@ -513,7 +521,11 @@ export default function Game({
     dispatch({ type: "concede" });
   }, [dispatch, refocusConcede]);
 
-  const highlight = useMemo(() => highlightFor(shown, legal, interaction), [shown, legal, interaction]);
+  // A replay lights nothing: not even the cells an open prompt in the view names (`pendingHighlight`).
+  const highlight = useMemo(
+    () => (replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction)),
+    [replay, shown, legal, interaction],
+  );
   // R738: what this seat aims at goes to the opponent; theirs is drawn below until the game ends.
   useAimEmitter(shown, legal, interaction, aim?.emit);
   const animated = useMemo(
@@ -577,6 +589,7 @@ export default function Game({
       className="game"
       ref={root}
       data-testid="game"
+      data-replay={replay ? "true" : undefined}
       data-viewer={shown.viewer}
       data-speaking={speaking ? "true" : undefined}
       data-impact-tier={impactTier}
@@ -621,7 +634,7 @@ export default function Game({
           <>
             {error != null && error !== "" ? (
               <p key={error} className="game-error" data-testid="action-error" role="alert">
-                {error}
+                {t(error)}
               </p>
             ) : null}
             {boardNotice}
@@ -646,7 +659,7 @@ export default function Game({
       <CardShowcase view={view} queue={runner} />
       <OpponentAim view={shown} aim={shown.result === null ? (aim?.opponent ?? null) : null} />
 
-      {promptOver(shown, burst, inFlight) ? null : (
+      {replay || promptOver(shown, burst, inFlight) ? null : (
         <Prompt
           view={shown}
           interaction={interaction}
@@ -660,14 +673,16 @@ export default function Game({
           onCancel={shown.pending === null ? () => setInteraction(IDLE) : undefined}
         />
       )}
-      <DragLayer
-        view={shown}
-        legal={legal}
-        interaction={interaction}
-        onInteraction={setInteraction}
-        onAction={onAction}
-        onLift={onLift}
-      />
+      {replay ? null : (
+        <DragLayer
+          view={shown}
+          legal={legal}
+          interaction={interaction}
+          onInteraction={setInteraction}
+          onAction={onAction}
+          onLift={onLift}
+        />
+      )}
 
       {shown.result !== null ? (
         <GameResult

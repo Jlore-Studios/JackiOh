@@ -32,7 +32,8 @@
 //!    the redemption it calls in Postgres;
 //!  - `codes_claim`, `rooms_claim` and `tickets_claim_pair` are single-shot, so the second of two
 //!    racing callers loses (§9.4 step 6, §9.5);
-//!  - `matches_append_actions` refuses a `seq` that already exists (append-only, §9.3);
+//!  - `matches_append_actions` answers a nonce already logged at its seq with that row and refuses any
+//!    other clash as `StoreError::SeqClash` (append-only, §9.3, R776000);
 //!  - `results_insert` refuses a second row for the same match (§9.5);
 //!  - `tickets_insert` refuses a second open ticket for one profile (`tickets_profile_queued_key`,
 //!    which `queue.rs` relies on as the race-proof half of "not already queued");
@@ -96,19 +97,21 @@ use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, USERNAME_DEFAULT_BASE,
+    MIN_ACCOUNT_AGE_YEARS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, TERMS_VERSION,
+    USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, MatchStatus,
-    NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
-    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
-    RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow,
-    StoreError, Ticket, TicketStatus, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    CollectionGrant, ConsentRow, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase,
+    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
+    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -147,6 +150,23 @@ pub struct PlayerStatsTableRow {
     pub updated_at: i64,
 }
 
+/// One row of `public.age_checks` (migration 0034, R757000): an account that passed the age check.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AgeCheckTableRow {
+    pub profile_id: String,
+    pub min_age: i32,
+    pub passed_at: i64,
+}
+
+/// One row of `public.terms_acceptances` (migration 0034, R757001): one version an account agreed to.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TermsAcceptanceTableRow {
+    pub profile_id: String,
+    pub version: String,
+    pub source: TermsSource,
+    pub accepted_at: i64,
+}
+
 /// One row of `public.bots` (migration 0032, R1453, R1454, R1452): a ladder bot beside its profile.
 #[derive(Clone, Debug, PartialEq)]
 pub struct BotTableRow {
@@ -158,6 +178,9 @@ pub struct BotTableRow {
     pub active_hours: i32,
     pub decks: Vec<BotDeck>,
     pub decks_catalog_version: Option<String>,
+    /// R641000: its Conquest trio and the catalog version it was dealt for (migration 0033).
+    pub trio: Option<FrozenTrio>,
+    pub trio_catalog_version: Option<String>,
     pub retired_at: Option<i64>,
 }
 
@@ -190,6 +213,8 @@ pub struct FakeTables {
     // R1450: the reservations Postgres holds as open rows.
     pub reserved: Vec<ReservedMatch>,
     pub tickets: Vec<Ticket>,
+    /// R640002: `tickets.claimed_at`, by ticket id.
+    pub ticket_claims: IndexMap<String, i64>,
     pub results: Vec<ResultRow>,
     // TutorialTables: the table R320 adds (`public.tutorial_progress`, migration 0011): one row per profile.
     pub tutorial: Vec<TutorialProgressRow>,
@@ -212,6 +237,10 @@ pub struct FakeTables {
     pub match_signals: Vec<MatchSignalRow>,
     // The ladder bots' table (`public.bots`, migration 0032): one row per bot's profile.
     pub ladder_bots: Vec<BotTableRow>,
+    // The two tables R757000 and R757001 add (migration 0034): one age check per profile, one
+    // acceptance per profile and terms version.
+    pub age_checks: Vec<AgeCheckTableRow>,
+    pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -373,7 +402,10 @@ impl FakeData {
     /// the username a new account gets, the lowest free `Player#n`, its prompt not yet answered
     /// (R1434). `username` names a base instead (stored as given, so a caller passes a stored
     /// form), with `usernameTag` as its tag or else the tag a claim of it would carry now;
-    /// `usernamePrompted` and `usernameChangedAt` set the rest.
+    /// `usernamePrompted` and `usernameChangedAt` set the rest. `consent` (default true) seeds the
+    /// age check and agreement to `TERMS_VERSION` at sign-up, dated `createdAt`, as an account that
+    /// signed up through the age screen and the terms box has (R757000, R757001); false seeds
+    /// neither.
     pub fn seed_profile(&mut self, input: Value) -> Profile {
         let id = input
             .get("id")
@@ -421,6 +453,19 @@ impl FakeData {
             in_match_id: text("inMatchId"),
             created_at: input.get("createdAt").and_then(Value::as_i64).unwrap_or(0),
         };
+        if input.get("consent").and_then(Value::as_bool).unwrap_or(true) {
+            self.tables.age_checks.push(AgeCheckTableRow {
+                profile_id: id.clone(),
+                min_age: MIN_ACCOUNT_AGE_YEARS,
+                passed_at: profile.created_at,
+            });
+            self.tables.terms_acceptances.push(TermsAcceptanceTableRow {
+                profile_id: id.clone(),
+                version: TERMS_VERSION.to_string(),
+                source: TermsSource::Signup,
+                accepted_at: profile.created_at,
+            });
+        }
         self.tables.profiles.push(profile.clone());
         self.next_profile += 1;
         profile
@@ -1172,7 +1217,11 @@ pub fn matches_create(f: &mut FakeTx<'_>, row: &MatchRow) -> Result<(), StoreErr
     if f.tables().matches.iter().any(|existing| existing.id == row.id) {
         return Err(StoreError::from(format!("matches.id is unique: {}", row.id)));
     }
-    f.tables().matches.push(row.clone());
+    // R768: as in Postgres, only `matches_record_final_hash` writes the hash.
+    f.tables().matches.push(MatchRow {
+        final_hash: None,
+        ..row.clone()
+    });
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != row.id);
     Ok(())
 }
@@ -1182,22 +1231,39 @@ pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
 }
 
-/// Append-only (§9.3). Rejects a seq that already exists.
+/// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
+/// own seq is answered with that row and writes nothing, so a write that committed and whose answer was
+/// lost can be sent again; a seq held under another nonce, or a nonce held at another seq, is a
+/// `StoreError::SeqClash`.
 pub fn matches_append_actions(f: &mut FakeTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     call(f, "matches.appendActions")?;
     let tables = f.tables();
     for row in rows {
-        let clash = tables
+        let logged = tables
             .match_actions
             .iter()
-            .any(|existing| existing.match_id == row.match_id && existing.seq == row.seq);
-        if clash {
-            return Err(StoreError::from(format!(
-                "match_actions is append-only: seq {} exists",
-                row.seq
-            )));
+            .find(|existing| {
+                existing.match_id == row.match_id
+                    && (existing.seq == row.seq || existing.action.nonce == row.action.nonce)
+            })
+            .map(|existing| (existing.seq, existing.action.nonce == row.action.nonce));
+        match logged {
+            None => tables.match_actions.push(row.clone()),
+            // The same row again: answered, as Postgres answers a repeated nonce with its seq.
+            Some((seq, true)) if seq == row.seq => {}
+            Some((seq, true)) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: nonce {} is logged at seq {seq}, not {}",
+                    row.action.nonce, row.seq
+                )));
+            }
+            Some(_) => {
+                return Err(StoreError::SeqClash(format!(
+                    "match_actions is append-only: seq {} exists",
+                    row.seq
+                )));
+            }
         }
-        tables.match_actions.push(row.clone());
     }
     Ok(())
 }
@@ -1313,6 +1379,125 @@ pub fn matches_reap_open(f: &mut FakeTx<'_>, before: i64) -> Result<u64, StoreEr
     Ok(reaped as u64)
 }
 
+/// R768: written once; a no-op on a match that has a hash already, and on an unknown id.
+pub fn matches_record_final_hash(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
+    call(f, "matches.recordFinalHash")?;
+    if let Some(row) = f
+        .tables()
+        .matches
+        .iter_mut()
+        .find(|row| row.id == match_id && row.final_hash.is_none())
+    {
+        row.final_hash = Some(final_hash.to_string());
+    }
+    Ok(())
+}
+
+/// R768: a match row is `live` or `over`. The fake keeps no `open` row (`matches_discard_open`), so
+/// an id a claimed room or a claimed ticket holds, with no match row yet, is the `open` one. A bot
+/// rematch's reservation (`bots_claim_for_rematch`) keeps no players here, so it reads as `None`.
+pub fn matches_seats(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchSeats>, StoreError> {
+    call(f, "matches.seats")?;
+    let tables: &FakeTables = f.tables();
+    if let Some(row) = tables.matches.iter().find(|row| row.id == match_id) {
+        return Ok(Some(MatchSeats {
+            phase: if row.status == MatchStatus::Finished {
+                MatchPhase::Over
+            } else {
+                MatchPhase::Live
+            },
+            players: vec![row.players.0.clone(), row.players.1.clone()],
+        }));
+    }
+    if let Some(room) = tables
+        .rooms
+        .iter()
+        .find(|room| room.match_id.as_deref() == Some(match_id))
+    {
+        let mut players = vec![room.host_profile_id.clone()];
+        players.extend(room.guest_profile_id.clone());
+        return Ok(Some(MatchSeats {
+            phase: MatchPhase::Open,
+            players,
+        }));
+    }
+    let players: Vec<String> = tables
+        .tickets
+        .iter()
+        .filter(|ticket| ticket.match_id.as_deref() == Some(match_id))
+        .map(|ticket| ticket.profile_id.clone())
+        .collect();
+    if players.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(MatchSeats {
+        phase: MatchPhase::Open,
+        players,
+    }))
+}
+
+/// R768: one finished match with a result, and how many actions its log holds.
+fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
+    if row.status != MatchStatus::Finished {
+        return None;
+    }
+    let result = tables.results.iter().find(|result| result.match_id == row.id)?;
+    let actions = tables
+        .match_actions
+        .iter()
+        .filter(|action| action.match_id == row.id)
+        .count();
+    Some(ReplayRow {
+        row: row.clone(),
+        result: result.clone(),
+        actions: actions as i64,
+    })
+}
+
+/// R768: newest ended first, the id breaking a tie, as Postgres orders them.
+pub fn replays_list(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayRow>, StoreError> {
+    call(f, "replays.list")?;
+    let tables: &FakeTables = f.tables();
+    let mut rows: Vec<ReplayRow> = tables
+        .matches
+        .iter()
+        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
+        .filter_map(|row| replay_row_in(tables, row))
+        .filter(|replay| replay.actions > 0)
+        .collect();
+    rows.sort_by(|a, b| {
+        b.row
+            .finished_at
+            .cmp(&a.row.finished_at)
+            .then_with(|| b.row.id.cmp(&a.row.id))
+    });
+    Ok(rows
+        .into_iter()
+        .skip(usize::try_from(offset).unwrap_or(0))
+        .take(usize::try_from(limit).unwrap_or(0))
+        .collect())
+}
+
+/// R768: one finished match with a result.
+pub fn replays_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
+    call(f, "replays.get")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .find(|row| row.id == match_id)
+        .and_then(|row| replay_row_in(tables, row)))
+}
+
 // ---------------------------------------------------------------------------
 // Rooms (§9.5)
 // ---------------------------------------------------------------------------
@@ -1415,8 +1600,7 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .count() as i64)
 }
 
-/// R257: open tickets per mode, for the lobby's per-mode population. Every mode is present, in TS's
-/// order (`bo1`, `bo3`, `random`).
+/// R257: open tickets per mode. Every mode is present, in TS's order (`bo1`, `bo3`, `random`).
 pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
     call(f, "tickets.countOpenByMode")?;
     let mut counts: PerMode<i64> = PerMode::default();
@@ -1426,6 +1610,29 @@ pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, St
         }
     }
     Ok(counts)
+}
+
+/// R640002: the waits of the tickets claimed at or after `since`, oldest claim first, ties on id.
+pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
+    call(f, "tickets.recentWaits")?;
+    let tables = f.tables();
+    let mut claimed: Vec<(i64, &Ticket)> = tables
+        .tickets
+        .iter()
+        .filter(|ticket| ticket.status == TicketStatus::Matched)
+        .filter_map(|ticket| {
+            let claimed_at = *tables.ticket_claims.get(&ticket.id)?;
+            (claimed_at >= since).then_some((claimed_at, ticket))
+        })
+        .collect();
+    claimed.sort_by(|(a_at, a), (b_at, b)| a_at.cmp(b_at).then_with(|| a.id.cmp(&b.id)));
+    Ok(claimed
+        .into_iter()
+        .map(|(claimed_at, ticket)| TicketWait {
+            mode: ticket.mode,
+            waited_ms: (claimed_at - ticket.enqueued_at).max(0),
+        })
+        .collect())
 }
 
 /// §9.5: "both tickets are claimed in one atomic statement".
@@ -1455,6 +1662,8 @@ pub fn tickets_claim_pair(
         ticket.status = TicketStatus::Matched;
         ticket.match_id = Some(match_id.to_string());
     }
+    tables.ticket_claims.insert(a_id.to_string(), at);
+    tables.ticket_claims.insert(b_id.to_string(), at);
     tables.reserved.push(ReservedMatch {
         match_id: match_id.to_string(),
         claimed_at: at,
@@ -2483,6 +2692,73 @@ pub fn player_stats_put(
     Ok(())
 }
 
+// Consent on the account (R757000, R757001, migration 0034)
+
+pub fn consent_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<ConsentRow, StoreError> {
+    call(f, "consent.get")?;
+    let tables = f.tables();
+    let age = tables.age_checks.iter().find(|row| row.profile_id == profile_id);
+    let mut terms: Vec<TermsAcceptanceRow> = tables
+        .terms_acceptances
+        .iter()
+        .filter(|row| row.profile_id == profile_id)
+        .map(|row| TermsAcceptanceRow {
+            version: row.version.clone(),
+            source: row.source,
+            accepted_at: row.accepted_at,
+        })
+        .collect();
+    // `order by accepted_at, terms_version`, as pg.rs reads them (text compared by code point).
+    terms.sort_by(|a, b| (a.accepted_at, &a.version).cmp(&(b.accepted_at, &b.version)));
+    Ok(ConsentRow {
+        profile_id: profile_id.to_string(),
+        age_checked_at: age.map(|row| row.passed_at),
+        age_min: age.map(|row| row.min_age),
+        terms,
+    })
+}
+
+pub fn consent_record_age(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    min_age: i32,
+    at: i64,
+) -> Result<(), StoreError> {
+    call(f, "consent.recordAge")?;
+    let rows = &mut f.tables().age_checks;
+    if !rows.iter().any(|row| row.profile_id == profile_id) {
+        rows.push(AgeCheckTableRow {
+            profile_id: profile_id.to_string(),
+            min_age,
+            passed_at: at,
+        });
+    }
+    Ok(())
+}
+
+pub fn consent_record_terms(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    version: &str,
+    source: TermsSource,
+    at: i64,
+) -> Result<(), StoreError> {
+    call(f, "consent.recordTerms")?;
+    let rows = &mut f.tables().terms_acceptances;
+    if !rows
+        .iter()
+        .any(|row| row.profile_id == profile_id && row.version == version)
+    {
+        rows.push(TermsAcceptanceTableRow {
+            profile_id: profile_id.to_string(),
+            version: version.to_string(),
+            source,
+            accepted_at: at,
+        });
+    }
+    Ok(())
+}
+
 pub fn player_stats_list_public(
     f: &mut FakeTx<'_>,
     options: &PlayerStatsListOptions,
@@ -2590,6 +2866,9 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.player_settings, |row| row.profile_id != profile_id);
     keep_only(&mut tables.last_boards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.player_stats, |row| row.profile_id != profile_id);
+    // 0034: the age check and the terms acceptances cascade with the profile.
+    keep_only(&mut tables.age_checks, |row| row.profile_id != profile_id);
+    keep_only(&mut tables.terms_acceptances, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tickets, |row| row.profile_id != profile_id);
     keep_only(&mut tables.rooms, |row| {
         !(row.host_profile_id == profile_id && row.guest_profile_id.is_none())
@@ -2758,7 +3037,9 @@ pub fn ranked_reset_ratings(f: &mut FakeTx<'_>, changes: &[ResetChange]) -> Resu
     Ok(())
 }
 
-/// Every row of a season, each with the player's current rating, in profile-id order.
+/// Every row of a season, each with the player's current rating, in profile-id order. R640000: a
+/// ladder bot's row carries the bot's own rating (R610), as Postgres's join reads it, and is
+/// marked `bot`.
 pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     call(f, "ranked.standings")?;
     let tables = f.tables();
@@ -2768,9 +3049,14 @@ pub fn ranked_standings(f: &mut FakeTx<'_>, season_id: &str) -> Result<Vec<Seaso
         .filter(|row| row.season_id == season_id)
         .filter_map(|row| {
             let profile = tables.profiles.iter().find(|p| p.id == row.profile_id)?;
+            let bot = profile.kind == ProfileKind::Bot;
+            let own = bot
+                .then(|| tables.bots.iter().find(|rating| rating.bot_id == profile.id))
+                .flatten();
             Some(SeasonStanding {
                 rank: row.clone(),
-                rating: profile.rating,
+                rating: own.map_or(profile.rating, |rating| rating.glicko.rating),
+                bot,
             })
         })
         .collect();
@@ -2903,6 +3189,8 @@ pub fn bots_list(f: &mut FakeTx<'_>) -> Result<Vec<BotRow>, StoreError> {
                 active_hours: bot.active_hours,
                 decks: bot.decks.clone(),
                 decks_catalog_version: bot.decks_catalog_version.clone(),
+                trio: bot.trio.clone(),
+                trio_catalog_version: bot.trio_catalog_version.clone(),
                 created_at: profile.created_at,
                 retired_at: bot.retired_at,
                 rating,
@@ -2957,6 +3245,8 @@ pub fn bots_create(f: &mut FakeTx<'_>, bot: &NewBot) -> Result<(), StoreError> {
         active_hours: bot.active_hours,
         decks: bot.decks.clone(),
         decks_catalog_version: bot.decks_catalog_version.clone(),
+        trio: None,
+        trio_catalog_version: None,
         retired_at: None,
     });
     let rating = BotRating {
@@ -3003,6 +3293,41 @@ pub fn bots_set_decks(
     Ok(())
 }
 
+pub fn bots_set_trio(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    trio: &FrozenTrio,
+    catalog_version: &str,
+) -> Result<(), StoreError> {
+    call(f, "bots.setTrio")?;
+    let row = bot_row_of(f.tables(), profile_id)?;
+    row.trio = Some(trio.clone());
+    row.trio_catalog_version = Some(catalog_version.to_string());
+    Ok(())
+}
+
+/// R1453, R641000: whether the bot may be claimed: in the pool (not retired), in no match and a
+/// side of no series that is not over, as Postgres's `lock_free_bot` reads it.
+fn bot_is_free(tables: &FakeTables, bot_id: &str) -> bool {
+    tables
+        .ladder_bots
+        .iter()
+        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
+        && tables
+            .profiles
+            .iter()
+            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none())
+        && !in_open_series(tables, bot_id)
+}
+
+/// R641000: whether a series that is not over names the profile as a side.
+fn in_open_series(tables: &FakeTables, profile_id: &str) -> bool {
+    tables.series.iter().any(|series| {
+        series.status != SeriesStatus::Over
+            && (series.sides.0.profile_id == profile_id || series.sides.1.profile_id == profile_id)
+    })
+}
+
 /// R1453: single-shot, as `tickets_claim_pair`: the bot free and the ticket open, or nothing changes.
 /// The fake writes no `open` skeleton (`matches_discard_open`), so the bot points at the reserved id.
 pub fn tickets_claim_for_bot(
@@ -3014,15 +3339,7 @@ pub fn tickets_claim_for_bot(
 ) -> Result<bool, StoreError> {
     call(f, "tickets.claimForBot")?;
     let tables = f.tables();
-    let free = tables
-        .ladder_bots
-        .iter()
-        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
-        && tables
-            .profiles
-            .iter()
-            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none());
-    if !free {
+    if !bot_is_free(tables, bot_id) {
         return Ok(false);
     }
     let Some(ticket) = tables
@@ -3034,9 +3351,39 @@ pub fn tickets_claim_for_bot(
     };
     ticket.status = TicketStatus::Matched;
     ticket.match_id = Some(match_id.to_string());
+    tables.ticket_claims.insert(ticket_id.to_string(), at);
     if let Some(bot) = profile_of(tables, bot_id) {
         bot.in_match_id = Some(match_id.to_string());
     }
+    tables.reserved.push(ReservedMatch {
+        match_id: match_id.to_string(),
+        claimed_at: at,
+    });
+    Ok(true)
+}
+
+/// R641000: `tickets_claim_for_bot` for a Conquest ticket: the bot free and the ticket open and
+/// `bo3`, or nothing changes; the bot is put in no match, since the series holds it.
+pub fn tickets_claim_for_bot_series(
+    f: &mut FakeTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    call(f, "tickets.claimForBotSeries")?;
+    let tables = f.tables();
+    if !bot_is_free(tables, bot_id) {
+        return Ok(false);
+    }
+    let Some(ticket) = tables.tickets.iter_mut().find(|ticket| {
+        ticket.id == ticket_id && ticket.status == TicketStatus::Open && ticket.mode == QueueMode::Bo3
+    }) else {
+        return Ok(false);
+    };
+    ticket.status = TicketStatus::Matched;
+    ticket.match_id = Some(match_id.to_string());
+    tables.ticket_claims.insert(ticket_id.to_string(), at);
     tables.reserved.push(ReservedMatch {
         match_id: match_id.to_string(),
         claimed_at: at,
@@ -3056,15 +3403,7 @@ pub fn bots_claim_for_rematch(
 ) -> Result<bool, StoreError> {
     call(f, "bots.claimForRematch")?;
     let tables = f.tables();
-    let free = tables
-        .ladder_bots
-        .iter()
-        .any(|row| row.profile_id == bot_id && row.retired_at.is_none())
-        && tables
-            .profiles
-            .iter()
-            .any(|row| row.id == bot_id && row.kind == ProfileKind::Bot && row.in_match_id.is_none());
-    if !free {
+    if !bot_is_free(tables, bot_id) {
         return Ok(false);
     }
     if let Some(bot) = profile_of(tables, bot_id) {
@@ -3165,6 +3504,16 @@ pub fn results_count_active_humans(f: &mut FakeTx<'_>, since: i64) -> Result<i64
         .filter(|id| humans.contains(id))
         .collect();
     Ok(active.len() as i64)
+}
+
+/// R640002: the results that ended at or after `since`, games against a bot included.
+pub fn results_count_since(f: &mut FakeTx<'_>, since: i64) -> Result<i64, StoreError> {
+    call(f, "results.countSince")?;
+    Ok(f.tables()
+        .results
+        .iter()
+        .filter(|row| row.ended_at >= since)
+        .count() as i64)
 }
 
 /// R611: one row per rated game. Rejects a second row for the same id.

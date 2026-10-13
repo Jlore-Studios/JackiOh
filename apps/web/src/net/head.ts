@@ -2,6 +2,7 @@
 // so the build's static pages (`apps/web/static-pages.ts`) name a page as the app does. `main.tsx`
 // re-exports them and writes them into the document (`useDocumentHead`).
 
+import { t } from "../i18n/i18n.ts";
 import { matchIdOf, paths, seriesIdOf, siteOrigin } from "./navigate.ts";
 
 /** The name every tab title ends with. */
@@ -32,6 +33,8 @@ export function screenNameFor(path: string): string | null {
       return "Terms";
     case paths.accessibility:
       return "Accessibility";
+    case paths.copyright:
+      return "Copyright";
     case paths.patchNotes:
       return "Patch notes";
     case paths.almanac:
@@ -43,6 +46,8 @@ export function screenNameFor(path: string): string | null {
     case paths.hotseat:
       // Read here, not at load: Vite's config loader runs this file with no `import.meta.env`.
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;
+    case paths.devReplays:
+      return import.meta.env.MODE !== "production" ? "Replays" : null;
   }
   if (matchIdOf(path) !== null) return "Match";
   if (seriesIdOf(path) !== null) return "Conquest";
@@ -55,8 +60,8 @@ export function screenNameFor(path: string): string | null {
  */
 export function documentTitleFor(path: string): string {
   const name = screenNameFor(path);
-  if (name === null) return `Page not found · ${SITE_NAME}`;
-  return name === "" ? SITE_NAME : `${name} · ${SITE_NAME}`;
+  if (name === null) return `${t("Page not found")} · ${SITE_NAME}`;
+  return name === "" ? SITE_NAME : `${t(name)} · ${SITE_NAME}`;
 }
 
 /** The canonical address of a path the client serves on `origin` (this bundle's own by default), or null for one it does not (a 404). */

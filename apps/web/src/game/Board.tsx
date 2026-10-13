@@ -52,6 +52,8 @@ import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, 
 import { SettingsButton, useSetting } from "../settings/index.ts";
 import AudioToggle from "../audio/AudioToggle.tsx";
 import { getAudioEngine } from "../audio/engine.ts";
+import LanguageButton from "../i18n/LanguageButton.tsx";
+import { formatSeconds, t } from "../i18n/i18n.ts";
 import { ActingProvider } from "./spent.ts";
 
 // Order matters: highlights.css paints the glow over board.css's borders (S7).
@@ -177,7 +179,7 @@ function ManaTray({
       data-current={mana.current}
       data-max={mana.max}
       data-animating={animating?.get(testId)}
-      title={`Mana ${mana.current}/${mana.max}`}
+      title={t("Mana {current}/{max}", { current: mana.current, max: mana.max })}
     >
       <span className="crystals">
         {Array.from({ length: crystals }, (_unused, index) => (
@@ -201,9 +203,17 @@ function ManaTray({
           data-available={credit.available === undefined ? "none" : String(credit.available)}
           data-used={credit.used === undefined ? "none" : String(credit.used)}
         >
-          {credit.available !== undefined && <span>+{credit.available} credit</span>}
-          {(credit.owed?.length ?? 0) > 0 && <span>owed {(credit.owed ?? []).join("·")}</span>}
-          {credit.used !== undefined && <span>{credit.used ? "used" : "unused"}</span>}
+          {credit.available !== undefined && (
+            <span>
+              +{credit.available} {t("credit")}
+            </span>
+          )}
+          {(credit.owed?.length ?? 0) > 0 && (
+            <span>
+              {t("owed")} {(credit.owed ?? []).join("·")}
+            </span>
+          )}
+          {credit.used !== undefined && <span>{credit.used ? t("used") : t("unused")}</span>}
         </span>
       )}
     </span>
@@ -253,6 +263,17 @@ function playFor(plays: PilePlays | undefined, instanceId: string): CardListEntr
   };
 }
 
+/** A browsable pile's accessible name: "Your graveyard: 2 cards. Show them". */
+function pileLabel(title: string, count: number, order: string | undefined): string {
+  if (order === undefined) {
+    return count === 1 ? t("{title}: {count} card. Show them", { title, count }) : t("{title}: {count} cards. Show them", { title, count });
+  }
+  const lower = order.toLowerCase();
+  return count === 1
+    ? t("{title}: {count} card, {order}. Show them", { title, count, order: lower })
+    : t("{title}: {count} cards, {order}. Show them", { title, count, order: lower });
+}
+
 /** The list a pile opens: its entries in the order to show them, and what that order is. */
 function browseEntries(
   lookup: CardLookup | null,
@@ -270,7 +291,7 @@ function browseEntries(
       }
     }
     if (browse.library.unknown > 0) entries.push({ key: "unknown", face: null, count: browse.library.unknown });
-    return { entries, order: LIBRARY_ORDER };
+    return { entries, order: t(LIBRARY_ORDER) };
   }
   // Newest first: a pile grows at its end (the engine appends each card that lands in it).
   for (let at = browse.cards.length - 1; at >= 0; at -= 1) {
@@ -349,11 +370,7 @@ function Pile({
         role={browsable ? "button" : undefined}
         tabIndex={browsable ? 0 : undefined}
         aria-haspopup={browsable ? "dialog" : undefined}
-        aria-label={
-          browsable
-            ? `${title}: ${String(count)} ${count === 1 ? "card" : "cards"}${order === undefined ? "" : `, ${order.toLowerCase()}`}. Show them`
-            : undefined
-        }
+        aria-label={browsable ? pileLabel(title, count, order) : undefined}
         onClick={browsable ? open : undefined}
         onKeyDown={
           browsable
@@ -365,7 +382,9 @@ function Pile({
             : undefined
         }
       >
-        <span className="pile-label">{label}</span>
+        {/* WCAG 2.5.3 (#757): the shown words read "Deck 17", not "Deck17", so the name holds them;
+            a flex box draws no space between its items, so the layout is unchanged. */}
+        <span className="pile-label">{label}</span>{" "}
         <span className="pile-n" data-testid={testId}>
           {count}
         </span>
@@ -416,7 +435,7 @@ function Seat({
       <span className="piles">
         {/* R373: the rules' library is shown to players as the Deck. */}
         <Pile
-          label="Deck"
+          label={t("Deck")}
           regionId={animTestid.library(side)}
           testId={countId("library", side)}
           count={seat.libraryCount}
@@ -424,29 +443,29 @@ function Seat({
           animating={animating}
           // R310, R313: only the viewer's own side carries the list; the opponent's is a count.
           {...(side === "you" && seat.ownLibrary !== undefined
-            ? { browse: { kind: "library" as const, title: "Your deck", library: seat.ownLibrary, view } }
+            ? { browse: { kind: "library" as const, title: t("Your deck"), library: seat.ownLibrary, view } }
             : {})}
           touchHold={touchHold}
         >
           <PileNotice key={notices.pile.get(side)?.entry} notice={notices.pile.get(side)} side={side} view={view} />
         </Pile>
         <Pile
-          label="Graveyard"
+          label={t("Graveyard")}
           regionId={animTestid.graveyard(side)}
           testId={countId("graveyard", side)}
           count={seat.graveyard.length}
           animating={animating}
-          browse={{ kind: "pile", title: side === "you" ? "Your graveyard" : "Opponent's graveyard", cards: seat.graveyard, view }}
+          browse={{ kind: "pile", title: side === "you" ? t("Your graveyard") : t("Opponent's graveyard"), cards: seat.graveyard, view }}
           {...(side === "you" ? { plays: { highlight, onClick } } : {})}
           touchHold={touchHold}
         />
         <Pile
-          label="Exile"
+          label={t("Exile")}
           regionId={animTestid.exile(side)}
           testId={countId("exile", side)}
           count={seat.exile.length}
           animating={animating}
-          browse={{ kind: "pile", title: side === "you" ? "Your exile" : "Opponent's exile", cards: seat.exile, view }}
+          browse={{ kind: "pile", title: side === "you" ? t("Your exile") : t("Opponent's exile"), cards: seat.exile, view }}
           touchHold={touchHold}
         />
       </span>
@@ -549,6 +568,8 @@ export default function Board({
   // #165: on the opponent's turn a touch hold on a card is the mouse-over the screen lacks.
   const touchHold = touchHoldMode(view);
   const field = useRef<HTMLDivElement>(null);
+  // "Turn 3": split around the number, so English keeps the two text nodes it always had.
+  const [turnBefore = "", turnAfter = ""] = t("Turn {n}").split("{n}");
 
   // B25: the confirm is armed FOR a view. Any new view (the engine moved, the turn changed, an
   // animation caught up) is a different object, so it disarms without an effect.
@@ -604,7 +625,7 @@ export default function Board({
         {/* R434: at the game's end the view shows the opponent's hand, and the row turns it face up. */}
         <Hand side="opponent" hand={revealedOpponentHand(view) ?? view.opponent.hand} cap={view.opponent.handCap} marked={view.opponent.handMarked} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("opponent")} />
 
-        <div className="field" aria-label="Field" ref={field}>
+        <div className="field" aria-label={t("Field")} ref={field}>
           <SandSurface field={field} disabled={sandDisabled} />
           {LANES.map((lane) => (
             <div className="lane" key={lane} data-lane={lane}>
@@ -628,7 +649,7 @@ export default function Board({
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
         <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
 
-        <div className="control-bar" aria-label="Controls">
+        <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
           {boardNotices === undefined ? null : <div className="board-notices">{boardNotices}</div>}
           {/* Whose turn, above End turn wherever the controls have a column of their own (board.css
@@ -639,29 +660,33 @@ export default function Board({
             data-side={view.result !== null ? "over" : sideOf(view, view.active)}
             aria-hidden="true"
           >
-            <span className="turn-plate-number">Turn {view.turn}</span>
+            <span className="turn-plate-number">
+              {turnBefore}
+              {view.turn}
+              {turnAfter}
+            </span>
             <span className="turn-plate-whose">
               {view.result !== null
-                ? "Game over"
+                ? t("Game over")
                 : view.phase === "mulligan"
-                  ? "Mulligan"
+                  ? t("Mulligan")
                   : view.active === view.viewer
-                    ? "Your turn"
-                    : "Opponent's turn"}
+                    ? t("Your turn")
+                    : t("Opponent's turn")}
             </span>
           </div>
           {matchStatus === undefined ? null : <div className="board-status">{matchStatus}</div>}
           {/* R1200: while a Mayor acts every target is drawn at random, so the board says so. */}
           {view.randomTargets === true ? (
             <div className="random-targets" data-testid="random-targets" role="status">
-              Targets are random
+              {t("Targets are random")}
             </div>
           ) : null}
           <div className="turn-mechanism" data-turn-state={endTurnState}>
             <ControlButton
               control="end-turn"
               testId={testid.endTurn}
-              label={endTurnState === "enemy" ? "Enemy turn" : armed ? "Confirm end turn" : "End turn"}
+              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : t("End turn")}
               highlight={highlight}
               animating={animating}
               confirm={armed ? "armed" : undefined}
@@ -669,12 +694,12 @@ export default function Board({
               pressed={pressed}
               onPress={pressEndTurn}
             />
-            {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{Math.ceil(view.clockMs / 1000)}s</span>)}
+            {turnClock ?? (view.clockMs !== null && <span className="clock turn-mechanism-clock">{formatSeconds(Math.ceil(view.clockMs / 1000))}</span>)}
           </div>
           <ControlButton
             control="offer-draw"
             testId={testid.offerDraw}
-            label="Offer draw"
+            label={t("Offer draw")}
             highlight={highlight}
             animating={animating}
             onPress={() => onControl?.("offer-draw")}
@@ -682,7 +707,7 @@ export default function Board({
           <ControlButton
             control="concede"
             testId={testid.concede}
-            label="Concede"
+            label={t("Concede")}
             highlight={highlight}
             animating={animating}
             onPress={() => onControl?.("concede")}
@@ -693,8 +718,8 @@ export default function Board({
             className="log-toggle"
             data-testid="log-toggle"
             aria-expanded={logOpen}
-            aria-label={logOpen ? "Hide the game log" : "Show the game log"}
-            title="Game log"
+            aria-label={logOpen ? t("Hide the game log") : t("Show the game log")}
+            title={t("Game log")}
             onClick={() => setLogOpen((open) => !open)}
           >
             <span className="log-toggle-icon" aria-hidden="true" />
@@ -702,6 +727,7 @@ export default function Board({
           {/* Task 2's mute, beside the gear that holds the rest of its controls: a fixed corner button
               sat on the practice HUD's Menu and the match bar's clock (integration). */}
           <AudioToggle className="audio-toggle--bar" />
+          <LanguageButton placement="game" />
           <SettingsButton placement="game" />
         </div>
 

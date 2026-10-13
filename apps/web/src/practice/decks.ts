@@ -162,6 +162,12 @@ export function isAutostartDeckValue(value: string): boolean {
 
 type DeckOption = { value: string; label: string; disabled: boolean };
 
+/** The saved deck a picker value names (`saved:<n>`), complete or not; undefined for any other value. */
+export function savedDeckOf(value: string, saved: readonly PracticeSavedDeck[] | null): PracticeSavedDeck | undefined {
+  if (saved === null || !value.startsWith(SAVED_PREFIX)) return undefined;
+  return saved[Number(value.slice(SAVED_PREFIX.length)) - 1];
+}
+
 export function savedDeckLabel(deck: PracticeSavedDeck): string {
   if (isPlayableSavedDeck(deck)) return deck.name;
   return `${deck.name} (${String(deck.cards.length)} of ${String(DECK_SIZE)} cards, not complete)`;

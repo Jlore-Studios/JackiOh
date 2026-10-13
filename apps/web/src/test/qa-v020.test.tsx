@@ -335,7 +335,7 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     expect(document.body).toHaveTextContent(`${nameOf("core-002")} now costs (1)`);
   });
 
-  it("item 9: the Find a match box repeats no queue count; the mode tiles carry them (R505)", async () => {
+  it("item 9: the Find a match box repeats none of the queue's readout; the mode tiles and the games line carry it (R505, R640002)", async () => {
     const ids = Array.from({ length: DECK_SIZE }, (_, i) => `core-${String(i + 1).padStart(3, "0")}`);
     const deck: SavedDeck = { id: "d1", name: "Aggro", cards: ids, catalogVersion: "v1", portrait: null, createdAt: 0, updatedAt: 0 };
     const decks: DecksResponse = {
@@ -355,19 +355,19 @@ describe("QA v0.2.0, Global Cosmetic", () => {
     vi.mocked(getDecks).mockResolvedValue(decks);
     vi.mocked(getCatalog).mockResolvedValue({ version: "v1", defs: CATALOG });
     vi.mocked(getCollection).mockResolvedValue({ catalogVersion: "v1", entries: ids.map((cardId) => ({ cardId, quantity: 1 })) });
-    vi.mocked(getPopulation).mockResolvedValue({ population: 97, byMode: { bo1: 41, bo3: 23, random: 33 } });
+    vi.mocked(getPopulation).mockResolvedValue({ gamesLastHour: 97, expectedWaitSeconds: { bo1: 50, bo3: null, random: null } });
     vi.mocked(getOwnRank).mockRejectedValue(new Error("the rank is not this spec's subject"));
-    vi.mocked(enqueue).mockResolvedValue({ ticketId: "tk", status: "open", matchId: null, seriesId: null, population: 98, mode: "bo1" });
+    vi.mocked(enqueue).mockResolvedValue({ ticketId: "tk", status: "open", matchId: null, seriesId: null, mode: "bo1" });
     vi.mocked(dequeue).mockResolvedValue({ cancelled: true });
 
     render(<PlayRoute token="token" />);
     await screen.findByTestId(playTestid.deckSelect);
     await waitFor(() => {
-      expect(screen.getByTestId(playTestid.population)).toHaveAttribute("data-bo1", "41");
+      expect(screen.getByTestId(playModeTestid("bo1")).closest("label")).toHaveTextContent("Usually under 50 s");
     });
-    expect(screen.getByTestId(playModeTestid("bo1")).closest("label")).toHaveTextContent("41 waiting");
+    expect(screen.getByTestId(playTestid.recentGames)).toHaveTextContent("97 games played in the last hour");
     const box = screen.getByRole("region", { name: "Find a match" });
-    const COUNTS = /waiting|\b(41|23|33|97|98)\b/;
+    const COUNTS = /Usually under|games played|\b(97|50)\b/;
     expect(box).not.toHaveTextContent(COUNTS);
     fireEvent.click(within(box).getByTestId(playTestid.queue));
     const status = await screen.findByTestId(playTestid.status);

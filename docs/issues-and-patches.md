@@ -53,7 +53,10 @@ touches none of `SPEC.md`, the notes in `spec/`, `BUILD.md` or the shared surfac
 AI, catalog, card or migration work, is checked by a unit test, leaves the builder no decision, and
 is blocked by nothing (`bot/harness/easy.py`); **hard** for engine rules, the AI, design across
 crates, a migration, or about 40 files or more; **medium** for the rest. Triage
-gives no difficulty. Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
+gives no difficulty beyond the form's answer. Every ten minutes the sweep labels what is left bare
+(#735): a planned issue with no difficulty gets `difficulty:medium`, and a bot pull request its
+issue's label (or medium); an issue still waiting for its plan is left to the planner. An agent
+that opens an issue labels it itself (`CLAUDE.md` rule 11). Three failures of an issue's own raise it a step (`bot/README.md`, Rating,
 strikes and the step up).
 
 ## Issue type
@@ -155,6 +158,39 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
   nothing for players. A change for players after that is a revision (`vX.Y.Zb`).
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
+
+## Patch notes players read
+
+- **Players see the note, never the record (R724000, R724001).** A patch's `title`, `sources` and
+  `notes` are the history's: they may name issues, rulings and commits. The Patch notes page shows
+  its `player` note instead: `{ title, new, balance, changes, text, fixes }`.
+- **Write it by hand in the fragment.** `cargo jackioh patches …` has no flag for it: open
+  `pending/<version>.json` and fill in `player`. Running the command again (when the cards change)
+  keeps the note, `patches ship` carries it onto the shipped patch, and `patches check` fails until
+  it has a title and at least one line, and on a blank line, a line over 200 characters, or a
+  ruling (`R656`), an issue or card number (`#88`) or a `§`.
+- **The title** is a short phrase with no version, which the page shows beside it: "Gary the Gambler
+  buffed", not "Patch v0.2.Y: Buff Gary the Gambler".
+- **One fact per line, under its heading.**
+  - `new`: the cards, tokens, keywords and tags the patch brings.
+  - `balance`: a cost, stat, number or rarity, written from and to ("Hit Job costs (3), up from
+    (2).").
+  - `changes`: how a card or a rule plays.
+  - `text`: wording only, nothing plays differently.
+  - `fixes`: what was broken and now works.
+- **Only what that patch changed.** Take it from the patch's snapshot diff (the cards behind its
+  toggle) and its change, never from a pull request's title, and never say what the game does not
+  do yet.
+- **Today's words.** Deck and Tribute, "(N) Cost" and "costs (N)", Nerf and Buff (R373, R432,
+  R1320): `apps/web/src/wording.test.ts` checks every note in `patches.json`.
+- **A set is a release line.** A major version that brings a set adds its line to `RELEASES`
+  (`apps/web/src/patches/releases.ts`), with `first` set to its first card patch, a summary and
+  its technical changes. The page shows one bubble per line, newest open.
+- **Technical changes.** A change players notice that ships no card data (a mode, a screen, the AI,
+  the engine, sound) adds one line to the `technical` of its major version's line, the newest, in its
+  own pull request, in the style of the lines there ("Background music and a main menu theme."). A
+  major version's changes before its first card patch are its line's too: v0.3.0, the Rust rewrite,
+  is Meditative's.
 
 ## Pull requests
 

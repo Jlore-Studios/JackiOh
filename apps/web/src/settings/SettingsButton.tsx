@@ -11,6 +11,7 @@
 import { useCallback, useRef, useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 
+import { t } from "../i18n/i18n.ts";
 import SettingsPanel from "./SettingsPanel.tsx";
 import type { SettingsSectionId } from "./slots.ts";
 import "./settings.css";
@@ -42,10 +43,10 @@ export default function SettingsButton({ placement, tab }: SettingsButtonProps):
         type="button"
         className={`settings-gear settings-gear--${placement}`}
         data-testid={`settings-open-${placement}`}
-        aria-label="Settings"
+        aria-label={t("Settings")}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title="Settings"
+        title={t("Settings")}
         onClick={() => {
           setOpen(true);
         }}

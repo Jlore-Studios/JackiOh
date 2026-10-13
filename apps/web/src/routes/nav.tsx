@@ -2,6 +2,8 @@
 
 import type { MouseEvent, ReactElement, ReactNode } from "react";
 
+import LanguageButton from "../i18n/LanguageButton.tsx";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { SettingsButton } from "../settings/index.ts";
 
@@ -26,12 +28,13 @@ export type BackLinkProps = {
 /** Uses `navigate`, not history, so direct links stay in the app. */
 export function BackLink({
   to = paths.landing,
-  label = "← Back",
+  label,
   onLeave,
   onPress,
   children,
   showSettings = true,
 }: BackLinkProps): ReactElement {
+  useLocale();
   return (
     <nav className="row screen-nav">
       <button
@@ -47,9 +50,10 @@ export function BackLink({
           navigate(to);
         }}
       >
-        {label}
+        {label === undefined ? t("← Back") : t(label)}
       </button>
       {children === undefined ? null : <div className="screen-nav__extra">{children}</div>}
+      {showSettings ? <LanguageButton placement="nav" /> : null}
       {showSettings ? <SettingsButton placement="nav" /> : null}
     </nav>
   );

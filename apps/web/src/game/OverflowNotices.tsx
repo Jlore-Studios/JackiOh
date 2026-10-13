@@ -8,6 +8,7 @@ import { useContext, type ReactElement } from "react";
 import type { GameEvent, GameEventType, LibraryOverflowOutcome, PlayerView } from "@jackioh/shared";
 
 import { CardBack, CardFace } from "../cards/index.ts";
+import { t } from "../i18n/i18n.ts";
 import { animTestid } from "./animations.ts";
 import { CatalogContext } from "./catalog.ts";
 import { sideOf, type AnimatingMap, type AnimationFrames, type Side } from "./contract.ts";
@@ -137,7 +138,7 @@ export function PileNotice({
   if (notice.kind === "fatigue") {
     return (
       <span className="pile-notice" data-testid={noticeTestid.pile(side)} data-kind="fatigue" data-side={side} data-playing={playing}>
-        <span className="pile-notice-tag">Fatigue {notice.count}</span>
+        <span className="pile-notice-tag">{t("Fatigue {count}", { count: notice.count })}</span>
       </span>
     );
   }
@@ -150,7 +151,7 @@ export function PileNotice({
       data-outcome={notice.outcome}
       data-playing={playing}
     >
-      <span className="pile-notice-tag">Deck full</span>
+      <span className="pile-notice-tag">{t("Deck full")}</span>
       <NoticeCardFace
         card={notice.card}
         view={view}
@@ -174,7 +175,7 @@ export function BurnNotice({
   if (notice === undefined) return null;
   return (
     <div className="burn-notice" data-testid={noticeTestid.burn(side)} data-side={side} data-playing={notice.playing ? "true" : undefined}>
-      <span className="burn-tag">Hand full</span>
+      <span className="burn-tag">{t("Hand full")}</span>
       <NoticeCardFace card={notice.card} view={view} className="burn-card" testId={noticeTestid.burnCard(side)} as="div" />
     </div>
   );

@@ -2,8 +2,9 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import type { ActionBody, PendingOption, PendingView, PlayerView } from "@jackioh/shared";
 
-import { chineseName } from "../cards/chinese.ts";
+import { chineseName, drawnInChinese } from "../cards/chinese.ts";
 import { CardFace, faceModel, useInspectTrigger } from "../cards/index.ts";
+import { t, useLocale } from "../i18n/i18n.ts";
 import { answerAction } from "./actions.ts";
 import { useCardInfo } from "./catalog.ts";
 import "./market.css";
@@ -39,10 +40,12 @@ function yuan(amount: number): string {
  * swallowed (`useInspectTrigger`), and only a tap buys (#552).
  */
 function Lot(props: { option: PendingOption; onPick: () => void }) {
+  useLocale();
   const defId = props.option.defId ?? "";
   const info = useCardInfo(defId, false);
   const price = props.option.cost ?? 0;
   const face = faceModel({ defId, def: info.def, name: info.name, radiant: false, chinese: false, inPlay: {} });
+  const caption = drawnInChinese(props.option.chinese === true) ? chineseName(defId, info.name, info.def) : props.option.label;
   const testId = `prompt-option-${props.option.key}`;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger({ key: testId, face }, { prefer: "above", showLoc: false });
@@ -52,12 +55,12 @@ function Lot(props: { option: PendingOption; onPick: () => void }) {
         type="button"
         className="market-deal"
         data-testid={testId}
-        aria-label={`${props.option.label}, ${String(price)} yuan`}
+        aria-label={t("{name}, {price} yuan", { name: drawnInChinese(false) ? caption : props.option.label, price })}
         onClick={props.onPick}
         {...inspect.handlers}
       >
         <CardFace face={face} layout="full" />
-        <span className="market-caption">{props.option.label}</span>
+        <span className="market-caption">{caption}</span>
         <span className="market-price">{yuan(price)}</span>
       </button>
       {inspect.overlay}
@@ -67,10 +70,11 @@ function Lot(props: { option: PendingOption; onPick: () => void }) {
 
 /** One barter: a hand card traded to the merchant for its price. */
 function Barter(props: { option: PendingOption; onPick: () => void }) {
+  useLocale();
   const defId = props.option.defId ?? "";
   const info = useCardInfo(defId, props.option.radiant === true);
   // ME-CN, R1301: a card the view says is Chinese is named in Chinese here too.
-  const name = props.option.chinese === true ? chineseName(defId, info.name, info.def) : props.option.label;
+  const name = drawnInChinese(props.option.chinese === true) ? chineseName(defId, info.name, info.def) : props.option.label;
   const gain = -(props.option.cost ?? 0);
   return (
     <li className="market-barter">
@@ -78,7 +82,7 @@ function Barter(props: { option: PendingOption; onPick: () => void }) {
         type="button"
         className="market-deal"
         data-testid={`prompt-option-${props.option.key}`}
-        aria-label={`Barter ${name} for ${String(gain)} yuan`}
+        aria-label={t("Barter {name} for {gain} yuan", { name, gain })}
         onClick={props.onPick}
       >
         <span className="market-caption">{name}</span>
@@ -89,6 +93,7 @@ function Barter(props: { option: PendingOption; onPick: () => void }) {
 }
 
 export default function MarketPrompt(props: MarketProps) {
+  useLocale();
   const root = useRef<HTMLDivElement>(null);
   const lots = props.pending.options.filter(isLot);
   const barters = props.pending.options.filter((option) => option.instanceId !== undefined);
@@ -125,7 +130,7 @@ export default function MarketPrompt(props: MarketProps) {
         data-animating={props.animating}
         role="dialog"
         aria-modal="true"
-        aria-label="Night market"
+        aria-label={t("Night market")}
         onKeyDown={onKeyDown}
       >
         <header className="market-header">
@@ -134,25 +139,25 @@ export default function MarketPrompt(props: MarketProps) {
               <span key={at} className="market-lantern" />
             ))}
           </div>
-          <h2 className="market-title">Night market</h2>
+          <h2 className="market-title">{t("Night market")}</h2>
           <p className="market-purse" data-testid="market-purse" role="status">
             {yuan(props.pending.budget ?? 0)}
           </p>
         </header>
         {lots.length === 0 ? (
           <p className="market-empty" data-testid="market-empty">
-            Nothing on the stall you can buy.
+            {t("Nothing on the stall you can buy.")}
           </p>
         ) : (
-          <ul className="market-stall" aria-label="The stall">
+          <ul className="market-stall" aria-label={t("The stall")}>
             {lots.map((option) => (
               <Lot key={option.key} option={option} onPick={() => pick(option.key)} />
             ))}
           </ul>
         )}
         {barters.length > 0 ? (
-          <section className="market-barters" aria-label="Barter from your hand">
-            <h3>Barter from your hand</h3>
+          <section className="market-barters" aria-label={t("Barter from your hand")}>
+            <h3>{t("Barter from your hand")}</h3>
             <ul className="market-barter-list">
               {barters.map((option) => (
                 <Barter key={option.key} option={option} onPick={() => pick(option.key)} />
@@ -162,7 +167,7 @@ export default function MarketPrompt(props: MarketProps) {
         ) : null}
         {leave === undefined ? null : (
           <button type="button" className="market-leave" data-testid={`prompt-option-${LEAVE}`} onClick={() => pick(LEAVE)}>
-            Leave
+            {t("Leave")}
           </button>
         )}
       </div>

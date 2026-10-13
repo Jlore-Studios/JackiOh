@@ -248,6 +248,8 @@ impl Registry {
                 portrait_or_default(first.portrait.as_deref()),
                 portrait_or_default(second.portrait.as_deref()),
             )),
+            // R768: written with the result, never at the start.
+            final_hash: None,
         };
         let dealt = dealt_for(derived_mode);
 
@@ -279,6 +281,8 @@ impl Registry {
                 telemetry: None,
                 bots,
                 bot_moved_turn: PerPlayer::new(None, None),
+                // R641000: a series game draws its bot no rematch plan.
+                series_game: derived_mode == Some(QueueMode::Bo3),
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor);
@@ -360,6 +364,7 @@ impl Registry {
                 telemetry,
                 bots,
                 bot_moved_turn,
+                series_game: mode == Some(QueueMode::Bo3),
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());

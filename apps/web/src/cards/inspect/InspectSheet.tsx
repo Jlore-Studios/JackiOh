@@ -12,6 +12,7 @@
 import { useRef } from "react";
 import type { ReactElement } from "react";
 import { createPortal } from "react-dom";
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardFace } from "../CardFace.tsx";
 import type { FaceModel } from "../model.ts";
 import { glossaryFor } from "../rules.ts";
@@ -28,6 +29,7 @@ import "./inspect.css";
 type InspectSheetProps = { face: FaceModel; onClose: () => void; note?: string };
 
 export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactElement {
+  useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
 
@@ -52,7 +54,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
             <Printed face={face} />
           </RefsInteractive>
           <Glossary entries={glossaryFor(face)} />
-          {face.known ? <Flavour defId={face.defId} /> : null}
+          {face.known ? <Flavour defId={face.defId} easter={face.flagged === true} /> : null}
           <LocLine face={face} />
         </div>
         <button
@@ -62,7 +64,7 @@ export function InspectSheet({ face, onClose, note }: InspectSheetProps): ReactE
           data-testid={INSPECT_CLOSE}
           {...modal.dismissProps}
         >
-          Close
+          {t("Close")}
         </button>
       </div>
     </div>,

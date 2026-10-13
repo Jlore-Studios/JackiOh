@@ -5,6 +5,7 @@
 
 import type { ReactElement } from "react";
 
+import { t, useLocale } from "../../i18n/i18n.ts";
 import { questProgress, stateBadges } from "../cardState.ts";
 import { MARK_GLYPH, markWords } from "../marks.ts";
 import { Icon } from "../icons.tsx";
@@ -20,7 +21,7 @@ const COPY_GLYPH = "“";
 
 /** R511: "Copying: Book of Knowledge", "Copying: Book of Knowledge (Radiant)". */
 export function copyingWords(copying: { name: string; radiant: boolean }): string {
-  return `Copying: ${copying.name}${copying.radiant ? " (Radiant)" : ""}`;
+  return copying.radiant ? t("Copying: {name} (Radiant)", { name: copying.name }) : t("Copying: {name}", { name: copying.name });
 }
 
 export function hasStateNotes(face: FaceModel): boolean {
@@ -41,7 +42,7 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
         <span className="inspect-tuned-glyph" aria-hidden="true">
           {VERDICT_GLYPH[tuning.verdict]}
         </span>
-        {VERDICT_WORD[tuning.verdict]}
+        {t(VERDICT_WORD[tuning.verdict])}
       </p>
       <ul className="inspect-tuned-changes">
         {tuning.changes.map((change, index) => {
@@ -53,7 +54,7 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
                 {way === null ? VERDICT_GLYPH.tuned : WAY_GLYPH[way]}
               </span>
               {words}
-              {way === null ? null : <span className="inspect-sr">{` (${way})`}</span>}
+              {way === null ? null : <span className="inspect-sr">{` (${t(way)})`}</span>}
             </li>
           );
         })}
@@ -63,6 +64,7 @@ function TunedRibbon({ face }: { face: FaceModel }): ReactElement | null {
 }
 
 export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
+  useLocale();
   const others = stateBadges(face).filter((badge) => badge.kind !== "tuned" && badge.kind !== "quest");
   const tuned = face.tuning !== undefined && face.tuning !== null;
   // R437: a mark's words, which on the board live only in its badge's tooltip (no hover on touch).
@@ -98,8 +100,9 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                 {QUEST_GLYPH}
               </span>
               <span className="inspect-state-words">
-                Quest: <RulesText text={quest.text} /> <span className="inspect-quest-progress">({questProgress(quest)})</span>
-                <span className="inspect-quest-label">Rewards</span>
+                {t("Quest: ")}
+                <RulesText text={quest.text} /> <span className="inspect-quest-progress">({questProgress(quest)})</span>
+                <span className="inspect-quest-label">{t("Rewards")}</span>
                 <ul className="inspect-quest-rewards">
                   {quest.rewards.map((reward) => (
                     <li key={reward.id} data-reward={reward.id}>
@@ -125,7 +128,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
               <span className="inspect-state-glyph" aria-hidden="true">
                 {MARK_GLYPH}
               </span>
-              <span className="inspect-state-words">{markWords(mark.mark).text}</span>
+              <span className="inspect-state-words">{t(markWords(mark.mark).text)}</span>
             </li>
           ))}
           {others.map((badge) => (

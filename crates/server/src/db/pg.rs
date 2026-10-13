@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0032) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0035) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -70,16 +70,17 @@ use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
+    MatchActionRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
     PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
-    Ticket, TicketStatus, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome,
-    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
+    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -572,6 +573,8 @@ struct MatchDbRow {
     mode: Option<String>,
     /// R672 (migration 0023): 2 on a double-or-nothing rematch; null is a normal game.
     stake: Option<i16>,
+    /// R768 (migration 0035): the final state's hash, written with the result.
+    final_hash: Option<String>,
 }
 
 impl MatchDbRow {
@@ -601,6 +604,7 @@ impl MatchDbRow {
             p2_portrait: get(row, "p2_portrait")?,
             mode: get(row, "mode")?,
             stake: get(row, "stake")?,
+            final_hash: get(row, "final_hash")?,
         })
     }
 }
@@ -611,7 +615,7 @@ macro_rules! match_columns {
         "id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
-  mode, stake, p1_glitch_board, p2_glitch_board"
+  mode, stake, p1_glitch_board, p2_glitch_board, final_hash"
     };
 }
 
@@ -707,6 +711,8 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         mode: row.mode.as_deref().map(queue_mode_of).transpose()?,
         stake: row.stake.map(stake_of).transpose()?,
         portraits,
+        // R768 (migration 0035): absent until the result writes it.
+        final_hash: row.final_hash,
     })
 }
 
@@ -2793,7 +2799,8 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
 ///
 /// The port hands in the `seq` the actor already used, so the two must agree: a mismatch means
 /// the log and the actor have diverged (a replayed nonce, a gap, a second writer), and it is
-/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists."
+/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists." It is
+/// `StoreError::SeqClash` (R776000), which the actor answers by letting go of the match.
 pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     run_as(t, None).await?;
     for row in rows {
@@ -2824,7 +2831,7 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
         // rollback takes that insert with it. A store that wrote the row and then complained
         // would be worse than one that refused.
         if assigned != row.seq {
-            return Err(StoreError::from(format!(
+            return Err(StoreError::SeqClash(format!(
                 "match_actions is append-only: seq {} exists (app.append_match_action assigned {} for nonce {})",
                 row.seq, assigned, action.nonce
             )));
@@ -3044,6 +3051,135 @@ pub async fn matches_reap_open(t: &mut PgTx<'_>, before: i64) -> Result<u64, Sto
     .await
     .map_err(db_error)?;
     Ok(done.rows_affected())
+}
+
+/// R768 (migration 0035): the `final_hash is null` guard is what makes it written once.
+pub async fn matches_record_final_hash(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(());
+    }
+    run_as(t, None).await?;
+    sqlx::query("update public.matches set final_hash = $2::text where id = $1::uuid and final_hash is null")
+        .bind(match_id)
+        .bind(final_hash)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
+/// R768: read off the row whatever its status. A claimed room's or a queue pair's reservation is an
+/// `open` row under the match id (KNOWN DIVERGENCES, reserved match ids), which `matches_get` skips.
+pub async fn matches_seats(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchSeats>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row =
+        sqlx::query("select status, p1_profile_id, p2_profile_id from public.matches where id = $1::uuid")
+            .bind(match_id)
+            .fetch_optional(&mut **t)
+            .await
+            .map_err(db_error)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let status: String = get(&row, "status")?;
+    let players = [
+        uuid_text_or_null(&row, "p1_profile_id")?,
+        uuid_text_or_null(&row, "p2_profile_id")?,
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    Ok(Some(MatchSeats {
+        phase: from_literal(&status)?,
+        players,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Replays (R768)
+// ---------------------------------------------------------------------------
+
+/// One finished match with a result, read for its replay. Unlike `to_match`'s other callers it
+/// reads a deleted second seat as the empty id too (KNOWN DIVERGENCES, deleted accounts), so a
+/// player keeps the replay of a match whose opponent has deleted their account.
+async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Option<ReplayRow>, StoreError> {
+    let row = sqlx::query(concat!(
+        "select ",
+        match_columns!(),
+        " from public.matches
+          where id = $1::uuid and status = 'over'"
+    ))
+    .bind(match_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let mut row = MatchDbRow::read(&row)?;
+    row.p2_profile_id.get_or_insert_with(String::new);
+    let row = to_match(row)?;
+    let Some(result) = results_get_by_match(t, match_id).await? else {
+        return Ok(None);
+    };
+    Ok(Some(ReplayRow { row, result, actions }))
+}
+
+pub async fn replays_list(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select m.id, (select count(*) from public.match_actions a where a.match_id = m.id) as actions
+           from public.matches m
+          where m.status = 'over'
+            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
+            and exists (select 1 from public.results r where r.match_id = m.id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
+          order by m.ended_at desc nulls last, m.id desc
+          limit $2::bigint offset $3::bigint",
+    )
+    .bind(profile_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut replays = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let match_id = uuid_text(row, "id")?;
+        if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
+            replays.push(replay);
+        }
+    }
+    Ok(replays)
+}
+
+pub async fn replays_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let counted =
+        sqlx::query("select count(*) as actions from public.match_actions where match_id = $1::uuid")
+            .bind(match_id)
+            .fetch_one(&mut **t)
+            .await
+            .map_err(db_error)?;
+    replay_row(t, match_id, get(&counted, "actions")?).await
 }
 
 // ---------------------------------------------------------------------------
@@ -3267,6 +3403,32 @@ pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>
     Ok(counts)
 }
 
+/// R640002: the waits of the tickets claimed at or after `since`, a pair's or a bot's claim, oldest
+/// claim first, ties on id.
+pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select mode, enqueued_at, claimed_at from public.tickets
+          where status = 'claimed' and claimed_at >= ",
+        ts!("$1"),
+        " order by claimed_at, id"
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            let enqueued: OffsetDateTime = get(row, "enqueued_at")?;
+            let claimed: OffsetDateTime = get(row, "claimed_at")?;
+            Ok(TicketWait {
+                mode: queue_mode_of(&get::<String>(row, "mode")?)?,
+                waited_ms: (ms_of(claimed) - ms_of(enqueued)).max(0),
+            })
+        })
+        .collect()
+}
+
 /// §9.5: "both tickets are claimed in one atomic statement." That statement is
 /// `app.claim_ticket_pair` (migration 0004), which returns true only when it moved exactly two
 /// still-queued rows, so two matchers racing over one ticket cannot both win.
@@ -3338,13 +3500,20 @@ pub async fn tickets_claim_pair(
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
-    sqlx::query("update public.tickets set match_id = $3::uuid where id in ($1::uuid, $2::uuid)")
-        .bind(a_id)
-        .bind(b_id)
-        .bind(match_id)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
+    // R640002: the claim is stamped with the sweep's clock, as the fake stamps it, not the
+    // transaction's `now()` that `app.claim_ticket_pair` wrote: a wait runs from enqueue to here.
+    sqlx::query(concat!(
+        "update public.tickets set match_id = $3::uuid, claimed_at = ",
+        ts!("$4"),
+        " where id in ($1::uuid, $2::uuid)"
+    ))
+    .bind(a_id)
+    .bind(b_id)
+    .bind(match_id)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
     Ok(true)
 }
 
@@ -4468,14 +4637,16 @@ pub async fn ranked_reset_ratings(t: &mut PgTx<'_>, changes: &[ResetChange]) -> 
 
 /// A season's rows joined to each player's CURRENT rating — what percentiles and Jlorious read.
 /// TS's `{ ...toSeasonRank(row), rating }`: the rank's own fields plus the rating, through their
-/// serde form.
+/// serde form. R640000: a ladder bot's row reads the bot's own rating (R610) and is marked `bot`.
 pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<SeasonStanding>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select r.season_id, r.profile_id, r.games, r.wins, r.losses, r.draws, r.ladder, r.floor,
-                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at, p.rating
+                r.streak, r.peak_ladder, r.peak_jlorious, r.updated_at,
+                coalesce(b.rating, p.rating) as rating, p.kind
            from public.season_ranks r
            join public.profiles p on p.id = r.profile_id
+           left join public.bot_ratings b on p.kind = 'bot' and b.bot_id = p.id::text
           where r.season_id = $1::text
           order by r.profile_id",
     )
@@ -4487,10 +4658,12 @@ pub async fn ranked_standings(t: &mut PgTx<'_>, season_id: &str) -> Result<Vec<S
         .map(|row| -> Result<SeasonStanding, StoreError> {
             let rank = to_season_rank(SeasonRankDbRow::read(row)?);
             let rating: f64 = get(row, "rating")?;
+            let kind: String = get(row, "kind")?;
             let mut standing =
                 serde_json::to_value(&rank).map_err(|error| StoreError::from(error.to_string()))?;
             if let Value::Object(fields) = &mut standing {
                 fields.insert(String::from("rating"), json!(rating));
+                fields.insert(String::from("bot"), json!(kind == "bot"));
             }
             from_json(standing)
         })
@@ -4652,6 +4825,8 @@ fn to_bot_row(row: &PgRow) -> Result<BotRow, StoreError> {
         active_hours: i32::from(get::<i16>(row, "active_hours")?),
         decks: json_col(row, "decks")?,
         decks_catalog_version: get(row, "decks_catalog_version")?,
+        trio: trio_or_null(get::<Option<Value>>(row, "trio")?.as_ref())?,
+        trio_catalog_version: get(row, "trio_catalog_version")?,
         created_at: ms_of(get(row, "created_at")?),
         retired_at: ms_or_null(get(row, "retired_at")?),
         rating: get::<Option<f64>>(row, "rating")?.unwrap_or(RATING_START),
@@ -4664,8 +4839,8 @@ pub async fn bots_list(t: &mut PgTx<'_>) -> Result<Vec<BotRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(
         "select b.profile_id, b.strength, b.speed, b.persona, b.active_from_hour, b.active_hours,
-                b.decks, b.decks_catalog_version, b.retired_at, p.created_at, p.current_match_id,
-                r.rating
+                b.decks, b.decks_catalog_version, b.trio, b.trio_catalog_version, b.retired_at,
+                p.created_at, p.current_match_id, r.rating
            from public.bots b
            join public.profiles p on p.id = b.profile_id
            left join public.bot_ratings r on r.bot_id = b.profile_id::text
@@ -4781,19 +4956,37 @@ pub async fn bots_set_decks(
     Ok(())
 }
 
-/// R1453: the bot is locked first (free: in no match, not retired), then the ticket claimed
-/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
-/// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
-/// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
-/// match.
-pub async fn tickets_claim_for_bot(
+pub async fn bots_set_trio(
     t: &mut PgTx<'_>,
-    ticket_id: &str,
-    bot_id: &str,
-    match_id: &str,
-    at: i64,
-) -> Result<bool, StoreError> {
+    profile_id: &str,
+    trio: &FrozenTrio,
+    catalog_version: &str,
+) -> Result<(), StoreError> {
     run_as(t, None).await?;
+    let done = sqlx::query(
+        "update public.bots set trio = $2::jsonb, trio_catalog_version = $3::text
+          where profile_id = $1::uuid",
+    )
+    .bind(profile_id)
+    .bind(json(trio)?)
+    .bind(catalog_version)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no bot {profile_id}")));
+    }
+    Ok(())
+}
+
+/// R1453, R641000: locks the bot when it is free, answering whether it is: in no match, not
+/// retired (the row lock on its profile and its `bots` row, which every claim of a bot takes first)
+/// and a side of no series that is not over. The series check is a statement of its own, run after
+/// the lock is held: under READ COMMITTED each statement reads a fresh snapshot, so it sees the
+/// series a claim that held the lock first committed (`tickets_claim_for_bot_series` puts the bot
+/// in no match, so the profile's row alone cannot say it is taken). One statement doing both would
+/// read the series as they stood before it waited for the lock.
+async fn lock_free_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<bool, StoreError> {
     let bot = sqlx::query(
         "select p.id
            from public.profiles p
@@ -4809,12 +5002,45 @@ pub async fn tickets_claim_for_bot(
     if bot.is_none() {
         return Ok(false);
     }
-    let claimed = sqlx::query(
-        "update public.tickets set status = 'claimed', claimed_at = now()
-          where id = $1::uuid and status = 'queued'
-          returning id",
+    let held = sqlx::query(
+        "select 1 as held
+           from public.series
+          where status <> 'over' and (p1_profile_id = $1::uuid or p2_profile_id = $1::uuid)
+          limit 1",
     )
+    .bind(bot_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(held.is_none())
+}
+
+/// R1453: the bot is locked first (free: `lock_free_bot`), then the ticket claimed
+/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
+/// written, the ticket linked to it and the bot put in it. Either step finding nothing answers
+/// false and writes nothing. The skeleton's bot deck is empty until `matches_create` writes the
+/// match.
+pub async fn tickets_claim_for_bot(
+    t: &mut PgTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if !lock_free_bot(t, bot_id).await? {
+        return Ok(false);
+    }
+    // R640002: stamped with the sweep's clock, as `tickets_claim_pair` stamps a pair.
+    let claimed = sqlx::query(concat!(
+        "update public.tickets set status = 'claimed', claimed_at = ",
+        ts!("$2"),
+        "
+          where id = $1::uuid and status = 'queued'
+          returning id"
+    ))
     .bind(ticket_id)
+    .bind(at)
     .fetch_optional(&mut **t)
     .await
     .map_err(db_error)?;
@@ -4856,8 +5082,70 @@ pub async fn tickets_claim_for_bot(
     Ok(true)
 }
 
-/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: in no match, not
-/// retired), then the `open` skeleton written for the finished match's two players and the bot put
+/// R641000: `tickets_claim_for_bot` for a `bo3` ticket: the bot locked first (free:
+/// `lock_free_bot`), then the ticket claimed, then game 1's `open` skeleton written and the ticket
+/// linked to it, but the bot put in no match. The series the caller writes in this transaction is
+/// what holds it: `lock_free_bot`'s series check keeps every other claim off it, and with no
+/// `current_match_id` to find it by, `bots_release_stale_starts` leaves game 1's skeleton alone
+/// through the pick phase.
+pub async fn tickets_claim_for_bot_series(
+    t: &mut PgTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if !lock_free_bot(t, bot_id).await? {
+        return Ok(false);
+    }
+    // R640002: stamped with the sweep's clock, as `tickets_claim_pair` stamps a pair.
+    let claimed = sqlx::query(concat!(
+        "update public.tickets set status = 'claimed', claimed_at = ",
+        ts!("$2"),
+        "
+          where id = $1::uuid and status = 'queued' and mode = 'bo3'
+          returning id"
+    ))
+    .bind(ticket_id)
+    .bind(at)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if claimed.is_none() {
+        return Ok(false);
+    }
+    sqlx::query(concat!(
+        "insert into public.matches (
+             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
+             ceiling_at, created_at)
+           select $3::uuid, 'open', '', a.profile_id, $2::uuid, a.frozen_deck, '[]'::jsonb,
+                  a.catalog_version, ",
+        ts!("$4"),
+        ", ",
+        ts!("$4"),
+        "
+             from public.tickets a
+            where a.id = $1::uuid"
+    ))
+    .bind(ticket_id)
+    .bind(bot_id)
+    .bind(match_id)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    sqlx::query("update public.tickets set match_id = $2::uuid where id = $1::uuid")
+        .bind(ticket_id)
+        .bind(match_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(true)
+}
+
+/// R639000: `tickets_claim_for_bot` with no ticket: the bot is locked (free: `lock_free_bot`),
+/// then the `open` skeleton written for the finished match's two players and the bot put
 /// in it. A bot that is not free answers false and writes nothing. The skeleton's decks are empty
 /// until `matches_create` writes the match; a start that never comes leaves it to
 /// `bots_release_stale_starts`.
@@ -4870,19 +5158,7 @@ pub async fn bots_claim_for_rematch(
     at: i64,
 ) -> Result<bool, StoreError> {
     run_as(t, None).await?;
-    let bot = sqlx::query(
-        "select p.id
-           from public.profiles p
-           join public.bots b on b.profile_id = p.id
-          where p.id = $1::uuid and p.kind = 'bot' and p.current_match_id is null
-            and b.retired_at is null
-          for update of p, b",
-    )
-    .bind(bot_id)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    if bot.is_none() {
+    if !lock_free_bot(t, bot_id).await? {
         return Ok(false);
     }
     sqlx::query(concat!(
@@ -4979,6 +5255,20 @@ pub async fn results_count_active_humans(t: &mut PgTx<'_>, since: i64) -> Result
     .await
     .map_err(db_error)?;
     get(&row, "active")
+}
+
+/// R640002: the results that ended at or after `since`, games against a bot included.
+pub async fn results_count_since(t: &mut PgTx<'_>, since: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select count(*) as games from public.results where ended_at >= ",
+        ts!("$1")
+    ))
+    .bind(since)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    get(&row, "games")
 }
 
 /// R611's row, and R262's rate-once guard: `rated_games_pkey` refuses a second row for the same
@@ -5100,6 +5390,105 @@ pub async fn player_stats_put(
     .bind(profile_id)
     .bind(json(stats)?)
     .bind(is_private)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Consent on the account (R757000, R757001, migration 0034). No `app.*` function: each table's
+// one rule is "the first row stands", which its primary key and `on conflict do nothing` say.
+// ---------------------------------------------------------------------------
+
+pub async fn consent_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<ConsentRow, StoreError> {
+    let mut consent = ConsentRow {
+        profile_id: profile_id.to_string(),
+        age_checked_at: None,
+        age_min: None,
+        terms: Vec::new(),
+    };
+    if !is_uuid(profile_id) {
+        return Ok(consent);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let age = sqlx::query("select min_age, passed_at from public.age_checks where profile_id = $1::uuid")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    if let Some(row) = age {
+        consent.age_min = Some(i32::from(get::<i16>(&row, "min_age")?));
+        consent.age_checked_at = Some(ms_of(get(&row, "passed_at")?));
+    }
+    let rows = sqlx::query(
+        "select terms_version, source, accepted_at from public.terms_acceptances
+          where profile_id = $1::uuid
+          order by accepted_at, terms_version",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in rows {
+        consent.terms.push(TermsAcceptanceRow {
+            version: get(&row, "terms_version")?,
+            source: get::<String>(&row, "source")?.parse::<TermsSource>()?,
+            accepted_at: ms_of(get(&row, "accepted_at")?),
+        });
+    }
+    Ok(consent)
+}
+
+pub async fn consent_record_age(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    min_age: i32,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    let min_age = i16::try_from(min_age).map_err(|_| StoreError::Other(format!("min_age {min_age}")))?;
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.age_checks (profile_id, min_age, passed_at)
+         values ($1::uuid, $2::smallint, ",
+        ts!("$3"),
+        ")
+         on conflict (profile_id) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(min_age)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn consent_record_terms(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    version: &str,
+    source: TermsSource,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.terms_acceptances (profile_id, terms_version, source, accepted_at)
+         values ($1::uuid, $2::text, $3::text, ",
+        ts!("$4"),
+        ")
+         on conflict (profile_id, terms_version) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(version)
+    .bind(source.as_str())
     .bind(at)
     .execute(&mut **t)
     .await
@@ -5273,9 +5662,10 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 //    `ranked_game` can read back a null where the port types a profile id. TS handed that null on in
 //    a string-typed slot; a Rust `String` cannot hold it, so a deleted seat reads back as the empty
 //    string (a match's second seat excepted: `to_match` refuses a row with no `p2_profile_id`, as
-//    TS's did). The in-memory store keeps the id (it has no foreign keys). Nothing reads a finished
-//    match's seats back, and a live match or series cannot lose a seat: the delete is refused, by
-//    constraint here and by `DELETE /api/account` first.
+//    TS's did, except for a replay's read, `replay_row`, R768). The in-memory store keeps the id (it
+//    has no foreign keys). Only a replay reads a finished match's seats back, and a live match or
+//    series cannot lose a seat: the delete is refused, by constraint here and by
+//    `DELETE /api/account` first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
 //    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
 //    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration

@@ -7,6 +7,7 @@
 
 import type { ClockLine, ClockReadout, ClockSide } from "./Clock.tsx";
 import { FUSE_EDGES, MS_PER_SECOND, PERCENT, TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "./clockConstants.ts";
+import { t } from "../i18n/i18n.ts";
 
 /** R439: none, the final 30 seconds, or the last 10 of them. */
 export type TurnClockUrgencyLevel = "none" | "final" | "last10";
@@ -93,6 +94,9 @@ export function urgencyLabel(side: ClockSide): string {
 
 /** The urgent readout's accessible name: "Your turn ends in 12 seconds". */
 export function urgencyAccessibleName(side: ClockSide, seconds: number): string {
-  const unit = seconds === 1 ? "second" : "seconds";
-  return `${urgencyLabel(side)} ends in ${String(seconds)} ${unit}`;
+  const count = String(seconds);
+  if (side === "you") {
+    return seconds === 1 ? t("Your turn ends in {count} second", { count }) : t("Your turn ends in {count} seconds", { count });
+  }
+  return seconds === 1 ? t("Their turn ends in {count} second", { count }) : t("Their turn ends in {count} seconds", { count });
 }
