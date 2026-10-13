@@ -2008,9 +2008,7 @@
       "run_id": "38361104353",
       "started_at": "2026-10-13T07:12:07Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6140233662"
-      ]
+      "taken_asks": []
     },
     "562": {
       "action": "build",
