@@ -421,6 +421,11 @@ describe("B17 SOUND_CUES is total over GameEvent types", () => {
     }
   });
 
+  it("an unknown event type yields no sound cues", () => {
+    // Issue #769: a tab left open on an older build can receive a type a newer patch added.
+    expect(cuesFor({ type: "not_a_real_event" } as unknown as GameEvent, ctx())).toEqual([]);
+  });
+
   it("B17 each unconditional row returns exactly its headline sound, at delay 0", () => {
     for (const type of UNCONDITIONAL) {
       expect(shape(SAMPLES[type]), type).toEqual([sfx(HEADLINE[type] ?? "notify")]);
