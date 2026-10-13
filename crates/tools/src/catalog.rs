@@ -1401,7 +1401,7 @@ pub fn check_catalog(catalog: &Object) -> CatalogReport {
 /// One string literal the scanner is inside, across lines: a plain `"…"` (with escapes) or a raw
 /// `r#"…"#` closed by that many `#`s.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Quote {
+pub(crate) enum Quote {
     Plain,
     Raw(usize),
 }
@@ -1409,7 +1409,7 @@ enum Quote {
 /// An identifier character, which a raw string's `r` may not follow.
 /// A raw string opening at `i` (`r"`, `r#"`, `br"`, `cr##"` …): its length up to and including
 /// the quote, and its `#` count.
-fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
+pub(crate) fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
     if i > 0 && is_ident_char(chars[i - 1]) {
         return None;
     }
@@ -1424,7 +1424,7 @@ fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
 
 /// The length of a character literal at `i` (`'x'`, `'\n'`, `'\''`, `'\u{2028}'`), or 1 for a
 /// lone `'` (a lifetime or a label).
-fn char_literal_length(chars: &[char], i: usize) -> usize {
+pub(crate) fn char_literal_length(chars: &[char], i: usize) -> usize {
     match chars.get(i + 1) {
         Some('\\') => chars
             .iter()
