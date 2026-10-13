@@ -143,6 +143,13 @@ The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `re
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
 
+To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
+an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
+installed on first use into `.cache/` and named in no manifest, so no one else pays for it.
+`.claude/skills/ui-walkthrough/SKILL.md` is the walkthrough: serving the client, the routes, setting a
+board up through `window.__jackioh`, waiting for animations, the viewports and the screenshots. It is
+for work on what a player sees, and nothing else.
+
 The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
 device and, signed in, the account's online replays (first page), and opens one in the replay player.
 Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
