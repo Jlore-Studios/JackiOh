@@ -20,7 +20,6 @@ pub const ID: &str = "classicplus-048";
 // (one tag, never itself, R387); a full hand burns it; hidden from the opponent (R97); radiant 0/6.
 #[cfg(test)]
 mod tests {
-    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

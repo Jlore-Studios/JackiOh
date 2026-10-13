@@ -9,6 +9,7 @@ pub const ID: &str = "classicplus-019-5";
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::effects::go_berserk;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
