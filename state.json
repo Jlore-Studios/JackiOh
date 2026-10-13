@@ -4781,11 +4781,13 @@
         "by": "`claude` (strong)",
         "sha": "9f5d5ef153dda12d1dd964fb554a3ee9e758148b"
       },
+      "closed_at": "2026-10-13T14:38:15Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-13T13:19:13Z",
       "issue": 511,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
