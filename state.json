@@ -4391,9 +4391,7 @@
     },
     "760": {
       "action": "build",
-      "asks": [
-        "c:6149025902"
-      ],
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-13T06:55:58Z",
@@ -4421,14 +4419,16 @@
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "Issue #760's plan touches only files under bot/, which the night bot is forbidden to change (CLAUDE.md, .harness/config.json forbidden_paths, deliver refuses the push). Should a person build this \u2014 please add the human label as the plan's Open questions ask \u2014 or is there an explicit exception allowing the bot to edit bot/ for this issue?",
       "queued_at": "2026-10-13T15:26:11Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "38359592872",
-      "started_at": "2026-10-13T06:57:06Z",
+      "run_id": "38433036630",
+      "started_at": "2026-10-13T16:45:43Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:6149025902"
+      ]
     },
     "761": {
       "failures": 0,
@@ -5105,9 +5105,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-13T16:44:48Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38432877958",
-    "what": "build #785 on claude-3"
+    "at": "2026-10-13T16:45:43Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38433036630",
+    "what": "build #760 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-13T16:43:08Z",
