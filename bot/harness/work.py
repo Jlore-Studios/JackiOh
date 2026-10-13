@@ -35,6 +35,7 @@ from harness import disk as disk_mod
 from harness import memory as memory_mod
 from harness import easy as easy_mod
 from harness import gates as gates_mod
+from harness import human as human_mod
 from harness import journal as journal_mod
 from harness import prompts, review_rule, verdicts
 from harness import split as split_mod
@@ -1423,8 +1424,22 @@ class Worker:
         handoff and queues the item to build from it."""
         self._prepare(merge_main=False, install=False)
         self._planning()
-        self.result.update(status="planned", reason=f"planned on {self.seat_for('plan').model}")
+        if not self._needs_a_person():
+            self.result.update(status="planned",
+                               reason=f"planned on {self.seat_for('plan').model}")
         self._finish()
+
+    def _needs_a_person(self) -> bool:
+        """A plan that leaves the bot nothing it may build (#793, `human.plan_needs`): the run
+        ends `blocked`, flagged `human_required`, before any builder is spent on it, and the
+        plan goes into the description for the person who does it."""
+        why = human_mod.plan_needs(self.plan_text, self.cfg.forbidden_paths)
+        if not why:
+            return False
+        self._came_of_it("its plan leaves nothing the bot may do: a person must")
+        self.result.update(status="blocked", human_required=True, question=why,
+                           reason="its plan leaves nothing the bot may do")
+        return True
 
     def _build_pass(self, cycle: int, role: str, prompt: str,
                     why: str = "") -> tuple[Any, dict[str, Any]]:
@@ -1456,7 +1471,10 @@ class Worker:
         if report.status == "blocked":
             self._save_wip("the builder needs a decision")
             self.result.update(status="blocked", question=report.question, report=report.body,
-                               reason="the builder needs a person to decide something")
+                               reason=("only a person can do it, its builder says"
+                                       if report.human_required else
+                                       "the builder needs a person to decide something"),
+                               human_required=report.human_required)
             self._finish()
             return None, entry
         self._commit(f"{COMMIT_PREFIX}: {role} pass {cycle} for #{self.plan['number']}")
@@ -1530,7 +1548,7 @@ class Worker:
         self.carry_build, self.carry_review = self._cleared_notes(conflicts)
         if self.plan_seat is not None:
             self._planning()
-            if self._rated_out():
+            if self._needs_a_person() or self._rated_out():
                 self._finish()
                 return
         if (self._rounds_spent() >= self._cycles_cap()
@@ -1730,6 +1748,7 @@ class Worker:
         paths = ", ".join(f"`{p}`" for p in self.put_back[:8])
         self.result.update(
             status="blocked", reason="the change was all in paths the bot may not change",
+            human_required=True,
             question=(f"Everything this run changed ({paths}) is in paths the bot may not "
                       "change, such as `bot/`, `.harness/` and `.github/`, so the harness put it "
                       "back and there is nothing to deliver. A person has to make this change, or "
@@ -1847,7 +1866,7 @@ class Worker:
         assert self.wt is not None
         if self.plan_seat is not None:
             self._planning()
-            if self._rated_out():
+            if self._needs_a_person() or self._rated_out():
                 self._finish()
                 return
         self.check()
@@ -1938,9 +1957,11 @@ class Worker:
         wt = worktree_add(self.repo, path, "bot-suggest", self.base_ref)
         self.check()
         prompt = self.render("suggest", repo=self.cfg.repo, count=count,
-                             existing=self.plan.get("existing") or data("(none)", "Issues"))
+                             existing=self.plan.get("existing") or data("(none)", "Issues"),
+                             declined=self.plan.get("declined") or data(
+                                 "(none)", "Suggestions that came to nothing"))
         result = self.call("suggest", prompt, wt.cwd, reader=True,
-                           why="propose improvements while the queue is empty")
+                           why="propose improvements while a lane has nothing to start")
         found = verdicts.suggestions(result.text, count)
         self.result.update(
             status="suggested",

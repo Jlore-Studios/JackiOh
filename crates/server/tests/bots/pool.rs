@@ -27,8 +27,8 @@ use jackioh_server::api::catalog::Catalog;
 use jackioh_server::api::queue::run_matchmaker;
 use jackioh_server::app::now_ms;
 use jackioh_server::bots::pool::{
-    PoolChange, draw_decks, draw_new_bot, draw_trio, plan_pool, pool_target, refresh_pool,
-    release_stale_starts,
+    PoolChange, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_pool, pool_target,
+    refresh_pool, release_stale_starts,
 };
 use jackioh_server::config::{
     BOT_ACCOUNT_AGE_MAX_DAYS, BOT_ACCOUNT_AGE_MIN_DAYS, BOT_ACTIVE_HOURS_MAX, BOT_ACTIVE_HOURS_MIN,
@@ -107,6 +107,20 @@ fn record(id: &str, source: &str, mode: &str, pilot: &str, deck: &[String], patc
         }
     });
     serde_json::from_value(value).expect("a well-formed game record")
+}
+
+/// `record`, with `p1` winning or losing.
+fn scored(id: &str, deck: &[String], patch: &str, won: bool) -> GameRecord {
+    let mut value = serde_json::to_value(record(id, "live", "bo1", "human", deck, patch)).expect("a record");
+    value["game"]["winner"] = json!(if won { "p1" } else { "p2" });
+    serde_json::from_value(value).expect("a well-formed game record")
+}
+
+/// `games` live human Best-of-1 games of `deck`, `wins` of them won.
+fn games_of(name: &str, deck: &[String], patch: &str, wins: usize, games: usize) -> Vec<GameRecord> {
+    (0..games)
+        .map(|n| scored(&format!("{name}-{n}"), deck, patch, n < wins))
+        .collect()
 }
 
 #[test]
@@ -240,9 +254,9 @@ async fn r1454_decks_prefer_human_bo1_lists_legal() {
 
     for k in 0..10 {
         let seed = format!("decks-{k}");
-        let decks = draw_decks(&seed, &records, &app.catalog);
+        let decks = draw_decks(&seed, &records, &app.catalog, 0.0);
         assert_eq!(
-            draw_decks(&seed, &records, &app.catalog),
+            draw_decks(&seed, &records, &app.catalog, 0.0),
             decks,
             "the same seed deals the same decks"
         );
@@ -266,7 +280,7 @@ async fn r1454_decks_prefer_human_bo1_lists_legal() {
 
     // With no human list at all, every deck is one All Random would deal a player (R1453: no shadow
     // ban and no soft gate, which would tell the bot's deck from a person's), and still legal.
-    let decks = draw_decks("decks-none", &[], &app.catalog);
+    let decks = draw_decks("decks-none", &[], &app.catalog, 0.0);
     assert!((BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()));
     assert!(decks.iter().all(|deck| queueable(&app.catalog, &deck.cards)));
     let dealt: Vec<Vec<String>> = (0..BOT_DECK_DRAW_ATTEMPTS)
@@ -325,7 +339,7 @@ async fn r1454_decks_skip_a_list_no_player_could_queue() {
     records.push(record("live-good", "live", "bo1", "human", &legal, &patch));
 
     for k in 0..10 {
-        let decks = draw_decks(&format!("decks-legal-{k}"), &records, &app.catalog);
+        let decks = draw_decks(&format!("decks-legal-{k}"), &records, &app.catalog, 0.0);
         assert!(
             (BOT_DECKS_MIN..=BOT_DECKS_MAX).contains(&decks.len()),
             "{} decks",
@@ -576,9 +590,9 @@ async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
 
     for k in 0..10 {
         let seed = format!("trio-{k}");
-        let trio = draw_trio(&seed, &own, &app.catalog).expect("a trio");
+        let trio = draw_trio(&seed, &own, &app.catalog, 0.0).expect("a trio");
         assert_eq!(
-            draw_trio(&seed, &own, &app.catalog),
+            draw_trio(&seed, &own, &app.catalog, 0.0),
             Some(trio.clone()),
             "the same seed, the same trio"
         );
@@ -609,7 +623,7 @@ async fn r641000_a_trio_takes_the_bot_s_own_disjoint_decks_first() {
     }
 
     // A bot with no deck of its own is dealt all three.
-    let trio = draw_trio("trio-none", &[], &app.catalog).expect("a trio");
+    let trio = draw_trio("trio-none", &[], &app.catalog, 0.0).expect("a trio");
     let [first, second, third] = trio_cards(&trio);
     assert!(
         first
@@ -659,4 +673,69 @@ async fn r641000_refresh_deals_every_active_bot_a_trio_once_per_catalog() {
         dealt.trio_catalog_version.as_deref(),
         Some(app.catalog.version.as_str())
     );
+}
+
+#[test]
+fn r750000_bot_target_strength_runs_from_the_weakest_to_the_strongest() {
+    assert_eq!(bot_target_strength(0), 0.0);
+    assert_eq!(bot_target_strength(BOT_STRENGTHS.len() - 1), 1.0);
+    assert_eq!(
+        bot_target_strength(BOT_STRENGTHS.len()),
+        0.0,
+        "an index no strength holds"
+    );
+    let shares: Vec<f64> = (0..BOT_STRENGTHS.len()).map(bot_target_strength).collect();
+    assert!(
+        shares.windows(2).all(|pair| pair[0] <= pair[1]),
+        "a stronger bot never leans less: {shares:?}"
+    );
+}
+
+#[tokio::test]
+async fn r750000_ranked_lists_deal_in_the_order_of_the_bots_strength() {
+    let app = empty_test_app().await;
+    let pool = playable();
+    let size = deck_size();
+    let best: Vec<String> = pool[..size].to_vec();
+    let worse: Vec<String> = pool[size..size * 2].to_vec();
+    let thin: Vec<String> = pool[size * 2..size * 3].to_vec();
+    let patch = app.catalog.version.clone();
+    // The worse list's games come first, and the thin list won the one game it played: neither goes
+    // ahead of the list that won 25 of its 30.
+    let mut records = games_of("worse", &worse, &patch, 5, 30);
+    records.push(scored("thin", &thin, &patch, true));
+    records.extend(games_of("best", &best, &patch, 25, 30));
+    // The strongest bot takes the best list first and the weakest the worst; the thin list follows.
+    for (strength, first, second) in [(1.0, &best, &worse), (0.0, &worse, &best)] {
+        for k in 0..10 {
+            let decks = draw_decks(&format!("ranked-{k}"), &records, &app.catalog, strength);
+            assert_eq!(&decks[0].cards, first, "strength {strength}, seed {k}");
+            assert_eq!(&decks[1].cards, second, "strength {strength}, seed {k}");
+            if let Some(third) = decks.get(2) {
+                assert_eq!(third.cards, thin, "strength {strength}, seed {k}");
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn r750000_below_threshold_lists_fall_back_to_the_shuffle() {
+    let app = empty_test_app().await;
+    let pool = playable();
+    let size = deck_size();
+    let first: Vec<String> = pool[..size].to_vec();
+    let second: Vec<String> = pool[size..size * 2].to_vec();
+    let patch = app.catalog.version.clone();
+    // Each list one game short of a ranking: the seed's shuffle decides, as it did before any list
+    // had its games.
+    let mut records = games_of("first", &first, &patch, 19, 19);
+    records.extend(games_of("second", &second, &patch, 0, 19));
+    let mut led: IndexSet<Vec<String>> = IndexSet::new();
+    for k in 0..10 {
+        let decks = draw_decks(&format!("unranked-{k}"), &records, &app.catalog, 1.0);
+        assert!(decks[..2].iter().any(|deck| deck.cards == first), "seed {k}");
+        assert!(decks[..2].iter().any(|deck| deck.cards == second), "seed {k}");
+        led.insert(decks[0].cards.clone());
+    }
+    assert_eq!(led.len(), 2, "both lists lead some seed");
 }

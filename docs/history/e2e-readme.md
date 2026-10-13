@@ -61,6 +61,7 @@ e2e/
   cypress/component/practice-table.cy.tsx  the practice table at the viewports practice is played on, on the M5-T1 fixture board with a hand of 4, 7 and 10 cards
   cypress/component/radiant-marks.cy.tsx  the Radiant pass: the gold mark's weight, underline and contrast on both backgrounds, a reference's tooltip in the detail view, and a computed value inside its rules box
   cypress/component/rematch-buttons.cy.tsx  #477, R672: the result panel's Rematch and Double or nothing at 1280x800 and 390x844, idle, unranked and with an offer each way: 44 px buttons as tall as Back to lobby and on its row, Rematch the panel's gold primary and Double or nothing drawn as the route's other buttons, the incoming offer above and the wait or the note below without widening the panel, all of it on the screen
+  cypress/component/replay-gif.cy.tsx  #513, R513000: a known view's frame plan drawn to a GIF in a worker and on the main thread, decoded by the browser and held to the plan's colours (the palette's, within one per channel) at both shapes, with every card's art showing several colours
   cypress/component/stack-wheel-and-sweeps.cy.tsx  #124: a Stack pile's wheel (the top card forward, the buried cards as backs, shuffled by tap, buttons and keyboard), a sweep's one fog over the swept side and a whole-pile impact's one wave
   fixtures/decks/*.json    scenario decks, named for the spec that uses them; a deck may carry the seat's
                            `handicap` (R180: deckSize, manaBonus, manaCap, extraOpeningCards,

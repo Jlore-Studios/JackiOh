@@ -6,6 +6,7 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
+use jackioh_engine::config::CN_TECH_MIN_GAMES;
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +19,11 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
     temperature: 0.0,
     missed_lethal_chance: 0.0,
 };
+
+/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
+/// decision, 1.0 follows the AI at every decision as it did before the knob.
+pub const AI_SKILL_MIN: f64 = 0.0;
+pub const AI_SKILL_MAX: f64 = 1.0;
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
@@ -419,6 +425,31 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
 /// before the AI is trained on it is listing it here.
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+
+/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AiWinRate {
+    /// The in-deck games a card's row needs before its rate moves its weight (R377's figures).
+    pub min_games: i32,
+    /// The most a card's weight is multiplied by at strength 1 and a 100% rate, above the 1.0 a 50%
+    /// rate keeps.
+    pub max_boost: f64,
+    /// The least a card's weight is multiplied by, however low its rate.
+    pub floor: f64,
+}
+
+/// #750 (R1454): a ladder bot's random decks lean on the cards that win. At `strength` s (0 to 1,
+/// `AiDeckOptions::strength`) a card whose row has at least `min_games` in-deck games has its weight
+/// multiplied by `1 + s × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`;
+/// a card with a thinner row or none, and every card at strength 0, keeps its weight, so a deal with
+/// no strength is the one the seed always dealt. 20 games is CN Tech's floor (`CN_TECH_MIN_GAMES`)
+/// and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under `AI_DECK.themeBoost` (4.0), so a
+/// win rate never outweighs the theme or the curve.
+pub const AI_WIN_RATE: AiWinRate = AiWinRate {
+    min_games: CN_TECH_MIN_GAMES,
+    max_boost: 3.0,
+    floor: 0.25,
+};
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,

@@ -158,9 +158,10 @@ FAKE_MUSE = PRELUDE + textwrap.dedent('''\
         draw("\\x1b7 Muse Code 1.4.2\\x1b8\\r\\n\\u276f \\r\\n")
         if answer() == b"/usage":
             week = "97" if mode == "spent" else "35"
+            current = "100" if mode == "full" else "5"
             draw("\\u2502 Session usage \\u2502\\r\\n"
                  "\\u2502 Subscription \\u00b7 Muse Code High Usage \\u2502\\r\\n"
-                 "\\u2502 Current 5% used \\u00b7 Resets at 6:42 PM \\u2502\\r\\n"
+                 "\\u2502 Current " + current + "% used \\u00b7 Resets at 6:42 PM \\u2502\\r\\n"
                  "\\u2502 Weekly " + week + "% used \\u00b7 Resets Oct 5 at 12:00 AM \\u2502\\r\\n")
         time.sleep(30)
         sys.exit(0)
@@ -169,6 +170,9 @@ FAKE_MUSE = PRELUDE + textwrap.dedent('''\
     print("step 1: reading", file=sys.stderr)
     if mode == "limit":
         print("Error: usage limit reached. Wait for usage to reset at 18:00.", file=sys.stderr)
+        sys.exit(1)
+    if mode in ("full", "broken"):
+        print("Error: the request could not be completed.", file=sys.stderr)
         sys.exit(1)
     print("<!-- bot: {{\\"status\\": \\"done\\", \\"title\\": \\"M\\"}} -->")
     print("report")
@@ -437,6 +441,21 @@ class MuseTests(Base):
         with mock.patch.dict(os.environ, {"FAKE_MODE": "spent", "FAKE_DUMP": str(self.dump)}):
             usage = self.backend().read_usage("the-model")
         self.assertEqual(usage["seven_day"]["utilization"], 0.97)
+
+    def test_a_failed_call_that_ran_a_window_out_is_its_refusal(self):
+        """Muse's caps are 100% (#798), so its own limit ends a call that runs a window out, in
+        words the bot does not know: a failed call whose reading has a window full parks it until
+        that window resets, rather than counting against the item. One with room left does not."""
+        result = self.run_fake(self.backend(), "full")
+        self.assertFalse(result.ok)
+        self.assertEqual(result.usage["five_hour"]["utilization"], 1.0)
+        self.assertTrue(result.rate_limited)
+        self.assertEqual(result.reset_at, result.usage["five_hour"]["resets_at"])
+        broken = self.run_fake(self.backend(), "broken")
+        self.assertFalse(broken.ok)
+        self.assertEqual(broken.usage["five_hour"]["utilization"], 0.05)
+        self.assertFalse(broken.rate_limited)
+        self.assertIsNone(broken.reset_at)
 
     def test_no_panel_is_no_reading(self):
         missing = MuseCli(str(self.tmp / "no-such-muse"))

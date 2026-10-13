@@ -116,6 +116,8 @@ class IdentityCases(unittest.TestCase):
         self.assertIn("`fullsend [notes]`", text)
         self.assertIn("`build`, `oneshot`, `split`, `fullsend` or `revise`", text)
         self.assertNotIn("`suggest`", text)
+        self.assertNotIn("`approve`", text)  # it makes no suggestions to vote on (#796)
+        self.assertIn("I do not know `approve`", commands.help_text(bot, "approve"))
         self.assertIn("`/squishy help`", commands.pointer(bot))
 
 

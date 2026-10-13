@@ -113,7 +113,7 @@ pub fn is_animated(state: &GameState, card: &CardInstance) -> bool {
 }
 
 /// B3.1 rule 2: where an animating card goes — its lane's unit zone when open, else R64's leftmost.
-pub(crate) fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneSlot> {
+fn unit_zone_for(state: &GameState, player: PlayerId, lane: i32) -> Option<ZoneSlot> {
     let same = ZoneSlot {
         player,
         row: Row::Units,

@@ -401,6 +401,7 @@ fn sweep_config(seed: &str, def_id: &str, n: i32, tier: Difficulty, filler: &Fil
 
     let ai = SeatController::Ai {
         budget: Some(AI_GATE_BUDGET),
+        skill: None,
     };
     let greedy = SeatController::Greedy;
     let p1_is_ai = ai_seat == PlayerId::P1;

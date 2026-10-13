@@ -15,7 +15,7 @@ from harness.state import item as state_item
 from harness.trust import Trust
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub
-from tests.support import DAY, NIGHT, make_ctx
+from tests.support import DAY, NIGHT, idle_for, make_ctx
 
 TRUST = "jgoetzmann 3 id:95732896\nhelper 2\n"
 SQUISHY = {"login": "squishy-squooby", "id": 334289562}
@@ -248,9 +248,25 @@ class NightRunTests(Base):
         self.ctx.store.update(lambda s: s.update(last_sweep={"since": iso(NIGHT - timedelta(days=1))}))
 
     def test_a_due_survey_counts_as_work_too(self):
+        # #797: the first tick with a free lane and nothing to start starts the clock; once it has
+        # run 30 minutes, the survey is work and a run starts for it.
         self.at_night()
         sweep.sweep(self.ctx)
+        self.assertEqual(self.ctx.store.load()["suggest"]["idle_since"], iso(NIGHT))
+        self.assertEqual(len(self.gh.dispatches), 0)
+        self.ctx.clock_fn.at = NIGHT + timedelta(minutes=29)
+        sweep.sweep(self.ctx)
+        self.assertEqual(len(self.gh.dispatches), 0)
+        self.ctx.clock_fn.at = NIGHT + timedelta(minutes=30)
+        sweep.sweep(self.ctx)
         self.assertEqual(len(self.gh.dispatches), 1)
+
+    def test_queued_work_for_a_free_lane_stops_the_survey_clock(self):
+        self.at_night()
+        sweep.sweep(self.ctx)
+        self.gh.add_issue(3, labels=(LABEL_BUILD,))
+        sweep.sweep(self.ctx)
+        self.assertIsNone(self.ctx.store.load()["suggest"]["idle_since"])
 
     def test_queued_work_in_the_window_with_no_run_going_starts_one(self):
         self.at_night()

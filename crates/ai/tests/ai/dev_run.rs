@@ -68,10 +68,12 @@ mod the_ais_development_run_9_11 {
             config.controllers,
             PerPlayer::new(
                 SeatController::Ai {
-                    budget: Some(AI_BUDGET)
+                    budget: Some(AI_BUDGET),
+                    skill: None,
                 },
                 SeatController::Ai {
-                    budget: Some(AI_BUDGET)
+                    budget: Some(AI_BUDGET),
+                    skill: None,
                 },
             )
         );

@@ -22,6 +22,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import { ReplayFailure, replayFailureOf, replayFailureText } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
+import { ShareGif, useGifExport } from "./ShareGif.tsx";
 import { createStepCache } from "./steps.ts";
 import "./replay.css";
 
@@ -121,6 +122,7 @@ export default function ReplayPlayer({ source, onLeave }: ReplayPlayerProps): Re
   const [fx] = useFxSettings();
   const busy = useBoardBusy(root);
   const current = at?.step.step ?? 0;
+  const gif = useGifExport(cache, current);
 
   /** Shows step `index` when its page is in, now if it is already held. */
   const show = useCallback(
@@ -340,7 +342,12 @@ export default function ReplayPlayer({ source, onLeave }: ReplayPlayerProps): Re
         replay
         resultForm="chip"
         boardRail={back}
-        boardNotice={controls}
+        boardNotice={
+          <>
+            {controls}
+            <ShareGif gif={gif} />
+          </>
+        }
       />
     </div>
   );

@@ -305,7 +305,9 @@ pub fn reveal_can_complete(state: &GameState, card: &CardInstance) -> bool {
         return false;
     };
     match crate::faces::card_type_of_face(state, &card.def_id, card.radiant) {
-        CardType::Unit => crate::animated::unit_zone_for(state, at.player, at.lane).is_some(),
+        // An open zone, unlocked and unreserved: a Locked one would take the move (R688) but not
+        // this reveal. With one open, the move lands in it (its lane's, else R64's leftmost).
+        CardType::Unit => crate::zones::first_free_zone(state, at.player, Row::Units).is_some(),
         CardType::Spell => {
             let mut probe = card.clone();
             if let Some(set) = probe.set_as.as_mut() {

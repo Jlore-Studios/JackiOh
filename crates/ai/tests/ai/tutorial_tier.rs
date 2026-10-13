@@ -121,6 +121,7 @@ fn tier_game(tier: Tier, n: i32) -> MatchConfig {
     *handicaps.slot(ai_seat) = Some(ai_handicap);
     let ai = SeatController::Ai {
         budget: Some(AI_GATE_BUDGET),
+        skill: None,
     };
     MatchConfig {
         seed,
@@ -240,7 +241,8 @@ mod r290_the_tutorial_tier_by_play {
                 assert_eq!(
                     config.controllers[ai_seat],
                     SeatController::Ai {
-                        budget: Some(AI_GATE_BUDGET)
+                        budget: Some(AI_GATE_BUDGET),
+                        skill: None,
                     }
                 );
                 let human_handicap = config
