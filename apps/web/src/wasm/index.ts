@@ -10,49 +10,32 @@
 // the engine's `GameState` as plain JSON; the client keeps it behind its opaque `EngineState` brand
 // and never reads it (CLAUDE.md rule 7, SPEC §10.8).
 //
+// THE STRINGS. The module is an emscripten `MODULARIZE` factory (`crates/wasm`): its boundary is C,
+// so a string crosses as a pointer. `put` copies one into the module (`stringToNewUTF8`, on the one
+// emscripten heap Rust's allocator shares, so `jackioh_free` frees argument buffers and answers
+// alike); `take` reads an answer back (`UTF8ToString`) and frees it. Every call runs inside
+// `withArgs`, which frees every argument pointer after, thrown or returned. A binding that would
+// have thrown answers NULL instead, and `take` throws the message the binding stowed for
+// `jackioh_last_error` — which already names the binding, as the old thrown `Error` did.
+//
 // LOADING. Nothing here works until the module is instantiated:
-//   - `loadWasm()` fetches and instantiates it (idempotent; one fetch however many callers). The page
-//     awaits it in `main.tsx` before the first render, because the deck builder calls the validator
-//     synchronously; the practice worker awaits it before it handles a message.
-//   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a file
-//     URL, so `test/setup.ts` reads `pkg/jackioh_wasm_bg.wasm` from disk and hands it over.
+//   - `loadWasm()` fetches its bytes (as an asset beside the glue, in the page's bundle and in the
+//     practice worker's alike) and instantiates it (idempotent; one fetch however many callers).
+//     The page awaits it in `main.tsx` before the first render, because the deck builder calls the
+//     validator synchronously; the practice worker awaits it before it handles a message.
+//   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a
+//     file URL, so `test/setup.ts` reads `pkg/jackioh_wasm.wasm` from disk and hands it over.
 // Both call the module's own `init()` once, which registers the catalog and the card scripts with the
 // engine (what TypeScript's `registerAll()` did; nothing is left for the web to register).
 //
 // ERRORS. Where the TypeScript engine threw (a deck `createGame` refuses, a malformed argument), the
-// binding throws an `Error` with the engine's message. `reduce` and `beginGame` never throw on an
-// illegal action: the refusal is `error` on the result. A panic is an engine invariant broken; the
-// panic hook prints it on the console, and the call throws "the engine panicked".
+// binding answers NULL and the wrapper throws an `Error` with the engine's message. `reduce` and
+// `beginGame` never throw on an illegal action: the refusal is `error` on the result. A panic is an
+// engine invariant broken; the panic hook prints it on the console, and the call throws "the engine
+// panicked".
 
-import initWasm, {
-  ai_decide,
-  ai_to_act,
-  begin_game,
-  build_ai_deck,
-  catalog,
-  catalog_version,
-  choose_action,
-  constants,
-  craft_preview,
-  create_game,
-  deal_emote_hand,
-  engine_tables,
-  find_instance,
-  fold as fold_log,
-  hash_state,
-  init as init_engine,
-  initSync,
-  last_board_for,
-  legal_actions,
-  preview_sets,
-  reduce as reduce_action,
-  replay_open,
-  replay_page,
-  seat_played_by,
-  seat_to_act,
-  validator as validator_call,
-  view_for,
-} from "./pkg/jackioh_wasm.js";
+import createModule from "./pkg/jackioh_wasm.js";
+import type { JackiohWasmModule } from "./pkg/jackioh_wasm.js";
 
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
@@ -70,13 +53,15 @@ import type { Decision, SearchBudget } from "../wire/ai.ts";
 // loading
 // ---------------------------------------------------------------------------------------------
 
+let mod: JackiohWasmModule | null = null;
 let loaded = false;
 let loading: Promise<void> | null = null;
 const onLoad: (() => void)[] = [];
 
 function ready(): void {
   if (loaded) return;
-  init_engine();
+  if (mod === null) throw new Error("the engine is not instantiated");
+  mod._init();
   loaded = true;
   for (const run of onLoad.splice(0)) run();
 }
@@ -101,23 +86,35 @@ export function loadWasm(): Promise<void> {
   if (loading === null) {
     // The literal `new URL(…, import.meta.url)` is what Vite recognises and emits as an asset, in
     // the page's bundle and in the practice worker's alike.
-    loading = initWasm({ module_or_path: new URL("./pkg/jackioh_wasm_bg.wasm", import.meta.url) })
-      .then(() => {
-        ready();
-      })
-      .catch((cause: unknown) => {
-        loading = null;
-        throw cause;
-      });
+    loading = (async (): Promise<void> => {
+      const response = await fetch(new URL("./pkg/jackioh_wasm.wasm", import.meta.url));
+      if (!response.ok) throw new Error(`the engine could not be fetched: ${response.status}`);
+      mod = await createModule({ wasmBinary: await response.arrayBuffer() });
+      ready();
+    })().catch((cause: unknown) => {
+      loading = null;
+      throw cause;
+    });
   }
   return loading;
 }
 
-/** Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent. */
-export function loadWasmSync(bytes: BufferSource): void {
-  if (loaded) return;
-  initSync({ module: bytes });
-  ready();
+/**
+ * Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent: a second call
+ * resolves at once. Async: emscripten's factory always instantiates asynchronously.
+ */
+export function loadWasmSync(bytes: BufferSource): Promise<void> {
+  if (loaded) return Promise.resolve();
+  if (loading === null) {
+    loading = (async (): Promise<void> => {
+      mod = await createModule({ wasmBinary: bytes });
+      ready();
+    })().catch((cause: unknown) => {
+      loading = null;
+      throw cause;
+    });
+  }
+  return loading;
 }
 
 /** Whether `loadWasm` or `loadWasmSync` has finished. */
@@ -126,17 +123,57 @@ export function wasmLoaded(): boolean {
 }
 
 /** Every call goes through here: a clear error before loading, and a panic named as one. */
-function call<T>(name: string, run: () => T): T {
-  if (!loaded) {
+function call<T>(name: string, run: (m: JackiohWasmModule) => T): T {
+  if (!loaded || mod === null) {
     throw new Error(`the engine is not loaded: await loadWasm() before calling ${name}`);
   }
   try {
-    return run();
+    return run(mod);
   } catch (cause) {
     if (typeof WebAssembly !== "undefined" && cause instanceof WebAssembly.RuntimeError) {
       throw new Error(`the engine panicked in ${name} (the console has its message): ${cause.message}`, { cause });
     }
     throw cause;
+  }
+}
+
+/**
+ * Run `run` with an allocator for argument strings: every pointer it takes is freed after, thrown
+ * or returned, through the module's one free function (see the header: arguments and answers share
+ * the emscripten heap).
+ */
+function withArgs<T>(name: string, run: (m: JackiohWasmModule, put: (value: string) => number) => T): T {
+  return call(name, (m) => {
+    const owned: number[] = [];
+    try {
+      return run(m, (value) => {
+        const ptr = m.stringToNewUTF8(value);
+        owned.push(ptr);
+        return ptr;
+      });
+    } finally {
+      for (const ptr of owned) m._jackioh_free(ptr);
+    }
+  });
+}
+
+/**
+ * Read the answer at `ptr` and free it. NULL is the binding's failure: throw the message it stowed
+ * for `jackioh_last_error`, which names the binding already.
+ */
+function take(m: JackiohWasmModule, ptr: number): string {
+  if (ptr === 0) {
+    throw new Error(m.UTF8ToString(m._jackioh_last_error()));
+  }
+  const text = m.UTF8ToString(ptr);
+  m._jackioh_free(ptr);
+  return text;
+}
+
+/** A status answer: 0 is success, anything else throws the stowed message. */
+function check(m: JackiohWasmModule, status: number): void {
+  if (status !== 0) {
+    throw new Error(m.UTF8ToString(m._jackioh_last_error()));
   }
 }
 
@@ -148,13 +185,10 @@ function json(value: unknown): string {
 const STATE_MARK = "\u00A0";
 
 /**
- * A state as it crosses: `["\u00A0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
- * `state_of`). wasm-bindgen's glue copies a string into the module one character at a time up to its
- * first non-ASCII character and hands the rest to `TextEncoder.encodeInto`, and a state's JSON is all
- * ASCII, so its ~80 KB went through the per-character loop on every call (0.18 ms of a 0.24 ms crossing,
- * measured in Node). The no-break space third in this text sends all but two characters through
- * `encodeInto`. One `JSON.stringify` writes it, so no second string is built, and it stays one byte a
- * character (a mark outside Latin-1, or one added with `+`, cost more than it saved).
+ * A state as it crosses: `["\u00a0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
+ * `state_of`). The mark dates to the `wasm-bindgen` glue and buys nothing on emscripten's
+ * `stringToNewUTF8`, which walks the whole string either way; it stays so both sides keep one
+ * shape, and no caller above this file ever sees it.
  */
 function stateJson(state: GameState): string {
   return JSON.stringify([STATE_MARK, state]);
@@ -206,73 +240,91 @@ function reduceResult(text: string, input: GameState): ReduceResult {
 }
 
 export function createGame(args: CreateGameArgs): GameState {
-  return call("createGame", () => parsed<GameState>(create_game(json(args))));
+  return withArgs("createGame", (m, put) => parsed<GameState>(take(m, m._create_game(put(json(args))))));
 }
 
 export function beginGame(state: GameState): ReduceResult {
-  return call("beginGame", () => reduceResult(begin_game(stateJson(state)), state));
+  return withArgs("beginGame", (m, put) => reduceResult(take(m, m._begin_game(put(stateJson(state)))), state));
 }
 
 export function reduce(state: GameState, action: Action): ReduceResult {
-  return call("reduce", () => reduceResult(reduce_action(stateJson(state), json(action)), state));
+  return withArgs("reduce", (m, put) =>
+    reduceResult(take(m, m._reduce(put(stateJson(state)), put(json(action)))), state),
+  );
 }
 
 /** Everything `player` may legally do now. The client greys out the rest (BUILD M5-T2). */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
-  return call("legalActions", () => parsed<ActionBody[]>(legal_actions(stateJson(state), player)));
+  return withArgs("legalActions", (m, put) =>
+    parsed<ActionBody[]>(take(m, m._legal_actions(put(stateJson(state)), put(player)))),
+  );
 }
 
 /** The only window the client has onto the game (SPEC §10.8). */
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
-  return call("viewFor", () => parsed<PlayerView>(view_for(stateJson(state), player)));
+  return withArgs("viewFor", (m, put) =>
+    parsed<PlayerView>(take(m, m._view_for(put(stateJson(state)), put(player)))),
+  );
 }
 
 /** The seat that owes the next action, or null when none does. */
 export function seatToAct(state: GameState): PlayerId | null {
-  return call("seatToAct", () => {
-    const seat = seat_to_act(stateJson(state));
+  return withArgs("seatToAct", (m, put) => {
+    const seat = take(m, m._seat_to_act(put(stateJson(state))));
     return seat === "" ? null : (seat as PlayerId);
   });
 }
 
 /** SURFACE §5.2's hash: eight hex digits, TypeScript's `hashState` bit for bit. */
 export function hashState(state: GameState): string {
-  return call("hashState", () => hash_state(stateJson(state)));
+  return withArgs("hashState", (m, put) => take(m, m._hash_state(put(stateJson(state)))));
 }
 
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
 export function fold(input: FoldInput): FoldResult {
-  return call("fold", () => parsed<FoldResult>(fold_log(json(input))));
+  return withArgs("fold", (m, put) => parsed<FoldResult>(take(m, m._fold(put(json(input))))));
 }
 
 /** R768: a finished game's replay, its log checked against its catalog version and final hash. */
 export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
-  return call("replayOpen", () => parsed<ReplayOpen>(replay_open(json(input), json(record))));
+  return withArgs("replayOpen", (m, put) =>
+    parsed<ReplayOpen>(take(m, m._replay_open(put(json(input)), put(json(record))))),
+  );
 }
 
 /** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
 export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
-  return call("replayPage", () => parsed<ReplayPage>(replay_page(json(checkpoints), seat, from, count)));
+  return withArgs("replayPage", (m, put) =>
+    parsed<ReplayPage>(take(m, m._replay_page(put(json(checkpoints)), put(seat), from, count))),
+  );
 }
 
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
-  return call("lastBoardFor", () => parsed<LastBoardCard[]>(last_board_for(stateJson(state), seat)));
+  return withArgs("lastBoardFor", (m, put) =>
+    parsed<LastBoardCard[]>(take(m, m._last_board_for(put(stateJson(state)), put(seat)))),
+  );
 }
 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
-  return call("seatPlayedBy", () => seat_played_by(stateJson(state), home) as PlayerId);
+  return withArgs("seatPlayedBy", (m, put) =>
+    take(m, m._seat_played_by(put(stateJson(state)), put(home))) as PlayerId,
+  );
 }
 
 /** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(find_instance(stateJson(state), instanceId)) ?? undefined);
+  return withArgs("findInstance", (m, put) =>
+    parsed<CardInstance | null>(take(m, m._find_instance(put(stateJson(state)), put(instanceId)))) ?? undefined,
+  );
 }
 
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
-  return call("dealEmoteHand", () => parsed<EmoteId[]>(deal_emote_hand(seed, seat)));
+  return withArgs("dealEmoteHand", (m, put) =>
+    parsed<EmoteId[]>(take(m, m._deal_emote_hand(put(seed), put(seat)))),
+  );
 }
 
 /**
@@ -282,8 +334,8 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
  * built without it and throws). The hotseat route calls it for its E2E injection's `preview` alone.
  */
 export function previewSets(sets: readonly SetName[]): void {
-  call("previewSets", () => {
-    preview_sets(json(sets));
+  withArgs("previewSets", (m, put) => {
+    check(m, m._preview_sets(put(json(sets))));
   });
 }
 
@@ -291,15 +343,15 @@ let catalogCache: CardDefs | null = null;
 
 /** The registered catalog (TypeScript's `registeredCatalog()`): the same object on every call. */
 export function registeredCatalog(): CardDefs {
-  return call("registeredCatalog", () => {
-    catalogCache ??= parsed<CardDefs>(catalog());
+  return withArgs("registeredCatalog", (m) => {
+    catalogCache ??= parsed<CardDefs>(take(m, m._catalog()));
     return catalogCache;
   });
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 export function catalogVersion(): string {
-  return call("catalogVersion", () => catalog_version());
+  return withArgs("catalogVersion", (m) => take(m, m._catalog_version()));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -307,7 +359,11 @@ export function catalogVersion(): string {
 // ---------------------------------------------------------------------------------------------
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
-  return call("aiToAct", () => ai_to_act(stateJson(state), seat));
+  return withArgs("aiToAct", (m, put) => {
+    const answer = m._ai_to_act(put(stateJson(state)), put(seat));
+    if (answer < 0) throw new Error(m.UTF8ToString(m._jackioh_last_error()));
+    return answer !== 0;
+  });
 }
 
 /** The AI's own stream as it crosses: its seed and where it stands. */
@@ -324,7 +380,9 @@ export type DecideResult = { decision: Decision | null; rngCursor: number };
  * state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
-  return call("decide", () => parsed<DecideResult>(ai_decide(stateJson(state), seat, json(request), deadlineMs)));
+  return withArgs("decide", (m, put) =>
+    parsed<DecideResult>(take(m, m._ai_decide(put(stateJson(state)), put(seat), put(json(request)), deadlineMs))),
+  );
 }
 
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
@@ -347,13 +405,17 @@ export type AiDeckRequest = StreamAt & {
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
-  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(build_ai_deck(json(request))));
+  return withArgs("buildAiDeck", (m, put) =>
+    parsed<{ deck: string[]; rngCursor: number }>(take(m, m._build_ai_deck(put(json(request))))),
+  );
 }
 
 /** §10.7's random policy (`subsystems.chooseAction`), drawing from `(rngSeed, rngCursor)`. */
 export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt): { action: ActionBody | null; rngCursor: number } {
-  return call("chooseAction", () =>
-    parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
+  return withArgs("chooseAction", (m, put) =>
+    parsed<{ action: ActionBody | null; rngCursor: number }>(
+      take(m, m._choose_action(put(stateJson(state)), put(seat), put(stream.rngSeed), stream.rngCursor)),
+    ),
   );
 }
 
@@ -363,7 +425,9 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
  * nothing (CLAUDE.md rule 7).
  */
 export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
-  return call("craftPreview", () => parsed<CraftPreview>(craft_preview(json(recipe), cost)));
+  return withArgs("craftPreview", (m, put) =>
+    parsed<CraftPreview>(take(m, m._craft_preview(put(json(recipe)), cost))),
+  );
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
@@ -399,8 +463,8 @@ let constantsCache: AiConstants | null = null;
 
 /** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
-  return call("constants", () => {
-    constantsCache ??= parsed<AiConstants>(constants());
+  return withArgs("constants", (m) => {
+    constantsCache ??= parsed<AiConstants>(take(m, m._constants()));
     return constantsCache;
   });
 }
@@ -424,8 +488,8 @@ export type EngineTables = {
 let tablesCache: EngineTables | null = null;
 
 export function engineTables(): EngineTables {
-  return call("engineTables", () => {
-    tablesCache ??= parsed<EngineTables>(engine_tables());
+  return withArgs("engineTables", (m) => {
+    tablesCache ??= parsed<EngineTables>(take(m, m._engine_tables()));
     return tablesCache;
   });
 }
@@ -447,5 +511,5 @@ export type ValidatorCall =
 
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
-  return call(name, () => parsed<T>(validator_call(name, json(input))));
+  return withArgs(name, (m, put) => parsed<T>(take(m, m._validator(put(name), put(json(input))))));
 }

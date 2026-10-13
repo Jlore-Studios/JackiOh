@@ -17,7 +17,9 @@ import { loadWasmSync } from "../wasm/index.ts";
 
 // A path, not `new URL("../wasm/pkg/…", import.meta.url)`: Vite rewrites that literal pattern into an
 // asset URL against the page's origin, which `readFileSync` refuses ("The URL must be of scheme file").
-loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm_bg.wasm")));
+// Top-level await: emscripten's factory instantiates asynchronously, so the module is ready before
+// any test file runs, exactly as `main.tsx` awaiting `loadWasm()` readies the page.
+await loadWasmSync(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../wasm/pkg/jackioh_wasm.wasm")));
 
 let reducedMotion = false;
 
