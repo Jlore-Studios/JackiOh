@@ -114,22 +114,66 @@ pub fn compiler() -> Compiler {
 /// any thread's VM can run it. A hook that fails panics with its error, which names its card, face and
 /// hook (an engine hook has no error to return).
 pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScripts, LuauError> {
+    let decl = vm::inspect_card(card, bytecode)?;
     let mut scripts = CardScripts::default();
-    for (face, name) in vm::declared_hooks(card, bytecode)? {
+
+    scripts.base.targets = decl.base.targets;
+    scripts.base.modes = decl.base.modes;
+    scripts.base.static_flags = decl.base.static_flags;
+    for name in decl.base.hooks {
         let site = Site {
             card,
-            face,
+            face: Face::Base,
             hook: name,
         };
-        let script = match face {
-            Face::Base => &mut scripts.base,
-            Face::Radiant => &mut scripts.radiant,
-        };
-        *hook_slot(script, name) = Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
-            Ok(effects) => effects,
-            Err(error) => panic!("{error}"),
-        }));
+        if name == "aura" {
+            scripts.base.aura = Some(jackioh_engine::aura_hook(move |args| {
+                match run_aura_hook(site, bytecode, args) {
+                    Ok(entries) => entries,
+                    Err(error) => panic!("{error}"),
+                }
+            }));
+        } else {
+            *hook_slot(&mut scripts.base, name) =
+                Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
+                    Ok(effects) => effects,
+                    Err(error) => panic!("{error}"),
+                }));
+        }
     }
+
+    match decl.radiant {
+        vm::RadiantDecl::Base => {
+            scripts.radiant = scripts.base.clone();
+        }
+        vm::RadiantDecl::Face(face) => {
+            scripts.radiant.targets = face.targets;
+            scripts.radiant.modes = face.modes;
+            scripts.radiant.static_flags = face.static_flags;
+            for name in face.hooks {
+                let site = Site {
+                    card,
+                    face: Face::Radiant,
+                    hook: name,
+                };
+                if name == "aura" {
+                    scripts.radiant.aura = Some(jackioh_engine::aura_hook(move |args| {
+                        match run_aura_hook(site, bytecode, args) {
+                            Ok(entries) => entries,
+                            Err(error) => panic!("{error}"),
+                        }
+                    }));
+                } else {
+                    *hook_slot(&mut scripts.radiant, name) =
+                        Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
+                            Ok(effects) => effects,
+                            Err(error) => panic!("{error}"),
+                        }));
+                }
+            }
+        }
+    }
+
     Ok(scripts)
 }
 
@@ -139,6 +183,15 @@ pub fn run_hook(site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> Res
         .iter()
         .map(|call| api::effect_of(call, site))
         .collect()
+}
+
+/// One aura hook's entries.
+pub fn run_aura_hook<'a>(
+    site: Site,
+    bytecode: &[u8],
+    args: jackioh_engine::script::HookArgs<'a>,
+) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
+    vm::call_aura_hook(site, bytecode, args)
 }
 
 /// The field of `script` a hook name fills: the names `Script::hook_named` answers, which are

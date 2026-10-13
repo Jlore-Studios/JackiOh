@@ -30,6 +30,9 @@
 # only when this line changes. The registry it was fetched from is dropped; the cook below fetches
 # the workspace's own.
 FROM rust:1.97-slim-bookworm AS chef
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends g++ \
+ && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --version 0.1.78 --locked \
  && rm -rf "$CARGO_HOME/registry"
 WORKDIR /src

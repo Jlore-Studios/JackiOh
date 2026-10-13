@@ -11,6 +11,7 @@ build = "build.rs"
 [dependencies]
 # Pure (SURFACE §3): serde, serde_json, indexmap and the engine. Nothing else.
 jackioh-engine = { workspace = true }
+jackioh-luau = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }
@@ -21,4 +22,6 @@ jackioh-engine = { workspace = true, features = ["testkit"] }
 [build-dependencies]
 # build.rs reads catalog.json and patches/patches.json (§7.4). Build scripts are not the pure
 # crate: they run at compile time, which is where data reaches a pure crate (§3).
+jackioh-luau = { workspace = true }
+mlua = { workspace = true }
 serde_json = { workspace = true }

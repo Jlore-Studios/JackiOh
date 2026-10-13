@@ -605,6 +605,33 @@ fn load_card_reads_the_declared_hooks() {
     );
 }
 
+#[test]
+fn load_card_reads_declarations_and_aura() {
+    let source = r#"
+local J = require("@jackioh")
+local base = {
+    targets = {
+        { kind = "target", min = 1, max = 1, filter = { side = "enemy", of = { "unit" }, notTags = { "Human" } } }
+    },
+    aura = function(ctx)
+        return {
+            J.defense_armor_aura({ armor = ctx:param("armor") })
+        }
+    end,
+}
+return {
+    base = base,
+    radiant = "base",
+}
+"#;
+    let code = bytecode("decl.luau", source);
+    let scripts = load_card("fixture-decl", code).expect("loads");
+    assert_eq!(scripts.base.targets.len(), 1);
+    assert_eq!(scripts.radiant.targets.len(), 1);
+    assert!(scripts.base.aura.is_some());
+    assert!(scripts.radiant.aura.is_some());
+}
+
 // ---- compiling and the lint (L6, L7) -------------------------------------------------------------
 
 #[test]
