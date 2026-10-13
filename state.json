@@ -4420,7 +4420,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "claude-3",
-      "question": "Issue #760's plan touches only files under bot/, which the night bot is forbidden to change (CLAUDE.md, .harness/config.json forbidden_paths, deliver refuses the push). Should a person build this \u2014 please add the human label as the plan's Open questions ask \u2014 or is there an explicit exception allowing the bot to edit bot/ for this issue?",
+      "question": "Issue #760 needs edits only under `bot/` (events.py, deliver.py, prompts/suggest.md, README.md, tests/test_flow.py). The night bot may not change `bot/`, and an issue comment cannot lift that. Options: (1) a person builds it from the plan in the issue (the issue needs the `human` label, which the plan asks for); or (2) a person changes the harness, not the issue: remove `bot/` from `forbidden_paths` in `.harness/config.json` (and lift the matching guards in `bot/harness/work.py` and `deliver.py`) for this one build. Then re-queue it. I'd pick (1): the plan is complete, and the change is about 60 lines plus four tests.",
       "queued_at": "2026-10-13T15:26:11Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38433036630",
