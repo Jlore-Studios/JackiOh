@@ -185,6 +185,14 @@ describe("public/_headers", () => {
     expect(files.length).toBeGreaterThan(0);
     for (const file of files) expect(file, "a versioned name").toMatch(/-\d+\.\d+\.\d+-/u);
   });
+
+  it("lets a browser keep the bundle and the engine's module a year (#778): Vite names every file in /assets/ by its hash", () => {
+    const cache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    expect(blocks().find((block) => block.path === "/assets/*")?.headers).toEqual(cache);
+    expect(vercel.headers.find((block) => block.source === "/assets/(.*)")?.headers).toEqual(cache);
+    // Only Vite writes /assets/: nothing in public/ is served there under a name without a hash.
+    expect(readdirSync(PUBLIC)).not.toContain("assets");
+  });
 });
 
 describe("wrangler.jsonc", () => {

@@ -782,8 +782,9 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
 `dealEmoteHand`, …).
-`apps/web/src/main.tsx` awaits `loadWasm()` before the first render (the deck builder calls the
-validator synchronously); `practice.worker.ts` awaits it before handling a message.
+`apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
+calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
+`practice.worker.ts` awaits it before handling a message.
 
 ### 10.4 `apps/web/src/wire/` and the aliases
 
