@@ -5301,11 +5301,13 @@
         "by": "`claude` (strong)",
         "sha": "18fc103ba721abed40c6b8d1ced8b66280cabe34"
       },
+      "closed_at": "2026-10-13T18:45:15Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-13T18:08:50Z",
       "issue": 749,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
