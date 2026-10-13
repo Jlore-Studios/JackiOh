@@ -1152,9 +1152,7 @@
       "run_id": "38358478874",
       "started_at": "2026-10-13T06:45:48Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:6139853125"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "511": {
