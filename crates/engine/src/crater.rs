@@ -49,8 +49,9 @@ pub fn lock_on_arrival(sink: &mut EngineSink<'_>, id: &str) {
 
 /// R783011: a Trap or Field Trap with Crater Locks the backrow zone it stood in as it is revealed —
 /// as it fires face-down, `trap` being the card as the firing matched it and `at` its zone then
-/// (`traps::fire_trap`). A Field Trap firing again is revealed already and Locks nothing more, and a
-/// card set face-down by its Cloaked is not a Trap by its face.
+/// (`traps::fire_trap`, and `replacements` for one that fires as it replaces, §5.1). A Field Trap
+/// firing again is revealed already and Locks nothing more, and a card set face-down by its Cloaked is
+/// not a Trap by its face.
 pub fn lock_on_firing(sink: &mut EngineSink<'_>, trap: &CardInstance, at: Option<ZoneSlot>) {
     let Some(at) = at else {
         return;
