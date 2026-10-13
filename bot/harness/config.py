@@ -125,6 +125,7 @@ _SAID_MODE_LABELS = ("fullsend", "tree")
 _SHARED: dict[str, tuple[str, str]] = {
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
+    "human required": ("e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
@@ -199,6 +200,12 @@ LABEL_TREE = f"{LABEL_PREFIX}tree"
 #: building. The bot never queues, plans, builds, labels or assigns it, and a request to build it
 #: gets a reply saying so.
 LABEL_HUMAN = "human"
+#: The bot's hand-over (#793): it found the item needs what only a person can do, a change to
+#: bot/, .harness/, .squishy/ or .github/, a secret, a dashboard or an account (`human.py`), so
+#: it took its own labels off, unassigned itself, assigned both people and said what in a comment
+#: naming them. From then on it is `human`: people do it, and the bot never touches it. A person
+#: puts it on too (`triage`). Taking it off hands the item back.
+LABEL_HUMAN_REQUIRED = "human required"
 #: Labels the bot used to have: the sweep deletes them from the repository (`sweep._labels`), so
 #: nobody puts on one that no longer does anything. #664 took the method labels and `bot:approved`
 #: (`bot:build` and `human` hand an issue on), `bot:needs-review` (always beside `ready for
@@ -299,7 +306,8 @@ class Config:
     ci_reruns: int
     suggestions_enabled: bool
     suggestions_max_open: int
-    suggestions_min_interval_hours: int
+    #: A survey is due once a free lane has had nothing to start for this long (#797).
+    suggestions_idle_minutes: int
     quiet: Quiet
     forbidden_paths: tuple[str, ...]
     review_paths: tuple[str, ...]
@@ -501,7 +509,7 @@ def parse(raw: Mapping[str, Any], root: Path, env: Mapping[str, str],
         ci_reruns=int(raw["ci_reruns"]),
         suggestions_enabled=bool(suggestions.get("enabled", True)),
         suggestions_max_open=int(suggestions.get("max_open", 4)),
-        suggestions_min_interval_hours=int(suggestions.get("min_interval_hours", 20)),
+        suggestions_idle_minutes=int(suggestions.get("idle_minutes", 30)),
         quiet=_quiet(raw["quiet"]),
         forbidden_paths=tuple(str(p) for p in raw["forbidden_paths"]),
         review_paths=tuple(str(p) for p in raw["review_paths"]),

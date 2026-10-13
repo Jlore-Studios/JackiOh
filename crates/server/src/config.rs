@@ -907,24 +907,38 @@ pub const TIMING_FIT_DELAY_QUANTILES: (f64, f64) = (0.1, 0.9);
 pub const TIMING_FIT_CONCEDE_TURN_QUANTILE: f64 = 0.1;
 
 // ---------------------------------------------------------------------------------------------
-// Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). Every value is hand-set until the offline
-// calibration and the think-time fit (R1442's `THINK_TIME_FITS`) replace it.
+// Ladder bots (SPEC §9.5, §9.12, R1453, R1454, R1451, R1452; #638). The strengths' seed ratings come from
+// R748000's offline calibration (docs/bot-calibration.md); every other value is hand-set until the
+// think-time fit (R1442's `THINK_TIME_FITS`) replaces it.
 // ---------------------------------------------------------------------------------------------
 
-/// R1452: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`: the
-/// softmax temperature over the finalists, in evaluation points, and the chance it passes over a
-/// lethal it found) and the rating its `bot_ratings` row is seeded with (R610). Always on the spec's
-/// resources: a strength is never a practice handicap (R180). The chance is rolled at each decision
-/// that finds a lethal, and the bot decides again after every move, so a bot that passed over one
-/// often finds it again before the turn ends: it misses a lethal for the whole turn less often than
-/// the chance says, which calibration (R610's ratings) takes in as it takes in everything else.
+/// R1452, R747000: one strength a ladder bot plays at: the AI's search budget, its style (`AiStyle`:
+/// the softmax temperature over the finalists, in evaluation points, and the chance it passes over a
+/// lethal it found), its skill (the chance each decision follows that AI, the rest a random legal
+/// action) and the rating its `bot_ratings` row is seeded with (R610), which is what
+/// `expected_elo_for_skill` measured for that skill (`BOT_SEED_RATINGS`, R748000). Always on the
+/// spec's resources: a strength is never a practice handicap (R180). The chance is rolled at each
+/// decision that finds a lethal, and the bot decides again after every move, so a bot that passed
+/// over one often finds it again before the turn ends: it misses a lethal for the whole turn less
+/// often than the chance says, which calibration (R610's ratings) takes in as it takes in everything
+/// else.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BotStrength {
     pub budget: jackioh_ai::SearchBudget,
     pub temperature: f64,
     pub missed_lethal_chance: f64,
+    pub skill: f64,
     pub seed_rating: f64,
 }
+
+/// R748000, R747000, R1454: the rating each strength seeds a new bot with, weakest first: the skill
+/// curve's readings at the strengths' skills (`expected_elo_for_skill`, whose test holds them
+/// equal), the reference (the strongest strength) at `SKILL_ELO_ANCHOR`. `jackioh-server
+/// bot-calibrate` measures the five strengths as built (their budget, temperature, missed-lethal
+/// chance and skill together, which the curve, measured at the arena's budget, does not) against each
+/// other and prints rows to paste here and over `SKILL_ELO_TABLE` (docs/bot-calibration.md). A new bot
+/// takes `BOT_STRENGTHS[i]`'s; a bot already in the pool keeps the R610 rating it has earned.
+pub const BOT_SEED_RATINGS: [f64; 5] = [570.0, 740.0, 900.0, 1080.0, SKILL_ELO_ANCHOR];
 
 /// R1454, R1452: the strengths a new bot is drawn from, weakest first. A bot keeps its index
 /// (`bots.strength`), so a change here changes every bot of that index.
@@ -942,7 +956,8 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 3.0,
         missed_lethal_chance: 0.4,
-        seed_rating: 800.0,
+        skill: 0.0,
+        seed_rating: BOT_SEED_RATINGS[0],
     },
     BotStrength {
         budget: jackioh_ai::SearchBudget {
@@ -957,19 +972,22 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 2.0,
         missed_lethal_chance: 0.25,
-        seed_rating: 900.0,
+        skill: 0.25,
+        seed_rating: BOT_SEED_RATINGS[1],
     },
     BotStrength {
         budget: jackioh_ai::AI_BUDGET,
         temperature: 1.0,
         missed_lethal_chance: 0.12,
-        seed_rating: 1000.0,
+        skill: 0.5,
+        seed_rating: BOT_SEED_RATINGS[2],
     },
     BotStrength {
         budget: jackioh_ai::AI_BUDGET,
         temperature: 0.4,
         missed_lethal_chance: 0.05,
-        seed_rating: 1100.0,
+        skill: 0.75,
+        seed_rating: BOT_SEED_RATINGS[3],
     },
     BotStrength {
         budget: jackioh_ai::SearchBudget {
@@ -984,9 +1002,71 @@ pub const BOT_STRENGTHS: &[BotStrength] = &[
         },
         temperature: 0.0,
         missed_lethal_chance: 0.0,
-        seed_rating: 1200.0,
+        skill: 1.0,
+        seed_rating: BOT_SEED_RATINGS[4],
     },
 ];
+
+/// R748000: the AI generation (`crates/ai/generation.json`) `BOT_SEED_RATINGS` were measured on.
+/// `bot-calibrate` shifts its anchor by the promotions after it.
+pub const BOT_CALIBRATION_GENERATION: i64 = 9;
+/// R748000: games each pair of strengths plays in a calibration. At 40 the five strengths' offsets
+/// carried errors of about 28 Elo, wider than the gaps between three of them.
+pub const BOT_CALIBRATION_GAMES_PER_PAIR: usize = 100;
+/// R748000: the fewest games a pair plays, and the fewest rated games against people the live anchor
+/// read accepts.
+pub const BOT_CALIBRATION_MIN_GAMES: usize = 30;
+/// R748000: drawn games added to each pair's tally and to the live read, so a sweep (every game won
+/// by one side) fits to a finite offset.
+pub const BOT_CALIBRATION_PRIOR_GAMES: f64 = 1.0;
+/// R748000: minorization-maximization steps of the Bradley-Terry fit.
+pub const BOT_CALIBRATION_FIT_ITERATIONS: usize = 1000;
+/// R748000: halvings of the live anchor's search for the rating that matches the score.
+pub const BOT_CALIBRATION_BISECTIONS: usize = 100;
+/// R748000: how far past the opponents' lowest and highest rating that search looks, in rating points.
+pub const BOT_CALIBRATION_SEARCH_SPAN: f64 = 2000.0;
+/// R748000: moves a calibration game plays before it is left out as unfinished.
+pub const BOT_CALIBRATION_MAX_ACTIONS: usize = 3000;
+/// R748000: actions one turn may take before its game is left out as unfinished. A calibration game
+/// has no acting clock (R79) to end a turn, and a turn that goes on this long is a loop whose every
+/// step costs more than the last: a University (Meditative 97.6) that Buffs itself raises its own
+/// "Activate N" with each use, so the AI went on using it. Of 100 games sampled, the longest turn took
+/// 20 actions.
+pub const BOT_CALIBRATION_MAX_TURN_ACTIONS: usize = 30;
+
+/// R747000: the Elo the arena's reference, this build's AI at full skill, is held at in
+/// `SKILL_ELO_TABLE`: the 1200 the strongest bot has been seeded at since R1454, not a new player's
+/// `RATING_START`, because the pairing seats no bot for a player rated above every bot (R1453) and a
+/// player past the middle of the ladder would otherwise have none.
+pub const SKILL_ELO_ANCHOR: f64 = 1200.0;
+
+/// R747000: the skill-to-Elo curve of the AI at the arena's budget, one row per skill, ascending in
+/// skill from `AI_SKILL_MIN` to `AI_SKILL_MAX`: the Elo a seat at that skill is expected to hold, the
+/// reference (full skill) at `SKILL_ELO_ANCHOR`. The rows are measured, not set: `cargo jackioh arena`
+/// games of each skill against the reference and against the random policy, scored as Elo gaps and
+/// rounded to 10 by the protocol in `crates/server/README.md` ("Skill to Elo"), where the games'
+/// counts are. A new best AI, or a set that ships, is measured again by the same protocol and the
+/// rows pasted over; the live Glicko ratings (R603) are the ongoing calibration.
+pub const SKILL_ELO_TABLE: &[(f64, f64)] = &[
+    (0.0, 570.0),
+    (0.25, 740.0),
+    (0.5, 900.0),
+    (0.75, 1080.0),
+    (1.0, SKILL_ELO_ANCHOR),
+];
+
+/// R747000: the Elo a seat at `skill` is expected to hold, read off `SKILL_ELO_TABLE` by straight
+/// lines between its rows; a skill outside the range reads as the end it is past (`clamp_skill`).
+pub fn expected_elo_for_skill(skill: f64) -> f64 {
+    let skill = jackioh_ai::clamp_skill(skill);
+    for pair in SKILL_ELO_TABLE.windows(2) {
+        let ((low_skill, low_elo), (high_skill, high_elo)) = (pair[0], pair[1]);
+        if skill <= high_skill {
+            return low_elo + (high_elo - low_elo) * (skill - low_skill) / (high_skill - low_skill);
+        }
+    }
+    SKILL_ELO_TABLE.last().map_or(RATING_START, |&(_, elo)| elo)
+}
 
 /// R1454: the pool never holds fewer active bots than this, however few people play.
 pub const BOT_POOL_MIN: usize = 8;

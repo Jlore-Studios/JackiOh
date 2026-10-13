@@ -107,6 +107,16 @@ within the node budget and under `AI_GATE.max_decision_ms`. Tuning changes the w
 AI; whether a change made it stronger is the training lanes' question (`training/README.md`,
 `cargo jackioh promote`).
 
+A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
+`[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
+§10.7's policy). `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one
+plays as it did before the knob; `AI_SKILL_MIN` is the random policy exactly, with no search. In
+between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
+(`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
+knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The
+arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
+the same way, and the skill-to-Elo curve is measured with the arena.
+
 ## Development runs for the card statistics (R378)
 
 `dev_game_config` and `dev_game_record` deal and play game n of a development run as All Random

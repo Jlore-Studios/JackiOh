@@ -49,6 +49,10 @@ enum Command {
     TimingBackfill(Rest),
     /// Print log-normal fits of human think times to paste into config (R1442).
     TimingFit(Rest),
+    /// Play the ladder bots' strengths against each other and print their seed ratings to paste into config (R748000).
+    BotCalibrate(Rest),
+    /// The strongest ladder bot's rating from its rated games against people (R748000).
+    BotCalibrateLive(Rest),
 }
 
 /// The arguments after the subcommand, passed through untouched to the tool's own parser.
@@ -76,6 +80,8 @@ async fn main() -> ExitCode {
         Command::InviteClusters(rest) => cli::invite_clusters::run(rest.args).await,
         Command::TimingBackfill(rest) => cli::timing_backfill::run(rest.args).await,
         Command::TimingFit(rest) => cli::timing_fit::run(rest.args).await,
+        Command::BotCalibrate(rest) => cli::bot_calibrate::run(rest.args).await,
+        Command::BotCalibrateLive(rest) => cli::bot_calibrate::run_live(rest.args).await,
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,

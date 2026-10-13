@@ -160,7 +160,7 @@
       "login": "machine",
       "runs_on": "night-vm-gpt",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "seven_day": 1.0 },
+      "limits": { "mode": "caps", "five_hour": 1.0, "seven_day": 1.0 },
       "quiet_check": false
     },
     "agy": {
@@ -174,7 +174,7 @@
       "login": "machine",
       "runs_on": "night-vm-agy",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
+      "limits": { "mode": "caps", "five_hour": 1.0, "seven_day": 1.0 },
       "quiet_check": false
     },
     "devin": {
@@ -209,7 +209,7 @@
       "lanes": 1,
       "usage_since": "2026-10-11T00:00:00Z",
       "schedule": { "mode": "always" },
-      "limits": { "mode": "caps", "five_hour": 0.95, "seven_day": 1.0 },
+      "limits": { "mode": "caps", "five_hour": 1.0, "seven_day": 1.0 },
       "quiet_check": false
     }
   }

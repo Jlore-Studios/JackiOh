@@ -204,7 +204,10 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
     match matchup {
         Matchup::AiVsRandom => SeatController::Random,
         Matchup::AiVsGreedy => SeatController::Greedy,
-        Matchup::HardVsEasy => SeatController::Ai { budget: Some(budget) },
+        Matchup::HardVsEasy => SeatController::Ai {
+            budget: Some(budget),
+            skill: None,
+        },
     }
 }
 
@@ -238,7 +241,10 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     let subject_deck = deck_for(subject_seat, &subject_handicap);
     let other_deck = deck_for(other_seat, &other_handicap);
 
-    let subject_controller = SeatController::Ai { budget: Some(budget) };
+    let subject_controller = SeatController::Ai {
+        budget: Some(budget),
+        skill: None,
+    };
     let subject_first = subject_seat == PlayerId::P1;
     let controllers = if subject_first {
         PerPlayer {

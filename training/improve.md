@@ -54,17 +54,57 @@ cargo jackioh promote --lane improve --parent-bin ~/parent-jackioh --dry-run
 ```
 
 It plays 100 games against the parent (`~/parent-jackioh`, built from `main`) and prints the gate's
-report: wins, the 65 needed, draws and games without a result (neither counts as a win). It plays
-no games against random. A dry run measures your uncommitted change on the seeds of HEAD's
-`crates/ai/src`, so every dry run in a session plays the same seeds. Do not tune to them: check a
-change on other seeds too, for example
+report: wins, the 65 needed, the 95% interval those wins put the true win rate in, draws and games
+without a result (neither counts as a win). It plays no games against random. A dry run measures your
+uncommitted change on the seeds of HEAD's `crates/ai/src`, so every dry run in a session plays the
+same seeds. Do not tune to them: check a change on other seeds too, with the arena:
 
 ```sh
-cargo jackioh arena --a self --b bin:~/parent-jackioh --games 40 --seed improve-try-<n>
+cargo jackioh arena --a self --b bin:<opponent> --games <n> --seed improve-try-<n>
 ```
 
-which prints one line per game and a tally (agent `a` sits p1 in odd games). `cargo jackioh trace`
-prints one game turn by turn when you need to see why the AI lost it.
+It prints one line per game and a tally (agent `a` sits p1 in odd games): the wins, and `aShare`,
+`aLow` and `aHigh`, the win share and its 95% interval. `cargo jackioh trace` prints one game turn
+by turn when you need to see why the AI lost it.
+
+### How much a result says
+
+A series of games is noisy, and the lane's own history shows how much. Before this section was
+written, dozens of sessions kept changes on 60-game reads that were 1 to 2 standard deviations wide
+(`37-23`, which reads as anything from 49% to 73%, was the largest), and the stacks those kept
+changes built read 40 to 68 of 100 on the gate's seeds, never landing a promotion. A change that wins
+by chance is reverted by the next fair measure. So:
+
+- **Screen a change against the AI without it, not against the parent.** Before you change anything,
+  build a control from your current tree (`cargo build --release -p jackioh-tools && cp
+  target/release/jackioh ~/control-jackioh`). Measure a change with `--a self --b
+  bin:~/control-jackioh`, which measures the change and nothing else. Rebuild the control each time
+  you keep a change.
+- **Play at least 200 games before you keep a change**, and keep it only when the tally's `aLow` is
+  above 0.5. A share whose interval holds 0.5 is not a measured gain, whatever its wins say: revert
+  it or measure it further on new seeds (a new `--seed` base), never on the same ones again. You may
+  stop a screen early when it is plainly losing, for example `aHigh` below 0.5 after 100 games.
+- **Before a real gate run, measure the whole stack against the parent at 200 games or more on seeds
+  of your own** (`--b bin:~/parent-jackioh`). The gate needs 65 of 100 on one draw of seeds, which a
+  stack whose true rate is 65% passes only about half the time. Go to the gate when the stack's
+  `aShare` is clearly above the bar (about 0.68 or more), and otherwise keep improving it.
+- **Never fish for seeds.** The real gate's seeds come from the committed tree, so a change that does
+  nothing (a comment, a renamed variable, a reordered constant) draws new seeds. Never commit one to
+  play the gate again: every real gate run must measure a tree that differs from the last in a way
+  you measured.
+- **When `main` has moved since your saved stack was measured, re-measure the whole stack** against
+  the new parent before you build on it. A gain measured against an older parent may not hold.
+- **Record the interval with every result in `attempts.md`** (for example `121-79, aLow 0.536`), so
+  the next session can tell a measured gain from a lucky one.
+
+A 200-game screen takes several minutes on the training box, and the improve lane shares it with the
+unban lane. That is what one real measurement costs. Fewer, measured changes beat many lucky ones.
+
+### Strength first
+
+Spend the session on strength. Change how the AI plays the tutorial's lessons only when one of their
+tests fails on your change (Beyond the gate), and keep that fix to the lessons' games: it is not where
+a promotion comes from.
 
 ## Beyond the gate
 
@@ -101,10 +141,12 @@ repeat an attempt that is recorded as failed unless you know why it will go diff
 ## How you work
 
 1. Keep each attempt small: one idea, one measured change. Before you start the next one, add an
-   entry to `~/training-out/improve/attempts.md`: the date, what you changed and why, the dry run's
-   numbers (vs parent), and whether you kept or reverted it.
+   entry to `~/training-out/improve/attempts.md`: the date, what you changed and why, the numbers
+   of every measure (games, wins and the interval, against the control or the parent), and whether
+   you kept or reverted it.
 2. The gate reads the AI from git, so a promotion is made in this order, and only this order:
-   1. When a dry run passes, commit your `crates/ai` change:
+   1. When the stack has measured clearly above the bar on seeds of your own (How much a result
+      says) and a dry run passes, commit your `crates/ai` change:
       `git add crates/ai && git commit -m "AI gen <N> (improve): <what changed>"`, where `<N>` is
       `crates/ai/generation.json`'s `generation` plus one and `<what changed>` is one line.
    2. Run the gate for real: `cargo jackioh promote --lane improve --parent-bin ~/parent-jackioh`.

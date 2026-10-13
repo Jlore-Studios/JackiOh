@@ -17,7 +17,7 @@ from harness.state import item as state_item
 from harness.work import Worker
 
 from tests.fakes import BOT, OPERATOR, FakeGitHub, git, push_branch
-from tests.support import DAY, make_ctx
+from tests.support import DAY, idle_for, make_ctx
 from tests.test_flow import Harness
 from tests.test_work import APPROVE, builder, reviewer
 
@@ -235,6 +235,7 @@ class DeliverTests(unittest.TestCase):
     def test_an_unfinished_survey_is_due_again(self):
         h = Harness(self)
         h.ctx.store.update(lambda s: s.update(suggest={"last_run": None, "requested": False}))
+        idle_for(h.ctx)
         planned = plan_mod.make(h.ctx, force=True, mode="suggest")
         self.assertEqual(planned["action"], "suggest")
         out = h.root / "out-cut-short"

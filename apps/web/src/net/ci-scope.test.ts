@@ -407,6 +407,7 @@ describe("scripts/ci-scope.sh", () => {
         "wrangler.jsonc",
         "eslint.config.js",
         "vitest.config.ts",
+        "scripts/browse.sh",
         "scripts/promote-production.sh",
         "scripts/vercel-ignore.sh",
         "scripts/vercel-install.sh",

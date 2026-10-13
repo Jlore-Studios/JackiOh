@@ -143,6 +143,13 @@ The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `re
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
 
+To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
+an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
+installed on first use into `.cache/` and named in no manifest, so no one else pays for it.
+`.claude/skills/ui-walkthrough/SKILL.md` is the walkthrough: serving the client, the routes, setting a
+board up through `window.__jackioh`, waiting for animations, the viewports and the screenshots. It is
+for work on what a player sees, and nothing else.
+
 The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
 device and, signed in, the account's online replays (first page), and opens one in the replay player.
 Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
@@ -153,8 +160,12 @@ inside it and the dev routes (the real entry points come with the result screens
 src/replay/
   source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
-  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search
+  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
   ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
+  gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
+                  function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
+                  OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
   config.ts replay.css
 ```
 
