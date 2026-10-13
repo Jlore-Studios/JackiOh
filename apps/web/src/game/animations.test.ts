@@ -923,6 +923,36 @@ describe("createAnimationQueue", () => {
     expect(onSettled).toHaveBeenCalledTimes(1);
   });
 
+  it("an unknown event type plans a zero-duration, frameless entry and the queue runs past it", () => {
+    const clock = fakeClock();
+    const onSettled = vi.fn();
+    const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false, onSettled });
+    // Issue #769: a tab left open on an older build can receive a type a newer patch added.
+    const unknown = { type: "not_a_real_event" } as unknown as GameEvent;
+    const events: GameEvent[] = [
+      { type: "manaChanged", player: "p1", current: 1, max: 4 },
+      unknown,
+      { type: "turnStarted", player: "p1", turn: 4 },
+    ];
+
+    const entries = planEntries(events, view, false);
+    expect(entries.map((e) => e.durationMs)).toEqual([BUILD_DURATIONS.manaChanged, 0, BUILD_DURATIONS.turnStarted]);
+    expect(entries[1]?.frames.size).toBe(0);
+    expect(targetFor(unknown, view)).toBeNull();
+    expect(durationFor(unknown.type, false)).toBe(0);
+
+    queue.enqueue(events, view);
+    clock.flush();
+
+    // The unknown entry is skipped without a timer, like gameOver: only the known two schedule.
+    expect(clock.schedule.mock.calls.map((c) => c[1])).toEqual([
+      BUILD_DURATIONS.manaChanged,
+      BUILD_DURATIONS.turnStarted,
+    ]);
+    expect(queue.idle()).toBe(true);
+    expect(onSettled).toHaveBeenCalledTimes(1);
+  });
+
   it("notifies subscribers on every change and unsubscribes", () => {
     const clock = fakeClock();
     const queue = createAnimationQueue({ schedule: clock.schedule, reducedMotion: false });

@@ -27,7 +27,7 @@
 import { hasKeyword, type GameEvent, type PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
-import { ANIMATIONS, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
+import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, UNIT_SLAM } from "../game/damageFeel.ts";
 import { brandCues } from "./brand.ts";
@@ -1195,7 +1195,7 @@ export function planFx(entry: AnimationEntry, view: PlayerView, env: FxPlanEnv):
       cues.push(...signature.cues);
       if (signature.row === "replace") continue;
     }
-    const recipe = ANIMATIONS[event.type].fx?.recipe;
+    const recipe = animationRow(event.type)?.fx?.recipe;
     if (recipe === undefined) continue;
     const tgt = targetFor(event, view);
     if (tgt === null) continue;

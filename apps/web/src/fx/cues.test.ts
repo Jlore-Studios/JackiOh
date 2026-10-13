@@ -1262,6 +1262,14 @@ describe("B16 the recipe table, row by row", () => {
     ];
     for (const event of bare) expect(plan([event], 300), event.type).toEqual([]);
   });
+
+  it("an unknown event type plans no cues", () => {
+    // Issue #769: a tab left open on an older build can receive a type a newer patch added.
+    const unknown = { type: "not_a_real_event" } as unknown as GameEvent;
+    const view = fullBoardView();
+    const entry: AnimationEntry = { events: [unknown], type: unknown.type, durationMs: 0, frames: new Map(), view };
+    expect(planFx(entry, view, envOf())).toEqual([]);
+  });
 });
 
 /* ------------------------------------------------------------------------------------------- *
