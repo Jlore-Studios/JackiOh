@@ -38,6 +38,9 @@ begin
   insert into public.tutorial_progress (profile_id, completed) values (gone, '{basics}');
   insert into public.player_settings (profile_id, groups) values (gone, '{"audio": {"at": 1, "values": {}}}');
   insert into public.player_stats (profile_id, stats) values (gone, '{"games": 1}');
+  -- 0034 (R757000, R757001): its age check and the terms it agreed to.
+  insert into public.age_checks (profile_id, min_age) values (gone, 13);
+  insert into public.terms_acceptances (profile_id, terms_version, source) values (gone, 'v-0012', 'signup');
   insert into public.tickets (profile_id, slot, rating, frozen_deck, catalog_version, mode)
   values (gone, null, 1000, '[]', 'core-1', 'bo1');
 
@@ -69,6 +72,8 @@ begin
        + (select count(*) from public.tutorial_progress where profile_id = gone)
        + (select count(*) from public.player_settings where profile_id = gone)
        + (select count(*) from public.player_stats where profile_id = gone)
+       + (select count(*) from public.age_checks where profile_id = gone)
+       + (select count(*) from public.terms_acceptances where profile_id = gone)
        + (select count(*) from public.tickets where profile_id = gone)
        + (select count(*) from public.code_attempts where profile_id = gone)
        + (select count(*) from public.invite_codes where created_by = gone)

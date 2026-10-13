@@ -231,6 +231,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::auth::delete_account),
     ),
     ("GET", "/api/auth/me", AuthLevel::User, h!(api::auth::get_me)),
+    // api/consent.rs (R757000, R757001)
+    (
+        "POST",
+        "/api/account/consent",
+        AuthLevel::User,
+        h!(api::consent::post_consent),
+    ),
     // api/catalog.rs
     (
         "GET",

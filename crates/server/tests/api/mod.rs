@@ -10,6 +10,7 @@ pub mod client_address;
 pub mod code_input_parity;
 pub mod codes;
 pub mod collection;
+pub mod consent;
 pub mod cors;
 pub mod decks;
 pub mod e2e;

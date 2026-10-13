@@ -342,7 +342,14 @@ export default function Card(props: CardProps): ReactElement {
     // the backrow shows the cost the view gives it (R370), and opens what the view says of it.
     if (faceDown === undefined) {
       return (
-        <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label={t("Face-down card")}>
+        // WCAG 4.1.2 (#757): a name needs a role; a back is a picture, or a button when it is clickable.
+        <div
+          {...shared}
+          className={cx("card", "card-back", props.className)}
+          data-face-down="true"
+          role={clickable ? "button" : "img"}
+          aria-label={t("Face-down card")}
+        >
           <CardBack />
         </div>
       );

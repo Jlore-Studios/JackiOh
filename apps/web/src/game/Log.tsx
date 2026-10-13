@@ -717,7 +717,8 @@ export default function Log({ view, revealed = false }: LogProps): ReactElement 
     <ol ref={listRef} className="log" data-testid={testid.log} aria-label={t("Game log")}>
       {lines.map((line, index) => (
         <Fragment key={line.key}>
-          {index > 0 && line.type === "turnStarted" ? <li className="log-divider" role="separator" /> : null}
+          {/* #757: drawn only; a list holds list items, and the turn's own line names the turn. */}
+          {index > 0 && line.type === "turnStarted" ? <li className="log-divider" aria-hidden="true" /> : null}
           <LogLine line={line} touchHold={touchHold} />
         </Fragment>
       ))}

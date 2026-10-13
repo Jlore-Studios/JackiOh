@@ -29,11 +29,11 @@ use jackioh_server::api::codes::{DEFAULT_INVITE_CODE_MAX_USES, MintDeps, MintInp
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    INVITE_CODE_LENGTH, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD, REDEMPTION_IDENTICAL_ERROR,
-    REDEMPTION_RESPONSE_FLOOR_MS,
+    INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, REDEMPTION_CIRCUIT_FAILURE_THRESHOLD,
+    REDEMPTION_IDENTICAL_ERROR, REDEMPTION_RESPONSE_FLOOR_MS, TERMS_VERSION,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError};
+use jackioh_server::db::store::{Db, StoreError, TermsSource};
 
 use crate::support::deps;
 
@@ -467,6 +467,47 @@ mod r145_section_9_4_step_1_pending_account_with_a_verified_email {
         // A good code is not consumed by an account that may not use it yet.
         assert_eq!(codes(&server).await[0]["uses"], json!(0));
         assert_eq!(attempts(&server).await.len(), 0);
+    }
+
+    /// R757000, R757001: a pending account that has not answered the age screen or agreed to the
+    /// terms in force is sent back to the consent screen before the attempt log: the good code is
+    /// not spent and the refusal costs none of the account's tries. Once both are recorded the same
+    /// code redeems.
+    #[tokio::test(start_paused = true)]
+    async fn r757001_redeem_refuses_consent_owed_without_an_attempt() {
+        let server = code_server().await;
+        let token = deps::add_user(&server.app, "user-owes", "owes@example.test", true);
+        let _ = store_of(&server.app).lock().await.seed_profile(json!({
+            "id": "owes", "userId": "user-owes", "status": "pending", "consent": false,
+        }));
+        let minted = mint(&server, None, None).await;
+
+        let response = redeem(&server, &token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(response.status, 403);
+        assert_eq!(response.error_code(), "consent_owed");
+        assert_ne!(response.error_message(), REDEMPTION_IDENTICAL_ERROR);
+        assert_eq!(codes(&server).await[0]["uses"], json!(0));
+        assert_eq!(attempts(&server).await.len(), 0);
+
+        // Agreeing to the terms alone still leaves the age check owed.
+        let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
+        tx.consent_record_terms("owes", TERMS_VERSION, TermsSource::Signup, now_ms())
+            .await
+            .expect("the terms are recorded");
+        tx.commit().await.expect("the transaction commits");
+        let response = redeem(&server, &token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(response.error_code(), "consent_owed");
+        assert_eq!(attempts(&server).await.len(), 0);
+
+        let mut tx = server.app.db.begin(None).await.expect("a transaction opens");
+        tx.consent_record_age("owes", MIN_ACCOUNT_AGE_YEARS, now_ms())
+            .await
+            .expect("the age check is recorded");
+        tx.commit().await.expect("the transaction commits");
+        let response = redeem(&server, &token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(response.status, 200, "{}", response.text);
+        assert_eq!(status_of(&server, "owes").await, json!("active"));
+        assert_eq!(attempts(&server).await.len(), 1);
     }
 
     /// R170. The row can go between `resolve_caller`'s read of the profile and `Tx::redeem`'s. The

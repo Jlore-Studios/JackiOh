@@ -50,7 +50,7 @@ use jackioh_server::db::store::{
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
     PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
     Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
+    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, TermsSource, Ticket,
     TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
@@ -2658,6 +2658,64 @@ mod player_stats {
     );
 }
 
+/// R757000, R757001: the age check and the terms each account agreed to (migration 0034).
+mod consent {
+    use super::*;
+
+    async fn r757000_keeps_the_first_age_check(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let empty = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(
+            j(&empty),
+            json!({ "profileId": profile.id, "ageCheckedAt": null, "ageMin": null, "terms": [] })
+        );
+
+        let now = harness.now();
+        q!(harness, t => t.consent_record_age(&profile.id, 13, now));
+        // A second record changes nothing: the first check stands, with its minimum and time.
+        q!(harness, t => t.consent_record_age(&profile.id, 16, now + 1000));
+        let consent = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(consent.age_checked_at, Some(now));
+        assert_eq!(consent.age_min, Some(13));
+        assert!(consent.terms.is_empty());
+    }
+
+    async fn r757001_records_each_version_once_oldest_first(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Signup, now));
+        q!(harness, t => t.consent_record_terms(&profile.id, "2027-01-02/2026-12-30", TermsSource::Reaccept, now + 2000));
+        // The same version again keeps its first record.
+        q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Reaccept, now + 3000));
+        let consent = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(
+            j(&consent.terms),
+            json!([
+                { "version": "2026-10-13/2026-10-13", "source": "signup", "acceptedAt": now },
+                { "version": "2027-01-02/2026-12-30", "source": "reaccept", "acceptedAt": now + 2000 },
+            ])
+        );
+        assert_eq!(consent.age_checked_at, None);
+    }
+
+    async fn r757001_consent_is_per_account(harness: &StoreHarness) {
+        let one = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.consent_record_age(&one.id, 13, now));
+        q!(harness, t => t.consent_record_terms(&one.id, "v1", TermsSource::Signup, now));
+        let theirs = q!(harness, t => t.consent_get(&other.id));
+        assert_eq!((theirs.age_checked_at, theirs.terms.len()), (None, 0));
+        assert_eq!(q!(harness, t => t.consent_get(&one.id)).terms.len(), 1);
+    }
+
+    both_stores!(
+        r757000_keeps_the_first_age_check,
+        r757001_records_each_version_once_oldest_first,
+        r757001_consent_is_per_account,
+    );
+}
+
 mod series {
     use super::*;
 
@@ -4332,6 +4390,10 @@ mod profiles_remove {
         q!(harness, t => t.tickets_insert(&ticket));
         let stats: IndexMap<String, Value> = from(json!({ "games": 1 }));
         q!(harness, t => t.player_stats_put(&gone.id, &stats, false, now));
+        // R757000, R757001: its age check and terms acceptance (migration 0034).
+        q!(harness, t => t.consent_record_age(&gone.id, 13, now));
+        q!(harness, t => t.consent_record_terms(&gone.id, "v1", TermsSource::Signup, now));
+        q!(harness, t => t.consent_record_terms(&other.id, "v1", TermsSource::Signup, now));
         let room: Room = from(json!({
             "code": "QWERTZ",
             "hostProfileId": gone.id,
@@ -4398,6 +4460,9 @@ mod profiles_remove {
         assert!(q!(harness, t => t.tutorial_get(&gone.id)).is_none());
         assert!(q!(harness, t => t.player_settings_get(&gone.id)).is_none());
         assert!(q!(harness, t => t.player_stats_get(&gone.id)).is_none());
+        let consent = q!(harness, t => t.consent_get(&gone.id));
+        assert_eq!((consent.age_checked_at, consent.terms.len()), (None, 0));
+        assert_eq!(q!(harness, t => t.consent_get(&other.id)).terms.len(), 1);
         assert!(q!(harness, t => t.collection_get(&gone.id)).is_empty());
         assert!(q!(harness, t => t.tickets_open_for_profile(&gone.id)).is_none());
         assert!(q!(harness, t => t.rooms_get("QWERTZ")).is_none());

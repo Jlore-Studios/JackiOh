@@ -255,6 +255,8 @@ export default function Hero(props: HeroProps): ReactElement {
         data-testid={modifiersId}
         data-count={modifiers.length}
         data-animating={props.animating?.get(modifiersId)}
+        // WCAG 4.1.2 (#757): a name needs a role.
+        role="group"
         aria-label={side === "you" ? t("Your modifiers") : t("Opponent modifiers")}
       >
         {modifiers.map((modifier) => (

@@ -1,5 +1,5 @@
-// The site footer: the privacy policy, the patch notes (R388), the Card Almanac (R630), and a way to
-// reach the people who run JackiOh.
+// The site footer: the privacy policy, the terms, the accessibility and copyright pages, the patch
+// notes (R388), the Card Almanac (R630), and a way to reach the people who run JackiOh.
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
 // email address. Kept off the board. The contact is the repository's public issue tracker until
@@ -21,6 +21,7 @@ export const siteFooterTestid = {
   privacy: "site-footer-privacy",
   terms: "site-footer-terms",
   accessibility: "site-footer-accessibility",
+  copyright: "site-footer-copyright",
   patchNotes: "site-footer-patch-notes",
   almanac: "site-footer-almanac",
   stats: "site-footer-stats",
@@ -43,6 +44,9 @@ export function SiteFooter(): ReactElement {
           onClick={followInApp(paths.accessibility)}
         >
           {t("Accessibility")}
+        </a>
+        <a href={paths.copyright} data-testid={siteFooterTestid.copyright} onClick={followInApp(paths.copyright)}>
+          {t("Copyright")}
         </a>
         <a href={paths.patchNotes} data-testid={siteFooterTestid.patchNotes} onClick={followInApp(paths.patchNotes)}>
           {t("Patch notes")}

@@ -370,6 +370,9 @@ function InviteScreen({ account }: { account: Account }) {
           }));
         }
         if (cause instanceof ApiRequestError && cause.status === 409) announceAccountChange();
+        // R757000, R757001: the account owes the consent screen (the terms changed since the gate
+        // read it): the gate reads the account again and shows it.
+        if (cause instanceof ApiRequestError && cause.code === "consent_owed") announceAccountChange();
         setStatusReads((count) => count + 1);
       })
       .finally(() => {

@@ -96,19 +96,21 @@ use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::PersonaName;
 use crate::config::{
     CODE_ATTEMPT_WINDOW_SECONDS, CODE_ATTEMPTS_PER_IP_PER_HOUR, CODE_ATTEMPTS_PER_PROFILE_PER_HOUR,
-    RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, USERNAME_DEFAULT_BASE,
+    MIN_ACCOUNT_AGE_YEARS, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START, TERMS_VERSION,
+    USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
-    InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, MatchSignalRow,
-    MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput,
-    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
-    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode,
-    RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow,
-    StoreError, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    CollectionGrant, ConsentRow, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery,
+    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
+    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ResultRow,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
+    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -145,6 +147,23 @@ pub struct PlayerStatsTableRow {
     pub is_private: bool,
     pub created_at: i64,
     pub updated_at: i64,
+}
+
+/// One row of `public.age_checks` (migration 0034, R757000): an account that passed the age check.
+#[derive(Clone, Debug, PartialEq)]
+pub struct AgeCheckTableRow {
+    pub profile_id: String,
+    pub min_age: i32,
+    pub passed_at: i64,
+}
+
+/// One row of `public.terms_acceptances` (migration 0034, R757001): one version an account agreed to.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TermsAcceptanceTableRow {
+    pub profile_id: String,
+    pub version: String,
+    pub source: TermsSource,
+    pub accepted_at: i64,
 }
 
 /// One row of `public.bots` (migration 0032, R1453, R1454, R1452): a ladder bot beside its profile.
@@ -217,6 +236,10 @@ pub struct FakeTables {
     pub match_signals: Vec<MatchSignalRow>,
     // The ladder bots' table (`public.bots`, migration 0032): one row per bot's profile.
     pub ladder_bots: Vec<BotTableRow>,
+    // The two tables R757000 and R757001 add (migration 0034): one age check per profile, one
+    // acceptance per profile and terms version.
+    pub age_checks: Vec<AgeCheckTableRow>,
+    pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -378,7 +401,10 @@ impl FakeData {
     /// the username a new account gets, the lowest free `Player#n`, its prompt not yet answered
     /// (R1434). `username` names a base instead (stored as given, so a caller passes a stored
     /// form), with `usernameTag` as its tag or else the tag a claim of it would carry now;
-    /// `usernamePrompted` and `usernameChangedAt` set the rest.
+    /// `usernamePrompted` and `usernameChangedAt` set the rest. `consent` (default true) seeds the
+    /// age check and agreement to `TERMS_VERSION` at sign-up, dated `createdAt`, as an account that
+    /// signed up through the age screen and the terms box has (R757000, R757001); false seeds
+    /// neither.
     pub fn seed_profile(&mut self, input: Value) -> Profile {
         let id = input
             .get("id")
@@ -426,6 +452,19 @@ impl FakeData {
             in_match_id: text("inMatchId"),
             created_at: input.get("createdAt").and_then(Value::as_i64).unwrap_or(0),
         };
+        if input.get("consent").and_then(Value::as_bool).unwrap_or(true) {
+            self.tables.age_checks.push(AgeCheckTableRow {
+                profile_id: id.clone(),
+                min_age: MIN_ACCOUNT_AGE_YEARS,
+                passed_at: profile.created_at,
+            });
+            self.tables.terms_acceptances.push(TermsAcceptanceTableRow {
+                profile_id: id.clone(),
+                version: TERMS_VERSION.to_string(),
+                source: TermsSource::Signup,
+                accepted_at: profile.created_at,
+            });
+        }
         self.tables.profiles.push(profile.clone());
         self.next_profile += 1;
         profile
@@ -2512,6 +2551,73 @@ pub fn player_stats_put(
     Ok(())
 }
 
+// Consent on the account (R757000, R757001, migration 0034)
+
+pub fn consent_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<ConsentRow, StoreError> {
+    call(f, "consent.get")?;
+    let tables = f.tables();
+    let age = tables.age_checks.iter().find(|row| row.profile_id == profile_id);
+    let mut terms: Vec<TermsAcceptanceRow> = tables
+        .terms_acceptances
+        .iter()
+        .filter(|row| row.profile_id == profile_id)
+        .map(|row| TermsAcceptanceRow {
+            version: row.version.clone(),
+            source: row.source,
+            accepted_at: row.accepted_at,
+        })
+        .collect();
+    // `order by accepted_at, terms_version`, as pg.rs reads them (text compared by code point).
+    terms.sort_by(|a, b| (a.accepted_at, &a.version).cmp(&(b.accepted_at, &b.version)));
+    Ok(ConsentRow {
+        profile_id: profile_id.to_string(),
+        age_checked_at: age.map(|row| row.passed_at),
+        age_min: age.map(|row| row.min_age),
+        terms,
+    })
+}
+
+pub fn consent_record_age(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    min_age: i32,
+    at: i64,
+) -> Result<(), StoreError> {
+    call(f, "consent.recordAge")?;
+    let rows = &mut f.tables().age_checks;
+    if !rows.iter().any(|row| row.profile_id == profile_id) {
+        rows.push(AgeCheckTableRow {
+            profile_id: profile_id.to_string(),
+            min_age,
+            passed_at: at,
+        });
+    }
+    Ok(())
+}
+
+pub fn consent_record_terms(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    version: &str,
+    source: TermsSource,
+    at: i64,
+) -> Result<(), StoreError> {
+    call(f, "consent.recordTerms")?;
+    let rows = &mut f.tables().terms_acceptances;
+    if !rows
+        .iter()
+        .any(|row| row.profile_id == profile_id && row.version == version)
+    {
+        rows.push(TermsAcceptanceTableRow {
+            profile_id: profile_id.to_string(),
+            version: version.to_string(),
+            source,
+            accepted_at: at,
+        });
+    }
+    Ok(())
+}
+
 pub fn player_stats_list_public(
     f: &mut FakeTx<'_>,
     options: &PlayerStatsListOptions,
@@ -2619,6 +2725,9 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.player_settings, |row| row.profile_id != profile_id);
     keep_only(&mut tables.last_boards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.player_stats, |row| row.profile_id != profile_id);
+    // 0034: the age check and the terms acceptances cascade with the profile.
+    keep_only(&mut tables.age_checks, |row| row.profile_id != profile_id);
+    keep_only(&mut tables.terms_acceptances, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tickets, |row| row.profile_id != profile_id);
     keep_only(&mut tables.rooms, |row| {
         !(row.host_profile_id == profile_id && row.guest_profile_id.is_none())
