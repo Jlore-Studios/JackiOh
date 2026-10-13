@@ -4478,11 +4478,13 @@
         "by": "`claude` (strong)",
         "sha": "6a33a5b68d472821226a857b0ae4f481899c7b98"
       },
+      "closed_at": "2026-10-13T11:42:15Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-13T08:07:10Z",
       "issue": 757,
       "kind": "revise",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-5",
       "queued_at": "2026-10-13T11:33:37Z",
