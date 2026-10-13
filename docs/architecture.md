@@ -626,7 +626,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0023_rematch.sql` → `0024_glitch_boards.sql` → `0025_patch_retcon.sql` →
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
-   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` — and records them in `app.migrations`. Expected result: 31 tables
+   `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
+   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -681,6 +682,8 @@ step that is not yet implemented says which BUILD task delivers it.
    version of the Terms and the Privacy Policy it agreed to. It gives every person's account that
    already exists a `baseline` record dated at its sign-up, so each such account is asked to agree
    to the terms in force on its next visit; an account already active is not asked its age.
+   0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
+   its replay (R768); older matches keep none and their replays are held to their results rows.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

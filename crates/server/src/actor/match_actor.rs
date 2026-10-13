@@ -1056,7 +1056,7 @@ impl MatchActor {
     async fn on_terminal(&self, snapshot: &MatchSnapshot) {
         let Some(result) = snapshot.result else { return };
         let at = now_ms();
-        let (swapped, last_boards) = {
+        let (swapped, last_boards, final_hash) = {
             let mut core = self.lock();
             if core.finished {
                 return;
@@ -1073,7 +1073,11 @@ impl MatchActor {
             if result.reason != GameOverReason::Voided {
                 self.plan_bot_rematches(&mut core, at);
             }
-            (core.swapped, engine::last_boards(&core.state))
+            (
+                core.swapped,
+                engine::last_boards(&core.state),
+                engine::hash_state(&core.state),
+            )
         };
         // R679: the one ending that records nothing. Only the engine's state reaches it.
         if result.reason == GameOverReason::Voided {
@@ -1092,6 +1096,8 @@ impl MatchActor {
             at,
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
+            // R768: the final state's hash, which the match's replay is held to.
+            final_hash: Some(final_hash),
         };
         // The write finishes the match row in the same transaction, so nothing else here does: a row
         // finished apart from it would outlive a failed write, with no result and both players stuck

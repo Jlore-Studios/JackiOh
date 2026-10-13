@@ -1,5 +1,5 @@
--- Consent on the account (migration 0034, SPEC §9.4, R757000, R757001; issue #757). Runs last,
--- after 17_ladder_bots.sql; profile 1 is active by then (03 activated it).
+-- Consent on the account (migration 0034, SPEC §9.4, R757000, R757001; issue #757). Runs after
+-- 17_ladder_bots.sql; profile 1 is active by then (03 activated it).
 \set ON_ERROR_STOP on
 
 -- Same rules as 01-17: every check raises on failure (`raise exception 'FAIL (R…): …'`), every

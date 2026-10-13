@@ -157,6 +157,10 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         "0034_account_consent.sql",
         include_str!("../../migrations/0034_account_consent.sql"),
     ),
+    (
+        "0035_replay_final_hash.sql",
+        include_str!("../../migrations/0035_replay_final_hash.sql"),
+    ),
 ];
 
 /// One advisory lock id for the whole runner, so two deploys cannot interleave migrations. It is

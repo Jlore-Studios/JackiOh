@@ -372,6 +372,7 @@ async fn record(app: &Arc<App>, inputs: &[Value]) -> ResultRow {
             turns,
             at: now_ms(),
             last_boards: None,
+            final_hash: None,
         },
     )
     .await
@@ -547,6 +548,7 @@ mod results_m7_t2 {
                 turns,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -625,6 +627,7 @@ mod results_m7_t2 {
                 turns: 99,
                 at: now_ms() + 1,
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -639,6 +642,70 @@ mod results_m7_t2 {
             },
         )
         .await;
+    }
+
+    /// R768: the input the actor hands over for p1's concede win, with the final state's hash.
+    fn hashed(final_hash: &str, at: i64) -> RecordResultInput {
+        RecordResultInput {
+            match_id: MATCH_ID.to_owned(),
+            seats: seats(),
+            outcome: TerminalOutcome {
+                winner: Winner::P1,
+                reason: GameOverReason::Concede,
+            },
+            turns: 3,
+            at,
+            last_boards: None,
+            final_hash: Some(final_hash.to_owned()),
+        }
+    }
+
+    /// R768: the final state's hash is written with the result, and a second write of the same
+    /// match writes no other.
+    #[tokio::test]
+    async fn r768_records_the_final_hash_with_the_result_once() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions::default()).await;
+        assert!(match_row(&app, MATCH_ID).await.get("finalHash").is_none());
+
+        record_result(&app, hashed("hash-1", now_ms()))
+            .await
+            .expect("the result is written");
+        assert_eq!(match_row(&app, MATCH_ID).await["finalHash"], "hash-1");
+        record_result(&app, hashed("hash-2", now_ms() + 1))
+            .await
+            .expect("the second write answers the first row");
+        assert_eq!(match_row(&app, MATCH_ID).await["finalHash"], "hash-1");
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
+    }
+
+    /// R768: the hash is part of the result's transaction, so a failure to write it writes nothing.
+    #[tokio::test]
+    async fn r768_a_failed_final_hash_write_rolls_the_whole_result_back() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions::default()).await;
+        fake(&app).lock().await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
+            if method == "matches.recordFinalHash" {
+                Err(StoreError::from("the hash write fails".to_owned()))
+            } else {
+                Ok(())
+            }
+        }));
+        assert!(record_result(&app, hashed("hash-1", now_ms())).await.is_err());
+        fake(&app).lock().await.on_call = None;
+
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(0)
+        );
+        let row = match_row(&app, MATCH_ID).await;
+        assert_eq!(row["status"], "live");
+        assert!(row.get("finalHash").is_none());
+        assert_eq!(profile(&app, A).await["inMatchId"], MATCH_ID);
+        assert_eq!(profile(&app, A).await["rating"].as_f64(), Some(1000.0));
     }
 
     #[tokio::test]
@@ -702,6 +769,7 @@ mod results_m7_t2 {
                 turns: 12,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -886,6 +954,22 @@ mod results_m7_t2 {
             assert!(!app.matches.has(MATCH_ID));
         }
 
+        /// R768: the reaper reads no state, so it has no final hash to write; the match's replay is
+        /// held to its results row.
+        #[tokio::test]
+        async fn r768_the_reaper_records_no_final_hash() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+            let row = match_row(&app, MATCH_ID).await;
+            assert_eq!(row["status"], "finished");
+            assert!(row.get("finalHash").is_none());
+        }
+
         #[tokio::test]
         async fn leaves_a_match_that_has_not_reached_its_ceiling_alone() {
             install_test_cards();
@@ -1013,6 +1097,7 @@ mod results_m7_t2 {
                     turns: 3,
                     at: now_ms(),
                     last_boards: None,
+                    final_hash: None,
                 },
             )
             .await
