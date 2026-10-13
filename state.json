@@ -9689,14 +9689,18 @@
         {
           "at": "2026-10-13T13:25:15Z",
           "minutes": 36.4
+        },
+        {
+          "at": "2026-10-13T14:28:10Z",
+          "minutes": 60.2
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-13T16:50:00Z",
-          "utilization": 0.0
+          "utilization": 0.01
         },
-        "observed_at": "2026-10-13T13:25:15Z",
+        "observed_at": "2026-10-13T14:28:10Z",
         "seven_day": {
           "resets_at": "2026-10-19T00:00:00Z",
           "utilization": 0.01
