@@ -1,11 +1,13 @@
 //! Face-down plays through the AI's eyes (ME-ALTPLAY, R1046).
 //!
 //! A set card redacts to a placeholder with no `setAs`, and `determinize` samples Units for a
-//! hidden backrow card only while a Unit permission acts on that side.
+//! hidden backrow card only while a Unit permission acts on that side, and (R783009) a card that may
+//! be set by its Cloaked whatever acts.
 
 use jackioh_ai::{DeterminizeOptions, determinize, redact};
 use jackioh_engine::testkit::{
-    ActionBody, CardType, GameState, Row, ZoneChoice, create_rng, find_def, json, legal_actions,
+    ActionBody, CardScripts, CardType, GameState, Keyword, RevealAt, Row, ZoneChoice, create_rng, find_def,
+    json, legal_actions, register_catalog, register_scripts, registered_catalog, registered_scripts,
 };
 
 use super::support::{AI, HUMAN, register_cards, scenario};
@@ -136,4 +138,97 @@ fn r1046_redact_drops_set_as_and_determinize_samples_units_only_under_a_permissi
         })
         .collect();
     assert!(!offered.is_empty());
+}
+
+/// R783009: a vanilla that prints Cloaked, registered beside the real cards on this thread only.
+const CLOAKED: &str = "ai-cloaked";
+
+fn register_cloaked() {
+    register_cards();
+    let mut def = find_def(None, VANILLA).expect("the vanilla").clone();
+    def.id = CLOAKED.to_string();
+    def.index = "783".to_string();
+    def.base.keywords = vec![Keyword::Cloaked];
+    def.radiant.keywords = vec![Keyword::Cloaked];
+    let mut defs = registered_catalog().clone();
+    defs.insert(def.id.clone(), def);
+    register_catalog(defs);
+    let mut scripts = registered_scripts().clone();
+    scripts.insert(CLOAKED.to_string(), CardScripts::default());
+    register_scripts(scripts);
+}
+
+#[test]
+fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
+    register_cloaked();
+    let mut state = scenario(json!({
+        "seed": "r783009-cloaked",
+        "active": "p1",
+        "p1": { "mana": 8, "hand": [CLOAKED, VANILLA] },
+        "p2": { "hand": [VANILLA] },
+    }))
+    .state()
+    .clone();
+    let card = state.players[AI]
+        .hand
+        .iter()
+        .find(|card| card.def_id == CLOAKED)
+        .cloned()
+        .expect("the Cloaked card");
+    // No permission acts: Cloaked alone offers the face-down play.
+    assert!(legal_actions(&state, AI).iter().any(|action| matches!(
+        action,
+        ActionBody::Play { instance_id, face_down: Some(RevealAt::Cloaked), .. } if *instance_id == card.id
+    )));
+    state = super::support::act(
+        &state,
+        AI,
+        ActionBody::Play {
+            instance_id: card.id,
+            zone: Some(ZoneChoice {
+                row: Row::Backrow,
+                lane: 1,
+            }),
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: None,
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: Some(RevealAt::Cloaked),
+        },
+    );
+    let set = state.players[AI].backrow[0].clone().expect("the set card");
+    assert_eq!(set.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
+    // Its controller's legal actions hold its Reveal.
+    assert!(legal_actions(&state, AI).iter().any(|action| matches!(
+        action,
+        ActionBody::Activate { instance_id, ability, .. } if *instance_id == set.id && ability.as_deref() == Some("reveal")
+    )));
+
+    // The opponent's worlds may hold it, stamped `cloaked`; every other sample is a Trap, unstamped.
+    let public = redact(&state, HUMAN);
+    let options = DeterminizeOptions {
+        match_shown_cost: Some(false),
+    };
+    let mut cloaked = 0;
+    for n in 0..300 {
+        let mut rng = create_rng(&format!("r783009-det-{n}"), 0);
+        let world = determinize(&public, HUMAN, &mut rng, options);
+        let sampled = world.players[AI].backrow[0].clone().expect("a sampled card");
+        if sampled.def_id == CLOAKED {
+            cloaked += 1;
+            assert_eq!(sampled.set_as.map(|stamp| stamp.reveal), Some(RevealAt::Cloaked));
+        } else {
+            let def = find_def(Some(&world), &sampled.def_id).expect("a sampled def");
+            assert!(
+                def.type_ == CardType::Trap || def.type_ == CardType::FieldTrap,
+                "a non-Trap sampled with no permission: {}",
+                sampled.def_id
+            );
+            assert_eq!(sampled.set_as, None);
+        }
+    }
+    assert!(cloaked > 0, "the Cloaked card was never sampled in 300 worlds");
 }

@@ -514,6 +514,8 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
             exits_from: None,
         };
         sink.events.push(event);
+        // R783010: a Crater body Locks the zone it came back into.
+        crate::crater::lock_on_arrival(sink, id);
     }
 }
 

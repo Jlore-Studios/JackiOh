@@ -397,13 +397,16 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
     // R46: an Indestructible unit that would have been destroyed loses Taunt for the turn. R347: an
     // Indestructible unit never has Taunt at all — printed, granted, from an aura or from Defense
     // Position — so Indestructible, from whichever source, takes Taunt out of the set.
-    // A spent Divine Shield and a used Reborn are gone until granted again (§6.1, §4.5 step 4).
+    // A spent Divine Shield and a used Reborn are gone until granted again (§6.1, §4.5 step 4); a
+    // used Flashback for good (R783013).
     let taunt_suppressed = instance.taunt_suppressed_turn == Some(state.turn)
         || keywords
             .iter()
             .any(|keyword| keyword.kind() == KeywordKind::Indestructible);
     let shield_spent = instance.divine_shield_spent == Some(true);
     let reborn_spent = instance.reborn_spent == Some(true);
+    // R783013: a used Flashback is gone for good, printed or given.
+    let flashback_spent = instance.flashback_spent == Some(true);
     let kept: Vec<Keyword> = keywords
         .into_iter()
         .filter(|keyword| {
@@ -411,6 +414,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
             !(taunt_suppressed && kind == KeywordKind::Taunt)
                 && !(shield_spent && kind == KeywordKind::DivineShield)
                 && !(reborn_spent && kind == KeywordKind::Reborn)
+                && !(flashback_spent && kind == KeywordKind::Flashback)
         })
         .collect();
     let final_keywords = as_set(&kept);

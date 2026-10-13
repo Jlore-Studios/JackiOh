@@ -1713,8 +1713,9 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     out
 }
 
-/// ME-ALTPLAY, R1040, R1044: every face-down `play` this card could legally produce — one per timing,
-/// price, payment, tribute set and open backrow zone. No targets or modes are declared when set.
+/// ME-ALTPLAY, R1040, R1044, R783004: every face-down `play` this card could legally produce — one
+/// per timing (Cloaked's own included), price, payment, tribute set and open backrow zone. No targets
+/// or modes are declared when set.
 fn face_down_play_actions(
     state: &GameState,
     player: PlayerId,
@@ -1722,11 +1723,8 @@ fn face_down_play_actions(
     from_graveyard: bool,
     payments: impl Fn(i32) -> Vec<PlayPayment>,
 ) -> Vec<PlayAction> {
-    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
-        return Vec::new();
-    };
     let mut out: Vec<PlayAction> = Vec::new();
-    for reveal in crate::alt_play::timings(kind) {
+    for (kind, reveal) in crate::alt_play::face_down_options(state, player, card, from_graveyard) {
         let probe = CardInstance {
             set_as: Some(crate::state::SetAs {
                 reveal,
@@ -1741,10 +1739,13 @@ fn face_down_play_actions(
             if paid.is_empty() {
                 continue;
             }
-            let tribute_sets: Vec<Vec<String>> = match kind {
-                crate::alt_play::SetKind::Unit => legal_tribute_sets(state, player, &probe),
-                crate::alt_play::SetKind::Spell => vec![Vec::new()],
-            };
+            // R783004: a Cloaked card pays its own price, a Tribute included; Paranoia's Spells none.
+            let tribute_sets: Vec<Vec<String>> =
+                if kind == crate::alt_play::SetKind::Spell && reveal != RevealAt::Cloaked {
+                    vec![Vec::new()]
+                } else {
+                    legal_tribute_sets(state, player, &probe)
+                };
             for tributes in &tribute_sets {
                 for zone in crate::alt_play::open_backrow_zones(state, player) {
                     for payment in &paid {
@@ -2406,9 +2407,9 @@ fn refuse_modes(
     Ok(())
 }
 
-/// ME-ALTPLAY, R1040, R1044: refusal for a face-down play — no kind, a timing outside its
-/// timings, a named zone outside the open backrow zones, or any target or mode. X, embiggen and
-/// tributes are still checked.
+/// ME-ALTPLAY, R1040, R1044, R783004: refusal for a face-down play — no way to set it, a timing
+/// outside its timings, a named zone outside the open backrow zones, or any target or mode. X,
+/// embiggen and tributes are still checked.
 fn why_face_down_refused(
     state: &GameState,
     player: PlayerId,
@@ -2419,13 +2420,14 @@ fn why_face_down_refused(
         return refuse("no face-down timing".to_string());
     };
     let from_graveyard = matches!(card.zone, crate::wire::Zone::Graveyard { .. });
-    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+    let options = crate::alt_play::face_down_options(state, player, card, from_graveyard);
+    if options.is_empty() {
         return refuse(format!(
             "{} cannot be played face-down",
             name_of(state, &card.def_id)
         ));
-    };
-    if !crate::alt_play::timings(kind).contains(&reveal) {
+    }
+    if !options.iter().any(|(_, timing)| *timing == reveal) {
         return refuse(format!(
             "{} cannot reveal at that time",
             name_of(state, &card.def_id)

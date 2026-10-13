@@ -262,6 +262,42 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     motion: { keyframes: "kw-magnet-pull", when: "always" },
     numbered: false,
   },
+  // #783's keywords (R783000, R783002, R783004, R783010, R783012).
+  Ranged: {
+    layer: "glyph",
+    priority: 29,
+    shape: "a drawn bow with an arrow nocked",
+    motion: { keyframes: "kw-ranged-aim", when: "always" },
+    numbered: false,
+  },
+  Flying: {
+    layer: "glyph",
+    priority: 30,
+    shape: "a pair of spread wings",
+    motion: { keyframes: "kw-flying-hover", when: "always" },
+    numbered: false,
+  },
+  Cloaked: {
+    layer: "glyph",
+    priority: 31,
+    shape: "a hooded cloak drawn over a face",
+    motion: { keyframes: "kw-cloaked-fade", when: "always" },
+    numbered: false,
+  },
+  Crater: {
+    layer: "glyph",
+    priority: 32,
+    shape: "a cratered bowl with rubble thrown up from its rim",
+    motion: { keyframes: "kw-crater-quake", when: "always" },
+    numbered: false,
+  },
+  Flashback: {
+    layer: "glyph",
+    priority: 33,
+    shape: "a circling arrow turning back on itself",
+    motion: { keyframes: "kw-flashback-rewind", when: "always" },
+    numbered: false,
+  },
 };
 
 /** One treatment a unit gets: its keyword, whether it loops now, and what it prints. */

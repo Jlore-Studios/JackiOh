@@ -70,7 +70,8 @@ pub struct PlagueSpend {
 /// ME-ALTPLAY, R1040, R1044: when a card played face-down as a Trap reveals — the end of the turn it
 /// was set in, the start of its controller's next turn, or the end of their next turn. A Unit set
 /// under Knowledge Breaker's Aura reveals at the start of the next turn only (R1041); a Spell set
-/// under Paranoia's at any of the three, chosen as it is played.
+/// under Paranoia's at any of the three, chosen as it is played. A Cloaked card (R783004) is set
+/// `cloaked`: it has no timing, and reveals only when its controller activates its Reveal (R783006).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -82,10 +83,11 @@ pub enum RevealAt {
     EndOfThisTurn,
     StartOfNextTurn,
     EndOfNextTurn,
+    Cloaked,
 }
 
 impl RevealAt {
-    /// Every timing, in the order a turn meets them.
+    /// Every timing, in the order a turn meets them. `Cloaked` is no timing and is not one of them.
     pub const ALL: [RevealAt; 3] = [
         RevealAt::EndOfThisTurn,
         RevealAt::StartOfNextTurn,

@@ -205,6 +205,12 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Untributable: keyword("Untributable", "Can't be Tributed, by any cost or effect"),
   // Meditative batch 16 (issue #532, R1086): Equip, M #65 and M #67's keyword.
   Equip: keyword("Equip", "May be played onto one of your Units, fusing into it"),
+  // #783: five keywords no card prints yet (R783000, R783002, R783004, R783010, R783012).
+  Ranged: keyword("Ranged", "Takes no damage back when it attacks, unless the defender is Ranged"),
+  Flying: keyword("Flying", "Only Units with Flying or Ranged can attack it, unless it is in Defense Position"),
+  Cloaked: keyword("Cloaked", "Can be played face-down as a Trap. Activate: Reveal"),
+  Crater: keyword("Crater", "Locks its zone when it arrives as a Unit, or when it is revealed as a Trap"),
+  Flashback: keyword("Flashback", "Can be played from your graveyard once, at its cost"),
   // §6.1's statuses that are not keyword kinds (patch v0.2.0, B5 E35; R512, see the header).
   "Can't be in Defense Position": status("Can't be in Defense Position", "Never switches to Defense", {
     row: "Cannot be in Defense Position",
@@ -321,4 +327,9 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Deft: "DE",
   Untributable: "UT",
   Equip: "EQ",
+  Ranged: "RG",
+  Flying: "FL",
+  Cloaked: "CK",
+  Crater: "CR",
+  Flashback: "FB",
 };

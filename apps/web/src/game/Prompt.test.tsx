@@ -750,4 +750,38 @@ describe("R1044 the face-down picker asks how to play it", () => {
     });
     expect(onInteraction).toHaveBeenCalledWith(IDLE);
   });
+
+  it("R783004 offers a Cloaked set as its own choice", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const view = viewWith();
+    const cloaked = {
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "backrow", lane: 1 },
+      faceDown: "cloaked",
+    } as const;
+    const interaction = playing([{ type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } }, cloaked]);
+
+    render(
+      <Prompt
+        view={view}
+        interaction={interaction}
+        legal={interaction.stage === "playing" ? interaction.candidates : []}
+        onAction={onAction}
+        onInteraction={onInteraction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("mode");
+    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(optionTestids()).toEqual(["prompt-option-up", "prompt-option-cloaked"]);
+    expect(screen.getByText("Play it face-up")).not.toBeNull();
+    expect(screen.getByText("Set face-down: reveal it with its Activate")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-cloaked"));
+
+    expect(onAction).toHaveBeenCalledWith(cloaked);
+    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+  });
 });
