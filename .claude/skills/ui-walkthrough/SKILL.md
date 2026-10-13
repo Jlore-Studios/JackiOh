@@ -129,8 +129,11 @@ sh scripts/browse.sh screenshot --filename=fix-board.png
   To see an animation mid-flight, leave it on and screenshot straight after the action.
 - **Viewports.** It opens at 1280x720. BUILD M5-T1 also holds the board at 390x844, and the e2e
   specs shoot 768x1024 too: `resize <w> <h>`. Resizing changes the page's size only: no touch, and a
-  pixel density of 1, so a phone shot looks blurrier than a phone. Judge text size by
-  `getComputedStyle(element).fontSize` through `eval`, not by eye.
+  pixel density of 1. To see what a phone does, open as one instead:
+  `open "--device=iPhone 13" <url>` (390 wide, density 3, touch; `--device=iPhone SE` is 320 wide,
+  `--device=Pixel 7` 412). The `=` and the name's capitals matter: `--device "iphone 13"` silently
+  opens a desktop. Judge text size by `getComputedStyle(element).fontSize` through `eval`, and
+  whether a label fits by its `scrollWidth` against its `clientWidth`, not by eye.
 - **Cost.** A 1280x720 screenshot is about 1,200 tokens. Shoot what the task needs: one element
   (`screenshot <ref or locator>`) for a card face, and `find` instead of a picture when the question
   is what is on the page rather than how it looks.
