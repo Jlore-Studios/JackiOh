@@ -139,6 +139,26 @@
 /// the AI into a slow game, not necessarily that the card is hard to think about
 /// (training/history/sweep-2026-10-12.md). They are the unban lane's work: a faster search in those
 /// states lifts them, never a lower bar.
+///
+/// Generation 10 removed seven entries — 021, 033, 047, 051, 063, 073, 092 — the cards no
+/// rerun of the sweep ever flagged again. What changed is the search's bookkeeping of wall
+/// clock, not its bar (`decide.rs` `fat_width`, `simulate.rs` `surcharge_nodes`): the searched
+/// part of a decision's budget now shrinks as the state grows wide, and a simulated step that plays
+/// a catalog-ranking scorer or attacks into a trap that answers with a whole AI turn is charged the
+/// nodes that work really costs, so a fat state can no longer burn a decision's two seconds on a
+/// few sims. Under pools dealt with these cards legal, sweeps on this build flagged other cards —
+/// some kept below, some that a later pool cleared again — and these seven never: their rows
+/// measured the fat games a fuller deck sometimes deals, not the cards themselves. `submitted`
+/// (decide.rs) also ends the misplay that kept the rows honest-looking: a play refused on the true
+/// state by a tax the determinization could not see is now replaced by the action the match would
+/// have stood in for it, before the refusal is ever recorded. Four cards stay that a rerun cleared
+/// or near-cleared: `meditative-030` re-flagged `timeout` at both tiers in the pass-1 rerun on this
+/// build's pool, under the machine to itself (7 decision(s) at easy, 1 at hard); `meditative-025`
+/// re-flagged `timeout` at easy the same way, twice; and `meditative-012` and `meditative-017`
+/// swept clean but leaving them out deals the practice fixtures' Easy AI dead hands — R265's
+/// `r265-ai-first-p2-h` mulligan lands past turn 1 and the R677 `glitch-swap` game ends inside the
+/// human's five passes — so they wait for a sweep that clears them under a pool the fixtures
+/// survive.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-006",
@@ -161,10 +181,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: hard: 13 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-021",
-        "timeout: hard: 5 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-025",
         "timeout: hard: 7 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
@@ -181,10 +197,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-033",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-041",
         "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
@@ -193,24 +205,12 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: hard: 31 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-047",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-049",
         "timeout: hard: 8 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-051",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-058",
         "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-063",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-067",
@@ -223,10 +223,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-069",
         "timeout: hard: 6 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-073",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-075",
@@ -251,10 +247,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-091",
         "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-092",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-096",

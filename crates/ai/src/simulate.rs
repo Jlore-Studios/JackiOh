@@ -12,8 +12,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions,
-    opponent_of, owed_mana_of, reduce, unit_view,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, find_instance,
+    legal_actions, opponent_of, owed_mana_of, reduce, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -234,6 +234,39 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// TS `{ ok: true; state } | { ok: false; error }` (private in TS; public here, as `simulate`'s answer).
 pub type SimStep = Result<GameState, String>;
 
+/// The extra nodes an action is charged for the work its `reduce` really does (AI_SEARCH's
+/// expensive_def_* and ai_turn_trap_*): a Play of a card whose resolve ranks the whole catalog for
+/// the state (the §10.7 scorer) or an Attack that could set off a trap which hands the attacker a
+/// whole random turn (§8.5 core-096). One reduce of either costs the wall clock a hundred cheap
+/// sims do, so the step is budgeted its share up front — otherwise a hand or backrow holding one
+/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones.
+pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
+    match action {
+        ActionBody::Play { instance_id, .. } => find_instance(state, instance_id)
+            .filter(|card| AI_SEARCH.expensive_def_ids.contains(&card.def_id.as_str()))
+            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
+        ActionBody::Attack { attacker_id, .. } => {
+            let defender = opponent_of(actor);
+            // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
+            // surcharge reads the same gate approximately — the unit's attack against the hero's
+            // health — so a chip attack at an armed board is not charged the playout's price.
+            let lethalish = find_instance(state, attacker_id)
+                .is_some_and(|unit| unit_view(state, unit).attack >= state.players[defender].hero.health);
+            let trapped = state.players[defender]
+                .backrow
+                .iter()
+                .flatten()
+                .any(|card| AI_SEARCH.ai_turn_trap_ids.contains(&card.def_id.as_str()));
+            if lethalish && trapped {
+                AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
+            } else {
+                0
+            }
+        }
+        _ => 0,
+    }
+}
+
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
 /// of the other seat is open, answer it with the first entry of legalActions (each answer one more
 /// node, at most AI_SEARCH.maxAutoAnswers). A throw or a refusal is `{ ok: false }`. Returns null
@@ -246,6 +279,22 @@ pub fn simulate(
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
+    }
+    // An action whose surcharge the slice cannot pay must not drain it node by node and then
+    // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
+    // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
+    // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
+    let surcharge = surcharge_nodes(state, seat, action);
+    if counter.used() + surcharge > counter.limit() {
+        note_sim_error(counter);
+        return Some(Err(
+            "the step's surcharge does not fit the budget's slice".to_string()
+        ));
+    }
+    for _ in 0..surcharge {
+        if !counter.take() {
+            return None;
+        }
     }
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<SimStep> {
         let first = reduce(

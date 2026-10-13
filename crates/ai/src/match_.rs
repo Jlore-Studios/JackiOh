@@ -186,7 +186,9 @@ fn choose_for(
 
 /// What stands in for a refused action: endTurn when it is legal, else the first legal answer (or
 /// mulligan), else any other legal action the random policy would take. Tried in this order.
-fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+/// `decide` reads the same list (`submitted`): an action the reducer would refuse on the true
+/// state is replaced before it is ever submitted, so a refusal costs no recorded rejection.
+pub(crate) fn replacements_for(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     let legal: Vec<ActionBody> = legal_actions(state, seat)
         .into_iter()
         .filter(|action| !subsystems::AI_SKIPPED_ACTIONS.contains(&action.action_type()))
