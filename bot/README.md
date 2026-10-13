@@ -55,7 +55,7 @@ flowchart TD
     R -- "approved and green" --> D["deliver (bot token, no model)<br/>verify the bundle, push, open the PR;<br/>auto-merge on the lane's final audit"]
     D -- "not enough approvals yet" --> X["review run = the final audit (bot:cross-review)<br/>strong for medium/hard, medium first for easy"]
     X -- "approved" --> CI
-    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's bot:build approves one"]
+    PL -- "nothing queued" --> S["suggestion survey<br/>up to 4 open bot:suggestion issues;<br/>a person's approve comment or bot:build approves one,<br/>reject closes it"]
   end
   D --> CI["CI on the PR: rust (fmt, clippy, tests, checks, fuzz),<br/>web, e2e smoke, db, bot selftest"]
   CI -- "green" --> M["squash-merged into main;<br/>the issue closes"]
@@ -69,7 +69,9 @@ when that is):
 
 - add the **`bot:build`** label (an issue form's Who does it puts it on for you); `human` hands
   it to people instead ([Triage](#triage)). On one of the bot's suggestions (`bot:suggestion`) any
-  of these is your yes to it, and the queue takes `bot:suggestion` off;
+  of these is your yes to it, and the queue takes `bot:suggestion` off. So is a comment that says
+  only **`approve`**, while **`reject`** closes the suggestion unbuilt (as not planned), which
+  makes room for the next survey (#760);
 - **assign** `@jgoetzmann-bot`;
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
   of the request.
@@ -112,6 +114,19 @@ labelled, forced or not, and the bot never touches it: it is never queued, plann
 gets no `bot:*` stage label, and a conflicted `human` pull request is not revised. A
 `/harness build`, an assignment or a mention gets one reply saying so, and nothing else. Take
 the label off to hand it to the bot.
+
+**`human required`** is the bot's own word that it cannot do an item (#793): it needs a change
+under `bot/`, `.harness/`, `.squishy/` or `.github/`, a secret or a token, a setting in a dashboard
+(GitHub's, Vercel's, Render's, Supabase's, Cloudflare's) or an account. The bot puts it on beside
+`bot:blocked`, with a comment that names both people (@MaxGoetzmann and @jgoetzmann) and says what
+a person must do, instead of asking the same question on every run (#760 spent two runs on one).
+It does so when its plan's **Files to touch** table lists only paths the bot may not change, or the
+planner opens the plan with a `**Human required:**` line (either way the plan still goes into the
+description, for the person, and nothing is built); when a builder or reviser stops with
+`"human_required": true`; and when the path guard puts back the whole of a build's change. While
+it is on the bot treats the item as `human`: nothing queues, plans or builds it, and a request gets
+one reply. A person who has done their part takes the label off and queues the item again
+(`/harness build`) for the rest; one who builds it all closes it ([`harness/human.py`](harness/human.py)).
 
 **Dependencies.** An issue waits, unless it is forced, while something it waits for is still open:
 an issue a line of its description names ("Blocked by #125", "Depends on #12 and #14", "Do not
@@ -350,11 +365,12 @@ in place of the `bot:*` ones.
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`harness/failures.py`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; add `bot:build` (or assign the bot, or `/harness build`) to have it built, which takes this label off; close it to say no |
+| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off; comment `reject` (or close it) to say no |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, `main`'s protection, GitHub refusing it, or `auto_merge` off), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
+| `human required` | the bot put it on: only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account); its comment names both people and says what. The bot leaves it alone until a person takes the label off ([above](#priority-and-human)) |
 
 ## Triage
 
@@ -1063,10 +1079,11 @@ days.
 | look at the machine | `aws ssm start-session --target <instance>`; it powers off after 30 idle minutes and the starter wakes it within five minutes of a job |
 | set how hard an item is | label it `difficulty:easy`, `difficulty:medium` or `difficulty:hard` (Opus only), or leave it to the planner's rating ([the easy rule](#the-easy-rule)) |
 | hand an issue to people or to the bot | label it `human` or `bot:build` ([Triage](#triage)) |
-| build one of the bot's suggestions | label it `bot:build`, as any issue |
+| build one of the bot's suggestions | comment `approve` on it, or label it `bot:build`, as any issue; `reject` closes it |
 | start a failing pull request over from `main` | `/harness rebuild` on it or its issue; three strikes do it by themselves, a step up ([below](#rating-strikes-and-the-step-up)) |
 | ask for a review only | `/harness review [strong\|medium] [notes]` on the bot's pull request |
 | keep the bot off an item altogether | label it `human` |
+| give the bot back an item it labelled `human required` | do the person's part its comment names, take the label off, then `/harness build` |
 | change which subscription is spent first | reorder `priority` in `.harness/providers.json` |
 | have an item picked up sooner or later | label it `priority:high`, `priority:medium` or `priority:low` |
 | stop one item | `/harness stop` on its issue or pull request |
@@ -1170,6 +1187,7 @@ started as Squishy (`tests/squishy_cases.py`, from `tests/test_squishy.py`).
 | `git.py`, `gates.py` | worktrees, commits, bundles, pushes; the repository's checks |
 | `triage.py` | labels, types and assigns a new issue or pull request, an issue a person labels `human`, or one a person calls it on, from fixed rules (`triage.yml`); the title rule the `pr title` check runs (`pull_title_ok`, `pr-title.yml`) |
 | `easy.py`, `stepup.py` | the easy rule and its checks on a plan and a change; strikes, the step up and the rebuild (#317) |
+| `human.py` | work only a person can do (#793): when a plan needs one, and the `human required` comment that names the people |
 | `memory.py` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `threads.py`, `prompts.py`, `verdicts.py` | what the model is told, and reading what it answers |
 | `dashboard.py` | the pinned status issue (#148): opened and pinned once, rewritten every five minutes by `bot-status.yml` (`harness dashboard --sweep --stats --companions --every 300 --for 19800`, which sweeps first each time), with the statistics counted every 30 minutes and kept between |

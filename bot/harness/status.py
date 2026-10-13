@@ -9,8 +9,9 @@ from typing import Any, Callable
 from harness import providers as providers_mod
 from harness import review_rule
 from harness.clock import human_delta, parse_iso
-from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN,
-                            LABEL_PR, LABEL_REVISE, LABEL_SUGGESTION, LABEL_WORKING, SLASH, TITLE)
+from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN,
+                            LABEL_HUMAN_REQUIRED, LABEL_NEEDS_PLAN, LABEL_PR, LABEL_REVISE,
+                            LABEL_SUGGESTION, LABEL_WORKING, SLASH, TITLE)
 from harness.context import Context
 from harness.plan import run_status, working_threads
 from harness.providers import Provider
@@ -251,6 +252,8 @@ def report(ctx: Context) -> str:
                  f"to revise: {_numbers(labelled(LABEL_REVISE, prs=True))}; "
                  f"for a review run: {_numbers(labelled(LABEL_CROSS, prs=True))}.")
     lines.append(f"- Waiting for a person: {_numbers(labelled(LABEL_BLOCKED))}.")
+    lines.append(f"- Only a person can do (`{LABEL_HUMAN_REQUIRED}`, left alone until it comes "
+                 f"off): {_numbers(labelled(LABEL_HUMAN_REQUIRED))}.")
     lines.append(f"- People's work (`{LABEL_HUMAN}`, never touched): "
                  f"{_numbers(labelled(LABEL_HUMAN))}.")
     lines.append(f"- Open bot pull requests: {_numbers(labelled(LABEL_PR, prs=True))}.")

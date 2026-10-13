@@ -17,8 +17,9 @@ order, `CLAUDE.md` the rules of the codebase.
   server, faster or more trustworthy tests, less code for the same behaviour.
 - **Grounded**: it cites the files, SPEC sections, rulings or measurements that show the problem
   or the opportunity. Nothing you cannot point at.
-- **Buildable by the bot**: a person can approve it by adding the `bot:build` label, and the
-  night bot can then build it inside this repository with tests. Say how big it is.
+- **Buildable by the bot**: a person approves it by commenting `approve` (or by adding the
+  `bot:build` label) and rejects it by commenting `reject`, which closes it, and the night bot
+  can then build it inside this repository with tests. Say how big it is.
 - **New**: none of the open or recently closed issues below already covers it, and it is not a
   suggestion the maintainer closed.
 

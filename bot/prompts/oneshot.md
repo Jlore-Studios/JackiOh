@@ -84,6 +84,16 @@ or, when you could not build it:
 
     <!-- bot: {"status": "blocked", "question": "The one question a person must answer, with the options you see"} -->
 
+or, when nobody but a person can do it (a change under `.github/`, `.harness/`, `.squishy/` or
+`bot/`, which the harness puts back; a secret or a token; a setting in a dashboard, such as
+GitHub's, Vercel's, Render's, Supabase's or Cloudflare's; an account), the same line with
+`"human_required": true` and, in `question`, exactly what a person must do:
+
+    <!-- bot: {"status": "blocked", "human_required": true, "question": "What a person must do, and where"} -->
+
+The harness then labels the issue `human required`, names the people in its comment and leaves
+the issue alone until a person has done their part.
+
 The title becomes the squash commit's subject, and a check holds it to the convention: usually
 the issue's own title (`Patch v0.3.X: …`, `CI: …`, `Architecture: …`), with its version number
 kept. A title that breaks the convention is replaced by the issue's.
