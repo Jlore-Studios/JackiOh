@@ -5,7 +5,7 @@
 import type { ReplayStep } from "@jackioh/engine";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
 
-import { REPLAY_PREFETCH_STEPS } from "./config.ts";
+import { REPLAY_GIF_MAX_STEPS, REPLAY_PREFETCH_STEPS } from "./config.ts";
 import { ReplayFailure, replayFailureOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 
@@ -95,4 +95,28 @@ export function createStepCache(source: ReplaySource): StepCache {
       return first;
     },
   };
+}
+
+/** A clip's first and last step, in order, the last no further than `REPLAY_GIF_MAX_STEPS` steps on (#513). */
+export function clampClip(a: number, b: number): [number, number] {
+  const lo = Math.min(a, b);
+  const hi = Math.max(a, b);
+  return [lo, Math.min(hi, lo + REPLAY_GIF_MAX_STEPS - 1)];
+}
+
+/** The first and last step of the turn `index` is in, the clip clamped to its cap (#513). */
+export async function turnRange(cache: StepCache, index: number): Promise<[number, number]> {
+  const turn = (await cache.load(index)).turn;
+  let first = index;
+  while (first > 0 && (await cache.load(first - 1)).turn === turn) first -= 1;
+  let last = index;
+  while (last < cache.total - 1 && (await cache.load(last + 1)).turn === turn) last += 1;
+  return clampClip(first, last);
+}
+
+/** Steps `from` to `to`, both included, loading the pages that hold them (#513). */
+export async function loadClip(cache: StepCache, from: number, to: number): Promise<ReplayStep[]> {
+  const steps: ReplayStep[] = [];
+  for (let index = from; index <= to; index += 1) steps.push(await cache.load(index));
+  return steps;
 }
