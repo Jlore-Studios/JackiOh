@@ -471,6 +471,19 @@ describe("B43 a phone opens the log from the control bar", () => {
   });
 });
 
+// #785: the control bar on a phone held upright
+
+describe("#785 a phone held upright keeps the control bar to one row", () => {
+  it("board.css hides the board's mute and language buttons on a phone held upright, where the settings gear holds both", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (max-width: 600px) {");
+    const portrait = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    expect(portrait).toMatch(/\.board \.control-bar \.audio-toggle,\s*\.board \.control-bar \.language-button--game\s*\{\s*display:\s*none;/);
+  });
+});
+
 // B44: which route opened a picker, for the phone's slim bar
 
 describe("B44 the picker says which route opened it", () => {
