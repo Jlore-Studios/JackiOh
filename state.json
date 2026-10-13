@@ -3968,7 +3968,7 @@
       "stop_requested": false
     },
     "757": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -3988,11 +3988,11 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-7",
       "queued_at": "2026-10-13T06:39:05Z",
       "requested_by": "jgoetzmann",
-      "run_id": "38358171551",
-      "started_at": "2026-10-13T06:43:22Z",
+      "run_id": "38361791312",
+      "started_at": "2026-10-13T07:18:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -4220,9 +4220,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-13T07:13:34Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38361237687",
-    "what": "build #769 on devin"
+    "at": "2026-10-13T07:18:49Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38361791312",
+    "what": "build #757 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-13T07:14:14Z",
