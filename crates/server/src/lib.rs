@@ -25,6 +25,10 @@ pub mod bots;
 pub mod cli;
 pub mod config;
 pub mod db;
+// ---- Duos co-op (#946) ----
+// Fullsend SPEC S6: the Duos co-op rooms, their socket and their four-seat match actor.
+pub mod duos;
+// ---- end Duos co-op (#946) ----
 pub mod env;
 pub mod loops;
 pub mod ranked;

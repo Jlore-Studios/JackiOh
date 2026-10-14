@@ -241,6 +241,11 @@ pub struct FakeTables {
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
+    // ---- Duos co-op (#946) ----
+    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0037). Their store methods
+    /// are `crate::duos::store`'s.
+    pub duos: crate::duos::store::DuosTables,
+    // ---- end Duos co-op (#946) ----
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,

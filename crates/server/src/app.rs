@@ -463,6 +463,45 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: duos/rooms.rs and duos/replay.rs.
+    (
+        "POST",
+        "/api/duos/rooms",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::create),
+    ),
+    (
+        "GET",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::get_room),
+    ),
+    (
+        "POST",
+        "/api/duos/rooms/:code/join",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::join),
+    ),
+    (
+        "DELETE",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::cancel),
+    ),
+    (
+        "GET",
+        "/api/duos/live",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::live),
+    ),
+    (
+        "GET",
+        "/api/duos/matches/:matchId/replay",
+        AuthLevel::Active,
+        h!(crate::duos::replay::get_replay),
+    ),
+    // ---- end Duos co-op (#946) ----
 ];
 
 /// TS `allRoutes()`.
@@ -608,6 +647,23 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
 
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: `/ws/duos`, the co-op socket, beside `/ws/match` (`actor::ws_server::handle_duos`).
+    let duos_app = app.clone();
+    let duos_cors = cors.clone();
+    let duos_socket = move |request: Request| {
+        let app = duos_app.clone();
+        let cors = duos_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_duos(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Duos co-op (#946) ----
+
     let fallback = move |request: Request| {
         let app = app.clone();
         let cors = cors.clone();
@@ -616,6 +672,8 @@ pub fn router(app: Arc<App>) -> Router {
 
     Router::new()
         .route(WS_PATH, axum::routing::any(socket))
+        // Duos co-op (#946)
+        .route(actor::ws_server::WS_DUOS_PATH, axum::routing::any(duos_socket))
         .fallback(fallback)
 }
 
@@ -679,6 +737,11 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     if app.env.ladder_bots {
         loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool);
     }
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6, B34, B40: expired co-op rooms go, finished actors leave memory, and a live
+    // co-op match a restart left without an actor is folded back.
+    loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper);
+    // ---- end Duos co-op (#946) ----
 
     axum::serve(
         listener,

@@ -183,6 +183,16 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("WS_IDLE_TIMEOUT_SECONDS", json!(c::WS_IDLE_TIMEOUT_SECONDS)),
         ("WS_OUTBOX_MAX_FRAMES", json!(c::WS_OUTBOX_MAX_FRAMES)),
         ("WS_PING_INTERVAL_SECONDS", json!(c::WS_PING_INTERVAL_SECONDS)),
+        // ---- Duos co-op (#946) ----
+        ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
+        ("DUOS_MULLIGAN_CLOCK_MS", json!(c::DUOS_MULLIGAN_CLOCK_MS)),
+        ("DUOS_PROMPT_CLOCK_MS", json!(c::DUOS_PROMPT_CLOCK_MS)),
+        ("DUOS_ROOM_TTL_MS", json!(c::DUOS_ROOM_TTL_MS)),
+        ("DUOS_ROUND_CLOCK_MS", json!(c::DUOS_ROUND_CLOCK_MS)),
+        ("PING_RATE_LIMIT", json!(c::PING_RATE_LIMIT)),
+        ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
+        ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
+        // ---- end Duos co-op (#946) ----
     ]
 }
 
@@ -204,13 +214,15 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 64,
+        // Duos co-op (#946): 64 before it, and its eight DUOS_* / PING_* numbers.
+        listed, 72,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
          (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and Duos co-op's eight clocks and ping \
+         limits (#946)"
     );
 }
 
