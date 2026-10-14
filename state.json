@@ -6172,6 +6172,13 @@
     "848": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T03:54:27Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether a helper in crates/engine/src counts as hard 'engine rules'; it stays medium: test-only harness code, no production or rule change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
