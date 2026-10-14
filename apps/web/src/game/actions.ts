@@ -68,6 +68,7 @@ import {
   type BoardControl,
   type ClickTarget,
   type Highlight,
+  type Side,
 } from "./contract.ts";
 
 type PlayBody = Extract<ActionBody, { type: "play" }>;
@@ -668,6 +669,13 @@ export function pendingHighlight(view: PlayerView, pending: PendingView | null):
     const where = selectionTestid(view, selectionForOption(option));
     if (where !== null) out.add(where);
   }
+  // R821000: a face-down card has no testid of its own, so the zone its back lies in is what is clicked.
+  if (isPlaguePlacementPrompt(pending)) {
+    for (const option of pending.options) {
+      const zone = hiddenOptionZone(view, option);
+      if (zone !== null) out.add(testid.zone(zone.side, zone.row, zone.lane));
+    }
+  }
   return out;
 }
 
@@ -1040,10 +1048,12 @@ function withoutPickPrefix(key: string): string {
 export function selectionForOption(option: PendingOption): Selection {
   // ME-CRAFT (Meditative #17, R880): a craft preset carries its recipe; nothing else sets it.
   if (option.recipe !== undefined) return { pick: "craft", recipe: option.recipe };
+  // R177, R821000: a face-down card's option carries its id to answer with and the zone it lies in; the
+  // id is the selection, so it comes before the coordinates of a zone option.
+  if (option.instanceId !== undefined) return { pick: "instance", instanceId: option.instanceId };
   if (option.row !== undefined && option.lane !== undefined && option.player !== undefined) {
     return { pick: "zone", player: option.player, row: option.row, lane: option.lane };
   }
-  if (option.instanceId !== undefined) return { pick: "instance", instanceId: option.instanceId };
   if (option.player !== undefined) return { pick: "hero", player: option.player };
   if (option.key === "none" || option.key.startsWith("none:")) return { pick: "none" };
   // Everything else is a mode option: a Discover def id, a "Choose one" mode, a direction, or an
@@ -1090,6 +1100,61 @@ export function answerAction(
     (body) => body.type === "answer" && body.choiceId === pending.choiceId && targetsKey(body.selection) === wanted,
   );
   return listed ?? { type: "answer", choiceId: pending.choiceId, selection };
+}
+
+/**
+ * R689, R471: the prompt "Place N Plague Counters" opens (`ask_placement`,
+ * `crates/engine/src/effects/plague.rs`): one pick among every permanent on the field, answered on the
+ * board instead of in a list. The engine's own two sentences are the only mark the view carries.
+ */
+const PLAGUE_PLACEMENT_PROMPT = /^Place (?:a Plague Counter|\d+ Plague Counters) on a permanent$/;
+
+export function isPlaguePlacementPrompt(pending: PendingView | null): boolean {
+  return (
+    pending !== null &&
+    pending.forYou &&
+    pending.kind === "target" &&
+    pending.min === 1 &&
+    pending.max === 1 &&
+    pending.options.length > 0 &&
+    pending.options.every((option) => option.instanceId !== undefined) &&
+    PLAGUE_PLACEMENT_PROMPT.test(pending.prompt)
+  );
+}
+
+/** R821000: the zone a face-down card's option names (its definition is hidden, its place is not). */
+function hiddenOptionZone(view: PlayerView, option: PendingOption): { side: Side; row: Row; lane: number } | null {
+  if (option.instanceId === undefined || option.defId !== undefined) return null;
+  if (option.player === undefined || option.row === undefined || option.lane === undefined) return null;
+  return { side: sideOf(view, option.player), row: option.row, lane: option.lane };
+}
+
+/**
+ * A click on the board that answers the placement prompt, or null when it does not (a click on a hand
+ * card, a hero or a card the prompt did not offer, or any other prompt). A card is picked by its id and a
+ * face-down card by the zone its back lies in. The engine's own `answer` is returned, as for a list.
+ */
+export function answerPlaguePlacement(
+  view: PlayerView,
+  legal: readonly ActionBody[],
+  pending: PendingView | null,
+  target: ClickTarget,
+): ActionBody | null {
+  if (pending === null || !pending.forYou || !isPlaguePlacementPrompt(pending)) return null;
+  const picked = pending.options.find((option) => {
+    switch (target.on) {
+      case "unit":
+      case "backrow":
+        return option.instanceId === target.instanceId;
+      case "zone": {
+        const zone = hiddenOptionZone(view, option);
+        return zone !== null && zone.side === target.side && zone.row === target.row && zone.lane === target.lane;
+      }
+      default:
+        return false;
+    }
+  });
+  return picked === undefined ? null : answerAction(pending, [picked.key], view, legal);
 }
 
 /** The nonce is handed in, never generated: this module is as pure as the engine (CLAUDE.md rule 4). */

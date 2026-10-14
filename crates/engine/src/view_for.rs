@@ -22,7 +22,8 @@
 //!     up to the end of its action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
 //!     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
-//!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only,
+//!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only
+//!     (and the zone it lies in, R821000),
 //!     a `costChanged` on an unreadable card hides its cost and a `buffed` one its amounts, and a
 //!     `transformed` whose new card is unreadable hides the card it replaced, as does one whose old
 //!     card was unreadable where it ceased to exist (`hiddenFrom`), whatever became of its
@@ -1115,6 +1116,13 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
                 let mut hidden =
                     bare_option(format!("instance:{instance_id}"), HIDDEN_OPTION_LABEL.to_string());
                 hidden.instance_id = Some(instance_id.clone());
+                // R821000: where the back lies on the board is public (its zone draws it), so a client can
+                // answer a prompt by a click on that zone while the card itself stays unnamed.
+                if let Zone::Field { player, row, lane } = &card.zone {
+                    hidden.player = Some(*player);
+                    hidden.row = Some(*row);
+                    hidden.lane = Some(*lane);
+                }
                 return hidden;
             }
             base.instance_id = Some(instance_id.clone());
