@@ -5780,8 +5780,11 @@
     "what": "plan #817 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-14T00:10:05Z",
-    "notes": [],
+    "at": "2026-10-14T00:15:49Z",
+    "notes": [
+      "#824 needs a plan",
+      "started a night run, as a lane was free: #819 conflicts with main"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
