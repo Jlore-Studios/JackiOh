@@ -200,6 +200,7 @@ pub mod temporary;
 pub mod transform_riders;
 pub mod transform_variants;
 pub mod trap_cardresolved;
+pub mod trap_repeat_arrival;
 pub mod trap_window_pause;
 pub mod tribute;
 pub mod tribute_zones;

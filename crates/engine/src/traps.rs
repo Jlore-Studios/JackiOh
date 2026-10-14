@@ -74,6 +74,40 @@ pub struct TrapMatch {
     pub triggers: Vec<TrapTrigger>,
 }
 
+/// R874000: the arrivals one action's traps have answered, as the trap that answered each and the
+/// event as the rules read it. A sink of the action's own keeps its own list (`EngineSink::new`);
+/// every sink borrowed from it (`EngineSink::reborrow`, which `resolve::make_context` builds each
+/// context with) answers into its parent's, so a firing nested inside an effect counts with the
+/// action's own firings, as TS's module-level sets were one. Plain per-action memory, never state:
+/// it changes no hash and survives no replay boundary, since every replayed action rebuilds it.
+#[derive(Debug)]
+pub enum TrapAnswerSlot<'a> {
+    Own(Vec<(String, GameEvent)>),
+    Shared(&'a mut Vec<(String, GameEvent)>),
+}
+
+impl Default for TrapAnswerSlot<'_> {
+    fn default() -> Self {
+        TrapAnswerSlot::Own(Vec::new())
+    }
+}
+
+impl TrapAnswerSlot<'_> {
+    pub fn get(&self) -> &Vec<(String, GameEvent)> {
+        match self {
+            TrapAnswerSlot::Own(answered) => answered,
+            TrapAnswerSlot::Shared(answered) => answered,
+        }
+    }
+
+    pub fn get_mut(&mut self) -> &mut Vec<(String, GameEvent)> {
+        match self {
+            TrapAnswerSlot::Own(answered) => answered,
+            TrapAnswerSlot::Shared(answered) => answered,
+        }
+    }
+}
+
 /// What a dispatch did: the traps that fired, and whether a prompt paused the rest (§10.3).
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TrapDispatch {
@@ -393,15 +427,20 @@ pub fn fire_trap(
     if armed.is_empty() {
         return false;
     }
-    if sink.events.len() > 600 && sink.events.len() < 700 {
-        // DEBUG874
-        eprintln!("DEBUG874 events {} trap {} ({}) face_up {:?} zone {:?} ctrl {:?} event {:?} armed {:?} | dispatch {} queue {} work {} pending {:?} last work {:?}", sink.events.len(), trap.id, trap.def_id, trap.face_up, trap.zone, controller, event, armed, sink.state.dispatch.len(), sink.state.trigger_queue.len(), sink.state.work.len(), sink.state.pending.is_some(), sink.state.work.last().map(|w| (&w.resume.hook, &w.resume.step, &w.resume.def_id, serde_json::to_string(&w.resume.data).unwrap_or_default().chars().take(600).collect::<String>())));
-        if sink.events.len() % 50 == 1 {
-            let v = serde_json::to_value(&*sink.state).unwrap();
-            let mut sizes: Vec<(String, usize)> = v.as_object().unwrap().iter().map(|(k, x)| (k.clone(), x.to_string().len())).collect();
-            sizes.sort_by_key(|x| std::cmp::Reverse(x.1));
-            eprintln!("DEBUG874 SIZES total {} top {:?} events_json {}", v.to_string().len(), &sizes[..5.min(sizes.len())], serde_json::to_string(&*sink.events).map(|s| s.len()).unwrap_or(0));
+    // R874000: one answering per arrival. A trap that has fired on this arrival — the event as the
+    // rules read it — in this action's resolution does not fire on its identical twin. A Flicker
+    // re-summoning the same Unit re-offers the same `summoned` (§6.3: it counts as summoned), so a
+    // Field Trap answering every twin (Tesla into a Flicker replacement) loops forever, past the
+    // settle cap's reach: each twin is a new event, and the uncapped inner dispatch never returns
+    // to the capped loop. Other arrivals still answer, including the same Unit arriving
+    // differently — played (which carries `arrivedDuring`), then back through Reborn (which does
+    // not) — and so does every twin of a prompt-split chain, whose answer rebuilds this list.
+    if ARRIVAL_EVENTS.contains(&event.event_type()) {
+        let answered = (trap.id.clone(), event.as_rules_read());
+        if sink.trap_answers.get().contains(&answered) {
+            return false;
         }
+        sink.trap_answers.get_mut().push(answered);
     }
 
     // R154: the zone is read before the trap resolves, because firing it can move the card — a Trap

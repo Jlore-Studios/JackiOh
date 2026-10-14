@@ -62,7 +62,10 @@ mod tests {
     }
 
     fn count(events: &[GameEvent], event_type: &str) -> usize {
-        events.iter().filter(|event| event.event_type().as_str() == event_type).count()
+        events
+            .iter()
+            .filter(|event| event.event_type().as_str() == event_type)
+            .count()
     }
 
     mod c_n5_tesla {
@@ -95,7 +98,8 @@ mod tests {
             }
 
             #[test]
-            fn r17_a_played_unit_is_answered_after_it_resolves_4_damage_from_tesla_then_tesla_animates_in_defense() {
+            fn r17_a_played_unit_is_answered_after_it_resolves_4_damage_from_tesla_then_tesla_animates_in_defense()
+             {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [VANILLA, FILLER] }), json!({}), false);
                 let vanilla = s.card(VANILLA).clone();
@@ -104,9 +108,18 @@ mod tests {
 
                 s.expect_in_zone(&vanilla, "graveyard");
                 let tesla = s.card(TESLA).clone();
-                assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
+                assert!(matches_object(
+                    &js(&tesla.zone),
+                    &json!({ "z": "field", "row": "units", "lane": 3 })
+                ));
                 assert_eq!(s.stats(&tesla).position, Position::Def);
-                s.expect_events(json!(["cardPlayed", "cardResolved", "trapFired", "damage", "animated"]));
+                s.expect_events(json!([
+                    "cardPlayed",
+                    "cardResolved",
+                    "trapFired",
+                    "damage",
+                    "animated"
+                ]));
                 let hit = s.events().iter().map(js).find(|event| event["type"] == "damage");
                 assert!(matches_object(
                     &hit.unwrap_or(Value::Null),
@@ -117,7 +130,11 @@ mod tests {
             #[test]
             fn r781002_an_immutable_unit_it_fires_on_takes_no_damage_and_tesla_still_animates() {
                 crate::register_all();
-                let mut s = setup(json!({ "hand": [{ "def": MENACE, "radiant": true }, FILLER], "mana": 10 }), json!({}), false);
+                let mut s = setup(
+                    json!({ "hand": [{ "def": MENACE, "radiant": true }, FILLER], "mana": 10 }),
+                    json!({}),
+                    false,
+                );
                 let menace = s.card(MENACE).clone();
 
                 s.play(&menace, json!({ "zone": 2 }));
@@ -125,7 +142,10 @@ mod tests {
                 // A Field Trap can't target an Immutable Unit in play (R781001): Tesla fires and animates,
                 // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
                 let tesla = s.card(TESLA).clone();
-                assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
+                assert!(matches_object(
+                    &js(&tesla.zone),
+                    &json!({ "z": "field", "row": "units", "lane": 3 })
+                ));
                 assert_eq!(count(s.events(), "trapFired"), 1);
                 assert_eq!(count(s.events(), "damage"), 0);
                 s.expect_stats(&menace, json!({ "health": 18 }));
@@ -153,7 +173,9 @@ mod tests {
                 assert_eq!(count(s.events(), "trapFired"), 2);
                 // The Cry's token is hit first (its summon), the played Unit only once the play has resolved.
                 let token = s.events().iter().find_map(|event| match event {
-                    GameEvent::Summoned { def_id, instance_id, .. } if def_id == "core-t-rush" => Some(instance_id.clone()),
+                    GameEvent::Summoned {
+                        def_id, instance_id, ..
+                    } if def_id == "core-t-rush" => Some(instance_id.clone()),
                     _ => None,
                 });
                 let Some(token) = token else {
@@ -178,7 +200,11 @@ mod tests {
             #[test]
             fn s6_3_a_recruit_s_arrivals_are_summons_too_each_is_answered() {
                 crate::register_all();
-                let mut s = setup(json!({ "hand": [CALL, FILLER], "library": [TIMMY, TIMMY, VANILLA, MENACE] }), json!({}), false);
+                let mut s = setup(
+                    json!({ "hand": [CALL, FILLER], "library": [TIMMY, TIMMY, VANILLA, MENACE] }),
+                    json!({}),
+                    false,
+                );
 
                 s.play(CALL, json!({}));
 
@@ -200,7 +226,10 @@ mod tests {
                 }));
                 let defender = s.card(DEFENDER).clone();
 
-                s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }));
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": defender.id }] }),
+                );
 
                 s.expect_in_zone(&defender, "field");
                 assert_eq!(count(s.events(), "trapFired"), 1);
@@ -244,7 +273,10 @@ mod tests {
                 );
                 let menace = s.card(MENACE).clone();
 
-                s.play(FEELINGS, json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }));
+                s.play(
+                    FEELINGS,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": menace.id }] }),
+                );
 
                 assert_eq!(s.card(&menace).controller, P2);
                 assert_eq!(count(s.events(), "trapFired"), 0);
@@ -272,14 +304,21 @@ mod tests {
                 assert_eq!(count(s.events(), "animated"), 1);
                 assert_eq!(count(s.events(), "trapFired"), 1);
                 assert_eq!(s.card(&mine).face_up, Some(false));
-                assert!(matches_object(&js(&s.card(&mine).zone), &json!({ "row": "backrow", "lane": 3 })));
+                assert!(matches_object(
+                    &js(&s.card(&mine).zone),
+                    &json!({ "row": "backrow", "lane": 3 })
+                ));
             }
 
             #[test]
             fn r383_no_open_unit_zone_it_stays_face_up_in_its_backrow_zone_and_keeps_firing() {
                 crate::register_all();
                 let full = vec![VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
-                let mut s = setup(json!({ "hand": [TIMMY, TIMMY, FILLER] }), json!({ "field": full }), false);
+                let mut s = setup(
+                    json!({ "hand": [TIMMY, TIMMY, FILLER] }),
+                    json!({ "field": full }),
+                    false,
+                );
                 let tesla = s.card(TESLA).clone();
 
                 s.play(TIMMY, json!({ "zone": 1 }));
@@ -323,7 +362,10 @@ mod tests {
                 s.play(TIMMY, json!({ "zone": 2 }));
 
                 let tesla = s.card(TESLA).clone();
-                assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
+                assert!(matches_object(
+                    &js(&tesla.zone),
+                    &json!({ "z": "field", "row": "units", "lane": 3 })
+                ));
                 assert_eq!(s.stats(&tesla).position, Position::Def);
                 assert_eq!(count(s.events(), "trapFired"), 2);
                 assert_eq!(count(s.events(), "animated"), 1);
@@ -331,21 +373,28 @@ mod tests {
             }
 
             #[test]
-            fn r383_animated_it_is_a_unit_for_every_rule_it_can_be_attacked_and_dies_to_its_owner_s_graveyard() {
+            fn r383_animated_it_is_a_unit_for_every_rule_it_can_be_attacked_and_dies_to_its_owner_s_graveyard()
+             {
                 crate::register_all();
-                let mut s = setup(json!({ "hand": [VANILLA, FILLER], "field": [{ "def": MENACE, "lane": 1 }] }), json!({}), false);
+                let mut s = setup(
+                    json!({ "hand": [VANILLA, FILLER], "field": [{ "def": MENACE, "lane": 1 }] }),
+                    json!({}),
+                    false,
+                );
 
                 s.play(VANILLA, json!({ "zone": 2 }));
                 let tesla = s.card(TESLA).clone();
                 s.attack(MENACE, &tesla);
 
                 s.expect_in_zone(&tesla, "graveyard");
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
+                let graveyard: Vec<String> =
+                    s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
                 assert!(graveyard.contains(&tesla.id));
             }
 
             #[test]
-            fn r383_the_move_keeps_nothing_reset_an_animated_tesla_is_summoning_sick_on_its_first_turn_as_a_unit() {
+            fn r383_the_move_keeps_nothing_reset_an_animated_tesla_is_summoning_sick_on_its_first_turn_as_a_unit()
+             {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [VANILLA, FILLER] }), json!({}), false);
                 s.play(VANILLA, json!({ "zone": 2 }));
@@ -385,7 +434,12 @@ mod tests {
                 let animated = theirs["events"]
                     .as_array()
                     .and_then(|events| events.iter().find(|event| event["type"] == "animated").cloned());
-                assert!(animated.map(|event| event.to_string()).unwrap_or_default().contains(TESLA));
+                assert!(
+                    animated
+                        .map(|event| event.to_string())
+                        .unwrap_or_default()
+                        .contains(TESLA)
+                );
             }
 
             #[test]
@@ -398,6 +452,76 @@ mod tests {
 
                 s.expect_stats(MENACE, json!({ "health": 4 }));
                 s.expect_health(P1, 25);
+            }
+        }
+
+        mod r874000_loop {
+            use super::*;
+
+            const TAOTIE: &str = "meditative-047";
+            const STEP: &str = "classic-014";
+
+            /// R874000: a Flicker re-summon answers once, then the game goes on. P2's Radiant 饕餮
+            /// eats a Shadowstep out of p1's library, and the fused Unit reads its Radiant face,
+            /// which is every ingredient's Radiant face fused — so it carries the Radiant
+            /// Shadowstep's would-die Flicker. P1's board is full, so Tesla never animates away.
+            /// The Unit p2 then plays is zapped, flickered, and zapped again — and the loop ends
+            /// there: the second Flicker re-offers the identical `summoned`, which Tesla has
+            /// answered, so the victim lives at full health and the game continues. (Without the
+            /// fix this never returns: each twin is a new event, past the settle cap's reach.)
+            #[test]
+            fn r874000_a_flicker_resummon_identical_to_the_last_answers_once() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "r874000-tesla-flicker",
+                    "active": "p2",
+                    "p2": {
+                        "field": [{ "def": TAOTIE, "radiant": true, "lane": 1 }],
+                        "hand": [VANILLA, FILLER],
+                        "library": [FILLER, FILLER, FILLER],
+                        "mana": 10,
+                    },
+                    "p1": {
+                        "field": [
+                            { "def": VANILLA, "lane": 1 },
+                            { "def": VANILLA, "lane": 2 },
+                            { "def": VANILLA, "lane": 3 },
+                            { "def": VANILLA, "lane": 4 },
+                            { "def": VANILLA, "lane": 5 },
+                        ],
+                        "hand": [TESLA, VANILLA, FILLER],
+                        "library": [STEP],
+                        "mana": 10,
+                    },
+                }));
+
+                // P2's end of turn: the radiant 饕餮 fuses a random p1 Unit and the lone library
+                // Shadowstep into itself.
+                s.end_turn();
+                let fused = s.unit(P2, 1).expect("taotie");
+                assert!(fused.def_id.starts_with("t-"), "fused: {}", fused.def_id);
+
+                // P1 refills the eaten lane and sets Tesla; p2 then plays a fresh Unit into it.
+                let gap = (1..=5)
+                    .find(|lane| s.unit(P1, *lane).is_none())
+                    .expect("one lane eaten");
+                let fifth = s.card(VANILLA).clone();
+                s.play(&fifth, json!({ "zone": gap }));
+                let tesla = s.card(TESLA).clone();
+                s.play(&tesla, json!({ "zone": 3 }));
+                s.end_turn();
+                let victim = s.card(VANILLA).clone();
+                s.play(&victim, json!({ "zone": 2 }));
+
+                // Two firings — the play's `cardResolved`, then the first Flicker's `summoned` —
+                // and the identical second summon is declined: the victim stands at full health,
+                // Tesla is still a face-up trap, and the game is not over.
+                assert_eq!(count(s.events(), "trapFired"), 2);
+                s.expect_in_zone(&victim, "field");
+                s.expect_stats(&victim, json!({ "attack": 4, "health": 4 }));
+                let tesla_now = s.card(TESLA).clone();
+                assert_eq!(tesla_now.face_up, Some(true));
+                assert!(s.state().result.is_none());
             }
         }
 

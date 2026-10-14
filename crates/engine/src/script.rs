@@ -54,6 +54,9 @@ pub struct EngineSink<'a> {
     pub frontier: crate::triggers::FrontierSlot<'a>,
     /// R117: the owed items behind the one a drain is running (TS `work.ts`'s `DrainSink.owedBehind`).
     pub owed_behind: Option<indexmap::IndexSet<String>>,
+    /// R874000: the arrivals one action's traps have answered, shared by every sink borrowed
+    /// from the action's own, so a firing nested inside an effect counts with the action's own.
+    pub trap_answers: crate::traps::TrapAnswerSlot<'a>,
 }
 
 impl<'a> EngineSink<'a> {
@@ -67,6 +70,7 @@ impl<'a> EngineSink<'a> {
             dry_running: false,
             frontier: crate::triggers::FrontierSlot::default(),
             owed_behind: None,
+            trap_answers: crate::traps::TrapAnswerSlot::default(),
         }
     }
 
@@ -82,6 +86,7 @@ impl<'a> EngineSink<'a> {
             dry_running: self.dry_running,
             frontier: crate::triggers::FrontierSlot::Shared(self.frontier.get_mut()),
             owed_behind: self.owed_behind.clone(),
+            trap_answers: crate::traps::TrapAnswerSlot::Shared(self.trap_answers.get_mut()),
         }
     }
 }
