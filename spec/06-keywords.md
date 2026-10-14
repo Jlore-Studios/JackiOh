@@ -6,6 +6,8 @@ Players read two of this spec's words differently (v0.1.1, [[R373]]): the rules'
 
 Two verbs were renamed for players and in this spec alike (patch v0.3.4, [[R1320]]): Degrade is **Nerf** and Upgrade is **Buff** ([[§6.3]]). The engine's identifiers keep the old names (`degrade`, `upgrade`, `tune_once`, `TuneDirection`, the events `degraded` and `upgraded`, the wire names), so a ruling or a section written before the rename that says Degrade or Upgrade means Nerf or Buff.
 
+A card's text prints every [[§6.2]] trigger and [[§6.3]] verb, and Radiant, in bold wherever it uses the word as that term, in every case and inflection ("exile it", "exiled", "Locked", "Tributes"); a word spelled like a term that names something else, such as the exile pile ("your exile"), stays plain, a [[§6.1]] keyword bolds as the keyword a card has, and the rows the glossary keeps rules-only (Summon, Draw, Discard, Destroy and the like) stay plain ([[R910000]]).
+
 ### 6.1 Unit keywords (computed as a set per unit)
 
 Animated, Brittle and Temporary are printed on, or given to, cards that are not Units as well; their rows say how. The Cards column names Core cards as #N and the new sets' as C #N, C+ #N and M #N; for a keyword Core already had, it lists the Core cards, and [[§8.6]] and [[§8.7]] show which Classic and Classic+ cards print it.
