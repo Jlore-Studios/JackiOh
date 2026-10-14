@@ -7,7 +7,8 @@
 use indexmap::IndexMap;
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, ZoneChoice,
-    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, unit_view,
+    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, takes_strike_back,
+    unit_view,
 };
 use serde_json::Value;
 
@@ -85,7 +86,8 @@ fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
 }
 
 /// Tier 1: an attack on a unit it kills and survives, read from the layers. Divine Shield or
-/// Indestructible on the target means no kill.
+/// Indestructible on the target means no kill; a Ranged attacker survives any target that is not
+/// Ranged (R783000).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -101,6 +103,10 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     let kills = dealt >= t.health || has_keyword(&a.keywords, KeywordKind::Poisonous);
     if !kills {
         return false;
+    }
+    // R783000: the engine's own read — no strike back reaches it, a First Strike one included.
+    if !takes_strike_back(state, attacker, target) {
+        return true;
     }
     if has_keyword(&a.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&t.keywords, KeywordKind::FirstStrike)
