@@ -6508,6 +6508,8 @@
       "pending_request": false,
       "provider": "claude-1",
       "queued_at": "2026-10-14T19:54:22Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38653363577",
       "self_check_findings": [],
       "started_at": "2026-10-14T23:20:30Z",
