@@ -33,7 +33,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, and the pool (R1453, R641000, R1454, R1452) |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -366,6 +366,16 @@ series still makes its picks.
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
   open-row sweep (R1450) would delete the skeleton.
+- `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
+  `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
+  `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
+  `decide_styled` or the random policy, and no clock), fits each strength's Elo offset from the
+  strongest and prints the two config rows; it reads no database, and its anchor is the seed of
+  record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
+  seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
+  calibration checks for the strengths as built; a row pasted over them goes over the curve's too. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
+  rated games against people (`ranked_bot_games_since`) and prints the rating they say it performs
+  at, to give `bot-calibrate` as `--anchor`. Run it again after each AI promotion.
 
 ### Skill to Elo (R747000)
 
@@ -412,8 +422,9 @@ the table's +120).
    gap is the mean of the gaps it has: its games against the reference, and its games against
    random plus the random policy's gap.
 3. A row's Elo is `SKILL_ELO_ANCHOR` plus the gap, rounded to the nearest 10. Paste the rows over
-   `SKILL_ELO_TABLE` and the strengths' `seed_rating`s (the test `r747000_strength_seed_ratings_match_skill_curve`
-   fails until they agree), and the new numbers over this table.
+   `SKILL_ELO_TABLE` and `BOT_SEED_RATINGS`, the strengths' `seed_rating`s (the test
+   `r747000_strength_seed_ratings_match_skill_curve` fails until they agree), and the new numbers
+   over this table.
 
 A run of 200 games near an even match is good to about ±50 Elo (95%), and a run of 50 to about ±95,
 which is as fast a check that an AI change moved the curve as is worth running; a shut-out run

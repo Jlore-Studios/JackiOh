@@ -54,6 +54,43 @@ pub enum PublicStatsSource {
     Dev,
 }
 
+/// Which seats the public figures count (R807000): merged counts every counted seat, human and
+/// bot alike, and is what the endpoint displays; human and ai split the two sides.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub enum PublicStatsPilot {
+    Merged,
+    Human,
+    Ai,
+}
+
+impl PublicStatsPilot {
+    /// `?pilot=`: merged unless the query asks for a side.
+    pub fn parse(raw: Option<&str>) -> PublicStatsPilot {
+        match raw.map(|value| value.trim().to_lowercase()) {
+            Some(value) if value == "human" => PublicStatsPilot::Human,
+            Some(value) if value == "ai" => PublicStatsPilot::Ai,
+            _ => PublicStatsPilot::Merged,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PublicStatsPilot::Merged => "Human and bot seats",
+            PublicStatsPilot::Human => "Human seats",
+            PublicStatsPilot::Ai => "Bot seats",
+        }
+    }
+
+    pub fn filter(self) -> PilotFilter {
+        match self {
+            PublicStatsPilot::Merged => PilotFilter::Unified,
+            PublicStatsPilot::Human => PilotFilter::Human,
+            PublicStatsPilot::Ai => PilotFilter::Ai,
+        }
+    }
+}
+
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct PublicStatsGate {
@@ -79,6 +116,7 @@ pub struct PublicStatsSummary {
     pub live_games: i64,
     pub active_patch: String,
     pub source: PublicStatsSource,
+    pub pilot: PublicStatsPilot,
     pub best_card: Option<PublicStatsExtreme>,
     pub worst_card: Option<PublicStatsExtreme>,
 }
@@ -91,6 +129,8 @@ pub struct PublicStatsCardsResponse {
     pub gate: PublicStatsGate,
     pub source: PublicStatsSource,
     pub source_label: String,
+    pub pilot: PublicStatsPilot,
+    pub pilot_label: String,
     pub min_sample: i64,
     pub total_games: i64,
     pub cards: Vec<PublicCardStat>,
@@ -204,13 +244,22 @@ async fn records_for(app: &App, source: SourceFilter, patch: &str) -> Result<Vec
     Ok(records)
 }
 
-/// R1451: the seats of a record the public figures count: a live game's people only, so a ladder
-/// bot's side (`ai`, R1452) is read only by a query that asks for it, and both seats of an AI
-/// development game (R378).
-fn counted_pilot(source: GameSource) -> PilotFilter {
+/// R1451, amended by R807000: the seats of a record the public figures count. Development games
+/// always count both seats (R378); live games count what `?pilot=` asks for, merged (both seats)
+/// unless the query names a side.
+fn counted_pilot(source: GameSource, live_pilot: PilotFilter) -> PilotFilter {
     match source {
-        GameSource::Live => PilotFilter::Human,
+        GameSource::Live => live_pilot,
         GameSource::Dev => PilotFilter::Unified,
+    }
+}
+
+/// R807000: whether one seat's side counts: a development seat always does, a live seat does when
+/// the requested pilot is merged or names its pilot.
+fn seat_counted(source: GameSource, seat_pilot: Pilot, live_pilot: PilotFilter) -> bool {
+    match source {
+        GameSource::Dev => true,
+        GameSource::Live => live_pilot == PilotFilter::Unified || seat_pilot.as_str() == live_pilot.as_str(),
     }
 }
 
@@ -222,10 +271,15 @@ fn sum_tally(a: &Tally, b: &Tally) -> Tally {
     }
 }
 
-/// R1451: the public report over `records` for `source`: the live records' report counting their
-/// people (`counted_pilot`) and the development records' counting both seats, summed card by card,
-/// in catalog-id order as `card_stats` lists them.
-fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> CardStatsReport {
+/// R1451, amended by R807000: the public report over `records` for `source`: the live records'
+/// report counting the requested pilot's seats (`counted_pilot`) and the development records'
+/// counting both seats, summed card by card, in catalog-id order as `card_stats` lists them.
+fn public_report(
+    records: &[GameRecord],
+    source: SourceFilter,
+    patch: &str,
+    live_pilot: PilotFilter,
+) -> CardStatsReport {
     let filter = |source: SourceFilter, pilot: PilotFilter| CardStatsFilter {
         source,
         mode: None,
@@ -236,13 +290,13 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
     if matches!(source, SourceFilter::Live | SourceFilter::All) {
         parts.push(card_stats(
             records,
-            &filter(SourceFilter::Live, counted_pilot(GameSource::Live)),
+            &filter(SourceFilter::Live, counted_pilot(GameSource::Live, live_pilot)),
         ));
     }
     if matches!(source, SourceFilter::Dev | SourceFilter::All) {
         parts.push(card_stats(
             records,
-            &filter(SourceFilter::Dev, counted_pilot(GameSource::Dev)),
+            &filter(SourceFilter::Dev, counted_pilot(GameSource::Dev, live_pilot)),
         ));
     }
     let mut by_card: IndexMap<String, CardStats> = IndexMap::new();
@@ -269,7 +323,14 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
     let mut cards: Vec<CardStats> = by_card.into_values().collect();
     cards.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
-        filter: filter(source, PilotFilter::Unified),
+        filter: filter(
+            source,
+            if source == SourceFilter::Dev {
+                PilotFilter::Unified
+            } else {
+                live_pilot
+            },
+        ),
         games,
         decks,
         cards,
@@ -278,14 +339,17 @@ fn public_report(records: &[GameRecord], source: SourceFilter, patch: &str) -> C
 
 /// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
-/// R1451: a ladder bot's game counts toward the gate like any live game, and its people's side
-/// toward the figures; the bot's side never does (`public_report`). That a bot game adds one deck
-/// where a person's adds two is a tell R1452 records and keeps.
+/// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
+/// the figures count every counted seat, human and bot alike (`?pilot=human` reads the people's
+/// sides only, `?pilot=ai` the bots'). A bot game adds two decks like any game, so the per-game
+/// deck tell R1452 recorded is gone.
 pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
     let source_param = req.query.get("source").map(|value| value.trim().to_lowercase());
+    let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
+    let live_pilot = pilot.filter();
 
     let patch_index = versions.iter().position(|version| *version == requested_patch);
     let previous_patch = match patch_index {
@@ -338,6 +402,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             PublicStatsSource::Provisional => SourceFilter::All,
         },
         &requested_patch,
+        live_pilot,
     );
 
     let stats_map: IndexMap<&str, _> = report
@@ -472,6 +537,8 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         },
         source,
         source_label: source_label.to_string(),
+        pilot,
+        pilot_label: pilot.label().to_string(),
         min_sample: CARD_STATS_MIN_SAMPLE,
         total_games: report.games as i64,
         cards,
@@ -480,6 +547,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             live_games: live_games_count,
             active_patch: requested_patch,
             source,
+            pilot,
             best_card,
             worst_card,
         },
@@ -510,6 +578,9 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         ));
     };
 
+    let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
+    let live_pilot = pilot.filter();
+
     let versions = load_patch_versions().await;
     let mut patch_history: Vec<PatchRate> = Vec::new();
 
@@ -520,7 +591,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             .filter(|record| !is_tutorial(record))
             .collect();
         if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
-            let report = public_report(&records, SourceFilter::Live, version);
+            let report = public_report(&records, SourceFilter::Live, version, live_pilot);
             let stat = report.cards.iter().find(|stat| stat.card == card_id);
             patch_history.push(PatchRate {
                 patch: version.clone(),
@@ -547,8 +618,8 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
 
     for record in &records_to_count {
         for seat in PLAYER_IDS {
-            // R1451: as `public_report` counts them, a live game's people only.
-            if counted_pilot(record.source) == PilotFilter::Human && record.pilots[seat] != Pilot::Human {
+            // R1451, amended by R807000: as `public_report` counts them.
+            if !seat_counted(record.source, record.pilots[seat], live_pilot) {
                 continue;
             }
             let summary = &record.game.seats[seat];

@@ -152,7 +152,10 @@ thread count.
   [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd games. It is
   the free-form version of the gate, for experiments on other seeds than the gate's. Per game it
   prints duel.ts's line (who won, why, the hash, whether the log replays, decision times) and a
-  tally at the end.
+  tally at the end: the wins, draws and games without a result, and agent `a`'s win share with its
+  95% Wilson interval (`aShare`, `aLow`, `aHigh`). The gate's report gives the same interval for
+  its wins. `improve.md` (How much a result says) sets how many games a lane plays before it trusts
+  one.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
@@ -240,6 +243,15 @@ The live games' records are what the gather lane's figures sit beside, and they 
   `r1451_r677_a_bots_pilot_is_filed_on_the_seat_it_ended_in`, and in `tests/store/card_stats.rs`
   `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
   `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
+
+## The ladder bots after a promotion
+
+The ladder bots' strengths are measured against each other on the AI on `main` (R748000,
+`docs/bot-calibration.md`), beside the skill curve their seed ratings are read from (R747000), so a
+merged promotion is followed by that document's re-calibration: `cargo run --release -p
+jackioh-server -- bot-calibrate`, run by a person or the night bot, whose report is compared with the
+curve and, where it should win, pasted into `crates/server/src/config.rs` in a pull request. A lane
+never edits `crates/server`, and a promotion does not wait for it.
 
 ## Where the numbers go
 

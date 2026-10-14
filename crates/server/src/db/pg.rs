@@ -5342,6 +5342,24 @@ pub async fn ranked_game(t: &mut PgTx<'_>, game_id: &str) -> Result<Option<Rated
         .transpose()
 }
 
+pub async fn ranked_bot_games_since(t: &mut PgTx<'_>, since: i64) -> Result<Vec<RatedGameRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        rated_game_columns!(),
+        " from public.rated_games where (p1_bot_id is not null or p2_bot_id is not null) and ended_at >= ",
+        ts!("$1"),
+        " order by ended_at, id"
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| RatedGameDbRow::read(row).and_then(to_rated_game))
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // Player statistics on the account (SPEC §9.11, R639, R654)
 // ---------------------------------------------------------------------------
