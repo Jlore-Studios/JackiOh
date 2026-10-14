@@ -38,10 +38,15 @@ pub use history::{KEPT_SCRIPTS, KeptScript, carried_versions, has_script_at, shi
 
 pub use query::*;
 
-/// `packages/cards/catalog.json` as compiled in: the card data proved against SPEC §8.
+/// `packages/cards/catalog.json` as compiled in: the card data proved against SPEC §8. `build.rs`'s
+/// copy without the whitespace between tokens (#442 L12), the same JSON with its keys in the same order.
 pub fn catalog_json() -> &'static str {
-    include_str!("../catalog.json")
+    CATALOG_JSON
 }
+
+/// The text `catalog_json()` returns: a `static`, so that a build holds one copy of it however many
+/// crates inline that function (a literal is copied into each codegen unit that inlines it).
+static CATALOG_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/catalog.json"));
 
 /// `packages/cards/flavour.json` as compiled in (the client's flavour lines and artists).
 pub fn flavour_json() -> &'static str {

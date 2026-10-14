@@ -25,6 +25,11 @@
 //! It also compiles the catalog version in: the `version` of the last entry of
 //! `patches/patches.json` (the newest shipped patch), as `JACKIOH_CATALOG_VERSION`.
 //!
+//! `$OUT_DIR/catalog.json` is `catalog.json` with the whitespace between its tokens taken out, which
+//! `lib.rs`'s `catalog_json()` compiles in: the same JSON, keys in the same order, without the
+//! indentation, which cost the browser's module about 2.7 KB gzipped against #442 L12's cap
+//! (`apps/web/src/wasm/size.test.ts`).
+//!
 //! R767000: and every other shipped version, for the replays of games played on it.
 //! `$OUT_DIR/history.json` holds `{ order, patches, versions }`: `order` is every shipped version,
 //! oldest first; each of `versions` is one shipped version but the newest, with the catalog ids its
@@ -140,6 +145,9 @@ fn main() {
 
     let out = out_dir.join("registry.rs");
     std::fs::write(&out, render(&files, &by_id)).expect("write registry.rs");
+    let catalog_text =
+        std::fs::read_to_string(&catalog_path).unwrap_or_else(|e| panic!("{}: {e}", catalog_path.display()));
+    std::fs::write(out_dir.join("catalog.json"), compact_json(&catalog_text)).expect("write catalog.json");
     let catalog = read_json(&catalog_path);
     let catalog = catalog
         .as_object()
@@ -147,6 +155,31 @@ fn main() {
     let browser = std::env::var("CARGO_CFG_TARGET_ARCH").is_ok_and(|arch| arch == "wasm32");
     let history = history_json(&patches_dir, catalog, browser.then_some(BROWSER_CARRIED_FROM));
     std::fs::write(out_dir.join("history.json"), history).expect("write history.json");
+}
+
+/// `json` without the whitespace outside its strings (the header): every other character kept, in
+/// order, so it parses to the same value with its keys in the same order.
+fn compact_json(json: &str) -> String {
+    let mut out = String::with_capacity(json.len());
+    let (mut in_string, mut escaped) = (false, false);
+    for c in json.chars() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+            out.push(c);
+        } else if !matches!(c, ' ' | '\n' | '\r' | '\t') {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// A JSON file, parsed; one that cannot be read or parsed fails the build, naming it.
