@@ -5969,6 +5969,13 @@
     "842": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T02:53:20Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 1 (size) is the doubtful one: 8 files is close to the limit of 10, and catching a panic in async code is subtle; the issue is already rated medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
