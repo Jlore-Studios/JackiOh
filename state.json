@@ -6033,9 +6033,9 @@
     "what": "suggestions on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-14T02:38:42Z",
+    "at": "2026-10-14T02:44:30Z",
     "notes": [
-      "started a night run, as a lane was free: a suggestion survey is due, for `claude-1`"
+      "started a night run, as a lane was free: #842 (medium) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
