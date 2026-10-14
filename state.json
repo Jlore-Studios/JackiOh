@@ -6029,6 +6029,13 @@
     "890": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T18:25:48Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): no way to list open PRs from here, so unconfirmed whether one touches these files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
