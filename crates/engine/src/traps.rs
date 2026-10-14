@@ -393,6 +393,16 @@ pub fn fire_trap(
     if armed.is_empty() {
         return false;
     }
+    if sink.events.len() > 600 && sink.events.len() < 700 {
+        // DEBUG874
+        eprintln!("DEBUG874 events {} trap {} ({}) face_up {:?} zone {:?} ctrl {:?} event {:?} armed {:?} | dispatch {} queue {} work {} pending {:?} last work {:?}", sink.events.len(), trap.id, trap.def_id, trap.face_up, trap.zone, controller, event, armed, sink.state.dispatch.len(), sink.state.trigger_queue.len(), sink.state.work.len(), sink.state.pending.is_some(), sink.state.work.last().map(|w| (&w.resume.hook, &w.resume.step, &w.resume.def_id, serde_json::to_string(&w.resume.data).unwrap_or_default().chars().take(600).collect::<String>())));
+        if sink.events.len() % 50 == 1 {
+            let v = serde_json::to_value(&*sink.state).unwrap();
+            let mut sizes: Vec<(String, usize)> = v.as_object().unwrap().iter().map(|(k, x)| (k.clone(), x.to_string().len())).collect();
+            sizes.sort_by_key(|x| std::cmp::Reverse(x.1));
+            eprintln!("DEBUG874 SIZES total {} top {:?} events_json {}", v.to_string().len(), &sizes[..5.min(sizes.len())], serde_json::to_string(&*sink.events).map(|s| s.len()).unwrap_or(0));
+        }
+    }
 
     // R154: the zone is read before the trap resolves, because firing it can move the card — a Trap
     // reaches its owner's graveyard on consumption and would then have no slot to report.
