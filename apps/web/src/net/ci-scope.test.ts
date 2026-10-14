@@ -34,6 +34,8 @@ const NAMES = [
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
   "web",
   "e2e",
@@ -49,6 +51,8 @@ const RUST = [
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
 
@@ -449,7 +453,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/.env.example", ["rust_server", "rust_tools_wasm"]],
     ["crates/engine/src/reduce.rs", [...RUST]],
     ["crates/cards/catalog.json", [...RUST]],
-    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -465,7 +469,7 @@ describe("scripts/ci-scope.sh", () => {
     ["ladder/x.ts", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
-    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
   ];
   it("runs each Rust test group for the crates it builds on and the files its tests read", () => {
     const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));
