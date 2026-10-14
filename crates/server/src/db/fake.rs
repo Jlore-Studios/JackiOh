@@ -244,12 +244,8 @@ pub struct FakeTables {
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0036's tables.
     pub social: SocialTables,
     // ---- Social: watching and shared replays (#939, #940) ----
-    // Migration 0036's `friendships` (`a < b`) and `blocks`, which watching and sharing read,
-    // `replay_shares`, and `profiles.allow_spectators` by profile (one not held reads as true).
-    pub friendships: Vec<FriendshipRow>,
-    pub blocks: Vec<BlockRow>,
+    // Migration 0036's `replay_shares` (friendships, blocks and the spectators setting are `social`'s).
     pub replay_shares: Vec<ReplayShare>,
-    pub allow_spectators: IndexMap<String, bool>,
     // ---- end Social: watching and shared replays ----
     // ---- Duos co-op (#946) ----
     /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0037). Their store methods
@@ -4148,32 +4144,16 @@ pub fn chat_purge(f: &mut FakeTx<'_>, before: i64) -> Result<i64, StoreError> {
 
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
-/// One row of `public.friendships` (migration 0036): `a < b`, as its check holds them.
-#[derive(serde::Serialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct FriendshipRow {
-    pub a: String,
-    pub b: String,
-    pub since: i64,
-}
-
-/// One row of `public.blocks` (migration 0036).
-#[derive(serde::Serialize, Clone, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BlockRow {
-    pub blocker: String,
-    pub blocked: String,
-    pub created_at: i64,
-}
-
 /// Friends (either order of the pair), and neither blocking the other.
 fn friends_unblocked_in(tables: &FakeTables, a: &str, b: &str) -> bool {
     a != b
         && tables
+            .social
             .friendships
             .iter()
             .any(|row| (row.a == a && row.b == b) || (row.a == b && row.b == a))
         && !tables
+            .social
             .blocks
             .iter()
             .any(|row| (row.blocker == a && row.blocked == b) || (row.blocker == b && row.blocked == a))
@@ -4188,19 +4168,12 @@ fn share_readable(tables: &FakeTables, share: &ReplayShare) -> Option<Option<i64
         .then_some(row.finished_at)
 }
 
-/// Migration 0036's cascades for the rows above: a deleted profile's friendships, blocks and
-/// shares, either side, and its spectators setting.
+/// Migration 0036's cascade for the shares: a deleted profile's, either side (the friendships,
+/// blocks and spectators setting go in `remove_social_rows`).
 fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
-    keep_only(&mut tables.friendships, |row| {
-        row.a != profile_id && row.b != profile_id
-    });
-    keep_only(&mut tables.blocks, |row| {
-        row.blocker != profile_id && row.blocked != profile_id
-    });
     keep_only(&mut tables.replay_shares, |row| {
         row.sharer != profile_id && row.friend != profile_id
     });
-    tables.allow_spectators.shift_remove(profile_id);
 }
 
 pub fn watch_friends_unblocked(f: &mut FakeTx<'_>, a: &str, b: &str) -> Result<bool, StoreError> {
@@ -4214,7 +4187,7 @@ pub fn watch_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<b
     if !tables.profiles.iter().any(|row| row.id == profile_id) {
         return Ok(false);
     }
-    Ok(tables.allow_spectators.get(profile_id).copied().unwrap_or(true))
+    Ok(!tables.social.spectators_refused.contains(profile_id))
 }
 
 pub fn watch_set_allows_spectators(
@@ -4227,7 +4200,11 @@ pub fn watch_set_allows_spectators(
     if !tables.profiles.iter().any(|row| row.id == profile_id) {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     }
-    tables.allow_spectators.insert(profile_id.to_string(), allow);
+    if allow {
+        tables.social.spectators_refused.shift_remove(profile_id);
+    } else {
+        tables.social.spectators_refused.insert(profile_id.to_string());
+    }
     Ok(())
 }
 

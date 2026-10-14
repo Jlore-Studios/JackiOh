@@ -19,6 +19,8 @@ pub mod challenges;
 pub mod chat;
 pub mod friends;
 pub mod presence;
+pub mod shares;
+pub mod watch;
 
 use axum::body::Body;
 use axum::http::{HeaderValue, StatusCode, header};

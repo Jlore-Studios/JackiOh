@@ -314,8 +314,12 @@ mod pg {
         Ok(row.try_get::<Option<Uuid>, _>(column)?.map(|id| id.to_string()))
     }
 
-    const ROOM_COLUMNS: &str =
-        "code, host, guest, difficulty, host_choice, guest_choice, match_id, created_at, expires_at";
+    /// A macro rather than a `const`, so every query stays a `&'static str` (`concat!`).
+    macro_rules! room_columns {
+        () => {
+            "code, host, guest, difficulty, host_choice, guest_choice, match_id, created_at, expires_at"
+        };
+    }
 
     fn room_of(row: &PgRow) -> Result<DuosRoom, StoreError> {
         let guest_choice: Option<Value> = row.try_get("guest_choice")?;
@@ -332,7 +336,11 @@ mod pg {
         })
     }
 
-    const MATCH_COLUMNS: &str = "id, seed, a1, a2, difficulty, options, created_at, ended_at, result";
+    macro_rules! match_columns {
+        () => {
+            "id, seed, a1, a2, difficulty, options, created_at, ended_at, result"
+        };
+    }
 
     fn match_of(row: &PgRow) -> Result<DuosMatch, StoreError> {
         let ended_at: Option<OffsetDateTime> = row.try_get("ended_at")?;
@@ -371,8 +379,10 @@ mod pg {
 
     pub async fn rooms_get(t: &mut PgTx<'_>, code: &str) -> Result<Option<DuosRoom>, StoreError> {
         run_as(t, None).await?;
-        let row = sqlx::query(&format!(
-            "select {ROOM_COLUMNS} from public.duos_rooms where code = $1::text"
+        let row = sqlx::query(concat!(
+            "select ",
+            room_columns!(),
+            " from public.duos_rooms where code = $1::text"
         ))
         .bind(code)
         .fetch_optional(&mut **t)
@@ -390,14 +400,15 @@ mod pg {
         at: i64,
     ) -> Result<Option<DuosRoom>, StoreError> {
         run_as(t, Some(guest)).await?;
-        let row = sqlx::query(&format!(
+        let row = sqlx::query(concat!(
             "update public.duos_rooms
                 set guest = $2::uuid, guest_choice = $3::jsonb, match_id = $4::uuid
               where code = $1::text
                 and guest is null
                 and host <> $2::uuid
                 and expires_at > to_timestamp($5::double precision / 1000.0)
-          returning {ROOM_COLUMNS}"
+          returning ",
+            room_columns!()
         ))
         .bind(code)
         .bind(guest)
@@ -468,8 +479,10 @@ mod pg {
         if !is_uuid(match_id) {
             return Ok(None);
         }
-        let row = sqlx::query(&format!(
-            "select {MATCH_COLUMNS} from public.duos_matches where id = $1::uuid"
+        let row = sqlx::query(concat!(
+            "select ",
+            match_columns!(),
+            " from public.duos_matches where id = $1::uuid"
         ))
         .bind(match_id)
         .fetch_optional(&mut **t)

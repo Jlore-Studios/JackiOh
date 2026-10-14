@@ -196,6 +196,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
         replays: jackioh_server::api::replays::Replays::default(),
+        social: jackioh_server::social::Social::default(),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)

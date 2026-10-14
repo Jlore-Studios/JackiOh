@@ -792,6 +792,13 @@ pub fn router(app: Arc<App>) -> Router {
         async move {
             if is_websocket_upgrade(&request) {
                 actor::ws_server::handle_watch(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Social: watching and shared replays ----
+
     // ---- Duos co-op (#946) ----
     // Fullsend SPEC S6: `/ws/duos`, the co-op socket, beside `/ws/match` (`actor::ws_server::handle_duos`).
     let duos_app = app.clone();
@@ -807,7 +814,6 @@ pub fn router(app: Arc<App>) -> Router {
             }
         }
     };
-    // ---- end Social: watching and shared replays ----
     // ---- end Duos co-op (#946) ----
 
     let fallback = move |request: Request| {
