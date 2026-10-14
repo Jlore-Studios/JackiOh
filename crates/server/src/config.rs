@@ -222,6 +222,16 @@ pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
 // ---------------------------------------------------------------------------------------------
+// The background loops' supervisor (`loops.rs`). Not in SPEC, and no R-row (#842).
+// ---------------------------------------------------------------------------------------------
+
+/// How long `loops::spawn_supervised` waits after a loop panics before it starts that loop again.
+/// The retention purge and the bot pool tick as soon as they start, so without a wait a panic that
+/// recurs on every tick would restart them in a hot loop. Five seconds holds such a loop to one
+/// crash line per five seconds and leaves a pairing or a sweep late by seconds only.
+pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
+
+// ---------------------------------------------------------------------------------------------
 // Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
 // the client reads the list's page and the routes' allowance.
 // ---------------------------------------------------------------------------------------------
@@ -475,6 +485,19 @@ pub const MATCH_ACTIONS_PER_SECOND: usize = 5;
 // SPEC §11 R109: 300 requests/minute per account across the API is generous for normal client
 // polling and UI use while still bounding a runaway or malicious client.
 pub const API_REQUESTS_PER_MINUTE: usize = 300;
+/// SPEC §11 R835000: how many refused actions from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
+/// raise `match.rejections.unusual` (§9.8). Twenty: a lost player mashing End turn out of turn
+/// stays under it, while a scripted flooder crosses it in seconds. Counted strictly over the
+/// threshold, so exactly this many refusals stay silent.
+pub const REJECTION_ALERT_THRESHOLD: usize = 20;
+/// SPEC §11 R835000, R835002: the rolling window the rejection count and the malformed-frame count
+/// are kept over, in milliseconds. A minute: abuse inside a live match (§9.8) is bursty, and a
+/// window this wide keeps a rapid test's sends inside one of them.
+pub const REJECTION_ALERT_WINDOW_MS: i64 = 60_000;
+/// SPEC §11 R835002: how many malformed frames from one seat, inside `REJECTION_ALERT_WINDOW_MS`,
+/// the actor answers before it closes that seat's socket. Ten: a stale client sends a few, never
+/// this many, so past it the peer is a flooder, not a bug.
+pub const MALFORMED_FRAMES_PER_WINDOW: usize = 10;
 /// SPEC §11 R738: the least time between two `aim` frames the actor relays for one seat. Aims that
 /// arrive faster are coalesced, never queued: the newest waits out the interval and goes alone, so
 /// the opponent's arrow always ends where the sender's aim ended, at most this long behind it.

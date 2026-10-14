@@ -27,7 +27,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops, `serve` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -462,7 +462,7 @@ sh crates/server/tests/db/run.sh                      # the store contract again
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-`tests/server.rs` is one binary over `tests/{api,actor,bots,store,support}/`. `support/deps.rs` builds a
+`tests/server.rs` is one binary over `tests/{api,actor,bots,loops,store,support}/`. `support/deps.rs` builds a
 test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; time is
