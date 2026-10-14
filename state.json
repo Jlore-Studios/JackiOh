@@ -6354,6 +6354,14 @@
           "muse": "medium"
         }
       }
+    },
+    "853": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T03:11:20Z",
+      "issue": 833,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
