@@ -5560,6 +5560,13 @@
     "873": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T12:41:14Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy-rule line 6 fails: the db half of the fix must land in .github/workflows/ci.yml, a forbidden path, so only a person can make it"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
