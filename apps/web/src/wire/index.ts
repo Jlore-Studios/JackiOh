@@ -212,7 +212,6 @@ export {
   PARAM_PLACEHOLDER,
   PLAYER_IDS,
   SHIPPED_SETS,
-  armorOf,
   fillParams,
   hasKeyword,
   keywordKey,

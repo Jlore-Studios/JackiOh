@@ -74,6 +74,3 @@ export function legalDecks(): string[][] {
   }
   return decks;
 }
-
-/** The card that is in no deck of `legalDecks()`, for the drag tests. */
-export const SPARE_CARD_ID = fixtureCardId(FIXTURE_CARD_COUNT);

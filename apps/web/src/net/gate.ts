@@ -45,11 +45,6 @@ export type Account =
       renewable?: boolean;
     };
 
-/** `me.profile.status`, hoisted so a screen does not reach through two objects for it. */
-export function statusOf(account: Account): "loading" | "anonymous" | "error" | MeResponse["profile"]["status"] {
-  return account.kind === "ready" ? account.me.profile.status : account.kind;
-}
-
 /** The refresh token when this session can be renewed at all, else null. */
 function renewableToken(session: Session): string | null {
   const token = session.refreshToken;
