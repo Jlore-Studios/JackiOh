@@ -6158,6 +6158,14 @@
       "started_at": "2026-10-14T03:37:17Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "851": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T02:48:22Z",
+      "issue": 834,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "07194ccb3614e7ac",
