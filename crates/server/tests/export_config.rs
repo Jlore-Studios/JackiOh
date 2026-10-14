@@ -198,6 +198,16 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
         ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
         // ---- end Social ----
+        // ---- Duos co-op (#946) ----
+        ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
+        ("DUOS_MULLIGAN_CLOCK_MS", json!(c::DUOS_MULLIGAN_CLOCK_MS)),
+        ("DUOS_PROMPT_CLOCK_MS", json!(c::DUOS_PROMPT_CLOCK_MS)),
+        ("DUOS_ROOM_TTL_MS", json!(c::DUOS_ROOM_TTL_MS)),
+        ("DUOS_ROUND_CLOCK_MS", json!(c::DUOS_ROUND_CLOCK_MS)),
+        ("PING_RATE_LIMIT", json!(c::PING_RATE_LIMIT)),
+        ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
+        ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
+        // ---- end Duos co-op (#946) ----
     ]
 }
 
@@ -220,13 +230,15 @@ fn every_name_is_listed_once() {
     assert_eq!(names.len(), listed, "a constant is listed twice");
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
-        listed, 76,
+        // 64 before #936, SPEC S7's twelve and Duos co-op's eight.
+        listed, 84,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
          (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and SPEC S7's twelve (#936)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), SPEC S7's twelve (#936), and Duos co-op's \
+         eight clocks and ping limits (#946)"
     );
 }
 

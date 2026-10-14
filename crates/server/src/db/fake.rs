@@ -251,6 +251,11 @@ pub struct FakeTables {
     pub replay_shares: Vec<ReplayShare>,
     pub allow_spectators: IndexMap<String, bool>,
     // ---- end Social: watching and shared replays ----
+    // ---- Duos co-op (#946) ----
+    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0037). Their store methods
+    /// are `crate::duos::store`'s.
+    pub duos: crate::duos::store::DuosTables,
+    // ---- end Duos co-op (#946) ----
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,

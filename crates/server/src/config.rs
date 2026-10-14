@@ -1829,3 +1829,29 @@ pub const CHAT_POLL_MS: i64 = 4_000;
 // challenge), so the sweep only tidies the rows; ten seconds keeps them honest for one cheap update.
 pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // ---- end Social ----
+// ---- Duos co-op (#946) ----
+// Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one is
+// exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board renders the same clocks and
+// the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
+
+/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
+/// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
+pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
+/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
+/// person ended): on expiry the AI answers that prompt for them.
+pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
+/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
+/// still owes.
+pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
+/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
+/// the AI team's turn.
+pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+/// S6, B34: how long an unjoined co-op room stays open.
+pub const DUOS_ROOM_TTL_MS: i64 = 600_000;
+/// S6, B39: the pings one seat may send inside `PING_RATE_WINDOW_MS`; the rest are dropped silently.
+pub const PING_RATE_LIMIT: usize = 5;
+/// S6, B39: the sliding window `PING_RATE_LIMIT` is counted over.
+pub const PING_RATE_WINDOW_MS: i64 = 3_000;
+/// S6, B64: how long the board marks a pinged card.
+pub const PING_SHOW_MS: i64 = 2_500;
+// ---- end Duos co-op (#946) ----

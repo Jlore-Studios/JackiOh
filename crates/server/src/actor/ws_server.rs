@@ -785,3 +785,62 @@ pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
         })
 }
 // ---- end Social: watching and shared replays ----
+
+// ---- Duos co-op (#946) ----
+
+/// Fullsend SPEC S6: the Duos co-op socket, upgraded on the same listener (`app::router`).
+pub const WS_DUOS_PATH: &str = "/ws/duos";
+
+/// S6, B35: the `/ws/duos` upgrade, through the doors `/ws/match` has (`handle_with`): a disallowed
+/// origin is refused before any token is read, an address over its socket count next, frames are
+/// capped at `MAX_FRAME_BYTES`, only `WS_SUBPROTOCOL` is echoed, and the pump pings and drops an idle
+/// peer the same way (R1441). The socket's hello gate goes on before its pump starts, so the hello
+/// that names the match is never dropped while the token is checked; then `duos::ws` authenticates it
+/// as `/ws/match` does and hands it to the co-op actor.
+pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
+    let options = AttachOptions::for_app(&app);
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+    if !origin_allowed(&allowed, &parts.headers) {
+        tracing::warn!(event = "ws.upgrade.origin_refused", path = WS_DUOS_PATH);
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(&app);
+    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
+        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let query = query_pairs(&parts.uri);
+    let token = token_from(&query);
+    let match_id = query_param(&query, "matchId");
+
+    upgrade
+        .max_message_size(MAX_FRAME_BYTES)
+        .max_frame_size(MAX_FRAME_BYTES)
+        .protocols([WS_SUBPROTOCOL])
+        .on_upgrade(move |ws| async move {
+            let _slot = slot;
+            let (socket, frames) = Socket::channel();
+            let gate = crate::duos::ws::HelloGate::install(&socket);
+            let pump = tokio::spawn(pump(ws, socket.clone(), frames));
+            register_client(key, &socket);
+            crate::duos::ws::handle_duos_socket(&app, &socket, gate, token, match_id).await;
+            let _ = pump.await;
+            unregister_client(key, &socket);
+        })
+}
+// ---- end Duos co-op (#946) ----
