@@ -5908,6 +5908,13 @@
     "835": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T01:28:28Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Never-easy line I was least sure of: 'anything that adds an R number' \u2014 this adds R835000-R835002, so medium even though the code change is small and single-crate."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
