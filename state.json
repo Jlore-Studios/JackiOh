@@ -5739,6 +5739,16 @@
       "started_at": "2026-10-13T23:51:05Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "824": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-14T00:10:58Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     }
   },
   "labels_synced": "07194ccb3614e7ac",
