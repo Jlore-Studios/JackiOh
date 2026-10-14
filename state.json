@@ -6512,6 +6512,9 @@
     "927": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "ebe72f566cfad1598df6839b49e6ff1205d3f55a": 1
+      },
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
