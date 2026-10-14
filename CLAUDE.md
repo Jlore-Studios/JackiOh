@@ -49,10 +49,10 @@ trap backrow. This file binds every agent, not only Claude.
    by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under among them, each
    built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled chunks and no game
    state (#442 L8), and the engine's thread-local naming the shipped catalog a replay is folding under, set
-   for that one call and put back after it (R767000). A Luau script is kept pure by its host: the sandbox (L5), the integer boundary
-   every value crosses (L6) and the build-time lint (L6, L7), all in `crates/luau/README.md`. Data reaches a
-   pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or
-   a clock goes in `crates/tools`.
+   for that one call and put back after it (R767000). A Luau script is kept pure by its host: the sandbox
+   (L5), the integer boundary every value crosses (L6) and the build-time lint (L6, L7), all in
+   `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
+   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return effects and never mutate state. A `.luau` script calls `J`
    (`local J = require("@jackioh")`, typed by `crates/cards/luau/jackioh.luau`): one function per verb of
    the engine's effects module, under the same name, each returning its effect as data that the host builds
