@@ -6240,7 +6240,13 @@
       "suggestion": true
     },
     "902": {
+      "asks": [],
       "closeout": false,
+      "forced": false,
+      "pending_request": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-14T19:37:35Z",
+      "stopped_by": "jgoetzmann",
       "tree": {
         "adopted": true,
         "at": "2026-10-14T19:35:57Z",
