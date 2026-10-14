@@ -6135,12 +6135,8 @@
     "what": "build #835 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-14T03:16:00Z",
-    "notes": [
-      "#849: typed it Task",
-      "#848: typed it Task",
-      "#847: typed it Bug"
-    ],
+    "at": "2026-10-14T03:21:51Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
