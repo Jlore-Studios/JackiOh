@@ -35,13 +35,25 @@ const CHAOS: &str = "core-095";
 
 use super::scenario;
 
-/// A cursor at which a base #95's single roll is `effect`, the pick 095's own tests use (R28).
-fn chaos_cursor(seed: &str, effect: &str) -> u32 {
-    cursor_where(seed, |cursor| {
-        subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
-            .first()
-            .is_some_and(|rolled| rolled.name == effect)
-    })
+/// Whether a base #95's single roll at `cursor` is `effect`, the pick 095's own tests use (R28).
+fn rolls(seed: &str, cursor: u32, effect: &str) -> bool {
+    subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
+        .first()
+        .is_some_and(|rolled| rolled.name == effect)
+}
+
+/// Whether a #95 play's events show its roll casting #95 itself, the play's second `cardPlayed`. "Cast a
+/// random Call to Chaos" picks the edition from the pool of every set (R380) on the roll's own rng, so a
+/// cursor rolling the recast does not pin the edition (095's own `recast_of_core_cursor`).
+fn recasts_core(events: &[GameEvent]) -> bool {
+    events
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::CardPlayed { def_id, .. } => Some(def_id),
+            _ => None,
+        })
+        .nth(1)
+        .is_some_and(|def_id| def_id == CHAOS)
 }
 
 /// The target list naming p2's hero.
@@ -235,18 +247,25 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
         // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
         // to Chaos" casts one where the old link at the cap cast nothing.
-        // The seed is arbitrary: `chaos_cursor` finds the cursor where the roll is the recast.
+        // The seed is arbitrary: each play's cursor is searched for a roll that casts #95 itself.
         let seed = "inv-r5-chaos-chain";
-        let mut s = scenario(
-            json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }),
-        );
-        let chaos = s.card(CHAOS).id.clone();
-        s.card_mut(&chaos).memory.insert(
-            subsystems::CHAOS_CHAIN_KEY.to_string(),
-            json!(CALL_TO_CHAOS_CHAIN_CAP - 1),
-        );
-        s.state_mut().rng_cursor = chaos_cursor(seed, "recast");
-        s.play(CHAOS, json!({}));
+        let at_cap = |cursor: u32| {
+            let mut s = scenario(
+                json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }),
+            );
+            let chaos = s.card(CHAOS).id.clone();
+            s.card_mut(&chaos).memory.insert(
+                subsystems::CHAOS_CHAIN_KEY.to_string(),
+                json!(CALL_TO_CHAOS_CHAIN_CAP - 1),
+            );
+            s.state_mut().rng_cursor = cursor;
+            s.play(CHAOS, json!({}));
+            s
+        };
+        let first = cursor_where(seed, |cursor| {
+            rolls(seed, cursor, "recast") && recasts_core(at_cap(cursor).events())
+        });
+        let mut s = at_cap(first);
 
         let plays: Vec<String> = s
             .events()
@@ -276,7 +295,18 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         s.answer(json!(last_link));
         s.expect_in_zone(&last_link, "hand");
 
-        s.state_mut().rng_cursor = chaos_cursor(seed, "recast");
+        let again = cursor_where(seed, |cursor| {
+            if !rolls(seed, cursor, "recast") {
+                return false;
+            }
+            let mut probe = at_cap(first);
+            probe.play(REMINISCE, json!({}));
+            probe.answer(json!(last_link));
+            probe.state_mut().rng_cursor = cursor;
+            probe.play(&last_link, json!({}));
+            recasts_core(probe.last_events())
+        });
+        s.state_mut().rng_cursor = again;
         s.play(&last_link, json!({}));
         let played = s
             .last_events()

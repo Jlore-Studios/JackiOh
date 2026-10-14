@@ -472,17 +472,28 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     fn r177_r33_r35_a_face_down_trap_transmogulate_replaced_stays_hidden_after_its_replacement_reaches_the_graveyard()
      {
         jackioh_cards::register_all();
-        let mut s = scenario(json!({
-            "seed": "hunt-r3-transmog-trap",
-            "p1": {
-                "hand": [TRANSMOGULATE],
-                "backrow": [{ "def": SHEEPISH, "lane": 1 }],
-                "mana": 10,
-                "library": [HIT_JOB],
-            },
-            "p2": { "hand": [MAGIC_JAMMED, STOCKPILE], "library": [HIT_JOB] },
-        }));
-        let sheep = must(s.backrow("p1", 1), "p1's Sheepish");
+        let setup = |seed: &str| {
+            let s = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [TRANSMOGULATE],
+                    "backrow": [{ "def": SHEEPISH, "lane": 1 }],
+                    "mana": 10,
+                    "library": [HIT_JOB],
+                },
+                "p2": { "hand": [MAGIC_JAMMED, STOCKPILE], "library": [HIT_JOB] },
+            }));
+            let sheep = must(s.backrow("p1", 1), "p1's Sheepish");
+            (s, sheep)
+        };
+        // Transmogulate's pick for the trap is a random Legendary Trap of every set (R35, R380), and every
+        // Trap joining the pool moves it: search for a seed where it is #85 Unlicensed Experimentation.
+        let seed = seed_where("hunt-r3-transmog-trap", |seed| {
+            let (mut s, _) = setup(seed);
+            s.play(TRANSMOGULATE, json!({}));
+            s.backrow("p1", 1).is_some_and(|card| card.def_id == UNLICENSED)
+        });
+        let (mut s, sheep) = setup(&seed);
 
         s.play(TRANSMOGULATE, json!({}));
         s.expect_in_zone(&sheep, "gone");
