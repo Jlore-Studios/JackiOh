@@ -710,16 +710,20 @@ pub(crate) fn game_record(outcome: &ArenaOutcome) -> anyhow::Result<Option<GameR
     )?))
 }
 
+/// The directory a run's output goes to: `out`, else `$JACKIOH_TRAINING_OUT`, else `None`.
+pub(crate) fn training_out(out: Option<&Path>) -> Option<PathBuf> {
+    match out {
+        Some(dir) => Some(dir.to_path_buf()),
+        None => match std::env::var_os(TRAINING_OUT_ENV) {
+            Some(dir) if !dir.is_empty() => Some(PathBuf::from(dir)),
+            _ => None,
+        },
+    }
+}
+
 /// Where the records go: `<out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else `None`.
 pub(crate) fn records_path(out: Option<&Path>) -> Option<PathBuf> {
-    let dir = match out {
-        Some(dir) => dir.to_path_buf(),
-        None => match std::env::var_os(TRAINING_OUT_ENV) {
-            Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-            _ => return None,
-        },
-    };
-    Some(dir.join(format!("{}.jsonl", utc_date())))
+    training_out(out).map(|dir| dir.join(format!("{}.jsonl", utc_date())))
 }
 
 pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Result<()> {
@@ -741,12 +745,17 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
     Ok(())
 }
 
-pub(crate) fn utc_date() -> String {
+/// The Unix time now, in whole seconds.
+pub(crate) fn unix_now() -> i64 {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs())
         .unwrap_or(0);
-    utc_date_of(i64::try_from(seconds).unwrap_or(i64::MAX))
+    i64::try_from(seconds).unwrap_or(i64::MAX)
+}
+
+pub(crate) fn utc_date() -> String {
+    utc_date_of(unix_now())
 }
 
 /// One game's duel line from agent `a`'s side, in key order.

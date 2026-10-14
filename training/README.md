@@ -60,14 +60,16 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
      and both standing prompts send the lanes to the Meditative cards first.
    - Otherwise push `ai/<lane>` as `main` plus an empty `[skip ci]` commit naming the session, and
      make the lane's pull request this session's draft, titled
-     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open).
+     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open). Its
+     description opens with the gate's latest pass (Watching a lane on GitHub).
 3. Run one Devin session on the lane's standing prompt
    (`devin -p --prompt-file training/<lane>.md --model "$DEVIN_MODEL" --permission-mode dangerous
    --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI, measures
    it with dry runs of the gate, and commits only once a real run of the gate has passed. A session
    ends after a promotion or after four hours. Meanwhile, every 15 minutes
    (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>` as one
-   `[skip ci]` commit when it changed, and rewrites the session's comment on the draft.
+   `[skip ci]` commit when it changed, rewrites the session's comment on the draft, and rewrites
+   the draft's description when a new pass of the gate changed it.
 4. When the session ends with a promotion commit, land it on `main`. If `main`'s crates did not move
    since the session's start, the parent and the candidate are the builds the gate measured: rebase
    the commit and re-check it against the parent (`cargo jackioh promote --verify`). If they moved,
@@ -85,8 +87,16 @@ A lane never merges anything itself: CI does, through branch protection, once it
 ### Watching a lane on GitHub
 
 The lane's pull request is the place to follow it. Its **Files changed** is the session's work in
-progress against `main` (CI does not run on a `[skip ci]` commit), and its comments say what
-happened:
+progress against `main` (CI does not run on a `[skip ci]` commit), the top of its description is
+the latest pass, and its comments say what happened:
+
+- the latest pass of the gate, at the top of the draft's description: every run of `promote` (a dry
+  run, a promotion or a `--verify`) rewrites `~/training-out/<lane>/last-pass.md` with it, failed
+  runs included, and the loop puts that file above the lane's own text within 15 minutes. It says
+  how many of the games the candidate beat the AI on `main` in, with what the lane needs, a table of
+  the games won, lost, drawn and without a result as p1, as p2 and in all, the interval those wins
+  give and the shadow bans, and a grid with one square per game (🟩 beat the bot, 🟥 lost, ⬜ drawn,
+  ⬛ no result). Arena runs are not passes and do not change it;
 
 - one comment per session, rewritten every 15 minutes while it runs: how long it has run, the
   checkout's diff against `main` with a link to it, and everything `attempts.md` gained this session
@@ -263,6 +273,7 @@ never edits `crates/server`, and a promotion does not wait for it.
 | The gather lane's next game number for a patch, and that patch's card figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `cards-<patch>.json` |
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
+| The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
 | What each Devin session tried, and why the loop set a promotion back | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
 | The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
 | The loop's log, each Devin session's export, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.json`, `~/logs/<lane>-web-<t>.log` |

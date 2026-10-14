@@ -1115,6 +1115,12 @@ A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` a
 `--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
 a failed gate.
 
+Every run that plays its games, in any mode and whether or not it passes, rewrites
+`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
+candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
+all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
+request.
+
 ### 14.3 `crates/ai/generation.json`
 
 The main AI's record. Generation 0 is the port of the last successful TS AI (`packages/ai` at
