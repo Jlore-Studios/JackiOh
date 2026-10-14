@@ -6678,10 +6678,10 @@
     "what": "build #831 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-14T23:40:30Z",
+    "at": "2026-10-14T23:51:19Z",
     "notes": [
       "CI on #896: #896: queued a CI fix",
-      "started a night run, as a lane was free: #927 (medium) is queued to revise, for `claude-3`: build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)"
+      "started a night run, as a lane was free: #892 (hard) is queued to build, for `claude-7`: build on `claude-7` (claude, `opus`, strong); review on `claude-7` (claude, `opus`, strong)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
