@@ -39,7 +39,7 @@ from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
                             LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_HUMAN_REQUIRED,
-                            LABEL_NEEDS_PLAN, LABEL_PLANNED,
+                            LABEL_NEEDS_PLAN, LABEL_PERSON_MERGES, LABEL_PLANNED,
                             LABEL_PR, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_STUCK,
                             LABEL_SUGGESTION, LABEL_TREE, LABELS, OTHERS, PLAN_FLOOR, SLASH,
                             STATE_BRANCH, TITLE)
@@ -1842,9 +1842,10 @@ class Deliverer:
 
     def _carried(self, issue: int) -> list[str]:
         """The issue's labels its pull request starts with, approved or a draft: its difficulty,
-        so the same models revise and review it, and its priority tier (#90)."""
+        so the same models revise and review it, its priority tier (#90), and `person merges`
+        (#839)."""
         return sorted(name for name in self._labels(issue)
-                      if name.lower() in {*DIFFICULTY_LABELS, *PRIORITY_TIERS})
+                      if name.lower() in {*DIFFICULTY_LABELS, *PRIORITY_TIERS, LABEL_PERSON_MERGES})
 
     def _second_review(self, number: int, status: str) -> None:
         """Act on a review run's verdict on a bot pull request."""
@@ -1975,6 +1976,8 @@ class Deliverer:
         if not pull.get("node_id"):
             return ""
         branch = str((pull.get("head") or {}).get("ref") or self.plan.get("branch") or "")
+        if pull.get("number") and LABEL_PERSON_MERGES in self._labels(int(pull["number"])):
+            return self._hand_to_a_person(pull, f"it is labelled `{LABEL_PERSON_MERGES}`")
         review = [p for p in self._changed(branch) if matches(p, self.cfg.review_paths)]
         if review:
             shown = ", ".join(f"`{p}`" for p in review[:8])

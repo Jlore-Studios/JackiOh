@@ -231,6 +231,18 @@ class FlowTests(unittest.TestCase):
         queue_mod.queue_revise(h.ctx, int(pull["number"]), by="jgoetzmann")
         self.assertNotIn("ready for merge", h.gh.label_names(int(pull["number"])))
 
+    def test_an_issue_labelled_person_merges_waits_for_a_person(self):
+        h = Harness(self)
+        h.gh.add_issue(12, labels=(LABEL_BUILD, "person merges"))
+        _, result = h.night(FakeRunner({"build": builder({"src/game.txt": "v2\n"}),
+                                        "review": reviewer(APPROVE)}))
+        self.assertEqual(result["status"], "approved")
+        pull = h.gh.list_pulls(head="bot/issue-12")[0]
+        self.assertNotIn(pull["node_id"], h.gh.auto_merge)
+        self.assertEqual(h.gh.label_names(int(pull["number"])),
+                         {LABEL_PR, "person merges", "ready for merge", "difficulty:medium"})
+        self.assertIn("it is labelled `person merges`", h.gh.bot_comments(12)[-1])
+
     def test_an_approved_pull_request_with_auto_merge_off_is_ready_for_merge(self):
         h = Harness(self, auto_merge=False)
         h.gh.add_issue(12, labels=(LABEL_BUILD,))

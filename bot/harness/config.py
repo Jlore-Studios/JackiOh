@@ -126,6 +126,7 @@ _SHARED: dict[str, tuple[str, str]] = {
     "ready for merge": ("0e8a16", "The night bot's reviews approved it, but auto-merge could not turn on: a person merges it"),
     "human": ("ededed", "People do this: the night bot never queues, plans, builds or labels it"),
     "human required": ("e99695", "The night bot found it cannot do this (bot/, .github/, a secret, a dashboard): people do it"),
+    "person merges": ("1d76db", "The bot builds it, but a person reviews and merges its pull request"),
     "difficulty:easy": ("c2e0c6", "Any model may build it, the weakest first (Sonnet, Devin)"),
     "difficulty:medium": ("fef2c0", "A medium model or stronger builds it (the default with no difficulty label)"),
     "difficulty:hard": ("b60205", "Only a strong model (Opus) plans, builds and reviews it"),
@@ -206,6 +207,10 @@ LABEL_HUMAN = "human"
 #: naming them. From then on it is `human`: people do it, and the bot never touches it. A person
 #: puts it on too (`triage`). Taking it off hands the item back.
 LABEL_HUMAN_REQUIRED = "human required"
+#: The bot builds and reviews it, but never auto-merges its pull request (#839): the pull request
+#: carries the label from its issue (`deliver._carried`), and the reviews' approval hands it to a
+#: person as a review path does. The weekly hygiene issue carries it.
+LABEL_PERSON_MERGES = "person merges"
 #: Labels the bot used to have: the sweep deletes them from the repository (`sweep._labels`), so
 #: nobody puts on one that no longer does anything. #664 took the method labels and `bot:approved`
 #: (`bot:build` and `human` hand an issue on), `bot:needs-review` (always beside `ready for

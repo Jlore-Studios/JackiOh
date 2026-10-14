@@ -145,8 +145,10 @@ summary over jobs of under five minutes) and `bot selftest` (`bot-selftest.yml`)
 but `bot selftest`; adding a path to that list takes proof that nothing in `crates/`, `apps/`, `e2e/` or
 `spec/` reads it. Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
 coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites) runs daily in `super.yml`. A job
-over seven minutes opens an issue (`ci-duration.yml`): split it until it finishes under five. Each workflow's
-header says what it does.
+over seven minutes opens an issue (`ci-duration.yml`): split it until it finishes under five. `hygiene.yml`
+runs weekly: it opens an issue for Squishy to clear dead files and tighten the agent instructions, which a
+person reviews and merges (`person merges`), and lists the stale branches safe to delete for a person (#839).
+Each workflow's header says what it does.
 
 ## Architecture
 
@@ -192,10 +194,11 @@ every bot off an issue, `priority:*` sets the order and `difficulty:*` the weake
 Neither bot takes an issue that is the other's.
 
 When you are a bot's builder or reviewer, this file binds you like anyone else. You must not change
-`.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/` (the full list is `forbidden_paths` in
-`.harness/config.json`): the harness puts such a change back, and the deliver job refuses to push one. When
-the task is nothing but such a change, or needs a secret, a dashboard or an account, stop with
-`"human_required": true` (your prompt shows the line) and say what a person must do.
+`.github/`, `.harness/`, `.squishy/`, `bot/` or `.claude/`, except that Squishy may change `.claude/skills/`
+(the full lists are `forbidden_paths` in each bot's `config.json`): the harness puts such a change back, and
+the deliver job refuses to push one. When the task is nothing but such a change, or needs a secret, a
+dashboard or an account, stop with `"human_required": true` (your prompt shows the line) and say what a person
+must do.
 
 ## Parallel work
 
