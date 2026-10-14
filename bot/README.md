@@ -240,7 +240,8 @@ Every way of asking either gets an answer at once, or is found again later:
   how to phrase a request. The bot does not guess a build from it, and does not ignore it.
 - **The sweep** runs every ten minutes (`harness sweep`, and on demand from the Actions tab). It
   reads the last three days back from GitHub and answers anything no handler answered:
-  - a trusted command (in a comment, a diff comment or a review) that nobody claimed;
+  - a trusted command (in a comment, a diff comment or a review) that nobody claimed, and a bare
+    `approve` or `reject` vote on a suggestion, which the event job also wakes for at once (#929);
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
   - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
