@@ -14,7 +14,7 @@ local PICKED_KEY = "kumquatPicked"
 -- own `{}` crosses as a record (`numbers.rs`, #464 gap 1).
 local function choices(ctx: J.EffectContext): { string }
 	local library = ctx:zone_cards(ctx:controller(), "library")
-	local meditative = {}
+	local meditative: { { id: string, cost: number } } = {}
 	for _, card in ipairs(library) do
 		if ctx:def_of(card.defId).set == "Meditative" then
 			meditative[#meditative + 1] = { id = card.id, cost = ctx:effective_cost(card.id) }

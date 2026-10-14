@@ -12,7 +12,7 @@ local function book_swap_source_of(card: any): string?
 	if card.enchantments == nil then
 		return nil
 	end
-	for _, entry in ipairs(card.enchantments) do
+	for _, entry: any in ipairs(card.enchantments) do
 		if entry.kind == "swapsBook" then
 			return entry.from
 		end

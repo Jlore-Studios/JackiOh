@@ -179,8 +179,13 @@ unannotated parameter degrades what the readers answer, and the checker cannot s
 (`#ctx:zone_cards(...)` and `unit.id` in a loop both fail without the annotation). A verb whose
 argument is a union (several table shapes, `HealArgs`) cannot narrow an inline literal either:
 hoist the inner table into an annotated local (`local target: J.TargetSpec = { of = "selfHero" }`).
-`luau-analyze --mode=strict` (Luau 0.740, above) is clean over the module, the pilots and every
-card-shaped fixture; the checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
+A table's fields are invariant, so a value going into an optional field takes that field's type
+(`local MARK: J.CardMark? = …` for `DestroyAtNextTurnStartArgs`' `mark`).
+`luau-analyze --mode=strict` (Luau 0.740, above) is clean over the module and every card script,
+and CI's `rust` check holds it so (#872). Each pure-read context's type (`J.ConditionContext`,
+`J.HookArgs`, `J.CostArgs`, …) declares every reader `shared_readers!` registers on it, typed as on
+`J.EffectContext`: `tests/export_api.rs` reads the macro, so a reader the host adds is typed at once.
+The checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
 `@jackioh` at the committed module, which the CLI resolves (the mapping drops the `.luau`
 extension, which luau-analyze 0.740 refuses as `Unknown require`, #464 gap 15), so local
 strict runs check the files in place.

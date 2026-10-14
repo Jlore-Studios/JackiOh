@@ -18,7 +18,7 @@ local TARGETS = {
 
 local function target_checks()
 	return {
-		number = function(args)
+		number = function(args: J.TargetCheckArgs): boolean
 			local candidate = args:candidate()
 			if candidate == nil then
 				return false
