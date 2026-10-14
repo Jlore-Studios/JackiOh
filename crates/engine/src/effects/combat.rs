@@ -40,6 +40,7 @@ use crate::zones::active_units_of;
 /// Which side's units are compelled. "any" is both, in R68's order (active side first). (TS
 /// `PlayerSpec | "any"`.)
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum ForcedSide {
     #[serde(rename = "self")]
@@ -81,6 +82,7 @@ fn attackers_of(ctx: &EffectContext<'_>, side: ForcedSide) -> Vec<CardInstance> 
 
 /// `forced_attacks_on`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForcedAttacksOnArgs {
     pub target: TargetSpec,
@@ -105,6 +107,7 @@ pub fn forced_attacks_on(args: ForcedAttacksOnArgs) -> Effect {
 
 /// Which attackers #60 compels: a side, narrowed by definition and by "the ones I just made".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForcedAttackerFilter {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -140,6 +143,7 @@ fn freshly_summoned(ctx: &EffectContext<'_>) -> IndexSet<String> {
 
 /// #60 names its target by the instance id its trigger read off the event (R42-style ids).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged, rename_all_fields = "camelCase")]
 pub enum ForcedTarget {
     Instance { instance_id: String },
@@ -162,6 +166,7 @@ fn target_of(ctx: &EffectContext<'_>, target: &ForcedTarget) -> Option<AttackTar
 
 /// `forced_attacks`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForcedAttacksArgs {
     pub attackers: ForcedAttackerFilter,
@@ -205,6 +210,7 @@ pub fn forced_attacks(args: ForcedAttacksArgs) -> Effect {
 
 /// `cancel_attack`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CancelAttackArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -265,6 +271,7 @@ pub fn cancel_attack(args: CancelAttackArgs) -> Effect {
 
 /// `redirect_attack`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RedirectAttackArgs {
     /// The instance id the attack is re-aimed at.
@@ -314,6 +321,7 @@ pub fn redirect_attack(args: RedirectAttackArgs) -> Effect {
 
 /// `ai_plays_out_turn`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AiPlaysOutTurnArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -415,6 +423,7 @@ fn settle_before_playout(ctx: &mut EffectContext<'_>) {
 /// `forced_attack_random`'s arguments (TS's inline object). `among` is TS's `"enemies" | "enemyUnits"`,
 /// the type `combat::force_attacks_random` takes.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForcedAttackRandomArgs {
     pub attacker: TargetSpec,
@@ -452,6 +461,7 @@ pub fn forced_attack_random(args: ForcedAttackRandomArgs) -> Effect {
 
 /// `forced_attack_own_hero`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForcedAttackOwnHeroArgs {
     pub attacker: TargetSpec,

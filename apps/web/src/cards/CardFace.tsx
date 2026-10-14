@@ -37,6 +37,9 @@
 //
 // R1382: a card with every tribal tag (R1424, Meditative #87) prints "All Tribes" on its tags line in
 // place of the five, its other tags after it; its tags themselves are unchanged.
+//
+// Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
+// line (shortText.ts); the rules box's tooltip always carries the whole text.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -55,6 +58,7 @@ import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./m
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
+import { summitShortText } from "./shortText.ts";
 import { MINUS } from "./tuning.ts";
 
 import "./cards.css";
@@ -66,6 +70,13 @@ export type CardFaceProps = {
   className?: string;
   /** One face of a long grid: its art is drawn once it has dwelt near the screen (CardArt `lazy`). */
   lazyArt?: boolean;
+  /**
+   * Issue #814: the Summit's Ascent level as the view gives it, in a game. A Summit face with a
+   * level prints its header and only the level's own line (shortText.ts); every other face, and
+   * a Summit without one (the Almanac, the deck builder, the inspect overlays), prints the whole
+   * text. The rules box's tooltip always carries the whole text.
+   */
+  ascentLevel?: number | null;
 };
 
 /** The art window's shape follows the card type, as Hearthstone's minion oval and spell frame do. */
@@ -112,10 +123,13 @@ function tagWords(face: FaceModel, tag: Tag | typeof ALL_TRIBES): string {
   return face.chinese === true ? CHINESE_TERMS.tags[tag] : tag;
 }
 
-/** Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. */
-function printedText(face: FaceModel): string {
+/**
+ * Everything the rules box prints, as one string: what `textTier` and `useFitText` measure. A
+ * shortened face is measured by what it prints, so the hidden lines shrink nothing.
+ */
+function printedText(face: FaceModel, text: string): string {
   const values = face.values.map((entry) => ` {${printedValue(entry)}}`).join("");
-  return [`${face.text.full}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
+  return [`${text}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
 /** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
@@ -179,14 +193,20 @@ export function hasCrest(face: FaceModel): boolean {
   return crested(frameRarity(face));
 }
 
-export function CardFace({ face, layout = "full", className, lazyArt = false }: CardFaceProps): ReactElement {
+export function CardFace({ face, layout = "full", className, lazyArt = false, ascentLevel }: CardFaceProps): ReactElement {
   useLocale();
   const settings = useCardSettings();
   const nameRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
-  const printed = printedText(face);
+  // Issue #814: what the rules box prints — shortened on a Summit face in play, whole elsewhere.
+  // The header is the full text's prefix, so a value after its label ("Ascent level", R280) and
+  // a mark or tuned number inside it keep their offsets; RulesText drops marks outside the
+  // printed words on its own, and a tuned number on a hidden line goes unmarked.
+  const short = summitShortText(face.defId, face.text.full, ascentLevel);
+  const shown = short ?? face.text.full;
+  const printed = printedText(face, shown);
   const names = nameTier(face.name);
   const texts = textTier(printed);
   useFitText(nameRef, face.name);
@@ -269,10 +289,10 @@ export function CardFace({ face, layout = "full", className, lazyArt = false }: 
         <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
 
         {full && (
-          <span className="card-text" ref={textRef}>
+          <span className="card-text" ref={textRef} title={face.text.full === "" ? undefined : face.text.full} data-short={short !== null ? "true" : undefined}>
             <span className="cf-text-base">
               <RulesText
-                text={face.text.full}
+                text={shown}
                 marks={face.text.marks}
                 refs={face.refs}
                 values={face.values}

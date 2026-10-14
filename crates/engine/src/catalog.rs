@@ -219,6 +219,7 @@ pub fn query_cost(def: &CardDef) -> i32 {
 /// own, in that order, so a card writes the TS object literal as `json_as(json!({ … }))`; R1221's
 /// `tribute` came after the port, on this side only.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogQueryArgs {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]

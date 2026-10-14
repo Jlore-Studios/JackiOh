@@ -18,6 +18,7 @@ use crate::wire::{GameEvent, ZoneName};
 
 /// Which cards `translate` reaches: one named card (a spec or an id a script captured), or a scope.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TranslateArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

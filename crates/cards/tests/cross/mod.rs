@@ -8,6 +8,41 @@ pub fn scenario(setup: serde_json::Value) -> jackioh_engine::testkit::Scenario {
     jackioh_engine::testkit::scenario(setup)
 }
 
+/// §8 #99 Craft a Card's result, made the way the card makes it (R77) without its two Discovers: the
+/// definitions go into `subsystems.fuse` as ingredients that were never cards, and the result is a fresh,
+/// non-Radiant hand card costing 0. A test about the fused card, not about which two offers the Discovers
+/// make, builds it here, so a card or keyword joining the pools (R380) moves nothing it depends on
+/// (issue #848). `re_entry.rs`'s `craft` is the same body.
+pub fn craft_fused(
+    g: &mut jackioh_engine::testkit::Scenario,
+    player: jackioh_engine::PlayerId,
+    def_ids: &[&str],
+) -> jackioh_engine::CardInstance {
+    use jackioh_engine::subsystems::{self, FuseArgs};
+    use jackioh_engine::testkit::{EngineSink, GameEvent, Rng, Zone, new_instance};
+
+    let mut events: Vec<GameEvent> = vec![];
+    let mut rng = Rng::new(&g.state().seed, g.state().rng_cursor);
+    let made = {
+        let state = g.state_mut();
+        let ingredients: Vec<jackioh_engine::CardInstance> = def_ids
+            .iter()
+            .map(|def_id| new_instance(&mut *state, def_id, player, Zone::Gone { player }))
+            .collect();
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        subsystems::fuse(
+            &mut sink,
+            FuseArgs {
+                ingredients,
+                to_hand: Some(player),
+                ..FuseArgs::default()
+            },
+        )
+    };
+    g.state_mut().rng_cursor = rng.cursor();
+    made.expect("the crafted card")
+}
+
 pub mod activate_listed;
 pub mod after_resolution;
 pub mod card_text;

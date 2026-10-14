@@ -606,12 +606,39 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
         expect(entry.aliases, key).toEqual(["hand size"]);
       } else if (key === "Mark in a hand") {
         expect(entry.aliases, key).toEqual(["Mark"]);
+      } else if (key === "Start of turn") {
+        // Issue #814: the lowercase second half of a compound trigger bolds as the term.
+        expect(entry.aliases, key).toEqual(["start of turn"]);
+      } else if (key === "End of turn") {
+        expect(entry.aliases, key).toEqual(["end of turn"]);
       } else if (key === "Combat keyword") {
         // R781005: the cards print it lower-case, in the singular and the plural.
         expect(entry.aliases, key).toEqual(["combat keywords", "combat keyword"]);
       } else {
         expect(entry.aliases, key).toEqual([]);
       }
+    }
+  });
+
+  it("issue #814: a compound trigger's lowercase half tokenizes as its term", () => {
+    expect(termsIn("Cry and start of turn: Summon a Right-house defender.")).toEqual(["Cry", "Start of turn"]);
+    expect(termsIn("Start of turn and end of turn: Draw a card.")).toEqual(["Start of turn", "End of turn"]);
+    expect(termsIn("While Berserk: Start of turn and end of turn: this attacks your hero.")).toEqual([
+      "Berserk",
+      "Start of turn",
+      "End of turn",
+    ]);
+    // The six catalog faces that print compounds name both terms now.
+    for (const [id, face] of [
+      ["classicplus-007", "base"],
+      ["classicplus-007", "radiant"],
+      ["classic-058", "radiant"],
+      ["classicplus-019-5", "base"],
+      ["classicplus-070", "base"],
+      ["classicplus-070", "radiant"],
+    ] as const) {
+      const text = played(id, face);
+      expect(termsIn(text), `${id} ${face}`).toContain("Start of turn");
     }
   });
 });

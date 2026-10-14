@@ -1,57 +1,10 @@
 //! C+ #23 Dropshipping (SPEC §8.7 row 23): add {cards} random cards from every card and token but this
 //! (R382, R387), each given Brittle {brittle} (R385); Radiant: each costs (1).
 
-use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-023";
 
 // "Each costs (1)" on the Radiant face: the declared number `setCost` (R386), less being better.
-
-/// The cards this list put in its controller's hand (R136: its own events, from `eventsFrom`).
-fn added_by_this_list(ctx: &mut EffectContext<'_>) -> Vec<String> {
-    let (from, controller) = (ctx.events_from, ctx.controller);
-    ctx.events
-        .get(from..)
-        .unwrap_or_default()
-        .iter()
-        .filter_map(|event| match event {
-            GameEvent::AddedToHand { player, instance_id, .. } if *player == controller => Some(instance_id.clone()),
-            _ => None,
-        })
-        .collect()
-}
-
-fn dropship(radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let n = param(&*ctx, "brittle");
-            let mut add = json!({
-                "query": { "withTokens": true, "excludeDefId": ID },
-                "count": param(&*ctx, "cards"),
-            });
-            if radiant {
-                add["costOverride"] = json!(param(&*ctx, "setCost"));
-            }
-            vec![
-                add_random_from_catalog(json_as(add)),
-                for_each_card(ForEachCardArgs {
-                    cards: Arc::new(added_by_this_list),
-                    each: Arc::new(move |instance_id: &str| {
-                        give_brittle(json_as(json!({ "instanceId": instance_id, "n": n })))
-                    }),
-                }),
-            ]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: dropship(false),
-        radiant: dropship(true),
-    }
-}
 
 // C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23: "Adds 3 random cards drawn from
 // every card and token of every set but Dropshipping (R382, R387; repeats allowed, R60), so a Grape, a
@@ -61,6 +14,7 @@ pub fn script() -> CardScripts {
 // destroy that Indestructible ignores, the count staying 0); the count rides the card from hand to
 // field; the owner sees the counts, the opponent sees three cards added under the sentinel (R97); a full hand burns
 // the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,7 +87,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert!(def.tags.contains(&Tag::Cn));
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }
@@ -205,14 +159,13 @@ mod tests {
                 // Each seed below picks a Grape mid-pool (read off the probe rng): the card Dropshipping
                 // generates for it is the re-roll, so the generated triple equals `pickGenerated` three times
                 // over — and differs from the picked triple, which a plain `rng.pick` would generate as is.
+                // Which seeds do is a roll of the pool, which a card joining it moves, so each is searched for.
                 crate::register_all();
                 let pool = query(&json_as(json!({ "withTokens": true, "excludeDefId": DROP })));
                 let grapes: IndexSet<&str> = GRAPE_ODDS.iter().map(|grape| grape.def_id).collect();
                 let table: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
-                let mut differed = 0;
-                // Re-pinned for v0.3.5: the Meditative set joins the pool, so other seeds pick the Grapes.
-                for seed in ["drop-reroll-7", "drop-reroll-16", "drop-reroll-19", "drop-reroll-46"] {
-                    let mut s = shop(seed, false, &[FILLER]);
+                let rolled = |seed: &str| {
+                    let s = shop(seed, false, &[FILLER]);
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut probe = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut expected: Vec<Option<String>> = Vec::new();
@@ -227,6 +180,15 @@ mod tests {
                         firsts.push(first);
                         expected.push(pick_generated(&mut rng, &pool, None).map(|card| card.id.clone()));
                     }
+                    (s, firsts, expected)
+                };
+                let mut differed = 0;
+                for tag in ["drop-reroll-a", "drop-reroll-b", "drop-reroll-c", "drop-reroll-d"] {
+                    let seed = seed_where(tag, |seed| {
+                        let (_, firsts, expected) = rolled(seed);
+                        firsts.iter().any(|id| id.as_deref().is_some_and(|id| grapes.contains(id))) && firsts != expected
+                    });
+                    let (mut s, firsts, expected) = rolled(&seed);
                     assert!(firsts.iter().any(|id| id.as_deref().is_some_and(|id| grapes.contains(id))));
                     if firsts != expected {
                         differed += 1;

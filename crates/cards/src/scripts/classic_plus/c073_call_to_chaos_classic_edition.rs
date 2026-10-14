@@ -545,19 +545,22 @@ mod tests {
         fn r70_r28_10_10_casts_a_random_call_to_chaos_of_any_edition_free_and_counted_as_a_play() {
             crate::register_all();
             let mut editions: IndexSet<String> = IndexSet::new();
-            // Re-pinned for v0.3.5: the Meditative set joins the pool, so the seeds reach all three editions.
-            for seed in ["a", "b", "c", "d", "e", "f", "g", "h"] {
-                let game_seed = format!("{SEED}-{seed}");
+            // Which edition a recast picks is a roll of the pool, which a card joining it moves, so no fixed
+            // handful of games is known to reach all three: eight games, and on until every edition has cast.
+            for n in 0..SEED_SEARCH_BOUND {
+                if n >= 8 && editions.len() == EDITIONS.len() {
+                    break;
+                }
+                let game_seed = format!("{SEED}-{n}");
                 let mut s = scenario(json!({
                     "seed": game_seed,
                     "p1": { "hand": [{ "def": CHAOS }, VANILLA], "mana": 8 },
                     "p2": { "hand": [VANILLA] }
                 }));
                 set_chain(&mut s, CALL_TO_CHAOS_CHAIN_CAP - 1);
-                let mut cursor = 0;
-                while rolled_names(&game_seed, cursor, false).first() != Some(&"recast") {
-                    cursor += 1;
-                }
+                let cursor = cursor_where(&game_seed, |at| {
+                    rolled_names(&game_seed, at, false).first() == Some(&"recast")
+                });
                 s.state_mut().rng_cursor = cursor;
                 s.play(CHAOS, json!({}));
                 let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();

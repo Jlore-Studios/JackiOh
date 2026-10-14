@@ -22,6 +22,7 @@ use crate::wire::{CounterKind, GameEvent, ZoneName};
 
 /// Which cards a Brittle verb reaches: one named card (a spec or an id a script captured), or a scope.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BrittleTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -35,6 +36,7 @@ pub struct BrittleTarget {
 /// TS `BrittleTarget & { n: number }`: `give_brittle`'s (and `gain_brittle`'s) arguments, the target's
 /// fields beside `n`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GiveBrittleArgs {
     #[serde(flatten)]

@@ -876,6 +876,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     fn r169_every_modifier_a_modifier_changed_event_announces_is_on_the_view_s_badge_list_and_is_reported_gone_when_hinder_s_refresh_spends_it_10_3_6_3_mana()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-inv-hinder",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [HINDER, TEMPO_TIMMY, TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "library": [STOCKPILE, STOCKPILE, STOCKPILE] },
@@ -931,6 +932,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     fn r240_r1362_r3_a_fatigue_draw_that_going_long_s_armor_absorbs_still_reports_itself_since_the_public_fatigue_count_moved_10_3()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-inv-fatigue",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "backrow": [GOING_LONG], "library": [] },
@@ -974,6 +976,7 @@ mod r169_r240_what_the_start_of_a_turn_changes_it_reports_10_3 {
     #[test]
     fn r240_r1362_r63_the_report_of_an_absorbed_fatigue_draw_is_answered_by_no_trigger_and_no_trap() {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r11-fatigue-report",
             "p1": { "hand": [HIT_JOB], "field": [TEMPO_TIMMY], "library": [TEMPO_TIMMY, TEMPO_TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TEMPO_TIMMY], "backrow": [GOING_LONG], "library": [] },

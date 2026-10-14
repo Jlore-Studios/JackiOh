@@ -37,6 +37,7 @@ use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 /// Which card to rewrite: the pick the play or a prompt carried (R81), or an instance id a trigger
 /// read off the event it answers — Sheepish transforms the unit the opponent just played (#41).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -201,6 +202,7 @@ fn replace_off_field(
 
 /// `transform`'s argument: `TransformTarget & { defId; radiant?; costOverride?; chinese? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformArgs {
     #[serde(flatten)]
@@ -392,6 +394,7 @@ fn can_replace(old: &CardInstance, def: &CardDef) -> bool {
 
 /// `"keep"`: `transformRandom`'s radiant literal for the old card's face.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum KeepFace {
     #[serde(rename = "keep")]
     Keep,
@@ -399,6 +402,7 @@ pub enum KeepFace {
 
 /// `transformRandom`'s `radiant`: `boolean | "keep"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum TransformRadiant {
     Flag(bool),
@@ -408,6 +412,7 @@ pub enum TransformRadiant {
 /// `transformRandom`'s argument: `TransformTarget & { query?; radiant?; readyToAttack?;
 /// scope?; same?; costOverride?; chinese?; arrives? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformRandomArgs {
     #[serde(flatten)]
@@ -549,6 +554,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
 
 /// `transformBeneath`'s argument (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformBeneathArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -617,6 +623,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
 
 /// `swapBook`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SwapBookArgs {
     pub instance_id: String,

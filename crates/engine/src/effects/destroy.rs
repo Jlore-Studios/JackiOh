@@ -43,6 +43,7 @@ fn mark_destroyed(state: &mut GameState, card: &CardInstance) {
 
 /// `destroy`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyArgs {
     pub target: TargetSpec,
@@ -87,6 +88,7 @@ pub fn destroy_all(args: BoardScope) -> Effect {
 /// TS `{ target: TargetSpec } & BoardScope`: `destroy_adjacent_to`'s arguments, the scope's fields
 /// beside `target`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyAdjacentToArgs {
     pub target: TargetSpec,
@@ -111,6 +113,7 @@ pub fn destroy_adjacent_to(args: DestroyAdjacentToArgs) -> Effect {
 
 /// `sacrifice`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SacrificeArgs {
     pub target: TargetSpec,

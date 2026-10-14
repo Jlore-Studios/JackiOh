@@ -1,0 +1,4 @@
+
+verbs! {
+    verb!(enchant, EnchantArgs);
+}

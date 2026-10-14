@@ -60,6 +60,7 @@ fn on_field(state: &GameState, card: Option<&CardInstance>) -> bool {
 
 /// `placePlague`'s arguments: the target defaults to the running card.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlacePlagueArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -85,6 +86,7 @@ pub fn place_plague(args: PlacePlagueArgs) -> Effect {
 
 /// `placePlagueEach`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlacePlagueEachArgs {
     pub scope: BoardScope,
@@ -108,6 +110,7 @@ pub fn place_plague_each(args: PlacePlagueEachArgs) -> Effect {
 
 /// `placePlagueRandom`'s arguments: the scope defaults to every unit on both sides.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlacePlagueRandomArgs {
     pub count: i32,
@@ -152,6 +155,7 @@ pub fn place_plague_random(args: PlacePlagueRandomArgs) -> Effect {
 
 /// `consumePlague`'s arguments: the target defaults to the running card, the amount to 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ConsumePlagueArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -295,6 +299,7 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
 
 /// `placePlagueTokens`'s arguments: `amount` (each placement's tokens) defaults to 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlacePlagueTokensArgs {
     pub count: i32,

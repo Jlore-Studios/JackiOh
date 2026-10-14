@@ -1,9 +1,10 @@
 //! The v0.3.0 run's structural acceptance checks (docs/v0.3.0/README.md §6) that no crate's own
 //! tests held, read off the repository itself:
 //!
-//!  - V2: the pure crates (engine, cards, ai) link nothing but serde, serde_json, indexmap and each
-//!    other, and the engine's ts-rs only behind its optional `ts` feature (CLAUDE.md rule 4; each
-//!    crate's `clippy.toml` holds the rest of the rule);
+//!  - V2: the pure crates (engine, cards, ai, luau) link nothing but serde, serde_json, indexmap and
+//!    each other (the AI not `jackioh-luau`), `jackioh-luau` alone `mlua` (#442 L3, L4), and the
+//!    engine's and `jackioh-luau`'s ts-rs only behind their optional `ts` features (CLAUDE.md rule 4;
+//!    each crate's `clippy.toml` holds the rest of the rule);
 //!  - V23: no code under `apps/`, `crates/` or `e2e/` reads a Markdown file's prose, part 28's grep
 //!    (`readFileSync(…md`, `include_str!(…md`, `read_to_string(…md`) as a test. The two structural
 //!    readers it allows are named below;
@@ -71,8 +72,9 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
         "jackioh-engine",
         "jackioh-cards",
         "jackioh-ai",
+        "jackioh-luau",
     ];
-    for crate_dir in ["engine", "cards", "ai"] {
+    for crate_dir in ["engine", "cards", "ai", "luau"] {
         let path = repo().join("crates").join(crate_dir).join("Cargo.toml");
         let manifest =
             fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
@@ -83,7 +85,7 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
             path.display()
         );
         for (name, entry) in &dependencies {
-            if crate_dir == "engine" && name == "ts-rs" {
+            if matches!(crate_dir, "engine" | "luau") && name == "ts-rs" {
                 assert!(
                     entry.contains("optional = true"),
                     "{}: ts-rs must stay optional, behind the `ts` feature",
@@ -91,8 +93,11 @@ fn v2_the_pure_crates_link_only_serde_serde_json_indexmap_and_each_other() {
                 );
                 continue;
             }
+            if crate_dir == "luau" && name == "mlua" {
+                continue;
+            }
             assert!(
-                ALLOWED.contains(&name.as_str()),
+                ALLOWED.contains(&name.as_str()) && !(crate_dir == "ai" && name == "jackioh-luau"),
                 "{}: `{name}` is not one of the pure crates' dependencies (CLAUDE.md rule 4)",
                 path.display()
             );
@@ -469,17 +474,19 @@ fn ci_scope_check_finds_a_crate_or_a_path_dependency_the_map_lacks() {
         "{mismatches:#?}"
     );
 
+    // The server building on the tools would make a change there run the server's group, which the
+    // map's `crates/tools/*` line does not.
     let mut with_dependency = packages;
     for package in &mut with_dependency {
         if package.name == "jackioh-server" {
-            package.deps.push("jackioh-luau".into());
+            package.deps.push("jackioh-tools".into());
         }
     }
     let mismatches = rust_group_mismatches(&with_dependency);
     assert!(
         mismatches
             .iter()
-            .any(|mismatch| mismatch.starts_with("crates/luau:")),
+            .any(|mismatch| mismatch.starts_with("crates/tools:")),
         "{mismatches:#?}"
     );
 }

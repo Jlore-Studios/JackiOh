@@ -32,6 +32,8 @@ export {
 } from "./inPlay.ts";
 export type { RolledPower } from "./inPlay.ts";
 
+export { ASCENT_LABEL, SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
+
 export { GLOSSARY, KEYWORD_MARK } from "./glossary.ts";
 export type { GlossaryEntry, GlossaryTermId, StatusTermId, TriggerTermId, VerbTermId } from "./glossary.ts";
 

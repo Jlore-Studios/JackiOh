@@ -10,20 +10,7 @@
 //! The count is the declared number `draw` (R386), 3 or 6, read through `param`; both faces run this
 //! one script.
 
-use jackioh_engine::effects::draw;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classic-024";
-
-pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
-        ..Script::default()
-    };
-    // The same script: the Radiant face's 6 is its declared `draw`, which `param` reads off the running face.
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // C #24 Book of Knowledge — SPEC §8.6 row 24, BUILD M9 Classic row C 24: "Draw 3: three draws, each
 // with its own cast-on-draw chain (R58), fatigue from an empty deck, a full hand burning (R317), a
@@ -37,6 +24,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
+    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -72,7 +60,7 @@ mod tests {
         #[test]
         fn runs_one_script_on_both_faces() {
             crate::register_all();
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             assert_eq!(crate::card_def(ID).id, BOOK);
             // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
             assert!(Arc::ptr_eq(

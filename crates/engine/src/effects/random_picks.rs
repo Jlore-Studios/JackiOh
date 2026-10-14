@@ -20,6 +20,7 @@ use crate::wire::Keyword;
 
 /// `buffRandomUnit`'s argument: `{ player? } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BuffRandomUnitArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -61,6 +62,7 @@ pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
 
 /// `grantKeywordsRandomUnit`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantKeywordsRandomUnitArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -91,6 +93,7 @@ pub fn grant_keywords_random_unit(args: GrantKeywordsRandomUnitArgs) -> Effect {
 
 /// `returnRandomFromGraveyard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ReturnRandomFromGraveyardArgs {
     pub count: i32,

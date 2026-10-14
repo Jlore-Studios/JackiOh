@@ -13,6 +13,7 @@ use crate::script::Effect;
 /// `heal`'s arguments: TS's three object shapes, told apart by the key each carries (`"amount" in
 /// args`, then `"toFull" in args`), which is what an untagged enum tried in this order does.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged, rename_all_fields = "camelCase")]
 pub enum HealArgs {
     /// "Heal X": up to X damage off a unit, or X health onto a hero with no cap (#5, #47, R19).

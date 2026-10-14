@@ -22,11 +22,10 @@ const LAVA_GOLEM: &str = "core-055";
 const TWISTED_SORCERER: &str = "core-068";
 const RADIANT_SAINTESS: &str = "core-081";
 const RIGHT_HOUSE: &str = "core-003";
-const CRAFT_A_CARD: &str = "core-099";
 const POSTDOC: &str = "core-061"; // radiant: "choose any unit on the field; summon a Vanilla copy"
 const SHEEP: &str = "core-t-sheep"; // "Worth 2 Tributes while on the field."
 
-use super::scenario;
+use super::{craft_fused, scenario};
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
@@ -120,9 +119,8 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
     fn r174_r78_a_crafted_lava_golem_twisted_sorcerer_that_tributes_its_own_target_leaves_that_card_in_the_graveyard_undamaged_8_conventions()
      {
         let mut g = scenario(json!({
-            "seed": "r3craft-272", // the first Discover offers Lava Golem, the second Twisted Sorcerer (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
             "p1": {
-                "hand": [CRAFT_A_CARD, RENO],
+                "hand": [RENO],
                 "mana": 4,
                 "field": [
                     { "def": GARY, "lane": 1 },
@@ -131,9 +129,9 @@ mod r174_a_target_the_play_s_own_tribute_sacrificed_is_no_longer_a_target {
             },
             "p2": { "hand": [RENO], "field": [{ "def": RENO, "lane": 1 }] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(LAVA_GOLEM));
-        g.answer(json!(TWISTED_SORCERER));
+        // Craft a Card's result for Lava Golem and Twisted Sorcerer, made directly (R77): the test is about
+        // the fused card, not about which two Discover offers the pools of every set (R380) make.
+        craft_fused(&mut g, PlayerId::P1, &[LAVA_GOLEM, TWISTED_SORCERER]);
         let card: CardInstance = must(
             g.hand(PlayerId::P1)
                 .iter()

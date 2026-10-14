@@ -135,6 +135,7 @@ fn copy_riders(copy: &mut CardInstance, source: &CardInstance) {
 
 /// `add_to_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddToHandArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -245,6 +246,7 @@ fn pool_query(ctx: &EffectContext<'_>, args: Option<&CatalogQueryArgs>) -> Catal
 
 /// `add_random_from_catalog`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddRandomFromCatalogArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -318,6 +320,7 @@ pub fn add_random_from_catalog(args: AddRandomFromCatalogArgs) -> Effect {
 
 /// `add_random_from_graveyard`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddRandomFromGraveyardArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

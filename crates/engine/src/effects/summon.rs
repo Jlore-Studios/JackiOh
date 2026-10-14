@@ -54,6 +54,7 @@ pub type StatsOverride = AttackHealth;
 
 /// Where and how a summoned card lands.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SummonPlacement {
     /// Who controls the summoned card; its owner too when the card is created here (R12).
@@ -80,6 +81,7 @@ pub struct SummonPlacement {
 /// `summon`'s arguments (TS `SummonPlacement & { defId?; instance?; randomKeywords? }`, the
 /// placement's keys beside the rest, as TS writes the literal).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SummonArgs {
     /// Who controls the summoned card; its owner too when the card is created here (R12).
@@ -378,6 +380,7 @@ pub fn summon(args: SummonArgs) -> Effect {
 
 /// What §10.7's copy semantics need on top of a placement: R57's two #61 deviations.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SummonCopyArgs {
     /// The card to copy. #12 copies `{ of: "self" }`; #61 copies the unit the play chose.
@@ -505,6 +508,7 @@ pub fn summon_copy(args: SummonCopyArgs) -> Effect {
 
 /// `summonRandom`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SummonRandomArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -574,6 +578,7 @@ pub fn summon_random(args: SummonRandomArgs) -> Effect {
 
 /// Which library cards a Recruit will consider, on top of "must be a permanent" (§6.3).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RecruitFilter {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -649,6 +654,7 @@ fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &Recruit
 /// Where a Recruit scans (B5 E25): a player's library, top down (§6.3), or a player's exile, newest
 /// first — exile is chronological (§3), so its "top" is the card exiled last (Classic #1 Radiant).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum RecruitSource {
     Library,
@@ -722,6 +728,7 @@ fn announce_radiant(ctx: &mut EffectContext<'_>, recruited: Option<&CardInstance
 
 /// `recruit`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RecruitArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -781,6 +788,7 @@ pub fn recruit(args: RecruitArgs) -> Effect {
 
 /// `recruitAll`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RecruitAllArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -850,6 +858,7 @@ pub fn recruit_all(args: RecruitAllArgs) -> Effect {
 
 /// `fillBoard`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FillBoardArgs {
     pub def_id: String,
@@ -908,6 +917,7 @@ pub fn fill_board(args: FillBoardArgs) -> Effect {
 
 /// `fillBoardRandom`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FillBoardRandomArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -960,6 +970,7 @@ pub fn fill_board_random(args: FillBoardRandomArgs) -> Effect {
 
 /// `summonRandomFromHand`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SummonRandomFromHandArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
