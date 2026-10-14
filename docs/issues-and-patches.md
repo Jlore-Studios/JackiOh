@@ -159,6 +159,26 @@ suggestions (`bot:suggestion`) are asked for conventional titles; retitle one th
 - **Moving a part.** A part deferred to another version moves under that version's tracker. Unlink
   it and link it to the new tracker, retitle it, and leave a comment saying why.
 
+## A task over every card
+
+An issue that asks for a pass over the whole catalog (every card, every face, every term) is where
+a run most easily does less than was asked and still reports it done: #814's first pass shortened
+no card, decided nothing about bold, and checked consistency with a text-similarity threshold that
+could not find what it was looking for (`reviews/2026-10-14-issue-814-first-pass.md`). Such an
+issue:
+
+- **Names the deliverable that proves the pass**: a table in the pull request with a row per card
+  or per group, its verdict and the reason, so a reviewer sees what was checked. "Every card
+  checked" alone cannot be reviewed.
+- **Gives the measure**: a length tier, a list of terms, a grouping method ("group cards by the
+  verbs their scripts call", never "compare similar texts"). An example in the issue is a test
+  case for the pass, not its scope.
+- **Is `difficulty:hard`**: a pass over 450 entries touches about 40 files or more (CLAUDE.md
+  rule 11).
+
+A run that splits such an issue says in the tracker, part by part, what each part leaves out, so a
+part that narrows the task shows the gap instead of hiding it.
+
 ## Patch notes players read
 
 - **Players see the note, never the record (R724000, R724001).** A patch's `title`, `sources` and
