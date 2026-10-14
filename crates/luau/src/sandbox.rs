@@ -165,6 +165,41 @@ impl Budget {
     }
 }
 
+/// The VM's memory cap set to a limit until this drops, then put back as it was (#843). Every hook
+/// call runs under `LUAU_MEMORY_BYTES` (`vm::BudgetGuard`), a nested one included; a reader lifts it
+/// while it builds its answer. Under a cap mlua runs each value the host builds through a
+/// protected call, which cost a hook call about half its time; what a reader builds is bounded by
+/// the state it reads, not by the script, and is still counted, so the script's next allocation past
+/// the cap fails as before.
+pub(crate) struct MemoryCap<'l> {
+    lua: &'l Lua,
+    previous: usize,
+}
+
+impl<'l> MemoryCap<'l> {
+    /// The cap at `LUAU_MEMORY_BYTES`, as a hook call runs under it.
+    pub(crate) fn hold(lua: &'l Lua) -> MemoryCap<'l> {
+        MemoryCap::set(lua, LUAU_MEMORY_BYTES)
+    }
+
+    /// No cap (mlua's limit 0), as a reader builds its answer.
+    pub(crate) fn lift(lua: &'l Lua) -> MemoryCap<'l> {
+        MemoryCap::set(lua, 0)
+    }
+
+    fn set(lua: &'l Lua, limit: usize) -> MemoryCap<'l> {
+        let previous = lua.set_memory_limit(limit).unwrap_or(limit);
+        MemoryCap { lua, previous }
+    }
+}
+
+impl Drop for MemoryCap<'_> {
+    fn drop(&mut self) {
+        // Only a Luau in module mode has no memory control, and this host never is one.
+        let _ = self.lua.set_memory_limit(self.previous);
+    }
+}
+
 /// The error a hook stopped at L5's cap fails with, naming its card, face and hook.
 pub fn stopped(site: Site) -> String {
     format!("{site}: stopped after {LUAU_HOOK_INTERRUPTS} interrupts (L5)")

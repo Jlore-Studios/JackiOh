@@ -11,6 +11,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value as Json;
 
 use crate::numbers::{self, arg};
+use crate::sandbox::MemoryCap;
 use crate::{LuauError, Site};
 
 /// One effect a hook returned, walked but not yet built: the verb's name and its arguments.
@@ -220,15 +221,15 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
     // Every verb is data: `J.damage(args)` returns `{ verb, args }` and touches
     // nothing. Closure-taking verbs take the *name* of a face function (`hook`,
     // `cards`, `each`), resolved by name when the verb builds — a function itself
-    // cannot cross into Rust (L6), and the walk below refuses one that tries.
+    // cannot cross into Rust (L6), and the walk below refuses one that tries. Each is a Luau
+    // closure over its verb's name: a call into Rust, and a table built there under the memory cap,
+    // cost a hook call more than the table built in Luau does.
+    let verb_function: Function = lua
+        .load("local verb = ...\nreturn function(args) return { verb = verb, args = args } end\n")
+        .set_name("=@jackioh")
+        .into_function()?;
     for &verb in &all_verbs() {
-        let call = lua.create_function(move |lua, args: Value| {
-            let call = lua.create_table()?;
-            call.raw_set("verb", verb)?;
-            call.raw_set("args", args)?;
-            Ok(call)
-        })?;
-        module.raw_set(verb, call)?;
+        module.raw_set(verb, verb_function.call::<Function>(verb)?)?;
     }
     module.raw_set("div", integer_function(lua, "div", numbers::div)?)?;
     module.raw_set("rem", integer_function(lua, "rem", numbers::rem)?)?;
@@ -304,6 +305,8 @@ fn compare_luau_values(a: &Value, b: &Value) -> std::cmp::Ordering {
 }
 
 fn query_catalog(lua: &Lua, args: Value) -> mlua::Result<Value> {
+    // Built with the memory cap lifted, as a reader's answer is (`MemoryCap`).
+    let _uncapped = MemoryCap::lift(lua);
     let json: Json = serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
     let query_args: jackioh_engine::CatalogQueryArgs =
         serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;
@@ -312,6 +315,7 @@ fn query_catalog(lua: &Lua, args: Value) -> mlua::Result<Value> {
 }
 
 fn pool_catalog(lua: &Lua, (own_id, args): (String, Value)) -> mlua::Result<Value> {
+    let _uncapped = MemoryCap::lift(lua);
     let json: Json = serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
     let query_args: jackioh_engine::CatalogQueryArgs =
         serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;

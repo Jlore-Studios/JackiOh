@@ -98,8 +98,7 @@ with identical bodies: Luau reuses one closure object for every evaluation
 of an upvalue-free literal, so a factory called twice is one value
 (`core-t-coin` spells its faces out). Triggers and
 replacements read through their event (`ReplacementContext.event`).
-`crates/luau/tests/fixtures/hooks_all.luau` exercises every adapter with a
-canned answer of its own type; `crates/luau/src/hooks.rs` is the full table.
+`crates/luau/src/hooks.rs` is the full table of adapters.
 
 **Integers only (L6).** Every number that crosses into Rust must be
 integral, finite and inside `i32`, or the hook fails naming card, face,

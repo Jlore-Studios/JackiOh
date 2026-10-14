@@ -17,8 +17,10 @@ local function exile_trap(radiant_face: boolean): J.TriggerDef
 		id = "exile",
 		on = { "cardAnnounced" },
 		when = cheap_play,
+		-- The condition again: `when` is a trap's alone (R99), and a non-trap that holds this text
+		-- (a fusion kept as another card) runs its trigger on every announce.
 		run = function(ctx: J.EffectContext, event: J.GameEvent)
-			if event.type ~= "cardAnnounced" then
+			if event.type ~= "cardAnnounced" or not cheap_play(ctx, event) then
 				return {}
 			end
 			local countered = J.counter_play({

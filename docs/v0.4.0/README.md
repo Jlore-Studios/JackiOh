@@ -27,10 +27,10 @@ Contents:
 
 ## 1. What v0.4.0 is
 
-- **408 of the 450 cards and tokens run from Luau.** Each card has its `.rs`
+- **409 of the 450 cards and tokens run from Luau.** Each card has its `.rs`
   (`crates/cards/src/scripts/<set>/<file>.rs`: `pub const ID`, the header comment, `mod tests`) and
-  one script: `<file>.luau` beside it, or `pub fn script()` in the `.rs` for one of the 42 cards of
-  section 4. By set: Core 103 of 111, Classic 82 of 91, Classic+ 104 of 116, Meditative 119 of 132.
+  one script: `<file>.luau` beside it, or `pub fn script()` in the `.rs` for one of the 41 cards of
+  section 4. By set: Core 103 of 111, Classic 82 of 91, Classic+ 104 of 116, Meditative 120 of 132.
 - **The tests stay Rust** (L16): a ported card's tests are the ones it had, unchanged in what they
   assert, run against the Luau script through the registry (`crate::scripts_of()[ID]`).
 - **`crates/luau`** hosts the scripts: the sandbox (L5), the integer boundary (L6), the build-time
@@ -99,8 +99,8 @@ is on `main` or on `bot/issue-442`.
 
 ## 4. The cards kept in Rust
 
-Forty-two cards keep `pub fn script()` in their `.rs` (`grep -l "pub fn script()"
-crates/cards/src/scripts/*/*.rs`). Fourteen are L14's. The other 28 a batch tried or judged and kept,
+Forty-one cards keep `pub fn script()` in their `.rs` (`grep -l "pub fn script()"
+crates/cards/src/scripts/*/*.rs`). Fourteen are L14's. The other 27 a batch tried or judged and kept,
 for one of PORTING.md §5's three reasons: the API cannot say it (a missing reader, verb or data
 shape), `luau diff` proved a divergence the batch could not fix, or the card breaks `luau bench`.
 A future port that keeps a card in Rust adds its row here.
@@ -145,7 +145,6 @@ A future port that keeps a card in Rust adds its row here.
 | `classicplus-046` | Felinor Flagbearer | batch 9, batch 19 | Missing API: "your other Felinors" turns the source away and reads granted tags (`tags_of`, R923); the filter has no instance or tag field, and `aura_filter` gets the candidate alone. |
 | `classicplus-046-1` | Felinor Flagbearer Prime | batch 9, batch 19 | The same "other Felinors" aura, on both faces. |
 | `classic-036` | Burn | batch 9, batch 15 | A divergence: ported, then restored, on two `luau diff` games. A Radiant Burn fused into a base fusion ran its base `cry` (the host picked the face by `ctx.radiant`); and an Echo copying Burn read `effective_cost` off the live Echo (cost 1) where the Rust reads the copied text face (0), with no `effective_cost` over an instance table. The first is fixed by the reconcile (section 7); the card was not ported again in this run. |
-| `meditative-022` | Mind Games | batch 18 | A divergence: ported, then restored. `luau diff` seed 54 fused a Radiant Mind Games into a base fusion, the host ran the base `cry`, and the Fortify Mind it linked lost its Radiant `costOverride`. The host bug is fixed by the reconcile (section 7); the card was not ported again in this run. |
 | `classic-088` | Siphon Squad | batch 12 | Over the bench: a faithful port (0 mismatches, its tests green) took `fuzz --seeds 200` to ×2.08 of the parent's. Its `aura` cost about 148 µs a call, the most of any hook. |
 | `core-014` | Jlockeed's Weapons | batch 8, batch 19 | Over the bench: first held for the aura verb gap 8 added; with it, ×1.75 alone and ×2.14 on top of batch 19's ports. |
 | `core-065-1` | Spikey Pillow | batch 8, batch 19 | Over the bench, as Weapons: ×1.75 alone, ×2.04 on top of batch 19's ports. |
@@ -436,9 +435,12 @@ Part 28 took classic-026, -030 and -035. The rest are in section 4.
   Death hook is the reset graveyard card (R78). Gap 9 gave `killer_of` a snapshot read; Keenus and
   Shrinking Felinor wait for the same on `keywords_of` and `base_stats_of`, and the ports that
   could read their own snapshot (`ctx:self_()`) did.
-- **Auras in Luau are slow.** L8 re-runs the chunk on every stat read: about 113–148 µs a call
-  (batch 12). Siphon Squad, Jlockeed's Weapons and Spikey Pillow broke the bench; a cheaper aura
-  call in `crates/luau` would let them port.
+- **Auras in Luau are slow.** An aura runs on every stat read: about 113–148 µs a call (batch 12),
+  which batch 12 put down to L8's re-run of the chunk. Siphon Squad, Jlockeed's Weapons and Spikey
+  Pillow broke the bench; a cheaper aura call in `crates/luau` would let them port. The reconcile
+  found that, once the readers were registered once per VM, most of what was left was mlua's
+  protected calls under the memory cap, not the re-run, and cut it (section 7); the three were not
+  tried again.
 - **`luau diff`'s reach.** A deck holds 20 forced cards, so big batches split their runs. A token is
   forced through the card whose `refs` name it; one that nothing names (Glitch, the AI tokens,
   Anti-Waffle Shell, AI Girlfriend, the last two Growing Felinors) is proved by its own tests and by
@@ -478,10 +480,22 @@ What the reconcile changed, beyond merging the parts:
 - **The face fix** (`crates/luau/src/script.rs`, `shared_functions`): only an adapter both faces
   share picks its face by `ctx.radiant`; any other runs its own face's function, as a Rust face
   runs its own closure whatever the context says. It removes the divergence that kept Burn and
-  Mind Games in Rust; neither was ported again in this run.
+  Mind Games in Rust. Mind Games (`meditative-022`) is Luau again, batch 18's port on the fixed
+  host: its tests pass and `luau diff` finds no mismatch. Burn was not ported again.
+- **Exile** (`classic-010`): its Luau `run` now checks the play again, as the Rust closure did.
+  `when` is read for a Trap alone (R99), so with Exile fused into a card kept as a Field Spell the
+  port countered its own controller's plays (`luau diff` seed 149). The other 27 ports with a `when`
+  keep the guards their Rust `run` had.
 - **Speed.** The readers are registered once per VM (`reads.rs`), not on every call; the test
   profile builds `mlua-sys` and `mlua` at opt-level 2, since at 0 every card hook a test ran went
-  through an unoptimised Luau interpreter.
+  through an unoptimised Luau interpreter. Timed by hook, `fuzz --seeds 200` spent most of its Luau
+  time in `aura` calls (about 350,000 a thread, 4.5–14 µs each) and about half of every call
+  in mlua's protected calls: with a memory cap set (#857), mlua builds each value the host hands
+  Luau under its own `pcall`. A hook call still runs under the cap (`vm::BudgetGuard`), but a
+  reader, `J.query` and `J.pool` lift it while they build their answer (`sandbox::MemoryCap`), and
+  `J`'s verbs are Luau closures rather than Rust functions. That took the fuzz from 11.98 s to
+  10.2 s on a box where `main` takes 6.6 s. Building each module once per VM instead of on every
+  call (a change to L8) saved under 0.3 s, so L8 stands.
 - **Smaller fixes.** `jackioh-luau`'s `ts` feature is optional and off by default; `cargo jackioh
   catalog loc` counts a ported card's `.luau` (`count_luau_loc`); the workspace version is 0.4.0;
   for strict analysis, Curse of the Forgotten Classic hoists its `J.TargetSpec` into an annotated
@@ -500,3 +514,23 @@ What the reconcile changed, beyond merging the parts:
   `docs/ADDING_CARDS.md`, SPEC §10.9, BUILD, REVIEW and `docs/architecture.md` describe the cards as
   Luau scripts with Rust tests, and the cards kept in Rust as this file's section 4.
 - **The parts' notes** are folded into this file and deleted.
+- **The final numbers**, on the reconcile's box (4 threads, AMD EPYC 9V45), against `main` at
+  `e20df15ea`, the last `main` merged in, built on the same machine:
+  - `luau bench` (L13): `fuzz --seeds 200` 6,388 → 9,767 ms (×1.53, budget 2×); the slowest gate
+    decision 205 → 126 ms (×0.62, budget 1.5×); a golden step 1.151 → 1.579 ms (×1.37, budget 2×).
+  - `luau diff` against that `main`, where every card is Rust: the 341 ported cards that can be
+    forced into a deck (every port but the 27 tokens no deckable card's `refs` name), 20 to a run,
+    200 games each, 0 mismatches. Seed 149 found the Exile divergence above before its fix.
+  - `fuzz --seeds 1000` and `fuzz --seeds 1000 --handicap`: clean. `golden check`: 240 of 240.
+    The workspace's tests pass, the card tests (5,883 unit, 752 cross-card) among them.
+  - `gate --full` gives `main`'s counts: 98 of 100 against random, 32 of 50 against greedy, 46 of
+    50 hard against easy, and 170 perf decisions, the wide ones at the same node counts. Only which
+    decision is the slowest by the clock differs; the slowest, scaled as `gate` reports it, is
+    352 ms (`main` 480 ms), under `AI_GATE.max_decision_ms` (1,500).
+  - The browser (L12) was not measured again: the box had no emsdk and no network to fetch it.
+    `apps/web/src/wasm/size.test.ts` holds the module and glue, gzipped, to L12's budget wherever
+    the web's tests build the module, CI's `web` job among them. Part 5's `register_all` and
+    golden-step numbers through the web's wrapper (section 5.3) were taken with the three pilots
+    only and are not re-measured.
+  - `luau-analyze --mode=strict` did not run: the box had no Luau 0.740 release. Part 8's CI step
+    runs it.

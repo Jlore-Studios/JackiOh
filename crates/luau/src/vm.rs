@@ -12,7 +12,9 @@ use mlua::{Function, Lua, Table, Value};
 use crate::api::{self, EffectCall};
 use crate::config::{LUAU_HOOK_DEPTH, LUAU_MEMORY_COLLECT_BYTES};
 use crate::numbers;
-use crate::sandbox::{Budget, Sandbox, new_sandbox, out_of_memory, ran_out_of_memory, stopped, too_deep};
+use crate::sandbox::{
+    Budget, MemoryCap, Sandbox, new_sandbox, out_of_memory, ran_out_of_memory, stopped, too_deep,
+};
 use crate::{Face, LuauError, Site};
 
 /// The hooks a face may declare. `start_of_game` is not among them: only cards that
@@ -166,15 +168,22 @@ impl Vm {
     }
 }
 
-/// A hook call in flight on the interrupt's budget, left when the call ends, a panic included.
-struct BudgetGuard<'l>(&'l Lua);
+/// A hook call in flight on the interrupt's budget and under the memory cap, left when the call
+/// ends, a panic included.
+struct BudgetGuard<'l> {
+    lua: &'l Lua,
+    _cap: MemoryCap<'l>,
+}
 
 impl<'l> BudgetGuard<'l> {
     fn enter(lua: &'l Lua, site: Site) -> BudgetGuard<'l> {
         if let Some(mut budget) = lua.app_data_mut::<Budget>() {
             budget.enter(site);
         }
-        BudgetGuard(lua)
+        BudgetGuard {
+            lua,
+            _cap: MemoryCap::hold(lua),
+        }
     }
 
     /// What `call` returns, unless the call is nested deeper than `LUAU_HOOK_DEPTH`, which it is
@@ -184,21 +193,21 @@ impl<'l> BudgetGuard<'l> {
     /// its card.
     fn run<T>(&self, site: Site, call: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
         let depth = self
-            .0
+            .lua
             .app_data_ref::<Budget>()
             .map_or(0, |budget| budget.calls.len());
         if depth > LUAU_HOOK_DEPTH {
             return Err(mlua::Error::runtime(too_deep(site)));
         }
-        if depth == 1 && self.0.used_memory() > LUAU_MEMORY_COLLECT_BYTES {
-            self.0.gc_collect()?;
+        if depth == 1 && self.lua.used_memory() > LUAU_MEMORY_COLLECT_BYTES {
+            self.lua.gc_collect()?;
         }
         let result = call();
         if result.as_ref().is_err_and(ran_out_of_memory) {
             return Err(mlua::Error::runtime(out_of_memory(site)));
         }
         let spent = self
-            .0
+            .lua
             .app_data_ref::<Budget>()
             .is_some_and(|budget| budget.spent());
         if spent && result.is_ok() {
@@ -210,7 +219,7 @@ impl<'l> BudgetGuard<'l> {
 
 impl Drop for BudgetGuard<'_> {
     fn drop(&mut self) {
-        if let Some(mut budget) = self.0.app_data_mut::<Budget>() {
+        if let Some(mut budget) = self.lua.app_data_mut::<Budget>() {
             budget.leave();
         }
     }

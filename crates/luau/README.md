@@ -74,8 +74,13 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   its garbage not yet collected included, so a hook that builds one huge string or table without
   looping (`string.rep`), which spends no interrupts, is bounded too. The allocation that would pass
   the cap fails, and the hook call with it, with an error naming the card, face and hook:
-  `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`, whether the allocation was the
-  hook's own or a reader's. Luau collects nothing when an allocation fails, so an outermost hook call
+  `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`. Every hook call, a nested one
+  included, runs under the cap (`vm::BudgetGuard`), but a reader, `J.query` and `J.pool` lift it
+  while they build their answer (`sandbox::MemoryCap`): under a cap mlua runs each value the host
+  builds through a protected call, which cost a hook call about half its time, and what the
+  host builds is bounded by the state it reads, not by the script. It is still counted, so the
+  hook's next allocation past the cap fails. For the same reason `J`'s verbs are Luau closures, not
+  Rust functions. Luau collects nothing when an allocation fails, so an outermost hook call
   that finds the VM holding more than `LUAU_MEMORY_COLLECT_BYTES` (half the cap) first collects all
   its garbage: a call that ran out of memory does not fail the next one. `pcall` catches a memory
   error as it catches any Luau error; the allocation never happened, so the cap holds;
