@@ -6221,6 +6221,13 @@
     "849": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T04:37:54Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "fails easy on lines 2, 3 and 5: engine view work in crates/engine/src, a new ruling R849000, and web changes in apps/web; not hard, as no rule, resolution loop, AI or migration changes (the golden traces move view hashes only)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
