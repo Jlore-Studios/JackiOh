@@ -6831,10 +6831,8 @@
     "what": "build #442 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-10-14T06:04:15Z",
-    "notes": [
-      "started a night run, as a lane was free: a suggestion survey is due, for `devin`"
-    ],
+    "at": "2026-10-14T06:13:25Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
