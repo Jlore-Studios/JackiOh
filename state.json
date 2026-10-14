@@ -6514,10 +6514,8 @@
     "what": "build #897 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-14T20:17:25Z",
-    "notes": [
-      "#898 left the Needs plan stage"
-    ],
+    "at": "2026-10-14T20:24:03Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
