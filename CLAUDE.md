@@ -82,6 +82,11 @@ trap backrow. This file binds every agent, not only Claude.
     files or more; **medium** for the rest. Torn between two, take the harder. The bot never changes your
     label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner rates
     it.
+12. Never delete or disable anything called from outside this codebase without asking a person first: a
+    webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
+    or a person or another service calls (`/api/catalog` is Render's health check), or a `cargo jackioh`,
+    server or harness subcommand that a workflow, a deploy or a person runs. That nothing in the tree calls
+    it is no proof it is dead (#900).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
