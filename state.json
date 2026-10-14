@@ -5992,6 +5992,13 @@
     "887": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T18:16:49Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 5 was the closest call: the settings flip needs a grant migration since service_role holds no table privilege on app.settings, so medium holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
