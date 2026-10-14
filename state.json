@@ -6639,10 +6639,8 @@
     "what": "build #442 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-14T04:38:31Z",
-    "notes": [
-      "#442: its parts have all closed; queued its reconcile"
-    ],
+    "at": "2026-10-14T04:44:46Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
