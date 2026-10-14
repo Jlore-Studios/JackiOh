@@ -69,6 +69,16 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   naming its card, face and hook (`"<card> <face> <hook>: hook calls nested deeper than 16 (L5)"`),
   since a hook that runs itself from a reader spends only a few interrupts a level and would
   otherwise nest until the thread's stack overflowed, which aborts the process;
+- a memory cap (`Lua::set_memory_limit`, #843): the thread's VM holds at most `LUAU_MEMORY_BYTES`
+  (64 MiB, `config.rs`) all told, its libraries, its chunk cache, what the calls in flight hold and
+  its garbage not yet collected included, so a hook that builds one huge string or table without
+  looping (`string.rep`), which spends no interrupts, is bounded too. The allocation that would pass
+  the cap fails, and the hook call with it, with an error naming the card, face and hook:
+  `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`, whether the allocation was the
+  hook's own or a reader's. Luau collects nothing when an allocation fails, so an outermost hook call
+  that finds the VM holding more than `LUAU_MEMORY_COLLECT_BYTES` (half the cap) first collects all
+  its garbage: a call that ran out of memory does not fail the next one. `pcall` catches a memory
+  error as it catches any Luau error; the allocation never happened, so the cap holds;
 - Rust panics that `pcall` cannot catch (`LuaOptions::catch_rust_panics(false)`): a nested hook
   that fails panics (below), and the panic goes on through the hook that called it, since mlua's
   `pcall` raises it again and runs no handler that could replace it.
@@ -120,9 +130,10 @@ rule 4).
 Two ways a script's answer could still differ from run to run are not closed here, and are left to
 part 6's bindings and part 8's `luau-analyze`: `tostring` of a table, a function or a userdata (and
 so string interpolation of one) gives its address, and a weak table (`__mode`) loses its entries
-whenever the collector runs, which hangs on everything the thread's VM did before. Nor does any
-memory cap stop a script that builds one huge string or table without looping (`string.rep`): L5's
-cap counts interrupts, not bytes.
+whenever the collector runs, which hangs on everything the thread's VM did before. The memory cap
+(above) adds a third, which nothing closes: whether a hook that allocates close to
+`LUAU_MEMORY_BYTES` runs out hangs on what the thread's VM holds besides, so one that catches the
+failure with `pcall` could answer differently on another thread. No card's hook comes near the cap.
 
 ## Statelessness (L8)
 

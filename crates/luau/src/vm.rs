@@ -10,9 +10,9 @@ use mlua::chunk::ChunkMode;
 use mlua::{Function, Lua, Table, Value};
 
 use crate::api::{self, EffectCall};
-use crate::config::LUAU_HOOK_DEPTH;
+use crate::config::{LUAU_HOOK_DEPTH, LUAU_MEMORY_COLLECT_BYTES};
 use crate::numbers;
-use crate::sandbox::{Budget, Sandbox, new_sandbox, stopped, too_deep};
+use crate::sandbox::{Budget, Sandbox, new_sandbox, out_of_memory, ran_out_of_memory, stopped, too_deep};
 use crate::{Face, LuauError, Site};
 
 /// The hooks a face may declare. `start_of_game` is not among them: only cards that
@@ -179,7 +179,9 @@ impl<'l> BudgetGuard<'l> {
 
     /// What `call` returns, unless the call is nested deeper than `LUAU_HOOK_DEPTH`, which it is
     /// never made, or the budget ran out during it: a hook that caught its stop with `pcall` and
-    /// returned is stopped all the same.
+    /// returned is stopped all the same. An outermost call first collects the VM's garbage when the VM
+    /// holds more than `LUAU_MEMORY_COLLECT_BYTES`, and a call that ran out of memory fails naming
+    /// its card.
     fn run<T>(&self, site: Site, call: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
         let depth = self
             .0
@@ -188,7 +190,13 @@ impl<'l> BudgetGuard<'l> {
         if depth > LUAU_HOOK_DEPTH {
             return Err(mlua::Error::runtime(too_deep(site)));
         }
+        if depth == 1 && self.0.used_memory() > LUAU_MEMORY_COLLECT_BYTES {
+            self.0.gc_collect()?;
+        }
         let result = call();
+        if result.as_ref().is_err_and(ran_out_of_memory) {
+            return Err(mlua::Error::runtime(out_of_memory(site)));
+        }
         let spent = self
             .0
             .app_data_ref::<Budget>()
