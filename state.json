@@ -5829,8 +5829,16 @@
     "what": "plan #824 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-10-14T00:52:51Z",
-    "notes": [],
+    "at": "2026-10-14T01:01:10Z",
+    "notes": [
+      "#833 needs a plan",
+      "#834 needs a plan",
+      "started a night run, as a lane was free: a suggestion survey is due, for `claude-4`",
+      "#836: typed it Task",
+      "#835: typed it Task",
+      "#834: typed it Task",
+      "#833: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
