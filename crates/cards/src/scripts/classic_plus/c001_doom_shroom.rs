@@ -1,7 +1,10 @@
-//! C+ #1 Doom Shroom (SPEC §8.7 row 1). (3) Trap, Epic.
+//! C+ #1 Doom Shroom (SPEC §8.7 row 1). (3) Trap, Epic. "Crater\nReveals when an enemy Unit attacks
+//! your hero: Exile all Units." (Radiant: all enemy Units.)
 //! Fires in §4.2 step 4's trap window (as Core #96 My Pawn) when an enemy Unit declares an attack on
-//! your hero: exiles every Unit (Radiant: every enemy Unit), tops of piles only, so the attacker is gone
-//! and no combat happens (R44, R220); then Locks its own backrow zone (E20) and is consumed.
+//! your hero. Its Crater Locks its own backrow zone as it is revealed (R783011, before its effects;
+//! until patch v0.3.7 the text's last step, "Lock this zone.", E20), then it exiles every Unit
+//! (Radiant: every enemy Unit), tops of piles only, so the attacker is gone and no combat happens
+//! (R44, R220), and is consumed.
 
 use jackioh_engine::prelude::*;
 
@@ -24,7 +27,7 @@ fn doom_shroom(side: &'static str) -> Script {
     Script {
         triggers: vec![
             TriggerDef::new("doom-shroom", &[GameEventType::AttackDeclared], move |_ctx, _event| {
-                vec![exile_all(json_as(json!({ "side": side }))), lock_own_zone()]
+                vec![exile_all(json_as(json!({ "side": side })))]
             })
             .with_when(attacks_your_hero),
         ],
@@ -43,8 +46,8 @@ pub fn script() -> CardScripts {
 // step 4's trap window when an enemy Unit declares an attack on your hero, never on an attack on a
 // unit; exiles every Unit on both sides (the tops of piles, a card dormant beneath resuming), so the
 // attacker is gone and no combat resolves (R44's cancel); no Death fires and exiled tokens cease to
-// exist; it goes to your graveyard as it fires and its backrow zone is Locked, so a later play into
-// that zone is refused; the opponent sees only a face-down card until `trapFired` (R33, R97); radiant
+// exist; it goes to your graveyard as it fires and its backrow zone is Locked by its Crater as it is
+// revealed (R783011), so a later play into that zone is refused; the opponent sees only a face-down card until `trapFired` (R33, R97); radiant
 // exiles enemy Units only, yours stay".
 //
 // Doom Shroom sits face-down in p1's backrow lane 2; p2 is active and attacks.
@@ -84,6 +87,22 @@ mod tests {
 
     fn count(s: &Scenario, type_: &str) -> usize {
         s.events().iter().filter(|event| event.event_type().as_str() == type_).count()
+    }
+
+    #[test]
+    fn r783011_both_faces_print_crater_in_place_of_lock_this_zone() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        assert_eq!(def.base.keywords, vec![Keyword::Crater]);
+        assert_eq!(def.radiant.keywords, vec![Keyword::Crater]);
+        assert_eq!(
+            def.base.text,
+            "Crater\nReveals when an enemy Unit attacks your hero: Exile all Units."
+        );
+        assert_eq!(
+            def.radiant.text,
+            "Crater\nReveals when an enemy Unit attacks your hero: Exile all enemy Units."
+        );
     }
 
     #[test]
@@ -194,14 +213,15 @@ mod tests {
         }
 
         #[test]
-        fn e20_its_backrow_zone_is_locked_as_it_fires_and_a_later_play_into_that_zone_is_refused() {
+        fn r783011_its_crater_locks_its_backrow_zone_as_it_is_revealed_before_the_exile_and_after_it_left() {
             crate::register_all();
             let mut s = setup(json!({ "hand": [SHEEPISH, SHEEPISH, FILLER] }), json!({}), false);
 
             let attacker = s.unit(P2, 1).unwrap();
             s.attack(&attacker, "hero");
 
-            s.expect_events(json!(["trapFired", "locked"]));
+            s.expect_events(json!(["trapFired", "locked", "exiled"]));
+            s.expect_in_zone(DOOM, "graveyard");
             assert_eq!(s.view(P1).you.locks.backrow, vec![false, true, false, false, false]);
             s.end_turn();
             assert_eq!(s.state().active, P1);
@@ -230,7 +250,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn exiles_enemy_units_only_the_attacker_is_gone_no_combat_and_your_units_stay() {
+        fn r783011_exiles_enemy_units_only_the_attacker_is_gone_no_combat_and_your_units_stay() {
             crate::register_all();
             let mut s = setup(json!({ "field": [VANILLA, TIMMY] }), json!({ "field": [TIMMY, VANILLA] }), true);
             let attacker = s.unit(P2, 1).unwrap();
@@ -246,6 +266,9 @@ mod tests {
             );
             s.expect_health(P1, 30);
             assert_eq!(count(&s, "damage"), 0);
+            // R783011: its Crater Locked the zone as it was revealed, before the Exile, and the Lock
+            // outlasts it.
+            s.expect_events(json!(["trapFired", "locked", "exiled"]));
             assert!(s.view(P1).you.locks.backrow[1]);
             s.expect_in_zone(DOOM, "graveyard");
         }

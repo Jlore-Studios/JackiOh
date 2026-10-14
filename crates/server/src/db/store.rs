@@ -2106,6 +2106,12 @@ impl Tx<'_> {
         dispatch!(self, ranked_game(id))
     }
 
+    /// R748000: every rated game with a bot side that ended at or after `since` (epoch ms), oldest
+    /// first, ties on id.
+    pub async fn ranked_bot_games_since(&mut self, since: i64) -> StoreResult<Vec<RatedGameRow>> {
+        dispatch!(self, ranked_bot_games_since(since))
+    }
+
     // tutorial (R320: tutorial progress kept on the account)
 
     /// The profile's row, or `None` before its first write.

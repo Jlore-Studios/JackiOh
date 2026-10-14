@@ -486,6 +486,7 @@ fn check_game_config(matchup: Matchup) -> Result<()> {
             &config.controllers[subject],
             &SeatController::Ai {
                 budget: Some(AI_GATE_BUDGET),
+                skill: None,
             },
             &format!("{label}: the subject's controller"),
         )?;
@@ -494,6 +495,7 @@ fn check_game_config(matchup: Matchup) -> Result<()> {
             "ai-vs-greedy" => SeatController::Greedy,
             _ => SeatController::Ai {
                 budget: Some(AI_GATE_BUDGET),
+                skill: None,
             },
         };
         expect_eq(

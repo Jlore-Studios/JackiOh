@@ -843,10 +843,20 @@ base → Radiant.
 
 > **Designer:** 3/4 Your Traps cost (0). ~~~ 6/8 Your Traps cost (0). Gain +1 Mana after playing one.
 
-- **Text:** Aura: Your Traps cost (0).
-- **Radiant:** Aura: Your Traps cost (0). After you play a Trap, gain 1 mana.
-- **Engine:** E15 cost aura on its controller's Traps and Field Traps in hand. Radiant: a trigger on
-  your `cardPlayed` of a Trap, +1 temporary mana.
+> **Designer (patch v0.3.7, #781):** Cloaked Toe Cracker gets Cloaked.
+
+- **Text:** Cloaked
+  Aura: Your Traps cost (0).
+- **Radiant:** Cloaked
+  Aura: Your Traps cost (0). After you play a Trap, gain 1 mana.
+- **Engine:** Cloaked printed on both faces since patch v0.3.7 (#783's keyword): it may be set
+  face-down from hand at its own (2) and revealed by its Reveal (R783004–R783006); set, it is a Field
+  Trap whose Aura and trigger are dormant. E15 cost aura on its controller's Traps and Field Traps in
+  hand; a card set by its Cloaked is priced as itself, so the Aura never makes one free (R783005, the
+  designer's "Toe Cracker: no"). Radiant: a trigger on your `cardPlayed` of a Trap, the played card read
+  as it stands, so a Cloaked card's face-down play counts (R783005); +1 temporary mana.
+- **Until patch v0.3.7:** no Cloaked; "Aura: Your Traps cost (0)." (Radiant adds "After you play a
+  Trap, gain 1 mana.").
 - **Numbers:** Radiant mana 1 ↑.
 
 #### Classic #7 · InfiniScepter
@@ -2139,11 +2149,18 @@ after the card that defines it. The designer's number is given where B2.3 moved 
 > **Designer:** Activate when your Hero is attacked: Exile all Units. Lock this slot. ~~~ Activate when
 > your Hero is attacked: Exile all enemy Units. Lock this slot.
 
-- **Text:** Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone.
-- **Radiant:** Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone.
-- **Engine:** §4.2 step 4's trap window (My Pawn's). Exile every Unit on the field (tops of piles; a
-  card dormant beneath resumes). The attacker is gone, so no combat happens (R44's cancel). The trap goes
-  to the graveyard as it fires, and E20 Locks the backrow zone it stood in.
+> **Designer (patch v0.3.7, #781):** Crater, applied retroactively to Doom Shroom.
+
+- **Text:** Crater
+  Reveals when an enemy Unit attacks your hero: Exile all Units.
+- **Radiant:** Crater
+  Reveals when an enemy Unit attacks your hero: Exile all enemy Units.
+- **Engine:** §4.2 step 4's trap window (My Pawn's). Its Crater (since patch v0.3.7, R783011) Locks the
+  backrow zone it stood in as it is revealed, before its effects; the Lock outlasts it. Exile every Unit
+  on the field (tops of piles; a card dormant beneath resumes). The attacker is gone, so no combat
+  happens (R44's cancel). The trap goes to the graveyard as it fires.
+- **Until patch v0.3.7:** "… Exile all Units. Lock this zone." (Radiant: all enemy Units), the Lock (E20)
+  the text's last step, after the Exile; a player sees no difference.
 - **Numbers:** none.
 
 #### Classic+ #2 · Groom Shroom
@@ -2392,8 +2409,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 
 > **Designer:** Summon a 3/3 rush token, it gains a random keyword ~~~ Summon 3 of them
 
-- **Text:** Summon a Rush Token. It gains a random keyword.
-- **Radiant:** Summon 3 Rush Tokens. Each gains a random keyword.
+- **Text:** Summon a Rush Token. It gains a random combat keyword.
+- **Radiant:** Summon 3 Rush Tokens. Each gains a random combat keyword.
 - **Engine:** Core's Rush Token (3/3 Rush); R21's pool, never a keyword it has.
 - **Numbers:** keywords 1 ↑.
 
@@ -2402,8 +2419,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 
 > **Designer:** Summon a 3/3 rush token, it gains 3 random keywords ~~~ Summon 3 of them
 
-- **Text:** Summon a Rush Token. It gains 3 random keywords.
-- **Radiant:** Summon 3 Rush Tokens. Each gains 3 random keywords.
+- **Text:** Summon a Rush Token. It gains 3 random combat keywords.
+- **Radiant:** Summon 3 Rush Tokens. Each gains 3 random combat keywords.
 - **Numbers:** keywords 3 ↑.
 
 #### Classic+ #17 · Conjure Rush Token++
@@ -2412,8 +2429,8 @@ The eight Pancake tokens (`classicplus-012-1` … `-8`), all Legendary by the de
 > **Designer:** (4) Conjure Tush Token++, spell, Epic · Summon a 3/3 rush token, it gains 3 random
 > keywords ~~~ Summon 3 of them
 
-- **Text (proposed):** Summon a Rush Token. It gains 6 random keywords.
-- **Radiant (proposed):** Summon 3 Rush Tokens. Each gains 6 random keywords.
+- **Text (proposed):** Summon a Rush Token. It gains 6 random combat keywords.
+- **Radiant (proposed):** Summon 3 Rush Tokens. Each gains 6 random combat keywords.
 - **Check:** the text is #16's word for word at twice the cost and a rarity up; 6 keywords (twice #16's)
   is proposed. "Tush" is "Rush". **⚠ designer.**
 - **Numbers:** keywords 6 ↑.

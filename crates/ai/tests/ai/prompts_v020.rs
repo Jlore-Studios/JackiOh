@@ -506,7 +506,10 @@ mod e18_a_whole_game_with_the_new_prompts {
                 p2: Some(handicap),
             }),
             controllers: PerPlayer {
-                p1: SeatController::Ai { budget: None },
+                p1: SeatController::Ai {
+                    budget: None,
+                    skill: None,
+                },
                 p2: SeatController::Greedy,
             },
             max_actions: None,

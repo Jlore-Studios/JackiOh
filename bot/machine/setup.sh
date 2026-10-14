@@ -219,6 +219,19 @@ fi
 echo 'kernel.apparmor_restrict_unprivileged_userns=0' > /etc/sysctl.d/60-codex-bwrap.conf
 sysctl -q -p /etc/sysctl.d/60-codex-bwrap.conf
 
+# Google Chrome, for the UI walkthroughs (scripts/browse.sh, .claude/skills/ui-walkthrough/, #816):
+# on PATH as google-chrome-stable, where browse.sh looks. Google's .deb adds Google's apt
+# repository and its key, so a later run upgrades it from there. Its sandbox needs the unprivileged
+# user namespaces the line above allows. Nothing starts it but a walkthrough an item's UI work asks
+# for.
+if dpkg -s google-chrome-stable >/dev/null 2>&1; then
+  apt-get install -y -qq --only-upgrade google-chrome-stable >/dev/null
+else
+  curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o "$work/google-chrome.deb"
+  apt-get install -y -qq "$work/google-chrome.deb" >/dev/null
+  rm -f "$work/google-chrome.deb"
+fi
+
 # The model CLIs, installed for every user. Each user's login stays in its own home.
 npm install -g --loglevel=error @anthropic-ai/claude-code@latest @openai/codex@latest >/dev/null
 curl -fsSL https://antigravity.google/cli/install.sh -o "$work/agy-install.sh"

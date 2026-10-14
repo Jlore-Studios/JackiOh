@@ -4,7 +4,9 @@
 //!
 //! Port of `packages/engine/test/effects-buff.test.ts`.
 
-use jackioh_engine::effects::{buff, buff_all_units, grant_keyword, grant_random_keywords};
+use jackioh_engine::effects::{
+    buff, buff_all_units, grant_keyword, grant_random_keywords, random_pool_keywords,
+};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, shielded, spikey_pillow, taunter, zero_attack};
@@ -12,22 +14,8 @@ use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
 
 /// A unit holding every keyword in R21's pool, so the pool can run dry.
 fn pool_keywords() -> Value {
-    json!([
-        { "kind": "Taunt" },
-        { "kind": "Armor", "n": 1 },
-        { "kind": "Rush" },
-        { "kind": "Charge" },
-        { "kind": "First Strike" },
-        { "kind": "Poisonous" },
-        { "kind": "Lifesteal" },
-        { "kind": "Reborn" },
-        { "kind": "Divine Shield" },
-        { "kind": "Trample" },
-        { "kind": "Cleave" },
-        { "kind": "Pierce" },
-        { "kind": "Windfury" },
-        { "kind": "Deft" },
-    ])
+    // R781005: the combat keyword pool as the engine holds it, so the fixture never restates it.
+    serde_json::to_value(random_pool_keywords()).expect("keywords serialise")
 }
 
 const EVERY_KEYWORD: &str = "bf-every-keyword";
@@ -564,15 +552,20 @@ mod r21_random_keywords_m3_t1 {
         assert_eq!(kinds.len(), 2);
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), 2);
         assert_eq!(b.card(&unit.id).granted_keywords.len(), 2);
-        let pool_kinds: Vec<&str> = RANDOM_KEYWORD_POOL
+        let pool_kinds: Vec<&str> = random_pool_keywords()
             .iter()
-            .map(|entry| if *entry == "Armor 1" { "Armor" } else { *entry })
+            .map(|keyword| keyword.kind().as_str())
             .collect();
         for kind in &kinds {
             assert!(pool_kinds.contains(&kind.as_str()));
         }
+        let shown = b.view(&unit.id).keywords;
         for keyword in &b.card(&unit.id).granted_keywords {
-            assert!(has_keyword(&b.view(&unit.id).keywords, keyword.kind()));
+            // R347: an Indestructible unit shows no Taunt, whichever came first.
+            if keyword.kind() == KeywordKind::Taunt && has_keyword(&shown, KeywordKind::Indestructible) {
+                continue;
+            }
+            assert!(has_keyword(&shown, keyword.kind()));
         }
 
         // Same seed, same draws: the effect only ever touches ctx.rng (§9.3).
@@ -612,11 +605,12 @@ mod r21_random_keywords_m3_t1 {
             .position = Some(Position::Def);
         let mut b = Bench::new(state);
 
-        // 12 draws: everything the 14-entry pool holds but Taunt and Armor, and nothing it has.
+        // Every draw the 18-entry pool has room for but Taunt and Armor, and nothing it has (R781005).
         let me = Some(b.card(&unit.id));
+        let count = RANDOM_KEYWORD_POOL.len() - 2;
         run(
             &mut b,
-            grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": 12 }))),
+            grant_random_keywords(json_as(json!({ "target": { "of": "self" }, "count": count }))),
             me,
             HookOptions::default(),
         );

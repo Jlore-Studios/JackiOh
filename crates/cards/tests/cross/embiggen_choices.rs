@@ -87,7 +87,7 @@ fn play(g: &Scenario, card: &str, zone: Option<ZoneChoice>, embiggen: bool) -> R
         zone,
         x: None,
         embiggen: Some(embiggen),
-        magnetic: None,
+        equip: None,
         tributes: None,
         targets: None,
         modes: None,

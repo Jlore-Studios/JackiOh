@@ -51,6 +51,9 @@ use serde_json::{Value, json};
 use crate::arena::{self, AgentSpec, ArenaOutcome, Entrant};
 use crate::patches::{git, repo_root};
 
+/// A share as a percentage, for the report.
+const PERCENT: f64 = 100.0;
+
 /// The AI's source, whose git tree names the seeds.
 pub(crate) const AI_SOURCE: &str = "crates/ai/src";
 
@@ -273,6 +276,11 @@ fn draws_and_aborted(outcomes: &[ArenaOutcome]) -> (usize, usize) {
     )
 }
 
+/// A win-rate interval as whole percentages, `55–74%`.
+fn interval_text(low: f64, high: f64) -> String {
+    format!("{:.0}–{:.0}%", low * PERCENT, high * PERCENT)
+}
+
 /// The run's report, in Markdown: the lane's pull request body (training/loop.sh).
 #[allow(clippy::too_many_arguments)]
 fn report(
@@ -307,10 +315,15 @@ fn report(
         record.generation,
         lane.as_str()
     ));
-    out.push_str("| Opponent | Wins | Needs | Draws | No result |\n|---|---|---|---|---|\n");
+    let (low, high) = arena::wilson_interval(counts.vs_parent.max(0) as usize, counts.games.max(0) as usize);
+    out.push_str(
+        "| Opponent | Wins | Needs | 95% interval | Draws | No result |\n|---|---|---|---|---|---|\n",
+    );
     out.push_str(&format!(
-        "| parent: {parent_name} | {} | {} | {parent_draws} | {parent_aborted} |\n\n",
-        record.vs_parent, gate.vs_parent
+        "| parent: {parent_name} | {} | {} | {} | {parent_draws} | {parent_aborted} |\n\n",
+        record.vs_parent,
+        gate.vs_parent,
+        interval_text(low, high)
     ));
     let ban_rule = match lane {
         Lane::Unban => "; the unban lane needs strictly fewer than the parent's",
@@ -513,6 +526,7 @@ mod tests {
             generation: Some(8),
             lane: Some("unban".to_string()),
             shadow_ban: shadow_ban.iter().map(|id| id.to_string()).collect(),
+            skill: jackioh_ai::AI_SKILL_MAX,
         }
     }
 
@@ -558,6 +572,13 @@ mod tests {
         let measured = counts(wins_of(&series), 11, 11);
         assert_eq!(measured.vs_parent, 64);
         assert_eq!(gate_failures(Lane::Improve, &measured).len(), 1);
+    }
+
+    #[test]
+    fn the_report_reads_the_gates_bar_as_an_interval() {
+        // 65 of 100, the improve lane's bar, is a true win rate anywhere from about 55% to 74%.
+        let (low, high) = arena::wilson_interval(65, 100);
+        assert_eq!(interval_text(low, high), "55–74%");
     }
 
     #[test]

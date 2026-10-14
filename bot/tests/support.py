@@ -112,3 +112,12 @@ def make_ctx(gh: FakeGitHub | None = None, *, at: datetime = NIGHT, cfg=None,
     cfg = cfg or make_config()
     trust = Trust.parse(trust_text) if trust_text is not None else Trust.load(ROOT / config_mod.TRUST_PATH)
     return Context(cfg=cfg, gh=gh, store=StateStore(gh), trust=trust, clock_fn=Clock(at))
+
+
+def idle_for(ctx: Context, minutes: int = 31) -> None:
+    """A free lane has had nothing to start for `minutes` (#797): a survey is due once that is
+    `suggestions.idle_minutes` (30) or more."""
+    from datetime import timedelta
+    from harness.clock import iso
+    ctx.store.update(lambda s: s["suggest"].update(
+        idle_since=iso(ctx.now() - timedelta(minutes=minutes))))

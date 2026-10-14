@@ -29,6 +29,7 @@ pub mod reply;
 pub mod search;
 pub mod secrets;
 pub mod shadow_ban;
+pub mod skill;
 pub mod style;
 pub mod support;
 pub mod surface;

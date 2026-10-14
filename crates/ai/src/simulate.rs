@@ -12,8 +12,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, legal_actions, opponent_of,
-    owed_mana_of, reduce,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, find_instance,
+    legal_actions, opponent_of, owed_mana_of, reduce, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -234,6 +234,39 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// TS `{ ok: true; state } | { ok: false; error }` (private in TS; public here, as `simulate`'s answer).
 pub type SimStep = Result<GameState, String>;
 
+/// The extra nodes an action is charged for the work its `reduce` really does (AI_SEARCH's
+/// expensive_def_* and ai_turn_trap_*): a Play of a card whose resolve ranks the whole catalog for
+/// the state (the §10.7 scorer) or an Attack that could set off a trap which hands the attacker a
+/// whole random turn (§8.5 core-096). One reduce of either costs the wall clock a hundred cheap
+/// sims do, so the step is budgeted its share up front — otherwise a hand or backrow holding one
+/// burns a decision's 2 s on a few sims (R186's sweep flag) as easily as on a few cheap ones.
+pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
+    match action {
+        ActionBody::Play { instance_id, .. } => find_instance(state, instance_id)
+            .filter(|card| AI_SEARCH.expensive_def_ids.contains(&card.def_id.as_str()))
+            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
+        ActionBody::Attack { attacker_id, .. } => {
+            let defender = opponent_of(actor);
+            // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
+            // surcharge reads the same gate approximately — the unit's attack against the hero's
+            // health — so a chip attack at an armed board is not charged the playout's price.
+            let lethalish = find_instance(state, attacker_id)
+                .is_some_and(|unit| unit_view(state, unit).attack >= state.players[defender].hero.health);
+            let trapped = state.players[defender]
+                .backrow
+                .iter()
+                .flatten()
+                .any(|card| AI_SEARCH.ai_turn_trap_ids.contains(&card.def_id.as_str()));
+            if lethalish && trapped {
+                AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
+            } else {
+                0
+            }
+        }
+        _ => 0,
+    }
+}
+
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
 /// of the other seat is open, answer it with the first entry of legalActions (each answer one more
 /// node, at most AI_SEARCH.maxAutoAnswers). A throw or a refusal is `{ ok: false }`. Returns null
@@ -246,6 +279,22 @@ pub fn simulate(
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
+    }
+    // An action whose surcharge the slice cannot pay must not drain it node by node and then
+    // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
+    // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
+    // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
+    let surcharge = surcharge_nodes(state, seat, action);
+    if counter.used() + surcharge > counter.limit() {
+        note_sim_error(counter);
+        return Some(Err(
+            "the step's surcharge does not fit the budget's slice".to_string()
+        ));
+    }
+    for _ in 0..surcharge {
+        if !counter.take() {
+            return None;
+        }
     }
     let run = catch_unwind(AssertUnwindSafe(|| -> Option<SimStep> {
         let first = reduce(
@@ -350,9 +399,48 @@ pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter
     static_score(state, seat, root_turn)
 }
 
+/// What a backrow card or an own hand card is, for `search_signature`: its id, its definition (a
+/// Transform or a discovered card keeps the id), its Radiant face, and its cost changes.
+fn card_signature(card: &CardInstance) -> String {
+    format!(
+        "{}={}{}{}/{:?}",
+        card.id,
+        card.def_id,
+        if card.radiant { "*" } else { "" },
+        card.cost_mod,
+        card.cost_override,
+    )
+}
+
+/// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
+/// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
+/// and armor overrides, a spent Divine Shield, and its counters and enchantments.
+fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
+    let view = unit_view(state, unit);
+    format!(
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}",
+        unit.def_id,
+        if unit.radiant { "*" } else { "" },
+        if unit.vanilla { "~" } else { "" },
+        view.attack,
+        view.max_health,
+        view.health,
+        view.armor,
+        view.keywords,
+        unit.stats_override,
+        unit.armor_override,
+        u8::from(unit.divine_shield_spent == Some(true)),
+        unit.counters,
+        unit.enchantments,
+    )
+}
+
 /// A cheap identity for a position inside one turn, for the lethal solver's visited set and the
-/// beam's duplicate check: both heroes, every active unit's id, damage, buffs, exertion and position,
-/// the seat's hand and mana, the enemy hand size and the open prompt.
+/// beam's duplicate check: both heroes, the open prompt whole, both library sizes, every active unit's
+/// id, damage, buffs, exertion and position and what else changes how it plays (`unit_play_signature`),
+/// every backrow card (`card_signature`, and whether it is face up), the seat's hand (`card_signature`)
+/// and mana, and the enemy hand size. A unit's lane is left out, so the two lanes `candidate_actions`
+/// keeps for one play stay one position.
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -368,7 +456,15 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         format!("n{}", state.players[opp].hand.len()),
         format!(
             "q{}",
-            state.pending.as_ref().map_or("-", |pending| pending.id.as_str())
+            state
+                .pending
+                .as_ref()
+                .map_or("-".to_string(), |pending| format!("{pending:?}"))
+        ),
+        format!(
+            "l{}/{}",
+            state.players[seat].library.len(),
+            state.players[opp].library.len()
         ),
     ];
     for player in PLAYER_IDS {
@@ -379,19 +475,25 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
                 .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
             let exerted = format!("{}{}", attacks, if unit.exertion.switched { 1 } else { 0 });
             parts.push(format!(
-                "{}:{}:{}/{}:{}:{}",
+                "{}:{}:{}/{}:{}:{}:{}",
                 unit.id,
                 unit.damage,
                 unit.buffs.attack,
                 unit.buffs.health,
                 exerted,
                 unit.position.map_or("ATK", |position| position.as_str()),
+                unit_play_signature(state, unit),
             ));
         }
         let backrow = state.players[player]
             .backrow
             .iter()
-            .map(|card| card.as_ref().map_or("-", |card| card.id.as_str()))
+            .map(|card| {
+                card.as_ref().map_or("-".to_string(), |card| {
+                    let face = if card.face_up == Some(true) { "^" } else { "" };
+                    format!("{}{face}:{:?}", card_signature(card), card.counters)
+                })
+            })
             .collect::<Vec<_>>()
             .join(",");
         parts.push(format!("b{backrow}"));
@@ -401,7 +503,7 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
         state.players[seat]
             .hand
             .iter()
-            .map(|card| card.id.as_str())
+            .map(card_signature)
             .collect::<Vec<_>>()
             .join(",")
     ));

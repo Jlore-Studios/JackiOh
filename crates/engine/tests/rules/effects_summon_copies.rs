@@ -421,7 +421,7 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
     }
 
     #[test]
-    fn s8_3_61_vanilla_true_and_granted_keywords_false_keep_the_buffs_and_the_radiant_flag() {
+    fn s8_3_61_r781003_vanilla_true_and_granted_keywords_false_drop_the_buffs_and_keep_the_radiant_flag() {
         let mut state = game("copy-postdoc");
         let source = put_radiant(&mut state, &body().id, slot(PlayerId::P1, Row::Units, 2));
         {
@@ -447,7 +447,8 @@ mod summon_copy_s10_7_copy_semantics_r57_12_61 {
         let copy = unit_at(&state, 1, PlayerId::P1).expect("the copy");
         assert!(copy.vanilla);
         assert!(copy.granted_keywords.is_empty());
-        assert_eq!(copy.buffs, AttackHealth { attack: 1, health: 1 });
+        // R781003: a copy made Vanilla is at its printed stats, so the buffs R57 carries go.
+        assert_eq!(copy.buffs, AttackHealth { attack: 0, health: 0 });
         assert!(copy.radiant);
         assert_eq!(copy.damage, 0);
         // The source keeps its own text and its own keyword: only the copy is textless (R23).

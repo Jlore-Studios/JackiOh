@@ -58,8 +58,8 @@ use crate::modifiers::remove_modifier;
 use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
-    declared_targets, default_zone_for, in_declared_order, interceptor_fits_decl, legal_selections_for,
-    magnetic_host_at, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
+    declared_targets, default_zone_for, equip_host_at, in_declared_order, interceptor_fits_decl,
+    legal_selections_for, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
     targeting_discards_required, targets_follow_modes, why_choices_refused,
 };
 use crate::play_counts::record_play;
@@ -428,6 +428,10 @@ pub struct PlayRun {
     /// E11, R454: the Plague Counters paying part of the price (`costPaid` is the whole price).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plague: Option<PlagueSpend>,
+    /// R783013: the play from the graveyard is the card's own Flashback's, which step 4 spends as the
+    /// card leaves the graveyard (`take_from_play_source`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flashback: Option<bool>,
     /// E12, R452: a random cast — every choice its caster would make is made at random.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random: Option<bool>,
@@ -461,10 +465,10 @@ pub struct PlayRun {
     /// cast has resolved, and its held `drawn` is released then (`draw_complete.rs`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drawn_as: Option<String>,
-    /// R1086: the host a Magnetic play fuses into at step 7 (ME-MAGNETIC), read at step 1. Absent for
+    /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1. Absent for
     /// every other play (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub magnetic_host: Option<String>,
+    pub equip_host: Option<String>,
     // ---- B5 E14 (Classic #57 Echo; R399, R546) ----
     /// The Spell text a copier's play resolves, fixed at step 1 as its choices are checked against it
     /// (null: nothing had been played), and written on the card as the announce moves it into the
@@ -525,6 +529,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         lost: None,
         source: None,
         plague: None,
+        flashback: None,
         random: None,
         target_enemies: None,
         fizzled: None,
@@ -537,7 +542,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         copied: None,
         extra_cries: None,
         aim_at: None,
-        magnetic_host: None,
+        equip_host: None,
     }
 }
 
@@ -690,22 +695,10 @@ pub fn validate_play(
         def_of(Some(&*sink.state), &card.def_id).cost,
         CardCost::Embiggen { .. }
     );
-    // ME-ALTPLAY, R1040, R1044, R1045: stamp the face-down form before the price is read.
-    let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> = action.face_down.map(|reveal| {
-        let turn = sink.state.turn;
-        let echo = {
-            let grants = crate::alt_play::grants_of(sink.state, player);
-            if grants.echo > 0
-                && crate::faces::card_type_of_face(sink.state, &card.def_id, card.radiant)
-                    != crate::wire::CardType::Unit
-            {
-                Some(grants.echo)
-            } else {
-                None
-            }
-        };
-        (reveal, turn, echo)
-    });
+    // R783004, R783005: stamp the face-down form before the price is read. Radiant Paranoia's Echo is
+    // read as the Spell reveals (R1045), so none is stamped.
+    let face_down_stamp: Option<(RevealAt, i32, Option<i32>)> =
+        action.face_down.map(|reveal| (reveal, sink.state.turn, None));
     if let Some(stamped) = find_instance_mut(sink.state, &card.id) {
         if chooses {
             stamped.x = Some(action.x.unwrap_or(0));
@@ -766,10 +759,10 @@ pub fn validate_play(
     let mut run = blank_run(card.id.clone(), card.def_id.clone(), player);
     run.cost_paid = cost;
     run.zone = zone;
-    // R1086: a Magnetic play names its host at step 1, off the same function the listing and the
+    // R1086: an Equip play names its host at step 1, off the same function the listing and the
     // refusal read.
-    if action.magnetic == Some(true) {
-        run.magnetic_host = zone.and_then(|slot| magnetic_host_at(state, player, &slot, &tributes));
+    if action.equip == Some(true) {
+        run.equip_host = zone.and_then(|slot| equip_host_at(state, player, &slot, &tributes));
     }
     // B5 E5, R450, R682: read against the picks as checked, before the step-1 interception moves
     // any of them — a cost the targeting owes whatever answers it.
@@ -795,6 +788,11 @@ pub fn validate_play(
     }
     if from == PlayFrom::Graveyard {
         run.source = Some(PlaySource::Graveyard);
+        // R783013: a play only the card's own Flashback allows spends it, read here as the play is
+        // checked — a Tribute at step 2 may take the permission that allowed it off the field.
+        if crate::graveyard_play::spends_flashback(state, player, &card, cost, action.plague.as_ref()) {
+            run.flashback = Some(true);
+        }
     }
     if let Some(plague) = &action.plague {
         run.plague = Some(PlagueSpend {
@@ -1661,8 +1659,8 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
 
     let placed = match run.zone {
         Some(zone) => {
-            // R1086: a Magnetic play lands on top of its host, as a Stack card lands on its pile.
-            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.magnetic_host.is_some();
+            // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
+            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
             place_on_field(
                 sink.state,
                 &mut card,
@@ -1718,6 +1716,8 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     record_play(sink.state, run.player, &card);
 
     played_events(sink, run, &card, former_id);
+    // R783010: a Crater Unit Locks the zone it was played into, before its Cry.
+    crate::crater::lock_on_arrival(sink, &card.id);
     if placed
         && let Some(times) = landing_buffs
         && times > 0
@@ -1772,6 +1772,10 @@ pub fn take_from_play_source(state: &mut GameState, run: &PlayRun, card: &mut Ca
         // R155: §5.1's end-of-turn return belongs to the Spell its own play landed in the graveyard
         // (§10.5 step 7). A card that leaves the graveyard has spent that landing (`zones`' removal).
         card.return_to_hand_at_end_of_turn = None;
+        // R783013: a play by its Flashback spends it as the card leaves the graveyard.
+        if run.flashback == Some(true) {
+            card.flashback_spent = Some(true);
+        }
         return true;
     }
     let side = &mut state.players[run.player];
@@ -2678,17 +2682,17 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             },
         );
     }
-    // R1086: a Magnetic play's card fuses into its host once the play has resolved (`cardResolved`
+    // R1086: an Equip play's card fuses into its host once the play has resolved (`cardResolved`
     // above), not as a trigger.
-    fuse_magnetic(sink, run);
+    fuse_equip(sink, run);
 }
 
-/// R1086 (ME-MAGNETIC): fuse the Magnetic card on top into its host, which the fusion keeps (zone,
-/// damage, exertion, the turn it arrived). The Magnetic card ceases to exist with no Death. When the
+/// R1086 (ME-EQUIP): fuse the Equip card on top into its host, which the fusion keeps (zone,
+/// damage, exertion, the turn it arrived). The Equip card ceases to exist with no Death. When the
 /// host or the top card left the field first, nothing fuses, and the top card, if still there, stays
 /// the pile's top.
-fn fuse_magnetic(sink: &mut EngineSink<'_>, run: &PlayRun) {
-    let Some(host_id) = run.magnetic_host.clone() else {
+fn fuse_equip(sink: &mut EngineSink<'_>, run: &PlayRun) {
+    let Some(host_id) = run.equip_host.clone() else {
         return;
     };
     let top_id = run.instance_id.clone();

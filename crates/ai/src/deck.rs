@@ -22,6 +22,10 @@
 //! is dealt from every set, and a lean on a gated set leans on the newest set that ships and is not
 //! gated. An empty gate deals exactly what the draw dealt before it.
 //!
+//! A ladder bot's deal leans on the cards that win (#750, R1454): its `strength` multiplies each
+//! card's weight by `win_rate_weight`, read off the compiled win-rate table. No strength, the default,
+//! multiplies every weight by exactly 1.0.
+//!
 //! Port of `packages/ai/src/deck.ts` (SURFACE §9: `build_ai_deck(&mut Rng, i32, &AiDeckOptions)`). TS
 //! threw on a bad request; this panics with the same message.
 
@@ -32,10 +36,11 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{
     CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
+    registered_win_rates,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::config::AI_DECK_GATED_SETS;
+use crate::config::{AI_DECK_GATED_SETS, AI_WIN_RATE};
 use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
 
 /// `"0-1" | "2" | "3" | "4+"`.
@@ -151,6 +156,12 @@ pub struct AiDeckOptions {
     /// leans on `ungated_lean`'s set instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gated_sets: Option<Vec<SetName>>,
+    /// #750 (R1454): how far the draw leans on the cards that win (`AI_WIN_RATE`, read off the
+    /// compiled win-rate table), from 0.0 (none) to 1.0 (all of `AI_WIN_RATE.max_boost`), clamped to
+    /// that range. A ladder bot's random deck passes its strength's share; `None` and `Some(0.0)` deal
+    /// exactly the deck the seed always dealt, and the lean takes no rng draw.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strength: Option<f64>,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -579,6 +590,26 @@ fn narrow_leaning<'a>(
     remaining.to_vec()
 }
 
+/// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0, for a
+/// card the win-rate table has no row for and for a row under `min_games` games; else `1 + strength
+/// × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`. The table is looked up by
+/// the pool's id, so a row for a card the catalog no longer holds is never read. Pure arithmetic: no
+/// rng draw, so a seed's deck moves only by the weights.
+fn win_rate_weight(id: &str, strength: f64) -> f64 {
+    if strength <= 0.0 {
+        return 1.0;
+    }
+    let Some(row) = registered_win_rates().cards.iter().find(|row| row.id == id) else {
+        return 1.0;
+    };
+    if row.games < AI_WIN_RATE.min_games {
+        return 1.0;
+    }
+    let rate = f64::from(row.wins) / f64::from(row.games);
+    (1.0 + strength * AI_WIN_RATE.max_boost * (rate - 0.5) * 2.0)
+        .clamp(AI_WIN_RATE.floor, 1.0 + AI_WIN_RATE.max_boost)
+}
+
 /// `build_ai_deck`'s deck and how many of its picks the leaned set's floor forced (R1370): a pick
 /// whose eligible cards were narrowed to the set's alone, because the slots left had come down to the
 /// cards the floors still owed. The measurement `AI_DECK.leanBoost` was chosen by.
@@ -684,6 +715,12 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .map(|boost| boost.ids.iter().cloned().collect())
         .unwrap_or_default();
     let boost_by = options.boost.as_ref().map_or(1.0, |boost| boost.by);
+    // #750: 0.0 unless a ladder bot's deal asks, so every other deal is the one it always was.
+    let strength = options
+        .strength
+        .filter(|strength| strength.is_finite())
+        .unwrap_or(0.0)
+        .clamp(0.0, 1.0);
     // The unban lane's deck shaping (shadow_ban.rs): exactly the seat an arena or a promotion deals
     // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS under a handicap's `mana_cap`, no
     // `include` or `boost` — gets its weights multiplied by the dealt-quality the lane's records
@@ -770,6 +807,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
                 if shape {
                     weight *= shaped_weight(&def.id);
                 }
+                weight *= win_rate_weight(&def.id, strength);
                 weight
             })
             .collect();

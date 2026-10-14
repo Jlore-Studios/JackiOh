@@ -1,7 +1,9 @@
-//! The bot seat (SPEC §9.12, R1452, R639000): what the match actor runs when a ladder bot owes the
-//! match a move. The bot decides on the AI's `decide_styled` at its strength (its budget and style,
-//! on the spec's resources), off the blocking pool so the actor's runtime never waits on a search,
-//! then waits out a human-paced think time before the move is sent: the delay drawn from the
+//! The bot seat (SPEC §9.12, R1452, R639000, R747000): what the match actor runs when a ladder bot owes
+//! the match a move. The bot decides on the AI's `decide_styled` at its strength (its budget and
+//! style, on the spec's resources), off the blocking pool so the actor's runtime never waits on a
+//! search, except that at each decision its strength's skill may hand the move to the random policy
+//! instead (R747000: skill is the chance a decision follows the AI, rolled on the bot's own AI
+//! stream), then waits out a human-paced think time before the move is sent: the delay drawn from the
 //! think-time fits (R1442's `THINK_TIME_FITS`, or the hand-set priors until a fit lands), longer on a
 //! board with more to do and on a turn that wins (R639000), times the bot's speed, less the time the
 //! decision took, inside its acting clock (R79). A targeted play or attack carries the aim a person's
@@ -19,7 +21,9 @@
 
 use std::time::Duration;
 
-use jackioh_ai::{AiOptions, AiStyle, DecisionReason, decide_styled};
+use jackioh_ai::{
+    AiOptions, AiStyle, DecisionReason, decide_styled, plays_best, random_action, unanswered_draw_offer,
+};
 use jackioh_engine::{ActionBody, ActionType, Aim, GameState, PlayerId, Rng};
 
 use crate::actor::engine;
@@ -154,24 +158,44 @@ pub async fn play(job: BotJob) -> BotMove {
                 aim: None,
             };
         }
-        let deadline =
-            std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
-        let should_stop = move || std::time::Instant::now() >= deadline;
-        let mut options = AiOptions {
-            rng: ai_rng,
-            budget: strength.budget,
-            should_stop: Some(&should_stop),
+        // R747000: the skill's roll comes first, on the AI's own stream; a full skill takes no draw,
+        // so a bot at it plays as it did before the knob.
+        let mut ai_rng = ai_rng;
+        let (chosen, lethal, ai_cursor) = if plays_best(strength.skill, &mut ai_rng) {
+            let deadline =
+                std::time::Instant::now() + Duration::from_millis(u64::try_from(deadline_ms).unwrap_or(0));
+            let should_stop = move || std::time::Instant::now() >= deadline;
+            let mut options = AiOptions {
+                rng: ai_rng,
+                budget: strength.budget,
+                should_stop: Some(&should_stop),
+            };
+            let style = AiStyle {
+                temperature: strength.temperature,
+                missed_lethal_chance: strength.missed_lethal_chance,
+            };
+            let decision = decide_styled(&state, seat, &mut options, &style);
+            let lethal = decision
+                .as_ref()
+                .is_some_and(|decision| decision.reason == DecisionReason::Lethal);
+            (
+                decision.map(|decision| decision.action),
+                lethal,
+                options.rng.cursor(),
+            )
+        } else if unanswered_draw_offer(&state, seat) {
+            // The random policy never answers an offer (§10.7), so the bot declines as the AI does
+            // and the roll below turns that into its own answer (R639000); no draw is taken.
+            (
+                Some(ActionBody::AnswerDraw { accept: false }),
+                false,
+                ai_rng.cursor(),
+            )
+        } else {
+            let action = random_action(&state, seat, &mut ai_rng);
+            (action, false, ai_rng.cursor())
         };
-        let style = AiStyle {
-            temperature: strength.temperature,
-            missed_lethal_chance: strength.missed_lethal_chance,
-        };
-        let decision = decide_styled(&state, seat, &mut options, &style);
-        let lethal = decision
-            .as_ref()
-            .is_some_and(|decision| decision.reason == DecisionReason::Lethal);
-        let body = decision
-            .map(|decision| decision.action)
+        let body = chosen
             .filter(|body| !r188_forbidden(body))
             .map(|body| match body {
                 ActionBody::AnswerDraw { .. } => ActionBody::AnswerDraw {
@@ -188,7 +212,7 @@ pub async fn play(job: BotJob) -> BotMove {
         let aim = body.as_ref().and_then(|body| bot_aim(&state, seat, body));
         Decided {
             body,
-            ai_cursor: options.rng.cursor(),
+            ai_cursor,
             legal_count,
             lethal,
             aim,

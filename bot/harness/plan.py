@@ -52,7 +52,7 @@ from datetime import timedelta
 from itertools import islice
 from typing import Any, Iterator
 
-from harness import asks, issueplan, review_rule, threads
+from harness import asks, declined, issueplan, review_rule, threads
 from harness import journal as journal_mod
 from harness import providers as providers_mod
 from harness.clock import iso, parse_iso
@@ -647,6 +647,9 @@ class Peek:
     held: int = 0
     #: Queued items passed over because of `human` (#96), one line each.
     skipped: list[str] = field(default_factory=list)
+    #: A lane is free and the queue holds nothing it can start (#797): the sweep keeps the clock
+    #: a survey waits on from this (`note_idle`).
+    idle: bool = False
 
 
 def peek(ctx: Context, *, force: bool = False, item: int | None = None,
@@ -655,12 +658,15 @@ def peek(ctx: Context, *, force: bool = False, item: int | None = None,
 
     The gate asks this before it spends anything on reading the subscription's usage."""
     skipped: list[str] = []
-    look = _peek(ctx, force, item, mode, skipped)
+    seen: dict[str, bool] = {}
+    look = _peek(ctx, force, item, mode, skipped, seen)
     look.skipped = skipped
+    look.idle = seen.get("idle", False)
     return look
 
 
-def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[str]) -> Peek:
+def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[str],
+          seen: dict[str, bool]) -> Peek:
     if mode not in MODES:
         return Peek(False, f"unknown mode {mode!r}")
     state = ctx.store.load()
@@ -686,9 +692,11 @@ def _peek(ctx: Context, force: bool, item: int | None, mode: str, skipped: list[
         if top is not None:
             chosen = top[1]
             found = (top[0], top[1].provider, force or top[0].forced)
-    # A survey only when nothing is queued (or one was asked for), as before: queued work that
-    # must wait for its subscription does not turn the others into surveyors.
-    if found is None and item is None and (mode == "suggest" or (mode == "auto" and not queue)) \
+    seen["idle"] = found is None and item is None and mode == "auto"
+    # A survey once a free lane has had nothing to start for `suggestions.idle_minutes` (#797),
+    # or when one is asked for: queued work that waits for another subscription, or for an issue
+    # it depends on, no longer keeps an idle one from surveying.
+    if found is None and item is None and mode in ("suggest", "auto") \
             and suggestions_due(ctx, state, force=mode == "suggest"):
         provider = survey_provider(ctx, state, lanes, force=force, quiet_ok=ANY_QUIET)
         if provider is not None:
@@ -837,7 +845,7 @@ def make(ctx: Context, *, force: bool = False, item: int | None = None, mode: st
         return {**nothing(f"#{item} is not queued (or has failed {cfg.max_failures} times), or "
                           f"no subscription can take it now: {why_none(ctx, state, lanes)}"),
                 "skipped": skipped}
-    if mode == "suggest" or (mode == "auto" and not queue):
+    if mode in ("suggest", "auto"):
         planned = suggestion_plan(ctx, lanes, force=mode == "suggest", quiet_ok=quiet)
         if planned is not None:
             planned["skipped"] = skipped
@@ -1287,17 +1295,36 @@ def open_suggestion_count(ctx: Context) -> int:
 
 
 def suggestions_due(ctx: Context, state: dict[str, Any], *, force: bool = False) -> int:
-    """How many suggestions a survey may open now: 0 when none is due or the cap is full."""
+    """How many suggestions a survey may open now: 0 when none is due or the cap is full. One is
+    due when asked for, or once a free lane has had nothing to start for
+    `suggestions.idle_minutes` (#797: `suggest.idle_since`, kept by `note_idle`)."""
     cfg = ctx.cfg
     if not cfg.suggestions_enabled:
         return 0
     suggest = state.get("suggest") or {}
-    last = parse_iso(suggest.get("last_run"))
-    due = force or bool(suggest.get("requested")) or last is None or (
-        ctx.now() - last >= timedelta(hours=cfg.suggestions_min_interval_hours))
+    if suggest.get("provider") and not force:
+        return 0  # one is running (a dead one's claim is cleared by `housekeeping`)
+    idle = parse_iso(suggest.get("idle_since"))
+    due = force or bool(suggest.get("requested")) or (
+        idle is not None and ctx.now() - idle >= timedelta(minutes=cfg.suggestions_idle_minutes))
     if not due:
         return 0
     return max(0, cfg.suggestions_max_open - open_suggestion_count(ctx))
+
+
+def note_idle(ctx: Context, idle: bool) -> None:
+    """Keep the clock a survey waits on (#797): `suggest.idle_since` is when a lane last became
+    free with nothing in the queue it could start (`Peek.idle`), and goes when there is work for
+    it again. The sweep calls this every tick, writing only when it changes; a survey claimed
+    restarts it (`suggestion_plan`). Bookkeeping, so it reports nothing."""
+    if not ctx.cfg.suggestions_enabled:
+        return
+    since = (ctx.store.load().get("suggest") or {}).get("idle_since")
+    if idle == bool(since):
+        return
+    stamp = iso(ctx.now()) if idle else None
+    ctx.store.update(lambda s: s.setdefault("suggest", {}).update(idle_since=stamp),
+                     "idle clock")
 
 
 def suggestion_plan(ctx: Context, lanes: Lanes, *, force: bool,
@@ -1318,23 +1345,31 @@ def suggestion_plan(ctx: Context, lanes: Lanes, *, force: bool,
                      + (f" ({tags})" if tags else ""))
     previous = state.get("suggest") or {}
     was_requested = bool(previous.get("requested"))
+    # The suggestions people closed unbuilt join the log of those that came to nothing (#797),
+    # however long ago: the list above is only the latest issues.
+    closed = [i for i in ctx.gh.list_issues(labels=LABEL_SUGGESTION, state="closed", limit=300)
+              if "pull_request" not in i]
 
     taken: list[str] = []
     def change(s: dict[str, Any]) -> None:
+        declined.sync(s, closed, iso(ctx.now()))
+        # The idle clock starts again (#797): the next survey waits for another idle spell.
         s["suggest"].update(last_run=iso(ctx.now()), requested=False, provider=provider.id,
-                            run_id=cfg.run_id)
+                            run_id=cfg.run_id, idle_since=iso(ctx.now()))
         taken[:] = asks.take(s["suggest"])
         s["last_run"] = {"at": iso(ctx.now()), "url": cfg.run_url,
                          "what": f"suggestions on {provider.id}"}
-    ctx.store.update(change, "claim suggestions")
+    state = ctx.store.update(change, "claim suggestions")
     asks.react(ctx.gh, taken, asks.WORKING)
     return {
         "action": "suggest",
         "count": count,
         "existing": data("\n".join(lines) or "(none)", "Existing issues and pull requests"),
+        "declined": data(declined.lines(state), "Suggestions that came to nothing"),
         "forced": bool(force),
         "was_requested": was_requested,
         "previous_last_run": previous.get("last_run"),
+        "previous_idle_since": previous.get("idle_since"),
         **_provider_fields(ctx, provider),
     }
 

@@ -102,8 +102,11 @@ pub fn projected_damage(state: &GameState, attacker: &CardInstance, target: &Att
         DamageTarget::Unit { instance } => instance,
     };
     // R176, §4.3 step 1: an attacker a First Strike defender destroys first deals nothing at all —
-    // no hit on the defender and so no Cleave either — so nothing of it can reach the hero.
-    if falls_to_first_strike(state, attacker, defender) {
+    // no hit on the defender and so no Cleave either — so nothing of it can reach the hero. R783000: a
+    // Ranged attacker takes no strike back from a defender that is not, so it never falls there.
+    if crate::combat::takes_strike_back(state, attacker, defender)
+        && falls_to_first_strike(state, attacker, defender)
+    {
         return 0;
     }
     let hit = attack * crate::combat::lane_multiplier_for(state, attacker, defender);
@@ -175,8 +178,8 @@ fn falls_to_first_strike(state: &GameState, attacker: &CardInstance, defender: &
 /// §4.3, §4.4 step 8: what the defender's strike back heals its own hero in the same combat — its
 /// Lifesteal heals its controller by the damage it deals the attacker, and the hero it heals is the
 /// one the attack's Trample reaches. Nothing strikes back for a hero, a defender an attacker with First
-/// Strike destroys first (§4.3 step 1), or a hit the attacker's Divine Shield, Indestructible or Armor
-/// stops.
+/// Strike destroys first (§4.3 step 1), a defender a Ranged attacker takes nothing back from (R783000),
+/// or a hit the attacker's Divine Shield, Indestructible or Armor stops.
 ///
 /// Lifesteal heals the damage actually dealt, which is the hit as §4.4 splits it. A strike back with
 /// Trample counts on the attacker only up to its health (step 5, R63), and the rest is its own
@@ -188,6 +191,10 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
         DamageTarget::Unit { instance } => instance,
         DamageTarget::Hero { .. } => return 0,
     };
+    // R783000: no strike back at all, so nothing for its Lifesteal to heal.
+    if !crate::combat::takes_strike_back(state, attacker, defender) {
+        return 0;
+    }
     let theirs = unit_view(state, defender);
     if !has_keyword(&theirs.keywords, KeywordKind::Lifesteal) || theirs.attack <= 0 {
         return 0;

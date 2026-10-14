@@ -658,11 +658,11 @@ Pierce
 
 (1) Sentient Cat Ears, Unit, Felinor, Epic, Meditative, #67
 1/1
-Magnetic {For AI: can optionally Stack on to one of your Units. If it does, Fuse with it}
+Equip {For AI: can optionally Stack on to one of your Units. If it does, Fuse with it}
 End of Turn: Shuffle a Love Bomb into your Deck.
 ~~~
 2/2
-Magnetic 
+Equip 
 End of Turn: Shuffle 2 Love Bombs into your Deck.
 
 (1) Catnip, Field Trap, Felinor, Rare, Meditative, #68
