@@ -1,4 +1,4 @@
-//! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1.",
+//! #21 Hinder (SPEC §8.2): "Cast on draw: Your opponent has 1 less mana next turn. Discard 1 random card.",
 //! radiant "Cast on draw: Your opponent has 2 less mana next turn." Only the base face discards (R431).
 //!
 //! Nothing here casts the card or draws again: `staticFlags.castOnDraw` is the whole of that. The

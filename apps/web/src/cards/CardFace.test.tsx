@@ -350,8 +350,9 @@ describe("B10: RulesText marks terms in bold", () => {
 
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute"]);
+    // R910000: "Can use enemy Units as Tributes" bolds its plural too.
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3", "Tributes"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute", "Tribute"]);
   });
 
   it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {
@@ -431,12 +432,12 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 lower-case or glued words are not bolded", () => {
     const plain: CardDef = {
       ...def("core-005"),
-      base: { keywords: [], text: "taunt the Locked Rushing units" },
-      radiant: { keywords: [], text: "taunt the Locked Rushing units" },
+      base: { keywords: [], text: "taunt the Locking Rushing units" },
+      radiant: { keywords: [], text: "taunt the Locking Rushing units" },
     };
     const cf = renderFace({ defId: plain.id, def: plain, radiant: false });
     expect(cf.querySelectorAll("strong")).toHaveLength(0);
-    expect(one(cf, ".card-text").textContent).toBe("taunt the Locked Rushing units");
+    expect(one(cf, ".card-text").textContent).toBe("taunt the Locking Rushing units");
   });
 
   it(
@@ -540,7 +541,7 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 Attack per heads and +2 Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
     expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["7", "+2", "+2"]);
   });
@@ -920,7 +921,7 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
 
 describe("R1107: a granted Death ability prints on its own line", () => {
   it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
-    const grant = "Death: Add 1 random Book card to your hand.";
+    const grant = "Death: Add 1 random Book to your hand.";
     const cf = catalogFace("meditative-058", false, "full", { inPlay: { grants: [grant] } });
     const text = one(cf, ".card-text");
     const granted = text.querySelectorAll(".cf-text-granted");

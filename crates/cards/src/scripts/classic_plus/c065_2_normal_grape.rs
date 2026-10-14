@@ -1,7 +1,7 @@
 //! C+ #65.2 Normal Grape (SPEC §8.7 row 65.2). (1) Spell, Fruit, Token (printed Common).
-//!   Base:    "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Reduce its cost
-//!            by (1)."
-//!   Radiant: the same text, amount 4 and draw 4: "… Draw {draw}. Reduce their cost by (1)."
+//!   Base:    "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. It costs (1)
+//!            less."
+//!   Radiant: the same text, amount 4 and draw 4: "… Draw {draw}. They cost (1) less."
 //!
 //! The target travels in the play (R81): any Unit or hero. Whether it is an enemy is read as the Spell
 //! resolves: an enemy takes one §4.4 hit from it (Spell Damage raises it), a friend is healed (§6.3, R19).
@@ -16,12 +16,12 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-065-2";
 
-/// §8.7: "Choose a Unit or hero" — either side.
+/// §8.7: "an enemy or an ally" — any Unit or hero, either side.
 fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
 }
 
-/// §8.7: "Reduce its cost by (1)" — a discount that stacks with every other modifier (R65), the
+/// §8.7: "It costs (1) less" — a discount that stacks with every other modifier (R65), the
 /// declared number `discount` (R386).
 pub fn script() -> CardScripts {
     let base = Script {

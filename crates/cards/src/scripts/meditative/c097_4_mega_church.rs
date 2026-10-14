@@ -1,6 +1,6 @@
 //! M #97.4 Mega Church (SPEC §8.8 row 97.4, R1282). (3) Unit, Token (printed Rare), 0/5 → 0/10.
-//!   Base:    "Tribute 5, Can't attack\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Take control of an enemy permanent."
-//!   Radiant: "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Take control of an enemy permanent. It becomes Radiant."
+//!   Base:    "Tribute 5, Can't attack\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Steal an enemy permanent."
+//!   Radiant: "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Steal an enemy permanent. Make it Radiant."
 //!   Engine:  "NEW: a wider Tribute (WIDE-TRIBUTE), a static flag the legal Tribute sets read: besides
 //!            your own Units, every permanent acting on the field on either side (unit tops, backrow
 //!            cards, face-down ones included, their cost public, R33; never a dormant card, R13) whose
@@ -31,7 +31,7 @@ const USES: i32 = 1;
 fn church(radiant: bool) -> Script {
     let activation = ActivationDecl {
         id: "church-steal".to_string(),
-        label: "Take control of an enemy permanent".to_string(),
+        label: "Steal an enemy permanent".to_string(),
         uses: ActivationUses::Count(USES),
         cost: None,
         targets: vec![TargetDecl::target(

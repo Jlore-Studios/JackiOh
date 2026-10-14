@@ -22,6 +22,7 @@ import { KEYWORD_KINDS, fillParams, type KeywordKind } from "@jackioh/shared";
 import {
   GLOSSARY,
   KEYWORD_MARK,
+  PLAIN_SPELLINGS,
   RULED_TERMS,
   SHORT_REMINDERS,
   SHORT_TERMS,
@@ -327,8 +328,8 @@ describe("B10: tokenizeRules and termsIn", () => {
     }
   });
 
-  it("B10 a term glued to a letter or digit on either side stays text: 'Locked', 'Rushing', 'Rush2', 'unTaunt'", () => {
-    for (const text of ["Locked", "Rushing", "Rush2", "unTaunt", "XRush", "Crying", "Deathless", "Tauntx"]) {
+  it("B10 a term glued to a letter or digit on either side stays text: 'Locking', 'Rushing', 'Rush2', 'unTaunt'", () => {
+    for (const text of ["Locking", "Rushing", "Rush2", "unTaunt", "XRush", "Crying", "Deathless", "Tauntx"]) {
       expect(termsOf(text), text).toEqual([]);
       expect(joined(text), text).toBe(text);
     }
@@ -352,6 +353,8 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect(termsOf("Can't attack. Death: steal all enemy units")).toEqual([
       { text: "Can't attack", term: "Can't attack" },
       { text: "Death:", term: "Death" },
+      // R910000: a lower-case verb bolds mid-sentence.
+      { text: "steal", term: "Steal" },
     ]);
     expect(termsOf("Cast on draw: take 1 damage")).toEqual([{ text: "Cast on draw:", term: "Cast on draw" }]);
     expect(termsOf("Choose one: bounce all units")).toEqual([{ text: "Choose one:", term: "Choose one" }]);
@@ -423,7 +426,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect(tokenizeRules("").filter((token) => token.kind === "term")).toEqual([]);
     expect(joined("")).toBe("");
     expect(termsIn("")).toEqual([]);
-    expect(termsIn("taunt, Locked, choose one, Rushing")).toEqual([]);
+    expect(termsIn("taunt, Locking, choose one, Rushing")).toEqual([]);
     expect(termsIn("   ")).toEqual([]);
   });
 });
@@ -595,28 +598,32 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
   });
 
   it("B11 the glossary's aliases for retired variants are empty", () => {
+    // Every alias is a spelling a card prints, never a retired variant.
+    const printed: Readonly<Partial<Record<GlossaryTermId, readonly string[]>>> = {
+      "Plague Counter": ["Plague Counters"],
+      "Look at a hand": ["Look at your opponent's hand"],
+      Bounce: ["Bounced", "bounced"],
+      "Hand size": ["hand size"],
+      "Mark in a hand": ["Mark", "marked"],
+      // Issue #814: the lowercase second half of a compound trigger bolds as the term.
+      "Start of turn": ["start of turn"],
+      "End of turn": ["end of turn"],
+      // R781005: the cards print it lower-case, in the singular and the plural.
+      "Combat keyword": ["combat keywords", "combat keyword"],
+      // R910000: the lower-case and inflected spellings the cards print mid-sentence.
+      Activate: ["activate"],
+      Tribute: ["Tributes"],
+      Fuse: ["fuse", "fused"],
+      Transform: ["transform", "transforms"],
+      Lock: ["Locked"],
+      Steal: ["steal"],
+      Nerf: ["Nerfs"],
+      Buff: ["Buffs"],
+      Redirect: ["redirected"],
+      Exile: ["exile", "exiles", "exiled"],
+    };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
-      if (key === "Plague Counter") {
-        expect(entry.aliases, key).toEqual(["Plague Counters"]);
-      } else if (key === "Look at a hand") {
-        expect(entry.aliases, key).toEqual(["Look at your opponent's hand"]);
-      } else if (key === "Bounce") {
-        expect(entry.aliases, key).toEqual(["Bounced"]);
-      } else if (key === "Hand size") {
-        expect(entry.aliases, key).toEqual(["hand size"]);
-      } else if (key === "Mark in a hand") {
-        expect(entry.aliases, key).toEqual(["Mark"]);
-      } else if (key === "Start of turn") {
-        // Issue #814: the lowercase second half of a compound trigger bolds as the term.
-        expect(entry.aliases, key).toEqual(["start of turn"]);
-      } else if (key === "End of turn") {
-        expect(entry.aliases, key).toEqual(["end of turn"]);
-      } else if (key === "Combat keyword") {
-        // R781005: the cards print it lower-case, in the singular and the plural.
-        expect(entry.aliases, key).toEqual(["combat keywords", "combat keyword"]);
-      } else {
-        expect(entry.aliases, key).toEqual([]);
-      }
+      expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
     }
   });
 
@@ -712,8 +719,8 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
     expect(termsIn("bounce all units")).toEqual([]);
   });
 
-  it("R512 matching stays case-sensitive: a lower-case \"steal it\" or \"can't attack or be attacked\" is plain words", () => {
-    expect(termsIn("you may Tribute this to steal it")).toEqual(["Tribute"]);
+  it("R512 matching stays case-sensitive: \"can't attack or be attacked\" is plain words, and since R910000 a lower-case \"steal it\" bolds", () => {
+    expect(termsIn("you may Tribute this to steal it")).toEqual(["Tribute", "Steal"]);
     expect(termsIn("That Unit can't attack or be attacked")).toEqual([]);
     expect(termsIn("This can't go Berserk.")).toEqual(["Berserk"]);
   });
@@ -786,5 +793,100 @@ describe("R1384: the glossary's rows for the Meditative cards' words", () => {
   it("R1384 Grant tag is rules vocabulary: no glossary row, and no card text prints the row's name", () => {
     expect(Object.keys(GLOSSARY)).not.toContain("Grant tag");
     expect(PLAYED_TEXTS.filter(({ text }) => text.includes("Grant tag"))).toEqual([]);
+  });
+});
+
+describe("R910000: a trigger or verb bolds wherever a card uses it, in every case and inflection", () => {
+  /** Where each term token stands in `text`. */
+  function termRanges(text: string): { start: number; end: number; term: GlossaryTermId }[] {
+    const ranges: { start: number; end: number; term: GlossaryTermId }[] = [];
+    let at = 0;
+    for (const token of tokenizeRules(text)) {
+      if (token.kind === "term") ranges.push({ start: at, end: at + token.text.length, term: token.term });
+      at += token.text.length;
+    }
+    return ranges;
+  }
+
+  /** Where each plain spelling stands in `text`. */
+  function plainRanges(text: string): { start: number; end: number }[] {
+    return PLAIN_SPELLINGS.flatMap((spelling) => {
+      const ranges: { start: number; end: number }[] = [];
+      for (let at = text.indexOf(spelling); at >= 0; at = text.indexOf(spelling, at + 1)) {
+        ranges.push({ start: at, end: at + spelling.length });
+      }
+      return ranges;
+    });
+  }
+
+  /** Any spelling of the entry with either case of its first letter and an inflection: "exiled", "Tributes". */
+  function stemOf(spelling: string): RegExp {
+    const first = spelling.charAt(0);
+    const rest = spelling.slice(1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(?<![A-Za-z0-9])[${first.toUpperCase()}${first.toLowerCase()}]${rest}(?:s|es|d|ed|n|ing)?(?![A-Za-z0-9])`, "g");
+  }
+
+  it("R910000 the words #814 named bold mid-sentence, and the exile pile stays plain", () => {
+    const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
+      ["Steal", "core-050", "base", "steal"],
+      ["Steal", "meditative-076", "base", "steal"],
+      ["Exile", "classic-078", "base", "exile"],
+      ["Exile", "classic-028", "base", "exiled"],
+      ["Exile", "core-093", "base", "exiles"],
+      ["Fuse", "classicplus-033", "base", "fused"],
+      ["Transform", "core-041", "base", "transform"],
+      ["Transform", "classicplus-073-1", "base", "transforms"],
+      ["Lock", "classicplus-019", "base", "Locked"],
+      ["Tribute", "core-055", "base", "Tributes"],
+      ["Buff", "meditative-084", "base", "Buffs"],
+      ["Nerf", "meditative-084", "base", "Nerfs"],
+      ["Redirect", "meditative-092", "base", "redirected"],
+      ["Bounce", "meditative-095", "base", "bounced"],
+      ["Activate", "meditative-054", "base", "activate"],
+      ["Mark in a hand", "meditative-076", "base", "marked"],
+    ];
+    for (const [term, id, face, spelling] of cases) {
+      expect(termsOf(played(id, face)), `${id} ${face}`).toContainEqual({ text: spelling, term });
+    }
+    // The exile pile reads like the verb and stays plain words, as Deck and Graveyard do.
+    for (const id of ["classic-001", "classic-019", "core-070"]) expect(termsIn(played(id)), id).not.toContain("Exile");
+    expect(termsOf("Draw 1 for each card in your exile. Then exile the bottom card of your deck.")).toEqual([
+      { text: "exile", term: "Exile" },
+    ]);
+    // Corpse Plantation's "counter" is one of its Plague Counters, not the verb.
+    expect(termsIn(played("classic-074"))).not.toContain("Counter");
+  });
+
+  it("R910000 every trigger and verb a card prints bolds as a term, unless it is a plain spelling", () => {
+    const entries = Object.values(GLOSSARY).filter((entry) => entry.section !== "§6.1");
+    const unbolded: string[] = [];
+    for (const { where, text } of PLAYED_TEXTS) {
+      const covered = [...termRanges(text), ...plainRanges(text)];
+      for (const entry of entries) {
+        for (const spelling of [entry.label, ...entry.aliases]) {
+          for (const match of text.matchAll(stemOf(spelling))) {
+            const start = match.index;
+            const end = start + match[0].length;
+            if (!covered.some((range) => range.start <= start && end <= range.end)) unbolded.push(`${where}: "${match[0]}"`);
+          }
+        }
+      }
+    }
+    expect([...new Set(unbolded)]).toEqual([]);
+  });
+
+  it("R910000 every alias it adds and every plain spelling is one a card prints, and a plain spelling prints plain", () => {
+    const added = ["activate", "Tributes", "fuse", "fused", "transform", "transforms", "Locked", "steal", "bounced", "Nerfs", "Buffs", "redirected", "exile", "exiles", "exiled", "marked"];
+    for (const spelling of [...added, ...PLAIN_SPELLINGS]) {
+      expect(PLAYED_TEXTS.some(({ text }) => text.includes(spelling)), spelling).toBe(true);
+    }
+    for (const spelling of PLAIN_SPELLINGS) expect(termsOf(spelling), spelling).toEqual([]);
+  });
+
+  it("R910000 a §6.1 keyword bolds as the keyword a card has, and a verb spelled like it stays plain", () => {
+    expect(termsIn("Stack, Taunt")).toEqual(["Stack", "Taunt"]);
+    expect(termsIn("The first Unit you stack onto this is fused into it.")).toEqual(["Fuse"]);
+    // The §6.3 rows kept rules-only stay plain, as Hearthstone prints them.
+    expect(termsIn("Summon a Unit. Draw 2. Discard 1. Destroy a Trap. Deal 3 damage.")).toEqual([]);
   });
 });

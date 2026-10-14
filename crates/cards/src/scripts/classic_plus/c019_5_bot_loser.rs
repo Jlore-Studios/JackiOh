@@ -5,7 +5,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-019-5";
 
-/// "Whenever this destroys a Unit, it gets +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
+/// "Whenever this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
 fn on_kill() -> TriggerDef {
     TriggerDef::new("bot-loser-kill", &[GameEventType::Destroyed], |ctx, event| {
         let killed_by_me = match (event, ctx.self_.as_ref()) {
