@@ -730,6 +730,7 @@ fn every_ctx_reader_has_a_typed_stub() {
                 "pub fn register_condition_ctx(",
                 "pub fn register_hook_args(",
                 "pub fn register_replacement_ctx(",
+                "pub fn register_target_check_args(",
             ]
             .into_iter()
             .find(|prefix| line.starts_with(prefix));

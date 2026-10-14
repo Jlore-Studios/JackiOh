@@ -230,7 +230,7 @@ nothing to wire), the snapshots in `crates/cards/patches/`, `crates/engine/**` a
 verb, [§6](#6-a-card-the-engine-cannot-express-yet); `crates/cards/luau/jackioh.luau` is where to look up what `J` takes),
 `apps/web/src/cards/**` (faces and art are drawn from the catalog; procedural art needs
 nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog), `e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`,
-`docs/v0.3.0/`, `docs/v0.4.0/notes/`, and the designer's source notes (`JackiOh_*.md`).
+`docs/v0.3.0/`, and the designer's source notes (`JackiOh_*.md`).
 
 ## 6. A card the engine cannot express yet
 

@@ -51,15 +51,22 @@ impl<T: 'static> Live<T> {
     fn get(&mut self) -> &mut T {
         // SAFETY: `scoped` builds a `Live` from a `&mut` borrow it holds across one `Lua::scope`,
         // and Luau reaches it only through that scope's userdata, which mlua invalidates as the
-        // scope ends. Every reader borrows the userdata exclusively (`Readers` registers each with
-        // `add_method_mut`), so no other reference to `*self.0` exists while one runs, and the
-        // erased lifetime never leaves a reader: each answers with values Luau owns.
+        // scope ends. Every reader borrows the userdata exclusively (`Readers` registers each as a
+        // function that takes it with `borrow_mut_scoped`), so no other reference to `*self.0`
+        // exists while one runs, and the erased lifetime never leaves a reader: each answers with
+        // values Luau owns.
         unsafe { &mut *self.0 }
     }
 }
 
 /// The readers of one kind of context, written as against mlua's own registry for it (`&T` to
 /// `add_method`, `&mut T` to `add_method_mut`) and registered over the erased `Live<T>`.
+///
+/// Each is registered as a plain function of its `self` userdata, borrowed mutably for the call,
+/// rather than with mlua's `add_method_mut`, whose one closure per reader, shared by every
+/// context of the VM, refuses to be re-entered ("mutable callback called recursively"): a reader
+/// that runs another hook (`effective_cost`, `effects_of`) reaches the same reader on that hook's
+/// own context, and must reach the depth cap (`LUAU_HOOK_DEPTH`), not that error.
 pub struct Readers<'r, T: 'static>(&'r mut UserDataRegistry<Live<T>>);
 
 impl<T: 'static> Readers<'_, T> {
@@ -69,18 +76,18 @@ impl<T: 'static> Readers<'_, T> {
         A: FromLuaMulti,
         R: IntoLuaMulti,
     {
-        self.0
-            .add_method_mut(name, move |lua, live, args| method(lua, live.get(), args));
+        self.add_method_mut(name, move |lua, ctx: &mut T, args| method(lua, ctx, args));
     }
 
-    pub fn add_method_mut<M, A, R>(&mut self, name: &str, mut method: M)
+    pub fn add_method_mut<M, A, R>(&mut self, name: &str, method: M)
     where
-        M: FnMut(&Lua, &mut T, A) -> mlua::Result<R> + 'static,
+        M: Fn(&Lua, &mut T, A) -> mlua::Result<R> + 'static,
         A: FromLuaMulti,
         R: IntoLuaMulti,
     {
-        self.0
-            .add_method_mut(name, move |lua, live, args| method(lua, live.get(), args));
+        self.0.add_function(name, move |lua, (this, args): (AnyUserData, A)| {
+            this.borrow_mut_scoped::<Live<T>, _>(|live| method(lua, live.get(), args))?
+        });
     }
 }
 

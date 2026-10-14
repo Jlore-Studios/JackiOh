@@ -16,9 +16,9 @@
 //! is the shapes the scripts use: a `CardScripts { base, radiant }` literal in `script()`, faces that are
 //! `Script { … }` literals (spread `..Script::default()` or `..base.clone()`), `let` bindings and helper
 //! functions of the same file, and `base.field` borrowed into the Radiant face. A name it cannot classify
-//! is listed as unclassified, and a card it cannot read as unreadable with its reason; neither fails
-//! the command, and nothing is dropped. Only the report is printed: no file is written, so it cannot go
-//! stale.
+//! is listed as unclassified, and a card it cannot read as unreadable with its reason (a card ported to
+//! Luau, #442, as one whose script is its `.luau`); neither fails the command, and nothing is dropped.
+//! Only the report is printed: no file is written, so it cannot go stale.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -1428,11 +1428,20 @@ fn survey(root: &Path, only: &[String]) -> Result<Report> {
                 stays_in_rust: STAY_IN_RUST.contains(&id.as_str()),
                 surface,
             }),
-            Err(reason) => report.unreadable.push(Unreadable {
-                id: id.clone(),
-                file: Some(file.clone()),
-                reason,
-            }),
+            Err(reason) => {
+                // A ported card's `.rs` holds its tests alone; its script is the `.luau` beside it.
+                let luau = Path::new(file).with_extension("luau");
+                let reason = if root.join(&luau).is_file() {
+                    format!("ported: its script is {}", luau.display())
+                } else {
+                    reason
+                };
+                report.unreadable.push(Unreadable {
+                    id: id.clone(),
+                    file: Some(file.clone()),
+                    reason,
+                });
+            }
         }
     }
     report.summary = summarise(&report.cards);
@@ -1751,22 +1760,31 @@ mod tests {
         assert_eq!(hook.stay_in_rust_ids, ["classic-090"]);
     }
 
+    /// Classic #32 Felinor Feelings, a card kept in Rust (`docs/v0.4.0/README.md` §4), whose faces
+    /// call different verbs. A ported card's `.rs` holds no script for the survey to read.
     #[test]
-    fn luau_core_002_bigot() {
-        let report = survey(&repo_root(), &["core-002".into()]).unwrap();
+    fn luau_classic_032_felinor_feelings() {
+        let report = survey(&repo_root(), &["classic-032".into()]).unwrap();
         assert_eq!(report.cards.len(), 1);
-        let bigot = &report.cards[0].surface;
-        assert!(bigot.base.hooks.contains("cry") && bigot.radiant.hooks.contains("cry"));
-        assert!(bigot.base.verbs.contains("destroy"));
-        assert!(bigot.radiant.verbs.contains("destroy_all"));
-        assert_eq!(report.summary.verbs["destroy"].cards, 1);
-        assert_eq!(report.summary.verbs["destroy"].ids, ["core-002"]);
+        let feelings = &report.cards[0].surface;
+        assert!(feelings.base.hooks.contains("cry") && feelings.radiant.hooks.contains("cry"));
+        assert!(feelings.base.verbs.contains("steal"));
+        assert!(!feelings.base.verbs.contains("choose_target_where"));
+        assert!(feelings.radiant.verbs.contains("choose_target_where"));
+        assert_eq!(report.summary.verbs["steal"].cards, 1);
+        assert_eq!(report.summary.verbs["steal"].ids, ["classic-032"]);
         assert!(survey(&repo_root(), &["nope".into()]).is_err());
+        let bigot = survey(&repo_root(), &["core-002".into()]).unwrap();
+        assert!(bigot.cards.is_empty());
+        assert_eq!(
+            bigot.unreadable[0].reason,
+            "ported: its script is crates/cards/src/scripts/core/c002_bigot.luau"
+        );
     }
 
     #[test]
     fn luau_reports_print_as_markdown_and_json() {
-        let report = survey(&repo_root(), &["core-002".into(), "classic-090".into()]).unwrap();
+        let report = survey(&repo_root(), &["classic-032".into(), "classic-090".into()]).unwrap();
         let text = markdown(&report);
         assert!(
             text.starts_with(
@@ -1785,16 +1803,19 @@ mod tests {
             assert!(text.contains(&format!("\n## {heading}\n")), "{heading}");
         }
         assert!(
-            text.contains("| core-002 | — | no | `cry`, `targets` | `cry` | `destroy` | `destroy_all` |"),
+            text.contains(
+                "| classic-032 | — | no | `cry`, `target_checks`, `targets` | `cry`, `resume` | `steal` | \
+                 `choose_target_where`, `steal`, `summon` |"
+            ),
             "{text}"
         );
         let json = serde_json::to_value(&report).unwrap();
-        assert_eq!(json["cards"][0]["id"], "core-002");
+        assert_eq!(json["cards"][0]["id"], "classic-032");
         assert_eq!(json["cards"][0]["stays_in_rust"], false);
         assert_eq!(json["cards"][0]["radiant_reuses_base"], "no");
-        assert_eq!(json["cards"][0]["base"]["verbs"][0], "destroy");
+        assert_eq!(json["cards"][0]["base"]["verbs"][0], "steal");
         assert_eq!(json["cards"][1]["id"], "classic-090");
         assert_eq!(json["cards"][1]["stays_in_rust"], true);
-        assert_eq!(json["summary"]["verbs"]["destroy"]["ids"][0], "core-002");
+        assert_eq!(json["summary"]["verbs"]["steal"]["ids"][0], "classic-032");
     }
 }

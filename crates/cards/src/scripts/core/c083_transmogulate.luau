@@ -8,14 +8,13 @@ local OFF_FIELD_ZONES: { J.OffFieldZone } = { "hand", "library", "graveyard", "e
 
 -- R35's pool: every non-token Legendary but this card (R387), of every set (R380), through §5.1's
 -- one query (`J.pool`), never listed here. `type` narrows it to one card type, or to both trap types.
--- (`J.pool`'s typed stub takes one argument; the binding takes the excluded id and the query and
--- answers the definitions, hence the cast.)
+-- (The binding takes the excluded id and the query and answers the definitions.)
 local function legendaries(type_: any): { any }
 	local query: { [string]: any } = { rarity = "Legendary" }
 	if type_ ~= nil then
 		query.type = type_
 	end
-	return (J.pool :: any)(ID, query)
+	return J.pool(ID, query)
 end
 
 -- R35 on the board: same type, with Field Trap counting as Trap in both directions.

@@ -1,7 +1,7 @@
 {
   "commit": "f01a13d5de7aaec0295b556b2b93ac32cbc310d0",
   "commitSubject": "Patch v0.3.X: internationalisation: every screen in any language, with a language button at the top (Simplified Chinese first) (#736)",
-  "note": "Baseline for v0.4.0's performance gate (L13), measured on main at bot/issue-442's branch point (all cards Rust). The gate itself (cargo jackioh luau bench) always compares two binaries on the same machine in the same run; this file is the branch-point witness, not the comparator. Recorded with luau bench --record: the parent numbers below are one side of that run (current numbers, budgets and pass are in docs/v0.4.0/notes/part-07.md).",
+  "note": "Baseline for v0.4.0's performance gate (L13), measured on main at bot/issue-442's branch point (all cards Rust). The gate itself (cargo jackioh luau bench) always compares two binaries on the same machine in the same run; this file is the branch-point witness, not the comparator. Recorded with luau bench --record: the parent numbers below are one side of that run (current numbers, budgets and pass are in docs/v0.4.0/README.md, §5.5).",
   "date": "2026-10-13",
   "machine": {
     "os": "linux",

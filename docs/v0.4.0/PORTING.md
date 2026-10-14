@@ -57,9 +57,10 @@ the code wins and this guide gets fixed. The proofs are part 7's
    committed module, which the CLI resolves (the mapping drops the `.luau`
    extension, which luau-analyze 0.740 refuses as `Unknown require`,
    #464 gap 15).
-8. **Write the batch notes** (`docs/v0.4.0/notes/part-NN.md`): which cards,
-   which stayed Rust and why (section 5), the `luau diff` / `fuzz` /
-   `bench` / strict results.
+8. **Record the cards that stay Rust** in `docs/v0.4.0/README.md`'s table of
+   the cards kept in Rust (section 4 there): one row each, with its id, its
+   name and its reason (section 5). The `luau diff` / `fuzz` / `bench` /
+   strict results go in the pull request.
 9. **Push.** The harness lands the batch on `bot/issue-442`.
 
 ## 2. The translation rules
@@ -501,8 +502,8 @@ A card stays Rust for one of three reasons, and only those:
 
 In all three cases: the card gets its `.rs` back from the base commit
 (`git show <base>:crates/cards/src/scripts/<set>/<module>.rs`), loses its
-`.luau`, and the batch's notes say which cards stayed and why, one line
-each. A card that stays Rust for any other reason is a batch that is not
+`.luau`, and `docs/v0.4.0/README.md`'s table of the cards kept in Rust says
+which cards stayed and why, one row each. A card that stays Rust for any other reason is a batch that is not
 done.
 
 **Since part 28 (#464), the first reason no longer holds for the fifteen gaps

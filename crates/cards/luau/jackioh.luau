@@ -15,7 +15,7 @@ tributeExcludesSelf: boolean?,
 eitherPlayer: boolean?,
 }
 
-export type ActivationUses = number | nil
+export type ActivationUses = number | "unlimited"
 
 export type AddCostRuleArgs = {
 player: PlayerSpec?,
@@ -2595,7 +2595,7 @@ export type ReplacementDef = {
 export type ActivationDecl = {
 	id: string,
 	label: string,
-	uses: ActivationUses,
+	uses: ActivationUses?,
 	cost: ActivationCost?,
 	targets: { TargetDecl },
 	modes: { ModeDecl },
@@ -2683,6 +2683,30 @@ export type CostArgs = {
 	played_earlier: (self: CostArgs, player: PlayerId, card: any) -> number,
 	params_view: (self: CostArgs) -> any,
 	given_lucky_on: (self: CostArgs, card: any) -> number,
+}
+
+-- A `targetChecks` predicate's argument (`register_target_check_args`, §10.6):
+-- `candidate` is the card a declaration would offer (nil for a hero or a zone),
+-- `player` the chooser.
+export type TargetCheckArgs = {
+	self_: (self: TargetCheckArgs) -> any,
+	candidate: (self: TargetCheckArgs) -> any,
+	player: (self: TargetCheckArgs) -> PlayerId,
+	radiant: (self: TargetCheckArgs) -> boolean,
+	controller: (self: TargetCheckArgs) -> PlayerId,
+	param: (self: TargetCheckArgs, key: string) -> number,
+	opponent_of: (self: TargetCheckArgs, player: PlayerId) -> PlayerId,
+	turn: (self: TargetCheckArgs) -> TurnView,
+	counters: (self: TargetCheckArgs) -> GameCounters,
+	params_view: (self: TargetCheckArgs) -> any,
+	hero_of: (self: TargetCheckArgs, player: PlayerId) -> any,
+	def_of: (self: TargetCheckArgs, id: string) -> any,
+	effective_cost: (self: TargetCheckArgs, id: string) -> number,
+	card_type_of: (self: TargetCheckArgs, id: string) -> any,
+	unit_has: (self: TargetCheckArgs, id: string, kw: any) -> boolean,
+	numbers_on: (self: TargetCheckArgs, id: string) -> {any},
+	unreadable_by: (self: TargetCheckArgs, id: string) -> {PlayerId},
+	has_triggerable_cry: (self: TargetCheckArgs, id: string) -> boolean,
 }
 
 -- Arbitrary JSON (a remembered value, a prompt's data bag): crosses
@@ -3618,7 +3642,7 @@ function J.query(args: any): {string}
 	return {}
 end
 
-function J.pool(name: string): {string}
+function J.pool(ownId: string, query: CatalogQueryArgs): {any}
 	return {}
 end
 

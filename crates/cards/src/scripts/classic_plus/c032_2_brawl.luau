@@ -28,9 +28,9 @@ local function destroy(id: string): { J.EffectCall }
 	return { J.destroy({ target = { of = "instance", instanceId = id } }) }
 end
 
--- A `cards` function cannot answer an empty list (an empty table crosses as a record, which
--- `for_each_card` refuses): with one Unit or none, the one the hook sees as the list does, nothing is
--- destroyed, so that list is handed over outright; the rest are otherwise read past the survivor drawn.
+-- With one Unit or none, nothing is destroyed, so no list is read: an empty one is handed over
+-- outright (an empty table crosses as a record, which `for_each_card` reads as no cards); the rest
+-- are otherwise read past the survivor drawn.
 local base = {
 	cry = function(ctx: J.EffectContext)
 		local units = unit_ids(ctx)
