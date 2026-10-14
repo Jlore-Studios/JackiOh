@@ -5835,9 +5835,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-14T01:02:18Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38493443292",
-    "what": "suggestions on claude-4"
+    "at": "2026-10-14T01:05:23Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38493716312",
+    "what": "suggestions on devin"
   },
   "last_sweep": {
     "at": "2026-10-14T01:01:10Z",
@@ -11361,13 +11361,19 @@
         "number": 347,
         "title": "Start disconnect grace for an absent seat after a restart or no-show",
         "why": "closed unbuilt by a person (completed)"
+      },
+      {
+        "at": "2026-10-14T01:03:25Z",
+        "number": 836,
+        "title": "Patch v0.3.X: a deck shares as a link that opens its import preview",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-13T23:58:45Z",
-    "last_run": "2026-10-13T23:36:04Z",
-    "provider": null,
+    "idle_since": "2026-10-14T01:05:23Z",
+    "last_run": "2026-10-14T01:05:23Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "38493716312",
     "taken_asks": []
   },
   "usage": {
