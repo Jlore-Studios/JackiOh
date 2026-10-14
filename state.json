@@ -6406,9 +6406,10 @@
     "what": "plan #897 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-14T19:41:35Z",
+    "at": "2026-10-14T19:47:39Z",
     "notes": [
-      "#898 needs a plan"
+      "#923 needs a plan",
+      "#924 needs a plan"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
