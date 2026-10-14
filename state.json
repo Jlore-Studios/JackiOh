@@ -6086,6 +6086,7 @@
       },
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T17:52:11Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -6094,11 +6095,13 @@
       "provider": "claude-3",
       "queued_at": "2026-10-14T17:09:35Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "",
       "run_id": "38617419217",
       "started_at": "2026-10-14T18:43:14Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "892": {
       "action": "plan",
