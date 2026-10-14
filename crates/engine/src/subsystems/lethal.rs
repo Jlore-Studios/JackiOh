@@ -225,9 +225,10 @@ fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackT
 /// R44: the projection against the defending hero's health. §4.5 step 2 ends the game at 0 or less
 /// at the check after the combat, so "≥ health" is exactly the hit that would end it — net of what
 /// the same combat gives back: R176, a defender's Lifesteal strike back heals the hero in the same
-/// simultaneous step, so a Trample swing it outheals leaves the hero standing at that check.
+/// simultaneous step, so a Trample swing it outheals leaves the hero standing at that check. #936
+/// B17: in a Duos duel the hero stands until its own HP and its team's pool are both gone.
 pub fn is_lethal(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> bool {
     let hero = defending_hero(target);
     let net = projected_damage(state, attacker, target) - strike_back_heal(state, attacker, target);
-    net >= state.players[hero].hero.health
+    net >= crate::duos_life::effective_life(state, hero)
 }

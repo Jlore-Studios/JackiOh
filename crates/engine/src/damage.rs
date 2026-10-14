@@ -19,6 +19,10 @@
 //! the Armor's part of the hit (`absorbed`, R1360), and a hit the Armor takes whole, which R63's zero
 //! rule stops, is reported by `damageAbsorbed` (R1361), a report that nothing answers.
 //!
+//! Duos co-op (#936 S3) writes a hero's health only through `duos_life.rs`: a Duos seat's own HP,
+//! then its team's pool (B13, B14), and step 4a judges a hit against both (B17). Without a Duos life
+//! on the hero each of those is the arithmetic it replaced, so a 1v1 game is unchanged (B3).
+//!
 //! Port of `packages/engine/src/damage.ts` (part 3). TS's `DamageTarget` held the live
 //! `CardInstance`; here a unit target carries the instance as the caller had it, and every read and
 //! write of the target goes to the card under that id in the state as it stands now (the TS object
@@ -420,10 +424,11 @@ fn land_hit(
     // E5, E9: after the caps and before step 5, a hit that would bring its hero to 0 or less — this
     // hit alone, as R44 judges it — meets the "would take lethal damage" replacements, which may send
     // it to the other hero as a new instance from the same source, through that hero's Armor and caps.
+    // #936 B17: in a Duos duel the hit is judged against own HP and the team's pool together.
     if let DamageTarget::Hero { player } = target
         && amount > 0
         && redirects < DAMAGE_REDIRECT_CAP
-        && sink.state.players[*player].hero.health - amount <= 0
+        && crate::duos_life::effective_life(sink.state, *player) - amount <= 0
     {
         let source_id = source.map(|card| card.id.clone());
         let to = crate::replacements::lethal_hit_window(sink, target, amount, source_id, caught);
@@ -543,7 +548,8 @@ fn land_hit(
             }
         }
         (DamageTarget::Hero { player }, _) => {
-            sink.state.players[*player].hero.health -= dealt;
+            // #936 B13, B14: a Duos hero's own HP first, then its team's pool.
+            crate::duos_life::hero_loses(sink.state, *player, dealt);
         }
         (DamageTarget::Unit { .. }, None) => {}
     }
@@ -666,7 +672,11 @@ pub fn heal_hero(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> i3
     if crate::replacements::healing_replaced(sink, &DamageTarget::Hero { player }, healed) {
         return 0;
     }
-    sink.state.players[player].hero.health += healed;
+    // #936 B14: a spent Duos hero heals its team's pool, never past its cap; any other heals as ever.
+    let healed = crate::duos_life::hero_heals(sink.state, player, healed);
+    if healed <= 0 {
+        return 0;
+    }
     sink.events.push(GameEvent::Healed {
         target_id: format!("hero-{player}"),
         amount: healed,
@@ -694,7 +704,8 @@ pub fn lose_health(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> 
         return 0;
     }
     let lost = amount;
-    sink.state.players[player].hero.health -= lost;
+    // #936 B13, B14: a Duos hero's own HP first, then its team's pool.
+    crate::duos_life::hero_loses(sink.state, player, lost);
     sink.events.push(GameEvent::HealthLost { player, amount: lost });
     lost
 }
@@ -702,8 +713,10 @@ pub fn lose_health(sink: &mut DamageSink<'_>, player: PlayerId, amount: i32) -> 
 /// E7: "Set a hero's health to N" (Classic #29) — no pipeline, not damage and not a heal, like R18's
 /// lose health: no Armor, no cap, no replacement, nothing that answers a hit or a heal. `healthSet`.
 pub fn set_hero_health(sink: &mut DamageSink<'_>, player: PlayerId, value: i32, source_id: Option<String>) {
-    let health = value;
-    sink.state.players[player].hero.health = health;
+    // #936: a Duos hero's own HP, or its team's pool once spent (`duos_life::hero_set`); the event
+    // reports the health the hero then reads, which outside Duos is `value`.
+    crate::duos_life::hero_set(sink.state, player, value);
+    let health = sink.state.players[player].hero.health;
     sink.events.push(GameEvent::HealthSet {
         player,
         health,

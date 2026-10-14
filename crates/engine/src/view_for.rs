@@ -1000,6 +1000,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             armor: hero_armor_of(state, player),
             power: powers.first().cloned(),
             powers,
+            // #936 S3: a Duos duel's pool and spent flag, public on both seats (absent in 1v1).
+            duos: side.duos,
         },
         // R987: the side's Luck, read as the hero's armor is above — absent at 0 (D14).
         luck: match crate::query::luck_of(state, player) {
