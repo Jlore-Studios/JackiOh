@@ -42,6 +42,12 @@ import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, Player
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
+import type { DuosAction } from "../wire/generated/DuosAction.ts";
+import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
+import type { DuosEvent } from "../wire/generated/DuosEvent.ts";
+import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
+import type { DuosTeamRules } from "../wire/generated/DuosTeamRules.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
 import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
@@ -367,6 +373,78 @@ export function carriedVersions(): readonly string[] {
     carriedCache ??= parsed<string[]>(take(m, m._carried_versions()));
     return carriedCache;
   });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
+// ---------------------------------------------------------------------------------------------
+
+declare const duosStateBrand: unique symbol;
+
+/**
+ * The engine's `DuosState` (two `GameState`s and the wrapper's own fields), opaque: it holds all four
+ * hands and libraries, so the client passes it back and never reads it (CLAUDE.md rule 7). It crosses
+ * in the same envelope as a `GameState` (`stateJson`).
+ */
+export type DuosState = { readonly [duosStateBrand]: never };
+
+/** `duosCreate`'s options (the engine's `DuosCreateOptions`): four decks, one per seat. */
+export type DuosCreateArgs = {
+  seed: string;
+  decks: { a1: readonly string[]; a2: readonly string[]; b1: readonly string[]; b2: readonly string[] };
+  /** Deal from these definitions instead of the registered catalog (tests). */
+  catalog?: CardDefs;
+  /** Each team's rules; absent, DUOS_HUMAN_TEAM for both. */
+  teams?: { a: DuosTeamRules; b: DuosTeamRules };
+  /** §9.9's per-seat handicaps; an absent seat is a human's. */
+  handicaps?: Partial<Record<DuosSeat, Handicap>>;
+  /** R433: the seats whose deck was dealt rather than built. */
+  dealt?: readonly DuosSeat[];
+};
+
+/** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
+export type DuosReduceResult = { state: DuosState; events: DuosEvent[]; error?: string };
+
+function duosStateJson(state: DuosState): string {
+  return JSON.stringify([STATE_MARK, state]);
+}
+
+/** As `reduceResult`: a refusal hands back the caller's own state object and no events. */
+function duosReduceResult(text: string, input: DuosState): DuosReduceResult {
+  const result = parsed<{ state: DuosState; events: DuosEvent[]; error?: string | null }>(text);
+  if (result.error === undefined || result.error === null) return { state: result.state, events: result.events };
+  return { state: input, events: [], error: result.error };
+}
+
+/** A begun-able Duos game: two duels, seeded `<seed>:duel0` and `<seed>:duel1`. Throws on a deck it refuses. */
+export function duosCreate(args: DuosCreateArgs): DuosState {
+  return withArgs("duosCreate", (m, put) => parsed<DuosState>(take(m, m._duos_create(put(json(args))))));
+}
+
+/** Both duels' setups, all four mulligans open at once (B1, B2). */
+export function duosBegin(state: DuosState): DuosReduceResult {
+  return withArgs("duosBegin", (m, put) => duosReduceResult(take(m, m._duos_begin(put(duosStateJson(state)))), state));
+}
+
+/** One seat's action; an illegal one is refused in `error`, never thrown. */
+export function duosReduce(state: DuosState, action: DuosAction): DuosReduceResult {
+  return withArgs("duosReduce", (m, put) =>
+    duosReduceResult(take(m, m._duos_reduce(put(duosStateJson(state)), put(json(action)))), state),
+  );
+}
+
+/** Everything `seat` may do now: its duel's moves wrapped as `duel`, its passes, its concede. */
+export function duosLegalActions(state: DuosState, seat: DuosSeat): DuosActionBody[] {
+  return withArgs("duosLegalActions", (m, put) =>
+    parsed<DuosActionBody[]>(take(m, m._duos_legal_actions(put(duosStateJson(state)), put(seat)))),
+  );
+}
+
+/** The seat's `DuosView`: its own duel, its teammate's from the teammate's seat, both teams' life (B23). */
+export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
+  return withArgs("duosViewFor", (m, put) =>
+    parsed<DuosView>(take(m, m._duos_view_for(put(duosStateJson(state)), put(seat)))),
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -50,9 +50,11 @@ use std::str::FromStr;
 use std::sync::Once;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use jackioh_engine::duos::{self as duos_engine, DuosReduceResult, DuosState};
+use jackioh_engine::wire::{DUOS_SEATS, DuosAction, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat};
 use jackioh_engine::{
     self as engine, Action, CardDefs, CraftRecipe, CreateGameArgs, DECK_SIZE, FoldArgs, GameState,
-    PLAYER_IDS, PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
+    Handicap, PLAYER_IDS, PerPlayerOpt, PlayerId, ReduceResult, ReplayCheckpoints, ReplayRecord, Rng,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -555,6 +557,139 @@ fn preview(sets: &[engine::SetName]) -> Result<(), String> {
         "previewSets: this module was built without the `preview` feature, so it previews no set (R1420)"
             .to_owned(),
     )
+}
+
+// ---------------------------------------------------------------------------------------------
+// Duos co-op (#936 SPEC S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
+// ---------------------------------------------------------------------------------------------
+//
+// The five bindings mirror the 1v1 ones: a `DuosState` crosses as JSON in the same envelope as a
+// `GameState` (`unwrapped`), a setup the engine would panic on is refused first with its own message,
+// and an illegal action is the result's `error`, never NULL. Duos states are not cached: only the
+// dev route plays them, and the cache above is sized for the 1v1 callers.
+
+/// `"a1"`, `"a2"`, `"b1"` or `"b2"`; anything else is refused with `DuosSeat`'s own message.
+fn duos_seat(text: &str) -> Result<DuosSeat, String> {
+    DuosSeat::from_str(text)
+}
+
+/// The deck a seat's options name.
+fn duos_deck(decks: &DuosDecks, seat: DuosSeat) -> &[String] {
+    match seat {
+        DuosSeat::A1 => &decks.a1,
+        DuosSeat::A2 => &decks.a2,
+        DuosSeat::B1 => &decks.b1,
+        DuosSeat::B2 => &decks.b2,
+    }
+}
+
+/// The handicap a seat's options name, if any (§9.9; absent is a human's).
+fn duos_handicap(handicaps: Option<&DuosHandicaps>, seat: DuosSeat) -> Option<&Handicap> {
+    let handicaps = handicaps?;
+    match seat {
+        DuosSeat::A1 => handicaps.a1.as_ref(),
+        DuosSeat::A2 => handicaps.a2.as_ref(),
+        DuosSeat::B1 => handicaps.b1.as_ref(),
+        DuosSeat::B2 => handicaps.b2.as_ref(),
+    }
+}
+
+/// `check_setup` for the four seats, in its order (every handicap, then every deck against its
+/// seat's size): each duel is a `create_game`, which panics where TypeScript threw, so a refusal is
+/// named here, with the engine's own message and the seat's name as its label.
+fn check_duos_setup(options: &DuosCreateOptions) -> Result<(), String> {
+    let catalog: &CardDefs = match &options.catalog {
+        Some(catalog) => catalog,
+        None => engine::registered_catalog(),
+    };
+    let handicaps = options.handicaps.as_ref();
+    for seat in DUOS_SEATS {
+        if let Some(handicap) = duos_handicap(handicaps, seat) {
+            engine::validate_handicap(handicap, seat.as_str()).map_err(|error| error.to_string())?;
+        }
+    }
+    for seat in DUOS_SEATS {
+        let size = duos_handicap(handicaps, seat).map_or(DECK_SIZE, |handicap| handicap.deck_size);
+        engine::validate_deck(duos_deck(&options.decks, seat), catalog, seat.as_str(), size)
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
+/// A `DuosState` argument, out of its envelope.
+fn duos_state_of(what: &str, state_json: &str) -> Result<DuosState, String> {
+    parse(&format!("{what}: the state"), unwrapped(state_json))
+}
+
+/// `DuosReduceResult`'s JSON as the 1v1 result's: `{"state":…,"events":[…]}` plus `"error"` on a refusal.
+fn duos_reduce_result_json(result: DuosReduceResult) -> Result<String, String> {
+    let DuosReduceResult { state, events, error } = result;
+    let state = to_json(&state)?;
+    let events = to_json(&events)?;
+    let error = match &error {
+        Some(refusal) => format!(",\"error\":{}", to_json(&refusal.to_string())?),
+        None => String::new(),
+    };
+    Ok(format!("{{\"state\":{state},\"events\":{events}{error}}}"))
+}
+
+/// `DuosState` (TS `duosCreate({ seed, decks: { a1, a2, b1, b2 }, catalog?, teams?, handicaps?, dealt? })`).
+#[unsafe(no_mangle)]
+pub extern "C" fn duos_create(options_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let options: DuosCreateOptions = parse("duosCreate", arg("duosCreate", options_json)?)?;
+        check_duos_setup(&options)?;
+        to_json(&duos_engine::duos_create(&options))
+    })
+}
+
+/// `{ state, events, error? }`: both duels set up, all four mulligans open (B1, B2).
+#[unsafe(no_mangle)]
+pub extern "C" fn duos_begin(state_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = duos_state_of("duosBegin", arg("duosBegin", state_json)?)?;
+        duos_reduce_result_json(duos_engine::duos_begin(&state))
+    })
+}
+
+/// `{ state, events, error? }` for one `DuosAction`; an illegal one is refused in `error`, never NULL.
+#[unsafe(no_mangle)]
+pub extern "C" fn duos_reduce(state_json: *const c_char, action_json: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = duos_state_of("duosReduce", arg("duosReduce: the state", state_json)?)?;
+        let action: DuosAction = parse(
+            "duosReduce: the action",
+            arg("duosReduce: the action", action_json)?,
+        )?;
+        duos_reduce_result_json(duos_engine::duos_reduce(&state, &action))
+    })
+}
+
+/// `DuosActionBody[]`: everything `seat` may do now.
+#[unsafe(no_mangle)]
+pub extern "C" fn duos_legal_actions(state_json: *const c_char, seat: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = duos_state_of(
+            "duosLegalActions",
+            arg("duosLegalActions: the state", state_json)?,
+        )?;
+        to_json(&duos_engine::duos_legal_actions(
+            &state,
+            duos_seat(arg("duosLegalActions: the seat", seat)?)?,
+        ))
+    })
+}
+
+/// `DuosView`: the only window the client has onto a Duos game (B23).
+#[unsafe(no_mangle)]
+pub extern "C" fn duos_view_for(state_json: *const c_char, seat: *const c_char) -> *mut c_char {
+    boundary(|| {
+        let state = duos_state_of("duosViewFor", arg("duosViewFor: the state", state_json)?)?;
+        to_json(&duos_engine::duos_view_for(
+            &state,
+            duos_seat(arg("duosViewFor: the seat", seat)?)?,
+        ))
+    })
 }
 
 // ---------------------------------------------------------------------------------------------

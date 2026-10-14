@@ -101,6 +101,10 @@ export const paths = {
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
   series: (seriesId: string): string => `/series/${seriesId}`,
+  /** #936 B61–B64: a Duos co-op match against the AI team. */
+  duos: (matchId: string): string => `/duos/${matchId}`,
+  /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
+  duosDev: "/dev/duos",
 } as const;
 
 function idUnder(path: string, first: string): string | null {
@@ -115,6 +119,11 @@ export function matchIdOf(path: string): string | null {
 
 export function seriesIdOf(path: string): string | null {
   return idUnder(path, "series");
+}
+
+/** #936: the match id of a `/duos/:matchId` path, or null. */
+export function duosIdOf(path: string): string | null {
+  return idUnder(path, "duos");
 }
 
 // Sign-in screen entry states.
