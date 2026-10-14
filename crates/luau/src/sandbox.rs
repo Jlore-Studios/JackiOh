@@ -1,15 +1,15 @@
 //! The sandbox (#442 L5): the Luau a card script runs in. Five libraries (string, table, math, bit32
 //! and utf8), with the base library's ways out of a pure function taken away, a `require` that answers
 //! only the host's own module, Luau's own sandbox (`Lua::sandbox(true)`: every library and the
-//! globals read-only) and an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts.
-//! What the lint refuses by name (L6, L7) is taken away here too, so a key the lint cannot read
-//! (`_G["pairs"]`, `math["sqrt"]`) finds nothing.
+//! globals read-only), an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts and a
+//! cap of `LUAU_MEMORY_BYTES` on what the VM holds (#843). What the lint refuses by name (L6, L7) is
+//! taken away here too, so a key the lint cannot read (`_G["pairs"]`, `math["sqrt"]`) finds nothing.
 
 use mlua::{Error, Lua, LuaOptions, StdLib, Table, Value, VmState};
 
 use crate::Site;
 use crate::api;
-use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS};
+use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES};
 use crate::lint::MATH_ALLOWED;
 
 /// The base library's globals a script never sees: output, environments, loading code at run time,
@@ -176,9 +176,22 @@ pub fn too_deep(site: Site) -> String {
     format!("{site}: hook calls nested deeper than {LUAU_HOOK_DEPTH} (L5)")
 }
 
-/// A Luau with the sandbox above, the host's module behind `require`, and the interrupt. Rust panics
-/// are not Lua errors here (`catch_rust_panics(false)`): `pcall` and `xpcall` raise a panic again,
-/// so a hook cannot catch a nested hook's failure and go on.
+/// The error a hook call that ran out of memory fails with, naming its card, face and hook.
+pub fn out_of_memory(site: Site) -> String {
+    format!("{site}: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)")
+}
+
+/// Whether `error` is an allocation past `LUAU_MEMORY_BYTES`, raised in the hook's own code or, under
+/// a `CallbackError`, in a reader it called.
+pub fn ran_out_of_memory(error: &Error) -> bool {
+    error
+        .chain()
+        .any(|layer| matches!(layer.downcast_ref::<Error>(), Some(Error::MemoryError(_))))
+}
+
+/// A Luau with the sandbox above, the host's module behind `require`, the interrupt and the memory
+/// cap. Rust panics are not Lua errors here (`catch_rust_panics(false)`): `pcall` and `xpcall` raise
+/// a panic again, so a hook cannot catch a nested hook's failure and go on.
 pub fn new_sandbox() -> mlua::Result<Sandbox> {
     let lua = Lua::new_with(
         StdLib::STRING | StdLib::TABLE | StdLib::MATH | StdLib::BIT | StdLib::UTF8,
@@ -220,6 +233,7 @@ pub fn new_sandbox() -> mlua::Result<Sandbox> {
     lua.sandbox(true)?;
     lua.set_app_data(Budget::new());
     lua.set_interrupt(interrupt);
+    lua.set_memory_limit(LUAU_MEMORY_BYTES)?;
     Ok(Sandbox { env, lua })
 }
 
