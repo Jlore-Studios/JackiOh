@@ -369,13 +369,6 @@ pub fn last_face_up_played(state: &GameState, player: PlayerId) -> Option<FaceUp
         .and_then(|log| log.last_face_up_play.clone())
 }
 
-/// B5 E1, R448: whether the play a `cardAnnounced` names can still be countered — its window is open
-/// and no Counter has cancelled it yet. A response that asks before it counters (Classic #4 Palantir)
-/// reads this; the engine already offers a cancelled announce to no trap and runs no trigger on it.
-pub fn play_still_announced(state: &GameState, instance_id: &str) -> bool {
-    crate::announce::is_announce_live(state, instance_id)
-}
-
 // ---------------------------------------------------------------------------
 // v0.2.0 readers: the Classic #1–#45 cards (card-specific, the cards-classic-a workstream)
 // ---------------------------------------------------------------------------

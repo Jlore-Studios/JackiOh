@@ -11,8 +11,6 @@
 //!
 //! Every method takes `&self`, as every test holds its sockets (part 31); the state sits behind locks.
 
-#![allow(dead_code)]
-
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
@@ -106,11 +104,6 @@ impl FakeSocket {
         self.drain().close_code
     }
 
-    /// The reason the server's close carried (`"voided"` for R679's 4410), or `None`.
-    pub fn close_reason(&self) -> Option<String> {
-        self.drain().close_reason.clone()
-    }
-
     /// Every frame the server sent, in order.
     pub fn sent(&self) -> Vec<String> {
         self.drain().sent.clone()
@@ -119,11 +112,6 @@ impl FakeSocket {
     /// Every frame the server sent, parsed.
     pub fn messages(&self) -> Vec<Value> {
         self.drain().sent.iter().map(|text| parse(text)).collect()
-    }
-
-    /// The last frame the server sent, parsed.
-    pub fn last(&self) -> Option<Value> {
-        self.drain().sent.last().map(|text| parse(text))
     }
 
     /// Frames of one `type`, parsed.
@@ -164,33 +152,6 @@ impl FakeSocket {
     pub fn clear(&self) {
         self.drain().sent.clear();
     }
-
-    /// The next text frame the server sends, parsed, or `None` once it has closed. Also kept in `sent`.
-    pub async fn next_frame(&self) -> Option<Value> {
-        let mut outgoing = self.outgoing.lock().await;
-        loop {
-            if lock(&self.state).close_code.is_some() {
-                return None;
-            }
-            let frame = outgoing.recv().await?;
-            let mut state = lock(&self.state);
-            let before = state.sent.len();
-            state.record(frame);
-            if state.sent.len() > before {
-                return state.sent.last().map(|text| parse(text));
-            }
-        }
-    }
-
-    /// Waits for the next frame of one `type`, skipping (and keeping in `sent`) every other one.
-    pub async fn next_of_type(&self, frame_type: &str) -> Option<Value> {
-        loop {
-            let frame = self.next_frame().await?;
-            if frame["type"] == frame_type {
-                return Some(frame);
-            }
-        }
-    }
 }
 
 fn parse(text: &str) -> Value {
@@ -210,18 +171,5 @@ pub fn create_fake_socket() -> FakeSocket {
             close_code: None,
             close_reason: None,
         }),
-    }
-}
-
-/// Two fake sockets, one per seat.
-pub struct SocketPair {
-    pub p1: FakeSocket,
-    pub p2: FakeSocket,
-}
-
-pub fn create_socket_pair() -> SocketPair {
-    SocketPair {
-        p1: create_fake_socket(),
-        p2: create_fake_socket(),
     }
 }

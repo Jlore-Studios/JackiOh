@@ -524,10 +524,6 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
     Ok(())
 }
 
-/// How an engine sequence answers a prompt it opened itself: validate, close, file the selection
-/// and go on, returning the refusal or null — the shape of `answerPrompt`.
-pub type PromptAnswerer = fn(&mut EngineSink<'_>, &AnswerInput) -> Result<(), EngineError>;
-
 /// R122, R113: a prompt an engine sequence opened for itself — the play pipeline's own questions, an
 /// Echo repeat's fresh picks and a cast's choices (§10.5 steps 4 and 6) — names that sequence as its
 /// `resume.hook`, which no card script holds, so re-entering it as a card's continuation finds

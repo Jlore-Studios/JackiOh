@@ -161,20 +161,6 @@ fn store_memory(state: &mut GameState, card_id: &str, memory: &QuestMemory) {
     }
 }
 
-/// The open quests of a card, in the order they opened.
-pub fn open_quests_of(card: &CardInstance) -> Vec<String> {
-    quest_memory_of(card)
-        .map(|memory| memory.active)
-        .unwrap_or_default()
-}
-
-/// The quests a card has completed, in order.
-pub fn completed_quests_of(card: &CardInstance) -> Vec<String> {
-    quest_memory_of(card)
-        .map(|memory| memory.done)
-        .unwrap_or_default()
-}
-
 /// The auras a card's quest line holds (rewards L and M): a pure read for its `aura` and `graveyard_play`.
 pub fn held_quest_auras(card: &CardInstance) -> Vec<String> {
     quest_memory_of(card)

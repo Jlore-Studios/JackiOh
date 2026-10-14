@@ -1786,8 +1786,6 @@ pub fn graveyard_play_actions_for(
 struct PlayPrice {
     x: Option<i32>,
     embiggen: Option<bool>,
-    #[allow(dead_code)]
-    probe: CardInstance,
     cost: i32,
 }
 
@@ -1825,7 +1823,6 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
             out.push(PlayPrice {
                 x: *x,
                 embiggen: *embiggen,
-                probe,
                 cost,
             });
         }

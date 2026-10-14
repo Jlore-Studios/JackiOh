@@ -152,9 +152,6 @@ fn pool_of(ctx: &EffectContext<'_>, player: PlayerId, zones: &[RadiantZone]) -> 
     pool
 }
 
-/// `setRadiant`'s argument is a `RadiantTarget` (default the first chosen selection).
-pub type SetRadiantArgs = RadiantTarget;
-
 /// §6.3 Make Radiant: one named card, with no effect when it is already Radiant.
 pub fn set_radiant(args: RadiantTarget) -> Effect {
     Effect::new("setRadiant", move |ctx| {
@@ -165,9 +162,6 @@ pub fn set_radiant(args: RadiantTarget) -> Effect {
         make_radiant(ctx, &card);
     })
 }
-
-/// `clearRadiant`'s argument is a `RadiantTarget` too (default the first chosen selection).
-pub type ClearRadiantArgs = RadiantTarget;
 
 /// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed. A card
 /// that is not Radiant is untouched; otherwise the flag is cleared and `deradianted` reports it.

@@ -21,8 +21,8 @@ use crate::config::{
 use crate::rng::Rng;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
-    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
-    Selection, Tag, Tuning, Zone, ZoneRef, string_union,
+    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags, SecretChoice, Selection,
+    Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -2012,19 +2012,6 @@ pub fn clone_state(state: &GameState) -> GameState {
     state.clone()
 }
 
-pub fn active_units(side: &PlayerState) -> Vec<&CardInstance> {
-    side.units
-        .iter()
-        .filter_map(|pile| pile.as_ref().and_then(|pile| pile.first()))
-        .collect()
-}
-
-pub fn all_zones_empty(side: &PlayerState) -> bool {
-    side.units.iter().all(Option::is_none)
-        && side.backrow.iter().all(Option::is_none)
-        && side.carried.iter().flatten().all(Option::is_none)
-}
-
 /// §2.1, §2.2: whether it is `player`'s turn. Setup (`SETUP_TURN`) is no player's turn: `active`
 /// names p1 there only as a placeholder until p1 takes the first turn (§2.1 step 5), so a clause a
 /// card makes during setup — a cast on the opening deal or a mulligan's replacement draw (R70) — is
@@ -2078,20 +2065,6 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
         &mut state.players.p2
     };
     side_cards_mut(side).find(|card| card.id == instance_id)
-}
-
-/// `rowOf`'s answer: a row's zones, which hold piles (units) or single cards (backrow).
-#[derive(Clone, Copy, Debug)]
-pub enum RowSlots<'a> {
-    Units(&'a Vec<Option<Pile>>),
-    Backrow(&'a Vec<Option<CardInstance>>),
-}
-
-pub fn row_of(side: &PlayerState, row: Row) -> RowSlots<'_> {
-    match row {
-        Row::Units => RowSlots::Units(&side.units),
-        Row::Backrow => RowSlots::Backrow(&side.backrow),
-    }
 }
 
 #[cfg(test)]

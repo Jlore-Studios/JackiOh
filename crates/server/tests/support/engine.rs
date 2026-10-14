@@ -46,10 +46,8 @@
 //! match rng: each is a test-made `Effect` that writes exactly what that outcome writes (TS's fake
 //! wrote the same two fields and events).
 
-#![allow(dead_code)]
-
 use indexmap::IndexMap;
-use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{DECK_SIZE, HERO_HEALTH};
 use jackioh_engine::effects::{choose_mode, lose_health};
 use jackioh_engine::game_over::end_game;
 use jackioh_engine::prelude::json_as;
@@ -61,7 +59,7 @@ use jackioh_engine::{
     Action, ActionBody, CardDef, CardDefs, CardScripts, CreateGameOptions, GameState, Phase, PlayerId,
     Script, StaticFlags, begin_game, create_game, hook, mulligan_owed, reduce,
 };
-use serde_json::{Value, json};
+use serde_json::json;
 
 /// Opens a prompt for the player who played it.
 pub const TEST_PROMPT_SELF: &str = "test-prompt-self";
@@ -78,10 +76,6 @@ pub const TEST_MUTUAL_LETHAL: &str = "test-mutual-lethal";
 pub const TEST_GLITCH_SWAP: &str = "test-glitch-swap";
 /// A Glitch's void (R679): the game ends with no winner, reason `voided`.
 pub const TEST_GLITCH_VOID: &str = "test-glitch-void";
-
-/// Mirrors `TURN_CAP_PLAYER_TURNS` (§2.5) so a test can reach the `turn-cap` ending; the real
-/// engine's own cap, not a copy of it.
-pub const FAKE_TURN_CAP: i32 = TURN_CAP_PLAYER_TURNS;
 
 /// The filler cards' id prefix: `test-card-0`, `test-card-1`, …
 pub const FILLER_PREFIX: &str = "test-card-";
@@ -315,17 +309,6 @@ pub fn install_test_cards() {
     register_scripts(test_scripts());
 }
 
-/// A small, stable string hash for scripted deals (FNV-1a over UTF-16 code units, as TS's
-/// `charCodeAt` loop); not a random source.
-pub fn seed_hash(seed: &str) -> u32 {
-    let mut hash: u32 = 0x811c_9dc5;
-    for unit in seed.encode_utf16() {
-        hash ^= u32::from(unit);
-        hash = hash.wrapping_mul(0x0100_0193);
-    }
-    hash
-}
-
 /// A `DECK_SIZE`-card deck of test ids, with `extra` scripted cards first; each of them has
 /// Quickdraw, so the opening deal puts them in the hand (up to the hand's size, R225).
 pub fn fake_deck(extra: &[&str]) -> Vec<String> {
@@ -444,17 +427,6 @@ pub fn hand_card(state: &GameState, seat: PlayerId, def_id: &str) -> Option<Stri
         .iter()
         .find(|card| card.def_id == def_id)
         .map(|card| card.id.clone())
-}
-
-/// The instance id of the first card of `def_id` in the viewer's own hand of a `view` frame's
-/// `PlayerView` JSON (`view.you.hand`), or `None`.
-pub fn hand_card_in_view(view: &Value, def_id: &str) -> Option<String> {
-    view["you"]["hand"]
-        .as_array()?
-        .iter()
-        .find(|card| card["defId"] == def_id)
-        .and_then(|card| card["instanceId"].as_str())
-        .map(str::to_string)
 }
 
 /// R265: the mulligan that keeps a seat's whole opening hand.
