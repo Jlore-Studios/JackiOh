@@ -68,4 +68,14 @@ created?: true,
  * ME-GRANT (MD-D13): the Death abilities other cards granted this Unit, as its lines read them
  * (`grants::grant_texts`). Absent when it holds none.
  */
-grants?: Array<string>, };
+grants?: Array<string>, 
+/**
+ * §4.1, R849000: summoning sick with neither Rush nor Charge (`combat::is_asleep`), on both seats.
+ * Only ever `Some(true)`.
+ */
+sick?: true, 
+/**
+ * R849000: why the viewer's own unit cannot declare an attack now (`combat::why_cannot_declare`),
+ * as `ActivationView.reason` (R384). Only while `canAct`; never on the opponent's units.
+ */
+attackReason?: string, };
