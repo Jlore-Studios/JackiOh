@@ -28,4 +28,6 @@ pub mod db;
 pub mod env;
 pub mod loops;
 pub mod ranked;
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- SPEC S7 (#936).
+pub mod social;
 pub mod username;

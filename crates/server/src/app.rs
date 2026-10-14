@@ -60,6 +60,10 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
+    /// limiter's reason.
+    pub social: crate::social::Social,
 }
 
 // ---------------------------------------------------------------------------
@@ -463,6 +467,112 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // social/*.rs (SPEC S7). `/api/chat/unread` comes before `/api/chat/:friendId`, which would
+    // otherwise take it as a friend's id.
+    (
+        "GET",
+        "/api/friends",
+        AuthLevel::Active,
+        h!(crate::social::friends::get_friends),
+    ),
+    (
+        "POST",
+        "/api/friends/requests",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/accept",
+        AuthLevel::Active,
+        h!(crate::social::friends::accept_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::friends::decline_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/requests/:id",
+        AuthLevel::Active,
+        h!(crate::social::friends::cancel_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::remove_friend),
+    ),
+    (
+        "POST",
+        "/api/blocks",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_block),
+    ),
+    (
+        "DELETE",
+        "/api/blocks/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::delete_block),
+    ),
+    (
+        "POST",
+        "/api/presence",
+        AuthLevel::Active,
+        h!(crate::social::presence::heartbeat),
+    ),
+    (
+        "POST",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::create),
+    ),
+    (
+        "GET",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::list),
+    ),
+    (
+        "POST",
+        "/api/challenges/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::challenges::decline),
+    ),
+    (
+        "DELETE",
+        "/api/challenges/:id",
+        AuthLevel::Active,
+        h!(crate::social::challenges::cancel),
+    ),
+    (
+        "GET",
+        "/api/chat/unread",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_unread),
+    ),
+    (
+        "POST",
+        "/api/chat/messages/:id/report",
+        AuthLevel::Active,
+        h!(crate::social::chat::report),
+    ),
+    (
+        "GET",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_messages),
+    ),
+    (
+        "POST",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::send),
+    ),
+    // ---- end Social ----
 ];
 
 /// TS `allRoutes()`.
@@ -539,6 +649,8 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        social: crate::social::Social::default(),
     });
 
     if app.env.e2e {
@@ -676,6 +788,16 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper);
     loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper);
     loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge);
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // SPEC S7: B53's chat purge beside the retention purge, on its interval, and B49's sweep that
+    // marks lapsed challenges expired.
+    loops::spawn_supervised("chat.purge", app.clone(), crate::social::chat::run_purge);
+    loops::spawn_supervised(
+        "challenges.sweeper",
+        app.clone(),
+        crate::social::challenges::run_sweeper,
+    );
+    // ---- end Social ----
     if app.env.ladder_bots {
         loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool);
     }
