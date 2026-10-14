@@ -12,6 +12,8 @@
 use jackioh_engine::subsystems::FuseArgs;
 use jackioh_engine::testkit::*;
 
+use super::craft_fused;
+
 const BIGOT: &str = "core-002";
 const STOCKPILE: &str = "core-005";
 const VANILLA: &str = "core-008";
@@ -27,7 +29,6 @@ const FRIEND: &str = "core-062";
 const GIFTED: &str = "core-064";
 const TWISTED_SORCERER: &str = "core-068";
 const POCKET_CHAOS: &str = "core-087";
-const CRAFT_A_CARD: &str = "core-099";
 const LIBRARY: [&str; 8] = [
     VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA,
 ];
@@ -286,13 +287,12 @@ mod r214_a_plays_choices_are_the_choices_of_the_face_it_resolves_with {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            "seed": "craft-9344", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
-            "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4, "backrow": [GIFTED] },
+            "p1": { "hand": [RENO], "mana": 4, "backrow": [GIFTED] },
             "p2": { "hand": [RENO], "field": [PANTHER] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(BIGOT));
-        g.answer(json!(TWISTED_SORCERER));
+        // Craft a Card's result for Bigot and Twisted Sorcerer, made directly (R77): the test is about the
+        // fused card, not about which two Discover offers the pools of every set (R380) make.
+        craft_fused(&mut g, PlayerId::P1, &[BIGOT, TWISTED_SORCERER]);
         let card = must(
             g.hand(PlayerId::P1)
                 .iter()

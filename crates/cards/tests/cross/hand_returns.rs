@@ -37,15 +37,11 @@ use super::scenario;
 
 /// A cursor at which a base #95's single roll is `effect`, the pick 095's own tests use (R28).
 fn chaos_cursor(seed: &str, effect: &str) -> u32 {
-    for cursor in 0..500u32 {
-        if subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
+    cursor_where(seed, |cursor| {
+        subsystems::roll_chaos_effects(&mut Rng::new(seed, cursor), false, None)
             .first()
             .is_some_and(|rolled| rolled.name == effect)
-        {
-            return cursor;
-        }
-    }
-    panic!("no cursor below 500 rolls \"{effect}\" from seed \"{seed}\"");
+    })
 }
 
 /// The target list naming p2's hero.
@@ -239,6 +235,7 @@ mod r215_a_card_that_lands_from_the_resolving_zone_is_the_printed_card_again {
         // roll casts the 20th link, which R87 sends to the graveyard as it resolves, and #72 Reminisce takes
         // it back. Played from hand it is a new play, a new chain from nothing, so its "cast a random Call
         // to Chaos" casts one where the old link at the cap cast nothing.
+        // The seed is arbitrary: `chaos_cursor` finds the cursor where the roll is the recast.
         let seed = "inv-r5-chaos-chain";
         let mut s = scenario(
             json!({ "seed": seed, "p1": { "hand": [CHAOS, REMINISCE, MENACE], "mana": 20 }, "p2": { "hand": [MENACE] } }),

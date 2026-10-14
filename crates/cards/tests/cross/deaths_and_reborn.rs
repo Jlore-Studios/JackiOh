@@ -35,12 +35,6 @@ const FAUCI: &str = "core-091";
 const FIENDER: &str = "core-092";
 const LIBRARY: [&str; 10] = [VANILLA; 10];
 
-/// On these seeds #63 Plastic Surgery's first random keyword is Reborn. The Gravedigger scenario
-/// draws from a fuller pool at another rng cursor than a unit that already has Rush (Fed Fauci), so
-/// it carries its own seed.
-const REBORN_SEED: &str = "re-entry-reborn-token-34"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31"; R781005's combat keyword pool moved it off "-32".
-const REBORN_SEED_DIGGER: &str = "re-entry-reborn-token-46"; // Same history: R49's Deft moved the roll off "-31", R781005's pool off "-40".
-
 use super::scenario;
 
 /// The one-instance target list a play sends.
@@ -193,16 +187,27 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
 
     #[test]
     fn r174_r78_fed_faucis_plague_counter_for_the_hit_that_killed_it_does_not_land_on_its_reborn_body() {
-        let mut g = scenario(json!({
-            "seed": REBORN_SEED,
-            "p1": {
-                "hand": [SURGERY, TRUE_STRIKE, VANILLA],
-                "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }],
-                "library": LIBRARY,
-            },
-            "p2": { "hand": [VANILLA], "library": LIBRARY },
-        }));
-        let fauci = g.card(FAUCI).clone();
+        let setup = |seed: &str| {
+            let g = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [SURGERY, TRUE_STRIKE, VANILLA],
+                    "field": [{ "def": FAUCI, "lane": 1, "damage": 5 }],
+                    "library": LIBRARY,
+                },
+                "p2": { "hand": [VANILLA], "library": LIBRARY },
+            }));
+            let fauci = g.card(FAUCI).clone();
+            (g, fauci)
+        };
+        // #63 Plastic Surgery's random keyword comes from a pool a unit's own keywords narrow (§6.1, R21),
+        // and every keyword added to it moves the roll: search for a seed where the Fauci's is Reborn.
+        let seed = seed_where("surgery-reborn-fauci", |seed| {
+            let (mut g, fauci) = setup(seed);
+            g.play(SURGERY, json!({ "targets": at(&fauci) }));
+            keywords_of(&g, &fauci).contains(&KeywordKind::Reborn)
+        });
+        let (mut g, fauci) = setup(&seed);
         g.play(SURGERY, json!({ "targets": at(&fauci) }));
         assert!(keywords_of(&g, &fauci).contains(&KeywordKind::Reborn));
 
@@ -218,17 +223,28 @@ mod r174_what_was_queued_for_a_cards_old_stay_does_not_act_on_its_reborn_body {
     #[test]
     fn r174_r83_a_gravedigger_that_dies_to_cleave_during_moths_run_and_comes_back_takes_no_card_from_its_start_of_turn_hook()
      {
-        let mut g = scenario(json!({
-            "seed": REBORN_SEED_DIGGER,
-            "p1": {
-                "hand": [SURGERY, VANILLA],
-                "field": [{ "def": MOTHS, "lane": 1 }, { "def": GRAVEDIGGER, "lane": 2 }],
-                "graveyard": [VANILLA],
-                "library": LIBRARY,
-            },
-            "p2": { "hand": [VANILLA], "field": [{ "def": PANTHER, "radiant": true, "lane": 1 }], "library": LIBRARY },
-        }));
-        let digger = g.card(GRAVEDIGGER).clone();
+        let setup = |seed: &str| {
+            let g = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [SURGERY, VANILLA],
+                    "field": [{ "def": MOTHS, "lane": 1 }, { "def": GRAVEDIGGER, "lane": 2 }],
+                    "graveyard": [VANILLA],
+                    "library": LIBRARY,
+                },
+                "p2": { "hand": [VANILLA], "field": [{ "def": PANTHER, "radiant": true, "lane": 1 }], "library": LIBRARY },
+            }));
+            let digger = g.card(GRAVEDIGGER).clone();
+            (g, digger)
+        };
+        // Plastic Surgery's pool is narrower for a unit that already has a keyword (§6.1, R21), so this
+        // scenario's roll is not the Fauci's: search for a seed where the Gravedigger's is Reborn.
+        let seed = seed_where("surgery-reborn-digger", |seed| {
+            let (mut g, digger) = setup(seed);
+            g.play(SURGERY, json!({ "targets": at(&digger) }));
+            keywords_of(&g, &digger).contains(&KeywordKind::Reborn)
+        });
+        let (mut g, digger) = setup(&seed);
         g.play(SURGERY, json!({ "targets": at(&digger) }));
         assert!(keywords_of(&g, &digger).contains(&KeywordKind::Reborn));
         g.end_turn(); // p2's turn

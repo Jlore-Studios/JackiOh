@@ -25,7 +25,7 @@ const PREJUDICED_POSTDOC: &str = "core-061";
 const MASOCHISM_MASK: &str = "core-065";
 const TWISTED_SORCERER: &str = "core-068";
 
-use super::scenario;
+use super::{craft_fused, scenario};
 
 fn must<T>(value: Option<T>, what: &str) -> T {
     match value {
@@ -208,7 +208,6 @@ const GARY: &str = "core-004";
 const STOCKPILE: &str = "core-005";
 const HIT_JOB: &str = "core-016";
 const CEASELESS_VOID: &str = "core-100";
-const CRAFT_A_CARD: &str = "core-099";
 const KPOP: &str = "core-050";
 const JILLIAX: &str = "core-056";
 const RIGHT_HOUSE: &str = "core-003"; // Unit, 1 — 1/1 Taunt, Divine Shield, Reborn
@@ -243,13 +242,12 @@ mod r41_r77_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     fn r41_r102_r174_a_crafted_ceaseless_void_carnivorous_cube_whose_void_exiled_the_meal_has_eaten_nothing_so_its_death_summons_nothing()
      {
         let mut g = scenario(json!({
-            "seed": "r6cube-4630", // Craft a Card's Discovers offer Ceaseless Void, then Carnivorous Cube (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
-            "p1": { "hand": [CRAFT_A_CARD, HIT_JOB, STOCKPILE], "mana": 10, "field": [{ "def": GARY, "lane": 1 }] },
+            "p1": { "hand": [HIT_JOB, STOCKPILE], "mana": 10, "field": [{ "def": GARY, "lane": 1 }] },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": RENO, "lane": 1 }] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(CEASELESS_VOID));
-        g.answer(json!(CARNIVOROUS_CUBE));
+        // Craft a Card's result for Ceaseless Void and Carnivorous Cube, made directly (R77): the test is
+        // about the fused card, not about which two Discover offers the pools of every set (R380) make.
+        craft_fused(&mut g, P1, &[CEASELESS_VOID, CARNIVOROUS_CUBE]);
         let card = must(
             g.hand(P1)
                 .iter()
@@ -298,13 +296,11 @@ mod r77_8_68_a_fused_crys_later_part_reads_the_board_its_earlier_parts_left {
     fn r102_8_68_a_crafted_reno_twisted_sorcerer_reads_the_hero_reno_has_just_set_to_30_so_it_deals_4_not_8()
     {
         let mut g = scenario(json!({
-            "seed": "r6reno-3560", // Craft a Card's Discovers offer Reno, then Twisted Sorcerer (every set's Units, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
-            "p1": { "hand": [CRAFT_A_CARD, STOCKPILE], "mana": 10, "health": 5 },
+            "p1": { "hand": [STOCKPILE], "mana": 10, "health": 5 },
             "p2": { "hand": [STOCKPILE], "field": [{ "def": RENO, "lane": 1 }] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(RENO));
-        g.answer(json!(TWISTED_SORCERER));
+        // Craft a Card's result for Reno and Twisted Sorcerer, made directly (R77), as above.
+        craft_fused(&mut g, P1, &[RENO, TWISTED_SORCERER]);
         let card = must(
             g.hand(P1)
                 .iter()

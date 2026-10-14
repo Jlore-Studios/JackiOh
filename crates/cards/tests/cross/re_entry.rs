@@ -230,13 +230,23 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
     #[test]
     fn r175_a_rush_token_given_reborn_comes_back_through_reborn_reset_and_sick_6_1s_pool_r21_r83() {
         jackioh_cards::register_all();
-        // On this seed Plastic Surgery's random keyword is Reborn: §6.1's pool keeps Reborn for tokens.
-        let mut g = scenario(json!({
-            "seed": "re-entry-reborn-token-34", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19", R49's Deft off "-31", R781005's pool off "-32"
-            "p1": { "hand": [SURGERY, HIT_JOB], "field": [{ "def": RUSH_TOKEN, "lane": 1 }], "library": LIBRARY },
-            "p2": { "hand": [HIT_JOB], "library": LIBRARY },
-        }));
-        let token = g.card(RUSH_TOKEN).id.clone();
+        let setup = |seed: &str| {
+            let g = scenario(json!({
+                "seed": seed,
+                "p1": { "hand": [SURGERY, HIT_JOB], "field": [{ "def": RUSH_TOKEN, "lane": 1 }], "library": LIBRARY },
+                "p2": { "hand": [HIT_JOB], "library": LIBRARY },
+            }));
+            let token = g.card(RUSH_TOKEN).id.clone();
+            (g, token)
+        };
+        // Plastic Surgery's random keyword is rolled from §6.1's pool (R21), which keeps Reborn for tokens;
+        // every keyword added to the pool moves the roll, so search for a seed where it is Reborn.
+        let seed = seed_where("surgery-reborn-token", |seed| {
+            let (mut g, token) = setup(seed);
+            g.play(SURGERY, json!({ "targets": at(&token) }));
+            has_keyword(&g, &token, KeywordKind::Reborn)
+        });
+        let (mut g, token) = setup(&seed);
         g.play(SURGERY, json!({ "targets": at(&token) }));
         assert!(has_keyword(&g, &token, KeywordKind::Reborn));
 
@@ -542,15 +552,28 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
     fn r35_transmogulate_replaces_a_heroic_power_that_magic_jammed_could_not_destroy_although_its_zone_is_locked_3_2_r46()
      {
         jackioh_cards::register_all();
-        let mut g = scenario(json!({
-            "p1": {
-                "hand": [MAGIC_JAMMED, TRANSMOGULATE, STOCKPILE],
-                "backrow": [{ "def": HEROIC_POWER, "lane": 1 }],
-                "library": LIBRARY,
-            },
-            "p2": { "hand": [STOCKPILE], "library": LIBRARY },
-        }));
-        let power = g.card(HEROIC_POWER).id.clone();
+        let setup = |seed: &str| {
+            let g = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [MAGIC_JAMMED, TRANSMOGULATE, STOCKPILE],
+                    "backrow": [{ "def": HEROIC_POWER, "lane": 1 }],
+                    "library": LIBRARY,
+                },
+                "p2": { "hand": [STOCKPILE], "library": LIBRARY },
+            }));
+            let power = g.card(HEROIC_POWER).id.clone();
+            (g, power)
+        };
+        // Transmogulate's pick is a random Legendary Field Spell of every set (R35, R380), and every card
+        // joining the pool moves it: search for a seed where it is Classic #7 InfiniScepter.
+        let seed = seed_where("transmogulate-locked", |seed| {
+            let (mut g, power) = setup(seed);
+            g.play(MAGIC_JAMMED, json!({ "targets": at(&power) }));
+            g.play(TRANSMOGULATE, json!({}));
+            g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()) == Some(INFINISCEPTER.to_string())
+        });
+        let (mut g, power) = setup(&seed);
 
         // Indestructible: the Field Spell simply stays (R46), in a zone that is now Locked.
         g.play(MAGIC_JAMMED, json!({ "targets": at(&power) }));
@@ -561,8 +584,7 @@ mod r35_3_2_a_transform_replaces_the_occupant_of_a_locked_zone {
         assert!(g.state().players.p1.locks.backrow[0]);
 
         // R35: every board card but an Immutable one is replaced in place; the lock only stops summons
-        // and "the current occupant is unaffected" (§3.2). This seed draws Classic #7 InfiniScepter, a
-        // Legendary Field Spell (re-pinned for v0.3.5: the Meditative set joins the pool).
+        // and "the current occupant is unaffected" (§3.2).
         g.play(TRANSMOGULATE, json!({}));
         assert_eq!(
             g.backrow(PlayerId::P1, 1).map(|card| card.def_id.clone()),
@@ -740,7 +762,6 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            "seed": "r6craft-1057",
             "p1": {
                 "hand": [STOCKPILE],
                 "mana": 4,
@@ -776,6 +797,7 @@ mod r174_a_later_part_of_one_effect_list_meets_the_stay_the_play_chose_across_a_
 
         // R174: the Sorcerer's 4 damage is aimed at the stay the Cube's part ended, so it fizzles — as it
         // does when nothing asks in between. The answer resuming the list (R113) changes nothing.
+        // The test takes the first offer whatever it is, so no seed is chosen for the Discover's roll.
         let option = must(
             g.state()
                 .pending

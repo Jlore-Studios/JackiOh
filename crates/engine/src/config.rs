@@ -1020,6 +1020,16 @@ pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 pub const REPLAY_PAGE_STEPS: usize = 16;
 
 // ---------------------------------------------------------------------------------------------
+// The testkit's seed search (issue #848).
+// ---------------------------------------------------------------------------------------------
+
+/// Issue #848: how many seeds (`<prefix>-0` … `<prefix>-N-1`) or rng cursors (`0..N`) the testkit's
+/// `seed_where` and `cursor_where` try before they panic. A test that needs a pool roll to land one way
+/// searches for it, so a card or keyword joining the pool moves the position it finds and breaks nothing;
+/// a roll that takes more than a few hundred tries is built directly instead of widening this bound.
+pub const SEED_SEARCH_BOUND: usize = 4000;
+
+// ---------------------------------------------------------------------------------------------
 // ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).
 // ---------------------------------------------------------------------------------------------
 
