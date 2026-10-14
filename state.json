@@ -5502,6 +5502,8 @@
       "run_id": "38578962519",
       "started_at": "2026-10-14T14:16:48Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
