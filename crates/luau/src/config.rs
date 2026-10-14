@@ -12,6 +12,20 @@ pub const LUAU_HOOK_INTERRUPTS: u32 = 1_000_000;
 /// it spent `LUAU_HOOK_INTERRUPTS`.
 pub const LUAU_HOOK_DEPTH: usize = 16;
 
+/// #843: how many bytes a thread's VM may hold, all told: its libraries, its cache of loaded chunks,
+/// what the calls in flight hold and the garbage not yet collected. An allocation that would pass it
+/// fails, and so does the hook call that asked, naming its card, so a call that builds one huge
+/// string or table without looping (`string.rep`), which spends no interrupts, is bounded too. A
+/// sandbox holding 370 loaded chunks of a two-reader fixture peaked at about 2.5 MB over 200,000
+/// module runs (measured for #843), so a card's hook never comes near it.
+pub const LUAU_MEMORY_BYTES: usize = 64 * 1024 * 1024;
+
+/// #843: how many bytes the VM may hold when an outermost hook call begins before the call first
+/// collects all its garbage. Luau collects nothing when an allocation fails, so the garbage of a call
+/// that ran out of memory would fail the next one too. Half `LUAU_MEMORY_BYTES`, which a VM serving
+/// cards' hooks never comes near, so the collection runs only after a call that took that much.
+pub const LUAU_MEMORY_COLLECT_BYTES: usize = LUAU_MEMORY_BYTES / 2;
+
 /// #442 L5: the optimization level `compile` asks of Luau's compiler: mlua's default, stated so that
 /// a bump of `mlua` cannot change it. Level 2 folds `math`'s constants (`math.pi`, `math.huge`, …)
 /// into the bytecode without reading the global the sandbox removed, and no disabled builtin turns
