@@ -949,11 +949,16 @@ mod determinize_b12 {
      {
         jackioh_cards::register_all();
         let face_down = ["core-018", "core-041", "core-060", "core-071", "core-085"];
-        // Every trap of every set is shown but four, so four unseen traps are left for five lanes.
+        // Every card a hidden backrow card may be (a trap of any set, or a card that prints Cloaked,
+        // R783009: Cloaked Toe Cracker) is shown but four traps, so four unseen traps are left for
+        // five lanes.
         let unshown = ["core-018", "core-060", "core-071", "core-085"];
-        let shown: Vec<String> = trap_pool()
-            .into_iter()
+        let mut candidates = trap_pool();
+        candidates.extend(jackioh_engine::alt_play::printed_cloaked_def_ids());
+        let shown: Vec<String> = candidates
+            .iter()
             .filter(|id| !unshown.contains(&id.as_str()))
+            .cloned()
             .collect();
         let backrow: Vec<Value> = face_down
             .iter()
@@ -970,7 +975,7 @@ mod determinize_b12 {
             .map(|card| card.as_ref().map(|card| card.id.clone()))
             .collect();
         assert!(lanes.iter().all(Option::is_some));
-        let traps: IndexSet<String> = trap_pool().into_iter().collect();
+        let traps: IndexSet<String> = candidates.into_iter().collect();
         let costs: Vec<i32> = state.players[PlayerId::P2]
             .backrow
             .iter()
@@ -1009,7 +1014,7 @@ mod determinize_b12 {
             );
             // Lane 4 shows (1) with no unseen (1) left, so it falls back to the pool's only unseen trap.
             assert_eq!(samples[3], "core-085", "seed {k}");
-            // Lane 5, showing (2) with nothing unseen left, takes any trap.
+            // Lane 5, showing (2) with nothing unseen left, takes any card of the pool.
         }
     }
 

@@ -67,10 +67,11 @@ pub struct PlagueSpend {
     pub tokens: i32,
 }
 
-/// ME-ALTPLAY, R1040, R1044: when a card played face-down as a Trap reveals — the end of the turn it
-/// was set in, the start of its controller's next turn, or the end of their next turn. A Unit set
-/// under Knowledge Breaker's Aura reveals at the start of the next turn only (R1041); a Spell set
-/// under Paranoia's at any of the three, chosen as it is played.
+/// R783004, R1040, R1044: how a card played face-down as a Trap reveals. A Cloaked card is set
+/// `cloaked`: it has no timing, and reveals only when its controller activates its Reveal (R783006).
+/// The three timings — the end of the turn it was set in, the start of its controller's next turn,
+/// the end of their next turn — were ME-ALTPLAY's, the face-down play Knowledge Breaker and Paranoia
+/// granted until patch v0.3.7; nothing offers one now, and they stay so old records still read.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
     feature = "ts",
@@ -82,10 +83,12 @@ pub enum RevealAt {
     EndOfThisTurn,
     StartOfNextTurn,
     EndOfNextTurn,
+    Cloaked,
 }
 
 impl RevealAt {
-    /// Every timing, in the order a turn meets them.
+    /// Every timing, in the order a turn meets them (none offered since patch v0.3.7). `Cloaked` is no
+    /// timing and is not one of them.
     pub const ALL: [RevealAt; 3] = [
         RevealAt::EndOfThisTurn,
         RevealAt::StartOfNextTurn,
@@ -115,10 +118,11 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         embiggen: Option<bool>,
-        /// R1086: play this Magnetic card onto one of its controller's Units (ME-MAGNETIC).
-        #[serde(default, skip_serializing_if = "Option::is_none")]
+        /// R1086: play this Equip card onto one of its controller's Units (ME-EQUIP). A log
+        /// recorded before the rename spells it `magnetic`, which reads as it (R781000).
+        #[serde(default, alias = "magnetic", skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
-        magnetic: Option<bool>,
+        equip: Option<bool>,
         /// Units sacrificed to pay a Tribute cost (§6.3).
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -134,9 +138,9 @@ pub enum ActionBody {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         plague: Option<PlagueSpend>,
-        /// ME-ALTPLAY, R1040, R1044: play the card face-down into the backrow as a Trap that reveals
-        /// at this timing — a Unit under Knowledge Breaker's Aura, a Spell under Paranoia's. Absent,
-        /// the card is played as it is printed.
+        /// R783004, R1040, R1044: play the card face-down into the backrow as a Trap by its Cloaked
+        /// (`cloaked`, the one way offered since patch v0.3.7). Absent, the card is played as it is
+        /// printed.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         face_down: Option<RevealAt>,
@@ -343,7 +347,7 @@ mod tests {
                 }),
                 x: None,
                 embiggen: None,
-                magnetic: None,
+                equip: None,
                 tributes: None,
                 targets: Some(vec![Selection::Hero { player: PlayerId::P2 }, Selection::None]),
                 modes: None,

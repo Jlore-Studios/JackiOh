@@ -38,8 +38,8 @@ const LIBRARY: [&str; 10] = [VANILLA; 10];
 /// On these seeds #63 Plastic Surgery's first random keyword is Reborn. The Gravedigger scenario
 /// draws from a fuller pool at another rng cursor than a unit that already has Rush (Fed Fauci), so
 /// it carries its own seed.
-const REBORN_SEED: &str = "re-entry-reborn-token-32"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31".
-const REBORN_SEED_DIGGER: &str = "re-entry-reborn-token-40"; // Same history: R49's Deft moved the roll off "-31".
+const REBORN_SEED: &str = "re-entry-reborn-token-34"; // R346 put Pierce in the pool, which moved the roll off "-4"; R636's Windfury moved it off "-10" and "-19"; R49's Deft moved it off "-31"; R781005's combat keyword pool moved it off "-32".
+const REBORN_SEED_DIGGER: &str = "re-entry-reborn-token-46"; // Same history: R49's Deft moved the roll off "-31", R781005's pool off "-40".
 
 use super::scenario;
 

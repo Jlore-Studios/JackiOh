@@ -188,7 +188,8 @@ pub fn target_answer(
 }
 
 /// R450, E35: the options a `target` prompt may offer its chooser — none they could not pay to target,
-/// and none Immune to Spells when a Spell asks. Every other prompt keeps its options.
+/// none Immune to Spells when a Spell asks, and none Immutable in play when a Spell, a Field Spell or a
+/// Field Trap asks (R781001). Every other prompt keeps its options.
 pub fn targetable_options(state: &GameState, args: &OpenPromptArgs) -> Vec<PromptOption> {
     if args.kind != PromptKind::Target {
         return args.options.to_vec();
@@ -211,7 +212,8 @@ pub fn targetable_options(state: &GameState, args: &OpenPromptArgs) -> Vec<Promp
             if card.zone.z() != ZoneName::Field {
                 return true;
             }
-            crate::targeting::may_target(state, args.player, spell_source, card, None)
+            !crate::restrictions::immutable_bars(state, source, card)
+                && crate::targeting::may_target(state, args.player, spell_source, card, None)
         })
         .cloned()
         .collect()

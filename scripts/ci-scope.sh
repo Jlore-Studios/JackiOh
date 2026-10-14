@@ -216,7 +216,7 @@ for file in $files; do
     docs/* | spec/* | training/* | reviews/* | analysis/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     render.yaml | crates/server/Dockerfile | vercel.json | wrangler.jsonc | eslint.config.js | vitest.config.ts) ;;
-    scripts/promote-production.sh | scripts/vercel-ignore.sh | scripts/vercel-install.sh | scripts/worktree.sh) ;;
+    scripts/browse.sh | scripts/promote-production.sh | scripts/vercel-ignore.sh | scripts/vercel-install.sh | scripts/worktree.sh) ;;
     *) on e2e ;;
   esac
 done

@@ -1,6 +1,7 @@
 // R373: player-facing client text says Deck and Tribute, never library or sacrifice.
 // R432: a cost is "(N) Cost" as a noun and "costs (N)" as a verb.
 // R1320: player-facing text says Nerf and Buff, not Degrade or Upgrade.
+// R781000: Magnetic is Equip; the old word is left only where the past is shown as it was.
 // The source guards parse strings, templates and JSX, excluding comments and lower-case machine words.
 // `cards/glossary.ts` retains SPEC text and converts it through `inPlayerWords`.
 
@@ -262,5 +263,48 @@ describe("R724001 players read a patch's note in today's words", () => {
       .filter(({ text }) => OLD_WORDS.test(text) || oldCostWords(text) || OLD_TUNING_WORDS.test(text))
       .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
     expect(found).toEqual([]);
+  });
+});
+
+/** R781000: the keyword's old name, in any form. */
+const OLD_EQUIP_WORD = /\bmagnetic\b/i;
+
+/** R781000: a player note may say the old name only to say what it became. */
+function namesTheRename(text: string): boolean {
+  return OLD_EQUIP_WORD.test(text) && /\bEquip\b/.test(text);
+}
+
+describe("R781000 players read Equip, the keyword Magnetic became", () => {
+  it("R781000 no text in the client, no card, flavour or voice line and no Chinese string says Magnetic", () => {
+    const files = sources(SRC);
+    expect(files.length).toBeGreaterThan(100);
+    const client = files
+      .flatMap(wordsIn)
+      .filter(({ text }) => OLD_EQUIP_WORD.test(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(client).toEqual([]);
+    const cards = Object.values(CATALOG).flatMap((card) =>
+      [card.name, card.base.text, card.radiant.text]
+        .filter((text) => OLD_EQUIP_WORD.test(text))
+        .map((text) => `${card.id}: ${JSON.stringify(text)}`),
+    );
+    expect(cards).toEqual([]);
+    expect(CATALOG["meditative-067"]?.base.text).toMatch(/^Equip\n/);
+    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+      entry.flavour !== undefined && OLD_EQUIP_WORD.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
+    );
+    expect(flavour).toEqual([]);
+    expect(voiceLineTexts().filter((text) => OLD_EQUIP_WORD.test(text))).toEqual([]);
+    const chinese = readFileSync(join(SRC, "i18n/zh-CN.json"), "utf8");
+    expect(OLD_EQUIP_WORD.test(chinese)).toBe(false);
+  });
+
+  it("R781000 a player note says Magnetic only to name its rename to Equip", () => {
+    const found = playerNoteTexts()
+      .filter(({ text }) => OLD_EQUIP_WORD.test(text) && !namesTheRename(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(found).toEqual([]);
+    expect(namesTheRename("Magnetic is now called Equip.")).toBe(true);
+    expect(namesTheRename("Play it Magnetic onto a Unit.")).toBe(false);
   });
 });

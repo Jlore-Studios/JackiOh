@@ -1,14 +1,21 @@
-//! C #6 Cloaked Toe Cracker (SPEC §8.6 row 6, §6.3 Cost, §6.3 Mana; R33, R65, R70). Unit, Human,
-//! cost 2, Common, 3/4 → 6/8. Base "Aura: Your Traps cost (0)."; Radiant adds "After you play a Trap,
-//! gain {mana} mana."
+//! C #6 Cloaked Toe Cracker (SPEC §8.6 row 6, §6.3 Cost, §6.3 Mana; R33, R65, R70, R783005). Unit,
+//! Human, cost 2, Common, 3/4 → 6/8. Base "Cloaked\nAura: Your Traps cost (0)."; Radiant adds "After you
+//! play a Trap, gain {mana} mana."
+//!
+//! CLOAKED is printed on both faces (since patch v0.3.7): it may be set face-down from hand at its own
+//! (2) and revealed by its Reveal (`alt_play`, R783004–R783006). Set, it is a Field Trap whose text is
+//! dormant, so neither its Aura nor its trigger acts until it reveals.
 //!
 //! THE AURA is a price rule the card lays while it acts on the field (B5 E15, `Script.costAura`): "costs
 //! (0)" on its controller's Traps and Field Traps ("Trap" names "Field Trap" too). A price is a play's,
-//! so it reaches the cards a play takes (the hand, R65) and lasts only while the card stands.
+//! so it reaches the cards a play takes (the hand, R65) and lasts only while the card stands. A card set
+//! by its Cloaked is priced as the card it is in hand (R783005), so the Aura never makes one free.
 //!
 //! THE RADIANT TRIGGER answers every `cardPlayed` of a Trap or Field Trap by its controller, a cast
 //! included (R70), and gains the card's declared mana (`param(ctx, "mana")`) for this turn (§6.3 Mana).
-//! The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the opponent (R33, R97).
+//! The played card is read as it stands, so a Cloaked card's face-down play, a Trap play (R783005),
+//! answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the
+//! opponent (R33, R97).
 
 use jackioh_engine::effects::gain_mana;
 use jackioh_engine::prelude::*;
@@ -37,13 +44,22 @@ fn aura() -> CostAuraHook {
 /// with nothing.
 fn after_you_play_a_trap() -> TriggerDef {
     TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
-        let GameEvent::CardPlayed { player, def_id, .. } = event else {
+        let GameEvent::CardPlayed {
+            player,
+            instance_id,
+            def_id,
+            ..
+        } = event
+        else {
             return vec![];
         };
         if *player != ctx.controller {
             return vec![];
         }
-        if !TRAP_TYPES.contains(&def_of(Some(&*ctx.state), def_id).type_) {
+        // R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.
+        let played = find_instance(ctx.state, instance_id)
+            .map_or_else(|| def_of(Some(&*ctx.state), def_id).type_, |card| card_type_of(ctx.state, card));
+        if !TRAP_TYPES.contains(&played) {
             return vec![];
         }
         vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))]
@@ -215,8 +231,119 @@ mod tests {
             }
         }
 
+        /// The Toe Cracker in p1's hand.
+        fn cracker_in_hand(s: &Scenario) -> String {
+            s.hand(P1)
+                .iter()
+                .find(|card| card.def_id == CRACKER)
+                .map(|card| card.id.clone())
+                .expect("a Toe Cracker in hand")
+        }
+
+        /// R783004: set the Toe Cracker in hand face-down by its Cloaked into backrow lane 1; its fresh id.
+        fn set_cracker(s: &mut Scenario) -> String {
+            let id = cracker_in_hand(s);
+            s.play(&id, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
+            s.backrow(P1, 1).expect("the set Toe Cracker").id
+        }
+
+        fn reveal(s: &mut Scenario, id: &str) {
+            s.activate(id, json!({ "ability": jackioh_engine::alt_play::CLOAKED_REVEAL }));
+        }
+
+        mod cloaked {
+            use super::*;
+
+            #[test]
+            fn r783004_both_faces_print_cloaked_before_the_aura() {
+                crate::register_all();
+                let def = crate::card_def(CRACKER);
+                for face in [&def.base, &def.radiant] {
+                    assert_eq!(face.keywords, vec![Keyword::Cloaked]);
+                    assert!(face.text.starts_with("Cloaked\nAura: Your Traps cost (0)."), "{}", face.text);
+                }
+            }
+
+            #[test]
+            fn r783005_set_face_down_it_pays_its_own_2_with_or_without_another_toe_cracker() {
+                crate::register_all();
+                for beside in [false, true] {
+                    let field = if beside { json!([{ "def": CRACKER, "lane": 3 }]) } else { json!([]) };
+                    let mut s = scenario(json!({
+                        "p1": { "hand": [CRACKER, STOCKPILE], "field": field },
+                        "p2": { "hand": [STOCKPILE] },
+                    }));
+                    let id = cracker_in_hand(&s);
+                    assert!(
+                        legal_actions(s.state(), P1).iter().any(|action| matches!(action,
+                            ActionBody::Play { instance_id, face_down: Some(RevealAt::Cloaked), .. } if *instance_id == id)),
+                        "offered Cloaked"
+                    );
+                    set_cracker(&mut s);
+                    // A Unit set by its Cloaked is priced as the Unit, so the Aura's (0) misses it.
+                    s.expect_mana(P1, 2);
+                }
+            }
+
+            #[test]
+            fn r783006_set_its_aura_is_dormant_revealed_it_is_a_3_4_and_the_aura_starts() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [CRACKER, EXPERIMENT, STOCKPILE] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                let set = set_cracker(&mut s);
+                assert_eq!(cost_of(&s, EXPERIMENT), 2, "face-down, its Aura does not act");
+                // The opponent reads a face-down card, never the Toe Cracker.
+                assert!(!js(&s.view(P2)).to_string().contains(CRACKER));
+                reveal(&mut s, &set);
+                let unit = s.unit(P1, 1).expect("it animated into its own lane");
+                assert_eq!(unit.def_id, CRACKER);
+                s.expect_stats(unit.id.as_str(), json!({ "attack": 3, "health": 4, "maxHealth": 4 }));
+                assert_eq!(cost_of(&s, EXPERIMENT), 0, "revealed, its Aura acts");
+            }
+        }
+
         mod radiant {
             use super::*;
+
+            #[test]
+            fn r783005_a_set_toe_cracker_is_a_trap_play_another_radiant_one_gains_mana_its_own_trigger_sleeps() {
+                crate::register_all();
+                // Beside a face-up Radiant Toe Cracker, setting this one is a Trap play: +1 mana.
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, STOCKPILE], "field": [{ "def": CRACKER, "radiant": true, "lane": 3 }] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                set_cracker(&mut s);
+                s.expect_mana(P1, 3);
+                // Alone, its own trigger is dormant face-down: no mana for its own set, nor for a Trap
+                // played after it.
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                set_cracker(&mut s);
+                s.expect_mana(P1, 2);
+                s.play(EXPERIMENT, json!({ "zone": 2 }));
+                s.expect_mana(P1, 0);
+            }
+
+            #[test]
+            fn r783006_revealed_it_is_a_6_8_its_traps_cost_0_and_a_trap_gains_1() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": CRACKER, "radiant": true }, EXPERIMENT, STOCKPILE] },
+                    "p2": { "hand": [STOCKPILE] },
+                }));
+                let set = set_cracker(&mut s);
+                reveal(&mut s, &set);
+                let unit = s.unit(P1, 1).expect("revealed").id;
+                s.expect_stats(unit.as_str(), json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
+                assert_eq!(cost_of(&s, EXPERIMENT), 0);
+                s.play(EXPERIMENT, json!({ "zone": 2 }));
+                s.expect_mana(P1, 3);
+            }
 
             #[test]
             fn is_a_6_8_with_the_same_aura() {

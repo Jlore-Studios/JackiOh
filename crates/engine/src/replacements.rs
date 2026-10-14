@@ -757,6 +757,8 @@ pub fn answer_targeting(
             arrived_during: None,
             exits_from: None,
         });
+        // R783010: a Crater Joro Locks the zone it was summoned into.
+        crate::crater::lock_on_arrival(sink, &card.id);
         sink.events.push(GameEvent::Redirected {
             what: match what {
                 TargetedWhat::Attack => RedirectWhat::Attack,

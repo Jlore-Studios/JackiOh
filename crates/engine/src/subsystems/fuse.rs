@@ -874,6 +874,19 @@ fn eager_read<R: 'static>(values: Vec<Option<ReadListHook<R>>>) -> Option<ReadLi
     }
 }
 
+/// R1045: a number read of `{ state, self, radiant }` that several ingredients give (`revealEcho`): the
+/// largest of their answers, as several Radiant Paranoias add one Echo, not their sum.
+fn largest_read(values: Vec<Option<crate::script::RevealEchoHook>>) -> Option<crate::script::RevealEchoHook> {
+    let defined: Vec<crate::script::RevealEchoHook> = values.into_iter().flatten().collect();
+    match defined.len() {
+        0 => None,
+        1 => defined.into_iter().next(),
+        _ => Some(Arc::new(move |args| {
+            defined.iter().map(|f| f(args)).max().unwrap_or(0)
+        })),
+    }
+}
+
 /// `eager_read` for a read of the condition context (`preview`, R280).
 fn eager_condition<R: 'static>(values: Vec<Option<ConditionListHook<R>>>) -> Option<ConditionListHook<R>> {
     let defined: Vec<ConditionListHook<R>> = values.into_iter().flatten().collect();
@@ -1131,6 +1144,7 @@ fn combine_objects(records: &[Script]) -> Script {
         death: hooks(|s| s.death.clone(), "death"),
         start_of_game: hooks(|s| s.start_of_game.clone(), "startOfGame"),
         enters_hand: hooks(|s| s.enters_hand.clone(), "entersHand"),
+        fused_into: hooks(|s| s.fused_into.clone(), "fusedInto"),
         resume: combine_resume(records),
         delayed: hooks(|s| s.delayed.clone(), "delayed"),
         set_stat: None,
@@ -1163,7 +1177,7 @@ fn combine_objects(records: &[Script]) -> Script {
         target_checks: combine_target_checks(records),
         cost_aura: eager_read(records.iter().map(|s| s.cost_aura.clone()).collect()),
         graveyard_play: eager_read(records.iter().map(|s| s.graveyard_play.clone()).collect()),
-        face_down_play: eager_read(records.iter().map(|s| s.face_down_play.clone()).collect()),
+        reveal_echo: largest_read(records.iter().map(|s| s.reveal_echo.clone()).collect()),
         targeting_discards: None,
         records_play_as: None,
         draw_limit: eager_read(records.iter().map(|s| s.draw_limit.clone()).collect()),
@@ -2110,6 +2124,10 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
         // has its power keeps it (`hero_power::ensure_power`). A crafted card rolls as it reaches the hand.
         let controller = result.controller;
         let _ = crate::prompts::run_start_of_game(sink, &result, controller);
+        // R781004: and a text that draws for its own card (Keymaster Keenus's Aura) draws for this one.
+        if let Some(live) = find_instance(sink.state, &result.id).cloned() {
+            let _ = crate::prompts::run_fused_into(sink, &live, controller);
+        }
         find_instance(sink.state, &result.id).cloned().unwrap_or(result)
     } else {
         let player = to_hand?;

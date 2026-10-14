@@ -3,7 +3,6 @@
 //! files are part 24's.
 
 pub mod activate;
-pub mod alt_play;
 pub mod blueprint;
 pub mod board_history;
 pub mod call_to_chaos_meditative;
@@ -24,6 +23,7 @@ pub mod generation;
 pub mod harness;
 pub mod instance_data;
 pub mod jade;
+pub mod keywords_783;
 pub mod kill_credit;
 pub mod ky_test;
 pub mod last_boards;

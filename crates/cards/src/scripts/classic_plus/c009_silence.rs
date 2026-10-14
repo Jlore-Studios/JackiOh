@@ -23,8 +23,9 @@ pub fn script() -> CardScripts {
 }
 
 // C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9: "Vanilla a target Unit on either side:
-// printed keywords and text gone, stats, buffs, damage and granted keywords kept (§10.4); an Immutable
-// Unit is unchanged (R23); radiant any permanent (R407): a Vanilla Field Spell's aura stops, a Vanilla
+// printed keywords and text gone, back to its printed stats (its buffs gone, R781003), damage and granted
+// keywords kept (§10.4), a Unit the lost stats would kill left at 1 health; an Immutable Unit in play is
+// no target (R781001) and unchanged (R23); radiant any permanent (R407): a Vanilla Field Spell's aura stops, a Vanilla
 // face-down trap never fires and sits inert, an Animated card loses Animated where it stands and no
 // longer moves; an enemy face-down trap is offered by id only and the Vanilla on it names nothing to the
 // caster (R97, R177)".
@@ -95,7 +96,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn s10_4_an_enemy_unit_loses_its_printed_keywords_and_text_and_keeps_its_stats_buffs_damage_and_granted_keywords() {
+        fn r781003_an_enemy_unit_loses_its_printed_keywords_text_and_buffs_and_keeps_its_damage_and_granted_keywords() {
             crate::register_all();
             let mut s = setup(
                 json!({ "hand": [{ "def": SILENCE }, SURGERY, FILLER] }),
@@ -106,15 +107,58 @@ mod tests {
             s.play(SURGERY, json!({ "targets": at(&menace.id) }));
             let granted: Vec<KeywordKind> = s.card(&menace).granted_keywords.iter().map(|k| k.kind()).collect();
             assert_eq!(granted.len(), 1);
+            s.expect_stats(&menace, json!({ "attack": 12, "maxHealth": 12, "health": 9 }));
 
             s.play(SILENCE, json!({ "targets": at(&menace.id) }));
 
             assert!(s.card(&menace).vanilla);
-            s.expect_stats(&menace, json!({ "attack": 12, "maxHealth": 12, "health": 9 }));
+            // Back to the 9/9 it prints: Plastic Surgery's +3/+3 goes, its 3 damage stays.
+            s.expect_stats(&menace, json!({ "attack": 9, "maxHealth": 9, "health": 6 }));
+            assert_eq!((s.card(&menace).buffs.attack, s.card(&menace).buffs.health), (0, 0));
+            assert_eq!(s.card(&menace).damage, 3);
             let now = kinds(&s, &menace.id);
             assert_eq!(now, granted);
             assert!(!now.contains(&KeywordKind::Taunt)); // R21 never grants a keyword the unit has, so Taunt was printed only
             s.expect_events(json!(["transformed"]));
+        }
+
+        #[test]
+        fn r781003_a_unit_the_lost_stats_would_kill_stays_alive_at_1_health() {
+            crate::register_all();
+            let mut s = setup(
+                json!({ "hand": [{ "def": SILENCE }, SURGERY, FILLER] }),
+                json!({ "field": [VANILLA] }),
+                false,
+            );
+            let vanilla = s.card(VANILLA).clone();
+            s.play(SURGERY, json!({ "targets": at(&vanilla.id) }));
+            // 5 damage on the buffed 7/7, more than the 4 health it prints.
+            s.card_mut(&vanilla).damage = 5;
+            s.expect_stats(&vanilla, json!({ "maxHealth": 7, "health": 2 }));
+
+            s.play(SILENCE, json!({ "targets": at(&vanilla.id) }));
+
+            s.expect_in_zone(&vanilla, "field");
+            s.expect_stats(&vanilla, json!({ "attack": 4, "maxHealth": 4, "health": 1 }));
+            assert_eq!(s.card(&vanilla).damage, 3);
+        }
+
+        #[test]
+        fn r781003_a_radiant_unit_stays_radiant_at_its_radiant_faces_numbers() {
+            crate::register_all();
+            let mut s = setup(
+                json!({ "hand": [{ "def": SILENCE }, SURGERY, FILLER] }),
+                json!({ "field": [{ "def": VANILLA, "radiant": true }] }),
+                false,
+            );
+            let vanilla = s.card(VANILLA).clone();
+            s.play(SURGERY, json!({ "targets": at(&vanilla.id) }));
+
+            s.play(SILENCE, json!({ "targets": at(&vanilla.id) }));
+
+            assert!(s.card(&vanilla).radiant);
+            // Mr. Vanilla's Radiant face prints 12/12, not its base 4/4.
+            s.expect_stats(&vanilla, json!({ "attack": 12, "maxHealth": 12, "health": 12 }));
         }
 
         #[test]
@@ -141,12 +185,14 @@ mod tests {
         }
 
         #[test]
-        fn r23_an_immutable_unit_is_unchanged() {
+        fn r781001_r23_an_immutable_unit_in_play_is_no_target_and_keeps_its_text() {
             crate::register_all();
             let mut s = setup(json!({}), json!({ "field": [{ "def": MENACE, "radiant": true }] }), false);
             let menace = s.card(MENACE).clone();
 
-            s.play(SILENCE, json!({ "targets": at(&menace.id) }));
+            s.expect_refused(|s| s.play(SILENCE, json!({ "targets": at(&menace.id) })));
+            // With no other Unit it is played with no pick and fizzles (R90).
+            s.play(SILENCE, json!({}));
 
             assert!(!s.card(&menace).vanilla);
             let now = kinds(&s, &menace.id);

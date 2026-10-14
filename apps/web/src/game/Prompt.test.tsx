@@ -427,14 +427,14 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     const view = viewWith();
     const interaction = playing([
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
-      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, equip: true },
     ]);
 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("mode");
     expect(optionTestids()).toEqual(["prompt-option-true", "prompt-option-false"]);
-    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Magnetic");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Equip");
     expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Stack");
 
     fireEvent.click(screen.getByTestId("prompt-option-true"));
@@ -443,7 +443,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       type: "play",
       instanceId: "h1",
       zone: { row: "units", lane: 1 },
-      magnetic: true,
+      equip: true,
     });
   });
 
@@ -748,6 +748,40 @@ describe("R1044 the face-down picker asks how to play it", () => {
       instanceId: "h1",
       zone: { row: "units", lane: 3 },
     });
+    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+  });
+
+  it("R783004 offers a Cloaked set as its own choice", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const view = viewWith();
+    const cloaked = {
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "backrow", lane: 1 },
+      faceDown: "cloaked",
+    } as const;
+    const interaction = playing([{ type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } }, cloaked]);
+
+    render(
+      <Prompt
+        view={view}
+        interaction={interaction}
+        legal={interaction.stage === "playing" ? interaction.candidates : []}
+        onAction={onAction}
+        onInteraction={onInteraction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("mode");
+    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(optionTestids()).toEqual(["prompt-option-up", "prompt-option-cloaked"]);
+    expect(screen.getByText("Play it face-up")).not.toBeNull();
+    expect(screen.getByText("Set face-down: reveal it with its Activate")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-cloaked"));
+
+    expect(onAction).toHaveBeenCalledWith(cloaked);
     expect(onInteraction).toHaveBeenCalledWith(IDLE);
   });
 });

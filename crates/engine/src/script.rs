@@ -783,23 +783,9 @@ pub struct GraveyardPlayPermission {
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
-/// ME-ALTPLAY, R1040, R1044: the permission this card gives its controller to play cards face-down
-/// as Traps — Units under Knowledge Breaker's Aura, Spells under Paranoia's. `echo` is the Echo a
-/// Radiant Paranoia adds to a set Spell (R1045), once per play.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct FaceDownPlayPermission {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub units: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub spells: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub echo: Option<i32>,
-}
-
-/// ME-ALTPLAY, R1040, R1044: the face-down play permissions this card grants while it acts.
-pub type FaceDownPlayHook =
-    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<FaceDownPlayPermission> + Send + Sync>;
+/// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their field
+/// (Radiant Paranoia's "Spells you reveal have Echo +{echo}"), read as the Spell reveals. 0 adds none.
+pub type RevealEchoHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
@@ -869,6 +855,10 @@ pub struct Script {
     /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
     /// on every hand arrival, after R151's start-of-game clause.
     pub enters_hand: Option<Hook>,
+    /// R781004: run on the card a Fuse keeps, once this card's text is fused into it (Meditative #65
+    /// Keymaster Keenus's Equip play), as R43's start-of-game roll is: what this text drew for its own
+    /// card ceased to exist with it, so the kept card draws its own.
+    pub fused_into: Option<Hook>,
     /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
@@ -913,9 +903,9 @@ pub struct Script {
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
-    /// ME-ALTPLAY, R1040, R1044: the permissions this card gives its controller to play cards
-    /// face-down as Traps.
-    pub face_down_play: Option<FaceDownPlayHook>,
+    /// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their
+    /// field (`alt_play::reveal_echo_bonus`).
+    pub reveal_echo: Option<RevealEchoHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
     /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
@@ -1028,7 +1018,8 @@ pub struct Script {
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
     /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
-    /// "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn".
+    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack",
+    /// "startOfOpponentTurn".
     /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
@@ -1036,6 +1027,7 @@ impl Script {
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
             "entersHand" => self.enters_hand.as_ref(),
+            "fusedInto" => self.fused_into.as_ref(),
             "delayed" => self.delayed.as_ref(),
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),

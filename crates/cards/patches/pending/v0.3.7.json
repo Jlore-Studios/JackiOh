@@ -1,0 +1,45 @@
+{
+  "version": "v0.3.7",
+  "title": "Patch v0.3.7: the keyword update: Ranged, Flying, Cloaked, Crater and Flashback, Magnetic renamed Equip, Immutable and Vanilla",
+  "sources": "issue #781, issue #783",
+  "notes": "The keyword update. Five keywords join the game (R783000 to R783013): Ranged, Flying, Cloaked, Crater and Flashback. Magnetic is renamed Equip, its old name read as Equip in the shipped snapshots and recorded logs (R781000). Immutable keeps what it did and, while in play, can't be targeted by Spells, Field Spells or Field Traps (R781001, R781002); no card's data changes for it. Vanilla returns a card to its printed stats, never killing it (R781003). The random keyword pool is the combat keyword pool, eighteen keywords in the designer's order (R781005), and the ten faces that draw from it say so. Keymaster Keenus prints Equip and an Aura of 5 (Radiant 10) random combat keywords (R781004). Knowledge Breaker, its Prime and Paranoia lend Cloaked in place of ME-ALTPLAY's face-down permission, which is gone (R1040 to R1046); Cloaked Toe Cracker prints Cloaked and Doom Shroom Crater (R783005, R783011).",
+  "player": {
+    "title": "Keyword update",
+    "new": [
+      "Five keywords: Ranged, Flying, Cloaked, Crater and Flashback.",
+      "Combat keyword: the name of the keywords a random keyword comes from, eighteen of them, listed in the glossary."
+    ],
+    "balance": [],
+    "changes": [
+      "Random keywords now come from the combat keywords, which adds Flying, Ranged, Indestructible and Spell Damage +1.",
+      "Immutable: while it is in play, Spells, Field Spells and Field Traps can't target it.",
+      "Vanilla returns a Unit to the attack and health printed on its face; one that would die from it stays at 1 health.",
+      "Prejudiced Postdoc's Vanilla copy no longer keeps the target's buffs.",
+      "Keymaster Keenus has Equip and an Aura that gives it 5 random combat keywords (Radiant 10), in place of every keyword and its Radiant Death.",
+      "Knowledge Breaker and Knowledge Breaker Prime: \"Aura: Your Units have Cloaked.\"",
+      "Paranoia: \"Aura: Your Spells have Cloaked.\" A Spell you set costs its own price and reveals when you choose.",
+      "Radiant Paranoia: \"Spells you reveal have Echo +1.\"",
+      "Cloaked Toe Cracker has Cloaked, and its Aura never makes a Cloaked card free.",
+      "Doom Shroom has Crater in place of \"Lock this zone.\""
+    ],
+    "text": [
+      "Magnetic is now called Equip.",
+      "Plastic Surgery, Zao Gao and the Conjure Rush Token cards say \"random combat keyword\"."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-063",
+    "core-080",
+    "classic-006",
+    "classicplus-001",
+    "classicplus-015",
+    "classicplus-016",
+    "classicplus-017",
+    "meditative-045",
+    "meditative-045-1",
+    "meditative-065",
+    "meditative-067",
+    "meditative-099"
+  ]
+}

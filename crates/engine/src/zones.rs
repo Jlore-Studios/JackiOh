@@ -467,7 +467,7 @@ fn set_carried(side: &mut PlayerState, lane: i32, card: Option<CardInstance>) {
 /// (R446). Its face, not where it stands: an animated card in a unit zone is a Unit there (R383) but
 /// never a Unit face, so it never lands on a carrier.
 fn is_unit_face(state: &GameState, instance: &CardInstance) -> bool {
-    // R1040: a Unit set face-down under Knowledge Breaker's Aura stands in the backrow as a Field Trap.
+    // R1040: a Unit set face-down by its Cloaked stands in the backrow as a Field Trap.
     if instance.set_as.is_some() {
         return false;
     }

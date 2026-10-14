@@ -2,9 +2,10 @@
 //! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
 //! unit", which per §8's Conventions restates only which units the pick may name.
 //!
-//! The copy is R57's (form, radiant flag and buffs carried; damage, exertion and counters reset) with
-//! two deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla
-//! flag is on and it has no granted keywords (BUILD M4-T4 #8). R23: Immutable blocks Vanilla on the
+//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) with three
+//! deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla flag is
+//! on, so it is at its printed stats with no buffs (R781003), and it has no granted keywords (BUILD
+//! M4-T4 #8). R23: Immutable blocks Vanilla on the
 //! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
 //!
 //! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
@@ -51,7 +52,7 @@ pub fn script() -> CardScripts {
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
 //
-// Must-pass: "Vanilla copy of a Human keeps the target's form and buffs, no keywords or text, no
+// Must-pass: "Vanilla copy of a Human keeps the target's form at its printed stats, no buffs (R781003), no keywords or text, no
 // damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
 mod tests {
@@ -100,7 +101,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r57_the_copy_keeps_the_target_s_buffs_and_resets_its_damage() {
+        fn r781003_the_copy_is_at_its_printed_stats_with_no_buffs_and_no_damage() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SURGERY, POSTDOC], "mana": 8 },
@@ -115,8 +116,10 @@ mod tests {
 
             let copy = unit_at(&s, P1, COPY_LANE);
             assert_eq!(copy.def_id, TIMMY);
-            // The target's form and buffs, at full health: R57 copies buffs and resets damage.
-            s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
+            // The target's form at its printed 3/3: a Vanilla copy is a Vanilla'd Unit like any other, so
+            // the buffs R57 would carry go (R781003), and R57 resets its damage.
+            s.expect_stats(&copy, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
+            assert_eq!((copy.buffs.attack, copy.buffs.health), (0, 0));
             assert_eq!(copy.damage, 0);
         }
 

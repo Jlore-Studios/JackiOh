@@ -39,6 +39,8 @@
 //! TS's `string | null` refusals are `Result<(), EngineError>` with TS's text (SURFACE §4.4.9). TS
 //! wrote the use count through the live card; here it is written on the card in the state, by id.
 
+use std::sync::Arc;
+
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -165,10 +167,38 @@ pub fn is_acting_on_field(state: &GameState, card: &CardInstance) -> bool {
     !(at.row == Row::Backrow && is_face_down(state, card))
 }
 
+/// R783006: a card set face-down by its Cloaked, acting in its zone — the one face-down card with an
+/// ability to use, its Reveal (`abilities_of`).
+fn reveals_cloaked(state: &GameState, card: &CardInstance) -> bool {
+    crate::alt_play::is_cloaked_set(card) && slot_of(state, card).is_some() && acts_on_field(state, card)
+}
+
+/// R783006: the Reveal a card set by its Cloaked has, and nothing else while it is set: no cost and
+/// no choices, usable while the card can come out whole (`alt_play::reveal_can_complete`). Its effect is
+/// the card's own reveal (`activate_ability`), so its list is empty.
+fn cloaked_reveal_decl() -> ActivationDecl {
+    ActivationDecl {
+        id: crate::alt_play::CLOAKED_REVEAL.to_string(),
+        label: "Reveal".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: Some(Arc::new(|ctx: ConditionContext<'_>| {
+            crate::alt_play::reveal_can_complete(ctx.state, ctx.self_)
+        })),
+        has: None,
+        run: crate::script::hook(|_ctx| Vec::new()),
+    }
+}
+
 /// The abilities the card has now: its running face's (`script_of`, so a Vanilla card has none, §6.3),
 /// ids made unique for a fused card (`script::activation_decls`, R102), less any it does not have on this
-/// instance (`ActivationDecl.has`).
+/// instance (`ActivationDecl.has`). A card set by its Cloaked has its Reveal alone (R783006).
 pub fn abilities_of(state: &GameState, card: &CardInstance) -> Vec<ActivationDecl> {
+    if crate::alt_play::is_cloaked_set(card) {
+        return vec![cloaked_reveal_decl()];
+    }
     activation_decls(&crate::scripts::script_of(state, card))
         .into_iter()
         .filter(|decl| {
@@ -427,7 +457,8 @@ pub fn why_cannot_activate_ability(
     if card.zone.z() != ZoneName::Field {
         return Err("that card is not on the field".into());
     }
-    if !is_acting_on_field(state, card) {
+    // R783006: a card set by its Cloaked is face-down and still has its Reveal to use.
+    if !is_acting_on_field(state, card) && !reveals_cloaked(state, card) {
         return Err(if is_face_down(state, card) {
             "a face-down card has no ability to use".into()
         } else {
@@ -909,6 +940,19 @@ pub fn activate_ability(
         exits_from: exit_mark(sink.state),
     };
 
+    // R783006: a Cloaked card's Reveal is its reveal — the firing a timed reveal is — and spends no
+    // use of the abilities the card has once it is face-up.
+    if crate::alt_play::is_cloaked_set(&card) {
+        let activated = GameEvent::Activated {
+            player,
+            instance_id: card.id.clone(),
+            def_id: card.def_id.clone(),
+            ability: decl.id.clone(),
+        };
+        sink.events.push(activated.clone());
+        crate::alt_play::fire_cloaked_reveal(sink, &card, &activated);
+        return Ok(());
+    }
     mark_use(sink.state, &card.id);
     sink.events.push(GameEvent::Activated {
         player,
@@ -946,7 +990,7 @@ pub fn activation_views_for(
     viewer: PlayerId,
     card: &CardInstance,
 ) -> Option<Vec<ActivationView>> {
-    if !is_acting_on_field(state, card) {
+    if !is_acting_on_field(state, card) && !reveals_cloaked(state, card) {
         return None;
     }
     let abilities: Vec<ActivationDecl> = abilities_of(state, card)
