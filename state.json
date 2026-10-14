@@ -6296,11 +6296,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-14T20:17:42Z",
+        "at": "2026-10-14T23:13:55Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "least sure whether signature-only widening could be medium, but the hard rule names the AI's search (crates/ai/src/) explicitly, so hard holds"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 5 fails outright: this rewrites the AI's search signature and evaluation in crates/ai/src, which the rule rates hard and never easy."
       },
       "failures": 0,
       "forced": false,
