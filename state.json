@@ -6231,6 +6231,13 @@
     "897": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T20:04:27Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "fails easy on lines 1-3 (server and web, a new ruling R897000 and \u00a79.5, ~22 files); not hard: no migration, no engine or AI, one presence check in one sweep"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
