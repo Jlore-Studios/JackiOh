@@ -6439,7 +6439,9 @@
       "requested_by": "jgoetzmann",
       "run_id": "38629025192",
       "started_at": "2026-10-14T20:05:43Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-14T20:22:54Z",
+      "stopped_by": "jgoetzmann",
       "taken_asks": []
     },
     "924": {
