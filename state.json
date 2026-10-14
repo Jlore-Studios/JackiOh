@@ -6268,6 +6268,13 @@
     "898": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T20:17:42Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether signature-only widening could be medium, but the hard rule names the AI's search (crates/ai/src/) explicitly, so hard holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
