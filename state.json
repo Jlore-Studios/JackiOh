@@ -5436,6 +5436,13 @@
     "862": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T14:15:24Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails 'one place': the change spans crates/server and crates/tools; otherwise small, no spec/engine/AI source"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
