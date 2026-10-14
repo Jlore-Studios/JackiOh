@@ -30,7 +30,6 @@ pub const ID: &str = "core-078";
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
