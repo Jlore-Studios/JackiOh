@@ -247,7 +247,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 29,
@@ -568,7 +569,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 24,
@@ -1180,7 +1182,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 15,
@@ -1234,7 +1237,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 50,
@@ -1288,7 +1292,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 29,
@@ -1843,7 +1848,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -1876,7 +1882,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -2004,7 +2011,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -2404,7 +2412,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 17,
@@ -2536,7 +2545,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 9,
@@ -2641,7 +2651,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 32,
@@ -2772,7 +2783,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 29,
@@ -3784,7 +3796,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 8,
@@ -3860,7 +3873,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 43,
@@ -3940,7 +3954,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 15,
@@ -4074,7 +4089,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 42,
@@ -4216,7 +4232,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 7,
@@ -4356,7 +4373,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 30,
@@ -4808,7 +4826,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 26,
@@ -5403,7 +5422,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 16,
@@ -5461,7 +5481,8 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 6,
@@ -5793,7 +5814,8 @@
         "radiant": 2,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 25,
@@ -6734,7 +6756,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 7,
@@ -8192,7 +8215,8 @@
         "radiant": 1,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 24,
@@ -8269,7 +8293,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 12,
@@ -8382,7 +8407,8 @@
         "radiant": 3,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       },
       {
         "key": "setCost",
@@ -8543,7 +8569,8 @@
         "radiant": 30,
         "better": "up",
         "step": 8,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       },
       {
         "key": "damage",
@@ -8551,7 +8578,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 9,
@@ -9354,7 +9382,8 @@
         "radiant": 1,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 23,
@@ -10115,7 +10144,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 11,
@@ -10445,7 +10475,8 @@
         "radiant": 0,
         "better": "down",
         "step": 1,
-        "min": 0
+        "min": 0,
+        "tunedOn": "radiant"
       }
     ],
     "loc": 17,

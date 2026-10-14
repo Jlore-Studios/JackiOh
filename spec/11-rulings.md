@@ -266,4 +266,6 @@ after [[R703]]. It edits [[§10.10]], [[R374]] and [[R639]].
 
 **[[R822000]] retires the Mythic themes and the shared Legendary entrance themes (issue #822, 2026-10-14)**: a card's own intro was followed by a theme taking over the music, and the two clashed. Now no card plays a theme: the intro plays over the result, low-health and station tracks, and the station switches stay. The 17 theme tracks are deleted, their music kept in the Mythics' intros, which were hand-tuned from them. Presentation only. It takes R822000, the first number of issue #822's block, and edits [[§10.11]], [[R631]], [[R1350]], [[R1351]] and [[R1352]].
 
+**[[R824000]] is a number only the Radiant face prints (issue #824, 2026-10-14)**: thirty-one such numbers on thirty cards were still tuned on both faces; each is now tuned on the Radiant face only, as [[R749]] did for two and [[R1431]] for every number only the base face prints, and `catalog check` refuses one left unmarked. It edits [[§6.3]]'s Nerf row, [[§8.6]]'s Tunes paragraph, C+ #32.3's row in [[§8.7]], [[R386]], [[R482]], [[R652]] and [[R749]].
+
 The table's rows are the ruling notes in `rulings/`, one per row (`rulings/R0195.md` is [[R195]]), each with its ruling, the cards and sections it affects, and the tests that prove it. [INDEX.md](INDEX.md) lists them all, one line each.
