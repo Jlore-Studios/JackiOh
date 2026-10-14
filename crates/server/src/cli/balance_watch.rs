@@ -34,6 +34,7 @@ use jackioh_engine::wire::{
 
 use super::card_stats::flag;
 use super::import_dev_records::run_file_path;
+use crate::cli::connect_one;
 use crate::config::{
     BALANCE_WATCH_MIN_GAMES, BALANCE_WATCH_PLAYED_DELTA_THRESHOLD, BALANCE_WATCH_Z_THRESHOLD,
     CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES,
@@ -424,12 +425,7 @@ async fn report_from_store(options: &BalanceWatchOptions) -> anyhow::Result<Bala
     }
 
     // One connection: this process runs one read and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let outcome = balance_watch_report(&db, options).await;
     db.close().await;
     let report = outcome?;

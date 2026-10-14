@@ -24,6 +24,7 @@ use serde::Serialize;
 use jackioh_engine::wire::{DEV_RECORD_ID_PREFIX, GameSource, parse_game_record_lines};
 
 use crate::cli::card_stats::literal;
+use crate::cli::{connect_one, database_url};
 use crate::db::store::Db;
 
 const USAGE: &str = "Usage: jackioh-server stats-import <records.jsonl>";
@@ -109,10 +110,7 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let (Some(path), None) = (args.next(), args.next()) else {
         bail!(USAGE);
     };
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
 
     let env: IndexMap<String, String> = std::env::vars().collect();
     let cwd = std::env::current_dir()?;
@@ -121,12 +119,7 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         .await
         .map_err(|error| anyhow!("{}: {error}", Path::new(&file).display()))?;
     // One connection: this process runs its inserts one after another and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let outcome = import_dev_records(&db, &contents).await;
     db.close().await;
     let outcome = outcome?;

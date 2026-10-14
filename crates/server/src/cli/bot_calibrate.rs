@@ -28,11 +28,11 @@ use crate::bots::calibrate::{
     performance_rating, promotion_shift, reference_observations, seed_ratings,
 };
 use crate::cli::card_stats::flag;
+use crate::cli::{connect_one, database_url};
 use crate::config::{
     BOT_CALIBRATION_GAMES_PER_PAIR, BOT_CALIBRATION_GENERATION, BOT_CALIBRATION_MIN_GAMES, BOT_SEED_RATINGS,
     BOT_STRENGTHS,
 };
-use crate::db::store::Db;
 use crate::env::quoted;
 
 const USAGE: &str = "Usage: jackioh-server bot-calibrate [--games=<n>] [--seed=<text>] [--anchor=<rating>]
@@ -320,17 +320,9 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
 /// `bot-calibrate-live`'s arguments after the subcommand (`main.rs`).
 pub async fn run_live(args: Vec<String>) -> anyhow::Result<()> {
     let since = parse_live_args(&args)?;
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
     // One connection: this process runs one read and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let read = async {
         let mut tx = db.begin(None).await?;
         let games = tx.ranked_bot_games_since(since).await?;
