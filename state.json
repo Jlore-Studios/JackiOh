@@ -6641,11 +6641,13 @@
         "by": "`claude` (strong)",
         "sha": "a8f85b5a84a11bba2c981a819a3a02789f558b4f"
       },
+      "closed_at": "2026-10-14T05:10:03Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-14T03:56:08Z",
       "issue": 841,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
