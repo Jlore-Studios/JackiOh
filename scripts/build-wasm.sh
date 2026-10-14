@@ -137,6 +137,11 @@ export interface JackiohWasmModule {
   _craft_preview(recipe: number, cost: number): number;
   _engine_tables(): number;
   _validator(call: number, input: number): number;
+  _duos_create(options: number): number;
+  _duos_begin(state: number): number;
+  _duos_reduce(state: number, action: number): number;
+  _duos_legal_actions(state: number, seat: number): number;
+  _duos_view_for(state: number, seat: number): number;
   _jackioh_free(text: number): void;
   _jackioh_last_error(): number;
   UTF8ToString(ptr: number): string;

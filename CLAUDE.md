@@ -147,7 +147,7 @@ pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web te
 ```
 # Cypress; the root `pnpm install` covers e2e/
 E2E=1 pnpm --dir apps/web dev                  # http://localhost:5173, serves /dev/hotseat
-E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39
+E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match, /ws/duos, /ws/watch; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41
 cargo build --release -p jackioh-tools         # target/release/jackioh, whose `replay` specs 01 and 13 fold the browser's log with
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed

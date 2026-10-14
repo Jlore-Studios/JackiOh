@@ -39,7 +39,7 @@ A round is one team turn. Its round seats are the seats whose turn each duel is 
 - A seat that has ended has no main-phase action left, but it still answers a prompt it holds and still receives passes ([[§12.5]]).
 - A duel whose turn ends by itself, through an effect ([[R456]]), counts its round seat as ended, and that duel's new active player waits for the round to close before it acts.
 - An extra turn ([[R846]]) keeps that duel's next round seat on the same player, so for a round the two duels' round seats can belong to different teams, each acting in its own duel. Nothing waits on a seat that cannot act: each duel's active player is its round seat.
-- [[R82]]'s automatic turn end is the round's to apply: a round seat whose only legal actions in its duel are ending the turn, conceding and draw offers is ended for it.
+- [[R82]]'s automatic turn end is the round's to apply: a round seat whose only legal actions in its duel are ending the turn, conceding and draw offers, and which has no pass it may make ([[§12.5]]), is ended for it. A card it could still pass keeps it in the round.
 - Each duel's turn counter moves once a round, so [[§2.5]]'s turn cap (`TURN_CAP_PLAYER_TURNS`, 60) counts rounds, which are team turns: 30 for each team.
 - A prompt belongs to the seat whose duel opened it, and one duel's prompt never holds up the other duel.
 - No draw is offered or answered in Duos, and a seat's 1v1 concede is refused: a team concedes together ([[§12.8]]).
@@ -55,6 +55,7 @@ A team's life is in two layers: each seat's own HP and the team's shared pool. A
 - While a seat is spent, damage and life loss on its hero come off the pool, and healing on it goes to the pool, never above the pool's cap. While it is not spent, healing works as in a 1v1 game, with no cap, and never reaches the pool.
 - Both duels always agree on a team's pool: after every step the pool is copied to the teammate's duel, and to the teammate's hero's health when the teammate is spent.
 - [[§4.4]] step 4a's lethal judge counts all of a seat's life: a hit is lethal only when it would leave the seat's own HP and its team's pool together, the pool alone once the seat is spent, at 0 or less.
+- An effect that sets a hero's health sets own HP while the seat is not spent (a value of 0 or less spends it, as damage would) and sets the pool once it is, never above the pool's cap.
 - A health swap (Pocket Chaos, [[R73]]) swaps the two heroes' own HP while neither hero is spent, and does nothing once either is.
 
 A co-op game ends at the first of these:
