@@ -42,11 +42,14 @@ import { readLastBoard, writeLastBoard } from "./lastBoard.ts";
 import { clearPracticeResume, writePracticeResume } from "./resume.ts";
 import type {
   PracticeDebug,
+  PracticeReplaySummary,
   PracticeRequestBody,
   PracticeResponse,
   PracticeSnapshot,
   PracticeStartConfig,
 } from "./protocol.ts";
+import type { ReplaySource } from "../replay/source.ts";
+import { practiceReplaySource } from "../replay/sources.ts";
 
 type PracticePhase = "idle" | "starting" | "playing" | "over" | "failed";
 
@@ -85,6 +88,11 @@ export type PracticeController = {
    */
   setHold(reason: string, held: boolean): void;
   debug(): Promise<PracticeDebug>;
+  /**
+   * R768000: the replay of a game the worker kept (the finished game's snapshot names it, `replay`),
+   * its pages asked behind any request already queued, as every request to the worker is.
+   */
+  replaySource(kept: Pick<PracticeReplaySummary, "game" | "steps">): ReplaySource;
   dispose(): void;
 };
 
@@ -344,6 +352,20 @@ export function createPracticeController(options: PracticeControllerOptions): Pr
           else reject(new Error(unexpected(response)));
         });
       });
+    },
+
+    replaySource(kept: Pick<PracticeReplaySummary, "game" | "steps">): ReplaySource {
+      const queued = {
+        request: (body: PracticeRequestBody): Promise<PracticeResponse> =>
+          new Promise<PracticeResponse>((resolve) => {
+            if (disposed) {
+              resolve({ id: -1, type: "failed", message: CLOSED_MESSAGE });
+              return;
+            }
+            send(body, resolve);
+          }),
+      };
+      return practiceReplaySource(queued, kept);
     },
 
     dispose(): void {
