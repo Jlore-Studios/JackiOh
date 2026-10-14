@@ -34,8 +34,8 @@ Everything below is for a table that still has entries.
 1. You may change only `crates/ai/**`. The gate itself writes `crates/ai/generation.json` and
    `training/history/unban.jsonl`; commit those two with your change and edit neither by hand.
 2. Never change the engine (`crates/engine`), the cards (`crates/cards`), any test outside
-   `crates/ai`, the gate (`crates/tools`), the seeds or the thresholds (`TRAINING_GAMES`,
-   `TRAINING_IMPROVE`, `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
+   `crates/ai`, the gate (`crates/tools`), the seeds or the thresholds (`TRAINING_IMPROVE`,
+   `TRAINING_UNBAN` in `crates/engine/src/config.rs`). CI refuses a pull request
    from this lane that touches anything outside `crates/ai/**` and `training/history/**`, and
    re-runs the gate itself.
 3. Only remove entries from `SHADOW_BAN`; never add one, and keep the table sorted by id. Above all
