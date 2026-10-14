@@ -5737,6 +5737,13 @@
     "821": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T01:17:00Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "fails the easy rule's line 5 (no engine work) since enemy face-down options need coords from view_for.rs, and line 2 since it spans engine plus web"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
