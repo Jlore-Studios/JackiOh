@@ -10,7 +10,10 @@
 #   clippy             `rust (fmt, clippy)`
 #   rust_engine_rules  `rust (test engine rules)`, and so on: each `rust_<group>` is one entry of
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
-#   rust_cards_lib     `rust_tools_wasm`)
+#   rust_cards_lib_core     `rust_tools_wasm`)
+#   rust_cards_lib_classic
+#   rust_cards_lib_classic_plus
+#   rust_cards_lib_meditative
 #   rust_cards
 #   rust_server
 #   rust_ai
@@ -98,8 +101,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm web e2e"
-RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm web e2e"
+RUST="rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
