@@ -179,12 +179,12 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
     // were this state's own before its layers were read. Rust builds fused scripts from the state on
     // every lookup (SURFACE §6.6), so there is nothing to sync.
-    let mut attacks: Vec<i32> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
         if attack > 0 && has_attack(state, unit) {
             for _ in 0..attacks_left(state, unit) {
-                attacks.push(attack);
+                attacks.push((unit, attack));
             }
         }
     }

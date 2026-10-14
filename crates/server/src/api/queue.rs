@@ -139,6 +139,23 @@ fn older_first<'a>(a: &'a Ticket, b: &'a Ticket) -> (&'a Ticket, &'a Ticket) {
     if a_first { (a, b) } else { (b, a) }
 }
 
+/// One pair of a sweep whose claim or start failed after the sweep had moved past the
+/// whole-sweep reads: the match id the claim reserved (or minted for the attempt), the ticket
+/// ids it concerned, and the error the caller whose ticket is among them still answers with.
+/// A lost claim race (`!won`) is not a failure: another matcher legitimately took the ticket.
+pub struct FailedStart {
+    pub match_id: String,
+    pub ticket_ids: Vec<String>,
+    pub error: ApiError,
+}
+
+/// What one pairing sweep did: how many matches and series it made, and which pairs failed to
+/// start without ending the sweep. Lives only for the sweep; dropped with the response.
+pub struct SweepReport {
+    pub made: usize,
+    pub failed: Vec<FailedStart>,
+}
+
 /// The seed for a pair, consumed. Two seeded tickets can disagree — each spec seeds its own
 /// enqueue — so the older ticket's seed wins, which is the same "oldest first" tie-break `try_pair`
 /// already uses, and both entries are dropped either way.
@@ -539,8 +556,11 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
 /// re-applies it and leaves the longest waiter waiting again. Ties break on ticket id, so a sweep is
 /// deterministic. Affects: §9.5, R108; `api/queue.rs`.
 ///
-/// Answers how many matches this sweep made.
-pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
+/// Answers what this sweep made and which pairs failed to start. A failed claim or start for
+/// one pair is logged (`queue.start_failed`) and the sweep moves on to the next pair instead of
+/// returning early, so a later pair still starts and `pair_with_bots` still runs. Only a failure
+/// that concerns the whole sweep (the opening reads and their commits) is returned as `Err`.
+pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
     let now = now_ms();
     let mut tx = app
         .db
@@ -557,7 +577,10 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         tx.commit()
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
-        return Ok(0);
+        return Ok(SweepReport {
+            made: 0,
+            failed: Vec::new(),
+        });
     }
 
     // §9.5's "not in a match" holds at pairing too: a ticket left open while its owner joined a room
@@ -589,7 +612,10 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
         .filter(|ticket| busy.contains(&ticket.profile_id))
         .map(|ticket| ticket.id.clone())
         .collect();
-    let mut made = 0;
+    let mut report = SweepReport {
+        made: 0,
+        failed: Vec::new(),
+    };
 
     for a in &open {
         if taken.contains(&a.id) {
@@ -606,7 +632,7 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
             let match_id = new_uuid();
             // §9.5: "both tickets are claimed in one atomic statement". Everything before this line is
             // a guess; only a `true` here gives this process the right to create a match.
-            let won = {
+            let claimed: Result<bool, ApiError> = async {
                 let mut tx = app
                     .db
                     .begin(None)
@@ -619,7 +645,24 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
                 tx.commit()
                     .await
                     .map_err(|error| ApiError::internal(error.to_string()))?;
-                won
+                Ok(won)
+            }
+            .await;
+            let won = match claimed {
+                Ok(won) => won,
+                // One pair's failed claim ends that pair, not the sweep: both tickets are marked
+                // taken so no later iteration retries them, and the sweep moves on.
+                Err(error) => {
+                    tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(&[a.id.clone(), b.id.clone()]), message = %error.message);
+                    report.failed.push(FailedStart {
+                        match_id,
+                        ticket_ids: vec![a.id.clone(), b.id.clone()],
+                        error,
+                    });
+                    taken.insert(a.id.clone());
+                    taken.insert(b.id.clone());
+                    continue;
+                }
             };
             if !won {
                 // Another matcher got one of them. Never create a match for a ticket we did not claim:
@@ -649,19 +692,34 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
 
             taken.insert(a.id.clone());
             taken.insert(b.id.clone());
-            start_paired_match(app, a, b, &match_id).await?;
-            made += 1;
-            break;
+            match start_paired_match(app, a, b, &match_id).await {
+                Ok(()) => {
+                    report.made += 1;
+                    break;
+                }
+                // One pair's failed start ends that pair, not the sweep: `start_paired_match`
+                // already freed both players, and both tickets are marked taken above.
+                Err(error) => {
+                    tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(&[a.id.clone(), b.id.clone()]), message = %error.message);
+                    report.failed.push(FailedStart {
+                        match_id,
+                        ticket_ids: vec![a.id.clone(), b.id.clone()],
+                        error,
+                    });
+                    continue;
+                }
+            }
         }
     }
 
     // R1453: only after every pair of people this sweep could make, so a person inside the window
     // always comes before a bot.
     if app.env.ladder_bots {
-        made += pair_with_bots(app, &open, &mut taken, &in_series, now).await?;
+        let bot_made = pair_with_bots(app, &open, &mut taken, &in_series, now, &mut report.failed).await?;
+        report.made += bot_made;
     }
 
-    Ok(made)
+    Ok(report)
 }
 
 /// R1453: pairs each ticket still open and past its fallback time, oldest first, with the bot
@@ -669,13 +727,16 @@ pub async fn try_pair(app: &Arc<App>) -> Result<usize, ApiError> {
 /// (`tickets_claim_for_bot`; a Conquest ticket's in `start_bot_series`, R641000). A claim that loses
 /// (the ticket went, or the bot was taken) is not an error: that ticket waits for the next sweep.
 /// `in_series` holds the sides of every series not over: a bot among them is taken already. Answers
-/// how many matches and series it made.
+/// how many matches and series it made. A failed claim or start for one bot pairing is logged
+/// (`queue.start_failed`), collected into `failed`, and the loop moves on; only a failure that
+/// concerns the whole fallback (the opening `bots_list` and its commit) is returned as `Err`.
 async fn pair_with_bots(
     app: &Arc<App>,
     open: &[Ticket],
     taken: &mut IndexSet<String>,
     in_series: &IndexSet<String>,
     now: i64,
+    failed: &mut Vec<FailedStart>,
 ) -> Result<usize, ApiError> {
     let due: Vec<&Ticket> = open
         .iter()
@@ -720,15 +781,28 @@ async fn pair_with_bots(
         };
         let match_id = new_uuid();
         if ticket.mode == QueueMode::Bo3 {
-            if !start_bot_series(app, ticket, bot, &match_id, now).await? {
-                continue;
+            match start_bot_series(app, ticket, bot, &match_id, now).await {
+                Ok(true) => {}
+                Ok(false) => continue,
+                // One bot pairing's failed start ends that pairing, not the fallback: the ticket
+                // is marked taken so no later iteration retries it, and the loop moves on.
+                Err(error) => {
+                    tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
+                    failed.push(FailedStart {
+                        match_id,
+                        ticket_ids: vec![ticket.id.clone()],
+                        error,
+                    });
+                    taken.insert(ticket.id.clone());
+                    continue;
+                }
             }
             taken.insert(ticket.id.clone());
             busy.insert(bot.profile_id.clone());
             made += 1;
             continue;
         }
-        let won = {
+        let claimed: Result<bool, ApiError> = async {
             let mut tx = app
                 .db
                 .begin(None)
@@ -741,14 +815,39 @@ async fn pair_with_bots(
             tx.commit()
                 .await
                 .map_err(|error| ApiError::internal(error.to_string()))?;
-            won
+            Ok(won)
+        }
+        .await;
+        let won = match claimed {
+            Ok(won) => won,
+            // One bot pairing's failed claim ends that pairing, not the fallback.
+            Err(error) => {
+                tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
+                failed.push(FailedStart {
+                    match_id,
+                    ticket_ids: vec![ticket.id.clone()],
+                    error,
+                });
+                taken.insert(ticket.id.clone());
+                continue;
+            }
         };
         if !won {
             continue;
         }
         taken.insert(ticket.id.clone());
         busy.insert(bot.profile_id.clone());
-        start_bot_match(app, ticket, bot, &match_id).await?;
+        // One bot pairing's failed start ends that pairing, not the fallback: `start_bot_match`
+        // already freed both sides, and the ticket and bot are marked taken above.
+        if let Err(error) = start_bot_match(app, ticket, bot, &match_id).await {
+            tracing::warn!(event = "queue.start_failed", matchId = %match_id, tickets = %json_list(std::slice::from_ref(&ticket.id)), message = %error.message);
+            failed.push(FailedStart {
+                match_id,
+                ticket_ids: vec![ticket.id.clone()],
+                error,
+            });
+            continue;
+        }
         made += 1;
     }
     Ok(made)
@@ -986,7 +1085,16 @@ async fn enqueue_route(app: &Arc<App>, req: Req) -> ApiResult {
     // ignored — anywhere else.
     let seed = seed_override_of(app, &req.body)?;
     let ticket = enqueue_ticket(app, &profile, &choice, seed).await?;
-    try_pair(app).await?;
+    let report = try_pair(app).await?;
+    // The sweep carries on past one pair's failed start, so only a caller whose own ticket is
+    // among the failures answers with its error; anyone else reads their ticket's status below.
+    if let Some(own) = report
+        .failed
+        .into_iter()
+        .find(|failure| failure.ticket_ids.iter().any(|id| id == &ticket.id))
+    {
+        return Err(own.error);
+    }
 
     let mut tx = app
         .db
