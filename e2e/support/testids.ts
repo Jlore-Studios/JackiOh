@@ -692,3 +692,91 @@ export const REPLAYS_ROOT = "replays";
 export function replaysOnlineId(matchId: string): string {
   return `replays-online-${matchId}`;
 }
+
+// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
+// the chat panel and the board rail's chat, the challenge toast, the watch screen and the replay share.
+
+export const LANDING_PLAY_TOGETHER = "landing-play-together";
+export const TOGETHER_ROOT = "together";
+export const TOGETHER_ADD_INPUT = "together-add-input";
+export const TOGETHER_ADD_SUBMIT = "together-add-submit";
+export const TOGETHER_ADD_ERROR = "together-add-error";
+export const TOGETHER_ADD_SENT = "together-add-sent";
+export const TOGETHER_ERROR = "together-error";
+/** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
+export const TOGETHER_FRIEND_ROW = "together-friend-row";
+export const TOGETHER_NO_FRIENDS = "together-no-friends";
+export const TOGETHER_CHALLENGE = "together-challenge";
+export const TOGETHER_WATCH = "together-watch";
+export const TOGETHER_CHAT_OPEN = "together-chat-open";
+export const TOGETHER_UNREAD = "together-unread";
+export const TOGETHER_REMOVE = "together-remove";
+export const TOGETHER_BLOCK = "together-block";
+export const TOGETHER_CONFIRM = "together-confirm";
+export const TOGETHER_KEEP = "together-keep";
+/** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`, `data-profile-id`. */
+export const TOGETHER_REQUEST_ROW = "together-request-row";
+export const TOGETHER_REQUEST_ACCEPT = "together-request-accept";
+export const TOGETHER_REQUEST_DECLINE = "together-request-decline";
+export const TOGETHER_REQUEST_CANCEL = "together-request-cancel";
+export const TOGETHER_REQUEST_BLOCK = "together-request-block";
+export const TOGETHER_BLOCKED_ROW = "together-blocked-row";
+export const TOGETHER_UNBLOCK = "together-unblock";
+export const TOGETHER_CHALLENGE_FORM = "together-challenge-form";
+export const TOGETHER_CHALLENGE_DECK = "together-challenge-deck";
+export const TOGETHER_CHALLENGE_TRIO = "together-challenge-trio";
+export const TOGETHER_CHALLENGE_SEND = "together-challenge-send";
+export const TOGETHER_CHALLENGE_CLOSE = "together-challenge-close";
+export const TOGETHER_CHALLENGE_ERROR = "together-challenge-error";
+/** One per open challenge the account sent: `data-challenge-id`, `data-room-code`. */
+export const TOGETHER_OUTGOING_CHALLENGE = "together-outgoing-challenge";
+export const TOGETHER_CANCEL_CHALLENGE = "together-cancel-challenge";
+/** One per replay shared with the account: `data-match-id`. */
+export const TOGETHER_SHARED_ROW = "together-shared-row";
+export const TOGETHER_SHARED_OPEN = "together-shared-open";
+export const TOGETHER_NO_SHARED = "together-no-shared";
+
+export function togetherChallengeModeId(mode: QueueMode): string {
+  return `together-challenge-mode-${mode}`;
+}
+
+/** `data-friend-id`. */
+export const CHAT_PANEL = "chat-panel";
+export const CHAT_INPUT = "chat-input";
+export const CHAT_SEND = "chat-send";
+/** One per message: `data-message-id`, `data-from` (`you|friend`). */
+export const CHAT_MESSAGE = "chat-message";
+export const CHAT_CLOSE = "chat-close";
+export const CHAT_ERROR = "chat-error";
+export const CHAT_EARLIER = "chat-earlier";
+export const CHAT_REPORT = "chat-report";
+export const CHAT_REPORT_REASON = "chat-report-reason";
+export const CHAT_REPORT_SEND = "chat-report-send";
+export const CHAT_REPORTED = "chat-reported";
+export const IN_MATCH_CHAT_TOGGLE = "in-match-chat-toggle";
+export const IN_MATCH_CHAT_LIST = "in-match-chat-list";
+export const IN_MATCH_CHAT_FRIEND = "in-match-chat-friend";
+export const IN_MATCH_CHAT_UNREAD = "in-match-chat-unread";
+
+/** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
+export const CHALLENGE_TOAST = "challenge-toast";
+export const CHALLENGE_ACCEPT = "challenge-accept";
+export const CHALLENGE_DECLINE = "challenge-decline";
+export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
+
+/** `data-connection` (`connecting|open|closed|refused`). */
+export const WATCH_SCREEN = "watch-screen";
+export const WATCH_WAITING = "watch-waiting";
+export const WATCH_REFUSED = "watch-refused";
+export const WATCH_STATUS = "watch-status";
+export const WATCH_BACK = "watch-back";
+
+export const SHARE_FRIEND_OPEN = "share-friend-open";
+/** One per friend: `data-profile-id`, `data-shared`. */
+export const SHARE_FRIEND_OPTION = "share-friend-option";
+export const SHARE_FRIEND_UNSHARE = "share-friend-unshare";
+export const SHARE_FRIEND_NONE = "share-friend-none";
+export const SHARE_FRIEND_ERROR = "share-friend-error";
+export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
+
+export const SETTING_ALLOW_SPECTATORS = "setting-allowSpectators";

@@ -1,0 +1,411 @@
+/* Play together (#936): the friends page, the chat panel, the in-match chat, the challenge toast, the
+   replay share and the watch screen's wrapper.
+
+   SCOPED ON PURPOSE, as lobby.css is: every rule sits under one of this slice's own classes and
+   nothing is added to :root, so the board's pixel layout is untouched. The page wears the lobby's
+   tavern look (`.tavern`, `.lobby-card`, lobby.css). */
+
+/* --- the page -------------------------------------------------------------------------------- */
+
+.tavern.together-screen {
+  gap: 16px;
+}
+
+.tavern.together-screen .together-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.tavern.together-screen .together-hero__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.tavern.together-screen .together-hero__lead {
+  margin: 0;
+  color: var(--text-dim);
+  max-width: 60ch;
+}
+
+.tavern.together-screen .together-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.tavern.together-screen .together-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 820px) {
+  .tavern.together-screen .together-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.tavern.together-screen .together-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: none;
+  min-width: 0;
+}
+
+.tavern.together-screen .together-panel__heading {
+  margin: 0;
+  font-size: 16px;
+}
+
+.tavern.together-screen .together-add {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tavern.together-screen .together-add__row {
+  display: flex;
+  gap: 8px;
+}
+
+.tavern.together-screen .together-add__row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tavern.together-screen .together-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.together-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  min-width: 0;
+}
+
+.together-row__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.together-row__status {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.together-row__actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.together-row__question {
+  flex: 1 1 100%;
+}
+
+/* A friend's status (B47): green online, gold in a game, dim offline; the words stand beside it. */
+.together-dot {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--locked);
+}
+
+.together-dot[data-status="online"] {
+  background: var(--legal);
+}
+
+.together-dot[data-status="inMatch"] {
+  background: var(--selected);
+}
+
+.together-badge {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--opponent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+
+.tavern.together-screen .together-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tavern.together-screen .together-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The challenge form, over the page. */
+.together-dialog-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.tavern .together-dialog-scrim .together-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--line-bright);
+  border-radius: 12px;
+  background: var(--bg-raised);
+}
+
+/* --- the chat panel -------------------------------------------------------------------------- */
+
+.chat-panel {
+  position: fixed;
+  z-index: 96;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100vw - 32px));
+  height: min(480px, calc(100vh - 32px));
+  border: 1px solid var(--line-bright);
+  border-radius: 12px;
+  background: var(--bg-raised);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 55%);
+}
+
+.chat-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.chat-panel__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 15px;
+}
+
+.chat-panel__messages {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.chat-panel__earlier,
+.chat-panel__empty {
+  align-self: center;
+  color: var(--text-dim);
+}
+
+.chat-message {
+  max-width: 85%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--bg-sunken);
+}
+
+.chat-message[data-from="you"] {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--you) 30%, var(--bg-sunken));
+}
+
+.chat-message[data-from="friend"] {
+  align-self: flex-start;
+}
+
+.chat-message__body {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.chat-message__meta {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.chat-panel__error {
+  margin: 0 12px;
+}
+
+.chat-panel__compose {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+}
+
+.chat-panel__compose input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* --- the board rail's chat -------------------------------------------------------------------- */
+
+.in-match-chat {
+  position: relative;
+}
+
+.in-match-chat__list {
+  position: absolute;
+  z-index: 95;
+  top: 100%;
+  left: 0;
+  min-width: 220px;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 50%);
+}
+
+.in-match-chat__friends {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.in-match-chat__friend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+}
+
+.in-match-chat__status,
+.in-match-chat__note {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.in-match-chat__note {
+  margin: 0;
+}
+
+/* --- the challenge toast ----------------------------------------------------------------------- */
+
+.challenge-toasts {
+  position: fixed;
+  z-index: 95;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.challenge-toast {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--selected);
+  border-radius: 10px;
+  background: var(--bg-raised);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 55%);
+  pointer-events: auto;
+}
+
+.challenge-toast__text {
+  margin: 0;
+  font-weight: 700;
+}
+
+.challenge-toast__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* --- sharing a replay ------------------------------------------------------------------------ */
+
+/* Under the replay player's toolbar it takes a row of its own, as "Share as GIF" does. */
+.share-friend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+
+/* At the end of a `/replays` row, beside Watch. */
+.replays__row .share-friend {
+  flex: none;
+  align-items: flex-end;
+}
+
+.share-friend__list ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.share-friend__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* --- watching ---------------------------------------------------------------------------------- */
+
+.watch-root {
+  display: contents;
+}

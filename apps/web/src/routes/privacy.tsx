@@ -10,8 +10,10 @@
 // is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
 // deleting an account removes (migration 0012), the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
-// seat played it (migration 0029, R1442), and the age check and the terms each account agreed to
-// (migration 0034, R757000, R757001). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
+// seat played it (migration 0029, R1442), the age check and the terms each account agreed to
+// (migration 0034, R757000, R757001), and Play together's friends, blocks, presence, challenges, chat
+// and replay shares (migration 0036, #936; chat purged after `CHAT_RETENTION_DAYS`, B53). The minimum
+// age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
 // choose. Change the date on the page whenever the text changes: with the terms' date it makes up
 // `TERMS_VERSION`, so every account is asked to agree again.
 
@@ -19,10 +21,13 @@ import type { ReactElement } from "react";
 
 import {
   AUTH_PENDING_ADDRESS_TTL_SECONDS,
+  CHAT_RETENTION_DAYS,
   CODE_ATTEMPT_RETENTION_DAYS,
   MATCH_ACTION_RETENTION_DAYS,
   MIN_ACCOUNT_AGE_YEARS,
   PLAY_TELEMETRY_RETENTION_DAYS,
+  PRESENCE_TTL_MS,
+  SPECTATE_DELAY_MS,
 } from "@jackioh/server-config";
 
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
@@ -34,6 +39,8 @@ import "./privacy.css";
 
 /** Unit conversion, not configuration. */
 const SECONDS_PER_HOUR = 3600;
+/** Unit conversion, not configuration. */
+const MS_PER_SECOND = 1000;
 
 export const privacyTestid = {
   screen: "privacy-screen",
@@ -41,7 +48,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-13";
+export const PRIVACY_LAST_UPDATED = "2026-10-14";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -109,6 +116,12 @@ export default function PrivacyRoute(): ReactElement {
               no account itself; the match it belongs to links it to you until it is deleted.
             </li>
             <li>
+              If you use Play together: the friends you add, the friend requests you send and receive, the
+              players you block, the last time your browser told us you were online, the challenges you send
+              and receive, your chat messages with friends and any you report (with the reason you give), the
+              replays you share with a friend, and whether you let friends watch your games.
+            </li>
+            <li>
               Our hosts receive your IP address, your browser type and the pages you ask for with each
               request, and may keep them in their logs. Supabase also records your IP address and browser
               when you sign in.
@@ -145,6 +158,14 @@ export default function PrivacyRoute(): ReactElement {
             <li>Vercel hosts a test copy of it at jackioh.vercel.app.</li>
           </ul>
           <p>In an online match, your opponent sees the moves you make.</p>
+          <p>
+            Your friends see your username and whether you are online or in a game: you count as online for{" "}
+            {PRESENCE_TTL_MS / MS_PER_SECOND} seconds after your browser last told us. A friend you chat with sees
+            your messages, and a friend you share a replay with can watch that game from your seat. If you let
+            friends watch your games (the &ldquo;Let friends watch my games&rdquo; setting, on unless you turn it
+            off), a friend can watch your unranked online games from your seat, {SPECTATE_DELAY_MS / MS_PER_SECOND}{" "}
+            seconds behind; ranked games are never watched.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-not">
@@ -204,6 +225,11 @@ export default function PrivacyRoute(): ReactElement {
               The record of how you played a finished match: {PLAY_TELEMETRY_RETENTION_DAYS} days after the
               match ends.
             </li>
+            <li>Chat messages, and any report of one: {CHAT_RETENTION_DAYS} days after the message was sent.</li>
+            <li>
+              Your friends, friend requests, blocks, challenges and replay shares: until you or the other player
+              removes them, or until you delete your account. Of your time online, only the latest is kept.
+            </li>
             <li>Our hosts&rsquo; request logs: as long as each host&rsquo;s own policy says.</li>
           </ul>
         </section>
@@ -217,6 +243,11 @@ export default function PrivacyRoute(): ReactElement {
             Finished matches and their results stay in the other player&rsquo;s history, with your account
             removed from them. You can&rsquo;t delete your account during a match or a Conquest series that
             hasn&rsquo;t finished.
+          </p>
+          <p>
+            Deleting your account also deletes everything of yours on Play together: your friends, friend
+            requests, blocks, challenges and replay shares, and your chats, the messages your friends sent you
+            included.
           </p>
           <p>
             To ask for a copy of your data, contact us. Please don&rsquo;t put your email address or other
