@@ -387,6 +387,8 @@ export type AiDeckConstants = {
   leanMinShare: number;
   /** R1370: weight for a card of the leaned set while the deck is short of it. */
   leanBoost: number;
+  /** R817000: a random deck holds at most this many Quickdraw cards. */
+  maxQuickdraw: number;
 };
 
 export type AiConstants = {

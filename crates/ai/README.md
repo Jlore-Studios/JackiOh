@@ -66,14 +66,15 @@ is the same budget, so both measure the AI that ships. The same state, seed and 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
-## Decks and the shadow ban (R184, R186, R390, R1370, R1390)
+## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
 otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of the deck comes from, a
 hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
 was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
-chosen by. `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
+chosen by. Every deck holds at most `AI_DECK.max_quickdraw` (2) Quickdraw cards, an `include`d one
+counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
 `AI_DECK_GATED_SETS` in `src/config.rs`, so every AI deck holds none of them whatever ships or a
 thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
