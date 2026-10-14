@@ -5,8 +5,6 @@
 
 const FNV_OFFSET_BASIS = 0x811c9dc5;
 const FNV_PRIME = 0x01000193;
-const MULBERRY_INCREMENT = 0x6d2b79f5;
-const UINT32_RANGE = 4294967296;
 /** Coordinates and opacities in an `ArtSpec` are rounded to this many decimal places. */
 const ART_DECIMALS = 2;
 const ROUNDING = 10 ** ART_DECIMALS;
@@ -39,17 +37,8 @@ export function hashId(id: string): number {
   return hash >>> 0;
 }
 
-/** mulberry32: a 32-bit seeded generator returning floats in [0, 1). */
-export function seededRandom(seed: number): () => number {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + MULBERRY_INCREMENT) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / UINT32_RANGE;
-  };
-}
+/** mulberry32: a 32-bit seeded generator returning floats in [0, 1), the effects layer's own. */
+export { createRng as seededRandom } from "../../fx/rng.ts";
 
 /** Rounds to `ART_DECIMALS` places and never returns `-0`, so specs compare and print cleanly. */
 export function round2(value: number): number {

@@ -4,6 +4,7 @@
 // `--expose shots=1` captures treatments; use 1600x1200 because Headless Chrome crops tall viewports.
 
 import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/testids.ts";
+import { createRng } from "../../../apps/web/src/fx/rng.ts";
 import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
 import {
   INSPECT_FACE,
@@ -148,21 +149,10 @@ function fanIds(): Cypress.Chainable<string[]> {
   );
 }
 
-function seededRandom(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function visitLanding(seed: number): void {
   cy.visit("/", {
     onBeforeLoad(win) {
-      win.Math.random = seededRandom(seed);
+      win.Math.random = createRng(seed);
     },
   });
   cy.get(ts(landingTestid.fan)).should("be.visible");
