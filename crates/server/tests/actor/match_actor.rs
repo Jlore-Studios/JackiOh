@@ -57,9 +57,9 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS,
-    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, REMATCH_OFFER_TTL_MS,
-    TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
+    MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START,
+    REJECTION_ALERT_THRESHOLD, REMATCH_OFFER_TTL_MS, TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::store::{Db, MatchRow, StartMatchInput};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
@@ -243,6 +243,11 @@ impl Client {
 
     fn is_open(&self) -> bool {
         self.0.is_open()
+    }
+
+    /// The server's close code for this socket, if it closed it.
+    fn close_code(&self) -> Option<u16> {
+        self.0.close_code()
     }
 }
 
@@ -1277,6 +1282,103 @@ mod m6_t4_the_match_actor {
             acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
             Some(json!("after-window"))
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835000_alerts_once_when_one_seats_refusals_cross_the_threshold() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // p1 holds the turn, so every `endTurn` from p2 is refused: the first budget's worth by
+        // the reducer, the rest past it by the flood limit — and both count toward R835000.
+        let refusals = REJECTION_ALERT_THRESHOLD + 1;
+        for i in 0..refusals {
+            send(&h, &h.p2, &format!("refuse-{i}"), json!({ "type": "endTurn" })).await;
+        }
+        assert_eq!(
+            h.log
+                .events()
+                .iter()
+                .filter(|event| *event == "match.rejections.unusual")
+                .count(),
+            1,
+            "one alert for {refusals} refusals from one seat"
+        );
+
+        // The opponent's legal actions are unaffected, and every refusal was answered.
+        send(&h, &h.p1, "still-legal", filler()).await;
+        assert_eq!(
+            acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("still-legal"))
+        );
+        assert_eq!(errors(&h.p2).len(), refusals);
+        assert!(h.p1.is_open() && h.p2.is_open());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835001_coalesces_queued_hellos_but_never_across_a_reattach() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+
+        // A small burst with nothing awaited between the frames is drained without yielding, so
+        // every hello but the first is absorbed by the one still queued: one view push answers
+        // ten hellos. (A larger burst can span the runtime's yield point, letting a queued Hello
+        // run and a later hello enqueue afresh — still at most one outstanding at a time.)
+        for _ in 0..10 {
+            h.p1.receive_json(json!({ "type": "hello" }));
+        }
+        h.idle().await;
+        assert_eq!(h.p1.of_type("view").len(), 1);
+
+        // And a hello flood stays far below one view push per hello: 200 frames enqueue a
+        // handful of Hellos at most, never 200 `view_for` + `legal_actions` replies.
+        h.p1.clear();
+        for _ in 0..200 {
+            h.p1.receive_json(json!({ "type": "hello" }));
+        }
+        h.idle().await;
+        assert!(h.p1.of_type("view").len() <= 10);
+
+        // A hello on a newer socket generation is never absorbed. Stage a Hello that is queued
+        // but unrun: deliver it synchronously through the server-side `Socket`, so `on_frame`
+        // enqueues it with no task running between this and the reattach below. (A hello sent the
+        // usual way would still sit in the old transport's channel, and a replaced socket drops
+        // what it never forwarded.)
+        let older = Client::new();
+        let older_server = older.socket();
+        h.actor.attach(P1, older_server.clone());
+        h.idle().await;
+        older_server.receive(r#"{"type":"hello"}"#.to_string());
+        // Reattach, then hello on the new socket: the newer generation always enqueues, so both
+        // Hellos run, beside the attach's own fresh view.
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        revived.receive_json(json!({ "type": "hello" }));
+        h.idle().await;
+        assert_eq!(revived.of_type("view").len(), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835002_closes_the_socket_past_the_malformed_budget() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        for _ in 0..=MALFORMED_FRAMES_PER_WINDOW {
+            h.p1.receive("not json");
+        }
+        h.idle().await;
+
+        // Every bad frame was answered as before — and then the socket was closed.
+        let malformed = errors(&h.p1);
+        assert_eq!(malformed.len(), MALFORMED_FRAMES_PER_WINDOW + 1);
+        assert!(malformed.iter().all(|error| error["code"] == json!("malformed")));
+        assert!(!h.p1.is_open());
+        assert_eq!(h.p1.close_code(), Some(1008));
+        // The opponent is untouched.
+        assert!(h.p2.is_open());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
 
     // -------------------------------------------------------------------------
