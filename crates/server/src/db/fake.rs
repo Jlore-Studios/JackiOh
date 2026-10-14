@@ -241,6 +241,14 @@ pub struct FakeTables {
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // Migration 0036's `friendships` (`a < b`) and `blocks`, which watching and sharing read,
+    // `replay_shares`, and `profiles.allow_spectators` by profile (one not held reads as true).
+    pub friendships: Vec<FriendshipRow>,
+    pub blocks: Vec<BlockRow>,
+    pub replay_shares: Vec<ReplayShare>,
+    pub allow_spectators: IndexMap<String, bool>,
+    // ---- end Social: watching and shared replays ----
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -2883,6 +2891,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
             }
         }
     }
+    // Social (#939, #940): migration 0036's rows cascade with the profile.
+    remove_watch_rows(tables, profile_id);
     true
 }
 
@@ -3548,3 +3558,167 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
     games.sort_by(|a, b| (a.ended_at, &a.id).cmp(&(b.ended_at, &b.id)));
     Ok(games)
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+// ---------------------------------------------------------------------------
+// Watching a friend (B50) and sharing a replay with one (B52), over migration 0036's tables: strict
+// where Postgres is (a share names two profiles that exist, one row per match, sharer and friend).
+// ---------------------------------------------------------------------------
+
+use crate::db::store::{ReplayShare, SharedReplayRow};
+
+/// One row of `public.friendships` (migration 0036): `a < b`, as its check holds them.
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendshipRow {
+    pub a: String,
+    pub b: String,
+    pub since: i64,
+}
+
+/// One row of `public.blocks` (migration 0036).
+#[derive(serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockRow {
+    pub blocker: String,
+    pub blocked: String,
+    pub created_at: i64,
+}
+
+/// Friends (either order of the pair), and neither blocking the other.
+fn friends_unblocked_in(tables: &FakeTables, a: &str, b: &str) -> bool {
+    a != b
+        && tables
+            .friendships
+            .iter()
+            .any(|row| (row.a == a && row.b == b) || (row.a == b && row.b == a))
+        && !tables
+            .blocks
+            .iter()
+            .any(|row| (row.blocker == a && row.blocked == b) || (row.blocker == b && row.blocked == a))
+}
+
+/// A share its friend may read now: the finished match holds the sharer in a seat, and the two are
+/// still friends with neither blocking the other.
+fn share_readable(tables: &FakeTables, share: &ReplayShare) -> Option<Option<i64>> {
+    let row = tables.matches.iter().find(|row| row.id == share.match_id)?;
+    let seated = row.players.0 == share.sharer || row.players.1 == share.sharer;
+    (row.status == MatchStatus::Finished && seated && friends_unblocked_in(tables, &share.sharer, &share.friend))
+        .then_some(row.finished_at)
+}
+
+/// Migration 0036's cascades for the rows above: a deleted profile's friendships, blocks and
+/// shares, either side, and its spectators setting.
+fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
+    keep_only(&mut tables.friendships, |row| {
+        row.a != profile_id && row.b != profile_id
+    });
+    keep_only(&mut tables.blocks, |row| {
+        row.blocker != profile_id && row.blocked != profile_id
+    });
+    keep_only(&mut tables.replay_shares, |row| {
+        row.sharer != profile_id && row.friend != profile_id
+    });
+    tables.allow_spectators.shift_remove(profile_id);
+}
+
+pub fn watch_friends_unblocked(f: &mut FakeTx<'_>, a: &str, b: &str) -> Result<bool, StoreError> {
+    call(f, "watch.friendsUnblocked")?;
+    Ok(friends_unblocked_in(f.tables(), a, b))
+}
+
+pub fn watch_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
+    call(f, "watch.allowsSpectators")?;
+    let tables = f.tables();
+    if !tables.profiles.iter().any(|row| row.id == profile_id) {
+        return Ok(false);
+    }
+    Ok(tables.allow_spectators.get(profile_id).copied().unwrap_or(true))
+}
+
+pub fn watch_set_allows_spectators(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    allow: bool,
+) -> Result<(), StoreError> {
+    call(f, "watch.setAllowsSpectators")?;
+    let tables = f.tables();
+    if !tables.profiles.iter().any(|row| row.id == profile_id) {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    tables.allow_spectators.insert(profile_id.to_string(), allow);
+    Ok(())
+}
+
+pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+    call(f, "shares.put")?;
+    let tables = f.tables();
+    let exists = |id: &str| tables.profiles.iter().any(|row| row.id == id);
+    // The foreign keys to `profiles`.
+    if !exists(&share.sharer) || !exists(&share.friend) {
+        return Err(StoreError::from(format!(
+            "a replay share names a profile that does not exist: {} or {}",
+            share.sharer, share.friend
+        )));
+    }
+    let held = tables.replay_shares.iter().any(|row| {
+        row.match_id == share.match_id && row.sharer == share.sharer && row.friend == share.friend
+    });
+    if !held {
+        tables.replay_shares.push(share.clone());
+    }
+    Ok(())
+}
+
+pub fn shares_remove(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    sharer: &str,
+    friend: &str,
+) -> Result<(), StoreError> {
+    call(f, "shares.remove")?;
+    keep_only(&mut f.tables().replay_shares, |row| {
+        !(row.match_id == match_id && row.sharer == sharer && row.friend == friend)
+    });
+    Ok(())
+}
+
+pub fn shares_sharers(
+    f: &mut FakeTx<'_>,
+    match_id: &str,
+    friend: &str,
+) -> Result<Vec<String>, StoreError> {
+    call(f, "shares.sharers")?;
+    let tables: &FakeTables = f.tables();
+    let mut shares: Vec<&ReplayShare> = tables
+        .replay_shares
+        .iter()
+        .filter(|row| row.match_id == match_id && row.friend == friend)
+        .filter(|row| share_readable(tables, row).is_some())
+        .collect();
+    shares.sort_by(|a, b| (a.created_at, &a.sharer).cmp(&(b.created_at, &b.sharer)));
+    Ok(shares.into_iter().map(|row| row.sharer.clone()).collect())
+}
+
+pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+    call(f, "shares.for")?;
+    let tables: &FakeTables = f.tables();
+    let mut shared: Vec<SharedReplayRow> = tables
+        .replay_shares
+        .iter()
+        .filter(|row| row.friend == friend)
+        .filter_map(|row| {
+            share_readable(tables, row).map(|ended_at| SharedReplayRow {
+                match_id: row.match_id.clone(),
+                sharer: row.sharer.clone(),
+                created_at: row.created_at,
+                ended_at,
+            })
+        })
+        .collect();
+    shared.sort_by(|a, b| {
+        (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer))
+    });
+    Ok(shared)
+}
+// ---- end Social: watching and shared replays ----

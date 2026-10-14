@@ -450,6 +450,28 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
+    // match id.
+    (
+        "GET",
+        "/api/replays/shared",
+        AuthLevel::Active,
+        h!(crate::social::shares::list_shared),
+    ),
+    (
+        "POST",
+        "/api/replays/:matchId/shares",
+        AuthLevel::Active,
+        h!(crate::social::shares::share_replay),
+    ),
+    (
+        "DELETE",
+        "/api/replays/:matchId/shares/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::shares::unshare_replay),
+    ),
+    // ---- end Social: watching and shared replays ----
     // api/replays.rs
     (
         "GET",
@@ -608,6 +630,24 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
 
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // S7's `/ws/watch`, a friend's seat watched SPECTATE_DELAY_MS behind (`social::watch`); as on
+    // `/ws/match`, anything but an upgrade on its path is the API's.
+    let watch_app = app.clone();
+    let watch_cors = cors.clone();
+    let watch = move |request: Request| {
+        let app = watch_app.clone();
+        let cors = watch_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_watch(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Social: watching and shared replays ----
+
     let fallback = move |request: Request| {
         let app = app.clone();
         let cors = cors.clone();
@@ -616,6 +656,8 @@ pub fn router(app: Arc<App>) -> Router {
 
     Router::new()
         .route(WS_PATH, axum::routing::any(socket))
+        // Social (#939): S7's watch socket.
+        .route(actor::ws_server::WATCH_PATH, axum::routing::any(watch))
         .fallback(fallback)
 }
 
