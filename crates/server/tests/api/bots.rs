@@ -258,7 +258,7 @@ async fn series_in_game_1(app: &Arc<App>) -> (String, String, String, String) {
     let bot = new_bot(app, BotSpec::rated(1000.0)).await;
     give_trio(app, &bot).await;
     conquest_ticket(app, &person, 1000.0, past_any_fallback()).await;
-    assert_eq!(try_pair(app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(app).await.expect("a sweep").made, 1);
     let opened = fake(app).await.tables.series[0].clone();
     series_post(app, &opened.id, "pick", &token, json!({ "slot": 0, "gameNo": 1 })).await;
     let due = pick_due_at(&opened, PlayerId::P2).expect("a pick phase");
@@ -470,13 +470,13 @@ async fn r1453_no_bot_before_the_fallback_time() {
     q!(app, tickets_insert(&early));
     assert!(!fallback_due(&early, now_ms()));
 
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 
     // Once it is due, the next sweep pairs it.
     tokio::time::advance(std::time::Duration::from_millis(1_000)).await;
     assert!(fallback_due(&early, now_ms()));
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(seated(&app, &[&bot]).await, vec![bot.clone()]);
 }
 
@@ -489,7 +489,7 @@ async fn r1453_the_closest_free_scheduled_bot_pairs() {
     let far_above = new_bot(&app, BotSpec::rated(1300.0)).await;
     let waiting = ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
 
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(
         seated(&app, &[&far_below, &closest, &far_above]).await,
         vec![closest.clone()]
@@ -529,7 +529,7 @@ async fn r1453_the_player_is_player_1_as_the_older_ticket_is() {
         let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
         let mode = if round % 2 == 0 { "bo1" } else { "random" };
         ticket(&app, &person, 1000.0, past_any_fallback(), mode).await;
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1, "round {round}");
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 1, "round {round}");
         let row = fake(&app).await.tables.matches.last().cloned().expect("a match");
         assert_eq!(row.players, (person, bot), "round {round} ({mode})");
     }
@@ -544,7 +544,7 @@ async fn r1453_a_human_inside_the_window_pairs_first() {
     ticket(&app, &a, 1000.0, past_any_fallback(), "bo1").await;
     ticket(&app, &b, 1010.0, past_any_fallback(), "bo1").await;
 
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let pairs = matches(&app).await;
     assert_eq!(pairs.len(), 1);
     let (p1, p2) = &pairs[0];
@@ -567,11 +567,11 @@ async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
         "a Conquest ticket falls back too"
     );
     // A bot with no trio dealt for this catalog plays no Conquest.
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(fake(&app).await.tables.series.is_empty());
 
     let trio = give_trio(&app, &bot).await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let made = fake(&app).await.tables.series.clone();
     assert_eq!(made.len(), 1);
     let series = &made[0];
@@ -604,7 +604,7 @@ async fn r641000_a_conquest_ticket_pairs_with_a_bot_holding_a_trio() {
     let free = new_bot(&app, BotSpec::rated(1000.0)).await;
     let (other, _) = new_person(&app, 1000.0).await;
     ticket(&app, &other, 1000.0, past_any_fallback(), "random").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(seated(&app, &[&bot, &free]).await, vec![free.clone()]);
 }
 
@@ -615,19 +615,19 @@ async fn r641000_a_bot_in_a_series_is_seated_nowhere_else_until_it_ends() {
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
     give_trio(&app, &bot).await;
     conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let series_id = fake(&app).await.tables.series[0].id.clone();
 
     // Between games the bot is in no match, but the series holds it: a Best-of-1 ticket past its
     // fallback time, with that bot the only one, waits on.
     let (other, _) = new_person(&app, 1000.0).await;
     ticket(&app, &other, 1000.0, past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 
     // The person forfeits between games, the series is over, and the bot is free again.
     series_post(&app, &series_id, "forfeit", &token, json!({})).await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(matches(&app).await, vec![(other, bot)]);
 }
 
@@ -638,7 +638,7 @@ async fn r641000_the_sweeper_makes_the_bot_s_pick_after_its_delay() {
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
     let trio = give_trio(&app, &bot).await;
     conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let opened = fake(&app).await.tables.series[0].clone();
 
     // The person picks through the route; the bot's pick is not in yet.
@@ -826,7 +826,7 @@ async fn r1453_recent_retired_off_schedule_and_busy_bots_are_skipped() {
     q!(app, profiles_set_in_match(&busy, Some("another-match")));
 
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(
         seated(
             &app,
@@ -860,7 +860,9 @@ async fn r1453_a_start_that_fails_lets_the_bot_go() {
         }
         Ok(())
     }));
-    assert!(try_pair(&app).await.is_err(), "the start's failure stands");
+    let report = try_pair(&app).await.expect("a sweep carries on");
+    assert_eq!(report.made, 0);
+    assert_eq!(report.failed.len(), 1);
     assert!(
         refused.load(Ordering::SeqCst),
         "the write after the claim was refused"
@@ -883,13 +885,13 @@ async fn r1453_above_the_strongest_bot_gets_none() {
     new_bot(&app, BotSpec::rated(1100.0)).await;
     new_bot(&app, BotSpec::rated(1200.0)).await;
     ticket(&app, &person, 1500.0, 10 * past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 
     // A retired bot rated above the player does not count as the strongest.
     let strong = new_bot(&app, BotSpec::rated(1600.0)).await;
     q!(app, bots_set_retired(&strong, Some(now_ms())));
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
 }
 
 /// R748000: a pool holding one fresh bot at each seed rating, as the pool seeds it; answers the
@@ -917,14 +919,14 @@ async fn r748000_the_strongest_seed_is_the_ceiling() {
     seeded_pool(&app).await;
     let (above, _) = new_person(&app, top + 1.0).await;
     ticket(&app, &above, top + 1.0, 10 * past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty(), "no match started");
 
     let app = app_with_bots(true).await;
     let pool = seeded_pool(&app).await;
     let (level, _) = new_person(&app, top).await;
     ticket(&app, &level, top, 10 * past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let ids: Vec<&str> = pool.iter().map(String::as_str).collect();
     assert_eq!(seated(&app, &ids).await, vec![pool[strongest].clone()]);
 }
@@ -960,7 +962,7 @@ async fn r1453_ladder_bots_off_seats_none() {
     let (person, _) = new_person(&app, 1000.0).await;
     new_bot(&app, BotSpec::rated(1000.0)).await;
     ticket(&app, &person, 1000.0, 10 * past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
     assert!(matches(&app).await.is_empty());
 }
 
@@ -970,7 +972,7 @@ async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
     let (person, _) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let (match_id, seat) = concede_bot_match(&app, &person).await;
 
     let record = fake(&app)
@@ -1069,7 +1071,7 @@ async fn r1452_no_read_tells_a_bot_seat() {
     let (person, token) = new_person(&app, 1000.0).await;
     let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let row = fake(&app).await.tables.matches[0].clone();
 
     let (status, _, ranks) = call(
@@ -1172,7 +1174,7 @@ async fn r640000_a_bot_in_mythic_shows_mythic_grape_while_jlorious_has_room() {
     let bot = new_bot(&app, BotSpec::rated(3000.0)).await;
     q!(app, ranked_put_rank(&mythic_row(&bot)));
     ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     let row = fake(&app).await.tables.matches[0].clone();
     let (status, _, ranks) = call(
         &app,
@@ -1215,7 +1217,7 @@ async fn r640001_past_the_gap_a_far_person_is_not_paired_and_the_near_one_gets_a
     ticket(&app, &near, 1000.0, WAITED_MS, "bo1").await;
     let waiting = ticket(&app, &far, 1500.0, WAITED_MS, "bo1").await;
 
-    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(matches(&app).await, vec![(near, bot)]);
     let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
     assert_eq!(serde_json::to_value(&held).expect("a ticket")["status"], "open");
