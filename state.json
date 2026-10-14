@@ -5650,6 +5650,13 @@
     "817": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T00:53:38Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 5 fails outright (crates/ai/src/deck.rs, plus ruling R817000 in spec/); not hard, because it changes the deck builder's draw only, not the AI's search, and every step was run in a scratch copy"
+      },
       "handoff": {
         "at": "2026-10-13T23:59:51Z",
         "draft": "# Draft plan, issue #817 (planner notes)\n\nFindings so far:\n- Every random deck (AI's own, practice human random, All Random, ladder bots, trio deals, dev runs, gate, arena, sweep) is dealt by `build_ai_deck_traced` in crates/ai/src/deck.rs.\n- Quickdraw is `Tag::Quickdraw` in the catalog; 10 non-token cards: core-065, core-084, core-098, classic-090, classicplus-037, meditative-008, -018, -019, -020, -080. Tag == script flag for all 10.\n- Quickdraw has >= 6 cards so it is a theme candidate (theme_min_share 0.3 -> 6 of 20): that is the bloat. With Meditative gated only 5 -> not a candidate (pins in r1370 test unaffected).\n- Plan: AI_DECK.max_quickdraw = 2 (new field), Tally.quickdraw count, at loop top `remaining.retain(!is_quickdraw)` once tally.quickdraw >= cap; theme_candidates skips Quickdraw (QUICKDRAW_TAG const beside TOKEN_TAG).\n- Test helper `themes()` in crates/ai/tests/ai/deck.rs (mod r1370...) must skip Quickdraw too, else r1370 every-theme tests assert 6 Quickdraw.\n- New ruling R817000 (issue #817 block), \u00a79.9 Decks sentence, 11-rulings paragraph, INDEX regenerated.\n- New tests: mod r817000 in crates/ai/tests/ai/deck.rs: cap holds over seeds (incl. explicit theme Quickdraw); cursor test proving Quickdraw never a theme (pool where Quickdraw is the only candidate -> cursor == size+1).\n- Waiting on explore agent for other pinned deals (server tests, web, e2e, golden, fuzz).",
