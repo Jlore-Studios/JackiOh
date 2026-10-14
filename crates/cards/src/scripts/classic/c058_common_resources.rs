@@ -31,7 +31,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell
     const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage
     const FILLER: &str = "core-010"; // (0) Spell
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1.
+    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: your opponent has 1 less mana next turn. Discard 1 random card.
     const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …
 
     use crate::js;

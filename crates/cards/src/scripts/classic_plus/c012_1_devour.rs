@@ -1,6 +1,6 @@
 //! C+ #12.1 Devour (SPEC §8.7 row 12.1): (0) Spell, Pancake, Token (printed Legendary).
-//!   Base:    "Destroy a Unit. Your hero takes damage equal to its health."
-//!   Radiant: "Destroy a Unit. Heal your hero by its health."
+//!   Base:    "Destroy a Unit. Your hero takes damage equal to its Health."
+//!   Radiant: "Destroy a Unit. Heal your hero by its Health."
 //! A target Unit on either side; its current health is read before the destroy. The self-hit is one
 //! instance from Devour through §4.4 (your Armor, caps and Spell Damage apply); the gain is a Heal. An
 //! Indestructible target survives (R46) and the damage or heal still happens (Hearthstone's Obliterate).

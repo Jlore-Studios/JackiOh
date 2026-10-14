@@ -31,7 +31,7 @@ mod tests {
     const POINTMASTER: &str = "core-020"; // 7/1.
     const D_FENDER: &str = "core-001"; // 0/7.
     const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +4 attack, Rush and First Strike."
+    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +4 Attack, Rush and First Strike."
     const SHEEP: &str = "core-t-sheep"; // 1/1, worth 2 Tributes.
     const ROCK: &str = "core-066"; // 10/10 Indestructible.
 

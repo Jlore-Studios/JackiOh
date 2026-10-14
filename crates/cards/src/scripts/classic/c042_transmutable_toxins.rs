@@ -89,7 +89,7 @@ mod tests {
 
     const TOXINS: &str = "classic-042";
     const SLIME: &str = "classic-027"; // (0) Unit 1/1: "Plague Counters placed on this are multiplied by {multiplier}." (2)
-    const FAUCI: &str = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, it gets a Plague Counter."
+    const FAUCI: &str = "core-091"; // (2) Unit 1/6: "Whenever this takes damage, place a Plague Counter on this."
     const ECLIPSE: &str = "core-035"; // (1) Spell: "Deal 3 damage to a target."
     const COLLATERAL: &str = "core-034"; // (4) Spell: "Exile target permanent and a random card from your opponent's deck."
     const STATE_OF_GAME: &str = "classic-041"; // (1) Unit 3/3 Indestructible

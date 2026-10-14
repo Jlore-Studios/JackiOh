@@ -1,6 +1,6 @@
 //! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (2) Field Spell, Rare.
-//!   Base:    "End of turn: Discard 2 cards. / Whenever you discard cards, draw that many."
-//!   Radiant: "End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck."
+//!   Base:    "End of turn: Discard 2 random cards. / Whenever you discard cards, draw that many."
+//!   Radiant: "End of turn: Discard 2 random cards. / Whenever you discard cards, draw your deck."
 //!   Engine:  The end-of-turn discard (§6.2's hook) is 2 random cards of the hand (R682), all of a
 //!            smaller one. "Whenever you discard cards" answers your own `discarded` events, one draw
 //!            each, once the discarding effect has finished (queued triggers, §10.3), so an effect
@@ -24,13 +24,13 @@ mod tests {
 
     const RECYCLER: &str = "classic-064";
     const ZAO_GAO: &str = "core-080"; // (2) Spell: Discard 2 random cards. Summon 2 Rush Tokens …
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1.
+    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const FILLER: &str = "core-010"; // (0) Spell
     const NOSE_HUNTER: &str = "classic-015"; // Activate: Discard a random card. Exile the bottom card of their deck.
-    const RAPID_DRAW: &str = "classic-026"; // (0) Spell: Draw 4. Then discard 4 cards.
+    const RAPID_DRAW: &str = "classic-026"; // (0) Spell: Draw 4. Then discard 4 random cards.
     const LAST_HURRAH: &str = "classic-037"; // (0) Spell: Draw your deck. At the end of this turn, discard your hand.
     const PICKLE: &str = "classic-008"; // (1) Spell: your opponent chooses 3 times: discard 1, exile 1, or you draw 1.
     const INCOME_TAX: &str = "classic-009"; // Trap: when the cards your opponent has drawn in a turn reach 2 …

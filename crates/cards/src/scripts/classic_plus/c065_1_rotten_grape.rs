@@ -1,6 +1,6 @@
 //! C+ #65.1 Rotten Grape (SPEC §8.7 row 65.1). (1) Spell, Fruit, Token (printed Common).
-//!   Base:    "Your hero loses 5 health."
-//!   Radiant: "Your hero loses 1 health."
+//!   Base:    "Lose 5 health."
+//!   Radiant: "Lose 1 health."
 //!   Engine:  "Lose health (§6.3, R18): no pipeline, no Armor, no cap. The Radiant's smaller loss is its
 //!            upgrade (R275). A Fruit for every Fruit rule (C+ #64, C+ #68). Tunes: none."
 //!
@@ -11,7 +11,7 @@
 
 pub const ID: &str = "classicplus-065-1";
 
-// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1: "Your hero loses 5 health
+// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1: "Lose 5 health
 // (R18): no Armor, no cap, no Blood Moon, no on-damage effect, and at 0 you lose at the state check;
 // radiant loses 1".
 #[cfg(test)]
