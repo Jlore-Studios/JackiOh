@@ -9,19 +9,27 @@
 // page may read the summaries of the finished games the worker kept and, for one of them, the
 // human's `viewFor` at each step (R768): never its log, seed or decks.
 
-import type { Action, ActionBody, CardDefs, DistributiveOmit, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import { LEAN_NEWEST } from "@jackioh/shared";
+import type { Action, ActionBody, CardDefs, DistributiveOmit, LeanPick, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
 export type PracticeDeckChoice =
   /**
-   * R1373: `leanNewest`, "More cards from the newest set": the worker deals the random deck leaning
-   * on the newest set that ships (R1370, R1371). Absent is off.
+   * R1373, R924000: `leanSet`, "More cards from": the worker deals the random deck leaning on that
+   * set, "newest" being the newest set that ships when it deals (R1370, R1371). Absent is no lean. A
+   * game kept before the picker (R668, R768) carries R1373's `leanNewest` instead, which is "newest"
+   * when true, so it deals the deck it always dealt (`randomDeckLean`).
    */
-  | { kind: "random"; leanNewest?: boolean }
+  | { kind: "random"; leanSet?: LeanPick; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
   | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };
+
+/** R924000: the pick a random deck leans on, R1373's `leanNewest` read as "newest"; `null` for none. */
+export function randomDeckLean(choice: PracticeDeckChoice & { kind: "random" }): LeanPick | null {
+  return choice.leanSet ?? (choice.leanNewest === true ? LEAN_NEWEST : null);
+}
 
 export type PracticeStartConfig = {
   seed: string;

@@ -16,6 +16,7 @@ import {
 } from "@jackioh/validator";
 
 import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import type { LeanPick } from "@jackioh/shared";
 import {
   ApiRequestError,
   createRoom,
@@ -36,7 +37,7 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
-import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
+import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
@@ -234,11 +235,11 @@ export function choiceFor(
   mode: QueueMode,
   deck: SavedDeck | null,
   trio: SavedTrio | null,
-  leanNewest = false,
+  lean: LeanPick | null = null,
 ): ModeChoice | null {
   switch (mode) {
     case "random":
-      return leanNewest ? { mode: "random", leanNewest: true } : { mode: "random" };
+      return lean === null ? { mode: "random" } : { mode: "random", leanSet: lean };
     case "bo1":
       return deck === null ? null : { mode: "bo1", deckId: deck.id };
     case "bo3":
@@ -617,13 +618,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
 
   const [deckId, setDeckId] = useState<string | null>(stored.deckId ?? null);
   const [trioId, setTrioId] = useState<string | null>(stored.trioId ?? null);
-  const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
+  const [lean, setLean] = useState(readPlayLean);
 
   const lobby = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
   const deck = data === null ? null : defaultDeck(data.decks, deckId);
   const trio = data === null ? null : defaultTrio(data.trios, trioId);
-  const choice = choiceFor(mode, deck, trio, leanNewest);
+  const choice = choiceFor(mode, deck, trio, lean);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
   // The readout is informational, never a blocker.
@@ -973,13 +974,13 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
               <p className="lobby-note">
                 {t("No deck needed: the server deals both of you one when the game starts.")}
               </p>
-              <LeanNewestToggle
-                checked={leanNewest}
+              <LeanSetPicker
+                value={lean}
                 disabled={locked}
                 testid={playTestid.leanNewest}
-                onChange={(on) => {
-                  setLeanNewest(on);
-                  writePlayLeanNewest(on);
+                onChange={(pick) => {
+                  setLean(pick);
+                  writePlayLean(pick);
                 }}
               />
             </>

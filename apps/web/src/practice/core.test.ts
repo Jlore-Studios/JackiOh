@@ -1007,6 +1007,28 @@ describe("R1373 practice's Random deck with more cards from the newest set", () 
     }
   });
 
+  it("R924000 the worker leans the human's random deck on the set picked, and newest is R1373's lean exactly", () => {
+    const seed = "r924000-pick";
+    const classic = driver();
+    classic.send({ type: "start", config: config({ seed, humanSeat: "p1", deck: { kind: "random", leanSet: "Classic" } }) });
+    const human = seatIndex("p1");
+    const picked = debugOf(classic).decks[human];
+    expect(picked).toEqual(
+      buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, { banned: [], gatedSets: [], leanSet: "Classic" }),
+    );
+    const defs = registeredCatalog();
+    expect(picked.filter((id) => defs[id]?.set === "Classic").length).toBeGreaterThanOrEqual(
+      Math.ceil(DECK_SIZE * AI_DECK.leanMinShare),
+    );
+
+    // A game kept before the picker (R668, R768) carries `leanNewest`, and deals what "newest" deals.
+    const newest = driver();
+    newest.send({ type: "start", config: config({ seed, deck: { kind: "random", leanSet: "newest" } }) });
+    const kept = driver();
+    kept.send({ type: "start", config: config({ seed, deck: { kind: "random", leanNewest: true } }) });
+    expect(debugOf(newest).decks).toEqual(debugOf(kept).decks);
+  });
+
   it("R1373 the switch off, or on a preset, changes nothing", () => {
     const preset = PRACTICE_PRESETS[0];
     if (preset === undefined) throw new Error("there is no practice preset");

@@ -1369,15 +1369,43 @@ mod read_mode_choice_r257 {
             read(json!({ "mode": "random", "deckId": "whatever" })).ok(),
             Some(json!({ "mode": "random" }))
         );
-        // R1372: All Random's own field, the player's lean; absent, null or false is off.
+        // R1372: All Random's own field, the player's lean; absent, null or false is off. R924000:
+        // an older client's `true` is the pick "newest".
         assert_eq!(
             read(json!({ "mode": "random", "leanNewest": true })).ok(),
-            Some(json!({ "mode": "random", "leanNewest": true }))
+            Some(json!({ "mode": "random", "leanSet": "newest" }))
         );
         for off in [json!(false), Value::Null] {
             assert_eq!(
                 read(json!({ "mode": "random", "leanNewest": off })).ok(),
                 Some(json!({ "mode": "random" }))
+            );
+        }
+    }
+
+    #[test]
+    fn r924000_reads_a_pick_of_newest_or_a_set_that_ships_and_nothing_else() {
+        for pick in ["newest", "Core", "Classic", "Classic+", "Meditative"] {
+            assert_eq!(
+                read(json!({ "mode": "random", "leanSet": pick })).ok(),
+                Some(json!({ "mode": "random", "leanSet": pick })),
+                "{pick}"
+            );
+        }
+        assert_eq!(
+            read(json!({ "mode": "random", "leanSet": null })).ok(),
+            Some(json!({ "mode": "random" }))
+        );
+        for junk in [
+            json!("Boss"),
+            json!("NEWEST"),
+            json!(""),
+            json!(true),
+            json!(["Core"]),
+        ] {
+            assert!(
+                read(json!({ "mode": "random", "leanSet": junk })).is_err(),
+                "{junk}"
             );
         }
     }
@@ -1698,12 +1726,22 @@ mod freeze_choice_r253_what_a_ticket_or_a_room_keeps {
                 .expect("frozen"),
             json!({ "mode": "random" })
         );
-        // R1372: nothing but the player's lean, which waits for the deal.
+        // R1372, R924000: nothing but the player's lean, which waits for the deal.
         assert_eq!(
             freeze(&ctx.app, PROFILE, json!({ "mode": "random", "leanNewest": true }))
                 .await
                 .expect("frozen"),
-            json!({ "mode": "random", "leanNewest": true })
+            json!({ "mode": "random", "leanSet": "newest" })
+        );
+        assert_eq!(
+            freeze(
+                &ctx.app,
+                PROFILE,
+                json!({ "mode": "random", "leanSet": "Classic" })
+            )
+            .await
+            .expect("frozen"),
+            json!({ "mode": "random", "leanSet": "Classic" })
         );
     }
 }

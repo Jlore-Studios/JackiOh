@@ -269,6 +269,80 @@ pub fn newest_shipped_set() -> SetName {
     SHIPPED_SETS[SHIPPED_SETS.len() - 1]
 }
 
+/// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
+/// set that ships, resolved when the deck is dealt (R1371), or one shipped set by name. No lean at all
+/// is the pick's absence (`Option<LeanPick>`'s `None`).
+///
+/// Serialised as a string, `"newest"` or the set's name: TS's `LeanPick` (`apps/web/src/wire/
+/// catalog.ts`), which no wire struct carries, so it is written there beside `SHIPPED_SETS` rather
+/// than generated. Only a set that ships (R1420) reads: a client cannot lean a deck on a set no
+/// player may hold yet.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LeanPick {
+    /// "Newest": whichever set ships newest when the deck is dealt.
+    Newest,
+    /// One shipped set.
+    Set(SetName),
+}
+
+/// R924000: the word `LeanPick::Newest` is written as.
+pub const LEAN_NEWEST: &str = "newest";
+
+impl LeanPick {
+    /// R924000: the picker's choices after "none", in its order: "newest" first, then every set that
+    /// ships, in catalog order.
+    pub fn choices() -> Vec<LeanPick> {
+        std::iter::once(LeanPick::Newest)
+            .chain(SHIPPED_SETS.iter().map(|set| LeanPick::Set(*set)))
+            .collect()
+    }
+
+    /// The pick a string names: `"newest"` or a shipped set's name; anything else is none of them.
+    pub fn parse(text: &str) -> Option<LeanPick> {
+        if text == LEAN_NEWEST {
+            return Some(LeanPick::Newest);
+        }
+        SHIPPED_SETS
+            .iter()
+            .find(|set| set.as_str() == text)
+            .map(|set| LeanPick::Set(*set))
+    }
+
+    /// The string the pick is written as, `parse`'s inverse.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LeanPick::Newest => LEAN_NEWEST,
+            LeanPick::Set(set) => set.as_str(),
+        }
+    }
+
+    /// The set the deck leans on, asked when it is dealt: "newest" follows `newest_shipped_set`.
+    pub fn resolve(self) -> SetName {
+        match self {
+            LeanPick::Newest => newest_shipped_set(),
+            LeanPick::Set(set) => set,
+        }
+    }
+}
+
+impl Serialize for LeanPick {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for LeanPick {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let text = String::deserialize(deserializer)?;
+        LeanPick::parse(&text).ok_or_else(|| {
+            D::Error::custom(format!(
+                "a lean is \"newest\" or a set that ships ({}), got {text:?}",
+                SHIPPED_SETS.map(SetName::as_str).join(", ")
+            ))
+        })
+    }
+}
+
 /// §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B".
 ///
 /// TS `number | "X" | { base: number; embiggen: number }`, serialised exactly so (a number, the

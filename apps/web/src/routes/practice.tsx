@@ -41,7 +41,8 @@ import {
 } from "react";
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
-import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
+import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView } from "@jackioh/shared";
 
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
@@ -187,8 +188,12 @@ function pacingFor(params: PracticeParams): PracticePacing {
   return reducedMotionNow() ? PRACTICE_PACING_REDUCED : PRACTICE_PACING;
 }
 
-/** The setup this device chose last; `leanNewest` is R1373's switch, kept whichever deck was picked. */
-type StoredSetup = { difficulty?: Difficulty; deck?: string; leanNewest?: boolean };
+/**
+ * The setup this device chose last; `leanSet` is the "More cards from" pick (R1373, R924000), kept
+ * whichever deck was picked. A setup kept before the picker holds R1373's `leanNewest`, read as
+ * "newest" when on.
+ */
+type StoredSetup = { difficulty?: Difficulty; deck?: string; leanSet?: LeanPick };
 
 function readStoredSetup(): StoredSetup {
   try {
@@ -196,11 +201,17 @@ function readStoredSetup(): StoredSetup {
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
-    const { difficulty, deck, leanNewest } = parsed as { difficulty?: unknown; deck?: unknown; leanNewest?: unknown };
+    const { difficulty, deck, leanSet, leanNewest } = parsed as {
+      difficulty?: unknown;
+      deck?: unknown;
+      leanSet?: unknown;
+      leanNewest?: unknown;
+    };
+    const lean = isLeanPick(leanSet) ? leanSet : leanNewest === true ? LEAN_NEWEST : undefined;
     return {
       ...(isDifficulty(difficulty) ? { difficulty } : {}),
       ...(typeof deck === "string" && isDeckValue(deck) ? { deck } : {}),
-      ...(typeof leanNewest === "boolean" ? { leanNewest } : {}),
+      ...(lean === undefined ? {} : { leanSet: lean }),
     };
   } catch {
     // A private window, blocked site data or malformed JSON: nothing is remembered.
@@ -208,12 +219,12 @@ function readStoredSetup(): StoredSetup {
   }
 }
 
-function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, leanNewest: boolean): void {
+function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, lean: LeanPick | null): void {
   try {
     window.localStorage.setItem(
       PRACTICE_SETUP_KEY,
-      // R1373: the switch only when it is on; a setup without it reads as off.
-      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(leanNewest ? { leanNewest: true } : {}) }),
+      // R1373, R924000: the pick only when there is one; a setup without it reads as none.
+      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(lean === null ? {} : { leanSet: lean }) }),
     );
   } catch {
     // Remembering the setup is a convenience; a refusal costs nothing.
@@ -500,7 +511,7 @@ function PracticeScreen({
     return {
       difficulty: params.difficulty ?? stored.difficulty ?? PRACTICE_DEFAULT_DIFFICULTY,
       deck: params.deck ?? stored.deck ?? "random",
-      leanNewest: stored.leanNewest ?? false,
+      leanSet: stored.leanSet ?? null,
     };
   }, [params]);
 
@@ -624,7 +635,7 @@ function PracticeScreen({
 
   const onStart = useCallback(
     (choice: PracticeSetupChoice) => {
-      writeStoredSetup(choice.difficulty, choice.deck, choice.leanNewest ?? false);
+      writeStoredSetup(choice.difficulty, choice.deck, choice.leanSet ?? null);
       dropSavedGame();
       setGame(configFor(choice, params));
     },

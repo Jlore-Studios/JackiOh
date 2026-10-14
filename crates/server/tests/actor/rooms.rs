@@ -793,7 +793,8 @@ mod r264_rooms_carry_a_mode {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         let code = create_in(&h, json!({ "mode": "random", "leanNewest": true })).await;
-        assert_eq!(h.rooms().await[0]["hostLeanNewest"], true);
+        // R924000: an older client's `leanNewest: true` is the pick "newest".
+        assert_eq!(h.rooms().await[0]["hostLeanSet"], "newest");
 
         let (status, answer) = join_with(&h, &code, json!({ "mode": "random" })).await;
         assert_eq!(status, 200, "{answer}");
@@ -815,7 +816,7 @@ mod r264_rooms_carry_a_mode {
         let _turn = ROOMS.lock().await;
         let h = harness(false).await;
         let code = create_in(&h, json!({ "mode": "random" })).await;
-        assert_eq!(h.rooms().await[0]["hostLeanNewest"], false);
+        assert_eq!(h.rooms().await[0]["hostLeanSet"], Value::Null);
 
         let (status, answer) = join_with(&h, &code, json!({ "mode": "random", "leanNewest": true })).await;
         assert_eq!(status, 200, "{answer}");
@@ -847,7 +848,38 @@ mod r264_rooms_carry_a_mode {
         assert!(h.rooms().await.is_empty());
         let (status, made) = create(&h.app, &h.host, json!({ "mode": "random", "leanNewest": null })).await;
         assert_eq!(status, 200, "{made}");
-        assert_eq!(h.rooms().await[0]["hostLeanNewest"], false);
+        assert_eq!(h.rooms().await[0]["hostLeanSet"], Value::Null);
+    }
+
+    #[tokio::test]
+    async fn r924000_each_seat_of_a_room_leans_on_the_set_its_own_player_picked() {
+        use jackioh_engine::SetName;
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let code = create_in(&h, json!({ "mode": "random", "leanSet": "Core" })).await;
+        assert_eq!(h.rooms().await[0]["hostLeanSet"], "Core");
+
+        let (status, answer) = join_with(&h, &code, json!({ "mode": "random", "leanSet": "Classic+" })).await;
+        assert_eq!(status, 200, "{answer}");
+        let row = started(&h.app).await.remove(0);
+        let seed = row["seed"].as_str().unwrap_or_default().to_string();
+        assert_eq!(
+            row["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Core)),
+                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::ClassicPlus))
+            ])
+        );
+    }
+
+    #[tokio::test]
+    async fn r924000_a_room_refuses_a_lean_on_a_set_that_does_not_ship() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, refused) =
+            create(&h.app, &h.host, json!({ "mode": "random", "leanSet": "Boss-X" })).await;
+        assert_eq!(status, 400, "{refused}");
+        assert!(h.rooms().await.is_empty());
     }
 
     #[tokio::test]

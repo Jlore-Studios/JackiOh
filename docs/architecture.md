@@ -627,7 +627,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
-   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
+   `0035_replay_final_hash.sql` → `0036_lean_set.sql` — and records them in `app.migrations`. Expected result: 31 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -684,6 +684,9 @@ step that is not yet implemented says which BUILD task delivers it.
    to the terms in force on its next visit; an account already active is not asked its age.
    0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
    its replay (R768); older matches keep none and their replays are held to their results rows.
+   0036 lets "More cards from" pick the set (R924000): `tickets.lean_set` and
+   `matches.room_lean_set` hold the pick as text, `newest` for every row 0027's boolean had on and
+   null for the rest. It only adds: 0027's columns stay, unread, for the deploy before it.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

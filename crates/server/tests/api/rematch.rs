@@ -14,6 +14,7 @@
 //!    socket, false once it closes or the actor is gone.
 //!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
 //!    status names the mode the rematch plays.
+//!  - **R924000**: each seat's latest offer picks the set its deck leans on.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
 //! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
@@ -190,6 +191,18 @@ async fn lean_offer(app: &Arc<App>, token: &str, match_id: &str, lean_newest: bo
         &format!("/api/matches/{match_id}/rematch"),
         token,
         Some(json!({ "stakes": STAKE_NORMAL, "leanNewest": lean_newest })),
+    )
+    .await
+}
+
+/// R924000: a normal offer whose "More cards from" picks `lean` (`"newest"` or a set's name).
+async fn pick_offer(app: &Arc<App>, token: &str, match_id: &str, lean: &str) -> (u16, Value) {
+    request(
+        app,
+        "POST",
+        &format!("/api/matches/{match_id}/rematch"),
+        token,
+        Some(json!({ "stakes": STAKE_NORMAL, "leanSet": lean })),
     )
     .await
 }
@@ -571,6 +584,39 @@ mod rematch_offers {
             json!([
                 deal_random_deck(&format!("{seed}:p1-deck"), None),
                 deal_random_deck(&format!("{seed}:p2-deck"), Some(newest_shipped_set()))
+            ])
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r924000_an_all_random_rematch_leans_each_seat_on_the_set_its_latest_offer_picked() {
+        use jackioh_engine::SetName;
+        let app = test_app().await;
+        let (a, b, finished_id) = names("pick-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "random").await;
+
+        // A refuses a set that does not ship, then picks Core, then Classic: the latest stands.
+        let (code, _) = pick_offer(&app, &token_a, &finished_id, "Boss").await;
+        assert_eq!(code, 400);
+        pick_offer(&app, &token_a, &finished_id, "Core").await;
+        pick_offer(&app, &token_a, &finished_id, "Classic").await;
+        let (_, created) = pick_offer(&app, &token_b, &finished_id, "Meditative").await;
+        let rematch = match_row(
+            &app,
+            created["matchId"]
+                .as_str()
+                .expect("premise: the rematch was created"),
+        )
+        .await;
+        let seed = rematch["seed"].as_str().expect("a seed").to_string();
+        assert_eq!(
+            rematch["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Classic)),
+                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::Meditative))
             ])
         );
     }

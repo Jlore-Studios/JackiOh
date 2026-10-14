@@ -901,6 +901,29 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     #[test]
+    fn r924000_every_pick_resolves_to_a_shipped_set_the_deal_leans_on_and_newest_to_the_newest() {
+        use jackioh_engine::LeanPick;
+        let picks = LeanPick::choices();
+        assert_eq!(picks.len(), SHIPPED_SETS.len() + 1);
+        assert_eq!(picks[0], LeanPick::Newest);
+        assert_eq!(LeanPick::Newest.resolve(), newest_shipped_set());
+        for pick in picks {
+            assert_eq!(LeanPick::parse(pick.as_str()), Some(pick));
+            assert!(SHIPPED_SETS.contains(&pick.resolve()), "{pick:?}");
+            every_floor_holds(
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [] }),
+                pick.resolve(),
+                None,
+                25,
+            );
+        }
+        for junk in ["Boss", "Boss-X", "NEWEST", "", "Classic+ "] {
+            assert_eq!(LeanPick::parse(junk), None, "{junk:?}");
+        }
+    }
+
+    #[test]
     fn r1370_a_set_short_of_cards_gives_all_it_has_and_the_deck_is_still_dealt_whole() {
         register_cards();
         let newest = newest_shipped_set();

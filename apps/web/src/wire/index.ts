@@ -209,18 +209,23 @@ export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (ty
 // declares its own copies only for its functions' signatures, which are the same shapes.
 export {
   KEYWORD_KINDS,
+  LEAN_NEWEST,
   PARAM_PLACEHOLDER,
   PLAYER_IDS,
   SHIPPED_SETS,
   armorOf,
   fillParams,
   hasKeyword,
+  isLeanPick,
   keywordKey,
+  leanPicks,
+  leanSetOf,
   newestShippedSet,
   opponentOf,
   paramPlaceholders,
   setShips,
 } from "./catalog.ts";
+export type { LeanPick } from "./catalog.ts";
 
 export * from "./codes.ts";
 export * from "./emotes.ts";

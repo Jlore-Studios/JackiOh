@@ -43,8 +43,8 @@ tx.commit().await?`.
 
 **The seams to the pure crates.** `actor/engine.rs` is the one path to the engine's game functions
 (`create_game`, `begin_game`, `reduce`, `legal_actions`, `view_for`, `fold`) and deals All Random's
-decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the newest set that ships
-when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); it calls
+decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
+"newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;

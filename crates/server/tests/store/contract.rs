@@ -3281,25 +3281,35 @@ mod rooms {
         assert!(claimed["hostTrio"].is_null());
     }
 
-    /// R1372: an All Random host's "More cards from the newest set" waits with the room until the join
-    /// (`matches.room_lean_newest`, migration 0027), and a room that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random host's "More cards from" pick waits with the room until the
+    /// join (`matches.room_lean_set`, migration 0036), and a room that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let guest = active_profile(harness, None).await;
         let leaning = room(
             harness,
             "DEF567",
             &host.id,
-            json!({ "mode": "random", "hostDeck": [], "hostLeanNewest": true }),
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "newest" }),
         );
         assert!(q!(harness, t => t.rooms_create(&leaning)));
         let found = j(&must(q!(harness, t => t.rooms_get("DEF567")), "the room"));
-        assert_eq!(found["hostLeanNewest"], true);
+        assert_eq!(found["hostLeanSet"], "newest");
         let claimed = j(&must(
             q!(harness, t => t.rooms_claim("DEF567", &guest.id, &id(), harness.now())),
             "the claim",
         ));
-        assert_eq!(claimed["hostLeanNewest"], true);
+        assert_eq!(claimed["hostLeanSet"], "newest");
+
+        let classic_plus = room(
+            harness,
+            "FGH789",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "Classic+" }),
+        );
+        assert!(q!(harness, t => t.rooms_create(&classic_plus)));
+        let found = j(&must(q!(harness, t => t.rooms_get("FGH789")), "the room"));
+        assert_eq!(found["hostLeanSet"], "Classic+");
 
         let plain = room(
             harness,
@@ -3309,7 +3319,7 @@ mod rooms {
         );
         assert!(q!(harness, t => t.rooms_create(&plain)));
         let found = j(&must(q!(harness, t => t.rooms_get("EFG678")), "the room"));
-        assert_eq!(found["hostLeanNewest"], false);
+        assert!(found["hostLeanSet"].is_null(), "{found}");
     }
 
     async fn refuses_a_code_that_is_already_taken(harness: &StoreHarness) {
@@ -3453,7 +3463,7 @@ mod rooms {
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
-        r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
+        r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
         refuses_a_code_that_is_already_taken,
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
@@ -3615,36 +3625,46 @@ mod tickets {
         assert!(!q!(harness, t => t.tickets_claim_pair(&row.id, &row.id, &id(), harness.now())));
     }
 
-    /// R1372: an All Random ticket's "More cards from the newest set" waits in the ticket until it is
-    /// paired (`tickets.lean_newest`, migration 0027), and a ticket that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random ticket's "More cards from" pick waits in the ticket until it is
+    /// paired (`tickets.lean_set`, migration 0036), and a ticket that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+        use jackioh_engine::{LeanPick, SetName};
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
         let leaning = ticket(
             harness,
             &a.id,
-            json!({ "mode": "random", "deck": [], "leanNewest": true }),
+            json!({ "mode": "random", "deck": [], "leanSet": "newest" }),
         );
         let plain = ticket(harness, &b.id, json!({ "mode": "random", "deck": [] }));
+        let classic = ticket(
+            harness,
+            &c.id,
+            json!({ "mode": "random", "deck": [], "leanSet": "Classic" }),
+        );
         q!(harness, t => t.tickets_insert(&leaning));
         q!(harness, t => t.tickets_insert(&plain));
+        q!(harness, t => t.tickets_insert(&classic));
         assert_eq!(
             q!(harness, t => t.tickets_get(&leaning.id)),
             Some(leaning.clone())
         );
-        assert!(leaning.lean_newest);
-        assert!(!plain.lean_newest);
-        let open = q!(harness, t => t.tickets_list_open());
-        let lean_of = |ticket_id: &str| {
-            open.iter()
-                .find(|row| row.id == ticket_id)
-                .map(|row| row.lean_newest)
-        };
-        assert_eq!(lean_of(&leaning.id), Some(true));
-        assert_eq!(lean_of(&plain.id), Some(false));
         assert_eq!(
-            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean_newest),
-            Some(true)
+            q!(harness, t => t.tickets_get(&classic.id)),
+            Some(classic.clone())
+        );
+        assert_eq!(leaning.lean, Some(LeanPick::Newest));
+        assert_eq!(plain.lean, None);
+        assert_eq!(classic.lean, Some(LeanPick::Set(SetName::Classic)));
+        let open = q!(harness, t => t.tickets_list_open());
+        let lean_of = |ticket_id: &str| open.iter().find(|row| row.id == ticket_id).map(|row| row.lean);
+        assert_eq!(lean_of(&leaning.id), Some(Some(LeanPick::Newest)));
+        assert_eq!(lean_of(&plain.id), Some(None));
+        assert_eq!(lean_of(&classic.id), Some(Some(LeanPick::Set(SetName::Classic))));
+        assert_eq!(
+            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean),
+            Some(Some(LeanPick::Newest))
         );
     }
 
@@ -3768,7 +3788,7 @@ mod tickets {
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
-        r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
+        r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
         cancels_an_open_ticket_and_cancelling_twice_is_harmless,
         claims_a_pair_exactly_once,

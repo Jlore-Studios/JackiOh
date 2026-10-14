@@ -30,8 +30,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, PerPlayer, PlayerId,
-    PortraitId, SourceFilter, Winner,
+    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, PerPlayer,
+    PlayerId, PortraitId, SourceFilter, Winner,
 };
 
 use super::{fake, pg};
@@ -647,10 +647,11 @@ pub struct Room {
     pub host_portrait: Option<Option<String>>,
     /// The host's frozen trio in a Conquest room; null otherwise.
     pub host_trio: Option<FrozenTrio>,
-    /// R1372: an All Random host's "More cards from the newest set", for the deck dealt to their seat
-    /// when the room is joined (`matches.room_lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub host_lean_newest: bool,
+    /// R1372, R924000: an All Random host's "More cards from" pick, for the deck dealt to their seat
+    /// when the room is joined (`matches.room_lean_set`, migrations 0027 and 0036). None in the other
+    /// modes.
+    #[serde(rename = "hostLeanSet", default, skip_serializing_if = "Option::is_none")]
+    pub host_lean: Option<LeanPick>,
     pub catalog_version: String,
     pub created_at: i64,
     pub expires_at: i64,
@@ -683,10 +684,10 @@ pub struct Ticket {
     pub portrait: Option<Option<String>>,
     /// R259: a Conquest ticket's frozen trio; null in the other two modes.
     pub trio: Option<FrozenTrio>,
-    /// R1372: an All Random ticket's "More cards from the newest set", for the deck dealt to its seat
-    /// when it is paired (`tickets.lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub lean_newest: bool,
+    /// R1372, R924000: an All Random ticket's "More cards from" pick, for the deck dealt to its seat
+    /// when it is paired (`tickets.lean_set`, migrations 0027 and 0036). None in the other modes.
+    #[serde(rename = "leanSet", default, skip_serializing_if = "Option::is_none")]
+    pub lean: Option<LeanPick>,
     pub catalog_version: String,
     pub enqueued_at: i64,
     pub status: TicketStatus,

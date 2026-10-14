@@ -2,6 +2,7 @@
 // rule 7). R765 records Save and leave; malformed or inaccessible storage is no resume.
 
 import { DIFFICULTIES } from "@jackioh/engine/config";
+import { isLeanPick } from "@jackioh/shared";
 
 import type { PracticeDeckChoice, PracticeStartConfig } from "./protocol.ts";
 
@@ -12,8 +13,12 @@ function isDeck(value: unknown): value is PracticeDeckChoice {
   const deck = value as Record<string, unknown>;
   switch (deck.kind) {
     case "random":
-      // R1373: a setup kept before the lean carries none, and reads as off.
-      return deck.leanNewest === undefined || typeof deck.leanNewest === "boolean";
+      // R1373, R924000: a setup kept before the lean carries none and reads as off; one kept before
+      // the picker carries `leanNewest`.
+      return (
+        (deck.leanSet === undefined || isLeanPick(deck.leanSet)) &&
+        (deck.leanNewest === undefined || typeof deck.leanNewest === "boolean")
+      );
     case "preset":
       return typeof deck.id === "string";
     case "saved":

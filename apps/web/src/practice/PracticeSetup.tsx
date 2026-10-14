@@ -1,6 +1,6 @@
 // Practice setup maps difficulty and deck selection to Start (SPEC §9.9).
 // AI resource tiers derive from `AI_DIFFICULTY` (CLAUDE.md rule 9).
-// R1373: only the player's Random deck can lean toward the newest set; retain its switch selection.
+// R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
 
 import { useId, useState, type FormEvent, type ReactElement } from "react";
 
@@ -14,9 +14,9 @@ import {
   type Handicap,
 } from "@jackioh/engine/config";
 
-import type { CardDefs } from "@jackioh/shared";
+import type { CardDefs, LeanPick } from "@jackioh/shared";
 
-import { LeanNewestToggle } from "../game/LeanNewest.tsx";
+import { LeanSetPicker } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
 import { DeckPreview } from "./DeckPreview.tsx";
@@ -34,8 +34,8 @@ import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, DIFFICULTY_TAGLINE, TierCrest } from "./Tier.tsx";
 import "./practice.css";
 
-/** Selection passed to Start, including R1373's random-deck preference. */
-export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanNewest?: boolean };
+/** Selection passed to Start, including the random deck's "More cards from" pick (R1373, R924000). */
+export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanSet?: LeanPick | null };
 
 /**
  * What the player's account offers the deck picker, and why when it offers nothing, so the hint
@@ -57,7 +57,7 @@ export type SavedDecks =
 
 type PracticeSetupProps = {
   saved: SavedDecks;
-  initial: { difficulty: Difficulty; deck: string; leanNewest?: boolean };
+  initial: { difficulty: Difficulty; deck: string; leanSet?: LeanPick | null };
   /** The worker's catalog for the deck preview; null while it loads or when it could not be read. */
   defs: CardDefs | null;
   defsFailed: boolean;
@@ -171,7 +171,7 @@ function tierStats(handicap: Handicap): TierStat[] {
 export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: PracticeSetupProps): ReactElement {
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
   const [deck, setDeck] = useState<string>(initial.deck);
-  const [leanNewest, setLeanNewest] = useState<boolean>(initial.leanNewest ?? false);
+  const [lean, setLean] = useState<LeanPick | null>(initial.leanSet ?? null);
   const baseId = useId();
 
   const savedDecks = saved.kind === "ready" ? saved.decks : null;
@@ -179,14 +179,14 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
   // A remembered saved deck that is gone, not complete or not loaded yet falls back to random.
   const selected = options.some((option) => option.value === deck && !option.disabled) ? deck : "random";
   const picked: PracticeDeckChoice = deckChoiceFromValue(selected, savedDecks) ?? { kind: "random" };
-  // R1373: only the Random deck leans, and only when the switch is on.
-  const choice: PracticeDeckChoice = picked.kind === "random" && leanNewest ? { kind: "random", leanNewest: true } : picked;
+  // R1373, R924000: only the Random deck leans, and only on a pick.
+  const choice: PracticeDeckChoice = picked.kind === "random" && lean !== null ? { kind: "random", leanSet: lean } : picked;
   const preview = previewFor(choice, savedDecks);
   const hint = savedHint(saved);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onStart({ difficulty, deck: choice, leanNewest });
+    onStart({ difficulty, deck: choice, leanSet: lean });
   }
 
   return (
@@ -266,7 +266,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
             </p>
           )}
           {choice.kind === "random" ? (
-            <LeanNewestToggle checked={leanNewest} testid={practiceTestid.leanNewest} onChange={setLeanNewest} />
+            <LeanSetPicker value={lean} testid={practiceTestid.leanNewest} onChange={setLean} />
           ) : null}
           <DeckPreview
             title={preview.title}

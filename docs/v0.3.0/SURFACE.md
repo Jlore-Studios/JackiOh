@@ -955,16 +955,17 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 - **Routes dropped** (unused): `POST /api/auth/signup` (503 in production), `GET /api/catalog/:version`.
   `POST /api/auth/signin` stays under `E2E=1` only. The legacy queue body (`deckIndex`, no `mode`)
   goes; `e2e/cypress/e2e/99-online-smoke.cy.ts` moves to `{ mode: "bo1", deckId }` (part 21).
-- **All Random's lean** (#549, R1372): "More cards from the newest set" is a request field, not a
+- **All Random's lean** (#549, R1372; #924, R924000): "More cards from" is a request field, not a
   socket frame (the queue, the rooms and the rematch are HTTP routes, and `actor/protocol.rs` carries
-  none of them): `leanNewest: true` on `POST /api/queue` and `POST /api/rooms` / `POST
-  /api/rooms/:code/join` in mode `random`, and on `POST /api/matches/:id/rematch`; absent or `null` is
-  off, anything but a boolean is 400. `GET /api/matches/:id/rematch` answers `mode` beside the offers.
-  The ask waits in `tickets.lean_newest` and, for a room's host, `matches.room_lean_newest` (migration
-  0027); a rematch offer's waits with the offer in memory. `actor::engine::deal_random_deck(seed, lean:
-  Option<SetName>)` deals a seat's deck, `lean_of(lean_newest)` resolving the engine's
-  `newest_shipped_set()` (R1371) at deal time; the client mirrors it as `newestShippedSet()` in
-  `src/wire/catalog.ts` to name the set, and never deals.
+  none of them): `leanSet: "newest" | <a shipped set>` on `POST /api/queue` and `POST /api/rooms` /
+  `POST /api/rooms/:code/join` in mode `random`, and on `POST /api/matches/:id/rematch`; absent or
+  `null` is none, anything else is 400, and an older client's `leanNewest: true` reads as "newest".
+  `GET /api/matches/:id/rematch` answers `mode` beside the offers. The pick is the engine's
+  `LeanPick` (`wire/catalog_types.rs`) and waits in `tickets.lean_set` and, for a room's host,
+  `matches.room_lean_set` (migration 0036); a rematch offer's waits with the offer in memory.
+  `actor::engine::deal_random_deck(seed, lean: Option<SetName>)` deals a seat's deck, `lean_of(pick)`
+  resolving "newest" to the engine's `newest_shipped_set()` (R1371) at deal time; the client mirrors
+  `LeanPick` and `newestShippedSet()` in `src/wire/catalog.ts` to name the choices, and never deals.
 - **The emote hand** (#545, R1340–R1345): the pool is twenty-four `EmoteId`s (the ten, then MN03's
   fourteen emoji), and each seat is dealt `EMOTE_HAND_SIZE` (8) of them, `EMOTE_HAND_VOICE` (3) voice
   lines and five emoji, by `jackioh_engine::deal_emote_hand(seed, seat)` on the stream

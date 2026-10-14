@@ -58,12 +58,13 @@ import {
 } from "@jackioh/engine";
 import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
-import { DEFAULT_PORTRAIT, newestShippedSet, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
+import { randomDeckLean } from "./protocol.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
@@ -131,19 +132,21 @@ function messageOf(cause: unknown): string {
 /**
  * The human's deck: a random draw at the spec's own size, a named preset's list, or a saved
  * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
- * ruling, printed as given. R1373: a random deck the player asked to lean on the newest set leans on
- * the newest set that ships (R1371), resolved here, where the deck is dealt; the AI's own deck never
- * leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
+ * ruling, printed as given. R1373, R924000: a random deck the player asked to lean on a set leans on
+ * it, "newest" being the newest set that ships (R1371), resolved here, where the deck is dealt; the
+ * AI's own deck never leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
  * (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
-    case "random":
+    case "random": {
+      const lean = randomDeckLean(choice);
       return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
         banned: [],
         gatedSets: [],
-        ...(choice.leanNewest === true ? { leanSet: newestShippedSet() } : {}),
+        ...(lean === null ? {} : { leanSet: leanSetOf(lean) }),
       });
+    }
     case "preset": {
       const preset = presetById(choice.id);
       if (preset === undefined) throw new Error(`unknown preset deck "${choice.id}"`);

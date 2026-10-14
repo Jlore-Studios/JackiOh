@@ -53,6 +53,25 @@ describe("R668 the practice game to resume, on the device", () => {
     }
   });
 
+  it("R924000 a random deck's pick is kept, a game kept before the picker reads as it was, and a bad pick is malformed", () => {
+    const picked: PracticeStartConfig = { ...CONFIG, deck: { kind: "random", leanSet: "Classic" } };
+    writePracticeResume(picked);
+    expect(readPracticeResume()).toEqual(picked);
+
+    const kept = { ...CONFIG, deck: { kind: "random", leanNewest: true } };
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
+    expect(readPracticeResume()).toEqual(kept);
+
+    for (const deck of [
+      { kind: "random", leanSet: "Boss" },
+      { kind: "random", leanSet: true },
+      { kind: "random", leanNewest: "yes" },
+    ]) {
+      window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, deck }));
+      expect(readPracticeResume(), JSON.stringify(deck)).toBeNull();
+    }
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });

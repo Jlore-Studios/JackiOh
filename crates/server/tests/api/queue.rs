@@ -16,6 +16,7 @@
 //!  - **R264**: a profile in a series that is not over can neither queue nor be paired.
 //!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
 //!    newest set, and only that seat's.
+//!  - **R924000**: its `leanSet` picks the set: "newest" or any set that ships, and nothing else.
 //!  - **R1450**: a start whose cleanup fails too is released by the reaper once the grace has run.
 //!  - **R640001**: the window widens as §9.5 says and stops at `MAX_FAIR_GAP`, so two people
 //!    further apart than that never pair.
@@ -1347,10 +1348,11 @@ mod r1372_more_cards_from_the_newest_set {
 
         let (status, first) = enqueue_with(&app, &one, json!({ "mode": "random", "leanNewest": true })).await;
         assert_eq!(status, 200, "{first}");
-        // The ask waits in the ticket, as a Best-of-1 deck would (migration 0027's column).
+        // The ask waits in the ticket, as a Best-of-1 deck would (migration 0036's column, R924000:
+        // an older client's `leanNewest: true` is the pick "newest").
         assert_eq!(
-            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
-            true
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "newest"
         );
         // The older ticket is p1 (R166), as in R258's test above.
         tokio::time::advance(Duration::from_millis(1)).await;
@@ -1392,8 +1394,94 @@ mod r1372_more_cards_from_the_newest_set {
         let (status, queued) = enqueue_with(&app, &one, json!({ "mode": "random" })).await;
         assert_eq!(status, 200, "{queued}");
         assert_eq!(
-            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
-            false
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            Value::Null
+        );
+    }
+
+    /// How many of a dealt deck's cards are of `set`.
+    fn of_set(deck: &Value, set: jackioh_engine::SetName) -> usize {
+        deck.as_array()
+            .map(|ids| {
+                ids.iter()
+                    .filter(|id| {
+                        id.as_str()
+                            .and_then(|id| jackioh_cards::CATALOG.get(id))
+                            .is_some_and(|def| def.set == set)
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r924000_a_ticket_leans_on_the_set_it_picked_and_its_partner_on_its_own() {
+        use jackioh_engine::SetName;
+        let app = test_app().await;
+        let one = active_profile(&app, "pick-one", 1000.0).await;
+        let two = active_profile(&app, "pick-two", 1000.0).await;
+
+        let (status, first) =
+            enqueue_with(&app, &one, json!({ "mode": "random", "leanSet": "Classic" })).await;
+        assert_eq!(status, 200, "{first}");
+        assert_eq!(
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "Classic"
+        );
+        tokio::time::advance(Duration::from_millis(1)).await;
+        // A ticket that leans on another set pairs with it all the same.
+        let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random", "leanSet": "newest" })).await;
+        assert_eq!(second["status"], "matched", "{second}");
+
+        let match_id = second["matchId"].as_str().expect("a match id").to_string();
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
+        let seed = row["seed"].as_str().expect("a seed").to_string();
+        let classic = json!(deal_random_deck(
+            &format!("{seed}:p1-deck"),
+            Some(SetName::Classic)
+        ));
+        let newest = json!(deal_random_deck(
+            &format!("{seed}:p2-deck"),
+            Some(newest_shipped_set())
+        ));
+        assert_eq!(seat_deck(&app, &match_id, "pick-one").await, classic);
+        assert_eq!(seat_deck(&app, &match_id, "pick-two").await, newest);
+        // R1370's floor holds for any set the player picks, not only the newest.
+        let floor =
+            (f64::from(jackioh_engine::config::DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil();
+        assert!(of_set(&classic, SetName::Classic) as f64 >= floor, "{classic}");
+        assert!(of_set(&newest, newest_shipped_set()) as f64 >= floor, "{newest}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r924000_a_lean_on_a_set_that_does_not_ship_or_on_nothing_known_is_refused() {
+        let app = test_app().await;
+        let one = active_profile(&app, "pick-bad", 1000.0).await;
+        for lean in [
+            json!("Boss"),
+            json!("Classic+ "),
+            json!("classic"),
+            json!(true),
+            json!(3),
+        ] {
+            let (status, refused) =
+                enqueue_with(&app, &one, json!({ "mode": "random", "leanSet": lean })).await;
+            assert_eq!(status, 400, "{lean}: {refused}");
+        }
+        assert!(tickets_table(&app).await.is_empty());
+        // `leanSet` is read before an older client's `leanNewest`, so a body with both leans on the pick.
+        let (status, queued) = enqueue_with(
+            &app,
+            &one,
+            json!({ "mode": "random", "leanSet": "Core", "leanNewest": true }),
+        )
+        .await;
+        assert_eq!(status, 200, "{queued}");
+        assert_eq!(
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "Core"
         );
     }
 }
