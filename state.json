@@ -5891,11 +5891,13 @@
         "by": "`claude` (strong)",
         "sha": "c3790670ef1611abd7848c04bb4b860fd9cc61d8"
       },
+      "closed_at": "2026-10-14T15:55:17Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T14:16:48Z",
       "issue": 862,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
