@@ -6534,6 +6534,11 @@
       },
       "ci_run_id": 38640530424,
       "ci_sha": "ebe72f566cfad1598df6839b49e6ff1205d3f55a",
+      "cleared": {
+        "at": "2026-10-14T23:20:06Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "360d238ec19051a7eeec8ecd64a18d409e5837e1"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
