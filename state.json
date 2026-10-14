@@ -5342,6 +5342,7 @@
         "by": "`muse` (medium), `claude` (strong)",
         "sha": "5dfcd9dfef0627c42278f2ec762e9cab17acfd3e"
       },
+      "closed_at": "2026-10-14T07:53:07Z",
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
@@ -5352,6 +5353,7 @@
       "issue": 849,
       "kind": "review",
       "last_findings": [],
+      "merged": true,
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
