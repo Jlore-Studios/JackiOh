@@ -423,3 +423,20 @@ class PathTests(unittest.TestCase):
                      "SPEC.md", "bots/x", "docs/scripts.md", "crates/engine/tests/rules/combat.rs"):
             self.assertFalse(matches(path, forbidden), path)
             self.assertFalse(matches(path, review), path)
+
+    def test_an_exception_takes_a_path_back_out(self):
+        import json
+        from harness.git import matches
+        self.assertFalse(matches(".claude/skills/x/SKILL.md", [".claude/", "!.claude/skills/"]))
+        self.assertTrue(matches(".claude/settings.json", [".claude/", "!.claude/skills/"]))
+        self.assertTrue(matches(".claude/skillset.json", [".claude/", "!.claude/skills/"]))
+        self.assertFalse(matches("x.md", ["!x.md"]))
+        # Squishy may change the skills (the weekly hygiene issue, #839); the night bot may not,
+        # and neither may change the rest of .claude/.
+        for home, skills_forbidden in ((".harness", True), (".squishy", False)):
+            raw = json.loads((config.REPO_ROOT / home / "config.json").read_text())
+            forbidden = raw["forbidden_paths"]
+            self.assertEqual(matches(".claude/skills/maxi-tail/SKILL.md", forbidden), skills_forbidden,
+                             home)
+            for path in (".claude/settings.json", ".claude/settings.local.json", ".claude/hooks/x.sh"):
+                self.assertTrue(matches(path, forbidden), (home, path))

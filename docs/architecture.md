@@ -750,16 +750,4 @@ step that is not yet implemented says which BUILD task delivers it.
 
 ---
 
-## 11. Decisions this document made that SPEC §9 does not state
-
-Moved to docs/history/architecture.md.
-
 ---
-
-## 12. Verifying the schema
-
-Moved to docs/history/architecture.md.
-
-## 13. File map
-
-Moved to docs/history/architecture.md.

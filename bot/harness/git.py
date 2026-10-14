@@ -257,7 +257,17 @@ def normalise(path: str) -> str:
 def matches(path: str, patterns: Iterable[str]) -> bool:
     """True when `path` matches a pattern: `dir/` is that directory and everything under it,
     a pattern with a `/` is a glob on the whole path, and a bare name is a glob on the last
-    part of the path at any depth. Case never matters."""
+    part of the path at any depth. Case never matters. A pattern that starts with `!` is an
+    exception, as in a `.gitignore`: a path it matches matches none of the others (`.claude/`
+    with `!.claude/skills/` is everything under `.claude/` but its skills)."""
+    listed = [str(p) for p in patterns]
+    exceptions = [p[1:] for p in listed if p.startswith("!")]
+    if exceptions and _matches(path, exceptions):
+        return False
+    return _matches(path, [p for p in listed if not p.startswith("!")])
+
+
+def _matches(path: str, patterns: Iterable[str]) -> bool:
     clean = normalise(path)
     name = clean.rsplit("/", 1)[-1]
     for raw in patterns:

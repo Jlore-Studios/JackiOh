@@ -122,7 +122,7 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
-/// An own hand card. ponytail: a Degrade or Upgrade of a hand card's stats is not read here.
+/// An own hand card. maxi-tail: a Degrade or Upgrade of a hand card's stats is not read here.
 fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {

@@ -24,7 +24,7 @@ and needs no outside licence:
 - **Card intros** (R1352, issue #547). Each Legendary and Mythic card, and each token printed
   Legendary or Mythic, has a few bars of its own (`intro-<card id>`), composed the same way: the
   motif per card, derived from its id, set and tags, and hand-tuned for the Mythics (from their
-  themes) and the best-known Legendaries. Each is a sting that plays once and ends on a faded tail.
+  themes, retired since R822000) and the best-known Legendaries. Each is a sting that plays once and ends on a faded tail.
 
 Rejected sources:
 
@@ -60,23 +60,6 @@ attribution is required when they play in the game.
 | `victory` | `apps/web/public/audio/music/victory.m4a` | Victory sting and results loop | 29.9 s |
 | `defeat` | `apps/web/public/audio/music/defeat.m4a` | Defeat sting and results loop | 40.2 s |
 | `draw` | `apps/web/public/audio/music/draw.m4a` | Draw sting and results loop | 34.9 s |
-| `mythic-my-pawn` | `apps/web/public/audio/music/mythic-my-pawn.m4a` | Theme of #96 My Pawn: harpsichord, pizzicato, bassoon | 24.3 s |
-| `mythic-zephyrs` | `apps/web/public/audio/music/mythic-zephyrs.m4a` | Theme of #97 Zephyrs: flutes, string tremolo, harp | 27.0 s |
-| `mythic-heroic-power` | `apps/web/public/audio/music/mythic-heroic-power.m4a` | Theme of #98 Heroic Power: the motif as a brass fanfare | 26.0 s |
-| `mythic-craft-a-card` | `apps/web/public/audio/music/mythic-craft-a-card.m4a` | Theme of #99 Craft a Card: marimba, kalimba, woodblocks | 23.5 s |
-| `mythic-ceaseless-void` | `apps/web/public/audio/music/mythic-ceaseless-void.m4a` | Theme of #100 Ceaseless Void: choir, drone, celesta | 34.4 s |
-| `mythic-in-too-deep` | `apps/web/public/audio/music/mythic-in-too-deep.m4a` | Theme of Classic #90 In Too Deep: halo pad, harp, vibraphone | 31.9 s |
-| `mythic-zephrys-zealotism` | `apps/web/public/audio/music/mythic-zephrys-zealotism.m4a` | Theme of Classic+ #27 Zephrys Zealotism: choir, organ, timpani | 29.2 s |
-| `mythic-twice-forward` | `apps/web/public/audio/music/mythic-twice-forward.m4a` | Theme of Classic+ #74 Twice Forward One Step Backwards: a waltz for clarinet and bassoon | 28.0 s |
-| `mythic-portal-to-the-past` | `apps/web/public/audio/music/mythic-portal-to-the-past.m4a` | Theme of Classic+ #29 Portal to the Past: music box, viola, strings | 30.5 s |
-| `mythic-reach-the-summit` | `apps/web/public/audio/music/mythic-reach-the-summit.m4a` | Theme of Meditative #8 Reach the Summit: the motif climbing the pentatonic on a pan flute, dulcimer, kalimba, timpani | 23.5 s |
-| `mythic-true-craft-a-card` | `apps/web/public/audio/music/mythic-true-craft-a-card.m4a` | Theme of Meditative #17 True Craft a Card: dulcimer, kalimba, marimba, woodblocks, a bell | 22.8 s |
-| `mythic-aestheticize-the-game` | `apps/web/public/audio/music/mythic-aestheticize-the-game.m4a` | Theme of Meditative #20 Aestheticize the Game: a 3/4 garden, flute over harp and bowed pad, kalimba | 22.3 s |
-| `mythic-yilegpt-tamed` | `apps/web/public/audio/music/mythic-yilegpt-tamed.m4a` | Theme of Meditative #49 YileGPT Tamed: a square lead answered by a dulcimer, synth bass, crystal | 21.5 s |
-| `mythic-pareto-optimality` | `apps/web/public/audio/music/mythic-pareto-optimality.m4a` | Theme of Meditative #71 Pareto Optimality: piccolo over a marimba ostinato, woodblocks, a side stick | 21.5 s |
-| `mythic-evil-blueprints` | `apps/web/public/audio/music/mythic-evil-blueprints.m4a` | Theme of Meditative #97 Jlockheed's Evil Blueprints: a march for synth brass, strings, bassoon, bells | 22.8 s |
-| `legendary-1` | `apps/web/public/audio/music/legendary-1.m4a` | Shared entrance theme of the Core and Classic Legendaries: a brass fanfare over timpani, celesta glint | 29.0 s |
-| `legendary-2` | `apps/web/public/audio/music/legendary-2.m4a` | Shared entrance theme of the Classic+ and Meditative Legendaries: a brass fanfare over timpani, piccolo glint | 29.0 s |
 | `intro-core-052` | `apps/web/public/audio/music/intro-core-052.m4a` | Intro of #52 Silly Silas (Legendary): bassoon, pizzicato, tuba, F major, 4/4 at 126 | 4.8 s |
 | `intro-core-083` | `apps/web/public/audio/music/intro-core-083.m4a` | Intro of #83 Transmogulate (Legendary): celesta, strings, cello, A-flat lydian, 4/4 at 104 | 5.6 s |
 | `intro-core-085` | `apps/web/public/audio/music/intro-core-085.m4a` | Intro of #85 Unlicensed Experimentation (Legendary): whistle, string tremolo, contrabass, G-flat phrygian, 4/4 at 100 | 5.8 s |

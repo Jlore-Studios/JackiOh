@@ -393,7 +393,7 @@ Counts: **561 R-rows** (`^| R(\d+) |`), unique, ascending, **R1..R762**, 201 unu
 | `.harness/README.md`, `.squishy/README.md` | 17, 13 | | |
 | `AGENTS.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `JackiOh_Tokens.md` | 43, 5, 5, 59 | | |
 | `reviews/*.md` (16 files) | 2,996 total | ≈ 428 KB | past audit reports |
-| `.claude/skills/{fullsend,ponytail}/**` (7 files) | 877 | | skills |
+| `.claude/skills/{fullsend,maxi-tail}/**` (7 files) | 877 | | skills |
 | `bot/prompts/*.md` (9), `ladder/prompts/proposer.md` | 637 | | prompts |
 
 ### 5.2 Doc → doc references (path or unique basename mentioned; root `README.md` inbound count is inflated because every `*/README.md` path contains it)
@@ -402,7 +402,7 @@ Counts: **561 R-rows** (`^| R(\d+) |`), unique, ascending, **R1..R762**, 201 unu
 |---|---|---|
 | `CLAUDE.md` | 20 | AGENTS, ARCHITECTURE-CCG, BUILD, GEMINI, JackiOh_{Classic_Cards,Core_Cards,Mechanics,Tokens}, README, REVIEW, SPEC, bot/README, bot/machine/README, docs/{ADDING_CARDS,architecture,classic-sets,deploy-cloudflare,issues-and-patches,polish/reference,radiant-audit} |
 | `SPEC.md` | 12 | CLAUDE, JackiOh_Classic_Cards, JackiOh_Mechanics, README, assets/music/LICENSES, docs/{architecture,classic-sets,issues-and-patches,polish/3-ai,polish/4-edge-cases,radiant-audit}, e2e/README |
-| `AGENTS.md` | 11 | ponytail SKILL, copilot-instructions, BUILD, CLAUDE, GEMINI, README, REVIEW, SPEC, bot/README, docs/ADDING_CARDS, docs/architecture |
+| `AGENTS.md` | 11 | maxi-tail SKILL, copilot-instructions, BUILD, CLAUDE, GEMINI, README, REVIEW, SPEC, bot/README, docs/ADDING_CARDS, docs/architecture |
 | `docs/ADDING_CARDS.md` | 9 | BUILD, CLAUDE, README, REVIEW, SPEC, docs/architecture, docs/issues-and-patches, docs/radiant-audit, packages/cards/README |
 | `docs/classic-sets.md` | 9 | BUILD, CLAUDE, JackiOh_{Classic,Core,Mechanics}, REVIEW, SPEC, docs/issues-and-patches, docs/radiant-audit |
 | `packages/cards/README.md` | 9 | BUILD, CLAUDE, README, SPEC, apps/server/README, apps/web/README, art/ART.md, docs/classic-sets, docs/radiant-audit |
