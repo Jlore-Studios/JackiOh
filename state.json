@@ -6040,16 +6040,25 @@
       "taken_asks": []
     },
     "896": {
+      "ci_fixes": 1,
       "ci_reruns": {
         "f6eb46a9c4ae0ec633cade559ec5ae39b503dfad": 1
       },
+      "ci_run_id": 38608669705,
+      "ci_sha": "f6eb46a9c4ae0ec633cade559ec5ae39b503dfad",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T14:39:04Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 874,
       "kind": "revise",
-      "queued_at": "2026-10-14T17:40:45Z",
+      "pending_request": false,
+      "queued_at": "2026-10-14T17:56:35Z",
+      "requested_by": "jgoetzmann-bot",
       "self_check_findings": [],
+      "source": "ci",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "muse"
