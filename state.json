@@ -5601,8 +5601,12 @@
     "what": "plan #873 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-14T12:59:30Z",
-    "notes": [],
+    "at": "2026-10-14T13:08:31Z",
+    "notes": [
+      "#874 needs a plan",
+      "started a night run, as a lane was free: #874 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+      "#874: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
