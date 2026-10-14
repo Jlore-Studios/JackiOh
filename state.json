@@ -6603,8 +6603,8 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-14T21:40:11Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38641923943",
+    "at": "2026-10-14T22:10:44Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38645708165",
     "what": "suggestions on devin"
   },
   "last_sweep": {
@@ -12841,13 +12841,19 @@
         "number": 885,
         "title": "Patch v0.3.X: close the Luau API's open gaps and port the cards they keep in Rust",
         "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-10-14T22:08:16Z",
+        "number": 899,
+        "title": "Architecture: spec check reads the card scripts' .luau citations and refuses proofs that cannot run",
+        "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-14T21:08:42Z",
-    "last_run": "2026-10-14T17:13:24Z",
-    "provider": null,
+    "idle_since": "2026-10-14T22:10:44Z",
+    "last_run": "2026-10-14T22:10:44Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "38645708165",
     "taken_asks": []
   },
   "usage": {
