@@ -242,6 +242,8 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
     let trap_types = lua.create_table()?;
     trap_types.raw_set(1, "Trap")?;
     trap_types.raw_set(2, "Field Trap")?;
+    // Read-only for the same reason as `J.config` below.
+    trap_types.set_readonly(true);
     module.raw_set("TRAP_TYPES", trap_types)?;
 
     // `J.config`: the engine's config constants card scripts use, read from the same source as

@@ -527,10 +527,15 @@ What the reconcile changed, beyond merging the parts:
     50 hard against easy, and 170 perf decisions, the wide ones at the same node counts. Only which
     decision is the slowest by the clock differs; the slowest, scaled as `gate` reports it, is
     352 ms (`main` 480 ms), under `AI_GATE.max_decision_ms` (1,500).
-  - The browser (L12) was not measured again: the box had no emsdk and no network to fetch it.
-    `apps/web/src/wasm/size.test.ts` holds the module and glue, gzipped, to L12's budget wherever
-    the web's tests build the module, CI's `web` job among them. Part 5's `register_all` and
-    golden-step numbers through the web's wrapper (section 5.3) were taken with the three pilots
-    only and are not re-measured.
+  - The browser (L12), on the whole branch, against the module `main` builds at `e20df15ea`, both
+    built on one box (4 threads, AMD EPYC 9V45), with part 5's probes (section 5.3):
+    - module and glue, `gzip -9`: 2,905,567 → 3,933,262 B (+1,027,695 B, 0.98 MiB; budget 1 MiB).
+      `apps/web/src/wasm/size.test.ts` holds it to part 5's anchor, 2,945,562 + 1 MiB, wherever the
+      web's tests build the module, CI's `web` job among them;
+    - a golden step through the wrapper (`chooseAction`, `reduce`, `viewFor` twice, `legalActions`,
+      `seatToAct`, `aiToAct`, in vitest), median of 406 steps of seeded `cheap20` games after 5
+      warm-up steps, two runs a side: 2.40 and 2.39 ms → 4.02 and 3.91 ms (×1.65, budget 2×);
+    - `register_all` (the module's `init()` in node, five runs): 115–145 ms (budget 200 ms;
+      `main`'s 28–33 ms).
   - `luau-analyze --mode=strict` did not run: the box had no Luau 0.740 release. Part 8's CI step
     runs it.
