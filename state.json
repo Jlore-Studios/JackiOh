@@ -6639,6 +6639,11 @@
       }
     },
     "858": {
+      "cleared": {
+        "at": "2026-10-14T05:01:04Z",
+        "by": "`claude` (strong)",
+        "sha": "a8f85b5a84a11bba2c981a819a3a02789f558b4f"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-14T03:56:08Z",
