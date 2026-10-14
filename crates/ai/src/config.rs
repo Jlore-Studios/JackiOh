@@ -44,6 +44,14 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
+/// (`duos_decide` at AI_GATE_BUDGET) against a team on §10.7's random policy, `duos.rs`'s `duos_gate`.
+pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
+
+/// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
+/// wins count; a draw is reported beside them.
+pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
