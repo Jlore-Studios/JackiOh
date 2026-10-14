@@ -1148,9 +1148,10 @@ state, pull request, mode or tree labels on it, or assigned to the other's accou
 (`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
 line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
 
-**The weekly hygiene run.** Every Monday, `.github/workflows/hygiene.yml` (#839, #888) opens two
-issues for Squishy (`squishy:build`, `difficulty:hard`, `person merges`), each unless its own last one
-is still open, so each cleanup is a pull request a person merges or closes on its own:
+**The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
+`.github/workflows/hygiene.yml` (#839, #888) opens two issues for Squishy (`squishy:build`,
+`difficulty:hard`, `person merges`), each unless its own last one is still open, so each cleanup
+is a pull request a person merges or closes on its own:
 `Architecture: weekly hygiene, dead files and archives, <date>` and `…, agent instructions, <date>`. The
 second carries a digest of Anthropic's current guidance that the workflow's model reads (on Squishy's
 subscription, with no GitHub token), since a builder has no web access. The first lists the stale
