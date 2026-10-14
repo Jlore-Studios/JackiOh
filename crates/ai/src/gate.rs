@@ -77,8 +77,8 @@ pub struct AiGate {
     ///
     /// `gate:v3` is a re-roll of the deals, not tuning and not a lower floor: R635 (a card that casts
     /// on draw is set aside and shuffled in after the mulligan) re-dealt every game whose deck holds
-    /// one, and a gate on its floor goes red on any neutral reshuffle (reviews/2026-09-23-polish-part-b.md
-    /// B-3). If it fails with the AI untouched, look at the deals first.
+    /// one, and a gate on its floor goes red on any neutral reshuffle (the 2026-09-23 polish Part B review,
+    /// B-3, in git history since #832). If it fails with the AI untouched, look at the deals first.
     pub seed_series: &'static str,
     /// What `pnpm test` runs per matchup (seeds 1..20), under the same rule as the full run
     /// (`gate_needed`: 17, 10 and 16 wins). At four games no count could tell a working AI from a broken

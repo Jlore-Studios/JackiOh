@@ -8,9 +8,6 @@
 // LIBRARY_CAP (R184) and an optional positive heroHealth (R290) — and L2 is then its deckSize.
 //
 //   pnpm --dir e2e check:fixtures
-//
-// Fixtures named 09-illegal-*.json are exempt: spec 09 needs loadouts that break L1-L6 on
-// purpose. They still have to say which rule they break.
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -82,14 +79,6 @@ for (const file of files) {
   }
   if (!Array.isArray(deck.cards)) {
     problems.push(`${where}: "cards" must be an array`);
-    continue;
-  }
-
-  const illegalOnPurpose = /^09-illegal-/.test(id);
-  if (illegalOnPurpose) {
-    if (!/L[1-6]/.test(deck.description ?? "")) {
-      problems.push(`${where}: an illegal fixture must name the rule it breaks (L1-L6)`);
-    }
     continue;
   }
 
