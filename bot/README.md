@@ -1147,6 +1147,16 @@ state, pull request, mode or tree labels on it, or assigned to the other's accou
 (`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
 line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
 
+**The weekly hygiene run.** `.github/workflows/hygiene.yml` (#839) sweeps the branches every Monday,
+deleting a stale one only when the rule in `.github/hygiene/branches.py` and a model's check (on
+Squishy's subscription, with no GitHub token) both agree, and opens `Architecture: weekly hygiene,
+<date>` for Squishy (`squishy:build`, `difficulty:hard`) unless the last one is still open: dead files,
+archives and the agent instructions, against a digest of Anthropic's current guidance that the
+workflow's model reads, since a builder has no web access. For that, Squishy alone may change
+`.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.matches` reads a leading `!` as
+an exception), and `tests/test_skills.py` holds every skill to Markdown and to frontmatter that grants
+no tool and adds no hook.
+
 **Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
 `bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),
 which sweeps for it with its token and draws its lanes, its account, its queue, its trees and its
