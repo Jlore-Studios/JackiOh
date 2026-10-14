@@ -5193,21 +5193,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md",
-            "spec/INDEX.md"
+            "crates/engine/tests/golden/games.jsonl",
+            "spec/11-rulings.md"
           ],
-          "from": "5039910291f2bcc74a18eb5481d57071aa256df9",
-          "main": "5d9603200b119e7d72d799d1fbf82207f28e7f47"
+          "from": "3ac1baa03a95fe7c6afcf52b3ffea0ab3cefcd96",
+          "main": "e20df15ea8e1d92cfa2c21b78cf248448a8f184d"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "38515910954",
+            "run": "38526871553",
             "tier": "strong"
           }
         ],
-        "sha": "3ac1baa03a95fe7c6afcf52b3ffea0ab3cefcd96",
+        "sha": "64526ad4328757fdcf0b1edc9a743af93f8a9183",
         "tiers": {
           "claude": "strong"
         }
