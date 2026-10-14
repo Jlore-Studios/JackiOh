@@ -6693,9 +6693,12 @@
         "sha": "7be5321af38ed0d265fafdc4cff112117a745b88"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T04:46:00Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 847,
       "kind": "review",
       "pending_request": false,
