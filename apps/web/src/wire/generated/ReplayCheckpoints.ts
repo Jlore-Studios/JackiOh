@@ -18,4 +18,8 @@ accepted: Array<Action>,
 /**
  * The state every `REPLAY_CHECKPOINT_EVERY` accepted actions, step 0's first.
  */
-states: Array<GameState>, };
+states: Array<GameState>, 
+/**
+ * R767000: the shipped catalog version the log was folded under; absent for the build's own.
+ */
+catalogVersion?: string, };

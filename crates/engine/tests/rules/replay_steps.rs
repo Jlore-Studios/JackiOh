@@ -2,11 +2,17 @@
 // `view_for` of the state after that many accepted actions; a page and a step cost at most
 // REPLAY_CHECKPOINT_EVERY `reduce` calls; a rejected action is no step; another catalog version or
 // another final hash is refused with no step.
+//
+// R767000, issue #767: a game played on a shipped catalog version the build carries replays under
+// that version's cards and kept scripts, step for step; any other version is still `earlier_patch`.
+
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::config::{REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{play_random_game, setup_catalog};
+use crate::rules::fixtures::harness::{RandomGame, play_random_game, setup_catalog};
+use crate::rules::fixtures::scripts::scripts as fixture_scripts;
 
 /// The build's catalog version, and the one the games below record.
 const BUILD: &str = "v-replay";
@@ -224,4 +230,178 @@ fn r768_another_catalog_version_or_a_wrong_hash_is_refused_with_no_steps() {
         serde_json::to_value(refused(ReplayRefusal::RulesChanged)).expect("serialises"),
         json!({ "kind": "refused", "reason": "rules_changed" })
     );
+}
+
+/// R767000: the version the shipped catalogs below were played on.
+const OLD: &str = "v-old";
+
+/// R767000: the fixture catalog as it was on `OLD`: every vanilla unit one attack higher, both
+/// faces, with `kept` as its kept scripts, carried by this thread's build. Call `setup_catalog` first.
+fn old_catalog(kept: IndexMap<String, CardScripts>) -> &'static ShippedCatalog {
+    let mut defs = registered_catalog().clone();
+    for (id, def) in defs.iter_mut() {
+        if id.strip_prefix("fx-").is_some_and(|n| n.parse::<i32>().is_ok()) {
+            def.base.attack = def.base.attack.map(|attack| attack + 1);
+            def.radiant.attack = def.radiant.attack.map(|attack| attack + 1);
+        }
+    }
+    register_shipped(vec![ShippedCatalog::new(OLD, defs, kept)]);
+    shipped_catalog(OLD).expect("the old catalog is carried")
+}
+
+/// R767000: a game played on `OLD`, and every step's view of both seats as the live game showed it:
+/// a fresh fold of its prefix under `OLD`'s catalog.
+fn played_on_old(seed: &str, old: &'static ShippedCatalog) -> (RandomGame, Vec<[PlayerView; 2]>) {
+    with_shipped(Some(old), || {
+        let live = play_random_game(seed, None);
+        let views = (0..=live.log.len())
+            .map(|k| {
+                let folded = fold(&input(seed, &live.decks, live.log[..k].to_vec()));
+                assert!(folded.errors.is_empty(), "{seed} step {k}");
+                PLAYER_IDS.map(|seat| view_for(&folded.state, seat))
+            })
+            .collect();
+        (live, views)
+    })
+}
+
+fn on_old(hash: &str) -> ReplayRecord {
+    ReplayRecord {
+        catalog_version: OLD.to_string(),
+        final_hash: hash.to_string(),
+    }
+}
+
+/// R767000: a game on `OLD` opens ready under `OLD`'s catalog, every page of both seats is the view
+/// the live game showed, and the same log folded under the build's catalog is another game.
+fn assert_replays_under_old(seed: &str, old: &'static ShippedCatalog) {
+    let (live, views) = played_on_old(seed, old);
+    let hash = hash_state(&live.state);
+    let game = input(seed, &live.decks, live.log.clone());
+    let ReplayOpen::Ready { steps, checkpoints } = replay_open(&game, &on_old(&hash), BUILD) else {
+        panic!("{seed}: a game on a carried version was refused");
+    };
+    assert_eq!(steps, live.log.len() + 1, "{seed}");
+    assert_eq!(checkpoints.catalog_version.as_deref(), Some(OLD), "{seed}");
+    for (at, seat) in PLAYER_IDS.into_iter().enumerate() {
+        let shown = all_steps(&checkpoints, seat);
+        assert_eq!(shown.len(), views.len(), "{seed} {seat}");
+        for (k, step) in shown.iter().enumerate() {
+            assert_eq!(step.step, k, "{seed} {seat}");
+            assert_eq!(step.view, views[k][at], "{seed} {seat} step {k}");
+        }
+    }
+    assert_ne!(
+        hash_state(&fold(&game).state),
+        hash,
+        "{seed}: the build's catalog plays the game the same way, so the test proves nothing"
+    );
+    assert_eq!(catalog_version(), "test", "the fold put the catalog back");
+}
+
+#[test]
+fn r767000_a_game_on_a_shipped_version_replays_step_for_step_under_its_cards() {
+    setup_catalog();
+    let old = old_catalog(IndexMap::new());
+    assert_eq!(old.version(), OLD);
+    assert_replays_under_old("replay-versions-1", old);
+    clear_overrides();
+}
+
+#[test]
+fn r767000_a_shipped_versions_kept_script_runs_in_its_fold() {
+    setup_catalog();
+    // On `OLD`, Fixture Unit 1 drew two cards when played (`<id>@<version>`, R388); the build's runs
+    // no script for it.
+    let stockpile = fixture_scripts()["fx-stockpile"].clone();
+    assert!(stockpile.base.cry.is_some());
+    assert!(registered_scripts().get("fx-1").is_none());
+    let old = old_catalog(IndexMap::from([("fx-1".to_string(), stockpile)]));
+    with_shipped(Some(old), || {
+        assert!(scripts::registered_entry("fx-1").is_some_and(|entry| entry.base.cry.is_some()));
+    });
+    assert!(scripts::registered_entry("fx-1").is_none());
+    assert_replays_under_old("replay-versions-2", old);
+    clear_overrides();
+}
+
+#[test]
+fn r767000_an_uncarried_version_is_earlier_patch_and_a_missed_hash_rules_changed() {
+    setup_catalog();
+    let old = old_catalog(IndexMap::new());
+    let refused = |reason| ReplayOpen::Refused { reason };
+    let (live, _) = played_on_old("replay-versions-3", old);
+    let hash = hash_state(&live.state);
+    let game = input("replay-versions-3", &live.decks, live.log.clone());
+
+    assert_eq!(
+        catalog_for(OLD, BUILD).map(|found| found.map(ShippedCatalog::version)),
+        Ok(Some(OLD))
+    );
+    assert_eq!(catalog_for(BUILD, BUILD).map(|found| found.is_none()), Ok(true));
+    assert_eq!(
+        catalog_for("v-gone", BUILD).err(),
+        Some(ReplayRefusal::EarlierPatch)
+    );
+    let gone = ReplayRecord {
+        catalog_version: "v-gone".to_string(),
+        final_hash: hash.clone(),
+    };
+    assert_eq!(
+        replay_open(&game, &gone, BUILD),
+        refused(ReplayRefusal::EarlierPatch)
+    );
+    assert_eq!(
+        replay_open(&game, &on_old("00000000"), BUILD),
+        refused(ReplayRefusal::RulesChanged)
+    );
+    // The game on `OLD` recorded as the build's own: folded under the build's cards, it misses its hash.
+    assert_eq!(
+        replay_open(&game, &record(&hash), BUILD),
+        refused(ReplayRefusal::RulesChanged)
+    );
+    clear_overrides();
+}
+
+#[test]
+fn r767000_a_page_of_checkpoints_on_an_uncarried_version_has_no_step() {
+    setup_catalog();
+    let old = old_catalog(IndexMap::new());
+    let (live, _) = played_on_old("replay-versions-4", old);
+    let game = input("replay-versions-4", &live.decks, live.log.clone());
+    let ReplayOpen::Ready { mut checkpoints, .. } =
+        replay_open(&game, &on_old(&hash_state(&live.state)), BUILD)
+    else {
+        panic!("a game on a carried version was refused");
+    };
+    assert!(
+        !replay_page(&checkpoints, PlayerId::P1, 1, REPLAY_PAGE_STEPS)
+            .steps
+            .is_empty()
+    );
+    checkpoints.catalog_version = Some("v-gone".to_string());
+    let page = replay_page(&checkpoints, PlayerId::P1, 1, REPLAY_PAGE_STEPS);
+    assert!(page.steps.is_empty());
+    assert_eq!(page.reduces, 0);
+    clear_overrides();
+}
+
+#[test]
+fn r767000_with_shipped_puts_the_catalog_back_after_a_panic() {
+    setup_catalog();
+    let old = old_catalog(IndexMap::new());
+    assert_eq!(catalog_version(), "test");
+    let panicked = catch_unwind(AssertUnwindSafe(|| {
+        with_shipped(Some(old), || {
+            assert_eq!(catalog_version(), OLD);
+            // A nested call under the build's own catalog puts `OLD` back when it ends.
+            with_shipped(None, || assert_eq!(catalog_version(), "test"));
+            assert_eq!(catalog_version(), OLD);
+            panic!("a fold that panics");
+        })
+    }));
+    assert!(panicked.is_err());
+    assert_eq!(catalog_version(), "test");
+    assert_eq!(find_def(None, "fx-1").and_then(|def| def.base.attack), Some(2));
+    clear_overrides();
 }

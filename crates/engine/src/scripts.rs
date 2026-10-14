@@ -54,10 +54,14 @@ pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
     let _ = REGISTERED.set(scripts.into_iter().collect());
 }
 
-/// One registered entry, borrowed: the testkit's override while one is set, else the production
-/// registry. A fused id is never in it. Lookups read through this rather than `registered_scripts`,
-/// which copies every entry.
+/// One registered entry, borrowed: the script kept for it in the shipped catalog a replay is folding
+/// under (R767000), else the testkit's override while one is set, else the production registry. A
+/// fused id is never in it. Lookups read through this rather than `registered_scripts`, which copies
+/// every entry.
 pub fn registered_entry(def_id: &str) -> Option<&'static CardScripts> {
+    if let Some(kept) = crate::catalog::folding_script(def_id) {
+        return Some(kept);
+    }
     match override_map() {
         Some(over) => over.get(def_id),
         None => REGISTERED.get().and_then(|map| map.get(def_id)),
@@ -123,9 +127,13 @@ fn fused_ingredient_count(state: &GameState, def_id: &str) -> Option<usize> {
     Some(count)
 }
 
-/// Which registry a composition read its ingredients' scripts from: the testkit's override (each one a
-/// leaked box of its own) or the production registry, by address; 0 before either is set.
+/// Which registry a composition read its ingredients' scripts from: the shipped catalog a replay is
+/// folding under, whose kept scripts come first (R767000), the testkit's override (each one a leaked
+/// box of its own) or the production registry, by address; 0 before either is set.
 fn registry_identity() -> usize {
+    if let Some(shipped) = crate::catalog::folding() {
+        return std::ptr::from_ref(shipped) as usize;
+    }
     match override_map() {
         Some(over) => std::ptr::from_ref(over) as usize,
         None => REGISTERED

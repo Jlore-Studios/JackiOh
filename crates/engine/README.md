@@ -58,9 +58,12 @@ mutable static. Two things hold it:
 
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
-catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`;
-under the `testkit` feature a thread-local override lets a test install fixture cards, the one
-allowed `RefCell`.
+catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
+(with where the older shipped catalogs are found, `register_shipped`, R767000); under the `testkit`
+feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
+more thread-local, `catalog.rs`'s `FOLDING`, names the shipped catalog a replay is folding under:
+`with_shipped` sets it for that one call and puts the previous one back after it, a panic included,
+so a fold of a game played on an older catalog version reads that version's cards (R767000).
 
 ## Effects, reads and scripts
 

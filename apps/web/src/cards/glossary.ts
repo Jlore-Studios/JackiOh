@@ -302,7 +302,7 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   }),
   Allure: verb(
     "Allure",
-    "Marked enemy Units join your side at the start of your next turn, or die if you have no room",
+    "Steal the marked enemy Units at the start of your next turn; one you have no room for dies",
   ),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.

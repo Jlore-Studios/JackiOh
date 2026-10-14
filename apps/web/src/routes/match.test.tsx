@@ -19,12 +19,21 @@ import type { SocketLike } from "../game/net.ts";
 import { baseView } from "../test/fixtures.ts";
 import { formatClock } from "../game/Clock.tsx";
 import { TURN_CLOCK_FINAL_MS, TURN_CLOCK_LAST_MS } from "../game/clockConstants.ts";
-import MatchRoute, { connectionWords, promptHolderOf, withoutToken } from "./match.tsx";
+import MatchRoute, { connectionWords, matchTestid, promptHolderOf, withoutToken } from "./match.tsx";
 import { navigate } from "../net/navigate.ts";
+import { replayTestid } from "../replay/ReplayPlayer.tsx";
+import { gifTestid } from "../replay/ShareGif.tsx";
+import { foldedReplaySteps } from "../test/replay.ts";
 
 vi.mock("../net/navigate.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../net/navigate.ts")>();
   return { ...actual, navigate: vi.fn() };
+});
+
+// R768000: "Share the last turn" makes a GIF at once; the export itself is `gif/export.test.ts`'s.
+vi.mock("../replay/gif/export.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../replay/gif/export.ts")>();
+  return { ...actual, exportGif: vi.fn(() => new Promise(() => undefined)), canShareFile: vi.fn(() => false), shareGif: vi.fn() };
 });
 
 class FakeSocket implements SocketLike {
@@ -823,5 +832,70 @@ describe("a socket refused mid-game", () => {
     } finally {
       logged.mockRestore();
     }
+  });
+});
+
+describe("R768000 a finished match's replay from its result panel", () => {
+  const steps = foldedReplaySteps();
+
+  /** `GET /api/replays/m-1?from=&count=` answers the folded game's steps; anything else the catalog. */
+  function stubReplayFetch(): string[] {
+    const asked: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        const address = new URL(String(url), "http://localhost");
+        const body = address.pathname === "/api/replays/m-1"
+          ? (() => {
+              asked.push(address.search);
+              const from = Number(address.searchParams.get("from") ?? "0");
+              const count = Number(address.searchParams.get("count") ?? "1");
+              return { matchId: "m-1", from, steps: steps.slice(from, from + count), total: steps.length };
+            })()
+          : address.pathname.endsWith("/series")
+            ? { series: null }
+            : address.pathname.endsWith("/rematch")
+              ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
+              : { version: "v1", defs: {} };
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
+      }),
+    );
+    return asked;
+  }
+
+  function finish(): void {
+    attach({ view: baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }) });
+  }
+
+  it("R768000 Watch the replay loads the match's replay at step 0, and Back returns to the board", async () => {
+    const asked = stubReplayFetch();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(asked[0]).toContain("from=0");
+
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R768000 Share the last turn opens it at its last step with Share as GIF open", async () => {
+    stubReplayFetch();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    finish();
+
+    fireEvent.click(await screen.findByTestId(matchTestid.shareLastTurn));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", String(steps.length - 1)));
+    await waitFor(() => expect(screen.getByTestId(gifTestid.toggle)).toHaveAttribute("aria-expanded", "true"));
+  });
+
+  it("R768000 a game still being played offers neither", () => {
+    stubReplayFetch();
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    expect(screen.queryByTestId(matchTestid.watchReplay)).toBeNull();
+    expect(screen.queryByTestId(matchTestid.shareLastTurn)).toBeNull();
   });
 });

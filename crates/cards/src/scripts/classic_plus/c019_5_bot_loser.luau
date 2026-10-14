@@ -1,7 +1,7 @@
 --!strict
 local J = require("@jackioh")
 
--- "Whenever this destroys a Unit, it gets +{attackGain} Attack." (`when` is read for traps only, so
+-- "Whenever this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so
 -- the test is in `run`.) R42's killer: a destroy with no killer is nobody's kill.
 local KILL = {
 	id = "bot-loser-kill",

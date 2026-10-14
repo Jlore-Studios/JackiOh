@@ -52,8 +52,16 @@ import type { TutorialAccountApi } from "../tutorial/accountSync.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { __resetTutorialProgressForTests, markLessonComplete, readTutorialProgress } from "../tutorial/progress.ts";
 import { tutorialTestid } from "../tutorial/testids.ts";
+import { replayTestid } from "../replay/ReplayPlayer.tsx";
+import { gifTestid } from "../replay/ShareGif.tsx";
 import PracticeRoute, { readPracticeParams } from "./practice.tsx";
 import type { PracticeRouteProps } from "./practice.tsx";
+
+// R768000: "Share the last turn" makes a GIF at once; the export itself is `gif/export.test.ts`'s.
+vi.mock("../replay/gif/export.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../replay/gif/export.ts")>();
+  return { ...actual, exportGif: vi.fn(() => new Promise(() => undefined)), canShareFile: vi.fn(() => false), shareGif: vi.fn() };
+});
 
 /** e2e/support/testids.ts mirrors these exact Surface testids. */
 const T = {
@@ -75,6 +83,8 @@ const T = {
   playAgain: "practice-play-again",
   changeSetup: "practice-change-setup",
   viewBoard: "practice-view-board",
+  watchReplay: "practice-watch-replay",
+  shareLastTurn: "practice-share-last-turn",
   outcome: "practice-outcome",
   deckHint: "practice-deck-hint",
   deckPreview: "practice-deck-preview",
@@ -146,6 +156,8 @@ type HostOptions = {
   catalog?: "answer" | "fail";
   /** R668: a failed resume cannot fold the saved game. */
   resume?: "started" | "failed";
+  /** R768000: the worker keeps the conceded game as game 3, of two steps, and answers its replay. */
+  kept?: boolean;
 };
 
 /** Fake definitions cost each card by its id's final digit. */
@@ -270,7 +282,23 @@ function routeHost(options: HostOptions = {}): RouteHost {
         );
       }
       if (body.type === "act" && body.action.type === "concede") {
-        return Promise.resolve({ id: mine, type: "snapshot", snapshot: concededSnapshot(human) });
+        const conceded = concededSnapshot(human);
+        return Promise.resolve({
+          id: mine,
+          type: "snapshot",
+          snapshot: options.kept === true ? { ...conceded, replay: { game: 3, steps: 2 } } : conceded,
+        });
+      }
+      if (body.type === "replay") {
+        const views = [snapshotFor(human, false).view, concededSnapshot(human).view];
+        return Promise.resolve({
+          id: mine,
+          type: "replay",
+          game: body.game,
+          from: body.from,
+          steps: views.slice(body.from, body.from + body.count).map((view, k) => ({ step: body.from + k, turn: 1, view })),
+          total: views.length,
+        });
       }
       return Promise.resolve({ id: mine, type: "snapshot", snapshot: snapshotFor(human, false) });
     },
@@ -558,6 +586,8 @@ describe("B32 /practice shows setup to anyone", () => {
       playAgain: T.playAgain,
       changeSetup: T.changeSetup,
       viewBoard: T.viewBoard,
+      watchReplay: T.watchReplay,
+      shareLastTurn: T.shareLastTurn,
       outcome: T.outcome,
       deckHint: T.deckHint,
       deckPreview: T.deckPreview,
@@ -1691,6 +1721,47 @@ describe("the result dialog", () => {
     expect(await screen.findByTestId(T.setup)).toBeInTheDocument();
     expect(screen.queryByTestId(T.result)).toBeNull();
     expect(screen.queryByTestId(T.hud)).toBeNull();
+  });
+});
+
+describe("R768000 a kept game's replay from the result dialog", () => {
+  async function concedeKept(kept: boolean): Promise<RouteHost> {
+    visit("?seed=replay1&difficulty=easy&deck=random&seat=p1");
+    const host = routeHost({ kept });
+    renderRoute(host);
+    await screen.findByTestId(T.hud);
+    concedeOnBoard();
+    await screen.findByTestId(T.result);
+    return host;
+  }
+
+  it("R768000 Watch the replay opens the kept game at step 0 through the worker, and Back returns to the dialog", async () => {
+    const host = await concedeKept(true);
+
+    fireEvent.click(screen.getByTestId(T.watchReplay));
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+    expect(screen.queryByTestId(T.result)).toBeNull();
+    expect(host.requests.filter((body) => body.type === "replay")[0]).toMatchObject({ type: "replay", game: 3, from: 0 });
+
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    expect(await screen.findByTestId(T.result)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R768000 Share the last turn opens the kept game at its last step with Share as GIF open", async () => {
+    await concedeKept(true);
+
+    fireEvent.click(screen.getByTestId(T.shareLastTurn));
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "1"));
+    await waitFor(() => expect(screen.getByTestId(gifTestid.toggle)).toHaveAttribute("aria-expanded", "true"));
+  });
+
+  it("R768000 a game the worker did not keep offers no replay", async () => {
+    await concedeKept(false);
+    expect(screen.queryByTestId(T.watchReplay)).toBeNull();
+    expect(screen.queryByTestId(T.shareLastTurn)).toBeNull();
   });
 });
 

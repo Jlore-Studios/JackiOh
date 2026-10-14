@@ -28,7 +28,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const REPLENISH: &str = "core-010"; // (0) Spell
-    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy Unit and the enemy hero.
+    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw
     const SCARAB: &str = "core-007"; // (1) Unit: Cry: Discover a (2) Cost card
     const HIT_JOB: &str = "core-016"; // Spell: destroy a target Unit
