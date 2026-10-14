@@ -1200,6 +1200,46 @@
   }
 }
 
+/* R849000's zzz: a summoning-sick unit (`UnitView.sick`) wears Hearthstone's mark at the portrait's right
+   edge, under the Vanilla stamp. A pill like the state rail's badges, so it reads in greyscale and without
+   motion; it drifts a little, and Reduce motion (the media query, or the settings panel's switch on
+   <html>) leaves it still. */
+.cf .cf-sick {
+  position: absolute;
+  z-index: 4;
+  top: 30cqh;
+  right: 2cqw;
+  padding: 0 max(2.5px, 1.4cqmin);
+  border-radius: 999px;
+  background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
+  box-shadow:
+    0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
+    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+  color: #e8ecf8;
+  font-size: max(7px, 8cqmin);
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@keyframes cf-sick-drift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-1.5cqh);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-reduce-motion="true"]) .cf .cf-sick {
+    animation: cf-sick-drift calc(2.4s * var(--anim-scale, 1)) ease-in-out infinite alternate;
+  }
+}
+
 /* One row along the bottom: attack on the left, health on the right, and Armor tucked against
    health's left side. A row rather than three absolute corners, so a wide "10/10" health pill
    pushes Armor aside instead of sliding over it. The DOM order (attack, health, armor) is kept

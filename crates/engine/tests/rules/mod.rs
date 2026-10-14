@@ -190,6 +190,7 @@ pub mod sets_not_shipped;
 pub mod setup;
 pub mod setup_aside;
 pub mod shuffle_random;
+pub mod sick_view;
 pub mod start_of_opponent_turn;
 pub mod state;
 pub mod statecheck;

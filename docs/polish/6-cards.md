@@ -84,7 +84,7 @@ board still fits 1280×720 and 390×844.
 | Legendary dragon crest | An original crest (laurel and wings, CSS/SVG) over the art for Legendary and Mythic |
 | Golden frame and animation | The Radiant face: a gold-foil frame, gold-shifted art and a shimmer. Radiant changes the card's game state (§5.2); it is not a cosmetic like Hearthstone's golden cards. |
 | Yellow sword and red drop | `.cf-atk` and `.cf-hp` on full cards; `.stat-attack` and `.stat-health` on minions. Damaged health is red and buffed stats are green (`data-tone`). |
-| Taunt shield frame, Divine Shield bubble, "zzz" | The minion shows a Taunt frame (`data-taunt`) and a `.shield-icon` bubble. No "zzz": `canAct` is false for every unit of the player who is not active and a sick unit may still switch (§4.1), so it cannot say "asleep". Whether a unit can attack is `legalActions`' highlight (task 7). |
+| Taunt shield frame, Divine Shield bubble, "zzz" | The minion shows a Taunt frame (`data-taunt`) and a `.shield-icon` bubble. It wears a `.cf-sick[data-sick]` "zzz" where the view marks the unit `sick` (R849000), because `canAct` cannot say "asleep": it is false for every unit of the player who is not active and a sick unit may still switch (§4.1). Whether a unit can attack is `legalActions`' highlight (task 7). |
 | Hover shows the whole card | `inspect-hover` after `HOVER_DELAY_MS` = 300 ms |
 | Click adds, drag adds, click on a deck tile removes, right-click inspects | The brief wins over Hearthstone here: a click on a pool card opens the detail view (whose "Add to Deck N" adds it), the card's "+" adds it in one tap, a drag adds, a click on a tile removes, and a right-click opens the detail view |
 | Mana filter 0–7+, keyword search, curve 0–7+ | Cost chips `0`–`5`, `6+` and `X`, because Core tops out at 6 plus the 100-cost Ceaseless Void. Free-text search. The curve uses the same buckets. |
@@ -965,8 +965,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - `title` (the name) only while `hoverPreviews` is off.
 
   Inside it, each keyword badge has the classes `keyword keyword-icon`, and the `.cf` of a unit
-  with Taunt has `data-taunt="true"`. No unit draws an exhausted or asleep mark: `canAct` is false
-  for every unit of the player who is not active, and a sick unit may still switch (§4.1). Taunt,
+  with Taunt has `data-taunt="true"`. No mark is drawn from `canAct`, which is false
+  for every unit of the player who is not active, and a sick unit may still switch (§4.1); a unit
+  the view marks `sick` wears `.cf-sick[data-sick]` (R849000). Taunt,
   Divine Shield and plated Armor are drawn as states (`data-chip="hidden"` on their badge); the
   other keywords show as at most `KEYWORD_CHIPS_MAX` (3) chips, the last becoming a `.cf-kw-more`
   "+n" whose title lists the rest. Every keyword keeps its `[data-keyword]` badge.

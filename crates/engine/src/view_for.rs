@@ -45,6 +45,8 @@
 //!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
 //!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
 //!     only, beside the normal price `cost` already is.
+//!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
+//!     (`attack_reason_of`).
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -62,7 +64,7 @@ use serde_json::{Map, Value};
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
 use crate::catalog::registered_catalog;
-use crate::combat::{ExertionKind, has_exertion};
+use crate::combat::{ExertionKind, has_exertion, is_asleep, why_cannot_declare};
 use crate::condition::condition_active;
 use crate::config::VIEW_EVENT_LIMIT;
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
@@ -520,7 +522,24 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         created: card.created,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
+        // R849000: summoning sick with neither Rush nor Charge, from the turn the unit entered and its
+        // viewed keywords — both public on the field.
+        sick: if is_asleep(state, top, &layers.keywords) {
+            Some(true)
+        } else {
+            None
+        },
+        attack_reason: attack_reason_of(state, top, viewer),
     })
+}
+
+/// R849000: why the viewer's own unit that may act now cannot declare an attack, gated as
+/// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer.
+fn attack_reason_of(state: &GameState, top: &CardInstance, viewer: PlayerId) -> Option<String> {
+    if top.controller != viewer || !can_act(state, top) {
+        return None;
+    }
+    why_cannot_declare(state, top).err().map(|error| error.message)
 }
 
 /// MD-D5, R1121: the yellow a dragged attack paints — the enemy Units an `attack_mods` entry would

@@ -1212,3 +1212,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.2, handlers:** `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult` (a handler that starts a match needs the `Arc` for `Registry::start`); `app::Handler`, `h!` and `api::http::dispatch` follow.
 - **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
+- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` rewrote those alone.

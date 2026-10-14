@@ -195,6 +195,12 @@ export default function Game({
    */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
   /**
+   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`),
+   * held with the view it was read from so it disappears when the board shows another view. Any later
+   * click replaces or clears it.
+   */
+  const [notice, setNotice] = useState<{ text: string; view: PlayerView } | null>(null);
+  /**
    * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
    * hotseat hand-over closes it the way a hand-over closes the concede question, and where: hung
    * off the portrait (`panel`, a click) or in the hero's inspect view (`inspect`, a hold; R1449).
@@ -467,6 +473,7 @@ export default function Game({
     (target: ClickTarget) => {
       const next = onClickTarget(shown, legal, interaction, target);
       setInteraction(next.interaction);
+      setNotice(next.notice === undefined ? null : { text: next.notice, view: shown });
       if (next.interaction !== interaction && next.interaction.stage === "attacking") {
         pickUp(next.interaction.attackerId);
       }
@@ -635,6 +642,11 @@ export default function Game({
             {error != null && error !== "" ? (
               <p key={error} className="game-error" data-testid="action-error" role="alert">
                 {t(error)}
+              </p>
+            ) : null}
+            {notice !== null && notice.view === shown ? (
+              <p key={notice.text} className="attack-reason" data-testid="attack-reason" role="status">
+                {t(notice.text)}
               </p>
             ) : null}
             {boardNotice}
