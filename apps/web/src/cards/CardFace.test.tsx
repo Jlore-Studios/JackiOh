@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardType, type Rarity, type Tag } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardType, type PreviewValue, type Rarity, type Tag } from "@jackioh/shared";
 
 import { CardFace } from "./CardFace.tsx";
 import { CHINESE_TERMS } from "./chinese.ts";
@@ -34,6 +34,7 @@ import { faceModel, type FaceSource } from "./model.ts";
 import { termsIn } from "./rules.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
+import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
 
 afterEach(() => {
   cleanup();
@@ -926,6 +927,85 @@ describe("R1107: a granted Death ability prints on its own line", () => {
     expect(granted).toHaveLength(1);
     expect(granted[0]?.textContent).toBe(grant);
     expect(text.textContent).toContain(grant);
+  });
+});
+
+/* --------------------------------------------------------------- issue #814: short faces */
+
+describe("issue #814: long faces truncate with an ellipsis and keep their whole text", () => {
+  const SUMMIT = SUMMIT_DEF_ID;
+
+  function summitBox(level: number | null): HTMLElement {
+    const { container } = render(
+      <CardFace
+        face={faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false })}
+        {...(level === null ? {} : { ascentLevel: level })}
+      />,
+    );
+    flushFits();
+    return one(container, ".card-text");
+  }
+
+  it("ascentLevelOf reads the engine's Ascent level preview (R280), and nothing else", () => {
+    const level = (value: number): PreviewValue => ({ label: "Ascent level", value });
+    expect(ascentLevelOf([])).toBeNull();
+    expect(ascentLevelOf([{ label: "Damage", value: 2 }])).toBeNull();
+    expect(ascentLevelOf([{ label: "Damage", value: 2 }, level(4)])).toBe(4);
+  });
+
+  it("summitShortText keeps the header and only the level's Ascent line", () => {
+    const sample = ["Header one.", "Header two.", "Ascent 0: Rest.", "Ascent 1: Fight.", "Ascent 2: Win."].join("\n");
+    expect(summitShortText(SUMMIT, sample, 1)).toBe("Header one.\nHeader two.\nAscent 1: Fight.");
+    expect(summitShortText(SUMMIT, sample, 0)).toBe("Header one.\nHeader two.\nAscent 0: Rest.");
+    // Nothing to shorten to: another card, no level, no Ascent lines, or a level past them.
+    expect(summitShortText("core-098", sample, 1)).toBeNull();
+    expect(summitShortText(SUMMIT, sample, null)).toBeNull();
+    expect(summitShortText(SUMMIT, sample, undefined)).toBeNull();
+    expect(summitShortText(SUMMIT, "no Ascent lines here", 1)).toBeNull();
+    expect(summitShortText(SUMMIT, sample, 9)).toBeNull();
+  });
+
+  it("a Summit face with a level prints its header and only the next Ascent line", () => {
+    const box = summitBox(1);
+    expect(box.getAttribute("data-short")).toBe("true");
+    expect(box.textContent).toContain("Ascent level: starts at 0");
+    expect(box.textContent).toContain("Ascent 1:");
+    for (const hidden of ["Ascent 0:", "Ascent 2:", "Ascent 9:", "Ascent 10:"]) {
+      expect(box.textContent, hidden).not.toContain(hidden);
+    }
+  });
+
+  it("a shortened Summit keeps its whole text in the rules box's tooltip", () => {
+    const box = summitBox(10);
+    expect(box.getAttribute("data-short")).toBe("true");
+    expect(box.textContent).toContain("Ascent 10: Win the game.");
+    expect(box.textContent).not.toContain("Ascent 0:");
+    const whole = faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false }).text.full;
+    expect(box.getAttribute("title")).toBe(whole);
+    expect(box.getAttribute("title")).toContain("Ascent 0:");
+  });
+
+  it("a Summit without a level prints the whole text, as does any other card given one", () => {
+    const whole = summitBox(null);
+    expect(whole.hasAttribute("data-short")).toBe(false);
+    expect(whole.textContent).toContain("Ascent 0:");
+    expect(whole.textContent).toContain("Ascent 10:");
+    expect(whole.getAttribute("title")).toContain("Ascent 10:");
+    cleanup();
+
+    // A level past the printed lines falls back to the whole text rather than hiding any.
+    expect(summitBox(99).hasAttribute("data-short")).toBe(false);
+    cleanup();
+
+    // A level means nothing off the Summit: Heroic Power's list of thirteen stays whole.
+    const { container } = render(
+      <CardFace face={faceModel({ defId: "core-098", def: def("core-098"), radiant: false })} ascentLevel={3} />,
+    );
+    flushFits();
+    const heroic = one(container, ".card-text");
+    expect(heroic.hasAttribute("data-short")).toBe(false);
+    expect(heroic.textContent).toContain("Gain one of 13 random powers");
+    expect(heroic.getAttribute("title")).toBe(faceModel({ defId: "core-098", def: def("core-098"), radiant: false }).text.full);
   });
 });
 

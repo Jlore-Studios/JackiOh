@@ -48,7 +48,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
     const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2.
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at once.
+    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at a time.
     const MAGIC_JAMMED: &str = "core-036"; // (1) Spell: destroy target backrow card; lock its zone.
     const MIND_CONTROL: &str = "core-049"; // (4) Spell: steal target enemy permanent.
     const MY_PAWN: &str = "core-096"; // Trap: cancels a declared attack that would be lethal to your hero (R44).

@@ -44,7 +44,7 @@ mod tests {
     const ROTTEN: &str = "classicplus-065-1";
     const FILLER: &str = "core-005";
     const GOING_LONG: &str = "core-084"; // Field Spell: "Your hero has Armor 2."
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: "Your hero can't take more than 5 damage at once." (Radiant 3)
+    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: "Your hero can't take more than 5 damage at a time." (Radiant 3)
     const MENACE: &str = "core-019";
 
     use crate::scenario;

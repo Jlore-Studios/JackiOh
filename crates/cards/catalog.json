@@ -2457,11 +2457,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at once.\nCry: Draw {draw}."
+      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
     }
   },
   "core-074": {

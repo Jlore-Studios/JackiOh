@@ -66,7 +66,7 @@ mod tests {
     const TWINSPELL: &str = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
     const FAUCI: &str = "core-091"; // (2) Unit: "Whenever this takes damage, it gets a Plague Counter."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
-    const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at once."
+    const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at a time."
     const FILLER: &str = "core-005"; // (1) Spell, a spare card so a hand never runs out (§2.5).
 
     fn events_of(s: &Scenario, kind: GameEventType) -> Vec<GameEvent> {
