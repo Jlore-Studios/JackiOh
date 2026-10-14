@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""The weekly hygiene run's branch sweep and its issue (.github/workflows/hygiene.yml).
+"""The weekly hygiene run's branch survey and its issue (.github/workflows/hygiene.yml). It reads
+and deletes nothing: a person reviews the branches it lists and deletes them.
 
   survey                        every branch, its pull requests and what its bot name points at
-  candidates SURVEY             the survey's candidates alone, for the model's check
-  apply SURVEY VERDICT          delete the candidates the model also said to delete; print a report
+  report SURVEY                 the branches safe to delete, and the stale ones a person must judge
   issue TEMPLATE REPORT GUIDE   open the week's issue for Squishy, unless one is still open
 
-A branch is a candidate when nothing live uses it and deleting it loses nothing that cannot come
+A branch is safe to delete when nothing live uses it and deleting it loses nothing that cannot come
 back. Its last commit is at least STALE_DAYS old. It is not infrastructure. No open pull request has
 it as head, and the issue or pull request its bot name points at is closed. And either a closed or
 merged pull request had it as head (that page restores it), or the default branch holds every commit
 on it. Anything else that is stale is listed for a person. Standard library only; GitHub through the
-`gh` CLI, as `GH_TOKEN` and `REPO` say. `DRY_RUN=true` deletes and opens nothing.
+`gh` CLI, as `GH_TOKEN` and `REPO` say. `DRY_RUN=true` opens nothing.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ KEEP_PREFIXES = ("ai/",)
 NAMED = re.compile(r"(?:bot|squishy)/(?:issue-(?P<issue>\d+)|old/issue-(?P<old>\d+)-.+"
                    r"|oneshot-(?P<oneshot>\d+)/.+|wip/(?P<pr>\d+))")
 TITLE = "Architecture: weekly hygiene"
-LABELS = ("architecture", "difficulty:hard", "squishy:build")
+LABELS = ("architecture", "difficulty:hard", "squishy:build", "person merges")
 #: The issue body's limit is 65,536 characters; the report gives way first.
 REPORT_LIMIT = 30_000
 
@@ -85,26 +85,6 @@ def classify(branch: dict[str, Any], *, default: str, protected: set[str], now: 
     if ahead(name) == 0:
         return "candidate", "the default branch holds every commit on it"
     return "list", "no pull request, and commits the default branch does not have"
-
-
-def to_delete(candidates: list[dict[str, Any]], verdict_text: str) -> tuple[list[dict], dict]:
-    """The candidates the model also said to delete, and the model's reasons by branch. Only names
-    from the survey, and only an explicit `delete`: a missing, malformed or unsure answer keeps the
-    branch."""
-    reasons: dict[str, str] = {}
-    match = re.search(r"\[.*\]", verdict_text, re.DOTALL)
-    try:
-        answers = json.loads(match.group(0)) if match else []
-    except json.JSONDecodeError:
-        answers = []
-    said = set()
-    for answer in answers if isinstance(answers, list) else []:
-        if not isinstance(answer, dict) or not isinstance(answer.get("branch"), str):
-            continue
-        reasons[answer["branch"]] = str(answer.get("reason", ""))
-        if answer.get("verdict") == "delete":
-            said.add(answer["branch"])
-    return [c for c in candidates if c["name"] in said], reasons
 
 
 def gh(*args: str) -> str:
@@ -166,47 +146,28 @@ def commit_cell(branch: dict[str, Any]) -> str:
     return f"{branch['date'][:10]} `{branch['sha'][:7]}` {headline}"
 
 
-def apply(data: dict[str, Any], verdict_text: str, *, dry_run: bool) -> str:
-    repo = data["repo"]
-    candidates = [b for b in data["branches"] if b["bucket"] == "candidate"]
+def report(data: dict[str, Any]) -> str:
+    """The branch section of the issue: for a person to review, never for the builder."""
+    safe = [b for b in data["branches"] if b["bucket"] == "candidate"]
     listed = [b for b in data["branches"] if b["bucket"] == "list"]
-    chosen, reasons = to_delete(candidates, verdict_text)
-    deleted, failed = [], []
-    for branch in chosen:
-        ref = f"repos/{repo}/git/refs/heads/{quote(branch['name'], safe='/')}"
-        try:
-            if gh_json("api", ref, "--jq", "{s: .object.sha}")["s"] != branch["sha"]:
-                failed.append((branch, "it moved since the survey"))
-                continue
-            if not dry_run:
-                gh("api", "-X", "DELETE", ref)
-            deleted.append(branch)
-        except subprocess.CalledProcessError as exc:
-            failed.append((branch, (exc.stderr or "").strip()[:120] or "the API refused"))
-    kept = [b for b in candidates if b not in chosen]
-    lines = [f"Swept {len(data['branches'])} branches on {data['at'][:10]}"
-             f"{' (a dry run: nothing was deleted)' if dry_run else ''}. A branch is deleted only when"
-             f" the rule in `.github/hygiene/branches.py` and a model's check both say so.", ""]
-    lines += [f"**Deleted ({len(deleted)}).** Restore one from its pull request's page, or with"
-              " `git push origin <sha>:refs/heads/<branch>`.", ""]
-    if deleted:
-        lines += ["| Branch | Last commit | Pull requests | Full sha |", "|---|---|---|---|"]
-        lines += [f"| `{b['name']}` | {commit_cell(b)} | {pr_cell(b)} | `{b['sha']}` |" for b in deleted]
-        lines.append("")
-    if kept or failed:
-        lines += [f"**Candidates kept ({len(kept) + len(failed)}).**", "", "| Branch | Why |", "|---|---|"]
-        lines += [f"| `{b['name']}` | the model kept it: {reasons.get(b['name'], 'no answer')} |" for b in kept]
-        lines += [f"| `{b['name']}` | not deleted: {why} |" for b, why in failed]
+    lines = [f"For a person, not the builder. {len(data['branches'])} branches surveyed on"
+             f" {data['at'][:10]} by the rule in `.github/hygiene/branches.py`. Nothing has been deleted.", ""]
+    if safe:
+        lines += [f"**Safe to delete ({len(safe)}).** Each one's pull request page restores it, or main"
+                  " holds every commit on it. Strike any you want to keep, then delete the rest:", "",
+                  "```sh", "git push origin --delete " + " ".join(b["name"] for b in safe), "```", "",
+                  "| Branch | Last commit | Pull requests | Why it is safe | Full sha |", "|---|---|---|---|---|"]
+        lines += [f"| `{b['name']}` | {commit_cell(b)} | {pr_cell(b)} | {b['why']} | `{b['sha']}` |"
+                  for b in safe]
         lines.append("")
     if listed:
-        lines += [f"**Stale, for a person ({len(listed)}).** No pull request, and commits the default"
-                  " branch lacks: delete each one by hand once it is not wanted.", "",
-                  "| Branch | Last commit |", "|---|---|"]
+        lines += [f"**Stale, with commits main lacks ({len(listed)}).** No pull request: delete one only"
+                  " once nobody wants its work.", "", "| Branch | Last commit |", "|---|---|"]
         lines += [f"| `{b['name']}` | {commit_cell(b)} |" for b in listed]
-    report = "\n".join(lines)
-    if len(report) > REPORT_LIMIT:
-        report = report[:REPORT_LIMIT] + "\n\n_The report was cut short; the run's log has all of it._"
-    return report
+    text = "\n".join(lines)
+    if len(text) > REPORT_LIMIT:
+        text = text[:REPORT_LIMIT] + "\n\n_The report was cut short; the run's survey artifact has all of it._"
+    return text
 
 
 def open_issue(repo: str, template: str, report: str, guidance: str, run_url: str, today: str, *,
@@ -243,12 +204,8 @@ def main(argv: list[str]) -> int:
     command, *rest = argv
     if command == "survey":
         print(json.dumps(survey(repo, datetime.now(timezone.utc)), indent=1))
-    elif command == "candidates":
-        data = json.loads(read(rest[0]))
-        print(json.dumps([{k: b.get(k) for k in ("name", "date", "headline", "prs", "why")}
-                          for b in data["branches"] if b["bucket"] == "candidate"], indent=1))
-    elif command == "apply":
-        print(apply(json.loads(read(rest[0])), read(rest[1]), dry_run=dry_run))
+    elif command == "report":
+        print(report(json.loads(read(rest[0]))))
     elif command == "issue":
         print(open_issue(repo, read(rest[0]), read(rest[1]), read(rest[2]),
                          os.environ.get("RUN_URL", ""), datetime.now(timezone.utc).date().isoformat(),

@@ -146,8 +146,9 @@ but `bot selftest`; adding a path to that list takes proof that nothing in `crat
 `spec/` reads it. Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
 coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites) runs daily in `super.yml`. A job
 over seven minutes opens an issue (`ci-duration.yml`): split it until it finishes under five. `hygiene.yml`
-runs weekly: it deletes stale branches a model's check agrees on and opens an issue for Squishy to clear dead
-files and tighten the agent instructions (#839). Each workflow's header says what it does.
+runs weekly: it opens an issue for Squishy to clear dead files and tighten the agent instructions, which a
+person reviews and merges (`person merges`), and lists the stale branches safe to delete for a person (#839).
+Each workflow's header says what it does.
 
 ## Architecture
 

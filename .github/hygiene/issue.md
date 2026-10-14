@@ -1,6 +1,7 @@
-The weekly hygiene run ([this week's run](<!-- run -->)) has swept the branches (below). This issue is the
-rest of the cleanup: dead files, archives nothing reads, and the agent instructions. Make one pull request
-that removes what is no longer needed and tightens what agents load, and prove every removal.
+The weekly hygiene run ([this week's run](<!-- run -->)) asks for a cleanup: dead files, archives nothing
+reads, and the agent instructions. Make one pull request that removes what is no longer needed and
+tightens what agents load, and prove every removal. A person reviews and merges it (`person merges`), so
+make each removal easy to check. Leave the branches at the end to that person.
 
 ## 1. Dead files
 
@@ -71,7 +72,7 @@ the bot selftest, and the unit tests of any package you touched.
 
 Nothing to remove? Make no change and say so in your answer, with your evidence.
 
-## Branches
+## Branches (for a person, not the builder)
 
 <!-- branches -->
 

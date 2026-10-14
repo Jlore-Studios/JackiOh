@@ -1,5 +1,5 @@
-"""The weekly hygiene run's branch rule (.github/hygiene/branches.py, #839): what it deletes once a
-model agrees, what it lists for a person, and what it never touches."""
+"""The weekly hygiene run's branch rule (.github/hygiene/branches.py, #839): what it offers a person
+to delete, what it lists for them to judge, and what it never touches. It deletes nothing itself."""
 
 from __future__ import annotations
 
@@ -58,20 +58,23 @@ class RuleTests(unittest.TestCase):
         self.assertIsNone(branches.named("claude/issue-12"))
 
 
-class VerdictTests(unittest.TestCase):
-    CANDIDATES = [branch("a"), branch("b"), branch("c")]
+class ReportTests(unittest.TestCase):
+    def survey(self, *found):
+        return {"at": NOW.isoformat(), "branches": list(found)}
 
-    def test_only_an_explicit_delete_of_a_surveyed_branch_counts(self):
-        text = ('Sure:\n[{"branch": "a", "verdict": "delete", "reason": "merged"},'
-                ' {"branch": "b", "verdict": "keep", "reason": "draft"},'
-                ' {"branch": "main", "verdict": "delete", "reason": "x"}]')
-        chosen, reasons = branches.to_delete(self.CANDIDATES, text)
-        self.assertEqual([c["name"] for c in chosen], ["a"])
-        self.assertEqual(reasons["b"], "draft")
+    def test_the_command_deletes_exactly_the_safe_branches(self):
+        text = branches.report(self.survey(
+            dict(branch("bot/issue-5", prs=[(9, "MERGED")]), bucket="candidate", why="restorable"),
+            dict(branch("claude/lost"), bucket="list", why="unique commits"),
+            dict(branch("main"), bucket="keep", why="infrastructure")))
+        self.assertIn("git push origin --delete bot/issue-5\n", text)
+        self.assertIn("`claude/lost`", text)
+        self.assertNotIn("`main`", text)
+        self.assertIn("Nothing has been deleted", text)
 
-    def test_no_answer_deletes_nothing(self):
-        for text in ("", "I could not decide.", "[not json]", '{"branch": "a", "verdict": "delete"}'):
-            self.assertEqual(branches.to_delete(self.CANDIDATES, text)[0], [], text)
+    def test_no_safe_branch_offers_no_command(self):
+        text = branches.report(self.survey(dict(branch("claude/lost"), bucket="list", why="x")))
+        self.assertNotIn("git push", text)
 
 
 if __name__ == "__main__":

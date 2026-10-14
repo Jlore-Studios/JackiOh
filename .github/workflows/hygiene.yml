@@ -1,13 +1,13 @@
-# The weekly hygiene run (#839): stale branches deleted once a model's check agrees, and an issue that
-# hands the rest to Squishy (dead files, archives, and the agent instructions held to Anthropic's
-# current guidance). Mondays at 06:41 UTC, and on demand: `gh workflow run hygiene.yml`, with
-# `-f dry_run=true` to delete nothing and open nothing.
+# The weekly hygiene run (#839): an issue that hands the cleanup to Squishy, for a person to review and
+# merge (`person merges`). Its body asks for dead files, archives and the agent instructions held to
+# Anthropic's current guidance, and lists the stale branches safe to delete for a person to delete by
+# hand. Nothing here deletes or merges anything. Mondays at 06:41 UTC, and on demand:
+# `gh workflow run hygiene.yml`, with `-f dry_run=true` to open nothing.
 #
-# Three jobs, so the model never holds a write token. `survey` reads the repository. `check` runs the
-# model on Squishy's subscription with no GitHub token: it judges the candidates and reads Anthropic's
-# pages for the guidance. `apply` deletes and opens the issue with no model. The rule, the prompts and
-# the issue's text are in .github/hygiene/, where no bot may change them; bot/tests/test_hygiene.py
-# tests the rule.
+# Two jobs, so the model never holds a GitHub token. `research` runs the model on Squishy's
+# subscription to read Anthropic's pages for the guidance, since a builder has no web access. `sweep`
+# reads the branches and opens the issue, with no model. The rule, the prompt and the issue's text are
+# in .github/hygiene/, where no bot may change them; bot/tests/test_hygiene.py tests the rule.
 name: hygiene
 
 on:
@@ -16,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Delete nothing and open no issue; report what would happen
+        description: Open no issue; show what it would say
         type: boolean
         default: false
 
@@ -27,49 +27,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  survey:
-    name: survey
+  research:
+    name: research
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      issues: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-          sparse-checkout: .github/hygiene
-      - name: survey the branches
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-        run: |
-          python3 .github/hygiene/branches.py survey > survey.json
-          python3 .github/hygiene/branches.py candidates survey.json > candidates.json
-          echo "$(jq '.branches | length' survey.json) branches, $(jq length candidates.json) candidates"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: survey
-          path: |
-            survey.json
-            candidates.json
-          retention-days: 30
-
-  check:
-    name: check
-    needs: survey
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
     permissions: {}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
           sparse-checkout: .github/hygiene
-      - uses: actions/download-artifact@v4
-        with:
-          name: survey
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -77,21 +44,8 @@ jobs:
         run: |
           npm install --global @anthropic-ai/claude-code
           claude --version
-      # No tools: the model only answers. A failed call leaves no verdict, and no verdict deletes nothing.
-      - name: the model checks the candidates
-        env:
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY }}
-        run: |
-          if [ "$(jq length candidates.json)" = 0 ]; then
-            echo "[]" > verdict.txt
-            exit 0
-          fi
-          prompt="$(cat .github/hygiene/check-branches.md; echo; cat candidates.json)"
-          timeout 15m claude -p "$prompt" --model opus --permission-mode dontAsk --max-turns 3 \
-            --disallowedTools "Bash,Edit,Write,NotebookEdit,Read,Glob,Grep,WebFetch,WebSearch,Task" \
-            --output-format text > verdict.txt || { echo "::warning::the check failed; nothing will be deleted"; : > verdict.txt; }
-          cat verdict.txt
-      # Web access on Anthropic's sites alone, and search; nothing else.
+      # Web access on Anthropic's sites alone, and search; nothing else. A failed call leaves the
+      # issue without a digest, not without an issue.
       - name: the model reads the current guidance
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_SQUISHY }}
@@ -106,20 +60,19 @@ jobs:
           wc -c guidance.md
       - uses: actions/upload-artifact@v4
         with:
-          name: check
-          path: |
-            verdict.txt
-            guidance.md
+          name: guidance
+          path: guidance.md
           retention-days: 30
 
-  apply:
-    name: apply
-    needs: [survey, check]
-    if: ${{ !cancelled() && needs.survey.result == 'success' }}
+  sweep:
+    name: sweep
+    needs: research
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
+      pull-requests: read
       issues: write
     steps:
       - uses: actions/checkout@v4
@@ -127,21 +80,22 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github/hygiene
       - uses: actions/download-artifact@v4
-        with:
-          name: survey
-      # A failed check uploads nothing: then there is no verdict, and nothing is deleted.
-      - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
-          name: check
-      - name: delete what the rule and the model agree on
+          name: guidance
+      - name: survey the branches
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          DRY_RUN: ${{ inputs.dry_run || false }}
         run: |
-          python3 .github/hygiene/branches.py apply survey.json verdict.txt > report.md
+          python3 .github/hygiene/branches.py survey > survey.json
+          python3 .github/hygiene/branches.py report survey.json > report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey
+          path: survey.json
+          retention-days: 30
       - name: open the issue for Squishy
         env:
           GH_TOKEN: ${{ github.token }}
