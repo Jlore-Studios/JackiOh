@@ -5330,6 +5330,7 @@
     "860": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "2a75319caa3dbdce9e52e8f0d447df481bf144ab",
       "ci_fixes": 1,
       "ci_reruns": {
         "905afc85c76a7f44dd59fd099dfc44be11206bba": 1
@@ -5346,7 +5347,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-14T05:51:39Z",
+      "feedback_since": "2026-10-14T06:56:12Z",
       "forced": false,
       "interruptions": 0,
       "issue": 849,
@@ -5360,11 +5361,11 @@
       "round_tier": "medium",
       "run_id": "38525083119",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-14T06:56:12Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse"
