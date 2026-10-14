@@ -5473,6 +5473,13 @@
     "864": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T14:21:25Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 9 (stands alone) cannot be checked without GitHub access, and connect() changes the reconnect state machine that R1441's tests pin; otherwise 5 files in apps/web"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
