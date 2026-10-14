@@ -150,6 +150,21 @@ pub struct KeywordWeights {
     /// E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs.
     #[serde(rename = "Immune to Spells")]
     pub immune_to_spells: f64,
+    /// R783000: its attacks take no strike back from a defender that is not Ranged.
+    #[serde(rename = "Ranged")]
+    pub ranged: f64,
+    /// R783002, R783003: in Attack Position only Flying and Ranged attackers may attack it.
+    #[serde(rename = "Flying")]
+    pub flying: f64,
+    /// R783004: a hand card's face-down play; a unit on the field has no use for it.
+    #[serde(rename = "Cloaked")]
+    pub cloaked: f64,
+    /// R783010: the Lock it makes as it arrives; a unit already on the field has made it.
+    #[serde(rename = "Crater")]
+    pub crater: f64,
+    /// R783012: one more play from the graveyard after the unit dies.
+    #[serde(rename = "Flashback")]
+    pub flashback: f64,
 }
 
 impl KeywordWeights {
@@ -172,6 +187,11 @@ impl KeywordWeights {
             KeywordKind::Stack => Some(self.stack),
             KeywordKind::Lucky => Some(self.lucky),
             KeywordKind::ImmuneToSpells => Some(self.immune_to_spells),
+            KeywordKind::Ranged => Some(self.ranged),
+            KeywordKind::Flying => Some(self.flying),
+            KeywordKind::Cloaked => Some(self.cloaked),
+            KeywordKind::Crater => Some(self.crater),
+            KeywordKind::Flashback => Some(self.flashback),
             _ => None,
         }
     }
@@ -297,6 +317,18 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         lucky: 0.2,
         // E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs.
         immune_to_spells: 1.0,
+        // Patch v0.3.7 (#841): untuned, conservative starts for the training lanes to move. R783000:
+        // Ranged spares its attacks the strike back, as First Strike spares a kill's, but guards
+        // nothing on defense, so half First Strike's worth.
+        ranged: 0.5,
+        // R783002: the reach Flying denies ground attackers is counted by `face_threat` and the reply
+        // already, so on its own it is worth what Trample is.
+        flying: 0.5,
+        // R783004, R783010: a hand card's play and an arrival's Lock, nothing left on the field.
+        cloaked: 0.0,
+        crater: 0.0,
+        // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
+        flashback: 0.0,
     },
     spell_damage: 0.5,
     brittle_discount: 0.5,
@@ -363,6 +395,12 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         // E35, E6, B3.1, B3.3 and B3.4 (patch v0.2.0) came after the gates were fixed, so the frozen
         // baseline gives each of these terms nothing, as it did.
         immune_to_spells: 0.0,
+        // Patch v0.3.7's keywords came after the gates were fixed too: nothing, as it gave them.
+        ranged: 0.0,
+        flying: 0.0,
+        cloaked: 0.0,
+        crater: 0.0,
+        flashback: 0.0,
     },
     spell_damage: 0.0,
     brittle_discount: 0.0,

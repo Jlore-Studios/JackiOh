@@ -144,7 +144,7 @@ that favours one seat gives each AI one game of it (R850000, R850001).
    keep the best of several arms of a knob because it read best: each arm you keep needs its own
    `edgeLow` above 0, and the stack's screen against the parent (below) says whether the picks hold.
 5. Record every screen in `attempts.md` with its interval, kept or reverted, for example
-   `400 games on improve-dev, 214-186, edge +0.035 (+0.004 to +0.066) vs control 1a2b3c4: kept`.
+   `400 games on improve-dev, 214-186, edge +0.070 (+0.012 to +0.128) vs control 1a2b3c4: kept`.
 
 `cargo jackioh trace` prints one game turn by turn when you need to see why the AI lost it; trace
 the dev set's games, never the gate's.

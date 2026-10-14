@@ -17,6 +17,7 @@ pub mod observe;
 pub mod observe_instance_data;
 pub mod prompts_v020;
 pub mod puzzles;
+pub mod ranged_flying;
 pub mod redact_announce;
 pub mod redact_backrow_piles;
 pub mod redact_board_history;

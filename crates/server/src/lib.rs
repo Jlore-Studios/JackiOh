@@ -13,6 +13,8 @@
 //!   R1451, R1452; #638).
 //! - `ranked`: the ladder's pure rules (part 18). `db`: the store and migrations (part 20).
 //! - `cli`: the command-line tools `main.rs` dispatches to (part 20).
+//! - `loops`: the background loops' supervisor, which logs a loop that panics and starts it again
+//!   (#842).
 //! - `username`: a username's checks, stored form and key (SPEC §9.4, R1432–R1434; #579).
 
 pub mod actor;
@@ -24,5 +26,6 @@ pub mod cli;
 pub mod config;
 pub mod db;
 pub mod env;
+pub mod loops;
 pub mod ranked;
 pub mod username;

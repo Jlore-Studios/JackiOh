@@ -819,7 +819,7 @@ EOF
   if [ -n "$stack" ]; then
     cat >>"$work/draft.md" <<EOF
 
-The lane keeps its kept, measured changes as commits on [\`$stack\`](https://github.com/$slug/commits/$stack), one per change, each message carrying its screen's numbers. Each session starts from that stack rebased onto \`main\`, and the loop saves the session's commits to it when the session ends ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md#the-improve-stack), The improve stack). A promotion empties it once it merges. To refuse the stack's changes, stop the lane, delete \`$stack\`, and start the lane again.
+The lane keeps its kept, measured changes as commits on [\`$stack\`](https://github.com/$slug/commits/$stack), one per change, each message carrying its screen's numbers. Each session starts from that stack rebased onto \`main\`, and the loop saves the session's commits to it when the session ends ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md#the-improve-stack), The improve stack). A promotion empties it once it merges. Closing this pull request leaves the stack as it is: to refuse the stack's changes, stop the lane, delete \`$stack\`, and start the lane again.
 EOF
   fi
   body
