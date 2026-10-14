@@ -1,6 +1,6 @@
 // R631 (SPEC §10.11 "Music"): the game's music director. It follows the viewer's own view, starts a
-// Mythic theme or a station switch at the moment R204 gives a card's cast line and only for a card
-// the viewer can read, ends a theme on the viewer's next hit, and opens a match on its sting.
+// station switch at the moment R204 gives a card's cast line and only for a card the viewer can read,
+// and opens a match on its sting. R822000: no card plays a theme.
 // R1350, R1351: a Legendary's or a Mythic's intro at its card's moment, and what cuts it.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,8 +19,10 @@ const ZEPHYRS = "core-097";
 const MY_PAWN = "core-096";
 const CEASELESS_VOID = "core-100";
 const K_POP = "core-050";
-/** #52 Silly Silas (a Legendary Unit, sharing the first Legendary entrance theme). */
+/** #52 Silly Silas (a Legendary Unit). */
 const SILLY_SILAS = "core-052";
+/** C+ #37 Wardrum (a Legendary Unit that switches to Epic Orchestral). */
+const WARDRUM = "classicplus-037";
 
 type Rig = {
   director: MusicDirector;
@@ -36,15 +38,11 @@ type Rig = {
   order: string[];
   settings: AudioSettings;
   setSettings(patch: Partial<AudioSettings>): void;
-  /** Fires the pending timer (a Mythic theme's end), if one is armed. */
-  fireTimer(): void;
-  timers: { ms: number; fn: () => void; cancelled: boolean }[];
 };
 
 function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } = {}): Rig {
   const requests: MusicRequest[] = [];
   const listeners = new Set<(s: AudioSettings) => void>();
-  const timers: Rig["timers"] = [];
   const r: Rig = {
     director: null as unknown as MusicDirector,
     requests,
@@ -64,14 +62,6 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
       r.settings = { ...r.settings, ...patch };
       for (const l of [...listeners]) l(r.settings);
     },
-    fireTimer() {
-      const live = timers.filter((t) => !t.cancelled);
-      const timer = live.at(-1);
-      if (timer === undefined) throw new Error("no timer armed");
-      timer.cancelled = true;
-      timer.fn();
-    },
-    timers,
   };
   r.director = createMusicDirector({
     sink: {
@@ -98,13 +88,6 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
       return () => listeners.delete(l);
     },
     rotation: () => options.rotation ?? 0,
-    later: (ms, fn) => {
-      const timer = { ms, fn, cancelled: false };
-      timers.push(timer);
-      return () => {
-        timer.cancelled = true;
-      };
-    },
   });
   return r;
 }
@@ -215,18 +198,8 @@ describe("R631 the viewer's own turn, health and result", () => {
   });
 });
 
-describe("R631 Mythic themes", () => {
-  it("R631 a readable Mythic cast starts its theme, from either seat", () => {
-    for (const seat of ["p1", "p2"] as const) {
-      const r = rig();
-      const view = midGame();
-      r.director.onView(view);
-      r.director.onEvent(played(ZEPHYRS, seat), view);
-      expect(r.last().track, seat).toBe("mythic-zephyrs");
-    }
-  });
-
-  it("R631 a card the viewer cannot read starts nothing", () => {
+describe("R631 station switches", () => {
+  it("R631 a card the viewer cannot read switches nothing", () => {
     const r = rig();
     const view = midGame();
     r.director.onView(view);
@@ -234,124 +207,6 @@ describe("R631 Mythic themes", () => {
     expect(r.last().track).toBe("tavern-1");
   });
 
-  it("R631 a Mythic Trap's theme starts when it fires, never when it is set", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(MY_PAWN), view);
-    expect(r.last().track).toBe("tavern-1");
-    r.director.onEvent({ type: "trapFired", instanceId: "t1", defId: MY_PAWN, controller: "p1", row: "backrow", lane: 2 }, view);
-    expect(r.last().track).toBe("mythic-my-pawn");
-  });
-
-  it("R631 a Field Trap that fires again (Classic+ #74 on each fuse) plays its theme at its first firing only", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    const fires: GameEvent = { type: "trapFired", instanceId: "t5", defId: "classicplus-074", controller: "p1", row: "backrow", lane: 3 };
-    r.director.onEvent(fires, view);
-    expect(r.last().track).toBe("mythic-twice-forward");
-    r.director.onEvent(hitOn("p1"), view);
-    expect(r.last().track).toBe("tavern-1");
-    r.director.onEvent(fires, view);
-    expect(r.last().track).toBe("tavern-1");
-  });
-
-  it("R631 the same Mythic again does not restart its theme", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    const armed = r.timers.length;
-    r.director.onEvent(played(ZEPHYRS), view);
-    expect(r.timers.length).toBe(armed);
-    expect(r.last().track).toBe("mythic-zephyrs");
-  });
-
-  it("R631 another Mythic replaces the theme", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    r.director.onEvent(played(CEASELESS_VOID, "p2"), view);
-    expect(r.last().track).toBe("mythic-ceaseless-void");
-  });
-
-  it("R631 the viewer's hero taking a hit ends the theme; a hit on the opponent does not", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    r.director.onEvent(hitOn("p2"), view);
-    expect(r.last().track).toBe("mythic-zephyrs");
-    r.director.onEvent(hitOn("p1", 0), view);
-    expect(r.last().track).toBe("mythic-zephyrs");
-    r.director.onEvent({ type: "healthLost", player: "p1", amount: 1 }, view);
-    expect(r.last().track).toBe("tavern-1");
-  });
-
-  it("R631 at low health the theme holds past its plays until the viewer's next hit, then urgency resumes", () => {
-    const r = rig();
-    const low = withHealth(5);
-    r.director.onView(low);
-    expect(r.last().track).toBe("tavern-danger");
-    r.director.onEvent(played(ZEPHYRS), low);
-    expect(r.last().track).toBe("mythic-zephyrs");
-    r.fireTimer();
-    r.director.settle();
-    expect(r.last().track).toBe("mythic-zephyrs");
-    r.director.onEvent(hitOn("p1"), low);
-    expect(r.last().track).toBe("tavern-danger");
-  });
-
-  it("R631 away from low health the theme ends once it has played twice", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    const timer = r.timers.at(-1);
-    // Its first pass to the loop's end, and one more loop.
-    expect(timer?.ms).toBeGreaterThan(20_000);
-    r.fireTimer();
-    expect(r.last().track).toBe("tavern-1");
-  });
-
-  it("R631 a Legendary's shared theme starts at its cast line and holds like a Mythic's", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(SILLY_SILAS), view);
-    expect(r.last().track).toBe("legendary-1");
-    r.director.onEvent(hitOn("p1"), view);
-    expect(r.last().track).toBe("tavern-1");
-    r.director.onEvent(played(SILLY_SILAS), view);
-    expect(r.last().track).toBe("legendary-1");
-    r.fireTimer();
-    expect(r.last().track).toBe("tavern-1");
-  });
-
-  it("R631 a theme held at low health lets go when the viewer recovers", () => {
-    const r = rig();
-    r.director.onView(withHealth(5));
-    r.director.onEvent(played(ZEPHYRS), withHealth(5));
-    r.fireTimer();
-    r.director.onView(withHealth(20));
-    r.director.settle();
-    expect(r.last().track).toBe("tavern-1");
-  });
-
-  it("R631 the result outranks a theme and ends it", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    r.director.onView(midGame({ phase: "over", result: { winner: "p1", reason: "hero-death" } }));
-    r.director.settle();
-    expect(r.last().track).toBe("victory");
-  });
-});
-
-describe("R631 station switches", () => {
   it("R631 the viewer's own cast switches their station for the rest of the match", () => {
     const r = rig();
     const view = midGame();
@@ -390,8 +245,41 @@ describe("R631 station switches", () => {
   });
 });
 
+describe("R822000 no card plays a theme", () => {
+  it("R822000 a readable Mythic or Legendary, from either seat, opens its intro and leaves the station's in-game track playing", () => {
+    for (const [defId, seat] of [[ZEPHYRS, "p1"], [CEASELESS_VOID, "p2"], [SILLY_SILAS, "p1"]] as const) {
+      const r = rig();
+      const view = midGame();
+      r.director.onView(view);
+      r.order.length = 0;
+      r.director.onEvent(played(defId, seat), view);
+      expect(r.order, defId).toEqual([`intro intro-${defId}`]);
+      expect(r.last().track, defId).toBe("tavern-1");
+    }
+  });
+
+  it("R822000 a Mythic Trap's firing opens its intro and nothing else", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.order.length = 0;
+    r.director.onEvent({ type: "trapFired", instanceId: "t1", defId: MY_PAWN, controller: "p1", row: "backrow", lane: 2 }, view);
+    expect(r.order).toEqual(["intro intro-core-096"]);
+    expect(r.last().track).toBe("tavern-1");
+  });
+
+  it("R822000 a Legendary that switches its caster's station (Classic+ #37 Wardrum) opens its intro, then moves to Epic Orchestral", () => {
+    const r = rig();
+    const view = midGame();
+    r.director.onView(view);
+    r.order.length = 0;
+    r.director.onEvent(played(WARDRUM), view);
+    expect(r.order).toEqual(["intro intro-classicplus-037", "request epic-1"]);
+  });
+});
+
 describe("R631 dynamic music off", () => {
-  it("R631 plays the station's in-game track only: no sting, no turn mix, no theme, no urgency, no switch", () => {
+  it("R631 plays the station's in-game track only: no sting, no turn mix, no urgency, no switch", () => {
     const r = rig({ settings: { dynamicMusic: false } });
     r.director.onView(opening({ active: "p2" }));
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: false });
@@ -401,34 +289,21 @@ describe("R631 dynamic music off", () => {
     r.director.onEvent(played(ZEPHYRS), view);
     r.director.onEvent(played(K_POP), view);
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: false });
-    expect(r.timers).toHaveLength(0);
-  });
-
-  it("R631 turning it off mid-theme drops the theme", () => {
-    const r = rig();
-    const view = midGame();
-    r.director.onView(view);
-    r.director.onEvent(played(ZEPHYRS), view);
-    r.setSettings({ dynamicMusic: false });
-    expect(r.last().track).toBe("tavern-1");
-    r.setSettings({ dynamicMusic: true });
-    expect(r.last().track).toBe("tavern-1");
   });
 });
 
 describe("R631 a hotseat hand-over", () => {
-  it("R631 plays the arriving seat's own music, with no theme carried over", () => {
+  it("R631 plays the arriving seat's own music, with no station carried over", () => {
     const r = rig();
     const p1 = midGame();
     r.director.onView(p1);
     r.director.onEvent(played(K_POP, "p1"), p1);
-    r.director.onEvent(played(ZEPHYRS, "p1"), p1);
-    expect(r.last().track).toBe("mythic-zephyrs");
+    expect(r.last().track).toBe("edm-1");
     const p2 = midGame({ viewer: "p2", active: "p2", you: emptySide("p2"), opponent: emptySide("p1") });
     r.director.onView(p2);
     expect(r.last()).toMatchObject({ track: "tavern-1", opponentTurn: false });
     // An event planned against the other seat's view is not this seat's.
-    r.director.onEvent(played(ZEPHYRS, "p1"), p1);
+    r.director.onEvent(played(K_POP, "p2"), p1);
     expect(r.last().track).toBe("tavern-1");
   });
 });
@@ -438,7 +313,7 @@ const TOP_LOSER = "classicplus-019-1";
 const summonedOf = (defId: string, instanceId: string, row: "units" | "backrow" = "units"): GameEvent => ({ type: "summoned", player: "p1", instanceId, defId, row, lane: 1 });
 
 describe("R1350 a Legendary's or a Mythic's intro", () => {
-  it("R1350 a readable Legendary or Mythic opens its play with its own intro, from either seat, before the theme it brings", () => {
+  it("R1350 a readable Legendary or Mythic opens its play with its own intro, from either seat", () => {
     for (const seat of ["p1", "p2"] as const) {
       const r = rig();
       const view = midGame();
@@ -446,7 +321,7 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
       r.order.length = 0;
       r.director.onEvent(played(ZEPHYRS, seat), view);
       expect(r.intros, seat).toEqual(["intro-core-097"]);
-      expect(r.order, seat).toEqual(["intro intro-core-097", "request mythic-zephyrs"]);
+      expect(r.order, seat).toEqual(["intro intro-core-097"]);
     }
   });
 
@@ -511,7 +386,7 @@ describe("R1350 a Legendary's or a Mythic's intro", () => {
     expect(r.intros).toEqual([]);
   });
 
-  it("R1350 the same card played again asks for its intro again (the player keeps one already playing, R1351), though its theme does not restart", () => {
+  it("R1350 the same card played again asks for its intro again (the player keeps one already playing, R1351)", () => {
     const r = rig();
     const view = midGame();
     r.director.onView(view);
@@ -577,7 +452,7 @@ describe("R1351 what cuts an intro short", () => {
     expect(r.stops).toBe(before + 1);
   });
 
-  it("R1351 the viewer's hero taking a hit ends the theme but leaves the intro playing", () => {
+  it("R1351 the viewer's hero taking a hit leaves the intro playing", () => {
     const r = rig();
     const view = midGame();
     r.director.onView(view);

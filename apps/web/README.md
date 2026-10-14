@@ -369,9 +369,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
-- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme, a Legendary's shared entrance
-  theme, a station switch or a card's intro is an entry in `src/audio/music-cards.json`, and the music system needs
-  no change for it.
+- Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
+  `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars

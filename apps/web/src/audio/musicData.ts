@@ -1,8 +1,8 @@
 // Music data access (SPEC §10.11 "Music", R631).
 //
 // `music-manifest.json` (the rendered tracks, written by `apps/web/scripts/gen-music.mjs`) and
-// `music-cards.json` (which cards play a theme, switch a station or open their play with an intro of
-// their own, R1350) are imported here and nowhere else, and checked once at import, so a malformed
+// `music-cards.json` (which cards switch a station or open their play with an intro of their own,
+// R1350; no card plays a theme, R822000) are imported here and nowhere else, and checked once at import, so a malformed
 // table fails at load rather than playing nothing. A card's entry is looked up by a defId the viewer
 // can read: the sentinel is never in the table.
 
@@ -74,10 +74,8 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
   for (const [defId, entry] of Object.entries(raw.cards)) {
     if (!isRecord(entry)) fail("music-cards.json", defId, "must be an object");
     const out: MusicCardEntry = {};
-    if (entry.theme !== undefined) {
-      if (typeof entry.theme !== "string" || manifest.files[entry.theme]?.loop !== true) fail("music-cards.json", `${defId}.theme`, "must name a looping track");
-      out.theme = entry.theme;
-    }
+    // R822000: no card plays a theme; a card's music is its intro.
+    if (entry.theme !== undefined) fail("music-cards.json", `${defId}.theme`, "is retired: no card plays a theme (R822000)");
     if (entry.station !== undefined) {
       const station = MUSIC_STATIONS.find((s) => s === entry.station);
       if (station === undefined) fail("music-cards.json", `${defId}.station`, `must be one of ${MUSIC_STATIONS.join(", ")}`);
@@ -88,7 +86,7 @@ export function parseMusicCards(raw: unknown, manifest: MusicManifest): Record<s
       if (typeof entry.intro !== "string" || manifest.files[entry.intro]?.loop !== false) fail("music-cards.json", `${defId}.intro`, "must name a track that plays once");
       out.intro = entry.intro;
     }
-    if (out.theme === undefined && out.station === undefined && out.intro === undefined) fail("music-cards.json", defId, "needs a theme, a station or an intro");
+    if (out.station === undefined && out.intro === undefined) fail("music-cards.json", defId, "needs a station or an intro");
     cards[defId] = out;
   }
   return cards;
