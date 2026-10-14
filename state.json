@@ -5347,7 +5347,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-14T06:56:12Z",
+      "feedback_since": "2026-10-14T07:19:42Z",
       "forced": false,
       "interruptions": 0,
       "issue": 849,
@@ -5358,14 +5358,14 @@
       "question": "",
       "queued_at": "2026-10-14T07:19:27Z",
       "requested_by": "jgoetzmann-bot",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "38527508724",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-14T07:19:42Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "muse"
