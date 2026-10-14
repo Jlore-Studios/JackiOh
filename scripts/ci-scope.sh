@@ -30,7 +30,9 @@
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
 # training lanes' prompts and loop (training/*.md, training/loop.sh: Devin and the training box read
-# them, no job does). Nothing a test, a build or a check reads is on the list. The other docs are
+# them, no job does), and the notebooks' project, analysis/ (#445: no file in crates/, apps/, e2e/,
+# spec/ or a per-pull-request job reads it; super.yml's `notebooks` job runs its tests once a day).
+# Nothing a test, a build or a check reads is on the list. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
 # training/history/. A `full=false` diff prints every other line false too.
@@ -126,6 +128,7 @@ skipped() {
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/*.md | training/loop.sh) ;;
+    analysis/*) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;

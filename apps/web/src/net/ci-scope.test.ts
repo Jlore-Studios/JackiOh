@@ -166,6 +166,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
     // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
+    // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
+    expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
 
   // One case per file: each makes four processes, so a case never nears vitest's time limit.
@@ -214,6 +216,8 @@ describe("scripts/ci-scope.sh", () => {
     ".github/ISSUE_TEMPLATE-copy/x.yml",
     ".github/CODEOWNERS.bak",
     "docs/CONTRIBUTING.md",
+    "analysis-copy/x.py",
+    "crates/tools/analysis/x.rs",
   ])("runs everything the moment %s changes, alone or beside the bot's code", (file) => {
     expect(fullFor(file), file).toBe(true);
     expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);

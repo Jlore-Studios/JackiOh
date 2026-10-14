@@ -25,7 +25,9 @@ local DOOM_TARGET = {
 }
 
 -- The unit marked for death wears #50 K-Pop Fanatic's aura, in red (R437; Radiant, every enemy Unit).
-local MARK = { mark = "destroy", color = "red" }
+-- Typed as the args' optional field: a Luau table's fields are invariant, so a `CardMark` would
+-- not fit `DestroyAtNextTurnStartArgs`'s `CardMark?`.
+local MARK: J.CardMark? = { mark = "destroy", color = "red" }
 
 -- The mode the activation carried, resolved on the face that runs it.
 local function punish(ctx: J.EffectContext, radiant: boolean): { J.EffectCall }
@@ -40,12 +42,14 @@ local function punish(ctx: J.EffectContext, radiant: boolean): { J.EffectCall }
 		if radiant then
 			return {}
 		end
-		local doom: J.DestroyAtNextTurnStartArgs = { target = { of = "chosen" }, mark = MARK }
+		local chosen: J.TargetSpec = { of = "chosen" }
+		local doom: J.DestroyAtNextTurnStartArgs = { target = chosen, mark = MARK }
 		return { J.destroy_at_next_turn_start(doom) }
 	end
 	if mode == DOOM_ALL_MODE then
 		if radiant then
-			local doom: J.DestroyAtNextTurnStartArgs = { scope = { side = "enemy" }, mark = MARK }
+			local enemies: J.BoardScope = { side = "enemy" }
+			local doom: J.DestroyAtNextTurnStartArgs = { scope = enemies, mark = MARK }
 			return { J.destroy_at_next_turn_start(doom) }
 		end
 		return {}

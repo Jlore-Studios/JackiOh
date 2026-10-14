@@ -27,7 +27,7 @@ local base = {
 	targetChecks = {
 		-- "A ({costLimit}) Cost or less Spell from your hand", at the cost it would be played for
 		-- now (R65).
-		[WITHIN_LIMIT] = function(args)
+		[WITHIN_LIMIT] = function(args: J.TargetCheckArgs): boolean
 			local candidate = args:candidate()
 			if candidate == nil then
 				return false

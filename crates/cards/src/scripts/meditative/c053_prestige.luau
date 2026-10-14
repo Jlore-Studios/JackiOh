@@ -73,7 +73,8 @@ local radiant = {
 				effects[#effects + 1] = J.clear_radiant({ instanceId = card.id })
 			end
 		end
-		for _, zone in ipairs({ "hand", "library" }) do
+		local piles: { J.OffFieldZone } = { "hand", "library" }
+		for _, zone in ipairs(piles) do
 			for _, card in ipairs(ctx:zone_cards(enemy, zone)) do
 				if card.radiant then
 					effects[#effects + 1] = J.clear_radiant({ instanceId = card.id })

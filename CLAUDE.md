@@ -123,6 +123,8 @@ sh crates/server/tests/deploy/rehearse.sh  # Render's deploy rehearsed: the imag
 pnpm --filter @jackioh/web gen:voice   # re-render changed voice lines (macOS `say`); `--check` runs anywhere; from Linux, `[gen:voice]` in a commit message renders them on GitHub's runners (R1448)
 pnpm --filter @jackioh/web gen:music   # re-render changed music scores (FluidSynth, ffmpeg; R631); `--check` runs anywhere
 cargo jackioh fuzz --from <seed> --seeds 1   # replay one failing fuzz seed (--handicap for the handicapped wave)
+uv sync --frozen --project analysis              # the balance notebooks' pinned Python 3.13 and dependencies (analysis/README.md)
+uv run --project analysis pytest analysis/tests  # the notebooks' loader and every notebook, on the fixtures
 ```
 
 `crates/server/README.md` covers the server against a real Supabase project (its `.env`, `migrate`,
@@ -159,11 +161,12 @@ every spec fails. `e2e/README.md` has the rest.
 
 Branch protection on `main` requires five checks: `rust`, `web`, `e2e smoke` and `db` (`ci.yml`, each a
 summary over jobs of under five minutes) and `bot selftest` (`bot-selftest.yml`). `rust` also fails when
-`apps/web/src/wire/` differs from what the Rust generates. A pull request that changes only paths on
+`apps/web/src/wire/` or `crates/cards/luau/jackioh.luau` differs from what the Rust generates, and runs
+`luau-analyze --mode=strict` over the card scripts (#442 L10). A pull request that changes only paths on
 `scripts/ci-scope.sh`'s skip list (the bots, the agent instruction files, the issue forms, …) skips every job
 but `bot selftest`; adding a path to that list takes proof that nothing in `crates/`, `apps/`, `e2e/` or
 `spec/` reads it. Everything slow or statistical (fuzz at 10,000 seeds, `gate --full`, `golden check`,
-coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites) runs daily in `super.yml`. A job
+coverage against `.github/coverage-floor.txt`, every e2e spec, the db suites, the notebooks' tests) runs daily in `super.yml`. A job
 over seven minutes opens an issue (`ci-duration.yml`): split it until it finishes under five. `hygiene.yml`
 runs weekly: two issues for Squishy, one pull request each that a person reviews and merges
 (`person merges`), for dead files and archives and for the agent instructions; the first lists stale
