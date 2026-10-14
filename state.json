@@ -5344,6 +5344,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "905afc85c76a7f44dd59fd099dfc44be11206bba"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
