@@ -1,6 +1,7 @@
 //! The ported AI tests (SURFACE §1): one module per `packages/ai/test/<x>.test.ts`. Written once by
 //! part 1; the files are part 17's. `lethal`, `match_`, `shadow_ban` and `tutorial_tier` are not
-//! named here: `ai_slow_a.rs` and `ai_slow_b.rs` run them, each in a CI job of its own (#873).
+//! named here: `ai_slow_a.rs` and `ai_slow_b.rs` run them, each in a CI job of its own (#873). Nor is
+//! `duos_gate` (#936, B32), which `ai_slow_b.rs` runs; `duos` is Duos co-op's AI seats (B26–B31).
 
 pub mod activate;
 pub mod alt_play;
@@ -9,6 +10,7 @@ pub mod decide;
 pub mod deck;
 pub mod determinize_shown_cost;
 pub mod dev_run;
+pub mod duos;
 pub mod evaluate;
 pub mod evaluate_v020;
 pub mod match_refusal;
