@@ -1,0 +1,44 @@
+# Deletes the branches a person ticked in the weekly hygiene issue (#888). A `/delete-branches` comment
+# from an owner, member or collaborator on an `Architecture: weekly hygiene, …` issue starts it. It surveys
+# again with the rule in .github/hygiene/branches.py and deletes only the ticked branches the rule does not
+# keep now: one that has since gained an open pull request, or turned out to be protected or
+# infrastructure, stays. It strikes each deleted branch in the issue and replies with its sha and how to
+# restore it. No model runs here.
+name: hygiene delete
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: hygiene-delete
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    name: delete the ticked branches
+    if: >-
+      ${{ !github.event.issue.pull_request
+      && startsWith(github.event.issue.title, 'Architecture: weekly hygiene')
+      && startsWith(github.event.comment.body, '/delete-branches')
+      && github.event.comment.user.type != 'Bot'
+      && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/hygiene
+      - name: delete them
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+        run: python3 .github/hygiene/branches.py delete "$NUMBER" | tee -a "$GITHUB_STEP_SUMMARY"
