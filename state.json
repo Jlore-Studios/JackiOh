@@ -5592,6 +5592,7 @@
     "874": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "difficulty_by": {
         "at": "2026-10-14T13:18:25Z",
         "difficulty": "medium",
@@ -5615,6 +5616,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
+      "queued_at": "2026-10-14T13:45:45Z",
       "run_id": "38570724947",
       "started_at": "2026-10-14T13:19:26Z",
       "stop_requested": false,
