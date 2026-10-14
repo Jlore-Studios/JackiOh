@@ -95,9 +95,9 @@ export const paths = {
   leaderboard: "/leaderboard",
   /** R654: public card and player statistics. */
   stats: "/stats",
+  /** R768000: the recent games and their replays. */
+  replays: "/replays",
   hotseat: "/dev/hotseat",
-  /** #511: the replay player's dev list; production serves a 404 there, as at the hotseat. */
-  devReplays: "/dev/replays",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
   series: (seriesId: string): string => `/series/${seriesId}`,

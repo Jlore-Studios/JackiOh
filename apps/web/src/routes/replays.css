@@ -1,0 +1,44 @@
+/* `/replays` (R768000): the recent games, one row each, the Watch button at its end. */
+
+.replays__section {
+  margin-top: 24px;
+}
+
+.replays__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.replays__row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--bg-raised);
+}
+
+.replays__what {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.replays__why {
+  color: var(--text-dim);
+}
+
+.replays__row > button {
+  flex: none;
+  min-height: 40px;
+}
+
+@media (max-width: 420px) {
+  .replays__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

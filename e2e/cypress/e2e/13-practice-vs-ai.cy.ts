@@ -22,6 +22,9 @@ import {
   PRACTICE_NEW_GAME,
   PRACTICE_RESULT,
   PRACTICE_RESUME,
+  PRACTICE_SHARE_LAST_TURN,
+  PRACTICE_WATCH_REPLAY,
+  REPLAY_BACK,
   PRACTICE_RESUME_BANNER,
   PRACTICE_SETUP,
   PRACTICE_START,
@@ -38,6 +41,7 @@ import {
   ts,
   zoneId,
 } from "../../support/testids.ts";
+import { expectLastTurnGif, spyOnDownloads, stepForwardAndBack } from "../../support/replays.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
 
 /** BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. */
@@ -193,11 +197,12 @@ function practiceUrl(seed: string, difficulty: Difficulty, seat: PlayerId): stri
   return `/practice?${params.toString()}`;
 }
 
-function visitPractice(url: string, options: { reducedMotion?: boolean } = {}): void {
+function visitPractice(url: string, options: { reducedMotion?: boolean; downloads?: boolean } = {}): void {
   cy.visit(url, {
     onBeforeLoad(win) {
       installRecorder(win);
       if (options.reducedMotion === true) preferReducedMotion(win);
+      if (options.downloads === true) spyOnDownloads(win);
     },
   });
 }
@@ -440,6 +445,28 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
           expect(result.replayHash, "the Node fold reaches the browser's final state").to.eq(result.browserHash);
         });
       });
+
+    expectNoServer();
+  });
+
+  it("R768000 a conceded game opens its replay from the result dialog, steps forward and back, shares its last turn as a GIF, and leaves", () => {
+    visitPractice(practiceUrl(`${SEED}:replay`, "easy", "p2"), { downloads: true });
+    cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    reachHumanTurn();
+    cy.concede();
+    cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
+
+    // Watch the replay: step 0, a step forward and back, and Back returns to the dialog.
+    cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
+    stepForwardAndBack();
+    cy.get(ts(REPLAY_BACK)).click();
+    cy.get(ts(PRACTICE_RESULT)).should("be.visible");
+
+    // Share the last turn: the last step, its turn's GIF made and downloaded; then leave.
+    cy.get(ts(PRACTICE_SHARE_LAST_TURN)).click();
+    expectLastTurnGif();
+    cy.get(ts(REPLAY_BACK)).click();
+    cy.get(ts(PRACTICE_RESULT)).should("be.visible");
 
     expectNoServer();
   });

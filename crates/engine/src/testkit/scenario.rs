@@ -177,6 +177,7 @@ thread_local! {
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
     static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
         const { Cell::new(None) };
+    static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -227,6 +228,18 @@ pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
     WIN_RATES_OVERRIDE.with(Cell::get)
 }
 
+/// R767000: the shipped catalogs `catalog::shipped_catalog()` finds by version on this thread, in
+/// place of the build's, until the thread ends or `clear_overrides()` runs. Leaked, like the catalog.
+pub fn register_shipped(catalogs: Vec<crate::catalog::ShippedCatalog>) {
+    let catalogs: &'static [crate::catalog::ShippedCatalog] = Box::leak(catalogs.into_boxed_slice());
+    SHIPPED_OVERRIDE.with(|cell| cell.set(Some(catalogs)));
+}
+
+/// The shipped catalogs this thread registered, if any.
+pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
+    SHIPPED_OVERRIDE.with(Cell::get)
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {
@@ -234,6 +247,7 @@ pub fn clear_overrides() {
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
+    SHIPPED_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------

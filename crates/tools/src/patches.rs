@@ -1972,6 +1972,92 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     Ok(problems)
 }
 
+/// R767000: every shipped version but the newest is carried by the cards compiled into this binary,
+/// each with its snapshot's definitions, in order, and a script for every card, so a replay of a game
+/// played on it folds under its own cards. The problems, or [] when every carried version is whole.
+/// Only `patches check` on this repository calls it: a fixture repository's versions are not the ones
+/// compiled in.
+pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
+    let versions: Vec<String> = read_patches(&paths.patches_json)?
+        .into_iter()
+        .map(|patch| patch.version)
+        .collect();
+    let older = &versions[..versions.len().saturating_sub(1)];
+    let carried = jackioh_cards::carried_versions();
+    let mut problems = Vec::new();
+    if carried != older {
+        problems.push(format!(
+            "the build carries {} shipped version(s), patches.json lists {} before its newest: rebuild jackioh (R767000)",
+            carried.len(),
+            older.len()
+        ));
+    }
+    for version in older {
+        let path = snapshot_path(version, &paths.dir)?;
+        let text = fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
+        let snapshot: jackioh_engine::CardDefs =
+            serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
+        let shipped = jackioh_cards::shipped_catalog(version);
+        problems.extend(carried_problems(
+            version,
+            &snapshot,
+            shipped.map(jackioh_engine::ShippedCatalog::defs),
+            |id| jackioh_cards::has_script_at(version, id),
+        ));
+    }
+    Ok(problems)
+}
+
+/// R767000: how `carried`, the definitions a build folds `version`'s games under, falls short of
+/// `snapshot`, the catalog as `version` shipped it: not carried at all, a card missing on either side
+/// or out of order, a definition that differs, or a card with no script on that version.
+fn carried_problems(
+    version: &str,
+    snapshot: &jackioh_engine::CardDefs,
+    carried: Option<&jackioh_engine::CardDefs>,
+    has_script: impl Fn(&str) -> bool,
+) -> Vec<String> {
+    let Some(carried) = carried else {
+        return vec![format!(
+            "{version} is shipped but not carried: its replays are refused (R767000)"
+        )];
+    };
+    let mut problems = Vec::new();
+    for id in snapshot.keys().filter(|id| !carried.contains_key(*id)) {
+        problems.push(format!(
+            "{version}: \"{id}\" is in its snapshot but not carried (R767000)"
+        ));
+    }
+    for id in carried.keys().filter(|id| !snapshot.contains_key(*id)) {
+        problems.push(format!(
+            "{version}: \"{id}\" is carried but not in its snapshot (R767000)"
+        ));
+    }
+    let shared: Vec<&String> = snapshot.keys().filter(|id| carried.contains_key(*id)).collect();
+    let carried_order: Vec<&String> = carried.keys().filter(|id| snapshot.contains_key(*id)).collect();
+    if shared != carried_order {
+        problems.push(format!(
+            "{version}: its cards are carried in another order than its snapshot's (R767000)"
+        ));
+    }
+    for (id, def) in snapshot {
+        let Some(held) = carried.get(id) else {
+            continue;
+        };
+        if serde_json::to_string(def).ok() != serde_json::to_string(held).ok() {
+            problems.push(format!(
+                "{version}: \"{id}\" is carried unlike its snapshot (R767000)"
+            ));
+        }
+        if !has_script(id) {
+            problems.push(format!(
+                "{version}: \"{id}\" has no script on it: keep the one it ran in jackioh_cards::KEPT_SCRIPTS (R767000)"
+            ));
+        }
+    }
+    problems
+}
+
 /// `git <args>` in `repo_root`, its stdout as text; a failing git is an error carrying its stderr.
 pub(crate) fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -> anyhow::Result<String> {
     let output = Command::new("git")
@@ -2326,11 +2412,14 @@ impl std::error::Error for CheckFailed {}
 fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     let command = argv.first().map(String::as_str);
     if command == Some("check") {
-        let problems = check_patches(repo_root)?;
+        let mut problems = check_patches(repo_root)?;
+        problems.extend(check_carried(&patch_paths(repo_root))?);
         if !problems.is_empty() {
             return Err(anyhow::Error::new(CheckFailed(problems)));
         }
-        println!("patches check: every catalog change is claimed by exactly one pending fragment");
+        println!(
+            "patches check: every catalog change is claimed by exactly one pending fragment, and every older shipped version is carried for replays (R767000)"
+        );
         return Ok(());
     }
     if command == Some("ship") {
@@ -4846,6 +4935,78 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// R767000: every older shipped version is carried, whole, for the replays of games played on it.
+    mod r767000_carried {
+        use super::super::{carried_problems, check_carried, patch_paths, repo_root};
+
+        fn pick(ids: &[&str]) -> jackioh_engine::CardDefs {
+            ids.iter()
+                .map(|id| ((*id).to_string(), jackioh_cards::CATALOG[*id].clone()))
+                .collect()
+        }
+
+        #[test]
+        fn r767000_every_shipped_version_but_the_newest_is_carried_with_every_script() {
+            let problems = check_carried(&patch_paths(&repo_root())).expect("the patch history reads");
+            assert!(problems.is_empty(), "{problems:#?}");
+        }
+
+        #[test]
+        fn r767000_names_an_uncarried_version_a_card_carried_otherwise_out_of_order_or_without_a_script() {
+            let snapshot = pick(&["core-001", "core-002", "core-003"]);
+            let named = |carried: Option<&jackioh_engine::CardDefs>, has_script: fn(&str) -> bool| {
+                carried_problems("v-old", &snapshot, carried, has_script)
+            };
+            assert!(named(Some(&snapshot), |_| true).is_empty());
+
+            let none = named(None, |_| true);
+            assert_eq!(none.len(), 1);
+            assert!(none[0].contains("v-old is shipped but not carried"), "{none:?}");
+
+            let fewer = named(Some(&pick(&["core-001", "core-002"])), |_| true);
+            assert!(
+                fewer
+                    .iter()
+                    .any(|problem| problem.contains("\"core-003\" is in its snapshot but not carried")),
+                "{fewer:?}"
+            );
+
+            let more = named(
+                Some(&pick(&["core-001", "core-002", "core-003", "core-004"])),
+                |_| true,
+            );
+            assert!(
+                more.iter()
+                    .any(|problem| problem.contains("\"core-004\" is carried but not in its snapshot")),
+                "{more:?}"
+            );
+
+            let swapped = named(Some(&pick(&["core-002", "core-001", "core-003"])), |_| true);
+            assert!(
+                swapped.iter().any(|problem| problem.contains("another order")),
+                "{swapped:?}"
+            );
+
+            let mut changed = snapshot.clone();
+            if let Some(def) = changed.get_mut("core-002") {
+                def.name.push_str(" (old)");
+            }
+            let differs = named(Some(&changed), |_| true);
+            assert_eq!(differs.len(), 1, "{differs:?}");
+            assert!(
+                differs[0].contains("\"core-002\" is carried unlike its snapshot"),
+                "{differs:?}"
+            );
+
+            let scriptless = named(Some(&snapshot), |id| id != "core-003");
+            assert_eq!(scriptless.len(), 1, "{scriptless:?}");
+            assert!(
+                scriptless[0].contains("\"core-003\" has no script on it"),
+                "{scriptless:?}"
+            );
         }
     }
 }

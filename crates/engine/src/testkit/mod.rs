@@ -32,7 +32,7 @@ pub use seams::*;
 pub use seed_search::*;
 
 // The thread-local override wins over the production registries `crate::*` re-exports.
-pub use scenario::{register_catalog, register_scripts};
+pub use scenario::{register_catalog, register_scripts, register_shipped};
 
 pub use crate::prelude::json_as;
 pub use indexmap::{IndexMap, IndexSet};

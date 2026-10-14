@@ -3,7 +3,8 @@
 // It reads only the human's `PlayerView` result (CLAUDE.md rule 7), and it is the practice route's
 // own screen: `Game.tsx`'s `result-overlay` still renders underneath, unchanged, for every other
 // consumer of the board. "View the board" closes the dialog so the final position can be read; the
-// HUD's outcome chip opens it again.
+// HUD's outcome chip opens it again. R768000: a game the worker kept also offers its replay, and its
+// last turn as a GIF.
 
 import { useEffect, useId, useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -69,6 +70,10 @@ type PracticeResultProps = {
   onPlayAgain(): void;
   onChangeSetup(): void;
   onViewBoard(): void;
+  /** R768000: the kept game's replay from step 0; absent for a game that was not kept. */
+  onWatchReplay?: () => void;
+  /** R768000: the kept game's replay at its last step, making its last turn's GIF. */
+  onShareLastTurn?: () => void;
 };
 
 export function PracticeResult({
@@ -78,6 +83,8 @@ export function PracticeResult({
   onPlayAgain,
   onChangeSetup,
   onViewBoard,
+  onWatchReplay,
+  onShareLastTurn,
 }: PracticeResultProps): ReactElement {
   const outcome = outcomeOf(result, viewer);
   const titleId = useId();
@@ -144,6 +151,20 @@ export function PracticeResult({
             {t("Change setup")}
           </button>
         </div>
+        {onWatchReplay === undefined && onShareLastTurn === undefined ? null : (
+          <div className="practice-result__replay">
+            {onWatchReplay === undefined ? null : (
+              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.watchReplay} onClick={onWatchReplay}>
+                {t("Watch the replay")}
+              </button>
+            )}
+            {onShareLastTurn === undefined ? null : (
+              <button type="button" className="practice-result__secondary" data-testid={practiceTestid.shareLastTurn} onClick={onShareLastTurn}>
+                {t("Share the last turn")}
+              </button>
+            )}
+          </div>
+        )}
         <button type="button" className="link-button practice-result__view" data-testid={practiceTestid.viewBoard} onClick={onViewBoard}>
           {t("View the board")}
         </button>
