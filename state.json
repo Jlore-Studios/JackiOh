@@ -6111,11 +6111,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-14T17:46:10Z",
+        "at": "2026-10-14T19:29:45Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "engine-rules work in crates/engine/src is never easy; least-sure line was size, and the borrow plumbing across 4 files confirms it is not small"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "engine internals: layer 5 and the attack, view and state-check sweeps in crates/engine/src across 13 files, which the rule rates hard for engine work"
       },
       "failures": 0,
       "forced": false,
