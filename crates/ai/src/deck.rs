@@ -22,6 +22,10 @@
 //! is dealt from every set, and a lean on a gated set leans on the newest set that ships and is not
 //! gated. An empty gate deals exactly what the draw dealt before it.
 //!
+//! The Quickdraw cap (R817000): once a deck holds `max_quickdraw` Quickdraw cards, its includes
+//! counted, the draw passes over the rest of them; until then it is untouched. Quickdraw is never a
+//! theme, whose floor the cap could not meet. Neither adds an rng draw.
+//!
 //! A ladder bot's deal leans on the cards that win (#750, R1454): its `strength` multiplies each
 //! card's weight by `win_rate_weight`, read off the compiled win-rate table. No strength, the default,
 //! multiplies every weight by exactly 1.0.
@@ -208,6 +212,8 @@ pub struct AiDeck {
     pub lean_min_share: f64,
     /// R1370: weight for a card of the leaned set while the deck is short of `leanMinShare`.
     pub lean_boost: f64,
+    /// R817000: a random deck holds at most this many Quickdraw cards, and Quickdraw is never a theme.
+    pub max_quickdraw: i32,
 }
 
 pub const AI_DECK: AiDeck = AiDeck {
@@ -243,6 +249,8 @@ pub const AI_DECK: AiDeck = AiDeck {
     // 17.6 of 30, against 11.5, 14.8 and 17.2 at 6). The boost stops once the floor is met, so the rest
     // is dealt as without it.
     lean_boost: 6.0,
+    // R817000 (#817): "less Quickdraw bloat".
+    max_quickdraw: 2,
 };
 
 /// The buckets in curve order; the last one, "4+", takes every cost above the others' ceilings.
@@ -262,6 +270,9 @@ const BUCKET_CEILINGS: [(CostBucket, i32); 3] = [
 
 /// The tag every token carries; never a theme (the pool holds no tokens anyway, §2.6 L3).
 const TOKEN_TAG: Tag = Tag::Token;
+
+/// R817000: the tag a random deck holds at most `AI_DECK.maxQuickdraw` cards of, so never a theme.
+const QUICKDRAW_TAG: Tag = Tag::Quickdraw;
 
 /// By queryCost (X → 0, embiggen → base).
 pub fn cost_bucket(def: &CardDef) -> CostBucket {
@@ -331,12 +342,12 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
     targets
 }
 
-/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name.
+/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name; never Token or Quickdraw (R817000).
 fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     let mut counts: IndexMap<String, i32> = IndexMap::new();
     for def in defs {
         for tag in &def.tags {
-            if *tag == TOKEN_TAG {
+            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG {
                 continue;
             }
             *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
@@ -374,18 +385,24 @@ fn is_unit(def: &CardDef) -> bool {
     def.type_ == CardType::Unit
 }
 
+/// R817000: whether a card counts toward `AI_DECK.maxQuickdraw`.
+fn is_quickdraw(def: &CardDef) -> bool {
+    def.tags.contains(&QUICKDRAW_TAG)
+}
+
 /// R1370: whether a card is of the set the deck leans on.
 fn is_leaned(def: &CardDef, lean: Option<SetName>) -> bool {
     lean.is_some_and(|set| def.set == set)
 }
 
 /// The running tallies `count` keeps (TS's closure over `counts`, `units` and `themed`), and the
-/// leaned set's (R1370).
+/// leaned set's (R1370) and the Quickdraw cards' (R817000).
 struct Tally<'a> {
     counts: ByBucket<i32>,
     units: i32,
     themed: i32,
     leaned: i32,
+    quickdraw: i32,
     theme: Option<&'a str>,
     lean: Option<SetName>,
 }
@@ -403,6 +420,9 @@ impl Tally<'_> {
         }
         if is_leaned(def, self.lean) {
             self.leaned += 1;
+        }
+        if is_quickdraw(def) {
+            self.quickdraw += 1;
         }
     }
 }
@@ -749,6 +769,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         units: 0,
         themed: 0,
         leaned: 0,
+        quickdraw: 0,
         theme: theme.as_deref(),
         lean,
     };
@@ -760,6 +781,11 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     let mut lean_forced = 0;
     while (deck.len() as i32) < size {
         let slots_left = size - deck.len() as i32;
+        // R817000: once the deck holds `maxQuickdraw` Quickdraw cards (its includes counted), no more are
+        // dealt. Before that the draw is untouched, so a deck that would have held no more deals as it did.
+        if tally.quickdraw >= AI_DECK.max_quickdraw {
+            remaining.retain(|def| !is_quickdraw(def));
+        }
 
         let eligible: Vec<&CardDef> = if lean.is_none() {
             narrow_unleaned(&remaining, slots_left, &tally, theme_needed, units_needed)
