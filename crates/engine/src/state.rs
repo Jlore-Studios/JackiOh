@@ -1705,7 +1705,7 @@ pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32
             )));
         }
         seen.push(def_id);
-        if def.token || def.tags.contains(&Tag::Token) {
+        if def.is_token() {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"
             )));

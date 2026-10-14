@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 use axum::body::Body;
 use axum::response::Response;
-use jackioh_engine::{CardDef, CardDefs, Tag, set_ships};
+use jackioh_engine::{CardDef, CardDefs, set_ships};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -63,7 +63,7 @@ impl Catalog {
     pub fn is_token(&self, card_id: &str) -> bool {
         match self.defs.get(card_id) {
             None => false,
-            Some(def) => def.token || def.tags.contains(&Tag::Token),
+            Some(def) => def.is_token(),
         }
     }
 
