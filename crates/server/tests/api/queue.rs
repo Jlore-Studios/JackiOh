@@ -54,14 +54,14 @@ use jackioh_server::api::queue::{e2e_seed_count, expected_wait_seconds, try_pair
 use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
-    MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
+    BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
     QUEUE_READOUT_WINDOW_SECONDS, RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START,
     RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, rating_window,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError};
+use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError};
 
-use crate::support::deps::{add_user, call, test_app};
+use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
 
 // Plumbing (private copies: each test file of this binary keeps its own)
 
@@ -501,7 +501,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         seed_ticket(&app, t("t-mid", "mid", mid)).await;
         seed_ticket(&app, t("t-near", "near", near)).await;
 
-        let made = try_pair(&app).await.expect("a sweep");
+        let made = try_pair(&app).await.expect("a sweep").made;
 
         // PREMISE: exactly one pair was made.
         assert_eq!(made, 1);
@@ -537,7 +537,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
             .await;
         }
 
-        let made = try_pair(&app).await.expect("a sweep");
+        let made = try_pair(&app).await.expect("a sweep").made;
 
         assert_eq!(made, 2);
         assert_eq!(
@@ -577,7 +577,7 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
             .unwrap_or_default();
         assert_eq!(open, vec![json!("t-oldest"), json!("t-zebra"), json!("t-alpha")]);
 
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["oldest", "alpha"])]);
         assert_eq!(ticket(&app, "t-zebra").await["status"], "open");
     }
@@ -609,13 +609,13 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
         )
         .await;
 
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
         assert!(matches_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 2);
 
         // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them at MAX_FAIR_GAP, still past it).
         tokio::time::advance(Duration::from_millis(120_000)).await;
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
     }
 }
@@ -955,7 +955,7 @@ mod r257_queue_modes {
         )
         .await;
 
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
         assert!(matches_table(&app).await.is_empty());
         assert!(series_table(&app).await.is_empty());
         assert_eq!(open_count(&app).await, 3);
@@ -972,7 +972,7 @@ mod r257_queue_modes {
             },
         )
         .await;
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["random", "random-2"])]);
         assert_eq!(ticket(&app, "t-bo1").await["status"], "open");
         assert_eq!(ticket(&app, "t-bo3").await["status"], "open");
@@ -1083,7 +1083,7 @@ mod r640001_the_window_stops_at_max_fair_gap {
         };
         seed_ticket(&app, t("t-low", "low", 1000, HOUR_MS + 1_000)).await;
         seed_ticket(&app, t("t-far", "far", 1000 + MAX_FAIR_GAP + 1, HOUR_MS)).await;
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
         assert!(matches_table(&app).await.is_empty());
 
         // Control: one exactly MAX_FAIR_GAP away whose window has reached it pairs with the oldest.
@@ -1101,7 +1101,7 @@ mod r640001_the_window_stops_at_max_fair_gap {
             (1000, HOUR_MS + 1_000),
             (1000 + MAX_FAIR_GAP, RATING_WINDOW_FULL_AFTER_SECONDS * 1000),
         );
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "edge"])]);
         assert_eq!(ticket(&app, "t-far").await["status"], "open");
     }
@@ -1536,6 +1536,171 @@ mod a_paired_match_whose_start_fails {
     }
 }
 
+// One pair's failed start no longer ends the sweep or fails another player's enqueue
+
+mod a_failed_start_does_not_end_the_sweep {
+    use super::*;
+
+    /// Unit conversion, not configuration: the fallback time speaks seconds.
+    const MS_PER_SECOND: i64 = 1000;
+
+    /// Past the longest fallback time any ticket draws, so a lone ticket is always due its bot.
+    fn past_any_fallback() -> i64 {
+        (BOT_FALLBACK_MAX_SECONDS + 1) * MS_PER_SECOND
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn older_bo1_pair_fails_younger_random_pair_still_starts() {
+        let app = test_app().await;
+        let t = |id, profile_id, rating, waited_ms, mode| SeedTicket {
+            id,
+            profile_id,
+            rating,
+            waited_ms,
+            mode,
+        };
+        seed_ticket(&app, t("t-bo1-a", "bo1-a", 1000, 3_000, "bo1")).await;
+        seed_ticket(&app, t("t-bo1-b", "bo1-b", 1000, 2_000, "bo1")).await;
+        seed_ticket(&app, t("t-rnd-c", "rnd-c", 1000, 1_000, "random")).await;
+        seed_ticket(&app, t("t-rnd-d", "rnd-d", 1000, 0, "random")).await;
+
+        // The registry writes the match row only once the game has begun; refusing that write
+        // once is a start that fails for the first pair only.
+        let _calls = record_calls(&mut *fake(&app).await, |seen, method| {
+            method == "matches.create" && !seen.iter().any(|previous| previous == "matches.create")
+        });
+
+        let report = try_pair(&app).await.expect("a sweep carries on");
+        assert_eq!(report.made, 1);
+        assert_eq!(report.failed.len(), 1);
+        let mut failed = report.failed[0].ticket_ids.clone();
+        failed.sort();
+        assert_eq!(failed, vec!["t-bo1-a".to_string(), "t-bo1-b".to_string()]);
+
+        // The younger All Random pair started in the same sweep.
+        assert_eq!(paired_profiles(&app).await, vec![json!(["rnd-c", "rnd-d"])]);
+        for id in ["t-rnd-c", "t-rnd-d"] {
+            assert_eq!(ticket(&app, id).await["status"], "matched");
+        }
+        // The failed pair's players were freed as they are today.
+        for id in ["bo1-a", "bo1-b"] {
+            assert_eq!(in_match_of(&app, id).await, Value::Null);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn third_player_enqueues_unrelated_to_a_failed_pair_gets_200() {
+        let app = test_app().await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-a",
+                profile_id: "pair-a",
+                rating: 1000,
+                waited_ms: 1_000,
+                mode: "bo1",
+            },
+        )
+        .await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-b",
+                profile_id: "pair-b",
+                rating: 1000,
+                waited_ms: 900,
+                mode: "bo1",
+            },
+        )
+        .await;
+        // Every `matches.create` fails: the seeded pair's start fails during the third player's
+        // own enqueue sweep.
+        let _calls = record_calls(&mut *fake(&app).await, |_, method| method == "matches.create");
+
+        // Rated far from the failing pair, so no window of this sweep admits it as an opponent.
+        let third = active_profile(&app, "third", 1600.0).await;
+        let [_, _, lone] = decks_from();
+        let deck_id = save_deck_for(&app, "third", &lone, "third's deck").await;
+        let (status, body) = enqueue_with(&app, &third, json!({ "mode": "bo1", "deckId": deck_id })).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(body["status"], "open");
+        assert!(body["ticketId"].is_string());
+
+        // The unrelated pair still failed as before, and both its players were freed.
+        for id in ["pair-a", "pair-b"] {
+            assert_eq!(in_match_of(&app, id).await, Value::Null);
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn failed_person_pair_does_not_skip_the_bot_fallback() {
+        let app = test_app_with(TestAppOptions {
+            env: vec![("LADDER_BOTS".to_string(), "on".to_string())],
+            skip_fixtures: true,
+            ..TestAppOptions::default()
+        })
+        .await;
+        // One ladder bot, rated with the people, on all day, dealt for this catalog.
+        let bot: NewBot = from(json!({
+            "profileId": "bot-fallback",
+            "strength": 2,
+            "speed": 1.0,
+            "persona": "balanced",
+            "activeFromHour": 0,
+            "activeHours": 24,
+            "decks": [],
+            "decksCatalogVersion": null,
+            "createdAt": now_ms() - 30 * 86_400_000_i64,
+            "seedRating": 1000.0,
+        }));
+        q!(app, bots_create(&bot));
+        let [lone, ..] = decks_from();
+        q!(
+            app,
+            bots_set_decks(
+                "bot-fallback",
+                &[BotDeck {
+                    cards: lone,
+                    portrait: pick_portrait_from_seed("bot-deck").to_string(),
+                }],
+                &app.catalog.version
+            )
+        );
+
+        // Two people who pair (and fail) first, plus one lone ticket past its fallback time that
+        // no person can pair with once the pair is taken.
+        let past = past_any_fallback();
+        let t = |id, profile_id, waited_ms| SeedTicket {
+            id,
+            profile_id,
+            rating: 1000,
+            waited_ms,
+            mode: "bo1",
+        };
+        seed_ticket(&app, t("t-p1", "pair-one", past + 60_000)).await;
+        seed_ticket(&app, t("t-p2", "pair-two", past + 50_000)).await;
+        seed_ticket(&app, t("t-lone", "lone", past)).await;
+
+        let _calls = record_calls(&mut *fake(&app).await, |seen, method| {
+            method == "matches.create" && !seen.iter().any(|previous| previous == "matches.create")
+        });
+
+        let report = try_pair(&app).await.expect("a sweep carries on");
+        assert_eq!(report.made, 1);
+        assert_eq!(report.failed.len(), 1);
+
+        // The bot game started despite the person pair's failure.
+        let rows = paired_profiles(&app).await;
+        assert_eq!(rows.len(), 1);
+        let players = rows[0].as_array().cloned().unwrap_or_default();
+        assert!(players.contains(&json!("lone")), "{players:?}");
+        assert!(players.contains(&json!("bot-fallback")), "{players:?}");
+        for id in ["pair-one", "pair-two"] {
+            assert_eq!(in_match_of(&app, id).await, Value::Null);
+        }
+    }
+}
+
 // R642 — the portrait on the ticket and the seat
 
 /// R642, the queue half: a Best-of-1 ticket freezes its deck's portrait with the deck (§9.4, §9.8), an
@@ -1711,7 +1876,7 @@ mod r264_a_series_that_is_not_over_holds_its_players_out_of_the_queue {
             series_create(&from(series_with(&app, "left", "room-rival", "picking")))
         );
 
-        assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+        assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
         assert_eq!(ticket(&app, "t-right").await["status"], "open");
     }
 }

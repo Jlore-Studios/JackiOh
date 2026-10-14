@@ -9217,5 +9217,270 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.7b",
+    "date": "2026-10-14",
+    "title": "Patch v0.3.Y: a number only the Radiant face prints is tuned on the Radiant face only",
+    "source": "issue #824",
+    "notes": "Thirty-one numbers only the Radiant face prints, on thirty cards, were still tuned on both faces. Each is now tuned on the Radiant face only (R824000), as R749 did for Divine Favor and Rewind; Blade Storm's base face always stops after 30 rounds.",
+    "player": {
+      "title": "Radiant numbers stay on the Radiant face",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Blade Storm's base face always stops after 30 rounds; a Nerf or a Buff moves that cap on its Radiant face only."
+      ],
+      "text": [],
+      "fixes": [
+        "A Nerf, a Buff or KY's Constant on a card that is not Radiant no longer lands on a number only its Radiant face prints."
+      ]
+    },
+    "commits": [
+      "799b3aeede37ce6d37380852164a52192d7e2379"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-006",
+        "name": "Cloaked Toe Cracker",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-013",
+        "name": "Boots on the Ground",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-017",
+        "name": "Counterspell",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-030",
+        "name": "Recycle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-049",
+        "name": "Anti-Greed Machine",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-023",
+        "name": "Dropshipping",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockheed's Permanent Defense Contract",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075-1",
+        "name": "J-lease J-Jungle EX-plorer Pack",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]

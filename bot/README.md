@@ -376,6 +376,7 @@ in place of the `bot:*` ones.
 | `difficulty:easy`, `difficulty:medium`, `difficulty:hard` | the weakest tier that may build it: weak, medium, strong. A person may set one; otherwise the planner rates the item, under [the easy rule](#the-easy-rule), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts |
 | `priority:high`, `priority:medium`, `priority:low` | the pickup order: high, medium, none, low ([above](#priority-and-human)) |
 | `human` | people do it; the bot never queues, plans, builds or labels it. A person who puts it on hands the issue to both people ([Triage](#triage)) |
+| `person merges` | the bot builds and reviews it, but a person merges its pull request: the pull request carries the label from its issue, and the reviews' approval labels it `ready for merge` instead of turning auto-merge on (#839; the weekly hygiene issue carries it) |
 | `human required` | the bot's hand-over: it found only a person can do this (a change to `bot/` or `.github/`, a secret, a dashboard, an account), took its own labels off, unassigned itself and assigned both people, and its comment names them and says what. People's from then on, like `human` ([above](#priority-and-human)) |
 
 ## Triage
@@ -1146,6 +1147,17 @@ sub-issues too (for the night bot's, Squishy comments `@jgoetzmann-bot stop`).
 state, pull request, mode or tree labels on it, or assigned to the other's account
 (`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
 line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
+
+**The weekly hygiene run.** Every Monday, `.github/workflows/hygiene.yml` (#839) opens `Architecture:
+weekly hygiene, <date>` for Squishy (`squishy:build`, `difficulty:hard`, `person merges`) unless the last
+one is still open: dead files, archives and the agent instructions, against a digest of Anthropic's
+current guidance that the workflow's model reads (on Squishy's subscription, with no GitHub token),
+since a builder has no web access. The issue also lists the stale branches the rule in
+`.github/hygiene/branches.py` finds safe to delete, with the command, for a person: the run deletes
+and merges nothing. For that, Squishy alone may change
+`.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.matches` reads a leading `!` as
+an exception), and `tests/test_skills.py` holds every skill to Markdown and to frontmatter that grants
+no tool and adds no hook.
 
 **Status.** Squishy has a section of its own in the pinned **Night bot status** issue: the
 `bot-status` loop runs Squishy in a process of its own each tick (`harness dashboard --companions`),

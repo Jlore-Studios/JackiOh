@@ -248,6 +248,12 @@ pub fn crater_trap() -> CardDef {
     def(7853, "crater-trap", "Trap", 1, json!([{ "kind": "Crater" }]))
 }
 
+/// A Crater Trap that fires as it replaces (§5.1): an enemy's heal becomes Pierce damage (Blood Moon's
+/// shape).
+pub fn crater_moon() -> CardDef {
+    def(7867, "crater-moon", "Trap", 1, json!([{ "kind": "Crater" }]))
+}
+
 /// A Spell that summons a Crater 2/2.
 pub fn summon_crater() -> CardDef {
     def(7854, "summon-crater", "Spell", 1, json!([]))
@@ -363,6 +369,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         crater_reborn(),
         crater_cloaked(),
         crater_trap(),
+        crater_moon(),
         summon_crater(),
         recruiter(),
         flicker_all(),
@@ -559,6 +566,21 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                         matches!(event, GameEvent::CardPlayed { player, .. } if *player != ctx.controller)
                     }),
             ],
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        crater_moon().id,
+        both(Script {
+            replacements: vec![ReplacementDef {
+                id: "crater-moon".to_string(),
+                on: ReplacementMoment::Healed,
+                where_: None,
+                when: None,
+                instead: json_as(json!({ "damage": "pierce" })),
+                then: None,
+                by: None,
+            }],
             ..Script::default()
         }),
     );

@@ -128,9 +128,9 @@ and the live ratings follow the AI.
 - **AI against AI.** The offsets are measured between strengths of the same AI. A person is not another
   strength, and the gap a bigger search opens over a smaller one need not be the gap it opens over a
   person, so the offsets are a first estimate of the spread. A promotion's `vsParent` has the
-  same fault: it is the new AI against the old one, at least 65 of 100 to be promoted, and overstates its
-  gain against people. R610 corrects both in live play, and `bot-calibrate-live` replaces the anchor as
-  soon as people have played the reference.
+  same fault: it is the new AI against the old one, at least 220 of 400 (improve) or 60 of 100
+  (unban) to be promoted, and overstates its gain against people. R610 corrects both in live play,
+  and `bot-calibrate-live` replaces the anchor as soon as people have played the reference.
 
 ## Results
 

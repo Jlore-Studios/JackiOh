@@ -17,10 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
+import { testid } from "./contract.ts";
 import Game from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { baseView, emptySide, unit, withEvents } from "../test/fixtures.ts";
+import { baseView, emptySide, faceDownBackrow, pendingFor, unit, withEvents } from "../test/fixtures.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 
 const END_TURN: ActionBody = { type: "endTurn" };
@@ -384,5 +385,55 @@ describe("a replay board (#511)", () => {
     const replay = vi.fn();
     render(<Game view={mulligan()} legal={[]} onAction={replay} replay />);
     expect(replay).not.toHaveBeenCalled();
+  });
+});
+
+describe("R821000 a Plague Counter placement is answered by a click on the board", () => {
+  const view = baseView({
+    you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), null, null, null, null] }),
+    opponent: emptySide("p2", {
+      hand: { count: 0 },
+      units: [unit("p2", { instanceId: "e1" }), null, null, null, null],
+      backrow: [null, null, faceDownBackrow, null, null],
+    }),
+    pending: pendingFor(
+      "target",
+      [
+        { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+        { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+        { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+      ],
+      { prompt: "Place 2 Plague Counters on a permanent" },
+    ),
+  });
+  const answer = (instanceId: string): ActionBody => ({
+    type: "answer",
+    choiceId: "ch1",
+    selection: [{ pick: "instance", instanceId }],
+  });
+
+  it("answers with the card clicked, or with the face-down card whose zone is clicked, and opens no list", () => {
+    const onAction = vi.fn();
+    render(<Game view={view} legal={[]} onAction={onAction} />);
+
+    expect(screen.getByTestId("prompt-modal").getAttribute("data-board-only")).toBe("true");
+    expect(screen.queryByTestId("prompt-option-instance:e1")).toBeNull();
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).toHaveBeenLastCalledWith(answer("e1"));
+
+    fireEvent.click(screen.getByTestId(testid.zone("opponent", "backrow", 3)));
+    expect(onAction).toHaveBeenLastCalledWith(answer("t1"));
+    expect(onAction).toHaveBeenCalledTimes(2);
+  });
+
+  it("answers nothing for a zone or a hero the prompt did not offer", () => {
+    const onAction = vi.fn();
+    render(<Game view={view} legal={[]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.zone("opponent", "backrow", 4)));
+    fireEvent.click(screen.getByTestId(testid.zone("opponent", "units", 2)));
+    fireEvent.click(screen.getByTestId(testid.hero("opponent")));
+    expect(onAction).not.toHaveBeenCalled();
   });
 });

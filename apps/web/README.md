@@ -24,10 +24,6 @@ enforces rules and never sees hidden information.** In practice:
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
   both with the same pickers.
 
-## Layout
-
-Moved to docs/history/web-readme.md.
-
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
 variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
@@ -373,9 +369,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
-- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme, a Legendary's shared entrance
-  theme, a station switch or a card's intro is an entry in `src/audio/music-cards.json`, and the music system needs
-  no change for it.
+- Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
+  `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
@@ -448,7 +443,3 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 ## Internationalisation
 
 The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English.
-
-## `PlayerView` gaps found while building M5 (SPEC §10.8)
-
-Moved to docs/history/web-readme.md.

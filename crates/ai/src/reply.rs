@@ -25,10 +25,10 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, UnitView, find_instance, has_keyword,
-    legal_actions, reduce, subsystems, unit_view,
+    legal_actions, reduce, subsystems, takes_strike_back, unit_view,
 };
 
-use crate::candidates::candidate_actions;
+use crate::candidates::candidate_actions_in;
 use crate::config::{AI_EVAL, AI_REPLY};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
 use crate::simulate::{LineStatus, line_status, simulate, static_score, surcharge_nodes};
@@ -93,8 +93,9 @@ fn blow(from: &Side, to: &Side) -> Blow {
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): the unit it kills, less its own
-/// body when that dies too, with First Strike deciding who strikes first. A hit that kills nothing is
-/// worth a little per point dealt, so a second attacker can finish what the first one started.
+/// body when that dies too, with First Strike deciding who strikes first and no strike back at all on
+/// a Ranged attacker unless the target is Ranged too (R783000). A hit that kills nothing is worth a
+/// little per point dealt, so a second attacker can finish what the first one started.
 fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f64 {
     let Some(target) = find_instance(state, target_id) else {
         return f64::NEG_INFINITY;
@@ -102,9 +103,8 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     let a = side_of(unit_view(state, attacker));
     let t = side_of(unit_view(state, target));
     let out = blow(&a, &t);
-    let back = blow(&t, &a);
     let mut kills = out.kills;
-    let mut dies = back.kills;
+    let mut dies = takes_strike_back(state, attacker, target) && blow(&t, &a).kills;
     if a.first_strike && !t.first_strike && kills {
         dies = false;
     }
@@ -126,13 +126,13 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     value
 }
 
-/// The opponent's attacks worth making, best static value first (ties keep legal_actions order).
-fn ranked_attacks(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
-    let opp = seat.opponent();
+/// The opponent's attacks worth making out of `legal` (legal_actions(state, opp)), best static value
+/// first (ties keep legal_actions order).
+fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Vec<ActionBody> {
     let hero = format!("hero-{}", seat.as_str());
     let health = state.players[seat].hero.health;
     let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
-    for action in legal_actions(state, opp) {
+    for action in legal.iter().cloned() {
         let ActionBody::Attack {
             attacker_id,
             target_id,
@@ -199,15 +199,16 @@ enum Known {
 }
 
 /// Step 1: the best play of a card the opponent holds that is not in `hidden`, by the opponent's own
-/// evaluation, when it beats standing still.
+/// evaluation, when it beats standing still. `legal` is legal_actions(state, opp), already in hand.
 fn known_play(
     state: &GameState,
     seat: PlayerId,
+    legal: &[ActionBody],
     hidden: &IndexSet<String>,
     counter: &dyn NodeCounter,
 ) -> Known {
     let opp = seat.opponent();
-    let plays: Vec<ActionBody> = candidate_actions(state, opp)
+    let plays: Vec<ActionBody> = candidate_actions_in(state, opp, legal.to_vec())
         .into_iter()
         .filter(
             |action| matches!(action, ActionBody::Play { instance_id, .. } if !hidden.contains(instance_id)),
@@ -295,7 +296,10 @@ pub fn simulate_reply(
             return Some(current);
         }
 
-        match known_play(&current, seat, hidden, counter) {
+        // One legal_actions serves both the known-play try (its ordered candidates) and the static
+        // trader's attack list — the two enumerations the walk used to make per step.
+        let legal = legal_actions(&current, opp);
+        match known_play(&current, seat, &legal, hidden, counter) {
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
@@ -304,7 +308,7 @@ pub fn simulate_reply(
             Known::Nothing => {}
         }
 
-        let attack = ranked_attacks(&current, seat).into_iter().next();
+        let attack = ranked_attacks(&current, seat, &legal).into_iter().next();
         if !counter.take() {
             return None;
         }

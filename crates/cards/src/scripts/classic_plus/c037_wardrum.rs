@@ -51,7 +51,7 @@ fn reaches_threshold(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
     let Some(at) = log.iter().rposition(|id| id == instance_id) else {
         return false;
     };
-    // ponytail: a cast inside this resolution whose card has ceased to exist since is not taken off.
+    // maxi-tail: a cast inside this resolution whose card has ceased to exist since is not taken off.
     let later = log[at + 1..]
         .iter()
         .filter(|id| find_instance(state, id).is_some_and(|card| non_unit(state, card)))

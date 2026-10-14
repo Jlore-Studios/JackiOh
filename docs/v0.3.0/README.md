@@ -4,14 +4,15 @@ The plan for [#306](https://github.com/Jlore-Studios/JackiOh/issues/306), which 
 server, engine and AI rewrite) and #133 (spec adherence by structure, not prose), and adds the
 AI training lanes (the successor of #55, following #70 and #65) and a shorter CI. It is written so
 that a builder who reads only this file, [SURFACE.md](SURFACE.md), [PORT-MAP.md](PORT-MAP.md) and
-its own part in [parts/](parts/) has no decision left to make.
+its own part's issue has no decision left to make.
 
 - **[SURFACE.md](SURFACE.md)** is the interface freeze: crate layout, pinned dependencies,
   translation rules, wire format, every cross-crate signature, CLI, file formats. It is the fullsend
   `SPEC.md` for this run.
 - **[PORT-MAP.md](PORT-MAP.md)** lists every file in `packages/`, `apps/server/` and `ladder/`, the
   Rust file it becomes (or that it is deleted, and why), and the part that owns it.
-- **[parts/](parts/)** holds one brief per sub-issue of #306, the same text as the issue's body.
+- **The briefs** of the parts are the bodies of #306's sub-issues (the Issue column below); their
+  copies in `parts/` were removed in #832 and stay in git history.
 
 Contents:
 
@@ -77,7 +78,7 @@ Each line is decided; a builder does not reopen it.
 | D12 | **SPEC.md becomes `spec/`, notes with front matter; `cargo jackioh spec check` replaces `rulings.test.ts` and `rulings-coverage.ts`.** | #133 and #306's "obsidian like graph": checks read ids, never wording; agents read a 30-line note instead of a 2,000-line file. |
 | D13 | **Fullsend over one integration branch, `staging`**, built by Claude Code cloud sessions created with `outcome_branch: staging`, one per part. | The bots' harness can only open pull requests to `main` (`bot/harness/deliver.py:1219`, `cfg.default_branch`), and its merges wait on a green CI that a fullsend branch does not have until Wave 3. |
 | D14 | **Per-PR CI runs the essentials; a daily "super" run runs everything.** | #306: "only run the essential tests on the CI". |
-| D15 | **Ponytail throughout.** No abstraction with one implementation (the server's two-variant enums of D18 are the only polymorphism), no config for a value that never changes, no structural sharing or binary wire format until a profile asks. | #306 and the goal ask for it. |
+| D15 | **Maxi-tail throughout.** No abstraction with one implementation (the server's two-variant enums of D18 are the only polymorphism), no config for a value that never changes, no structural sharing or binary wire format until a profile asks. | #306 and the goal ask for it. |
 | D16 | **`loc` stays frozen data.** The catalog's `loc` (a card script's TypeScript line count) is gameplay data read by C+ #44, C+ #45 and Classic #48; it keeps its values, and a new card's count comes from `cargo jackioh catalog loc`. | Recomputing it from Rust would change three cards' behaviour (research A §8 #16). |
 | D17 | **No mutable globals and no registration hooks in the rules.** The catalog and script registries are set once; fused scripts are composed on lookup from the game state; per-call flags live in `EngineSink`; the ~25 import-time `register*` hooks become direct calls. | The tools run games on many threads; TS's process-global re-sync (`syncFusedScripts` on every `reduce`) would let games see each other's cards (research A §8 #7, #8, #18). |
 | D18 | **The server has no traits:** `Db`/`Tx` and `Auth` are enums with one variant per implementation, and the server calls the engine directly. | Two implementations each; enums avoid generic `App<S, A, E>` signatures and `Send`-bound async-trait puzzles for the builders. |
@@ -162,48 +163,48 @@ Forty parts, one sub-issue each, titled `v0.3.0 (part n of 40): …` (`docs/issu
 - **Wave 4** (part 37, then part 38): cull and docs, then the cutover to `main`.
 - **Wave 5** (parts 39 and 40): the bot machines and the training lanes switched on.
 
-| Part | Title | Wave | Starts after | Builder | Mode | Brief | Issue |
-|---|---|---|---|---|---|---|---|
-| 1 | bootstrap: staging, the Cargo workspace and the type freeze | Wave 0 | — | Opus | setup | [01-bootstrap.md](parts/01-bootstrap.md) | #389 |
-| 2 | engine 1: the model and the board | Wave 1 | 1 | Sonnet+ | builder | [02-engine-1.md](parts/02-engine-1.md) | #390 |
-| 3 | engine 2: combat, damage and the resolution loop | Wave 1 | 1 | Opus | builder | [03-engine-2.md](parts/03-engine-2.md) | #391 |
-| 4 | engine 3: the play pipeline and casting | Wave 1 | 1 | Sonnet+ | builder | [04-engine-3.md](parts/04-engine-3.md) | #392 |
-| 5 | engine 4: turn, setup, reduce, view, validator, wire helpers and the testkit | Wave 1 | 1 | Opus | builder | [05-engine-4.md](parts/05-engine-4.md) | #393 |
-| 6 | engine 5: effect verbs, first half | Wave 1 | 1 | Sonnet+ | builder | [06-engine-5.md](parts/06-engine-5.md) | #394 |
-| 7 | engine 6: effect verbs, second half | Wave 1 | 1 | Sonnet+ | builder | [07-engine-6.md](parts/07-engine-6.md) | #395 |
-| 8 | engine 7: subsystems | Wave 1 | 1 | Opus | builder | [08-engine-7.md](parts/08-engine-7.md) | #396 |
-| 9 | cards lane 1: Core #1–#48 | Wave 1 | — | night bot (Opus) | builder | [09-cards-lane-1.md](parts/09-cards-lane-1.md) | #397 |
-| 10 | cards lane 2: Core #49–#81 | Wave 1 | — | night bot (Opus) | builder | [10-cards-lane-2.md](parts/10-cards-lane-2.md) | #398 |
-| 11 | cards lane 3: Core #82–#100 and the Core tokens to Ghoul | Wave 1 | — | night bot (Opus) | builder | [11-cards-lane-3.md](parts/11-cards-lane-3.md) | #399 |
-| 12 | cards lane 4: Core tokens Rush to Sheep, Classic #1–#32 | Wave 1 | — | night bot (Opus) | builder | [12-cards-lane-4.md](parts/12-cards-lane-4.md) | #400 |
-| 13 | cards lane 5: Classic #33–#68 | Wave 1 | — | night bot (Opus) | builder | [13-cards-lane-5.md](parts/13-cards-lane-5.md) | #401 |
-| 14 | cards lane 6: Classic #69–#90 and tokens, Classic+ #1–#18 | Wave 1 | — | night bot (Opus) | builder | [14-cards-lane-6.md](parts/14-cards-lane-6.md) | #402 |
-| 15 | cards lane 7: Classic+ #19–#49 | Wave 1 | — | night bot (Opus) | builder | [15-cards-lane-7.md](parts/15-cards-lane-7.md) | #403 |
-| 16 | cards lane 8: Classic+ #50–#78 and the AI tokens | Wave 1 | — | night bot (Opus) | builder | [16-cards-lane-8.md](parts/16-cards-lane-8.md) | #404 |
-| 17 | the AI in Rust (generation 0) | Wave 1 | — | night bot (Opus) | builder | [17-the-ai-in-rust-generation-0.md](parts/17-the-ai-in-rust-generation-0.md) | #405 |
-| 18 | server 1: the HTTP API and auth | Wave 1 | — | night bot (Opus) | builder | [18-server-1.md](parts/18-server-1.md) | #406 |
-| 19 | server 2: the match lifecycle and the WebSocket | Wave 1 | — | night bot (Opus) | builder | [19-server-2.md](parts/19-server-2.md) | #407 |
-| 20 | server 3: persistence, migrations, CLIs and the Docker deploy | Wave 1 | 1 | Opus | builder | [20-server-3.md](parts/20-server-3.md) | #408 |
-| 21 | the WASM bindings and the web client on them | Wave 1 | 1 | Opus | builder | [21-the-wasm-bindings-and-the-web-client-on-them.md](parts/21-the-wasm-bindings-and-the-web-client-on-them.md) | #409 |
-| 22 | the jackioh CLI: fuzz, catalog, patches, gates, sweep, stats | Wave 1 | — | night bot (Opus) | builder | [22-the-jackioh-cli.md](parts/22-the-jackioh-cli.md) | #410 |
-| 23 | golden traces recorded from the TypeScript engine | Wave 1 | — | night bot (Opus) | oracle | [23-golden-traces-recorded-from-the-typescript-engine.md](parts/23-golden-traces-recorded-from-the-typescript-engine.md) | #411 |
-| 24 | engine tests 1: effect verbs and fixtures | Wave 1 | — | night bot (Opus) | tester | [24-engine-tests-1.md](parts/24-engine-tests-1.md) | #412 |
-| 25 | engine tests 2: rulings, subsystems, prompts and triggers | Wave 1 | — | night bot (Opus) | tester | [25-engine-tests-2.md](parts/25-engine-tests-2.md) | #413 |
-| 26 | engine tests 3: view, turn, setup, combat | Wave 1 | — | night bot (Opus) | tester | [26-engine-tests-3.md](parts/26-engine-tests-3.md) | #414 |
-| 27 | engine tests 4: play pipeline and cross-card rules | Wave 1 | — | night bot (Opus) | tester | [27-engine-tests-4.md](parts/27-engine-tests-4.md) | #415 |
-| 28 | the spec graph and structural spec checks (#133) | Wave 1 | 1 | Sonnet+ | builder | [28-the-spec-graph-and-structural-spec-checks-133.md](parts/28-the-spec-graph-and-structural-spec-checks-133.md) | #416 |
-| 29 | the training arena, the promotion gate and the lane prompts | Wave 1 | — | night bot (Opus) | builder | [29-the-training-arena-the-promotion-gate-and-the-lane-prompts.md](parts/29-the-training-arena-the-promotion-gate-and-the-lane-prompts.md) | #417 |
-| 30 | CI: essential checks per pull request, the daily super run | Wave 1 | 1 | person | person | [30-ci.md](parts/30-ci.md) | #418 |
-| 31 | contact and reconcile | Wave 2 | 2–29 | Opus | reconciler | [31-contact-and-reconcile.md](parts/31-contact-and-reconcile.md) | #419 |
-| 32 | green 1: the engine compiles and replays the golden traces | Wave 3a | 31 | Opus | green | [32-green-1.md](parts/32-green-1.md) | #420 |
-| 33 | green 2: the cards | Wave 3b | 32 | Sonnet+ | green | [33-green-2.md](parts/33-green-2.md) | #421 |
-| 34 | green 3: the AI, the tools and the training arena | Wave 3b | 32 | Sonnet+ | green | [34-green-3.md](parts/34-green-3.md) | #422 |
-| 35 | green 4: the server and the database | Wave 3b | 32 | Opus | green | [35-green-4.md](parts/35-green-4.md) | #423 |
-| 36 | green 5: the web client and e2e | Wave 3b | 32 | Sonnet+ | green | [36-green-5.md](parts/36-green-5.md) | #424 |
-| 37 | cull: delete the TypeScript, rewrite the docs | Wave 4 | 33, 34, 35, 36 | Opus | culler | [37-cull.md](parts/37-cull.md) | #425 |
-| 38 | cutover: staging into main, deploys and the bots' settings | Wave 4 | 37, 30 | person | ops | [38-cutover.md](parts/38-cutover.md) | #426 |
-| 39 | the bot machines: six normal lanes and two training lanes | Wave 5 | 38 | person | person | [39-the-bot-machines.md](parts/39-the-bot-machines.md) | #427 |
-| 40 | generation 0, the sweep of record, and the lanes switched on | Wave 5 | 38, 39 | Sonnet+ | ops | [40-generation-0-the-sweep-of-record-and-the-lanes-switched-on.md](parts/40-generation-0-the-sweep-of-record-and-the-lanes-switched-on.md) | #428 |
+| Part | Title | Wave | Starts after | Builder | Mode | Issue |
+|---|---|---|---|---|---|---|
+| 1 | bootstrap: staging, the Cargo workspace and the type freeze | Wave 0 | — | Opus | setup | #389 |
+| 2 | engine 1: the model and the board | Wave 1 | 1 | Sonnet+ | builder | #390 |
+| 3 | engine 2: combat, damage and the resolution loop | Wave 1 | 1 | Opus | builder | #391 |
+| 4 | engine 3: the play pipeline and casting | Wave 1 | 1 | Sonnet+ | builder | #392 |
+| 5 | engine 4: turn, setup, reduce, view, validator, wire helpers and the testkit | Wave 1 | 1 | Opus | builder | #393 |
+| 6 | engine 5: effect verbs, first half | Wave 1 | 1 | Sonnet+ | builder | #394 |
+| 7 | engine 6: effect verbs, second half | Wave 1 | 1 | Sonnet+ | builder | #395 |
+| 8 | engine 7: subsystems | Wave 1 | 1 | Opus | builder | #396 |
+| 9 | cards lane 1: Core #1–#48 | Wave 1 | — | night bot (Opus) | builder | #397 |
+| 10 | cards lane 2: Core #49–#81 | Wave 1 | — | night bot (Opus) | builder | #398 |
+| 11 | cards lane 3: Core #82–#100 and the Core tokens to Ghoul | Wave 1 | — | night bot (Opus) | builder | #399 |
+| 12 | cards lane 4: Core tokens Rush to Sheep, Classic #1–#32 | Wave 1 | — | night bot (Opus) | builder | #400 |
+| 13 | cards lane 5: Classic #33–#68 | Wave 1 | — | night bot (Opus) | builder | #401 |
+| 14 | cards lane 6: Classic #69–#90 and tokens, Classic+ #1–#18 | Wave 1 | — | night bot (Opus) | builder | #402 |
+| 15 | cards lane 7: Classic+ #19–#49 | Wave 1 | — | night bot (Opus) | builder | #403 |
+| 16 | cards lane 8: Classic+ #50–#78 and the AI tokens | Wave 1 | — | night bot (Opus) | builder | #404 |
+| 17 | the AI in Rust (generation 0) | Wave 1 | — | night bot (Opus) | builder | #405 |
+| 18 | server 1: the HTTP API and auth | Wave 1 | — | night bot (Opus) | builder | #406 |
+| 19 | server 2: the match lifecycle and the WebSocket | Wave 1 | — | night bot (Opus) | builder | #407 |
+| 20 | server 3: persistence, migrations, CLIs and the Docker deploy | Wave 1 | 1 | Opus | builder | #408 |
+| 21 | the WASM bindings and the web client on them | Wave 1 | 1 | Opus | builder | #409 |
+| 22 | the jackioh CLI: fuzz, catalog, patches, gates, sweep, stats | Wave 1 | — | night bot (Opus) | builder | #410 |
+| 23 | golden traces recorded from the TypeScript engine | Wave 1 | — | night bot (Opus) | oracle | #411 |
+| 24 | engine tests 1: effect verbs and fixtures | Wave 1 | — | night bot (Opus) | tester | #412 |
+| 25 | engine tests 2: rulings, subsystems, prompts and triggers | Wave 1 | — | night bot (Opus) | tester | #413 |
+| 26 | engine tests 3: view, turn, setup, combat | Wave 1 | — | night bot (Opus) | tester | #414 |
+| 27 | engine tests 4: play pipeline and cross-card rules | Wave 1 | — | night bot (Opus) | tester | #415 |
+| 28 | the spec graph and structural spec checks (#133) | Wave 1 | 1 | Sonnet+ | builder | #416 |
+| 29 | the training arena, the promotion gate and the lane prompts | Wave 1 | — | night bot (Opus) | builder | #417 |
+| 30 | CI: essential checks per pull request, the daily super run | Wave 1 | 1 | person | person | #418 |
+| 31 | contact and reconcile | Wave 2 | 2–29 | Opus | reconciler | #419 |
+| 32 | green 1: the engine compiles and replays the golden traces | Wave 3a | 31 | Opus | green | #420 |
+| 33 | green 2: the cards | Wave 3b | 32 | Sonnet+ | green | #421 |
+| 34 | green 3: the AI, the tools and the training arena | Wave 3b | 32 | Sonnet+ | green | #422 |
+| 35 | green 4: the server and the database | Wave 3b | 32 | Opus | green | #423 |
+| 36 | green 5: the web client and e2e | Wave 3b | 32 | Sonnet+ | green | #424 |
+| 37 | cull: delete the TypeScript, rewrite the docs | Wave 4 | 33, 34, 35, 36 | Opus | culler | #425 |
+| 38 | cutover: staging into main, deploys and the bots' settings | Wave 4 | 37, 30 | person | ops | #426 |
+| 39 | the bot machines: six normal lanes and two training lanes | Wave 5 | 38 | person | person | #427 |
+| 40 | generation 0, the sweep of record, and the lanes switched on | Wave 5 | 38, 39 | Sonnet+ | ops | #428 |
 
 ## 5. The orchestrator's runbook
 
@@ -235,8 +236,8 @@ Session prompt template (`create_session`, with `outcome_branch: "staging"`,
 
 ```
 You are building part <n> of the JackiOh v0.3.0 rewrite (GitHub issue #<sub-issue>, parent #306).
-Read, in this order: docs/v0.3.0/README.md §3, docs/v0.3.0/SURFACE.md, docs/v0.3.0/parts/<file>.md
-(the same text as the issue) and the research file it cites, if any. Your brief is the last file; its "Files to touch" table is the complete list of paths you may write.
+Read, in this order: docs/v0.3.0/README.md §3, docs/v0.3.0/SURFACE.md, issue #<sub-issue>'s body
+and the research file it cites, if any. Your brief is the issue's body; its "Files to touch" table is the complete list of paths you may write.
 Follow its steps exactly. Push to staging with the protocol of README §3.2. Do not ask questions:
 decide, and record the decision in your notes. Stop when your brief's "Done when" list holds.
 ```

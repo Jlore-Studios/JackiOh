@@ -48,7 +48,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
   animTestid,
   createAnimationQueue,
@@ -194,6 +194,12 @@ export default function Game({
    * hotseat hand-over, or a game that ends while it is open, closes it without a word.
    */
   const [concedeFor, setConcedeFor] = useState<PlayerId | null>(null);
+  /**
+   * R849000: the engine's reason a click on your own unit offered no attack (`UnitView.attackReason`),
+   * held with the view it was read from so it disappears when the board shows another view. Any later
+   * click replaces or clears it.
+   */
+  const [notice, setNotice] = useState<{ text: string; view: PlayerView } | null>(null);
   /**
    * Which portrait's menu is open (`emoteMenu.side`), bound to the viewer that opened it so a
    * hotseat hand-over closes it the way a hand-over closes the concede question, and where: hung
@@ -465,14 +471,21 @@ export default function Game({
 
   const handleClick = useCallback(
     (target: ClickTarget) => {
+      // R821000: "Place N Plague Counters" is answered by a click on the board, not from a list.
+      const placement = answerPlaguePlacement(shown, legal, shown.pending, target);
+      if (placement !== null) {
+        dispatch(placement);
+        return;
+      }
       const next = onClickTarget(shown, legal, interaction, target);
       setInteraction(next.interaction);
+      setNotice(next.notice === undefined ? null : { text: next.notice, view: shown });
       if (next.interaction !== interaction && next.interaction.stage === "attacking") {
         pickUp(next.interaction.attackerId);
       }
       if (next.action !== undefined) onAction(next.action);
     },
-    [shown, legal, interaction, onAction, pickUp],
+    [shown, legal, interaction, onAction, dispatch, pickUp],
   );
 
   const handleControl = useCallback(
@@ -635,6 +648,11 @@ export default function Game({
             {error != null && error !== "" ? (
               <p key={error} className="game-error" data-testid="action-error" role="alert">
                 {t(error)}
+              </p>
+            ) : null}
+            {notice !== null && notice.view === shown ? (
+              <p key={notice.text} className="attack-reason" data-testid="attack-reason" role="status">
+                {t(notice.text)}
               </p>
             ) : null}
             {boardNotice}

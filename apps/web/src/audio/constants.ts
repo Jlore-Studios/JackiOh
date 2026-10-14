@@ -155,8 +155,6 @@ export const MUSIC_DUCK_SFX: readonly SfxId[] = ["trapSting", "entrance", "victo
 export const MUSIC_FOCUS_TC_S = 0.15;
 /** Low health: the viewer's hero at or under this fraction of HERO_HEALTH plays the urgency track. */
 export const MUSIC_LOW_HEALTH_FRACTION = 0.25;
-/** A Mythic theme away from low health ends after it has played through this many times. */
-export const MUSIC_MYTHIC_PLAYS = 2;
 /** Decoded tracks kept in memory (a two-minute track decodes to about 45 MB), least recently used evicted. */
 export const MUSIC_DECODED_MAX = 3;
 /** Fetched files kept, compressed, least recently used evicted. */

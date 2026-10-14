@@ -8,7 +8,7 @@ docs/v0.3.0/SURFACE.md §14.
 
 | Lane | Goal | Standing prompt |
 |---|---|---|
-| `improve` | a stronger AI: beat its predecessor in 65 of 100 games | [`improve.md`](improve.md) |
+| `improve` | a stronger AI: beat its predecessor in 220 of 400 games, 200 deals each played twice with the seats swapped (R850000) | [`improve.md`](improve.md) |
 | `unban` | an AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, while beating it in 60 of 100 | [`unban.md`](unban.md) |
 | `gather` | no change to the AI: development records for the card win rates (R378), without end | [`gather.md`](gather.md) |
 
@@ -27,9 +27,11 @@ session, looking again every `TRAIN_IDLE_SECONDS` (How a lane runs, step 2).
 
 The lanes played 100 games against SPEC §10.7's random policy too, needing 90, until generation 9,
 the first AI dealt the Meditative set, beat random in at least 90 of 100 (R732001). Since then they
-measure a candidate against its parent alone, at 65 of 100 for `improve` and 60 for `unban`. The
-daily quality gates (`cargo jackioh gate --full`) still hold the AI on `main` to their floor against
-random, so an AI that forgets how to beat random fails the daily run.
+measure a candidate against its parent alone: `unban` at 60 of 100, and `improve` at 65 of 100 until
+issue #850 lowered its bar to 220 of 400 paired games (R850000), so that the few points a change
+gains can bank and compound. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
+on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
+run.
 
 ## How a lane runs
 
@@ -52,23 +54,34 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    next session reads first. Otherwise wait.
 2. Otherwise fetch `main`, reset `ai/<lane>` to it, build `jackioh` from it and keep that binary as
    `~/parent-jackioh`. The parent is always the AI on `main`.
+   - The `improve` lane then checks out its stack, `ai/improve-stack`, rebased onto `main` (The
+     improve stack): the session starts from its kept changes, not from bare `main`.
    - The `unban` lane stops here while the parent shadow-bans no card. A promotion needs strictly
      fewer bans, so a session could do nothing. The lane retitles its draft
      `AI gen <N> (unban): idle, the AI on main bans no card`, says so once in a comment, and looks
      again every `TRAIN_IDLE_SECONDS` (15 minutes). The first cycle after `main`'s AI bans a card
      again starts a session. A sweep of record adds such bans, as #732's did for the Meditative set,
      and both standing prompts send the lanes to the Meditative cards first.
-   - Otherwise push `ai/<lane>` as `main` plus an empty `[skip ci]` commit naming the session, and
-     make the lane's pull request this session's draft, titled
-     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open).
+   - Otherwise push `ai/<lane>` as that start (`main`, or the improve lane's rebased stack) plus an
+     empty `[skip ci]` commit naming the session, and make the lane's pull request this session's
+     draft, titled
+     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open). Its
+     description opens with the gate's latest pass (Watching a lane on GitHub).
 3. Run one Devin session on the lane's standing prompt
    (`devin -p --prompt-file training/<lane>.md --model "$DEVIN_MODEL" --permission-mode dangerous
-   --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI, measures
-   it with dry runs of the gate, and commits only once a real run of the gate has passed. A session
-   ends after a promotion or after four hours. Meanwhile, every 15 minutes
-   (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>` as one
-   `[skip ci]` commit when it changed, and rewrites the session's comment on the draft.
-4. When the session ends with a promotion commit, land it on `main`. If `main`'s crates did not move
+   --respect-workspace-trust false --export ~/logs/<lane>-<t>.json`). Devin changes the AI and
+   measures it: the `unban` lane with dry runs of the gate, committing only once a real run has
+   passed; the `improve` lane with paired screens on its dev set, committing each change it keeps to
+   its stack and going to the gate only with a stack that screened above its parent
+   ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
+   every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
+   as one `[skip ci]` commit when it changed, rewrites the session's comment on the draft, and
+   rewrites the draft's description when a new pass of the gate changed it. When the session ends,
+   the loop stops any `jackioh` process it left running as the lane's user (an arena or a gate cut
+   off by the time limit, and the parent agents it spawned), so the next measurement has the box.
+   Without a promotion, the `improve` lane saves the session's commits as its stack.
+4. When the session ends with a promotion commit, fold every commit of the session into it (the
+   improve lane's stack included) and land it on `main`. If `main`'s crates did not move
    since the session's start, the parent and the candidate are the builds the gate measured: rebase
    the commit and re-check it against the parent (`cargo jackioh promote --verify`). If they moved,
    the parent changed: build it from `main` again, apply the promotion's change (less the record the
@@ -77,16 +90,67 @@ review, with auto-merge on, once a promotion is in it. Each cycle:
    prompts' "Beyond the gate" lists them) when the box has `pnpm`, push `ai/<lane>`, retitle the pull
    request with the promotion's subject (`AI gen <N> (<lane>): <what changed>`), give it the gate's
    report as its body, mark it ready and turn on auto-merge (squash). A promotion that fails any of
-   that is set back as in 1.
+   that is set back as in 1. Until it merges, the improve lane's promotion, less its record, is its
+   stack, so a set-back promotion is where the next session starts.
 5. Sleep 60 seconds and repeat.
 
 A lane never merges anything itself: CI does, through branch protection, once its checks pass.
 
+### The improve stack
+
+The `improve` lane banks its work between sessions on a branch of its own, `ai/improve-stack`, so
+a measured gain too small for the gate is not lost when a session ends or `main` moves (issue
+#850). It holds the lane's kept changes as commits on `main`, one per change, each subject
+`Stack (improve): <what changed>` and each body the screen that kept it (its games, wins, edge and
+interval, and the control it was measured against; [`improve.md`](improve.md), The stack). No stack
+commit holds anything outside `crates/ai/`, nor `crates/ai/generation.json` or a history line, and
+none is a promotion (its subject never starts `AI gen `).
+
+- **When it is saved.** A session without a promotion ends with its commits pushed to
+  `ai/improve-stack` (`save_stack`), uncommitted work left out. A session whose commits change
+  anything else is refused as a stack: the stack stays as it was, the commits are kept on the box as
+  the local branch `ai/improve-stack-unsaved-<t>`, and `attempts.md` says so.
+- **A promotion.** The loop folds the session's commits into the promotion commit, as it always
+  has, and pushes it less its record as the stack: one commit, its message the promotion's subject
+  and every folded commit's message (`save_promoted_stack`). A promotion set back, or refused by
+  closing its pull request, is where the next session starts; once it merges, `main` holds its
+  change, and the next cycle empties the stack to `main`.
+- **Each session.** Step 2 fetches the stack. When `main` already holds its change, it is emptied.
+  Otherwise it is rebased onto `main` and checked out as `ai/improve`, and the session starts from
+  it. Its comment on the draft says so.
+- **When `main`'s AI moved under it** (`crates/ai` differs between the `main` the stack was on and
+  today's, say after an unban promotion), the loop builds the rebased stack and screens it against
+  the new parent on the dev set (`arena --a self --b bin:~/parent-jackioh --set improve-dev`, 400
+  games, about 40 minutes on the box) before the session, and puts the tally in `attempts.md`. The
+  session reads it first; a stack that lost its edge is the session's to fix or drop. That screen
+  reads higher than the gate would, as every dev-set read can: the gate is the hold-out read.
+- **A rebase conflict.** When the stack does not rebase onto `main`, the loop aborts the rebase,
+  keeps the stack's commits as the local branch `ai/improve-stack-conflict-<t>`, notes the conflict
+  and its files in `attempts.md`, and starts the session from `main`. The stack stays on GitHub as
+  it was. The session rebuilds it first (`improve.md`, The stack): it cherry-picks the kept commits
+  onto `main`, resolving the conflicts in `crates/ai`, and screens the result against the parent.
+  Its commits replace the stack when it ends; a session that commits nothing leaves it as it was. A
+  stack is never dropped without a note.
+- **A stack the loop cannot read** (GitHub unreachable at the session's start) is left alone: the
+  session starts from `main`, `attempts.md` says so, and its commits are kept as a local branch
+  rather than pushed over the stack.
+
+The gate still measures only what is committed: `promote` refuses uncommitted changes in
+`crates/ai/src`, so the promotion's seeds are the committed stack's (R850001).
+
 ### Watching a lane on GitHub
 
 The lane's pull request is the place to follow it. Its **Files changed** is the session's work in
-progress against `main` (CI does not run on a `[skip ci]` commit), and its comments say what
-happened:
+progress against `main` (CI does not run on a `[skip ci]` commit), the top of its description is
+the latest pass, and its comments say what happened:
+
+- the latest pass of the gate, at the top of the draft's description: every run of `promote` (a dry
+  run, a promotion or a `--verify`) rewrites `~/training-out/<lane>/last-pass.md` with it, failed
+  runs included, and the loop puts that file above the lane's own text within 15 minutes. It says
+  how many of the games the candidate beat the AI on `main` in, with what the lane needs, a table of
+  the games won, lost, drawn and without a result as p1, as p2 and in all, the interval those wins
+  give and the shadow bans, and a grid with one square per game (🟩 beat the bot, 🟥 lost, ⬜ drawn,
+  ⬛ no result). Arena runs are not passes and do not change it;
 
 - one comment per session, rewritten every 15 minutes while it runs: how long it has run, the
   checkout's diff against `main` with a link to it, and everything `attempts.md` gained this session
@@ -111,35 +175,48 @@ shrinks: no lane adds an entry, and no card of an earlier set is ever banned aga
 
 ## The gate
 
-`cargo jackioh promote --lane <lane> --parent-bin <parent> [--dry-run] [--verify]` plays
-`TRAINING_GAMES` (100) games against the parent:
+`cargo jackioh promote --lane <lane> --parent-bin <parent> [--dry-run] [--verify]` plays the lane's
+games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`, 100):
 
 - game `k`'s seed is `<lane>:<tree>:<k>`, where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
   the seeds name the AI being measured and committing `generation.json` does not move them;
 - the candidate sits p1 on odd games and p2 on even ones;
+- the improve lane's gate is paired (R850000): its `k` is a deal, and each deal is played twice
+  with the seats swapped, game `2k − 1` with the candidate on p1 and game `2k` with it on p2, the
+  same decks, shuffles and first seat in both. Its 200 deals are the lane's hold-out set (R850001):
+  named for the committed AI and read only by it, never by a screen;
 - each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
   generation 9) minus its own AI's shadow ban, with no handicap (Easy both);
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
 | Lane | vs parent | Shadow bans |
 |---|---|---|
-| `improve` | ≥ 65 of 100 (`TRAINING_IMPROVE.vs_parent`) | — |
+| `improve` | ≥ 220 of 400 paired games (`TRAINING_IMPROVE.vs_parent`) | — |
 | `unban` | ≥ 60 of 100 (`TRAINING_UNBAN.vs_parent`) | strictly fewer than the parent's |
+
+220 of 400 is about two standard deviations above an equal successor's 200: one passes at most about
+2.6% of the time, less with the luck pairing cancels, while a successor that truly wins 55% passes
+about half the time and one at 58% nine times in ten (R850000). It was 65 of 100 until issue #850.
 
 It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
 a win, and neither is a game that ended without a result. Exit 0 on a pass, 1 on a failed gate. The
-report (Markdown) goes to stdout.
+report (Markdown) goes to stdout; a paired gate's report and latest pass add the paired edge, the
+candidate's wins less the parent's over each deal's two games, in points of the games, with its 95%
+interval.
 
 Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
 none), so `promote --lane unban` says the lane has nothing to do and exits 1 before it plays a game,
 whatever the flag, writing nothing and printing no report.
 
-- `--dry-run` measures and writes nothing. It runs on a working copy with uncommitted changes in
-  `crates/ai/src` (on HEAD's seeds, and says so).
+- `--dry-run` measures and writes nothing. The unban lane's runs on a working copy with uncommitted
+  changes in `crates/ai/src` (on HEAD's seeds, and says so). The improve lane's refuses one: its
+  deals are read only by the committed AI they are named for (R850001), so a dry run on a clean
+  checkout plays exactly the games the promotion would.
 - Without a flag, a pass writes `crates/ai/generation.json` and appends the same object to
   `training/history/<lane>.jsonl`. It refuses to run while `crates/ai/src` has uncommitted changes,
-  since the seeds come from the committed tree: commit the change first, then run it, then amend the
-  two files into that commit.
+  since the seeds come from the committed tree: commit the change first, then run it, then commit
+  the two files (the unban lane amends them into the change's commit; the improve lane commits them
+  alone on top of its stack, as the promotion commit).
 - `--verify` (CI, and `loop.sh` before it pushes) recomputes and compares every field of the
   branch's `generation.json` except `date` and `parent`.
 
@@ -149,13 +226,20 @@ thread count.
 ### The arena and the agent
 
 - `cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> --games N --seed <base>
-  [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd games. It is
-  the free-form version of the gate, for experiments on other seeds than the gate's. Per game it
-  prints duel.ts's line (who won, why, the hash, whether the log replays, decision times) and a
-  tally at the end: the wins, draws and games without a result, and agent `a`'s win share with its
-  95% Wilson interval (`aShare`, `aLow`, `aHigh`). The gate's report gives the same interval for
-  its wins. `improve.md` (How much a result says) sets how many games a lane plays before it trusts
-  one.
+  [--paired] [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd
+  games. It is the free-form version of the gate, for experiments on other seeds than the gate's.
+  With `--paired` (R850000) it plays deals instead: deal `d` is `<base>:<d>`, played twice with the
+  seats swapped, so `N` is even. Per game it prints duel.ts's line (who won, why, the hash, whether
+  the log replays, decision times) and a tally at the end: the wins, draws and games without a
+  result, and agent `a`'s win share with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`); a
+  paired series adds `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's
+  two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`). The gate's report gives the
+  same intervals for its wins. A base that is a lane's name, or one followed by `:`, is refused:
+  those are the gates' own seeds (R850001).
+- `cargo jackioh arena --a … --b … --set improve-dev [--games N]` plays the improve lane's fixed dev
+  set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says more, never fewer
+  (R850001). The improve lane screens every change on it (`improve.md`, How you measure); the gate's
+  hold-out deals are never a screen's.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
@@ -263,7 +347,9 @@ never edits `crates/server`, and a promotion does not wait for it.
 | The gather lane's next game number for a patch, and that patch's card figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `cards-<patch>.json` |
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
 | A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
-| What each Devin session tried, and why the loop set a promotion back | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
+| The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
+| What each Devin session tried, with each screen's numbers and interval, why the loop set a promotion back, and what it did with the improve stack (a rebase conflict, a re-measure) | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
+| The improve lane's kept changes between sessions, one commit each | the branch `ai/improve-stack` on GitHub (The improve stack) |
 | The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
 | The loop's log, each Devin session's export, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.json`, `~/logs/<lane>-web-<t>.log` |
 
@@ -279,8 +365,12 @@ tail -f ~agent-train-gather/logs/gather.log
 ```
 
 To refuse a promotion, close its pull request: the loop opens a new draft with its next session,
-from `main`. A lane notices a new `loop.sh` on `main` at the start of a cycle, or while it waits on a
-promotion, and restarts on it. A lane's thresholds change only by a pull request from a person to
+from `main`, or for the improve lane from its stack, which still holds the refused promotion's change
+(The improve stack). To refuse the improve stack's changes as well, stop the lane, delete the branch
+`ai/improve-stack` on GitHub, then start the lane: its next session starts from `main` and saves a new
+stack. Delete it only while the lane is stopped, or the session running then saves it again. A lane
+notices a new `loop.sh` on `main` at the start of a cycle, or while it waits on a promotion, and
+restarts on it. A lane's thresholds change only by a pull request from a person to
 `crates/engine/src/config.rs`.
 
 ## Reading the history
@@ -294,11 +384,14 @@ promotion of that lane, oldest first:
 
 - `generation`: the parent's plus one. Generations count across both lanes: they share `main`.
 - `parent`: the `main` commit the parent was built from; `tree`: the AI's source tree, which names
-  the seeds (`<lane>:<tree>:1` … `:100`), so anyone can re-run the gate:
+  the seeds (`<lane>:<tree>:1` … `:100`, or the improve lane's deals `:1` … `:200`), so anyone can
+  re-run the gate:
   `git checkout <parent> && cargo build --release -p jackioh-tools && cp target/release/jackioh /tmp/parent`,
   then on the promotion's commit `cargo jackioh promote --lane <lane> --parent-bin /tmp/parent --verify`.
-- `vsRandom`, `vsParent`: the candidate's wins out of `TRAINING_GAMES`. `vsRandom` is `null` from
-  generation 10 on: the lanes play no random games (R732001).
+- `vsRandom`, `vsParent`: the candidate's wins out of the games played, `"<wins>/<games>"`: out of
+  400 for the improve lane since issue #850 (R850000), out of 100 for the unban lane and every
+  promotion before. `vsRandom` is `null` from generation 10 on: the lanes play no random games
+  (R732001).
 - `shadowBan`, `parentShadowBan`: how many cards each AI keeps out of its own decks (R186).
 
 ```sh

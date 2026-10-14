@@ -13,10 +13,10 @@
 
 use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
-    CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
-    active_brittle_count, active_units_of, animated_kind_of, attacks_per_turn, cannot_attack, card_keywords,
-    credit_lapsing, find_def, has_keyword, hero_armor_of, owed_mana_of, own_cost, query_cost, subsystems,
-    unit_view,
+    AttackTarget, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
+    active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
+    cannot_attack, card_keywords, credit_lapsing, find_def, has_keyword, hero_armor_of, owed_mana_of,
+    own_cost, query_cost, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -122,7 +122,7 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
-/// An own hand card. ponytail: a Degrade or Upgrade of a hand card's stats is not read here.
+/// An own hand card. maxi-tail: a Degrade or Upgrade of a hand card's stats is not read here.
 fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
@@ -205,12 +205,12 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
 /// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
-/// Taunt units on the defending side soak up the smallest attackers first; each Taunt costs health +
-/// armor, plus one extra attacker if it has Divine Shield. Each remaining attacker's attack goes
-/// through `subsystems::projected_hero_damage` (armor and the Anti-oneshot cap, per hit), and the
-/// results are summed.
+/// Taunt units on the defending side soak up the smallest attackers they bind first
+/// (`damage_past_taunts`); each Taunt costs health + armor, plus one extra attacker if it has Divine
+/// Shield. Each remaining attacker's attack goes through `subsystems::projected_hero_damage` (armor
+/// and the Anti-oneshot cap, per hit), and the results are summed.
 pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
-    let mut attacks: Vec<i32> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
         let view = unit_view(state, unit);
         if view.attack <= 0 || view.position != Position::Atk {
@@ -221,47 +221,55 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
         }
         // R636: the unit's next turn starts with its exertion reset, so a Windfury unit swings twice.
         for _ in 0..attacks_per_turn(state, unit) {
-            attacks.push(view.attack);
+            attacks.push((unit, view.attack));
         }
     }
     damage_past_taunts(state, attacker.opponent(), &attacks)
 }
 
-/// What `attacks` (one entry per attacker) deal `defender`'s hero once its Taunt units have soaked up
-/// the smallest attackers, as `face_threat` counts it: each Taunt costs health + armor, plus one extra
-/// attacker if it has Divine Shield, and every remaining hit goes through
-/// `subsystems::projected_hero_damage`.
-pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[i32]) -> i32 {
-    let mut sorted: Vec<i32> = attacks.to_vec();
-    sorted.sort();
-    let mut taunts: Vec<UnitView> = active_units_of(state, defender)
+/// What `attacks` (one entry per attack: the attacker and its attack) deal `defender`'s hero once its
+/// Taunt units have soaked up the smallest attackers they bind, as `face_threat` counts it: each Taunt
+/// costs health + armor, plus one extra attacker if it has Divine Shield, and one its attackers cannot
+/// kill holds them all. §4.2 step 3: a Taunt binds only the attackers that may attack it, asked of the
+/// engine's own `attack_restriction` (what its Taunt wall reads), so a Flying Taunt in Attack Position
+/// holds no ground attacker (R783002) and a landed one, in Defense Position, holds every attacker
+/// (R783003). Every remaining hit goes through `subsystems::projected_hero_damage`.
+pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
+    let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
+    free.sort_by_key(|(_, attack)| *attack);
+    let mut taunts: Vec<(&CardInstance, UnitView)> = active_units_of(state, defender)
         .into_iter()
-        .map(|unit| unit_view(state, unit))
-        .filter(|view| has_keyword(&view.keywords, KeywordKind::Taunt))
+        .map(|unit| (unit, unit_view(state, unit)))
+        .filter(|(_, view)| has_keyword(&view.keywords, KeywordKind::Taunt))
         .collect();
-    taunts.sort_by_key(|a| a.health + a.armor);
+    taunts.sort_by_key(|(_, view)| view.health + view.armor);
 
-    let mut next = 0usize;
-    for taunt in &taunts {
+    for (unit, taunt) in &taunts {
+        let target = AttackTarget::Unit {
+            instance: (*unit).clone(),
+        };
+        let (bound, mut unbound): (Vec<_>, Vec<_>) = free
+            .into_iter()
+            .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
+        let mut bound = bound.into_iter();
         if has_keyword(&taunt.keywords, KeywordKind::DivineShield) {
-            if next >= sorted.len() {
-                return 0;
-            }
-            next += 1;
+            bound.next();
         }
         let cost = taunt.health.max(0) + taunt.armor;
         let mut soaked = 0;
         while soaked < cost {
-            if next >= sorted.len() {
-                return 0;
-            }
-            soaked += sorted.get(next).copied().unwrap_or(0);
-            next += 1;
+            let Some((_, attack)) = bound.next() else {
+                break;
+            };
+            soaked += attack;
         }
+        unbound.extend(bound);
+        unbound.sort_by_key(|(_, attack)| *attack);
+        free = unbound;
     }
 
     let mut total = 0;
-    for hit in sorted.iter().skip(next) {
+    for (_, hit) in &free {
         total += subsystems::projected_hero_damage(state, defender, *hit, false);
     }
     total

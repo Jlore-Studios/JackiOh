@@ -100,7 +100,7 @@ mod tests {
             );
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }]));
-            assert_eq!(def["params"], json!([{ "key": "limit", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }]));
+            assert_eq!(def["params"], json!([{ "key": "limit", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1, "tunedOn": "radiant" }]));
             let scripts = script();
             assert!(scripts.base.draw_limit.is_some());
             assert!(scripts.radiant.draw_limit.is_some());

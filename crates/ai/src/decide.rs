@@ -31,9 +31,9 @@ use jackioh_engine::{
     mulligan_prompt_for, reduce,
 };
 
-use crate::candidates::{action_key, candidate_actions};
+use crate::candidates::candidate_actions;
 use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
-use crate::determinize::{DeterminizeOptions, determinize};
+use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::lethal::find_lethal;
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_shaped;
@@ -76,19 +76,18 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Lines in order, at most `perAction` for any one first action, `count` in all.
-fn shortlist_lines(found: &[Line], count: usize) -> Vec<&Line> {
-    let mut taken: IndexMap<String, i32> = IndexMap::new();
-    let mut out: Vec<&Line> = Vec::new();
+fn shortlist_lines<'a>(found: &'a [Line], count: usize) -> Vec<&'a Line> {
+    let mut taken: IndexMap<&ActionBody, i32> = IndexMap::new();
+    let mut out: Vec<&'a Line> = Vec::new();
     for line in found {
         let Some(first) = line.actions.first() else {
             continue;
         };
-        let key = action_key(first);
-        let already = taken.get(&key).copied().unwrap_or(0);
+        let already = taken.get(first).copied().unwrap_or(0);
         if already >= AI_SEARCH.lines_per_action {
             continue;
         }
-        taken.insert(key, already + 1);
+        taken.insert(first, already + 1);
         out.push(line);
         if out.len() >= count {
             break;
@@ -106,15 +105,14 @@ struct Scored<'a> {
 
 /// The best-scoring line for each distinct first action, best first, at most `count` of them.
 fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<'a>> {
-    let mut best: IndexMap<String, Scored<'a>> = IndexMap::new();
+    let mut best: IndexMap<&'a ActionBody, Scored<'a>> = IndexMap::new();
     for entry in scored {
         let Some(first) = entry.line.actions.first() else {
             continue;
         };
-        let key = action_key(first);
-        match best.get_mut(&key) {
+        match best.get_mut(first) {
             None => {
-                best.insert(key, *entry);
+                best.insert(first, *entry);
             }
             Some(held) => {
                 if entry.score > held.score {
@@ -183,7 +181,6 @@ fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
 /// missed lethal keeps off every line that wins on the determinization it was searched on and every
 /// line that opens with the solver's first lethal action. When that leaves nothing, every line.
 fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: PlayerId) -> Vec<Line> {
-    let lethal_key = action_key(first_lethal);
     let kept: Vec<Line> = found
         .iter()
         .filter(|line| {
@@ -192,10 +189,7 @@ fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: Playe
                 .result
                 .as_ref()
                 .is_some_and(|result| result.winner.player() == Some(seat));
-            let opens_lethal = line
-                .actions
-                .first()
-                .is_some_and(|action| action_key(action) == lethal_key);
+            let opens_lethal = line.actions.first().is_some_and(|action| action == first_lethal);
             !wins && !opens_lethal
         })
         .cloned()
@@ -281,12 +275,17 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 4. Forced: a throwaway world lists the candidates without touching options.rng.
-    let probe = determinize(
+    // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
+    // determinization of this decision starts from the same public state, so the read-only part
+    // of the determinization (the pools, what the opponent has shown, each side's face-down
+    // grants) is computed once (det_ground) and handed to each.
+    let ground = det_ground(&public, seat);
+    let probe = determinize_on(
         &public,
         seat,
         &mut Rng::new(AI_SEARCH.probe_seed, 0),
         DeterminizeOptions::default(),
+        &ground,
     );
     scratch.candidates = candidate_actions(&probe, seat);
     if scratch.candidates.len() == 1
@@ -309,7 +308,13 @@ fn plan(
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
-        dets.push(determinize(&public, seat, rng, DeterminizeOptions::default()));
+        dets.push(determinize_on(
+            &public,
+            seat,
+            rng,
+            DeterminizeOptions::default(),
+            &ground,
+        ));
     }
     scratch.determinizations = k;
 

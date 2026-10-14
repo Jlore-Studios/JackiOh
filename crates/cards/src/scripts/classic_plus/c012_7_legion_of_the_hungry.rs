@@ -22,7 +22,8 @@ fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEac
 fn legion(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // ponytail: the picks are drawn as the Cry resolves; nothing in this list can pause between them.
+            // maxi-tail: the picks are drawn as the Cry resolves; nothing in this list can pause between
+            // them.
             let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
             let shuffled = ctx.rng.shuffle(&library);
             let count = param(&*ctx, "cards").max(0) as usize;

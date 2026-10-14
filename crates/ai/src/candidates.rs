@@ -7,7 +7,8 @@
 use indexmap::IndexMap;
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, ZoneChoice,
-    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, unit_view,
+    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, takes_strike_back,
+    unit_view,
 };
 use serde_json::Value;
 
@@ -20,7 +21,7 @@ pub fn action_key(action: &ActionBody) -> String {
 }
 
 /// The play with its lane blanked: two plays with the same key differ only in where they land.
-fn zone_group_key(play: &ActionBody) -> String {
+fn zone_group_key(play: &ActionBody) -> ActionBody {
     match play {
         ActionBody::Play { zone: Some(zone), .. } => {
             let mut blanked = play.clone();
@@ -33,9 +34,9 @@ fn zone_group_key(play: &ActionBody) -> String {
                     lane: -1,
                 });
             }
-            action_key(&blanked)
+            blanked
         }
-        _ => action_key(play),
+        _ => play.clone(),
     }
 }
 
@@ -55,7 +56,7 @@ fn play_lane(action: &ActionBody) -> Option<i32> {
 /// AI_SEARCH.zoneVariants: per otherwise-identical play, keep the lowest and the highest lane (or only
 /// the lowest when one variant is asked for). Everything else keeps legal_actions order.
 fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
-    let mut lanes: IndexMap<String, Vec<i32>> = IndexMap::new();
+    let mut lanes: IndexMap<ActionBody, Vec<i32>> = IndexMap::new();
     for action in actions {
         let Some(lane) = play_lane(action) else {
             continue;
@@ -85,7 +86,8 @@ fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
 }
 
 /// Tier 1: an attack on a unit it kills and survives, read from the layers. Divine Shield or
-/// Indestructible on the target means no kill.
+/// Indestructible on the target means no kill; a Ranged attacker survives any target that is not
+/// Ranged (R783000).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -101,6 +103,10 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     let kills = dealt >= t.health || has_keyword(&a.keywords, KeywordKind::Poisonous);
     if !kills {
         return false;
+    }
+    // R783000: the engine's own read — no strike back reaches it, a First Strike one included.
+    if !takes_strike_back(state, attacker, target) {
+        return true;
     }
     if has_keyword(&a.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&t.keywords, KeywordKind::FirstStrike)
@@ -292,12 +298,19 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
         .collect()
 }
 
-/// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
-/// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest and
-/// the highest `zone.lane`, AI_SEARCH.zoneVariants), in move order. endTurn, when legal, is last.
-pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+/// The candidates' membership, before their order is fixed: legal_actions(state, seat) minus
+/// AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus `mulligan`, with `play` zone
+/// variants collapsed (per otherwise-identical play keep the lowest and the highest `zone.lane`,
+/// AI_SEARCH.zoneVariants). `candidate_actions` orders this list; a caller that only needs to know
+/// whether an action is among the candidates is spared the ordering's reads of the layers.
+pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+    candidate_pool(state, seat, legal_actions(state, seat))
+}
+
+/// `candidate_set` on a legal_actions already in hand.
+pub fn candidate_pool(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
     let skipped = subsystems::AI_SKIPPED_ACTIONS;
-    let legal: Vec<ActionBody> = legal_actions(state, seat)
+    let legal: Vec<ActionBody> = legal
         .into_iter()
         .filter(|action| {
             let kind = action.action_type();
@@ -305,7 +318,20 @@ pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
         })
         .collect();
     let capped = cap_tribute_sets(state, seat, legal);
-    let actions = collapse_zones(&capped);
+    collapse_zones(&capped)
+}
+
+/// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
+/// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest and
+/// the highest `zone.lane`, AI_SEARCH.zoneVariants), in move order. endTurn, when legal, is last.
+pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
+    candidate_actions_in(state, seat, legal_actions(state, seat))
+}
+
+/// `candidate_actions` on a legal_actions already in hand (reply.rs asks for both the raw and the
+/// ordered lists of one state).
+pub fn candidate_actions_in(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
+    let actions = candidate_pool(state, seat, legal);
 
     let mut hero_attacks: Vec<ActionBody> = Vec::new();
     let mut good_trades: Vec<ActionBody> = Vec::new();

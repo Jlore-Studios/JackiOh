@@ -13,7 +13,7 @@
 //! its Brittle there (R687). Counting plays, not resolutions, keeps "every second card" right when a
 //! play casts a card that resolves before it (R70): the cast is the later play. The predicate writes
 //! the card, so its `when` takes `&mut EffectContext`.
-//! ponytail: a trap predicate that writes its card's own counter; a watch-without-firing trigger kind in
+//! maxi-tail: a trap predicate that writes its card's own counter; a watch-without-firing trigger kind in
 //! traps.rs is the upgrade path if a second card ever needs one.
 
 use std::sync::Arc;
