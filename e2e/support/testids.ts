@@ -780,3 +780,40 @@ export const SHARE_FRIEND_ERROR = "share-friend-error";
 export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
 
 export const SETTING_ALLOW_SPECTATORS = "setting-allowSpectators";
+// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65): the
+// co-op panel's, the board's (its life strip, teammate strip, portal, pass control and pings), and
+// the slice's own chrome after them.
+
+export const COOP_CREATE = "coop-create";
+export const COOP_DIFFICULTY = "coop-difficulty";
+export const COOP_CODE = "coop-code";
+export const COOP_JOIN_INPUT = "coop-join-input";
+export const COOP_JOIN_SUBMIT = "coop-join-submit";
+export const DUOS_PORTAL = "duos-portal";
+export const DUOS_PASS = "duos-pass";
+export const DUOS_POOL = "duos-pool";
+export const DUOS_OWN_HP = "duos-own-hp";
+export const DUOS_TEAMMATE_STRIP = "duos-teammate-strip";
+export const DUOS_PING_WHEEL = "duos-ping-wheel";
+export const DUOS_PING_MARKER = "duos-ping-marker";
+
+export type DuosPingKind = "thumbsUp" | "thumbsDown" | "portal" | "careful" | "killThis";
+
+export function duosPingId(kind: DuosPingKind): string {
+  return `duos-ping-${kind}`;
+}
+
+export const COOP_DECK = "coop-deck";
+export const COOP_ERROR = "coop-error";
+export const DUOS_BOARD = "duos-board";
+export const DUOS_CARD_ACTIONS = "duos-card-actions";
+export const DUOS_ROUND = "duos-round";
+export const DUOS_WAITING = "duos-waiting";
+export const DUOS_CONCEDE = "duos-concede";
+export const DUOS_CONCEDE_STATUS = "duos-concede-status";
+export const DUOS_RESULT = "duos-result";
+export const DUOS_LIFE_STRIP = "duos-life-strip";
+
+export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
+  return `duos-dev-seat-${seat}`;
+}

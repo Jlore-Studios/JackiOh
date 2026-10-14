@@ -84,6 +84,7 @@ import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
+  duosIdOf,
   loginPath,
   matchIdOf,
   navigate,
@@ -114,6 +115,10 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
 // Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
 // behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
 const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
+// #936 B65: the four-seat Duos hotseat, outside production only, as the 1v1 hotseat is.
+const DevDuosRoute = DEV_ONLY ? lazy(() => import("./duos/DevDuosRoute.tsx")) : null;
+// #936 B61–B64: the networked co-op board.
+const DuosRoute = lazy(() => import("./duos/DuosRoute.tsx"));
 // R768000: the recent games and their replays.
 const ReplaysRoute = lazy(() => import("./routes/replays.tsx"));
 const LoginRoute = lazy(() => import("./routes/login.tsx"));
@@ -782,11 +787,33 @@ export function App(): ReactElement {
       );
     }
 
+    // #936: a Duos co-op match, behind the same gate as a match; the board reads its own socket's token.
+    const duosId = duosIdOf(path);
+    if (duosId !== null) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
     if (path === paths.hotseat) {
       if (HotseatRoute === null) return <NotFound path={path} />;
       return (
         <EngineGate>
           <HotseatRoute />
+        </EngineGate>
+      );
+    }
+    if (path === paths.duosDev) {
+      if (DevDuosRoute === null) return <NotFound path={path} />;
+      return (
+        <EngineGate>
+          <DevDuosRoute />
         </EngineGate>
       );
     }
