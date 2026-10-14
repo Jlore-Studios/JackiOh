@@ -159,6 +159,54 @@
 /// `r265-ai-first-p2-h` mulligan lands past turn 1 and the R677 `glitch-swap` game ends inside the
 /// human's five passes — so they wait for a sweep that clears them under a pool the fixtures
 /// survive.
+///
+/// Generation 11 removed three entries — 041, 067, 080 — on the same sweep
+/// evidence as generation 10 plus reruns of its own: none of them flags at
+/// either tier under a pass-1 rerun of the sweep on this build. The change is
+/// the twice-set-back generation 11's own (commit fe9997827, promoted 75/100
+/// and set back when patch v0.3.7 moved the engine under it — the Magnetic
+/// rename and the Cloaked rework of `determinize`'s hidden-backrow pools —
+/// and the change no longer applied; re-landed as 7afc085ea→0e6a7e0ad
+/// releasing 016, 041 and 068, promoted 73/100 and set back when CI's tools
+/// suite played its `b30_b31` smoke: under that table the Hard-vs-Easy deal
+/// won only 2 of the 4 `gate:v3:hard-vs-easy` games). What changed is
+/// bookkeeping of wall clock, not the bar: determinization's read-only
+/// preamble (its trap and card pools, the opponent's shown def ids, each
+/// side's cloakable slot pools) is computed once per decision instead of once
+/// per world (determinize.rs `det_ground`); a line's membership checks
+/// compare the action itself instead of its canonical-JSON key and skip move
+/// ordering they do not read (candidates.rs `candidate_set`, `ActionBody`
+/// being plain data whose `==` answers what `action_key` equality did); the
+/// reply walk enumerates `legal_actions` once per step instead of twice; and
+/// decide's line shortlists key on the body itself. None of it changes which
+/// action any state plays — the same decisions arrive under the 2 s mark in
+/// the fat states the Meditative games deal.
+///
+/// The release is the swept-clean triple every seeded fixture survives. Every
+/// ban-table change re-deals every seeded game, and the other tables each
+/// broke one: {016, 041, 068} loses `gate:v3:hard-vs-easy` games 2 and 3 (2
+/// of 4, the set-back above); {016, 067, 068}, {041, 067, 068} and
+/// {016, 067, 080} deal the spec-13 practice human dead before its fourth
+/// main; {016, 041, 067} and {016, 068, 080} re-deal R265's
+/// `r265-ai-first-p2-h` into a p1 hand with no turn-1 play; {016, 041} deals
+/// B34's `b34-walk` into an AI holding no hidden card; and the five-card
+/// release {016, 041, 067, 068, 080} ties R290's `tutorial-tier-3` margin
+/// (greedy takes seeds 1–8 against it 3 to Easy's 4, where a lead of 1 is
+/// needed). Under {041, 067, 080} the tools test's four-game gate smokes pass
+/// 4/3, 3/1 and 4/3, the tutorial-tier run holds 10 of 13 with a margin of 5
+/// over Easy where 6 and 1 are needed, all four r265 mulligan seeds hold
+/// turn 1, B34's walk never empties the AI's hidden cards, the glitch-swap
+/// seat owes its action inside the human's passes, and spec 13's human
+/// reaches its fourth main. `meditative-016` and `meditative-068` sweep clean
+/// on this build too — the pair {016, 068} alone survives every fixture as
+/// the 22-ban fallback — but no surviving triple holds 016, so it waits, as
+/// `meditative-012` and `meditative-017` did, for a pool whose deals survive.
+/// The rest of the generation-9 table keeps its record: `meditative-017`,
+/// `meditative-025`, `meditative-030` and `meditative-031` still flag
+/// `timeout` in the reruns, and `meditative-029`, `meditative-058`,
+/// `meditative-069`, `meditative-091` and `meditative-099` flag `neverPlayed`
+/// at hard — the beam never casts them in the dealt games, an evaluation
+/// blind spot a faster clock does not move.
 pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-006",
@@ -197,10 +245,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
         "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
-        "meditative-041",
-        "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
         "meditative-045",
         "timeout: hard: 31 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
@@ -211,10 +255,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-058",
         "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-067",
-        "timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-068",
@@ -231,10 +271,6 @@ pub const SHADOW_BAN: &[(&str, &str)] = &[
     (
         "meditative-078",
         "timeout: easy: 4 decision(s) over 2000 ms or game(s) past 600 actions",
-    ),
-    (
-        "meditative-080",
-        "timeout: hard: 3 decision(s) over 2000 ms or game(s) past 600 actions",
     ),
     (
         "meditative-085",

@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 use indexmap::IndexSet;
 use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
 
-use crate::candidates::{action_key, candidate_actions};
+use crate::candidates::{candidate_actions, candidate_set};
 use crate::config::AI_EVAL;
 use crate::evaluate::{NextSwing, evaluate};
 use crate::reply::{hidden_card_ids, reply_score};
@@ -202,10 +202,11 @@ pub fn score_line(
         if line_status(&state, seat, root_turn) != LineStatus::Open {
             break;
         }
-        let key = action_key(action);
-        if !candidate_actions(&state, seat)
+        // Membership asks for the candidates' set only (candidate_set), not their move order, and an
+        // action is its own key: `==` on the body answers what action_key equality did.
+        if !candidate_set(&state, seat)
             .iter()
-            .any(|candidate| action_key(candidate) == key)
+            .any(|candidate| candidate == action)
         {
             break;
         }
