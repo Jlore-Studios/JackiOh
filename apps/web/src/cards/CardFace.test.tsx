@@ -350,8 +350,9 @@ describe("B10: RulesText marks terms in bold", () => {
 
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute"]);
+    // R910000: "Can use enemy Units as Tributes" bolds its plural too.
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3", "Tributes"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute", "Tribute"]);
   });
 
   it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {
@@ -431,12 +432,12 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 lower-case or glued words are not bolded", () => {
     const plain: CardDef = {
       ...def("core-005"),
-      base: { keywords: [], text: "taunt the Locked Rushing units" },
-      radiant: { keywords: [], text: "taunt the Locked Rushing units" },
+      base: { keywords: [], text: "taunt the Locking Rushing units" },
+      radiant: { keywords: [], text: "taunt the Locking Rushing units" },
     };
     const cf = renderFace({ defId: plain.id, def: plain, radiant: false });
     expect(cf.querySelectorAll("strong")).toHaveLength(0);
-    expect(one(cf, ".card-text").textContent).toBe("taunt the Locked Rushing units");
+    expect(one(cf, ".card-text").textContent).toBe("taunt the Locking Rushing units");
   });
 
   it(
