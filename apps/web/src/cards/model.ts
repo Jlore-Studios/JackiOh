@@ -216,6 +216,8 @@ export type FaceModel = {
   englishName?: string;
   /** R1301: on a Chinese face, the text the English face prints, whose terms the glossary explains. */
   englishText?: string;
+  /** R849000: in play, why the viewer's own unit cannot attack now (`UnitView.attackReason`), which the inspect notes spell out. */
+  attackReason?: string;
 };
 /**
  * What a game adds to a face (R243, SPEC §10.10); its presence is what makes a face one in play.
@@ -262,6 +264,8 @@ export type InPlay = {
   copies?: { def: CardDef; radiant: boolean; params?: Readonly<Record<string, number>> };
   /** ME-GRANT, R1107: the Death abilities other cards granted the unit (`UnitView.grants`). */
   grants?: readonly string[];
+  /** R849000: why the viewer's own unit cannot attack now (`UnitView.attackReason`). */
+  attackReason?: string;
 };
 export type FaceSource = {
   defId: string;
@@ -377,6 +381,7 @@ function faceIn(source: FaceSource, chinese: boolean): FaceModel {
     marks: inPlay?.marks ?? [],
     quest: inPlay?.quest ?? null,
     copying: copies === undefined ? null : { defId: copies.def.id, name: copies.def.name, radiant: copies.radiant },
+    ...(inPlay?.attackReason === undefined ? {} : { attackReason: inPlay.attackReason }),
     ...(english === null ? {} : { chinese: true, englishName: english.name, englishText: english.text.full }),
     ...(source.chinese === true ? { flagged: true } : {}),
   };

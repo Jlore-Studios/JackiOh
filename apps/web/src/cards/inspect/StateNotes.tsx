@@ -1,7 +1,8 @@
 // A face in play's states in words, beside the face an inspect overlay shows (SPEC §10.8). A hover
 // preview takes no pointer events and a touch sheet has no hover, so the badges' tooltips cannot be
 // read there. Covers the tuned ribbon (R386, R1320), the other badges' words (R385, E39, R383), a
-// quest line (B5 E33, R404) and what a copier copies (B5 E14, R511). `LocLine` is E36's meta line.
+// quest line (B5 E33, R404), what a copier copies (B5 E14, R511) and why the viewer's own unit cannot
+// attack now (R849000). `LocLine` is E36's meta line.
 
 import type { ReactElement } from "react";
 
@@ -18,6 +19,8 @@ import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 const QUEST_GLYPH = "⚑";
 const AURA_GLYPH = "✦";
 const COPY_GLYPH = "“";
+/** R849000: the glyph of a unit's reason for not attacking. */
+const ATTACK_REASON_GLYPH = "⊘";
 
 /** R511: "Copying: Book of Knowledge", "Copying: Book of Knowledge (Radiant)". */
 export function copyingWords(copying: { name: string; radiant: boolean }): string {
@@ -29,7 +32,8 @@ export function hasStateNotes(face: FaceModel): boolean {
     stateBadges(face).length > 0 ||
     (face.marks ?? []).length > 0 ||
     (face.quest?.auras ?? []).length > 0 ||
-    (face.copying ?? null) !== null
+    (face.copying ?? null) !== null ||
+    face.attackReason !== undefined
   );
 }
 
@@ -72,13 +76,22 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
   const quests = face.quest?.open ?? [];
   const auras = face.quest?.auras ?? [];
   const copying = face.copying ?? null;
-  const lines = others.length + marks.length + quests.length + auras.length + (copying === null ? 0 : 1);
+  const lines =
+    others.length + marks.length + quests.length + auras.length + (copying === null ? 0 : 1) + (face.attackReason === undefined ? 0 : 1);
   if (lines === 0 && !tuned) return null;
   return (
     <>
       <TunedRibbon face={face} />
       {lines === 0 ? null : (
         <ul className="inspect-states" data-testid={INSPECT_STATES}>
+          {face.attackReason === undefined ? null : (
+            <li className="inspect-state" data-state="attackReason">
+              <span className="inspect-state-glyph" aria-hidden="true">
+                {ATTACK_REASON_GLYPH}
+              </span>
+              <span className="inspect-state-words">{t(face.attackReason)}</span>
+            </li>
+          )}
           {copying === null ? null : (
             <li className="inspect-state" data-state="copies" data-copies={copying.defId}>
               <span className="inspect-state-glyph" aria-hidden="true">

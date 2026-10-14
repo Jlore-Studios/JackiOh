@@ -144,7 +144,11 @@ export type PlayNeed =
   | { kind: "target"; min: number; max: number; selections: Selection[] }
   | { kind: "mode"; min: number; max: number; options: string[] };
 
-export type ClickResult = { interaction: Interaction; action?: ActionBody };
+/**
+ * What a click comes to: the next interaction, the action to send, if one is ready, and (R849000) a
+ * `notice`, the engine's own words for why a click on your unit did nothing. A notice sends nothing.
+ */
+export type ClickResult = { interaction: Interaction; action?: ActionBody; notice?: string };
 
 // ---------------------------------------------------------------------------------------------
 // Keys. Presentation-only identity for a choice, so a picker can round-trip it through the DOM.
@@ -962,7 +966,12 @@ export function onClickTarget(
         return { interaction };
       }
       const candidates = attacksBy(legal, target.instanceId);
-      if (candidates.length === 0) return { interaction };
+      if (candidates.length === 0) {
+        // R849000: legal offers this unit no attack; say why in the engine's words where the view gives
+        // them (`UnitView.attackReason`, on the viewer's own units only). Nothing is sent.
+        const reason = view.you.units.find((unit) => unit?.instanceId === target.instanceId)?.attackReason;
+        return reason === undefined ? { interaction } : { interaction, notice: reason };
+      }
       // R1200: while a Mayor acts the attack names no target, so the click sends it at once.
       const only = candidates.length === 1 ? candidates[0] : undefined;
       if (only?.targetId === RANDOM_ATTACK_TARGET) return { interaction: IDLE, action: only };
