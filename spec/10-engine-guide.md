@@ -289,10 +289,10 @@ than the screen does ([[R203]]).
 - **Music** ([[R631]]). Music plays on its own bus, under the master volume and mute. Every screen
   without a board plays the main menu theme. On a board, each player hears music driven by their
   own view: their station, their hero's health and their turn. A priority stack decides what plays:
-  the result first (a victory, defeat or draw sting and its loop), then a Mythic card's theme or the shared
-  Legendary entrance theme, then the station's low-health track, then the station's in-game track. While the opponent has the turn,
-  the in-game track plays low-passed and a little quieter. There are four stations: Tavern, EDM,
-  Lo-fi and Epic Orchestral. Each has two in-game tracks, rotated from match to match, plus a
+  the result first (a victory, defeat or draw sting and its loop), then the station's low-health
+  track, then the station's in-game track. While the opponent has the turn, the in-game track
+  plays low-passed and a little quieter. There are four stations: Tavern, EDM, Lo-fi and Epic
+  Orchestral. Each has two in-game tracks, rotated from match to match, plus a
   low-health track and a match-start sting. A few cards switch their caster's station for the rest
   of the match. A change waits for the playing track's next bar line and crossfades. The music
   ducks under voice lines and the biggest effects. Every track quotes one motif. The tracks are
@@ -305,8 +305,8 @@ than the screen does ([[R203]]).
   for the Mythics and the best-known Legendaries, rendered with the rest of the music and named by
   the card's `intro` in `music-cards.json`. It plays on the music bus at the moment [[R204]] gives
   the card's play or cast line, only for a card the viewer can read and never for a Trap's set, with
-  dynamic music on; it ducks the rest of the music for its span, the theme the card brings included,
-  and [[R669]]'s entrance sting and the card's line stay. It follows the music volume and the mute,
+  dynamic music on; it ducks the rest of the music for its span, a station the card switches to
+  included (no card plays a theme of its own, [[R822000]]), and [[R669]]'s entrance sting and the card's line stay. It follows the music volume and the mute,
   plays under Reduce Motion, and holds nothing practice's pacing waits on. A second Legendary played
   meanwhile, the game's end, a hand-over or the board leaving cuts it short with a short fade.
 - **Settings.** Master, effects, voice and music volume, mute, voice on or off, the music station,

@@ -273,16 +273,16 @@ export type MusicManifest = {
   version: 1;
   /** Informative: "aac-lc 44100 stereo 80k". */
   format: string;
-  /** Keyed by track id, e.g. "menu", "tavern-1", "tavern-danger", "mythic-zephyrs". */
+  /** Keyed by track id, e.g. "menu", "tavern-1", "tavern-danger", "intro-core-097". */
   files: Record<string, MusicTrack>;
 };
 
 /**
- * What a card does to the music when it is cast (music-cards.json, keyed by catalog id): a theme it
- * starts, a station it switches its caster to, and (R1350) the intro it opens its play with, a
- * non-looping track of its own.
+ * What a card does to the music when it is cast (music-cards.json, keyed by catalog id): a station it
+ * switches its caster to, and (R1350) the intro it opens its play with, a non-looping track of its own.
+ * No card plays a theme (R822000).
  */
-export type MusicCardEntry = { theme?: string; station?: MusicStation; intro?: string };
+export type MusicCardEntry = { station?: MusicStation; intro?: string };
 
 /** What the director and the UI need from an engine. */
 export type SoundSink = {

@@ -14,7 +14,7 @@ const MANIFEST: MusicManifest = {
   files: { "tavern-1": LOOP, "tavern-2": LOOP, "tavern-danger": LOOP, "edm-1": LOOP, menu: LOOP },
 };
 
-const CALM: MusicMoment = { station: "tavern", rotation: 0, dynamic: true, result: null, theme: null, lowHealth: false, opponentTurn: false };
+const CALM: MusicMoment = { station: "tavern", rotation: 0, dynamic: true, result: null, lowHealth: false, opponentTurn: false };
 
 describe("R631 the music's priority stack", () => {
   it("R631 plays the station's in-game track when nothing outranks it", () => {
@@ -24,15 +24,13 @@ describe("R631 the music's priority stack", () => {
   it("R631 puts the opponent's-turn mix on the in-game track only", () => {
     expect(chooseMusic({ ...CALM, opponentTurn: true }, MANIFEST)).toEqual({ track: "tavern-1", opponentTurn: true });
     expect(chooseMusic({ ...CALM, opponentTurn: true, lowHealth: true }, MANIFEST)).toEqual({ track: "tavern-danger", opponentTurn: false });
-    expect(chooseMusic({ ...CALM, opponentTurn: true, theme: "mythic-zephyrs" }, MANIFEST)).toEqual({ track: "mythic-zephyrs", opponentTurn: false });
   });
 
-  it("R631 ranks the result over a Mythic theme, a theme over low health, and low health over the in-game track", () => {
-    const all: MusicMoment = { ...CALM, result: "defeat", theme: "mythic-zephyrs", lowHealth: true, opponentTurn: true };
+  it("R631 ranks the result over low health, and low health over the in-game track", () => {
+    const all: MusicMoment = { ...CALM, result: "defeat", lowHealth: true, opponentTurn: true };
     expect(chooseMusic(all, MANIFEST).track).toBe("defeat");
-    expect(chooseMusic({ ...all, result: null }, MANIFEST).track).toBe("mythic-zephyrs");
-    expect(chooseMusic({ ...all, result: null, theme: null }, MANIFEST).track).toBe("tavern-danger");
-    expect(chooseMusic({ ...all, result: null, theme: null, lowHealth: false }, MANIFEST).track).toBe("tavern-1");
+    expect(chooseMusic({ ...all, result: null }, MANIFEST).track).toBe("tavern-danger");
+    expect(chooseMusic({ ...all, result: null, lowHealth: false }, MANIFEST).track).toBe("tavern-1");
   });
 
   it("R631 names each result's own sting", () => {
@@ -42,7 +40,7 @@ describe("R631 the music's priority stack", () => {
   });
 
   it("R631 with dynamic music off plays the station's in-game track and nothing else", () => {
-    const busy: MusicMoment = { ...CALM, dynamic: false, result: "victory", theme: "mythic-zephyrs", lowHealth: true, opponentTurn: true };
+    const busy: MusicMoment = { ...CALM, dynamic: false, result: "victory", lowHealth: true, opponentTurn: true };
     expect(chooseMusic(busy, MANIFEST)).toEqual({ track: "tavern-1", opponentTurn: false });
   });
 

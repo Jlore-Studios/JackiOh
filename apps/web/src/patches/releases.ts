@@ -79,6 +79,7 @@ export const RELEASES: readonly Release[] = [
       "Leaving a practice game can save it, to resume later from the practice menu.",
       "24 emotes, 8 of them dealt to each player each game.",
       "Every Legendary and Mythic opens its play with a few bars of music of its own, and every Unit has a line to speak as it attacks.",
+      "The music no longer switches to a theme when a Legendary or Mythic is played: its own few bars play, then the station carries on.",
     ],
   },
 ];
