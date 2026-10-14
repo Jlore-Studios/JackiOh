@@ -5959,8 +5959,13 @@
     "what": "build #822 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-14T01:50:12Z",
-    "notes": [],
+    "at": "2026-10-14T01:55:59Z",
+    "notes": [
+      "#844: typed it Task",
+      "#843: typed it Task",
+      "#842: typed it Task",
+      "#841: typed it Feature"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
