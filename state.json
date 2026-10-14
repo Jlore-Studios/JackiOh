@@ -6512,9 +6512,12 @@
     "927": {
       "action": "revise",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T20:59:04Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 897,
       "kind": "revise",
       "last_findings": [],
