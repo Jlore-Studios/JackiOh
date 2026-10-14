@@ -1,11 +1,11 @@
 # `jackioh-luau`
 
-The host that will run card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
+The host that runs card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
 runs in, the integer boundary every value crosses, the lint that refuses what the sandbox cannot
 stop, one VM per thread, and `load_card`, which turns a compiled script into the engine's
-`CardScripts`. **Nothing depends on it yet.** Part 4 wires it into `crates/cards` (whose `build.rs`
-will call `compile`), ports the pilot cards, and adds `g++` to the server's Docker image. Until then
-no build from `main` compiles it except the workspace's own (`cargo build/clippy/test --workspace`).
+`CardScripts`. `crates/cards` depends on it: its `build.rs` calls `compile` on every card's
+`.luau`, and its registry calls `load_card` on the bytecode, so every build that takes the cards
+(the server's, the browser's, the tools') compiles it. The engine and the AI do not depend on it.
 The decisions it follows are #442's L3–L8. This file is the contract.
 
 ## Pinned versions
@@ -204,8 +204,8 @@ strict runs check the files in place.
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
 `load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
-`crates/cards/build.rs` will call it in part 4; until then only the tests do. Its errors name the
-file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
+`crates/cards/build.rs` calls it on every card's `.luau`, and the tests on their fixtures. Its
+errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
 `"<file>:<line>: <Luau's message>"`.
 
 The lint (`lint.rs`, L6, L7) is a pure function over the source: a lexer that knows Luau's

@@ -35,7 +35,9 @@ local base = {
 		local discount = ctx:param("discount")
 		local threshold = ctx:param("threshold")
 		return {
-			J.remember({ key = LIBRARY_KEY, value = library }),
+			-- `J.list`: an empty library is remembered as a list, as the Rust's `[]` (`remember`'s
+			-- value is untyped, so nothing else would say an empty table is one).
+			J.remember({ key = LIBRARY_KEY, value = J.list(library) }),
 			J.draw({ count = ctx:param("draw") }),
 			J.for_each_card({
 				cards = "each_cards",
