@@ -100,7 +100,7 @@ mod tests {
     const BLOOD_BEAN: &str = "core-027"; // Cast on draw: make a random hand card Radiant. Lose 5 health.
     const HINDER: &str = "core-021"; // Cast on draw: their next refresh −1. Discard 1 at random (R682).
     const GOING_LONG: &str = "core-084"; // Field Spell: your hero has Armor 2.
-    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at once.
+    const ANTI_ONESHOT: &str = "core-073"; // Field Spell: your hero can't take more than 5 damage at a time.
     const FILLER: &str = "core-005";
     const DECK: [&str; 5] = [FILLER, FILLER, FILLER, FILLER, FILLER];
     const FORWARD: &str = "classicplus-074"; // (2) Field Trap: every 2 cards the opponent plays, the last is fused into this.
