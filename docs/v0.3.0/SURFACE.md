@@ -7,8 +7,8 @@ what you like. At an edge, this file is law. It does not change during Waves 1â€
 contact part (part 31) records the hole in `.fullsend/notes/spec-gaps.md` and the orchestrator
 patches this file between waves, never a builder in the middle of one.
 
-The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: [A-engine](research/A-engine.md), [B-ai](research/B-ai.md), [C-server](research/C-server.md), [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
-[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are in [parts/](parts/).
+The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832, in git history) and [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
+[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are #306's sub-issues.
 
 Contents:
 

@@ -12,10 +12,6 @@ everywhere in here:
 - each spec asserts what BUILD's "Key assertions" column says for its row, quoted verbatim in the
   spec's header comment.
 
-## Layout
-
-Moved to docs/history/e2e-readme.md.
-
 `e2e/` is a member of the root pnpm workspace, so the root `pnpm install` installs it as CI does, and
 it also carries its own `pnpm-workspace.yaml` and lockfile, so `cd e2e && pnpm install` works alone.
 `e2e/tsconfig.json` type-checks without the client or the Rust crates being buildable, on purpose: the
@@ -120,10 +116,6 @@ for contract reasons rather than rules reasons.
    not a preference: `support/config.ts`, `cypress.config.ts` and the `wsPlayer` task all default
    to it.
 
-## Assumptions beyond that contract
-
-Moved to docs/history/e2e-readme.md.
-
 Every one of these is either an ask on another team or a convention this suite invented because
 BUILD does not fix it. They are all made in `support/`, never in a spec, so each has exactly one
 place to change.
@@ -155,10 +147,6 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `concede()` | The `concede` control only asks ("Concede this game?"); this confirms in the dialog it opens. A spec that clicks `concede` alone has conceded nothing. |
 | `expectNoBlockingViolations(route)` (`support/a11y.ts`) | Spec 38's check (#757): axe-core injected from this package's `node_modules`, WCAG 2.0–2.2 A and AA rules, failing on any serious or critical violation `support/axe-exceptions.ts` does not list for `route` (by rule and a selector each flagged element matches, with its reason), and on a listed one that no longer fires. |
 | `wsPlayer` `awaitView` `where: { mulliganOpponentReady, drawOfferBy }` | R266's "the other seat is ready" and R269's standing offer, read off seat 2's own view (`view.mulligan.opponentReady`, `view.drawOffer.by`). |
-
-## Which spec needs which milestone
-
-Moved to docs/history/e2e-readme.md.
 
 | Spec | Needs |
 | --- | --- |

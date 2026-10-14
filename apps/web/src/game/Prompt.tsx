@@ -993,7 +993,7 @@ function PromptModal(props: {
 
   // R514: a click on a zone of the board a `cell` prompt offers, or Enter or Space on it, picks that
   // cell. The board's own handler builds nothing from a zone while a prompt is open, so this is the
-  // one answer. ponytail: document listeners for the one board-answered prompt kind; move them into
+  // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
   const live = useRef({ pick, keys: picker.boardKeys });
   live.current = { pick, keys: picker.boardKeys };
