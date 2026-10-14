@@ -489,23 +489,11 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
 }
 
 /// Whether any card acting for this player carries the picked static flag — the active units and
-/// the face-up backrow tops, as `damage.rs`'s `acting_texts_of` walks them (a face-down Trap's text
-/// is in nobody's use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28,
-/// MD-D29, R1125, R1127).
+/// the face-up backrow tops, `damage.rs`'s `acting_texts_of` (a face-down Trap's text is in nobody's
+/// use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28, MD-D29, R1125,
+/// R1127).
 pub fn acting_with_flag(state: &GameState, player: PlayerId, pick: fn(&StaticFlags) -> Option<bool>) -> bool {
-    let mut acting: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
-    for slot in slots_of(player, Row::Backrow) {
-        let Some(card) = card_at(state, slot) else {
-            continue;
-        };
-        let card_type = crate::faces::card_type_of(state, card);
-        let face_down =
-            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
-        if !face_down {
-            acting.push(card.clone());
-        }
-    }
-    acting
+    crate::damage::acting_texts_of(state, player)
         .iter()
         .any(|card| pick(&crate::scripts::flags_of(state, card)) == Some(true))
 }
