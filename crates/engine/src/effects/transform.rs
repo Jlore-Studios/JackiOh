@@ -32,7 +32,7 @@ use crate::zones::{
 
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope};
 use super::summon::clone_of;
-use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
+use super::targets::{TargetSpec, instance_by_id_or_spec, instance_on_its_stay, resolve_target};
 
 /// Which card to rewrite: the pick the play or a prompt carried (R81), or an instance id a trigger
 /// read off the event it answers — Sheepish transforms the unit the opponent just played (#41).
@@ -44,18 +44,6 @@ pub struct TransformTarget {
     pub target: Option<TargetSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub instance_id: Option<String>,
-}
-
-fn instance_of(ctx: &EffectContext<'_>, args: &TransformTarget) -> Option<CardInstance> {
-    // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
-    if let Some(instance_id) = &args.instance_id {
-        return instance_on_its_stay(ctx, instance_id);
-    }
-    let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
-    match resolve_target(ctx, &spec)? {
-        DamageTarget::Unit { instance } => Some(instance),
-        _ => None,
-    }
 }
 
 /// §5.1: the row a type lives in; a Spell is never a permanent, so it can never replace one.
@@ -245,7 +233,11 @@ fn apply_transform_riders(
 /// zone the old card occupies (§5.1).
 pub fn transform(args: TransformArgs) -> Effect {
     Effect::new("transform", move |ctx| {
-        let Some(old) = instance_of(ctx, &args.target) else {
+        let Some(old) = instance_by_id_or_spec(
+            ctx,
+            args.target.instance_id.as_deref(),
+            args.target.target.as_ref(),
+        ) else {
             return;
         };
         if !transformable(ctx, &old) {
@@ -341,7 +333,8 @@ pub(crate) fn to_printed_stats(card: &mut CardInstance) {
 /// field. (TS default argument `{}`.)
 pub fn vanilla(args: TransformTarget) -> Effect {
     Effect::new("vanilla", move |ctx| {
-        let Some(card) = instance_of(ctx, &args) else {
+        let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
+        else {
             return;
         };
         if unit_has(ctx.state, &card, KeywordKind::Immutable) {
@@ -471,7 +464,11 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
             .map(|entry| entry.card)
             .filter(|card| transformable(ctx, card))
             .collect(),
-            None => match instance_of(ctx, &args.target) {
+            None => match instance_by_id_or_spec(
+                ctx,
+                args.target.instance_id.as_deref(),
+                args.target.target.as_ref(),
+            ) {
                 Some(old) if transformable(ctx, &old) => vec![old],
                 _ => Vec::new(),
             },

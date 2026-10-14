@@ -11,9 +11,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::combat::{enter_new_side, is_active_on_field};
-use crate::damage::DamageTarget;
 use crate::effects::destroy::{DestroyArgs, destroy};
-use crate::effects::targets::{TargetSpec, instance_on_its_stay, resolve_target};
+use crate::effects::targets::{TargetSpec, instance_by_id_or_spec, instance_on_its_stay};
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
@@ -45,18 +44,6 @@ pub struct StealTarget {
 pub enum StealOtherwise {
     /// An ordinary destroy (§6.3), so Death and Reborn apply and an Indestructible card stays (R46).
     Destroy,
-}
-
-fn instance_of(ctx: &EffectContext<'_>, args: &StealTarget) -> Option<CardInstance> {
-    // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
-    if let Some(instance_id) = &args.instance_id {
-        return instance_on_its_stay(ctx, instance_id);
-    }
-    let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
-    match resolve_target(ctx, &spec) {
-        Some(DamageTarget::Unit { instance }) => Some(instance),
-        _ => None,
-    }
 }
 
 /// R15: the same lane on the stealer's side when that zone is free, else its first free zone.
@@ -140,7 +127,8 @@ fn move_control(
 /// §6.3 Steal: take control of one card on the field (#36 radiant, #49, #50).
 pub fn steal(args: StealTarget) -> Effect {
     Effect::new("steal", move |ctx| {
-        let Some(card) = instance_of(ctx, &args) else {
+        let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
+        else {
             return;
         };
         if take_control(ctx, &card) {
@@ -171,7 +159,8 @@ pub fn steal(args: StealTarget) -> Effect {
 /// or one the receiving side has no free zone for, stays where it is (R15).
 pub fn give_control(args: StealTarget) -> Effect {
     Effect::new("giveControl", move |ctx| {
-        let Some(card) = instance_of(ctx, &args) else {
+        let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
+        else {
             return;
         };
         let receiver = opponent_of(card.controller);
