@@ -5957,6 +5957,13 @@
     "891": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T17:52:08Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 of the easy rule (nothing in crates/ai/src) fails outright: this changes the AI's search, which the hard rule names explicitly"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
