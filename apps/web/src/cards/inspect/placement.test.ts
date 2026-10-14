@@ -1,7 +1,7 @@
 // Polish 6, slice C: where the hover preview goes (docs/polish/6-cards.md, B27).
 //
 // `placePreview(anchor, viewport, size)` picks the first side the preview fits on, in the order
-// right, left, above, below, and clamps `left` and `top` so the box stays PREVIEW_MARGIN_PX inside
+// left, right, above, below (#912 put the left first), and clamps `left` and `top` so the box stays PREVIEW_MARGIN_PX inside
 // the viewport. The spec fixes that order and the clamp. It does not fix the exact offset from the
 // anchor on the chosen side, or the vertical alignment beside it, so every case here is chosen with
 // room to spare either way, and the geometry asserted is only what a side means: a preview on the
@@ -56,21 +56,21 @@ type Case = {
 
 const CASES: Case[] = [
   {
-    name: "B27 goes right when there is room on the right",
+    name: "B27 goes right when the left edge is too close",
     anchor: { left: 100, top: 200, width: 100, height: 140 },
     viewport: DESKTOP,
     size: PREVIEW,
     side: "right",
   },
   {
-    name: "B27 prefers right over left when both have room",
+    name: "B27 prefers left over right when both have room (#912)",
     anchor: { left: 600, top: 200, width: 100, height: 140 },
     viewport: DESKTOP,
     size: PREVIEW,
-    side: "right",
+    side: "left",
   },
   {
-    name: "B27 falls back to left when the right edge is too close, even though above also fits",
+    name: "B27 goes left when there is room on the left, even though above also fits",
     anchor: { left: 1150, top: 500, width: 100, height: 140 },
     viewport: DESKTOP,
     size: PREVIEW,
@@ -177,7 +177,7 @@ describe("placePreview: a card in a row prefers above", () => {
     expectInside(placed, PREVIEW, DESKTOP);
   });
 
-  it("falls back to B27's order, right first, when there is no room above", () => {
+  it("falls back to B27's order, left then right, when there is no room above", () => {
     const anchor: Rect = { left: 100, top: 40, width: 55, height: 76 };
     const placed = placePreview(anchor, DESKTOP, PREVIEW, "above");
     expect(placed.side).toBe("right");
