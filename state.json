@@ -6301,6 +6301,10 @@
       "run_id": "38630882543",
       "started_at": "2026-10-14T20:19:00Z",
       "stop_requested": false,
+      "strike_log": [
+        "CI still failed after 1 fix(es)"
+      ],
+      "strikes": 1,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
