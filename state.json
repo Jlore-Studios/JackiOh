@@ -6268,8 +6268,10 @@
     "what": "plan #848 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-14T03:41:57Z",
-    "notes": [],
+    "at": "2026-10-14T03:47:46Z",
+    "notes": [
+      "#847 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
