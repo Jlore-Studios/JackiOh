@@ -6009,6 +6009,13 @@
     "843": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T03:01:13Z",
+        "difficulty": "medium",
+        "provider": "claude-5",
+        "tier": "strong",
+        "why": "line 9 fails: origin/bot/issue-442 (the v0.4.0 Luau integration branch, active today) rewrites crates/luau/src/vm.rs, config.rs, tests/host.rs and README.md; the rest would be easy (one crate, ~150 lines, verified on a scratch copy)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
