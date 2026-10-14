@@ -9,6 +9,7 @@ import { getMe, type MeResponse, type QueueMode } from "./api.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
+import { sessionStorageOrNull } from "./storage.ts";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
@@ -85,18 +86,10 @@ const QUEUE_CHANGED = "jackioh:queue-changed";
 
 const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
 
-function tabStorage(): Storage | null {
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
-
 /** The mode this tab is queued in, or null. */
 export function readQueued(): QueueMode | null {
   try {
-    const raw = tabStorage()?.getItem(QUEUE_STORAGE_KEY) ?? null;
+    const raw = sessionStorageOrNull()?.getItem(QUEUE_STORAGE_KEY) ?? null;
     return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
   } catch {
     return null;
@@ -110,7 +103,7 @@ function changed(): void {
 /** R765: remember this tab's queue so a pairing can follow it. */
 export function rememberQueued(mode: QueueMode): void {
   try {
-    tabStorage()?.setItem(QUEUE_STORAGE_KEY, mode);
+    sessionStorageOrNull()?.setItem(QUEUE_STORAGE_KEY, mode);
   } catch {
     // Blocked storage: only `/play` follows the queue (R765).
   }
@@ -120,7 +113,7 @@ export function rememberQueued(mode: QueueMode): void {
 /** Forget a left or paired queue. */
 export function forgetQueued(): void {
   try {
-    tabStorage()?.removeItem(QUEUE_STORAGE_KEY);
+    sessionStorageOrNull()?.removeItem(QUEUE_STORAGE_KEY);
   } catch {
     // Blocked storage has nothing to forget.
   }

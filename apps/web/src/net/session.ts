@@ -4,19 +4,11 @@
 // M8 fixture in `localStorage` (e2e/README.md A6). Pending addresses are non-secret; recovery stays per tab (R193).
 
 import { AUTH_PENDING_ADDRESS_TTL_SECONDS } from "@jackioh/server-config";
+import { sessionStorageOrNull } from "./storage.ts";
 
 export const SESSION_STORAGE_KEY = "jackioh.session";
 
 export const E2E_SESSION_STORAGE_KEY = "jackioh.e2e.session";
-
-function tabStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
 
 function sharedStorage(): Storage | null {
   if (typeof window === "undefined") return null;
@@ -72,7 +64,7 @@ function parse(raw: string | null): Session | null {
 
 export function readSession(): Session | null {
   if (typeof window === "undefined") return null;
-  const tab = tabStorage();
+  const tab = sessionStorageOrNull();
   const shared = sharedStorage();
 
   const current = parse(read(tab, SESSION_STORAGE_KEY));
@@ -96,7 +88,7 @@ export function readSession(): Session | null {
 export function writeSession(session: Session): void {
   if (typeof window === "undefined") return;
   try {
-    tabStorage()?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    sessionStorageOrNull()?.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   } catch {
     // The caller keeps the session until the page is left.
     return;
@@ -107,7 +99,7 @@ export function writeSession(session: Session): void {
 
 export function clearSession(): void {
   if (typeof window === "undefined") return;
-  remove(tabStorage(), SESSION_STORAGE_KEY);
+  remove(sessionStorageOrNull(), SESSION_STORAGE_KEY);
   remove(sharedStorage(), SESSION_STORAGE_KEY);
   remove(sharedStorage(), E2E_SESSION_STORAGE_KEY);
 }

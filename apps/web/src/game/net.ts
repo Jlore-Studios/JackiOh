@@ -10,6 +10,7 @@ import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -148,9 +149,6 @@ function pageWake(handler: () => void): () => void {
 }
 
 // Frame parsing: total and protocol-shaped
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
 

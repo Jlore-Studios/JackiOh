@@ -10,6 +10,7 @@ import { MUSIC_ROTATION_KEY, MUSIC_STATIONS } from "./constants.ts";
 import rawCards from "./music-cards.json";
 import rawManifest from "./music-manifest.json";
 import type { MusicCardEntry, MusicManifest, MusicStation, MusicTrack } from "./types.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** The main menu theme: every screen without a board plays it. */
 export const MENU_TRACK = "menu";
@@ -18,10 +19,6 @@ export const RESULT_TRACKS = { victory: "victory", defeat: "defeat", draw: "draw
 
 function fail(file: string, path: string, problem: string): never {
   throw new Error(`${file}: ${path}: ${problem}`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function finite(value: unknown, path: string): number {

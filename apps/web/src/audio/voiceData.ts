@@ -35,6 +35,7 @@ import type {
 } from "./types.ts";
 import rawCardAudio from "./card-audio.json5?raw";
 import rawManifest from "./voice-manifest.json";
+import { isRecord } from "../wire/json.ts";
 
 /* ------------------------------------------------------------------------------------------- *
  * Parsing
@@ -45,10 +46,6 @@ const FILE = "card-audio.json5";
 
 function fail(path: string, problem: string): never {
   throw new Error(`${FILE}: ${path}: ${problem}`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function record(value: unknown, path: string): Record<string, unknown> {

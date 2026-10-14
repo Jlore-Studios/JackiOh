@@ -3,6 +3,7 @@
 // Keep the glob path-based: Vite rejects package specifiers.
 
 import type { CardDef, CardDefs } from "@jackioh/shared";
+import { isRecord } from "../wire/json.ts";
 
 export type PatchChange = {
   readonly id: string;
@@ -52,10 +53,6 @@ const SHIPPED_FILE = "shipped";
 export function fileStem(path: string): string {
   const name = path.slice(path.lastIndexOf("/") + 1);
   return name.endsWith(".json") ? name.slice(0, -".json".length) : name;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readPatches(value: unknown): readonly Patch[] {

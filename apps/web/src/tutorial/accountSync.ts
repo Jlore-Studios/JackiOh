@@ -13,6 +13,7 @@ import {
   subscribeTutorialProgress,
   type TutorialProgressLike,
 } from "./progress.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** The two requests, injectable so the route's tests never touch the network. */
 export type TutorialAccountApi = {
@@ -31,10 +32,6 @@ export type TutorialAccountSync = {
   /** Resolves once no request is in flight or owed (tests; nothing in the app waits on it). */
   settled(): Promise<void>;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** Reject malformed server progress as a failed request. */
 function accountCopy(raw: unknown): TutorialProgressLike {
