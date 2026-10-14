@@ -7467,10 +7467,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-10-14T02:40:00Z",
-          "utilization": 0.43
+          "utilization": 0.98
         },
-        "observed_at": "2026-10-13T22:40:00Z",
-        "status": "allowed"
+        "observed_at": "2026-10-14T02:03:51Z",
+        "status": "allowed_warning"
       }
     },
     "claude-2": {
