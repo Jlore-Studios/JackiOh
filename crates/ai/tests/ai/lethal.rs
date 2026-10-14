@@ -86,7 +86,7 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
             ready.insert(attacker_id);
         }
     }
-    let mut attacks: Vec<i32> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for id in &ready {
         let Some(unit) = find_instance(state, id) else {
             continue;
@@ -96,7 +96,7 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
             // R636: once per attack the unit has left this turn.
             let spent = unit.exertion.attacks.unwrap_or(i32::from(unit.exertion.attacked));
             for _ in spent..attacks_per_turn(state, unit) {
-                attacks.push(attack);
+                attacks.push((unit, attack));
             }
         }
     }
