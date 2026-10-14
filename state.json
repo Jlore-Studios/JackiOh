@@ -5835,6 +5835,13 @@
     "833": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T01:21:44Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone) is my least sure: no GitHub access to rule out open PRs, but the issue names #776/#680/#684 as distinct paths; medium regardless since the new ruling fails easy line 3"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
