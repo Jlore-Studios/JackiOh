@@ -11363,11 +11363,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-14T01:02:18Z",
-    "last_run": "2026-10-14T01:02:18Z",
-    "provider": "claude-4",
+    "idle_since": "2026-10-13T23:58:45Z",
+    "last_run": "2026-10-13T23:36:04Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38493443292",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
