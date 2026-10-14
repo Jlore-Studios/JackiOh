@@ -5592,6 +5592,13 @@
     "874": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T13:18:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 5 (no engine/AI/rules work): shard 2 judges B31 cleanliness and perf over its gate games, so the fix almost certainly lives in crates/engine, a card script, or crates/ai, which alone rules out easy"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
