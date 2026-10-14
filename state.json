@@ -5649,9 +5649,11 @@
     "what": "build #874 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-14T13:47:03Z",
+    "at": "2026-10-14T13:52:56Z",
     "notes": [
-      "started a night run, as a lane was free: #874 (medium) is queued to build, for `claude-3`: build on `claude-3` (claude, `sonnet`, medium); review on `claude-3` (claude, `opus`, strong)"
+      "#767 needs a plan",
+      "started a night run, as a lane was free: #767 (hard) is queued to build, for `claude-3`: plan on `claude-3` (claude, `opus`, strong)",
+      "#872: planned with no difficulty, so `difficulty:medium`"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
