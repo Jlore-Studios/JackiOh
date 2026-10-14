@@ -5991,11 +5991,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-14T18:05:43Z",
+        "at": "2026-10-14T20:04:24Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "engine-rules line: the fix lives in crates/engine/src uses counting, which the rule names as hard outright"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Engine rules in crates/engine/src (activate.rs's uses cap), plus a new ruling, a catalog patch and a golden re-bless: that is hard under the rule's own line, and it can never be rated lower"
       },
       "failures": 0,
       "forced": false,
