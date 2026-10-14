@@ -1,6 +1,5 @@
 //! C+ #65.3 Large Grape (SPEC §8.7 row 65.3). (3) Spell, Fruit, Token (printed Rare).
-//!   Base:    "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal
-//!            it {amount}. Draw {draw}. Each costs (0)."
+//!   Base:    "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs (0)."
 //!   Radiant: the same text, amount 10 and draw 2.
 //!   Engine:  "As C+ #65.2, the drawn card taking `costOverride` 0. Tunes: amount 5 ↑; draw 1 ↑."
 //!

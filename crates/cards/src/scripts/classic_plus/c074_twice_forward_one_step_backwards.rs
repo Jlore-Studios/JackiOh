@@ -68,7 +68,7 @@ mod tests {
     const RAPID: &str = "core-010"; // (0) Spell
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
     const BEAR: &str = "core-060"; // (1) Trap
-    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy Unit and the enemy hero.
+    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
     const FELINORS: &str = "core-012"; // (2) Unit: Cry: Summon a copy of this.
     const TIGER_DOJO: &str = "core-014"; // (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.

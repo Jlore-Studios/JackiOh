@@ -4,7 +4,7 @@ local J = require("@jackioh")
 -- The same script on both faces: the Radiant face's 10 and 2 are its declared `amount` and `draw`,
 -- which `param` reads.
 local base = {
-	-- §8.7: "Choose a Unit or hero" — either side.
+	-- §8.7: "an enemy or an ally" — any Unit or hero, either side.
 	targets = {
 		{
 			kind = "target",

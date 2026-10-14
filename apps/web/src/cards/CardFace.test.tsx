@@ -541,7 +541,7 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 Attack per heads and +2 Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
     expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["7", "+2", "+2"]);
   });
@@ -921,7 +921,7 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
 
 describe("R1107: a granted Death ability prints on its own line", () => {
   it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
-    const grant = "Death: Add 1 random Book card to your hand.";
+    const grant = "Death: Add 1 random Book to your hand.";
     const cf = catalogFace("meditative-058", false, "full", { inPlay: { grants: [grant] } });
     const text = one(cf, ".card-text");
     const granted = text.querySelectorAll(".cf-text-granted");

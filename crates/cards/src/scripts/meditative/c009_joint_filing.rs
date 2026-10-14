@@ -20,7 +20,7 @@ pub const ID: &str = "meditative-009";
 // two (R820); M 12's triggered End of turn effects are multiplied too; leaving the field ends it;
 // extra reads through `param()`; radiant three runs in all".
 //
-// Core #13 Jlockeed Shredder-10's end of turn (2 to each enemy Unit and the enemy hero) and Core #58
+// Core #13 Jlockeed Shredder-10's end of turn (2 to each enemy) and Core #58
 // Rush Token Farm's start of turn (a Rush Token) are the hooks it multiplies; Core #23 Reoccurring
 // Dream stands in for M 8, a Spell that returns from the graveyard at the end of the turn it was played
 // (M 8 and M 21 are built by their own parts). M 12's case is in Fear Mongerer's file.
@@ -34,7 +34,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const SHREDDER: &str = "core-013"; // End of turn: 2 damage to each enemy Unit and the enemy hero.
+    const SHREDDER: &str = "core-013"; // End of turn: 2 damage to each enemy.
     const FARM: &str = "core-058"; // Field Spell. Start of turn: summon a Rush Token.
     const RUSH_TOKEN: &str = "core-t-rush";
     const DREAM: &str = "core-023"; // Spell. End of turn: return this to hand (from the graveyard).

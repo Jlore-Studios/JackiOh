@@ -235,7 +235,7 @@ mod tests {
 
             #[test]
             fn r1204_lose_health_is_not_caught() {
-                // Rotten Grape: "Your hero loses 5 health." At 5 health it is lethal, and no
+                // Rotten Grape: "Lose 5 health." At 5 health it is lethal, and no
                 // damage for Unan to catch.
                 crate::register_all();
                 let mut s = scenario(json!({

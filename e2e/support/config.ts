@@ -25,6 +25,8 @@ export const routes = {
   match: (matchId: string) => `${env("matchRoute", "/match")}/${matchId}`,
   /** R259: a Best-of-3 series between games. */
   series: (seriesId: string) => `${env("seriesRoute", "/series")}/${seriesId}`,
+  /** R768000: the recent games and their replays. */
+  replays: () => env("replaysRoute", "/replays"),
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */

@@ -17,7 +17,7 @@ local function church(radiant: boolean)
 		activations = {
 			{
 				id = "church-steal",
-				label = "Take control of an enemy permanent",
+				label = "Steal an enemy permanent",
 				uses = USES,
 				targets = {
 					{ kind = "target", min = 1, max = 1, filter = { side = "enemy", of = { "unit", "backrow" } } },

@@ -1,9 +1,9 @@
 //! M #23 Golly Bob Howdy (SPEC §8.8 row 23, §3.1, §3.2, §7, R11, R13, R23, R691): (1) Unit, Human, Common,
 //! 3/5 → 6/10.
 //!
-//! Base:    "Cry: Transform the Units next to this into Sheep Tokens."
-//! Radiant: "Cry: Transform the Units next to this into Radiant Sheep Tokens."
-//! Engine: `for_each_card` over the Units next to it (§3.1: lanes N − 1 and N + 1 on its own side and
+//! Base:    "Cry: Transform the Units adjacent to this into Sheep Tokens."
+//! Radiant: "Cry: Transform the Units adjacent to this into Radiant Sheep Tokens."
+//! Engine: `for_each_card` over the Units adjacent to it (§3.1: lanes N − 1 and N + 1 on its own side and
 //! row, the tops of piles, R13), listed once before the first transform. Each becomes a Sheep Token in
 //! place (R691): its Cry does not fire, an Immutable one is left alone (R23), and the Unit token it
 //! replaces ceases to exist (R11). A Sheep is worth 2 Tributes, a Radiant one 3 (§3.2, §7).
@@ -11,7 +11,7 @@
 pub const ID: &str = "meditative-023";
 
 // M #23 Golly Bob Howdy — SPEC §8.8 row 23, BUILD M10 row M 23: "Cry (played, R1; no shipped effect casts a
-// Unit): transforms the Units next to it, on its own side and row (§3.1), into base Sheep Tokens in place
+// Unit): transforms the Units adjacent to it, on its own side and row (§3.1), into base Sheep Tokens in place
 // (R691), the Radiant face into Radiant ones; the old cards cease to exist (R11); an Immutable neighbour
 // stays (R23); lane 1 has one neighbour; the enemy's Units are never touched; a Sheep is worth 2 Tributes, a
 // Radiant one 3 (§3.2, §7)".

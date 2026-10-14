@@ -51,6 +51,10 @@ export const practiceTestid = {
   changeSetup: "practice-change-setup",
   /** In the result dialog: close it and look at the final board. */
   viewBoard: "practice-view-board",
+  /** R768000: in the result dialog of a kept game, its replay from step 0. */
+  watchReplay: "practice-watch-replay",
+  /** R768000: in the result dialog of a kept game, its last turn's GIF. */
+  shareLastTurn: "practice-share-last-turn",
   /** In the HUD while any modifier is live (R169): a chip with the count, `data-count`; it opens `modifiersPanel`. */
   modifiers: "practice-modifiers",
   /** Every live modifier's label in full, grouped You and AI. */
