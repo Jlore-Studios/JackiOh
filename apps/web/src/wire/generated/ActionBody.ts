@@ -8,9 +8,10 @@ import type { ZoneChoice } from "./ZoneChoice";
 
 export type ActionBody = { "type": "mulligan", keep: Array<string>, } | { "type": "play", instanceId: string, zone?: ZoneChoice, x?: number, embiggen?: boolean, 
 /**
- * R1086: play this Magnetic card onto one of its controller's Units (ME-MAGNETIC).
+ * R1086: play this Equip card onto one of its controller's Units (ME-EQUIP). A log
+ * recorded before the rename spells it `magnetic`, which reads as it (R781000).
  */
-magnetic?: boolean, 
+equip?: boolean, 
 /**
  * Units sacrificed to pay a Tribute cost (§6.3).
  */
@@ -21,8 +22,8 @@ tributes?: Array<string>, targets?: Array<Selection>, modes?: Array<string>,
  */
 plague?: PlagueSpend, 
 /**
- * ME-ALTPLAY, R1040, R1044: play the card face-down into the backrow as a Trap that reveals
- * at this timing — a Unit under Knowledge Breaker's Aura, a Spell under Paranoia's. Absent,
- * the card is played as it is printed.
+ * R783004, R1040, R1044: play the card face-down into the backrow as a Trap by its Cloaked
+ * (`cloaked`, the one way offered since patch v0.3.7). Absent, the card is played as it is
+ * printed.
  */
 faceDown?: RevealAt, } | { "type": "attack", attackerId: string, targetId: string, } | { "type": "switchPosition", instanceId: string, } | { "type": "activate", instanceId: string, ability?: string, targets?: Array<Selection>, modes?: Array<string>, tributes?: Array<string>, } | { "type": "activatePower", instanceId: string, targets?: Array<Selection>, } | { "type": "answer", choiceId: string, selection: Array<Selection>, } | { "type": "offerDraw" } | { "type": "answerDraw", accept: boolean, } | { "type": "emote", emote: EmoteId, } | { "type": "concede" } | { "type": "endTurn" } | { "type": "setAutoEndTurn", enabled: boolean, } | { "type": "timeout" } | { "type": "disconnectExpired", player: PlayerId, } | { "type": "ceilingReached" };

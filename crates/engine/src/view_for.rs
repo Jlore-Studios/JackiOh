@@ -641,7 +641,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         } else {
             None
         },
-        // ME-ALTPLAY (R1046, D3): the card's own reveal timing rides the controller's view only.
+        // R1046, D3: how the card reveals rides the controller's view only.
         reveal_at: if card.controller == viewer {
             card.set_as.as_ref().map(|set| set.reveal)
         } else {
@@ -1575,7 +1575,7 @@ fn redact_event(
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
             if hidden(&instance) {
-                // ME-ALTPLAY, R1046: a card set face-down by a permission shows neither its `x` nor its
+                // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`. Any other hidden play keeps both, as it always has (D14).
                 if find_instance(state, &instance).is_some_and(|card| card.set_as.is_some()) {
                     shown.remove("x");

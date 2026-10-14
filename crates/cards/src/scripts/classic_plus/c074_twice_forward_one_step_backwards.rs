@@ -262,6 +262,27 @@ mod tests {
             }
 
             #[test]
+            fn r781002_an_immutable_unit_in_play_is_not_fused_in_and_it_still_fires_and_gains_its_brittle() {
+                let mut s = set_then_their_turn(
+                    false,
+                    json!({}),
+                    json!({ "hand": [RAPID, { "def": MENACE, "radiant": true }, VANILLA] }),
+                    |_| {},
+                );
+                s.play(RAPID, json!({}));
+                let menace = s.card(MENACE).clone();
+                s.play(MENACE, json!({ "zone": 1 }));
+                // A Field Trap can't target an Immutable card in play (R781001): it fires, fuses nothing in
+                // and gains its Brittle.
+                s.expect_in_zone(&menace, "field");
+                assert_eq!(fused_events(&s), 0);
+                let trap = trap_of(&s);
+                assert_eq!(trap.face_up, Some(true));
+                assert_eq!(active_brittle_count(&trap), Some(3));
+                s.expect_events(json!(["cardResolved", "trapFired"]));
+            }
+
+            #[test]
             fn r687_r589_r425_with_nothing_left_to_fuse_a_spell_that_exiles_itself_it_reveals_and_still_gains_plus_1_brittle_unfired()
              {
                 let mut s =
@@ -534,6 +555,22 @@ mod tests {
                 assert_eq!(part, Some(json!({ "defId": VANILLA, "radiant": true })));
                 assert_eq!(active_brittle_count(&trap), Some(5));
                 assert_eq!(trap.face_up, Some(true));
+            }
+
+            #[test]
+            fn r781002_neither_an_immutable_unit_in_play_nor_a_copy_of_it_is_fused_in() {
+                let mut s = set_then_their_turn(
+                    true,
+                    json!({}),
+                    json!({ "hand": [RAPID, { "def": MENACE, "radiant": true }, VANILLA] }),
+                    |_| {},
+                );
+                s.play(RAPID, json!({}));
+                s.play(MENACE, json!({ "zone": 1 }));
+                assert_eq!(fused_events(&s), 0);
+                let trap = trap_of(&s);
+                assert_eq!(trap.face_up, Some(true));
+                assert_eq!(active_brittle_count(&trap), Some(5));
             }
 
             #[test]

@@ -52,6 +52,7 @@ mod tests {
             death,
             start_of_game,
             enters_hand,
+            fused_into,
             resume,
             delayed,
             set_stat,
@@ -89,7 +90,7 @@ mod tests {
             tribute_when,
             would_counter,
             start_of_opponent_turn,
-            face_down_play,
+            reveal_echo,
             turn_hook_extra,
             cry_death_extra,
             grants,
@@ -99,6 +100,7 @@ mod tests {
             && death.is_none()
             && start_of_game.is_none()
             && enters_hand.is_none()
+            && fused_into.is_none()
             && resume.is_empty()
             && delayed.is_none()
             && set_stat.is_none()
@@ -136,7 +138,7 @@ mod tests {
             && tribute_when.is_none()
             && would_counter.is_none()
             && start_of_opponent_turn.is_none()
-            && face_down_play.is_none()
+            && reveal_echo.is_none()
             && turn_hook_extra.is_none()
             && cry_death_extra.is_none()
             && grants.is_empty()
