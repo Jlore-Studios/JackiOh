@@ -5798,7 +5798,7 @@
     "874": {
       "action": "build",
       "asks": [],
-      "died": 1,
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T13:18:25Z",
         "difficulty": "medium",
@@ -5807,6 +5807,7 @@
         "why": "line 5 (no engine/AI/rules work): shard 2 judges B31 cleanliness and perf over its gate games, so the fix almost certainly lives in crates/engine, a card script, or crates/ai, which alone rules out easy"
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-14T14:33:57Z",
         "family": "claude",
