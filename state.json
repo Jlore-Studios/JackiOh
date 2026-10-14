@@ -6519,6 +6519,7 @@
     "927": {
       "action": "revise",
       "asks": [],
+      "ci_fixed_head": "360d238ec19051a7eeec8ecd64a18d409e5837e1",
       "ci_fixes": 1,
       "ci_reruns": {
         "ebe72f566cfad1598df6839b49e6ff1205d3f55a": 1
@@ -6528,7 +6529,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-14T20:59:04Z",
+      "feedback_since": "2026-10-14T22:26:16Z",
       "forced": false,
       "interruptions": 0,
       "issue": 897,
@@ -6542,11 +6543,11 @@
       "round_tier": "medium",
       "run_id": "38647536215",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-14T22:26:16Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
