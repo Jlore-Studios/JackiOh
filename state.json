@@ -5569,8 +5569,12 @@
     "what": "revise #870 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-14T12:15:33Z",
-    "notes": [],
+    "at": "2026-10-14T12:21:31Z",
+    "notes": [
+      "#873 needs a plan",
+      "started a night run, as a lane was free: #873 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+      "#873: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
