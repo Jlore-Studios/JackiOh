@@ -587,7 +587,7 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     /// The tags a theme may be (at least `minThemeSize` cards of the pool `banned` and the gate `gated`
-    /// leave), each with how many cards the pool holds of it.
+    /// leave), each with how many cards the pool holds of it; never Quickdraw (R817000).
     fn themes(banned: &[String], gated: &[SetName]) -> Vec<(String, usize)> {
         register_cards();
         let pool: Vec<CardDef> = query(&CatalogQueryArgs::default())
@@ -598,7 +598,7 @@ mod r1370_a_deck_that_leans_on_a_set {
         let mut counts: IndexMap<String, usize> = IndexMap::new();
         for def in &pool {
             for tag in &def.tags {
-                if *tag != Tag::Token {
+                if *tag != Tag::Token && *tag != Tag::Quickdraw {
                     *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
                 }
             }
@@ -1337,5 +1337,152 @@ mod win_rate_strength {
             serde_json::to_value(options(json!({ "strength": 0.5 }))).ok(),
             Some(json!({ "strength": 0.5 }))
         );
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R817000: a random deck holds at most two Quickdraw cards
+// ---------------------------------------------------------------------------------------------
+
+mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
+    use super::*;
+
+    /// How many Quickdraw cards `deck` holds.
+    fn quickdraw_in(deck: &[String]) -> usize {
+        defs_of(deck)
+            .iter()
+            .filter(|def| def.tags.contains(&Tag::Quickdraw))
+            .count()
+    }
+
+    /// Every non-token Quickdraw card of every set, sorted by id.
+    fn quickdraw_ids() -> Vec<String> {
+        register_cards();
+        let mut ids: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.contains(&Tag::Quickdraw))
+            .map(|def| def.id.clone())
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    #[test]
+    fn r817000_no_random_deck_holds_more_than_two_quickdraw_cards_at_any_size_lean_or_theme() {
+        register_cards();
+        assert_eq!(AI_DECK.max_quickdraw, 2);
+        let cap = AI_DECK.max_quickdraw as usize;
+        // Enough Quickdraw cards ship for a theme, so without the cap a Quickdraw theme dealt six or more.
+        assert!(quickdraw_ids().len() >= AI_DECK.min_theme_size as usize);
+        let mut rules: Vec<(String, i32, Value)> = vec![
+            (
+                "human".to_string(),
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [] }),
+            ),
+            (
+                "human-themed".to_string(),
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [], "theme": "Quickdraw" }),
+            ),
+            (
+                "human-leaning".to_string(),
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [], "leanSet": "Meditative", "theme": "Quickdraw" }),
+            ),
+        ];
+        for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
+            let h = AI_DIFFICULTY[difficulty];
+            rules.push((
+                format!("{difficulty}"),
+                h.deck_size,
+                json!({ "manaCap": h.mana_cap }),
+            ));
+            rules.push((
+                format!("{difficulty}-themed"),
+                h.deck_size,
+                json!({ "manaCap": h.mana_cap, "theme": "Quickdraw" }),
+            ));
+        }
+        let mut at_cap = 0;
+        for (label, size, literal) in rules {
+            let opts = options(literal.clone());
+            for n in 1..=SEEDS {
+                let deck = build_ai_deck(&mut create_rng(&format!("r817000:{label}:{n}"), 0), size, &opts);
+                let at = format!("{literal} seed {n}");
+                assert_eq!(deck.len(), size as usize, "{at}");
+                assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size as usize, "{at}");
+                let held = quickdraw_in(&deck);
+                assert!(held <= cap, "{at}: {held} Quickdraw cards in {deck:?}");
+                if held == cap {
+                    at_cap += 1;
+                }
+            }
+        }
+        // Some deck reached the cap, so the cap is what held the rest to it.
+        assert!(at_cap > 0, "no deck reached the cap, so this measured nothing");
+    }
+
+    #[test]
+    fn r817000_quickdraw_is_never_a_theme_so_a_pool_whose_one_theme_sized_tag_it_is_rolls_none() {
+        register_cards();
+        // The Quickdraw cards and twenty cards with no tag: Quickdraw is the pool's one tag with
+        // `minThemeSize` cards, so a rolled theme would be Quickdraw and take one more draw.
+        let mut untagged: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.is_empty())
+            .map(|def| def.id.clone())
+            .collect();
+        untagged.sort();
+        let kept: IndexSet<String> = quickdraw_ids()
+            .into_iter()
+            .chain(untagged.into_iter().take(DECK_SIZE as usize))
+            .collect();
+        let banned: Vec<String> = ai_pool().into_iter().filter(|id| !kept.contains(id)).collect();
+        let opts = options(json!({ "banned": banned, "gatedSets": [] }));
+        for n in 1..=SEEDS {
+            let mut rng = create_rng(&format!("r817000:theme:{n}"), 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &opts);
+            assert_eq!(deck.len(), DECK_SIZE as usize, "seed {n}");
+            assert!(
+                quickdraw_in(&deck) <= AI_DECK.max_quickdraw as usize,
+                "seed {n}: {deck:?}"
+            );
+            // The theme's chance and one draw per card, and no draw to pick a theme.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32 + 1, "seed {n}");
+        }
+    }
+
+    #[test]
+    fn r817000_an_included_quickdraw_card_counts_toward_the_cap_and_is_always_dealt() {
+        register_cards();
+        let quickdraw = quickdraw_ids();
+        // Three forced in, past the cap: all three are dealt and the draw adds none, even themed on it.
+        let three: Vec<String> = quickdraw[..3].to_vec();
+        // One forced in: the draw adds at most one more.
+        let one: Vec<String> = quickdraw[..1].to_vec();
+        for n in 1..=SEEDS {
+            for (include, theme) in [
+                (&three, json!("Quickdraw")),
+                (&one, json!("Quickdraw")),
+                (&one, Value::Null),
+            ] {
+                let literal = json!({ "banned": [], "gatedSets": [], "include": include, "theme": theme });
+                let deck = build_ai_deck(
+                    &mut create_rng(&format!("r817000:include:{}:{theme}:{n}", include.len()), 0),
+                    DECK_SIZE,
+                    &options(literal.clone()),
+                );
+                let at = format!("{literal} seed {n}");
+                assert_eq!(deck.len(), DECK_SIZE as usize, "{at}");
+                for id in include {
+                    assert!(deck.contains(id), "{at}: {id} is missing from {deck:?}");
+                }
+                // At most the cap, or the cards forced in when they are more.
+                let held = quickdraw_in(&deck);
+                let most = include.len().max(AI_DECK.max_quickdraw as usize);
+                assert!(held <= most, "{at}: {held} Quickdraw cards in {deck:?}");
+            }
+        }
     }
 }
