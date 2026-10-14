@@ -11,7 +11,9 @@
 //! that, and `start_turn` fires this hook for the controller alone, before their draw (§2.2, R68).
 //!
 //! Armor is not this card's business either: §4.4 step 2 subtracts the defender's armor from each
-//! incoming hit, so the radiant face's printed Armor 1 reduces every forced attack by 1 on its own.
+//! incoming hit, so the radiant face's printed Armor 1 reduces every forced attack by 1 on its own. Pierce,
+//! printed on both faces since patch v0.3.9, is the layer's too: the hits it strikes back with skip
+//! the attackers' Armor.
 //!
 //! A card file returns `Vec<Effect>` and never touches state (CLAUDE.md rule 5), so it cannot call
 //! `combat::force_attacks_on`, which takes an `EngineSink`. It goes through `forced_attacks_on`

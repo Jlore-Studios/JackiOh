@@ -1,4 +1,4 @@
-//! C+ #60 Doctors Orders (SPEC §8.7 row 60). (1) Field Spell, Rare.
+//! C+ #60 Doctors Orders (SPEC §8.7 row 60). (2) Field Spell, Rare.
 //!   Base:    "Activate: Add {apples|All Purpose Apple|All Purpose Apples} to your hand." — 1
 //!            (balance patch 1: the Cry and the start-of-turn trigger became one Activate)
 //!   Radiant: "Activate: Add {apples|Radiant All Purpose Apple|…} to your hand."

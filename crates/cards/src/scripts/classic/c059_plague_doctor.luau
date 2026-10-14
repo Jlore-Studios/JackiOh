@@ -16,23 +16,22 @@ local function tokens_on_field(ctx: any): number
 	return sum
 end
 
--- The Plague Counters the Radiant face's own placement puts on the Doctor: the declared number times
--- its own multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would
--- once played.
+-- The Plague Counters the Cry's own placement puts on the Doctor: the declared number times its own
+-- multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once
+-- played. Both faces place since patch v0.3.9 (#831), the Radiant face alone before.
 local function tokens_it_places(ctx: any, me: any): number
-	if me == nil or not ctx:radiant() then
+	if me == nil then
 		return 0
 	end
 	return math.max(ctx:param("tokens"), 0) * ctx:plague_multiplier_of(me.id)
 end
 
--- N: every Plague Counter on the field, plus the Radiant face's own placement, as the Cry resolves
--- now.
+-- N: every Plague Counter on the field, plus the Cry's own placement, as the Cry resolves now.
 local function damage_now(ctx: any, me: any): number
 	return tokens_on_field(ctx) + tokens_it_places(ctx, me)
 end
 
--- The Radiant face's placement is `ctx:radiant()`'s branch; its 2 is the declared `tokens`.
+-- The placement is the declared `tokens`: 1 on the base face, 2 on the Radiant face.
 local base = {
 	targets = {
 		{ kind = "target", min = 1, max = 1, filter = { side = "any", of = { "unit", "hero" } } },
@@ -43,9 +42,6 @@ local base = {
 		local hit = {}
 		if amount > 0 then
 			hit[1] = J.damage({ to = { of = "chosen" }, amount = amount })
-		end
-		if not ctx:radiant() then
-			return hit
 		end
 		local effects = { J.place_plague({ target = { of = "self" }, amount = ctx:param("tokens") }) }
 		for _, effect in ipairs(hit) do

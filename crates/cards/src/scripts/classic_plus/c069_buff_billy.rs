@@ -1,8 +1,8 @@
 //! C+ #69 Buff Billy (SPEC §8.7 row 69, R348, R386, R396; BUILD M9 row C+ 69). (X) Unit, Human, Rare.
 //!   Base:    "This is a 3X/3X. / Cry: Buff this X times."
-//!   Radiant: "This is a 7X/7X. / Cry: Buff this 2X times."
+//!   Radiant: "This is a 6X/6X. / Cry: Buff this 2X times." (7X/7X until patch v0.3.9, #831)
 //!
-//! The 3X/3X (7X/7X) is the catalog's `xStats` (E40), read by the engine's layer 1 off the X the card
+//! The 3X/3X (6X/6X) is the catalog's `xStats` (E40), read by the engine's layer 1 off the X the card
 //! was played for (at least 1, R348); a Recruit or a summon has no X and arrives 0/0 to die at the
 //! state check. The Cry is X (2X) separate Upgrades of itself (R386), each drawn from what fits it on
 //! the field: its X has resolved there, so only the stats and keyword rows remain (R396).
@@ -13,7 +13,7 @@ pub const ID: &str = "classicplus-069";
 // a 3X/3X from its `xStats`; its Cry Upgrades it X times, each its own draw from what fits it now
 // (R386) — the stats split or an R21 keyword it lacks, never cost or X (it is an X-cost card, and on the
 // field it costs its X, R396); the upgrades are `tuning`, kept by a copy (R57); summoned outside a play
-// (a Recruit) it has X 0, arrives 0/0 and dies at the state check; radiant 7X/7X and 2X Upgrades.
+// (a Recruit) it has X 0, arrives 0/0 and dies at the state check; radiant 6X/6X and 2X Upgrades.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -98,7 +98,7 @@ mod tests {
         assert_eq!(json["type"], json!("Unit"));
         assert_eq!(json["tags"], json!(["Human"]));
         assert_eq!(js(&def.base.x_stats), json!({ "attack": 3, "health": 3 }));
-        assert_eq!(js(&def.radiant.x_stats), json!({ "attack": 7, "health": 7 }));
+        assert_eq!(js(&def.radiant.x_stats), json!({ "attack": 6, "health": 6 }));
         let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());

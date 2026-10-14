@@ -1,4 +1,4 @@
-//! M #97.1 Empty Plot (SPEC §8.8 row 97.1, R1281). (0) Unit, Token (printed Common), 0/3 → 0/8.
+//! M #97.1 Empty Plot (SPEC §8.8 row 97.1, R1281). (0) Unit, Token (printed Common), 0/3 → 0/6.
 //!   Base:    "Can't attack. You may play a Unit on top of this, as if it had Stack."
 //!   Radiant: "Can't attack. You may play a Unit on top of this, as if it had Stack. When you do, Buff that Unit."
 //!   Engine:  "NEW: a pile base (STACK-BASE), a static flag: while the Plot acts (the top of its unit

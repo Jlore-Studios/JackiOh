@@ -1,6 +1,6 @@
-//! M #97.5 Bunker (SPEC §8.8 row 97.5, R1283). (2) Unit, Token (printed Epic), 5/10 → 10/30.
+//! M #97.5 Bunker (SPEC §8.8 row 97.5, R1283). (2) Unit, Token (printed Epic), 5/10 → 10/20.
 //!   Base:    "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
-//!   Radiant: "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
+//!   Radiant: "Tribute 2, Armor 6, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
 //!   Engine:  "NEW: a lane multiplier (LANE-STRIKE): where combat reads both attacks once (R94), a
 //!            combatant whose face declares it has its attack multiplied when the other combatant stands
 //!            in the opposing unit zone of its own lane (§3.1), the hit then going through §4.4 as usual
@@ -8,8 +8,8 @@
 //!            §4.3) and in any forced attack, which skips Can't attack (§4.2); Cleave hits into other
 //!            lanes and every non-combat damage are not multiplied (MD-F14). The view may show the in-lane
 //!            number as a `preview` (R280). The designer's Radiant face printed 5/30, not doubling the
-//!            attack; R275's stat half makes it 10/30 (⚠ designer), 30 in its lane. Tunes: multiplier 3 ↑
-//!            (step 1); Armor 3 ↑ (Radiant 5); Tribute 2 ↓ (never below 1)."
+//!            attack; R275's stat half made it 10/30 (⚠ designer), patch v0.3.9 10/20, 30 in its lane. Tunes: multiplier 3 ↑
+//!            (step 1); Armor 3 ↑ (Radiant 6); Tribute 2 ↓ (never below 1)."
 
 pub const ID: &str = "meditative-097-5";
 

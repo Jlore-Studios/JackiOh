@@ -378,7 +378,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         // Outside the phrase it still names Jade (Meditative #39.2).
         assert!(names("Your Jade Beauties become Radiant.", "Jade"));
         assert!(names(
-            "Add one of these: Dud (20%), Jade (70%) or Red Jade (10%).",
+            "Add one of these: Dud (20%), Jade (75%) or Red Jade (5%).",
             "Jade"
         ));
         // So neither Jade nor Red Jade lists a `refs` for the Counter alone.

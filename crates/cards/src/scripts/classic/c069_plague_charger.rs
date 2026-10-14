@@ -68,7 +68,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CHARGER: &str = "classic-069";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on another permanent.
+    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on a permanent (a prompt).
     const MUTATE: &str = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
@@ -163,8 +163,9 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, FILLER], "field": [CHARGER] }, "p2": { "hand": [FILLER] } }));
             assert_eq!(kinds(&s, CHARGER), vec!["Charge"]);
 
-            let targets = at(s.card(CHARGER));
-            s.play(CRAWLER, json!({ "targets": targets }));
+            let charger = s.card(CHARGER).id.clone();
+            s.play(CRAWLER, json!({}));
+            s.answer(json!(charger));
 
             s.expect_stats(CHARGER, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, CHARGER), vec!["Charge", "First Strike"]);

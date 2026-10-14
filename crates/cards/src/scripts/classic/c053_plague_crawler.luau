@@ -13,25 +13,29 @@ local function placed_on_this(ctx: J.EffectContext, event: J.GameEvent): boolean
 	return event.counter == "plague" and event.instanceId == me.id and (event.placed or 0) > 0
 end
 
+-- The Cry's resume step: the permanent picked as it resolves.
+local PLACED_STEP = "placed"
+
 local base = {
-	-- "another permanent": the top of any unit pile or any backrow card, either side, never this one.
-	targets = {
-		{
-			kind = "target",
-			min = 1,
-			max = 1,
-			filter = {
-				side = "any",
-				of = { "unit", "backrow" },
-				excludeSelf = true,
-			},
-		},
-	},
+	-- "a permanent": the top of any unit pile or any backrow card, either side, this one included
+	-- (patch v0.3.9, #831; "another permanent", a declared target, before), so the pick is a prompt
+	-- made once this stands on the field (R831016).
 	cry = function(ctx: J.EffectContext)
 		return {
-			J.place_plague({ target = { of = "chosen" }, amount = ctx:param("tokens") }),
+			J.choose_target({
+				step = PLACED_STEP,
+				scope = { side = "any", of = { "unit", "backrow" } },
+				prompt = "Plague Crawler: place Plague Counters on a permanent",
+			}),
 		}
 	end,
+	resume = {
+		[PLACED_STEP] = function(ctx: J.EffectContext)
+			return {
+				J.place_plague({ target = { of = "chosen" }, amount = ctx:param("tokens") }),
+			}
+		end,
+	},
 	triggers = {
 		{
 			id = "plague-crawler-placed",

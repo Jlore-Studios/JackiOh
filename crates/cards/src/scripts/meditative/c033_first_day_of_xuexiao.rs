@@ -1,4 +1,4 @@
-//! M #33 First Day of 学校 (SPEC §8.8 row 33): (0) Spell, CN, Rare.
+//! M #33 First Day of 学校 (SPEC §8.8 row 33): (1) Spell, CN, Rare.
 //!
 //! Base:    "Add {cards|random CN card|random CN cards} to your hand. Each costs ({discount}) less."
 //! Radiant: "Add {cards|random Radiant CN card|random Radiant CN cards} to your hand. Each costs

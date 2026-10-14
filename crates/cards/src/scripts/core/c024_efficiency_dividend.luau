@@ -24,23 +24,21 @@ local TARGETS = {
 	},
 }
 
--- "Gain floor(X/2) mana next turn": one mana for every two X.
-local X_PER_MANA = 2
+-- Patch v0.3.9 (#831): "Deal X+1" (Radiant "2X+1") damage: the declared multiple of X, plus this.
+local DIVIDEND_DAMAGE_FLAT = 1
 
--- The base face uses X as it was paid; the radiant face uses 2X ("Uses 2X", R275) for its mana mode.
-local BASE_USES = 1
-local RADIANT_USES = 2
+-- "Gain X mana next turn" on the base face, "X+1" on the Radiant: this much more there.
+local DIVIDEND_RADIANT_MANA = 1
 
--- `uses` is the mana mode's radiant difference. The damage and heal modes' multiples are the declared
--- numbers `damage` and `heal` (R386): X and 2X, 2X and 4X on the Radiant face, where `damage` is
--- tuned alone (R749: the base face's "Deal X damage" prints no number and is always 1X).
-local function dividend_cry(ctx: J.EffectContext, uses: number): { J.EffectCall }
-	-- The X paid, never below 0, and the X the mana mode reads: that times the face's multiple.
+-- The damage and heal modes' multiples are the declared numbers `damage` and `heal` (R386): X and
+-- 4X, 2X and 8X on the Radiant face, where `damage` is tuned alone (R749: the base face's "Deal X+1
+-- damage" prints no multiple and is always 1X). `bonus_mana` is the mana mode's Radiant difference.
+local function dividend_cry(ctx: J.EffectContext, bonus_mana: number): { J.EffectCall }
+	-- The X paid, never below 0.
 	local paid = math.max(ctx:x(), 0)
-	local x = paid * uses
 	local mode = ctx:chosen_options()[1]
 	if mode == MODE_DAMAGE then
-		local amount = ctx:param("damage") * paid
+		local amount = ctx:param("damage") * paid + DIVIDEND_DAMAGE_FLAT
 		return { J.damage({ to = { of = "chosen" }, amount = amount }) }
 	end
 	if mode == MODE_HEAL then
@@ -48,9 +46,8 @@ local function dividend_cry(ctx: J.EffectContext, uses: number): { J.EffectCall 
 		local target: J.TargetSpec = { of = "chosen" }
 		return { J.heal({ target = target, amount = amount }) }
 	end
-	-- floor(x / 2) on a non-negative x.
 	if mode == MODE_MANA then
-		return { J.next_turn_mana({ amount = J.div(x, X_PER_MANA), player = "self" }) }
+		return { J.next_turn_mana({ amount = paid + bonus_mana, player = "self" }) }
 	end
 	-- No mode named: nothing to resolve, and the spell still counts as played (§8 Conventions).
 	return {}
@@ -73,7 +70,7 @@ local base = {
 	modes = MODES,
 	targets = TARGETS,
 	cry = function(ctx: J.EffectContext)
-		return dividend_cry(ctx, BASE_USES)
+		return dividend_cry(ctx, 0)
 	end,
 	endOfTurn = end_of_turn,
 }
@@ -82,7 +79,7 @@ local radiant = {
 	modes = MODES,
 	targets = TARGETS,
 	cry = function(ctx: J.EffectContext)
-		return dividend_cry(ctx, RADIANT_USES)
+		return dividend_cry(ctx, DIVIDEND_RADIANT_MANA)
 	end,
 	endOfTurn = end_of_turn,
 }

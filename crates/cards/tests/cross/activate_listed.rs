@@ -612,27 +612,31 @@ mod c_n78_mutate_spell {
 mod c_n81_the_power_to_thrive {
     use super::*;
 
-    fn gains(radiant: bool, mana: i32) {
+    /// The third mode, a card of your hand costing less (patch v0.3.9; it gained mana before).
+    fn reduces(radiant: bool, discount: i32) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(POWER_TO_THRIVE, radiant)], "hand": [STOCKPILE], "mana": 3 },
             "p2": { "hand": [FILLER] },
         }));
         activate_listed(&mut s, POWER_TO_THRIVE, |action| {
-            modes_of(action) == vec!["mana".to_string()]
+            modes_of(action) == vec!["reduce".to_string()]
         });
-        s.expect_mana(P1, 3 + mana);
+        let stockpile = s.card(STOCKPILE).id.clone();
+        s.answer(json!(stockpile));
+        assert_eq!(s.card(&stockpile).cost_mod, -discount);
+        s.expect_mana(P1, 3);
         let id = s.card(POWER_TO_THRIVE).id.clone();
         assert!(listed(&s, &id).is_empty(), "once per turn");
     }
 
     #[test]
-    fn r384_base_the_mana_mode_gains_1() {
-        gains(false, 1);
+    fn r384_base_the_reduce_mode_takes_1_off() {
+        reduces(false, 1);
     }
 
     #[test]
-    fn r384_radiant_the_mana_mode_gains_2() {
-        gains(true, 2);
+    fn r384_radiant_the_reduce_mode_takes_2_off() {
+        reduces(true, 2);
     }
 }
 
@@ -890,21 +894,33 @@ mod m_n97_4_mega_church {
 mod m_n97_6_university {
     use super::*;
 
+    /// The University beside one Vanilla: it Buffs its other permanents, never itself (patch v0.3.9).
+    fn campus(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(UNIVERSITY, radiant), VANILLA], "hand": [FILLER], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
     #[test]
-    fn r384_base_activate_buffs_it_twice_once_a_turn() {
-        let mut s = building(UNIVERSITY, false);
+    fn r384_base_activate_buffs_the_other_permanent_twice_once_a_turn() {
+        let mut s = campus(false);
         let id = s.card(UNIVERSITY).id.clone();
+        let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &id), 2);
+        assert_eq!(upgrades_of(&events, &other), 2);
+        assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 
     #[test]
-    fn r384_radiant_activate_buffs_it_five_times_once_a_turn() {
-        let mut s = building(UNIVERSITY, true);
+    fn r384_radiant_activate_buffs_the_other_permanent_five_times_once_a_turn() {
+        let mut s = campus(true);
         let id = s.card(UNIVERSITY).id.clone();
+        let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &id), 5);
+        assert_eq!(upgrades_of(&events, &other), 5);
+        assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }

@@ -1,4 +1,4 @@
-//! C+ #7 The House (SPEC §8.7 row 7, R406). (3) Field Spell, Rare.
+//! C+ #7 The House (SPEC §8.7 row 7, R406). (4) Field Spell, Rare.
 //! Cry and each start of its controller's turn: summon a Right-house defender (Core #3) with chance
 //! 2 in 3, else a Wrong-House Attacker (C+ #6); Radiant: one of each. Fresh base-face cards, yours, no
 //! Cry (R1), R64's placement; a full board summons nothing and rolls nothing (R129).

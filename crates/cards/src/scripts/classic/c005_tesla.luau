@@ -29,22 +29,29 @@ local function arrival(ctx: J.EffectContext, event: J.GameEvent): string?
 	return nil
 end
 
+-- What Tesla keeps once it has revealed: it zaps only the Unit that revealed it (patch v0.3.9, #831).
+local REVEALED = "revealed"
+
+local function has_revealed(ctx: J.EffectContext): boolean
+	return ctx:recalled(REVEALED) == true
+end
+
 local zap = {
 	id = "tesla-zap",
 	on = { "summoned", "cardResolved" },
 	when = function(ctx: J.EffectContext, event: J.GameEvent)
-		return arrival(ctx, event) ~= nil
+		return not has_revealed(ctx) and arrival(ctx, event) ~= nil
 	end,
 	run = function(ctx: J.EffectContext, event: J.GameEvent)
 		local target = arrival(ctx, event)
-		if target == nil then
+		if target == nil or has_revealed(ctx) then
 			return {}
 		end
 		-- R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
 		-- animates but deals it nothing.
 		local me = ctx:live_self()
 		local shielded = me ~= nil and ctx:immutable_bars(me.id, target)
-		local effects: { J.EffectCall } = {}
+		local effects: { J.EffectCall } = { J.remember({ key = REVEALED, value = true }) }
 		if not shielded then
 			local hit: J.TargetSpec = { of = "instance", instanceId = target }
 			effects[#effects + 1] = J.damage({ to = hit, amount = ctx:param("damage") })

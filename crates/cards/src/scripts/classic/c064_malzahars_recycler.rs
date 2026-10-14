@@ -1,4 +1,4 @@
-//! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (2) Field Spell, Rare.
+//! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (1) Field Spell, Rare.
 //!   Base:    "End of turn: Discard 2 cards. / Whenever you discard cards, draw that many."
 //!   Radiant: "End of turn: Discard 2 cards. / Whenever you discard cards, draw your deck."
 //!   Engine:  The end-of-turn discard (§6.2's hook) is 2 random cards of the hand (R682), all of a

@@ -1,4 +1,4 @@
-//! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (2) Field Spell, Legendary.
+//! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (3) Field Spell, Legendary.
 //!   Base:    "End of Turn: Add a random AI Generated card to your hand. It costs (0)."
 //!   Radiant: "… random Radiant AI generated card …"
 //!   Engine:  "Its controller's end of turn (R62). The pool is the ten AI generated cards (T-AI-1 to

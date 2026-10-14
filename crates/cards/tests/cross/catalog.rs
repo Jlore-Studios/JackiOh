@@ -24,7 +24,9 @@
 //!                    the Losers typed Unit, Otherworldly Removal's three and the Grapes typed Spell
 //!                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
-//!                    (tagged AI). Buff Billy's "3X/3X → 7X/7X" prints 0/0 (its `xStats` carry X).
+//!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
+//!   patch v0.3.9   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
+//!                    lines are what the designer first wrote, the patch what the cards are now.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
 //!   rarity         — SPEC §8's rarity paragraph for Core (32/40/16/7/5) and B2.5's table for
@@ -133,8 +135,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(6, 1),
-        st(12, 2),
+        st(4, 1),
+        st(8, 2),
     ),
     row(
         "3",
@@ -234,7 +236,7 @@ const CORE: &[SpecRow] = &[
         &[G::Felinor],
         R::Rare,
         st(3, 4),
-        st(6, 9),
+        st(6, 8),
     ),
     row(
         "13",
@@ -582,7 +584,7 @@ const CORE: &[SpecRow] = &[
     row(
         "50",
         "K-Pop Fanatic",
-        c(1),
+        c(2),
         T::Unit,
         &[G::Human],
         R::Epic,
@@ -979,7 +981,7 @@ const CORE: &[SpecRow] = &[
         &[],
         R::Epic,
         st(2, 2),
-        st(6, 6),
+        st(4, 4),
     ),
     row(
         "90",
@@ -1208,7 +1210,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "4",
         "Palantir",
-        c(1),
+        c(2),
         T::FieldSpell,
         &[G::Jlockeed],
         R::Legendary,
@@ -1240,14 +1242,14 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "9",
         "Income Tax",
-        c(2),
+        c(3),
         T::Trap,
         &[],
         R::Legendary,
         NO_STATS,
         NO_STATS,
     ),
-    row("10", "Exile", c(1), T::Trap, &[], R::Common, NO_STATS, NO_STATS),
+    row("10", "Exile", c(2), T::Trap, &[], R::Common, NO_STATS, NO_STATS),
     row(
         "11",
         "Mind Melt",
@@ -1452,7 +1454,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "32",
         "Felinor Feelings",
-        c(0),
+        c(1),
         T::Spell,
         &[G::Felinor],
         R::Rare,
@@ -1699,7 +1701,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "63",
         "Crop Dusting",
-        c(2),
+        c(1),
         T::Trap,
         &[G::Plague],
         R::Common,
@@ -1709,7 +1711,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "64",
         "Malzahar's Recycler",
-        c(2),
+        c(1),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -2053,7 +2055,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "7",
         "The House",
-        c(3),
+        c(4),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -2165,7 +2167,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "12.7",
         "Legion of the Hungry",
         c(2),
-        T::FieldSpell,
+        T::Spell,
         &[G::Pancake, G::Token],
         R::Token,
         NO_STATS,
@@ -2178,8 +2180,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::FieldSpell,
         &[G::Pancake, G::Token],
         R::Token,
-        st(10, 3),
-        st(20, 6),
+        st(7, 3),
+        st(14, 6),
     ),
     row(
         "13",
@@ -2359,8 +2361,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(9, 9),
-        st(18, 18),
+        st(5, 5),
+        st(10, 10),
     ),
     row(
         "27",
@@ -2435,7 +2437,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "32.2",
         "Brawl",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Token],
         R::Token,
@@ -2765,7 +2767,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "60",
         "Doctors Orders",
-        c(1),
+        c(2),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -2777,7 +2779,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         "Bauble Bubble",
         c(1),
         T::FieldSpell,
-        &[G::Fruit],
+        &[],
         R::Rare,
         NO_STATS,
         NO_STATS,
@@ -2795,7 +2797,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "63",
         "Fruit Tree",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Fruit],
         R::Rare,
@@ -3025,7 +3027,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "78",
         "Claude's Datacenter",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Legendary,
@@ -3157,7 +3159,7 @@ const MEDITATIVE: &[SpecRow] = &[
         &[],
         R::Common,
         st(5, 9),
-        st(11, 20),
+        st(10, 18),
     ),
     row(
         "3",
@@ -3172,9 +3174,9 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "4",
         "Juicy Kumquat Melon",
-        c(4),
+        c(2),
         T::Spell,
-        &[],
+        &[G::Fruit],
         R::Epic,
         NO_STATS,
         NO_STATS,
@@ -3256,8 +3258,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Epic,
-        st(6, 8),
-        st(12, 16),
+        st(5, 7),
+        st(10, 14),
     ),
     row(
         "13",
@@ -3321,7 +3323,7 @@ const MEDITATIVE: &[SpecRow] = &[
     ),
     row(
         "19",
-        "Expedition1234",
+        "Expedition123",
         c(1),
         T::Spell,
         &[G::Quickdraw],
@@ -3492,7 +3494,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "32",
         "Spiritually 中国",
-        c(2),
+        c(3),
         T::Spell,
         &[G::Cn],
         R::Epic,
@@ -3502,7 +3504,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "33",
         "First Day of 学校",
-        c(0),
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Rare,
@@ -3552,7 +3554,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "38",
         "H1B Printer",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Cn, G::Ky],
         R::Rare,
@@ -3642,7 +3644,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "42",
         "CN Flea Market",
-        c(0),
+        c(1),
         T::Spell,
         &[G::Cn],
         R::Legendary,
@@ -3724,7 +3726,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "YileGPT Tamed",
         c(2),
         T::Unit,
-        &[G::Cn, G::Acclaimed],
+        &[G::Cn, G::Acclaimed, G::Catalyst],
         R::Mythic,
         st(2, 6),
         st(4, 12),
@@ -3734,7 +3736,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "YileGPT Unleashed",
         c(10),
         T::Unit,
-        &[G::Cn, G::Acclaimed, G::Token],
+        &[G::Cn, G::Acclaimed, G::Prime, G::Token],
         R::Token,
         st(8, 20),
         st(16, 40),
@@ -3744,7 +3746,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "Yile's Virus",
         c(2),
         T::Unit,
-        &[G::Cn, G::Acclaimed, G::Token],
+        &[G::Cn, G::Token],
         R::Token,
         st(0, 8),
         st(0, 16),
@@ -3754,7 +3756,7 @@ const MEDITATIVE: &[SpecRow] = &[
         "AI Girlfriend",
         c(4),
         T::FieldSpell,
-        &[G::Cn, G::Acclaimed, G::Token],
+        &[G::Cn, G::Token],
         R::Token,
         st(2, 30),
         st(4, 60),
@@ -3836,8 +3838,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(5, 1),
-        st(10, 2),
+        st(4, 1),
+        st(8, 2),
     ),
     row(
         "58",
@@ -3982,7 +3984,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "71",
         "Pareto Optimality",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Mythic,
@@ -4082,7 +4084,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "80",
         "Aluneth",
-        c(3),
+        c(2),
         T::FieldSpell,
         &[G::Quickdraw],
         R::Legendary,
@@ -4126,8 +4128,8 @@ const MEDITATIVE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(3, 3),
-        st(6, 6),
+        st(1, 1),
+        st(2, 2),
     ),
     row(
         "85",
@@ -4172,7 +4174,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "89",
         "Jlarna",
-        c(3),
+        c(4),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -4318,7 +4320,7 @@ const MEDITATIVE: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(0, 3),
-        st(0, 8),
+        st(0, 6),
     ),
     row(
         "97.2",
@@ -4358,7 +4360,7 @@ const MEDITATIVE: &[SpecRow] = &[
         &[G::Token],
         R::Token,
         st(5, 10),
-        st(10, 30),
+        st(10, 20),
     ),
     row(
         "97.6",
@@ -4398,9 +4400,9 @@ const MEDITATIVE: &[SpecRow] = &[
         &[G::Jlockeed, G::Token],
         R::Token,
         st(0, 20),
-        st(0, 50),
+        st(0, 40),
     ),
-    row("98", "Showdown", c(2), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
+    row("98", "Showdown", c(1), T::Spell, &[], R::Rare, NO_STATS, NO_STATS),
     row(
         "99",
         "Paranoia",
@@ -5408,14 +5410,16 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_45_and_91_catalyst_and_no_other_entry()
+    fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_45_49_and_91_catalyst_and_no_other_entry()
      {
+        // Meditative #49 YileGPT Tamed since patch v0.3.9 (#831).
         assert_eq!(
             tagged(Tag::Catalyst),
             strings(&[
                 "classicplus-038",
                 "classicplus-046",
                 "meditative-045",
+                "meditative-049",
                 "meditative-091"
             ])
         );
@@ -5429,15 +5433,19 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 "classicplus-038-1",
                 "classicplus-046-1",
                 "meditative-045-1",
+                "meditative-049-1",
                 "meditative-091-1"
             ])
         );
-        // Every entry named "<card> Prime" carries the tag, and each is the token its Catalyst defines.
+        // Every entry named "<card> Prime" carries the tag, and each Prime is the token its Catalyst
+        // defines. M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck, took the tag in
+        // patch v0.3.9 (#831) and kept its name.
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.ends_with(" Prime"))
             .map(|entry| entry.id.clone())
             .collect();
+        named.push("meditative-049-1".to_string());
         named.sort();
         assert_eq!(named, tagged(Tag::Prime), "entries named <card> Prime");
         for id in tagged(Tag::Prime) {
@@ -5448,13 +5456,14 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 catalyst.is_some_and(|entry| entry.tags.contains(&Tag::Catalyst)),
                 "{id}"
             );
-            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime".
-            if id == "meditative-091-1" {
-                assert_eq!(
-                    prime.map(|entry| entry.name.clone()),
-                    Some("Windfurious Prime".to_string()),
-                    "{id}"
-                );
+            // The designer named M #91.1 Windfurious Prime, not "Windfast Prime", and M #49.1 YileGPT
+            // Unleashed.
+            if let Some(name) = match id.as_str() {
+                "meditative-091-1" => Some("Windfurious Prime"),
+                "meditative-049-1" => Some("YileGPT Unleashed"),
+                _ => None,
+            } {
+                assert_eq!(prime.map(|entry| entry.name.clone()), Some(name.to_string()), "{id}");
                 continue;
             }
             assert_eq!(
@@ -5480,10 +5489,10 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     }
 
     #[test]
-    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_its_three_tokens_acclaimed_and_no_other_entry()
+    fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_yilegpt_unleashed_acclaimed_and_no_other_entry()
      {
-        // §8.8 rows 49 to 49.3 print the tag on YileGPT Tamed, YileGPT Unleashed, Yile's Virus and
-        // AI Girlfriend (the designer's "Acclaimed").
+        // §8.8 rows 49 and 49.1 print the tag on YileGPT Tamed and YileGPT Unleashed (the designer's
+        // "Acclaimed"); Yile's Virus and AI Girlfriend lost it in patch v0.3.9 (#831).
         assert_eq!(
             tagged(Tag::Acclaimed),
             strings(&[
@@ -5491,8 +5500,6 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 "classicplus-037",
                 "meditative-049",
                 "meditative-049-1",
-                "meditative-049-2",
-                "meditative-049-3",
             ])
         );
     }

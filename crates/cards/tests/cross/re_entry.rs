@@ -734,8 +734,14 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         until_active(&mut g, PlayerId::P1);
         until_active(&mut g, PlayerId::P2);
         // Turn 12, p2: the fused card again. Silas's part rotates right (from p2's seat p1's backrow
-        // 3 -> 2), and lane 2 is Locked, so the prey is bounced to p1's hand (R14); the Kpop part then
-        // schedules the steal of the prey, which has already left the field.
+        // 3 -> 2), and lane 2 is held, so the prey is bounced to p1's hand (R14, R88); the Kpop part then
+        // schedules the steal of the prey, which has already left the field. The Lock alone bounced it
+        // until patch v0.3.9 (a rotation enters a Locked zone now, R831000), so the zone is held here
+        // as a dying Reborn unit's is (§3.2, R64).
+        jackioh_engine::zones::reserve_zone(
+            g.state_mut(),
+            ZoneRef { player: PlayerId::P1, row: Row::Backrow, lane: 2 },
+        );
         g.play(
             fused.id.as_str(),
             json!({ "zone": 1, "modes": ["right"], "targets": at(&prey) }),

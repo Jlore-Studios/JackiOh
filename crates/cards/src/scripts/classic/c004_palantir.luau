@@ -1,36 +1,24 @@
 --!strict
 local J = require("@jackioh")
 
--- Where the Radiant face keeps the cost it has stolen so far.
-local STOLEN_COST = "stolenCost"
+-- Where the Radiant face counts the Spells it has stolen so far.
+local STOLEN = "stolen"
 
--- Whether `tags` holds the Book tag.
-local function has_book(tags: { string }): boolean
-	for _, tag in ipairs(tags) do
-		if tag == "Book" then
-			return true
-		end
-	end
-	return false
-end
+-- Patch v0.3.9 (#831): the Spells it answers are the (1) Cost ones (R65: a card's own cost as it
+-- stands out of play, an X Spell 0), Books or not.
+local STOLEN_COST = 1
 
--- The opponent's announced Spell (a Book only, on the base face), or nil: the announced card's
--- instance id, which is what this answers.
-local function answered(ctx: J.EffectContext, event: J.GameEvent, books_only: boolean): string?
+-- The opponent's announced (1) Cost Spell, or nil: the announced card's instance id, which is what
+-- this answers.
+local function answered(ctx: J.EffectContext, event: J.GameEvent): string?
 	if event.type ~= "cardAnnounced" then
 		return nil
 	end
 	if event.player == ctx:controller() or event.cardType ~= "Spell" then
 		return nil
 	end
-	-- MD-B15, R923: a granted Book tag counts — read the announced card itself when it still exists,
-	-- else its definition's tags.
-	if books_only then
-		local card = ctx:find_instance(event.instanceId)
-		local tags = if card ~= nil then ctx:tags_of(event.instanceId) else ctx:def_of(event.defId).tags
-		if not has_book(tags) then
-			return nil
-		end
+	if ctx:own_cost(event.instanceId) ~= STOLEN_COST then
+		return nil
 	end
 	return event.instanceId
 end
@@ -41,57 +29,66 @@ local function draw_limit(ctx: J.HookArgs)
 	return { limit }
 end
 
--- Base: "Tribute this to steal it" — no question, the price is paid to steal.
-local steal_book = {
-	id = "palantir-book",
-	on = { "cardAnnounced" },
-	when = function(ctx: J.EffectContext, event: J.GameEvent)
-		return answered(ctx, event, true) ~= nil
-	end,
-	run = function(ctx: J.EffectContext, event: J.GameEvent)
-		local book = answered(ctx, event, true)
-		if book == nil then
-			return {}
-		end
-		return {
-			J.sacrifice({ target = { of = "self" } }),
-			J.counter_play({ to = "thief", target = { of = "instance", instanceId = book } }),
-		}
-	end,
-}
+-- "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
+-- random but aimed in your favour (R831001, R452, R656).
+local function steal_and_cast(spell: string): { J.EffectCall }
+	local card: J.TargetSpec = { of = "instance", instanceId = spell }
+	return {
+		J.counter_play({ to = "thief", target = card }),
+		J.cast({ target = card, random = true, targetEnemies = true }),
+	}
+end
 
--- Radiant: steal every Spell, count what it cost, and Tribute this at the threshold.
-local steal_spells = {
-	id = "palantir-spell",
+-- Base: "Tribute this to steal it" — no question, the price is paid to steal.
+local steal_one = {
+	id = "palantir-steal",
 	on = { "cardAnnounced" },
 	when = function(ctx: J.EffectContext, event: J.GameEvent)
-		return answered(ctx, event, false) ~= nil
+		return answered(ctx, event) ~= nil
 	end,
 	run = function(ctx: J.EffectContext, event: J.GameEvent)
-		local spell = answered(ctx, event, false)
+		local spell = answered(ctx, event)
 		if spell == nil then
 			return {}
 		end
-		-- R65: its own cost as it stands out of play, an X Spell 0 (R396).
-		local cost = ctx:own_cost(spell) or 0
-		local before = ctx:recalled(STOLEN_COST)
-		local total = (if type(before) == "number" then before else 0) + math.max(cost, 0)
-		local steal = J.counter_play({ to = "thief", target = { of = "instance", instanceId = spell } })
-		local kept = J.remember({ key = STOLEN_COST, value = total })
-		if total >= ctx:param("threshold") then
-			return { steal, kept, J.sacrifice({ target = { of = "self" } }) }
+		local effects = { J.sacrifice({ target = { of = "self" } }) }
+		for _, effect in ipairs(steal_and_cast(spell)) do
+			effects[#effects + 1] = effect
 		end
-		return { steal, kept }
+		return effects
+	end,
+}
+
+-- Radiant: steal each one, count them, and Tribute this once it has stolen {threshold}.
+local steal_some = {
+	id = "palantir-spells",
+	on = { "cardAnnounced" },
+	when = function(ctx: J.EffectContext, event: J.GameEvent)
+		return answered(ctx, event) ~= nil
+	end,
+	run = function(ctx: J.EffectContext, event: J.GameEvent)
+		local spell = answered(ctx, event)
+		if spell == nil then
+			return {}
+		end
+		local before = ctx:recalled(STOLEN)
+		local total = (if type(before) == "number" then before else 0) + 1
+		local effects = steal_and_cast(spell)
+		effects[#effects + 1] = J.remember({ key = STOLEN, value = total })
+		if total >= ctx:param("threshold") then
+			effects[#effects + 1] = J.sacrifice({ target = { of = "self" } })
+		end
+		return effects
 	end,
 }
 
 return {
 	base = {
 		drawLimit = draw_limit,
-		triggers = { steal_book },
+		triggers = { steal_one },
 	},
 	radiant = {
 		drawLimit = draw_limit,
-		triggers = { steal_spells },
+		triggers = { steal_some },
 	},
 }

@@ -9,11 +9,17 @@ end
 
 local base = {
 	discardGuard = guard,
+	-- "Cry: Draw {draw}" (patch v0.3.9, #831): the declared number `draw` (R386).
+	cry = function(ctx: J.EffectContext)
+		return {
+			J.draw({ count = ctx:param("draw") }),
+		}
+	end,
 }
 
 local radiant = {
 	discardGuard = guard,
-	-- "Cry: Draw 1 and gain 2 mana": the declared numbers `draw` and `mana` (R386).
+	-- "Cry: Draw {draw} and gain {mana} mana": the declared numbers `draw` and `mana` (R386).
 	cry = function(ctx: J.EffectContext)
 		return {
 			J.draw({ count = ctx:param("draw") }),

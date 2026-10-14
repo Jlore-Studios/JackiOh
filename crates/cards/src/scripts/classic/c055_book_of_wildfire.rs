@@ -34,7 +34,6 @@ mod tests {
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const FILLER: &str = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
     const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
-    const VITAL_KILL: &str = "classic-029"; // Radiant: … Add a Book of Flame to your hand.
     const BOOK_OF_FLAME: &str = "classic-016";
 
     use crate::js;
@@ -149,10 +148,11 @@ mod tests {
         }
 
         #[test]
-        fn r381_nothing_names_it_c_23_and_c_29_name_book_of_flame_c_16_never_book_of_wildfire() {
+        fn r381_nothing_names_it_c_23_names_book_of_flame_c_16_never_book_of_wildfire() {
             crate::register_all();
             assert_eq!(js(&crate::card_def("classic-023"))["refs"], json!(["classic-016"]));
-            assert_eq!(js(&crate::card_def("classic-029"))["refs"], json!(["classic-016"]));
+            // C #29 named C #16 too until patch v0.3.9 (#831).
+            assert!(js(&crate::card_def("classic-029")).get("refs").is_none());
             assert_eq!(crate::card_def("classic-016").name, "Book of Flame");
             assert_eq!(crate::card_def(ID).name, "Book of Wildfire");
         }
@@ -264,16 +264,6 @@ mod tests {
                     &json!({ "owner": "p2", "zone": { "z": "hand", "player": "p2" } }),
                 ));
                 s.expect_health(P2, 30);
-            }
-
-            #[test]
-            fn r381_c_29s_radiant_face_adds_a_book_of_flame_never_this_card() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [{ "def": VITAL_KILL, "radiant": true }, FILLER] } }));
-                s.play(VITAL_KILL, json!({ "targets": [hero("p2")] }));
-                let added: Vec<String> =
-                    s.hand(P1).into_iter().map(|card| card.def_id).filter(|def_id| def_id != FILLER).collect();
-                assert_eq!(added, vec![BOOK_OF_FLAME]);
             }
 
             #[test]

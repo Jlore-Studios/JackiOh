@@ -1,6 +1,6 @@
-//! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/9 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
+//! #12 Duplicating Felinors (SPEC §8.1): 3/4 → 6/8 Unit, Felinor, cost 2, Rare. Base "Cry: summon a
 //! copy of this unit"; the radiant cell says "Same", so the radiant face runs the same text (§8
-//! Conventions) on the 6/9 body, and its copy is a Radiant 6/9 too (R275). §8's Engine cell: "Copy
+//! Conventions) on the 6/8 body, and its copy is a Radiant 6/8 too (R275). §8's Engine cell: "Copy
 //! per R57, placed per R64; the copy's Cry does not fire (§6.2)".
 //!
 //! R57: the copy keeps the radiant flag, buffs, granted keywords, Vanilla state and `statsOverride`

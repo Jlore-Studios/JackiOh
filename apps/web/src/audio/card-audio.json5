@@ -1393,7 +1393,7 @@
     "meditative-018": { // Expedition12
       cast: { voice: "prof", text: "Sacrifice now, shine later." },
     },
-    "meditative-019": { // Expedition1234
+    "meditative-019": { // Expedition123
       cast: { voice: "prof", text: "The long road it is." },
     },
     "meditative-019-1": { // Temporal Rift

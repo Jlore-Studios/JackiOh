@@ -4,17 +4,14 @@ local J = require("@jackioh")
 local CHOSEN: J.TargetSpec = { of = "chosen" }
 
 -- What the chosen permanent's side and row make of the removed Plague Counter, read as the
--- activation runs: an enemy permanent is exiled (Radiant: fused onto a card of yours of its type, or
--- exiled if you have none); your backrow card draws; your Unit attacks a random enemy.
-local function outcome(ctx: J.EffectContext, fuses: boolean): { J.EffectCall }
+-- activation runs: an enemy permanent is exiled; your backrow card draws; your Unit attacks a random
+-- enemy.
+local function outcome(ctx: J.EffectContext): { J.EffectCall }
 	local card = ctx:instance_of(CHOSEN)
 	if card == nil or card.zone.z ~= "field" then
 		return {}
 	end
 	if card.controller ~= ctx:controller() then
-		if fuses then
-			return { J.fuse_onto_your_card({ target = CHOSEN }) }
-		end
 		return { J.exile({ target = CHOSEN }) }
 	end
 	if card.zone.row == "backrow" then
@@ -23,13 +20,15 @@ local function outcome(ctx: J.EffectContext, fuses: boolean): { J.EffectCall }
 	return { J.forced_attack_random({ attacker = CHOSEN, times = ctx:param("attacks") }) }
 end
 
-local function mutate(fuses: boolean)
+-- Patch v0.3.9 (#831): the base face activates once a turn, and the Radiant face, which fused an
+-- enemy permanent before, runs the base face's text with Activate ♾️.
+local function mutate(uses: J.ActivationUses)
 	return {
 		activations = {
 			{
 				id = "mutate",
 				label = "Remove a Plague Counter",
-				uses = "unlimited",
+				uses = uses,
 				targets = {
 					{
 						kind = "target",
@@ -48,7 +47,7 @@ local function mutate(fuses: boolean)
 				end,
 				run = function(ctx: J.EffectContext)
 					local effects = { J.consume_plague({ target = CHOSEN }) }
-					for _, effect in ipairs(outcome(ctx, fuses)) do
+					for _, effect in ipairs(outcome(ctx)) do
 						effects[#effects + 1] = effect
 					end
 					return effects
@@ -59,6 +58,6 @@ local function mutate(fuses: boolean)
 end
 
 return {
-	base = mutate(false),
-	radiant = mutate(true),
+	base = mutate(1),
+	radiant = mutate("unlimited"),
 }

@@ -1,6 +1,7 @@
 //! M #1 Disruptive Disruptor (SPEC §8.8 row 1, BUILD M10 row M 1). (2) Field Spell, Common.
-//!   Base:    "Aura: You can't be forced to discard cards during your opponent's turn."
-//!   Radiant: the Aura, plus "Cry: Draw {draw|card|cards} and gain {mana} mana." (1, 2)
+//!   Base:    "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw
+//!            {draw|card|cards}." (1)
+//!   Radiant: the Aura, plus "Cry: Draw {draw|card|cards} and gain {mana} mana." (2, 2)
 //!
 //! The Aura is a discard guard (R800): a pure-read hook beside `draw_limit` (R457), read off the cards
 //! acting on the field while it is not the guarded player's turn. An effect's discard (`discard`,
@@ -8,15 +9,16 @@
 //! and reports one public `discardPrevented`. A discard paid as a price (an Activate's cost, R384; a
 //! targeting cost, R450) never asks the guard, and several Disruptors do no more than one.
 //!
-//! The Radiant Cry is an ordinary `draw` then `gain_mana` (R1: fires when played or cast). Both numbers
-//! are declared and read through `param` (R386); the base face prints neither (R749).
+//! The Cry is an ordinary `draw`, then on the Radiant face `gain_mana` (R1: fires when played or cast).
+//! Both numbers are declared and read through `param` (R386); the base face prints no mana (R749,
+//! R824000). Patch v0.3.9 (#831) gave the base face its Cry and the Radiant face a draw of 2, not 1.
 
 pub const ID: &str = "meditative-001";
 
 // M #1 Disruptive Disruptor — SPEC §8.8 row 1, BUILD M10 row M 1: "Aura: an effect's discard from
 // your hand while it is not your turn moves nothing, draws no rng and reports `discardPrevented`
 // (R800); a discard you pay still happens; two Disruptors report once; in the graveyard it guards
-// nothing; radiant Cry draws 1 and gains 2 mana; its tuned numbers (draw, mana) read through
+// nothing; its Cry draws 1 (patch v0.3.9); radiant Cry draws 2 and gains 2 mana; its tuned numbers (draw, mana) read through
 // `param()` (R386)".
 #[cfg(test)]
 mod tests {
@@ -62,7 +64,7 @@ mod tests {
             let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.discard_guard.is_some());
             assert!(scripts.radiant.discard_guard.is_some());
-            assert!(scripts.base.cry.is_none());
+            assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }
 
@@ -144,14 +146,10 @@ mod tests {
         }
 
         #[test]
-        fn radiant_cry_draws_1_and_gains_2_mana() {
+        fn its_cry_draws_1_and_gains_no_mana() {
             crate::register_all();
             let mut s = scenario(json!({
-                "p1": {
-                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
-                    "mana": 9,
-                    "library": [VANILLA, VANILLA],
-                },
+                "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA] },
                 "p2": { "hand": [FILLER] },
             }));
 
@@ -159,6 +157,41 @@ mod tests {
 
             // One played, one drawn: the hand holds the filler and the draw.
             assert_eq!(s.hand(P1).len(), 2);
+            assert_eq!(s.pile(P1, "library").len(), 1);
+            s.expect_mana(P1, 7);
+            s.expect_in_zone(DISRUPTOR, "field");
+        }
+
+        #[test]
+        fn r386_its_draw_reads_through_param() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [DISRUPTOR, FILLER], "mana": 9, "library": [VANILLA, VANILLA, VANILLA] },
+                "p2": { "hand": [FILLER] },
+            }));
+            step_param(s.card_mut(DISRUPTOR), "draw", 1);
+
+            s.play(DISRUPTOR, json!({}));
+
+            assert_eq!(s.hand(P1).len(), 3);
+        }
+
+        #[test]
+        fn radiant_cry_draws_2_and_gains_2_mana() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
+                    "mana": 9,
+                    "library": [VANILLA, VANILLA, VANILLA],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+
+            s.play(DISRUPTOR, json!({}));
+
+            // One played, two drawn: the hand holds the filler and the draws.
+            assert_eq!(s.hand(P1).len(), 3);
             assert_eq!(s.pile(P1, "library").len(), 1);
             s.expect_mana(P1, 9);
             s.expect_in_zone(DISRUPTOR, "field");
@@ -171,7 +204,7 @@ mod tests {
                 "p1": {
                     "hand": [{ "def": DISRUPTOR, "radiant": true }, FILLER],
                     "mana": 9,
-                    "library": [VANILLA, VANILLA, VANILLA],
+                    "library": [VANILLA, VANILLA, VANILLA, VANILLA],
                 },
                 "p2": { "hand": [FILLER] },
             }));
@@ -180,7 +213,7 @@ mod tests {
 
             s.play(DISRUPTOR, json!({}));
 
-            assert_eq!(s.hand(P1).len(), 3);
+            assert_eq!(s.hand(P1).len(), 4);
             s.expect_mana(P1, 10);
         }
 
@@ -347,10 +380,10 @@ mod tests {
             }
 
             s.expect_in_zone(&disruptor, "field");
-            // A cast is free: 3 kept, plus the Cry's temporary 2; the draw took one card.
+            // A cast is free: 3 kept, plus the Cry's temporary 2; the draw took two cards.
             s.expect_mana(P1, 5);
-            assert_eq!(s.pile(P1, "library").len(), 1);
-            assert_eq!(s.hand(P1).len(), 2);
+            assert_eq!(s.pile(P1, "library").len(), 0);
+            assert_eq!(s.hand(P1).len(), 3);
         }
     }
 }

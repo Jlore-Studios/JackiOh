@@ -1,5 +1,5 @@
 //! M #97.9 Jlockheed's Headquarters (SPEC §8.8 row 97.9, R1261). (4) Unit, Jlockeed, Token (printed
-//! Mythic), 0/20 → 0/50.
+//! Mythic), 0/20 → 0/40.
 //!   Base:    "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
 //!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
 //!   Engine:  "Activate (R384; Activate 2 on the Radiant face). C+ #2 Groom Shroom's fill: each empty,

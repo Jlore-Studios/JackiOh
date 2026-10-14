@@ -1,4 +1,4 @@
-//! M #49.3 AI Girlfriend (SPEC §8.8 row 49.3): (4) Field Spell, CN, Acclaimed, Token (printed
+//! M #49.3 AI Girlfriend (SPEC §8.8 row 49.3): (4) Field Spell, CN, Token (printed
 //! Mythic), 2/30 → 4/60, Animated, Can't attack.
 //!
 //! "Animated, Can't attack. Start of turn: Every enemy Unit attacks this. After this is attacked:

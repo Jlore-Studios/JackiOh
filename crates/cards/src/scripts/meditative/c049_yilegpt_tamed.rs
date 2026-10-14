@@ -1,4 +1,4 @@
-//! M #49 YileGPT Tamed (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Mythic, 2/6 → 4/12.
+//! M #49 YileGPT Tamed (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Catalyst, Mythic, 2/6 → 4/12.
 //!
 //! Base:    "Cry: Summon a Yile's Virus for your opponent across from this.
 //!           Death: Put a YileGPT Unleashed on the bottom of your deck."

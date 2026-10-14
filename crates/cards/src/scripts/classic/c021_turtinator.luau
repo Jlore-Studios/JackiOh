@@ -1,7 +1,7 @@
 --!strict
 local J = require("@jackioh")
 
--- Activate ♾️ (R384): the cost is one Tribute carried in the `activate` action, never Turtinator
+-- Activate (R384), once a turn since patch v0.3.9 (#831; Activate ♾️ before): the cost is one Tribute carried in the `activate` action, never Turtinator
 -- itself (R683). The hit is the tributed unit's Attack as it stood when paid (R78, recorded by
 -- `subsystems.activationPaid`) times the declared multiplier; an amount of 0 is no hit (R63).
 local base = {
@@ -9,7 +9,7 @@ local base = {
 		{
 			id = "eat",
 			label = "Tribute another Unit. Deal damage equal to {multiplier}× its Attack",
-			uses = "unlimited",
+			uses = 1,
 			cost = { tribute = 1, tributeExcludesSelf = true },
 			targets = {
 				{ kind = "target", min = 1, max = 1, filter = { of = { "unit", "hero" } } },

@@ -1,7 +1,7 @@
 --!strict
 local J = require("@jackioh")
 
--- R408's Cry reading: {cards} different random cards of your deck (R60), all of them if fewer, are
+-- R408's reading, the Spell's resolution (a Field Spell's Cry until patch v0.3.9, #831): {cards} different random cards of your deck (R60), all of them if fewer, are
 -- exiled, then the Units among them are summoned out of exile in the order they were exiled. The
 -- picks are drawn as the Cry resolves; nothing in this list can pause between them.
 local function legion(ctx: J.EffectContext): { J.EffectCall }

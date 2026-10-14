@@ -20,11 +20,11 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     "bounce all enemy units": { label: "Bounce enemy units", detail: "Your opponent's units return to their hand. Then draw 1." },
     "destroy all enemy units": { label: "Destroy enemy units", detail: "Destroy every enemy unit. Then draw 1." },
   },
-  // #24 Efficiency Dividend: "Deal X damage, heal a target 2X, or gain floor(X/2) mana next turn".
+  // #24 Efficiency Dividend: "Deal X+1 damage, heal a target 4X, or gain X mana next turn".
   "core-024": {
-    damage: { label: "Deal X damage", detail: "Deal X damage." },
-    heal: { label: "Heal 2X", detail: "Heal a target by twice X." },
-    mana: { label: "Mana next turn", detail: "Gain half of X, rounded down, as mana next turn." },
+    damage: { label: "Deal X+1 damage", detail: "Deal X plus 1 damage." },
+    heal: { label: "Heal 4X", detail: "Heal a target by four times X." },
+    mana: { label: "Mana next turn", detail: "Gain X mana next turn." },
   },
   // #30 Archivist: "draw the highest-cost card in your library, or the lowest".
   "core-030": {
@@ -97,12 +97,12 @@ export const RADIANT_MODE_TEXT: Readonly<Record<string, Readonly<Record<string, 
   },
   // M #98 Showdown, radiant: "This turn, after you put a card into that lane, cast Book of Buff on it."
   "meditative-098": lanes("Lock the other four lanes until the start of your next turn. This turn, Book of Buff is cast on each card you put into this one."),
-  // #24 Efficiency Dividend, radiant: "Deal 2X damage, heal a target 4X, or gain X mana next turn"
-  // (§8 #24, R275), every mode doubled.
+  // #24 Efficiency Dividend, radiant: "Deal 2X+1 damage, heal a target 8X, or gain X+1 mana next turn"
+  // (§8 #24, R275).
   "core-024": {
-    damage: { label: "Deal 2X damage", detail: "Deal twice X damage." },
-    heal: { label: "Heal 4X", detail: "Heal a target by four times X." },
-    mana: { label: "Mana next turn", detail: "Gain X mana next turn." },
+    damage: { label: "Deal 2X+1 damage", detail: "Deal twice X plus 1 damage." },
+    heal: { label: "Heal 8X", detail: "Heal a target by eight times X." },
+    mana: { label: "Mana next turn", detail: "Gain X plus 1 mana next turn." },
   },
 };
 

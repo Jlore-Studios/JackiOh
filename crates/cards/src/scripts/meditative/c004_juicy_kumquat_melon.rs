@@ -1,4 +1,4 @@
-//! M #4 Juicy Kumquat Melon (SPEC §8.8 row 4, BUILD M10 row M 4). (4) Spell, Epic.
+//! M #4 Juicy Kumquat Melon (SPEC §8.8 row 4, BUILD M10 row M 4). (2) Spell, Fruit, Epic.
 //!   Base:    "Draw a (0), (1), (2), (3), (4) and (5) Cost Meditative card."
 //!   Radiant: the same, plus "They cost ({discount}) less." (2)
 //!

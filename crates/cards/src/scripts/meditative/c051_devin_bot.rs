@@ -1,11 +1,11 @@
 //! M #51 Devin Bot (SPEC §8.8 row 51, R1080): (2) Unit, Legendary, 1/1 → 2/2.
 //!
-//! Base:    "Reborn\nCry: Fill your board with random 1/1 Units."
-//! Radiant: "Reborn\nCry: Fill your board with random Radiant 1/1 Units."
+//! Base:    "Cry: Fill your board with random 1/1 Units."
+//! Radiant: "Cry: Fill your board with random Radiant 1/1 Units."
 //! Engine: `fill_board_random` with `{ type: Unit, stats: {1, 1}, withTokens: true }` (R1080): every
 //! empty, unlocked unit zone, left to right, gets its own pick from the match rng, repeats allowed,
 //! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
-//! Summons fire no Cry (R1), and Reborn's return does not fire the Cry again.
+//! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.9.
 
 pub const ID: &str = "meditative-051";
 

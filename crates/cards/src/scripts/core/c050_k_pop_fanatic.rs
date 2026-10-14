@@ -1,4 +1,5 @@
 //! #50 K-Pop Fanatic (SPEC §8.2; R13, R15, R62, R68, R76, R81, R90, R126, R127, R174, R275, R282, R437).
+//!   (2) Unit, Human, Epic, 1/1 → 2/2.
 //!   Base:    "Cry: choose an enemy permanent; at the start of your next turn, steal it"
 //!   Radiant: "Divine Shield; Cry: choose an enemy permanent; at the start of your next turn, steal
 //!            it; it becomes Radiant" (R275; "Divine Shield" is printed in `catalog.json`).

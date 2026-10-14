@@ -8,9 +8,10 @@ local function has_activated(ctx: J.EffectContext): boolean
 	return ctx:recalled(ACTIVATED) == true
 end
 
--- The answer this play gets: "activate" (the {plays}th play of a turn), "sale" (once activated), or nil.
+-- The answer this play gets: "activate" (its controller's {plays}th play of a turn), "sale" (once
+-- activated), or nil. Only its controller's plays count and sell (patch v0.3.9, #831).
 local function answer(ctx: J.EffectContext, event: J.GameEvent): string?
-	if event.type ~= "cardPlayed" then
+	if event.type ~= "cardPlayed" or event.player ~= ctx:controller() then
 		return nil
 	end
 	local reached = ctx:cards_played_this_turn(event.player) == ctx:param("plays")

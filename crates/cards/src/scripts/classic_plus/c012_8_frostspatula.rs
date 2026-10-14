@@ -1,5 +1,5 @@
 //! C+ #12.8 Frostspatula (SPEC §8.7 row 12.8, R409): (2) Field Spell, Pancake, Token (printed Legendary),
-//! 10/3 → 20/6.
+//! 7/3 → 14/6.
 //!   Base:    "Animated on your turn, Rush. Death: Summon a copy of every Unit this destroyed."
 //!   Radiant: "… and make them Radiant."
 //! Animated on your turn and Rush are catalog keywords the engine runs (B3.1, R383). It remembers each

@@ -1,4 +1,4 @@
-//! M #49.1 YileGPT Unleashed (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Token (printed
+//! M #49.1 YileGPT Unleashed (SPEC §8.8 row 49.1): (10) Unit, CN, Acclaimed, Prime, Token (printed
 //! Mythic), 8/20 → 16/40, Can't attack (Radiant: Can't attack, Armor 5).
 //!
 //! "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …" plus "Start of turn: Make

@@ -1,4 +1,4 @@
-//! M #57 Clip-Farming Critikal (SPEC §8.8 row 57, R1081): (1) Unit, Common, 5/1 → 10/2.
+//! M #57 Clip-Farming Critikal (SPEC §8.8 row 57, R1081): (1) Unit, Common, 4/1 → 8/2.
 //!
 //! Base:    "Combo: Return the card you played before this to hand."
 //! Radiant: "Combo: Return the card you played before this to hand. Make it Radiant."

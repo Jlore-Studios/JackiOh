@@ -1,11 +1,13 @@
-//! M #84 Volatility (SPEC §8.8 row 84): (1) Unit, Common, 3/3 → 6/6.
+//! M #84 Volatility (SPEC §8.8 row 84): (1) Unit, Common, 1/1 → 2/2.
 //!
-//! Base:    "Buffs and Nerfs are twice as effective on this."
-//! Radiant: "Buffs are three times as effective on this."
+//! Base:    "Cry: Buff this.\nBuffs and Nerfs are twice as effective on this."
+//! Radiant: "Cry: Buff this.\nBuffs are three times as effective on this."
 //! Engine: NEW: ME-TUNEMULT (R1160) — a static flag `tuneMultiplier`, read off the card's running
 //! face wherever it is (field, hand, deck), by which each Buff or Nerf application on this card is
 //! scaled: still one application and one draw, with the change N times as large. "Twice" and
-//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier.
+//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier. Patch v0.3.9
+//! (#831) made it 1/1 and gave both faces "Cry: Buff this": one Upgrade of itself, which its own
+//! multiplier then doubles (triples on the Radiant face).
 
 pub const ID: &str = "meditative-084";
 
@@ -13,7 +15,7 @@ pub const ID: &str = "meditative-084";
 // is doubled (MD-E7): a cost row of two steps (never below (0)), a stat split of twice the total,
 // two keywords, X +2; a Nerf likewise doubled, never removing a harmful keyword; still one
 // `upgraded` or `degraded` event; in hand and deck too; a +2/+2 stat buff and KY's Constant are not
-// doubled; radiant 6/6, Buffs tripled and Nerfs normal".
+// doubled; radiant 6/6, Buffs tripled and Nerfs normal". Patch v0.3.9: 1/1 → 2/2, and its Cry Buffs it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -169,7 +171,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_3_3_common_unit_radiant_6_6_with_no_params() {
+        fn is_a_1_1_1_common_unit_radiant_2_2_with_no_params() {
             let def = crate::card_def(ID);
             assert_eq!(def.id, VOLATILITY);
             assert_eq!(def.cost, CardCost::Fixed(1));
@@ -183,7 +185,7 @@ mod tests {
                     def.radiant.attack,
                     def.radiant.health
                 ],
-                [Some(3), Some(3), Some(6), Some(6)]
+                [Some(1), Some(1), Some(2), Some(2)]
             );
             assert!(def.params.is_none() || def.params.as_ref().is_some_and(Vec::is_empty));
         }
@@ -293,7 +295,7 @@ mod tests {
                 {
                     assert_eq!(attack + health, 2 * TUNE_STAT_TOTAL);
                     let view = s.stats(id.as_str());
-                    assert_eq!((view.attack, view.health), (3 + attack, 3 + health));
+                    assert_eq!((view.attack, view.health), (1 + attack, 1 + health));
                     seen = true;
                 }
             }
@@ -467,9 +469,9 @@ mod tests {
         }
 
         #[test]
-        fn radiant_is_6_6() {
+        fn radiant_is_2_2() {
             let (mut s, id) = volatile("vol-radiant-stats", "field", true, &[]);
-            s.expect_stats(id.as_str(), json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(id.as_str(), json!({ "attack": 2, "health": 2 }));
         }
 
         #[test]
@@ -513,6 +515,51 @@ mod tests {
                 }
             }
             assert!(tripled > 0);
+        }
+
+        /// The one `upgraded` event the Cry of a Volatility played from hand makes, over `seeds`, and
+        /// each stat split it drew.
+        fn cried(radiant: bool) -> (usize, Vec<i32>) {
+            let mut stat_totals = Vec::new();
+            let mut cries = 0;
+            for seed in 1..=20 {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": format!("vol-cry-{radiant}-{seed}"),
+                    "p1": { "hand": [{ "def": VOLATILITY, "radiant": radiant }, FILLER], "library": filler(3) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let id = s.card(VOLATILITY).id.clone();
+                s.play(VOLATILITY, json!({}));
+                let ups = upgrades(s.events());
+                assert_eq!(ups.len(), 1, "one Buff, on itself");
+                let GameEvent::Upgraded { instance_id, change, .. } = &ups[0] else {
+                    unreachable!("upgrades() keeps upgraded events")
+                };
+                assert_eq!(instance_id, &id);
+                cries += 1;
+                if let TuningChange::Stats { attack, health } = change {
+                    stat_totals.push(attack + health);
+                    s.expect_stats(id.as_str(), json!({ "attack": (if radiant { 2 } else { 1 }) + attack, "health": (if radiant { 2 } else { 1 }) + health }));
+                }
+            }
+            (cries, stat_totals)
+        }
+
+        #[test]
+        fn its_cry_buffs_it_once_and_the_buff_is_doubled() {
+            let (cries, totals) = cried(false);
+            assert_eq!(cries, 20);
+            assert!(!totals.is_empty(), "the stat row was drawn");
+            assert!(totals.iter().all(|total| *total == 2 * TUNE_STAT_TOTAL), "{totals:?}");
+        }
+
+        #[test]
+        fn radiant_its_cry_buffs_it_once_and_the_buff_is_tripled() {
+            let (cries, totals) = cried(true);
+            assert_eq!(cries, 20);
+            assert!(!totals.is_empty(), "the stat row was drawn");
+            assert!(totals.iter().all(|total| *total == 3 * TUNE_STAT_TOTAL), "{totals:?}");
         }
     }
 }

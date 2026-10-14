@@ -1,4 +1,4 @@
-//! C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Fruit, Rare.
+//! C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Rare (no Fruit tag since patch v0.3.9).
 //!   Base:    "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)." — cards 2
 //!   Radiant: "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
 //!   Engine:  "A Death on a backrow card (§4.5): it fires when the card goes from the field to a

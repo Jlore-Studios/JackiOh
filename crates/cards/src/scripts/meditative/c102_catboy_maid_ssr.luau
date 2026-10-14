@@ -5,10 +5,11 @@ local J = require("@jackioh")
 local MIN_DRAWS = 1
 local MAX_DRAWS = 2
 
--- The printed "Add 1-4" (base) and "Add 1-10" (Radiant): the least and most one Cry adds.
+-- The printed "Add 1-3" (base) and "Add 1-6" (Radiant): the least and most one Cry adds (patch
+-- v0.3.9, #831; 1-4 and 1-10 before).
 local MIN_JADE = 1
-local MAX_JADE = 4
-local MAX_JADE_RADIANT = 10
+local MAX_JADE = 3
+local MAX_JADE_RADIANT = 6
 
 -- R1438, R987: the Lucky on the card as it stands, and its controller's Luck.
 local function lucky_of(ctx: J.EffectContext): number

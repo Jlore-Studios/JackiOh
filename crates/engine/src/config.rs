@@ -709,7 +709,8 @@ pub struct GrapeOdds {
 /// table runs from worst to best, so a roll with Lucky keeps the later of its draws.
 pub type RollOdds = GrapeOdds;
 
-/// R960: Auspicious Rock's table (Meditative #39.1, MD-C1): Dud 20, Jade 70, Red Jade 10, ordered
+/// R960: Auspicious Rock's table (Meditative #39.1, MD-C1): Dud 20, Jade 75, Red Jade 5 (patch
+/// v0.3.9, #831; Jade 70 and Red Jade 10 before), ordered
 /// worst to best (Dud < Jade < Red Jade). A distribution, so config and not params: the odds must
 /// add to 100.
 pub const AUSPICIOUS_ROCK_ODDS: &[RollOdds] = &[
@@ -719,11 +720,11 @@ pub const AUSPICIOUS_ROCK_ODDS: &[RollOdds] = &[
     },
     RollOdds {
         def_id: "meditative-039-2",
-        percent: 70,
+        percent: 75,
     },
     RollOdds {
         def_id: "meditative-039-4",
-        percent: 10,
+        percent: 5,
     },
 ];
 

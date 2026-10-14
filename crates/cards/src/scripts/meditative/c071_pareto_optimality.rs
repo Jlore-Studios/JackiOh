@@ -1,4 +1,4 @@
-//! Meditative #71, Pareto Optimality (docs/meditative-set.md M6): the card face of ME-PARETO
+//! Meditative #71, Pareto Optimality (docs/meditative-set.md M6): a (3) Field Spell, Mythic, the card face of ME-PARETO
 //! (MD-D28–MD-D30, R1125, R1126).
 //!
 //! Cry: summon The Cane (`meditative-071-1`), remembered as `"cane"` (`summon.rememberAs`). While

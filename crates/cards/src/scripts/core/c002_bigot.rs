@@ -1,4 +1,4 @@
-//! SPEC §8.1 #2 Bigot — 6/1 → 12/2 Unit, Human, cost 2.
+//! SPEC §8.1 #2 Bigot — 4/1 → 8/2 Unit, Human, cost 2.
 //! Base: "Cry: destroy target enemy non-Human unit". Radiant: "Cry: destroy all enemy non-Human
 //! units" — the radiant cell restates the clause, so it replaces the base one (§8 Conventions) and
 //! the radiant form declares no target at all.

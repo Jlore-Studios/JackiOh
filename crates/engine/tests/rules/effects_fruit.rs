@@ -738,7 +738,7 @@ mod roll_weighted_r960_md_c1 {
                 .iter()
                 .map(|entry| entry.percent)
                 .collect::<Vec<_>>(),
-            vec![20, 70, 10]
+            vec![20, 75, 5]
         );
         assert_eq!(
             AUSPICIOUS_ROCK_ODDS
@@ -750,7 +750,7 @@ mod roll_weighted_r960_md_c1 {
     }
 
     #[test]
-    fn r960_many_seeded_rolls_match_20_70_10() {
+    fn r960_many_seeded_rolls_match_20_75_5() {
         let share = rock_shares("rock-odds", 0, 20_000);
         for entry in AUSPICIOUS_ROCK_ODDS {
             let got = share.get(entry.def_id).copied().unwrap_or(0.0);

@@ -3,9 +3,6 @@ local J = require("@jackioh")
 
 local VITAL_HEALTH = 13
 
--- C #16 Book of Flame, which the Radiant face adds on its base face.
-local BOOK_OF_FLAME = "classic-016"
-
 local function targets(): { J.TargetDecl }
 	return {
 		{
@@ -21,20 +18,18 @@ local function setVitalHealth(): J.EffectCall
 	return J.set_health({ to = { of = "chosen" }, value = VITAL_HEALTH })
 end
 
+-- Patch v0.3.9 (#831): the base face ends the turn once the health is set.
 local base = {
 	targets = targets(),
 	cry = function(ctx: J.EffectContext)
-		return { setVitalHealth() }
+		return { setVitalHealth(), J.end_turn({}) }
 	end,
 }
 
 local radiant = {
 	targets = targets(),
 	cry = function(ctx: J.EffectContext)
-		return {
-			setVitalHealth(),
-			J.add_to_hand({ defId = BOOK_OF_FLAME }),
-		}
+		return { setVitalHealth() }
 	end,
 }
 

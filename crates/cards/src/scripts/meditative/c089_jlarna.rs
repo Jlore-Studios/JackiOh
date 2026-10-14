@@ -1,4 +1,4 @@
-//! M #89 Jlarna (SPEC §8.8 row 89). (3) Field Spell, Rare.
+//! M #89 Jlarna (SPEC §8.8 row 89). (4) Field Spell, Rare.
 //!
 //! Base:    "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at
 //!          once. Pay it back in {instalments|instalment|instalments}, one at the start of each of

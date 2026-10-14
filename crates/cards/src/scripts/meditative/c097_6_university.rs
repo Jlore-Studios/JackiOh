@@ -1,8 +1,8 @@
 //! M #97.6 University (SPEC §8.8 row 97.6). (4) Unit, Token (printed Epic), 0/12 → 0/24.
-//!   Base:    "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
-//!   Radiant: "Can't attack\nActivate: Buff each of your permanents {times|time|times}."
-//!   Engine:  "Activate (R384): separate Buffs (Upgrade, R386) on each permanent acting on your side (unit
-//!            tops, backrow cards, face-down ones, this one included), each application its own draw; an
+//!   Base:    "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
+//!   Radiant: "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
+//!   Engine:  "Activate (R384): separate Buffs (Upgrade, R386) on each other permanent acting on your side
+//!            (unit tops, backrow cards, face-down ones; itself left out since patch v0.3.9, #831), each application its own draw; an
 //!            Immutable card is left alone (R23); a face-down card's applications are reported as R440
 //!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5)."
 //!
@@ -11,7 +11,7 @@
 pub const ID: &str = "meditative-097-6";
 
 // M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6: "Can't attack; Activate, once a turn: two
-// Buffs on each permanent on your side, itself and face-down cards included (the latter cued per R440), an
+// Buffs on each other permanent on your side (itself left out since patch v0.3.9), face-down cards included (the latter cued per R440), an
 // Immutable one unchanged; enemy cards untouched; times reads through `param()`; radiant 0/24 and five
 // Buffs each".
 //
@@ -111,12 +111,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r386_buffs_each_of_your_permanents_twice_itself_and_a_face_down_card_included() {
+        fn r386_buffs_each_of_your_other_permanents_twice_a_face_down_card_included_itself_never() {
             let mut s = setup(false);
             s.activate(ID, json!({}));
-            // The University, the Vanilla and the face-down Trap twice; the Immutable Menace never (R23);
-            // the enemy Vanilla never.
-            assert_eq!(tally(&s), [2, 2, 0, 2, 0]);
+            // The Vanilla and the face-down Trap twice; the University itself never (patch v0.3.9); the
+            // Immutable Menace never (R23); the enemy Vanilla never.
+            assert_eq!(tally(&s), [0, 2, 0, 2, 0]);
         }
 
         #[test]
@@ -141,7 +141,7 @@ mod tests {
             let mut s = setup(false);
             set_param(s.card_mut(ID), "times", 3);
             s.activate(ID, json!({}));
-            assert_eq!(tally(&s), [3, 3, 0, 3, 0]);
+            assert_eq!(tally(&s), [0, 3, 0, 3, 0]);
         }
 
         #[test]
@@ -166,7 +166,7 @@ mod tests {
             let mut s = setup(true);
             s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 24 }));
             s.activate(ID, json!({}));
-            assert_eq!(tally(&s), [5, 5, 0, 5, 0]);
+            assert_eq!(tally(&s), [0, 5, 0, 5, 0]);
         }
     }
 }

@@ -1,5 +1,5 @@
 //! Meditative #12 Fear Mongerer (SPEC §8.8 row 12; docs/meditative-set.md M6 #12; ME-TRIG (c); R824).
-//! (2) Unit, Human, Epic, 6/8 → 12/16.
+//! (2) Unit, Human, Epic, 5/7 → 10/14.
 //!   Base:    "Cry: Trigger your End of turn effects."
 //!   Radiant: "Cry: Trigger your End of turn effects {times|time|times}." (times 2)
 //!
