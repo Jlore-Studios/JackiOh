@@ -6764,6 +6764,9 @@
     "860": {
       "action": "revise",
       "asks": [],
+      "ci_reruns": {
+        "905afc85c76a7f44dd59fd099dfc44be11206bba": 1
+      },
       "cleared": {
         "at": "2026-10-14T06:17:40Z",
         "by": "`claude` (strong)",
