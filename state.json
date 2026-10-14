@@ -5712,6 +5712,13 @@
     "822": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T00:05:58Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule line 3 fails: it adds ruling R822000 and amends R631, R1350\u2013R1352 and \u00a710.11, so it cannot be easy; it is presentation-only client work, so not hard"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
