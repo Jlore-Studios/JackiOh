@@ -223,7 +223,9 @@
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
+      "pr": 870,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-14T04:38:56Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
@@ -268,7 +270,7 @@
         "mode": "fullsend",
         "onto": "bot/issue-442"
       },
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "443": {
       "action": "build",
