@@ -6246,8 +6246,16 @@
       }
     },
     "903": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "onto": "bot/issue-902",
-      "part_of": 902
+      "part_of": 902,
+      "pending_request": false,
+      "queued_at": "2026-10-14T19:36:00Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false
     },
     "904": {
       "onto": "bot/issue-902",
