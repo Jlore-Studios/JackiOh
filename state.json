@@ -6363,7 +6363,10 @@
       "feedback_since": "2026-10-14T03:11:20Z",
       "issue": 833,
       "kind": "revise",
+      "queued_at": "2026-10-14T04:02:10Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
