@@ -5552,6 +5552,13 @@
       "stop_requested": false
     },
     "872": {
+      "difficulty_by": {
+        "at": "2026-10-14T13:53:22Z",
+        "difficulty": "medium",
+        "provider": "sweep",
+        "tier": "",
+        "why": "planned with no rating, so medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
