@@ -241,6 +241,8 @@ pub struct FakeTables {
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0036's tables.
+    pub social: SocialTables,
 }
 
 /// TS `emptyTables()` (with `emptyDeckTables`, `emptyTutorialTables`, `emptyPlayerSettingsTables`,
@@ -2869,6 +2871,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // 0034: the age check and the terms acceptances cascade with the profile.
     keep_only(&mut tables.age_checks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.terms_acceptances, |row| row.profile_id != profile_id);
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 0036 cascades too.
+    remove_social_rows(tables, profile_id);
     keep_only(&mut tables.tickets, |row| row.profile_id != profile_id);
     keep_only(&mut tables.rooms, |row| {
         !(row.host_profile_id == profile_id && row.guest_profile_id.is_none())
@@ -3548,3 +3552,576 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
     games.sort_by(|a, b| (a.ended_at, &a.id).cmp(&(b.ended_at, &b.id)));
     Ok(games)
 }
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (migration 0036), in memory. Strict where Postgres is strict: one request per direction
+// and pair and never to oneself, one friendship per pair, one block per pair and direction, one open
+// challenge per challenger and friend (`challenges_open_pair_key`), a message of 1 to
+// `CHAT_MAX_CHARS` characters, one report per message and reporter; and every row goes with either
+// profile it names (`remove_social_rows`, the foreign keys' cascade).
+
+use crate::config::CHAT_MAX_CHARS;
+use crate::db::store::{
+    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, FriendshipRow,
+};
+
+/// The tables migration 0036 adds, and `profiles.allow_spectators`, which `Profile` does not carry:
+/// held as the profiles that turned it off (the column defaults to on).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SocialTables {
+    pub friend_requests: Vec<FriendRequestRow>,
+    pub friendships: Vec<FriendshipRow>,
+    pub blocks: Vec<BlockRow>,
+    /// `public.presence`: each profile's last heartbeat, by profile id.
+    pub presence: IndexMap<String, i64>,
+    pub challenges: Vec<ChallengeRow>,
+    pub chat_messages: Vec<ChatMessageRow>,
+    pub chat_reports: Vec<ChatReportRow>,
+    pub spectators_refused: IndexSet<String>,
+}
+
+/// The pair in the store's order, as `friendships`' check holds it (`a < b`).
+fn friend_pair(x: &str, y: &str) -> (String, String) {
+    if x < y {
+        (x.to_string(), y.to_string())
+    } else {
+        (y.to_string(), x.to_string())
+    }
+}
+
+/// Whether a row from `from` to `to` joins `x` and `y`, either way.
+fn joins(from: &str, to: &str, x: &str, y: &str) -> bool {
+    (from == x && to == y) || (from == y && to == x)
+}
+
+/// Every social row naming the profile, as 0036's `on delete cascade` takes them; a deleted
+/// message's reports go with it.
+pub fn remove_social_rows(tables: &mut FakeTables, profile_id: &str) {
+    let social = &mut tables.social;
+    keep_only(&mut social.friend_requests, |row| {
+        row.from_profile != profile_id && row.to_profile != profile_id
+    });
+    keep_only(&mut social.friendships, |row| row.a != profile_id && row.b != profile_id);
+    keep_only(&mut social.blocks, |row| row.blocker != profile_id && row.blocked != profile_id);
+    social.presence.shift_remove(profile_id);
+    keep_only(&mut social.challenges, |row| {
+        row.from_profile != profile_id && row.to_profile != profile_id
+    });
+    let gone: IndexSet<String> = social
+        .chat_messages
+        .iter()
+        .filter(|row| row.from_profile == profile_id || row.to_profile == profile_id)
+        .map(|row| row.id.clone())
+        .collect();
+    keep_only(&mut social.chat_messages, |row| !gone.contains(&row.id));
+    keep_only(&mut social.chat_reports, |row| {
+        row.reporter != profile_id && !gone.contains(&row.message_id)
+    });
+    social.spectators_refused.shift_remove(profile_id);
+}
+
+// friends (B43–B45)
+
+pub fn friends_requests_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<FriendRequestRow>, StoreError> {
+    call(f, "friends.requestsOf")?;
+    let mut rows: Vec<FriendRequestRow> = f
+        .tables()
+        .social
+        .friend_requests
+        .iter()
+        .filter(|row| row.from_profile == profile_id || row.to_profile == profile_id)
+        .cloned()
+        .collect();
+    rows.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    Ok(rows)
+}
+
+pub fn friends_request_get(f: &mut FakeTx<'_>, request_id: &str) -> Result<Option<FriendRequestRow>, StoreError> {
+    call(f, "friends.requestGet")?;
+    Ok(f.tables()
+        .social
+        .friend_requests
+        .iter()
+        .find(|row| row.id == request_id)
+        .cloned())
+}
+
+pub fn friends_request_between(
+    f: &mut FakeTx<'_>,
+    from: &str,
+    to: &str,
+) -> Result<Option<FriendRequestRow>, StoreError> {
+    call(f, "friends.requestBetween")?;
+    Ok(f.tables()
+        .social
+        .friend_requests
+        .iter()
+        .find(|row| row.from_profile == from && row.to_profile == to)
+        .cloned())
+}
+
+/// The unique key on `(from_profile, to_profile)` answers false; the check on a request to oneself
+/// and a reused id raise, as Postgres raises.
+pub fn friends_request_create(f: &mut FakeTx<'_>, row: &FriendRequestRow) -> Result<bool, StoreError> {
+    call(f, "friends.requestCreate")?;
+    if row.from_profile == row.to_profile {
+        return Err(StoreError::from(
+            "friend_requests_check: a friend request to oneself".to_string(),
+        ));
+    }
+    let requests = &mut f.tables().social.friend_requests;
+    if requests.iter().any(|existing| existing.id == row.id) {
+        return Err(StoreError::from(format!("friend_requests.id is unique: {}", row.id)));
+    }
+    if requests
+        .iter()
+        .any(|existing| existing.from_profile == row.from_profile && existing.to_profile == row.to_profile)
+    {
+        return Ok(false);
+    }
+    requests.push(row.clone());
+    Ok(true)
+}
+
+pub fn friends_request_delete(f: &mut FakeTx<'_>, request_id: &str) -> Result<bool, StoreError> {
+    call(f, "friends.requestDelete")?;
+    Ok(keep_only(&mut f.tables().social.friend_requests, |row| row.id != request_id) > 0)
+}
+
+pub fn friends_requests_delete_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<i64, StoreError> {
+    call(f, "friends.requestsDeleteBetween")?;
+    let gone = keep_only(&mut f.tables().social.friend_requests, |row| {
+        !joins(&row.from_profile, &row.to_profile, x, y)
+    });
+    Ok(gone as i64)
+}
+
+pub fn friends_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<FriendshipRow>, StoreError> {
+    call(f, "friends.of")?;
+    let mut rows: Vec<FriendshipRow> = f
+        .tables()
+        .social
+        .friendships
+        .iter()
+        .filter(|row| row.a == profile_id || row.b == profile_id)
+        .cloned()
+        .collect();
+    rows.sort_by(|x, y| (x.since, &x.a, &x.b).cmp(&(y.since, &y.a, &y.b)));
+    Ok(rows)
+}
+
+pub fn friends_count(f: &mut FakeTx<'_>, profile_id: &str) -> Result<i64, StoreError> {
+    call(f, "friends.count")?;
+    Ok(f.tables()
+        .social
+        .friendships
+        .iter()
+        .filter(|row| row.a == profile_id || row.b == profile_id)
+        .count() as i64)
+}
+
+pub fn friends_get(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<Option<FriendshipRow>, StoreError> {
+    call(f, "friends.get")?;
+    let (a, b) = friend_pair(x, y);
+    Ok(f.tables()
+        .social
+        .friendships
+        .iter()
+        .find(|row| row.a == a && row.b == b)
+        .cloned())
+}
+
+/// The check `a < b` makes a friendship with oneself impossible, as it raises in Postgres.
+pub fn friends_make(f: &mut FakeTx<'_>, x: &str, y: &str, at: i64) -> Result<FriendshipRow, StoreError> {
+    call(f, "friends.make")?;
+    if x == y {
+        return Err(StoreError::from(
+            "friendships_check: a friendship with oneself".to_string(),
+        ));
+    }
+    let (a, b) = friend_pair(x, y);
+    let social = &mut f.tables().social;
+    keep_only(&mut social.friend_requests, |row| {
+        !joins(&row.from_profile, &row.to_profile, x, y)
+    });
+    if let Some(existing) = social.friendships.iter().find(|row| row.a == a && row.b == b) {
+        return Ok(existing.clone());
+    }
+    let row = FriendshipRow { a, b, since: at };
+    social.friendships.push(row.clone());
+    Ok(row)
+}
+
+pub fn friends_remove(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<bool, StoreError> {
+    call(f, "friends.remove")?;
+    let (a, b) = friend_pair(x, y);
+    Ok(keep_only(&mut f.tables().social.friendships, |row| !(row.a == a && row.b == b)) > 0)
+}
+
+// blocks (B46)
+
+pub fn blocks_of(f: &mut FakeTx<'_>, blocker: &str) -> Result<Vec<BlockRow>, StoreError> {
+    call(f, "blocks.of")?;
+    let mut rows: Vec<BlockRow> = f
+        .tables()
+        .social
+        .blocks
+        .iter()
+        .filter(|row| row.blocker == blocker)
+        .cloned()
+        .collect();
+    rows.sort_by(|x, y| (x.created_at, &x.blocked).cmp(&(y.created_at, &y.blocked)));
+    Ok(rows)
+}
+
+pub fn blocks_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<bool, StoreError> {
+    call(f, "blocks.between")?;
+    Ok(f.tables()
+        .social
+        .blocks
+        .iter()
+        .any(|row| joins(&row.blocker, &row.blocked, x, y)))
+}
+
+pub fn blocks_add(f: &mut FakeTx<'_>, blocker: &str, blocked: &str, at: i64) -> Result<(), StoreError> {
+    call(f, "blocks.add")?;
+    if blocker == blocked {
+        return Err(StoreError::from("blocks_check: a block of oneself".to_string()));
+    }
+    let blocks = &mut f.tables().social.blocks;
+    if !blocks
+        .iter()
+        .any(|row| row.blocker == blocker && row.blocked == blocked)
+    {
+        blocks.push(BlockRow {
+            blocker: blocker.to_string(),
+            blocked: blocked.to_string(),
+            created_at: at,
+        });
+    }
+    Ok(())
+}
+
+pub fn blocks_remove(f: &mut FakeTx<'_>, blocker: &str, blocked: &str) -> Result<bool, StoreError> {
+    call(f, "blocks.remove")?;
+    Ok(keep_only(&mut f.tables().social.blocks, |row| {
+        !(row.blocker == blocker && row.blocked == blocked)
+    }) > 0)
+}
+
+// presence (B47)
+
+pub fn presence_touch(f: &mut FakeTx<'_>, profile_id: &str, at: i64) -> Result<(), StoreError> {
+    call(f, "presence.touch")?;
+    let seen = f
+        .tables()
+        .social
+        .presence
+        .entry(profile_id.to_string())
+        .or_insert(at);
+    *seen = (*seen).max(at);
+    Ok(())
+}
+
+pub fn presence_last_seen(
+    f: &mut FakeTx<'_>,
+    profile_ids: &[String],
+) -> Result<IndexMap<String, i64>, StoreError> {
+    call(f, "presence.lastSeen")?;
+    let presence = &f.tables().social.presence;
+    Ok(profile_ids
+        .iter()
+        .filter_map(|id| presence.get(id).map(|seen| (id.clone(), *seen)))
+        .collect())
+}
+
+// profiles (B46, B50)
+
+pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
+    call(f, "profiles.find")?;
+    Ok(f.tables()
+        .profiles
+        .iter()
+        .find(|row| row.id == profile_id)
+        .cloned())
+}
+
+pub fn profiles_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
+    call(f, "profiles.allowsSpectators")?;
+    Ok(!f.tables().social.spectators_refused.contains(profile_id))
+}
+
+pub fn profiles_set_allow_spectators(f: &mut FakeTx<'_>, profile_id: &str, allow: bool) -> Result<(), StoreError> {
+    call(f, "profiles.setAllowSpectators")?;
+    if !f.tables().profiles.iter().any(|row| row.id == profile_id) {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    let refused = &mut f.tables().social.spectators_refused;
+    if allow {
+        refused.shift_remove(profile_id);
+    } else {
+        refused.insert(profile_id.to_string());
+    }
+    Ok(())
+}
+
+// challenges (B48, B49)
+
+/// `challenges_open_pair_key` is a partial unique index on the open rows, so a lapsed open row is
+/// marked expired before the insert, as `pg::challenges_create` does.
+pub fn challenges_create(f: &mut FakeTx<'_>, row: &ChallengeRow, now: i64) -> Result<bool, StoreError> {
+    call(f, "challenges.create")?;
+    let challenges = &mut f.tables().social.challenges;
+    if challenges.iter().any(|existing| existing.id == row.id) {
+        return Err(StoreError::from(format!("challenges.id is unique: {}", row.id)));
+    }
+    let same_pair = |existing: &ChallengeRow| {
+        existing.from_profile == row.from_profile
+            && existing.to_profile == row.to_profile
+            && existing.state == ChallengeState::Open
+    };
+    for existing in challenges.iter_mut() {
+        if same_pair(&*existing) && existing.expires_at <= now {
+            existing.state = ChallengeState::Expired;
+        }
+    }
+    if challenges.iter().any(same_pair) {
+        return Ok(false);
+    }
+    challenges.push(row.clone());
+    Ok(true)
+}
+
+pub fn challenges_get(f: &mut FakeTx<'_>, challenge_id: &str) -> Result<Option<ChallengeRow>, StoreError> {
+    call(f, "challenges.get")?;
+    Ok(f.tables()
+        .social
+        .challenges
+        .iter()
+        .find(|row| row.id == challenge_id)
+        .cloned())
+}
+
+pub fn challenges_open_of(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
+    call(f, "challenges.openOf")?;
+    let mut rows: Vec<ChallengeRow> = f
+        .tables()
+        .social
+        .challenges
+        .iter()
+        .filter(|row| {
+            (row.from_profile == profile_id || row.to_profile == profile_id)
+                && row.state == ChallengeState::Open
+                && row.expires_at > now
+        })
+        .cloned()
+        .collect();
+    rows.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    Ok(rows)
+}
+
+/// The newest, should a code freed and minted again ever name two.
+pub fn challenges_open_for_room(
+    f: &mut FakeTx<'_>,
+    code: &str,
+    now: i64,
+) -> Result<Option<ChallengeRow>, StoreError> {
+    call(f, "challenges.openForRoom")?;
+    Ok(f.tables()
+        .social
+        .challenges
+        .iter()
+        .filter(|row| row.room_code == code && row.state == ChallengeState::Open && row.expires_at > now)
+        .max_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)))
+        .cloned())
+}
+
+pub fn challenges_close(
+    f: &mut FakeTx<'_>,
+    challenge_id: &str,
+    state: ChallengeState,
+) -> Result<Option<ChallengeRow>, StoreError> {
+    call(f, "challenges.close")?;
+    let Some(row) = f
+        .tables()
+        .social
+        .challenges
+        .iter_mut()
+        .find(|row| row.id == challenge_id && row.state == ChallengeState::Open)
+    else {
+        return Ok(None);
+    };
+    row.state = state;
+    Ok(Some(row.clone()))
+}
+
+pub fn challenges_close_between(
+    f: &mut FakeTx<'_>,
+    x: &str,
+    y: &str,
+    state: ChallengeState,
+) -> Result<Vec<ChallengeRow>, StoreError> {
+    call(f, "challenges.closeBetween")?;
+    let mut closed = Vec::new();
+    for row in f.tables().social.challenges.iter_mut() {
+        if row.state == ChallengeState::Open && joins(&row.from_profile, &row.to_profile, x, y) {
+            row.state = state;
+            closed.push(row.clone());
+        }
+    }
+    Ok(closed)
+}
+
+pub fn challenges_accept_room(f: &mut FakeTx<'_>, code: &str, guest: &str, now: i64) -> Result<bool, StoreError> {
+    call(f, "challenges.acceptRoom")?;
+    let mut accepted = false;
+    for row in f.tables().social.challenges.iter_mut() {
+        if row.room_code == code
+            && row.to_profile == guest
+            && row.state == ChallengeState::Open
+            && row.expires_at > now
+        {
+            row.state = ChallengeState::Accepted;
+            accepted = true;
+        }
+    }
+    Ok(accepted)
+}
+
+pub fn challenges_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
+    call(f, "challenges.expire")?;
+    let mut expired = Vec::new();
+    for row in f.tables().social.challenges.iter_mut() {
+        if row.state == ChallengeState::Open && row.expires_at <= now {
+            row.state = ChallengeState::Expired;
+            expired.push(row.clone());
+        }
+    }
+    Ok(expired)
+}
+
+// rooms
+
+/// The fake's room is its row in `rooms`; an unjoined one goes, a joined one stays.
+pub fn rooms_release(f: &mut FakeTx<'_>, code: &str) -> Result<bool, StoreError> {
+    call(f, "rooms.release")?;
+    Ok(keep_only(&mut f.tables().rooms, |room| {
+        !(room.code == code && room.guest_profile_id.is_none())
+    }) > 0)
+}
+
+// chat (B53)
+
+/// `chat_messages`' check holds the body to 1..`CHAT_MAX_CHARS` characters (`char_length`).
+pub fn chat_insert(f: &mut FakeTx<'_>, row: &ChatMessageRow) -> Result<(), StoreError> {
+    call(f, "chat.insert")?;
+    let length = row.body.chars().count();
+    if length == 0 || length > CHAT_MAX_CHARS {
+        return Err(StoreError::from(format!(
+            "chat_messages_body_check: a body of {length} characters"
+        )));
+    }
+    let messages = &mut f.tables().social.chat_messages;
+    if messages.iter().any(|existing| existing.id == row.id) {
+        return Err(StoreError::from(format!("chat_messages.id is unique: {}", row.id)));
+    }
+    messages.push(row.clone());
+    Ok(())
+}
+
+pub fn chat_get(f: &mut FakeTx<'_>, message_id: &str) -> Result<Option<ChatMessageRow>, StoreError> {
+    call(f, "chat.get")?;
+    Ok(f.tables()
+        .social
+        .chat_messages
+        .iter()
+        .find(|row| row.id == message_id)
+        .cloned())
+}
+
+pub fn chat_page(
+    f: &mut FakeTx<'_>,
+    x: &str,
+    y: &str,
+    before: Option<i64>,
+    limit: i64,
+) -> Result<Vec<ChatMessageRow>, StoreError> {
+    call(f, "chat.page")?;
+    let mut rows: Vec<ChatMessageRow> = f
+        .tables()
+        .social
+        .chat_messages
+        .iter()
+        .filter(|row| joins(&row.from_profile, &row.to_profile, x, y))
+        .filter(|row| before.is_none_or(|before| row.created_at < before))
+        .cloned()
+        .collect();
+    // Newest first to take the page, then newest last as the port answers.
+    rows.sort_by(|a, b| (b.created_at, &b.id).cmp(&(a.created_at, &a.id)));
+    rows.truncate(usize::try_from(limit).unwrap_or(0));
+    rows.reverse();
+    Ok(rows)
+}
+
+pub fn chat_mark_read(
+    f: &mut FakeTx<'_>,
+    reader: &str,
+    message_ids: &[String],
+    at: i64,
+) -> Result<(), StoreError> {
+    call(f, "chat.markRead")?;
+    for row in f.tables().social.chat_messages.iter_mut() {
+        if row.to_profile == reader && row.read_at.is_none() && message_ids.contains(&row.id) {
+            row.read_at = Some(at);
+        }
+    }
+    Ok(())
+}
+
+/// By sender id, in id order, as Postgres's `order by from_profile` gives them.
+pub fn chat_unread(f: &mut FakeTx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, StoreError> {
+    call(f, "chat.unread")?;
+    let mut unread: IndexMap<String, i64> = IndexMap::new();
+    for row in f.tables().social.chat_messages.iter() {
+        if row.to_profile == profile_id && row.read_at.is_none() {
+            *unread.entry(row.from_profile.clone()).or_insert(0) += 1;
+        }
+    }
+    unread.sort_keys();
+    Ok(unread)
+}
+
+pub fn chat_report(f: &mut FakeTx<'_>, row: &ChatReportRow) -> Result<bool, StoreError> {
+    call(f, "chat.report")?;
+    let social = &mut f.tables().social;
+    if !social.chat_messages.iter().any(|message| message.id == row.message_id) {
+        return Err(StoreError::from(format!(
+            "chat_reports_message_id_fkey: no message {}",
+            row.message_id
+        )));
+    }
+    if social
+        .chat_reports
+        .iter()
+        .any(|existing| existing.message_id == row.message_id && existing.reporter == row.reporter)
+    {
+        return Ok(false);
+    }
+    social.chat_reports.push(row.clone());
+    Ok(true)
+}
+
+pub fn chat_purge(f: &mut FakeTx<'_>, before: i64) -> Result<i64, StoreError> {
+    call(f, "chat.purge")?;
+    let social = &mut f.tables().social;
+    let gone: IndexSet<String> = social
+        .chat_messages
+        .iter()
+        .filter(|row| row.created_at < before)
+        .map(|row| row.id.clone())
+        .collect();
+    keep_only(&mut social.chat_messages, |row| !gone.contains(&row.id));
+    keep_only(&mut social.chat_reports, |row| !gone.contains(&row.message_id));
+    Ok(gone.len() as i64)
+}
+// ---- end Social ----

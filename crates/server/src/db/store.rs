@@ -2291,3 +2291,323 @@ impl Tx<'_> {
         dispatch!(self, play_telemetry_unfolded())
     }
 }
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (migration 0036): friend requests, friendships, blocks, presence, challenges and chat,
+// and the spectator setting on the profile. The rules are `social/*`; these are their rows, and
+// the methods below the one `impl Tx` they need.
+
+/// B43: a pending friend request (`public.friend_requests`), one per direction and pair.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendRequestRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub created_at: i64,
+}
+
+/// B45: two friends (`public.friendships`), the pair in the store's order (`a < b`), and since when.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendshipRow {
+    pub a: String,
+    pub b: String,
+    pub since: i64,
+}
+
+impl FriendshipRow {
+    /// The friend of `profile_id` in this pair.
+    pub fn other(&self, profile_id: &str) -> &str {
+        if self.a == profile_id { &self.b } else { &self.a }
+    }
+}
+
+/// B46: one block (`public.blocks`): `blocker` blocked `blocked`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockRow {
+    pub blocker: String,
+    pub blocked: String,
+    pub created_at: i64,
+}
+
+store_union! {
+    /// B48, B49: where a challenge stands (`challenges.state`). Only an open one may be answered.
+    pub enum ChallengeState {
+        Open = "open",
+        Accepted = "accepted",
+        Declined = "declined",
+        Cancelled = "cancelled",
+        Expired = "expired",
+    }
+}
+
+/// B48: a challenge to a friend and the room it opened (`public.challenges`). The room expires
+/// with the challenge (`expires_at`), and `mode` is the room's.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChallengeRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub room_code: String,
+    pub mode: QueueMode,
+    pub created_at: i64,
+    pub expires_at: i64,
+    pub state: ChallengeState,
+}
+
+/// B53: one chat message (`public.chat_messages`), its body as stored (trimmed and filtered), and
+/// when its recipient read it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessageRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub body: String,
+    pub created_at: i64,
+    pub read_at: Option<i64>,
+}
+
+/// B53: one report of a chat message (`public.chat_reports`), one per message and reporter.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatReportRow {
+    pub id: String,
+    pub message_id: String,
+    pub reporter: String,
+    pub reason: String,
+    pub created_at: i64,
+}
+
+impl Tx<'_> {
+    // friends (B43–B45)
+
+    /// Every pending request `profile_id` sent or received, oldest first, the id breaking a tie.
+    pub async fn friends_requests_of(&mut self, profile_id: &str) -> StoreResult<Vec<FriendRequestRow>> {
+        dispatch!(self, friends_requests_of(profile_id))
+    }
+
+    /// One request, or `None` for an id no request holds.
+    pub async fn friends_request_get(&mut self, request_id: &str) -> StoreResult<Option<FriendRequestRow>> {
+        dispatch!(self, friends_request_get(request_id))
+    }
+
+    /// The request `from` sent `to`, if any (this direction only).
+    pub async fn friends_request_between(
+        &mut self,
+        from: &str,
+        to: &str,
+    ) -> StoreResult<Option<FriendRequestRow>> {
+        dispatch!(self, friends_request_between(from, to))
+    }
+
+    /// B43: writes the request. False, and nothing written, when its sender already has one to its
+    /// recipient (the unique key).
+    pub async fn friends_request_create(&mut self, row: &FriendRequestRow) -> StoreResult<bool> {
+        dispatch!(self, friends_request_create(row))
+    }
+
+    /// B45: deletes one request; false when there was none.
+    pub async fn friends_request_delete(&mut self, request_id: &str) -> StoreResult<bool> {
+        dispatch!(self, friends_request_delete(request_id))
+    }
+
+    /// B46: deletes every request between the two, either way; answers how many went.
+    pub async fn friends_requests_delete_between(&mut self, x: &str, y: &str) -> StoreResult<i64> {
+        dispatch!(self, friends_requests_delete_between(x, y))
+    }
+
+    /// Every friendship `profile_id` is in, oldest first.
+    pub async fn friends_of(&mut self, profile_id: &str) -> StoreResult<Vec<FriendshipRow>> {
+        dispatch!(self, friends_of(profile_id))
+    }
+
+    /// B43: how many friends `profile_id` holds, for `MAX_FRIENDS`.
+    pub async fn friends_count(&mut self, profile_id: &str) -> StoreResult<i64> {
+        dispatch!(self, friends_count(profile_id))
+    }
+
+    /// The two's friendship, whichever order they are named in, or `None`.
+    pub async fn friends_get(&mut self, x: &str, y: &str) -> StoreResult<Option<FriendshipRow>> {
+        dispatch!(self, friends_get(x, y))
+    }
+
+    /// B44, B45: makes the two friends from `at` (a pair already friends keeps its row and its
+    /// date) and deletes every request between them, either way. Answers the friendship.
+    pub async fn friends_make(&mut self, x: &str, y: &str, at: i64) -> StoreResult<FriendshipRow> {
+        dispatch!(self, friends_make(x, y, at))
+    }
+
+    /// B45, B46: ends the two's friendship; false when they were not friends.
+    pub async fn friends_remove(&mut self, x: &str, y: &str) -> StoreResult<bool> {
+        dispatch!(self, friends_remove(x, y))
+    }
+
+    // blocks (B46)
+
+    /// The blocks `blocker` made, oldest first.
+    pub async fn blocks_of(&mut self, blocker: &str) -> StoreResult<Vec<BlockRow>> {
+        dispatch!(self, blocks_of(blocker))
+    }
+
+    /// B46: whether either of the two blocked the other.
+    pub async fn blocks_between(&mut self, x: &str, y: &str) -> StoreResult<bool> {
+        dispatch!(self, blocks_between(x, y))
+    }
+
+    /// B46: records the block; a block already made keeps its date.
+    pub async fn blocks_add(&mut self, blocker: &str, blocked: &str, at: i64) -> StoreResult<()> {
+        dispatch!(self, blocks_add(blocker, blocked, at))
+    }
+
+    /// Lifts `blocker`'s block of `blocked`; false when there was none.
+    pub async fn blocks_remove(&mut self, blocker: &str, blocked: &str) -> StoreResult<bool> {
+        dispatch!(self, blocks_remove(blocker, blocked))
+    }
+
+    // presence (B47)
+
+    /// A heartbeat: `profile_id` was seen at `at` (a later beat never moves it back).
+    pub async fn presence_touch(&mut self, profile_id: &str, at: i64) -> StoreResult<()> {
+        dispatch!(self, presence_touch(profile_id, at))
+    }
+
+    /// Each named profile's last heartbeat, by profile id; one that never beat is left out.
+    pub async fn presence_last_seen(&mut self, profile_ids: &[String]) -> StoreResult<IndexMap<String, i64>> {
+        dispatch!(self, presence_last_seen(profile_ids))
+    }
+
+    // profiles (B46, B50)
+
+    /// The profile a client named by id, or `None`: `profiles_get_by_id` for an id that came off
+    /// the wire, which may be no id at all (Postgres answers `None` for a text that is not a UUID
+    /// rather than failing the cast).
+    pub async fn profiles_find(&mut self, profile_id: &str) -> StoreResult<Option<Profile>> {
+        dispatch!(self, profiles_find(profile_id))
+    }
+
+    /// B50: whether friends may watch `profile_id`'s live unranked games: true unless they turned
+    /// it off, and true for an id no profile holds (a read that finds no profile decides nothing).
+    pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
+        dispatch!(self, profiles_allows_spectators(profile_id))
+    }
+
+    /// B50: `PUT /api/settings`' `allowSpectators`.
+    pub async fn profiles_set_allow_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
+        dispatch!(self, profiles_set_allow_spectators(profile_id, allow))
+    }
+
+    // challenges (B48, B49)
+
+    /// B48: writes the open challenge. A challenge of the same pair (this direction) still open
+    /// but lapsed by `now` is marked expired first; one still open and live makes this false, with
+    /// nothing written (`challenges_open_pair_key`).
+    pub async fn challenges_create(&mut self, row: &ChallengeRow, now: i64) -> StoreResult<bool> {
+        dispatch!(self, challenges_create(row, now))
+    }
+
+    /// One challenge, whatever its state, or `None`.
+    pub async fn challenges_get(&mut self, challenge_id: &str) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_get(challenge_id))
+    }
+
+    /// B48: the open challenges `profile_id` sent or received that have not lapsed by `now`,
+    /// oldest first.
+    pub async fn challenges_open_of(&mut self, profile_id: &str, now: i64) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_open_of(profile_id, now))
+    }
+
+    /// B49: the open challenge, not lapsed by `now`, that opened the room `code`, if any.
+    pub async fn challenges_open_for_room(&mut self, code: &str, now: i64) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_open_for_room(code, now))
+    }
+
+    /// B49: moves an open challenge to `state` (declined or cancelled) and answers it as it now
+    /// stands; `None`, and nothing written, when it is not open.
+    pub async fn challenges_close(
+        &mut self,
+        challenge_id: &str,
+        state: ChallengeState,
+    ) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_close(challenge_id, state))
+    }
+
+    /// B46: moves every open challenge between the two, either way, to `state`; answers them.
+    pub async fn challenges_close_between(
+        &mut self,
+        x: &str,
+        y: &str,
+        state: ChallengeState,
+    ) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_close_between(x, y, state))
+    }
+
+    /// B49: the room `code` was joined by `guest`: the open challenge to `guest` that opened it,
+    /// not lapsed by `now`, is accepted. False when no such challenge exists.
+    pub async fn challenges_accept_room(&mut self, code: &str, guest: &str, now: i64) -> StoreResult<bool> {
+        dispatch!(self, challenges_accept_room(code, guest, now))
+    }
+
+    /// B49: marks every open challenge lapsed by `now` expired; answers them.
+    pub async fn challenges_expire(&mut self, now: i64) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_expire(now))
+    }
+
+    // rooms
+
+    /// B49: frees an unjoined room: its code is open to the next room at once, and joining it is
+    /// the miss an unknown code is. A room someone has joined is never touched. False when there
+    /// was no unjoined room under the code.
+    pub async fn rooms_release(&mut self, code: &str) -> StoreResult<bool> {
+        dispatch!(self, rooms_release(code))
+    }
+
+    // chat (B53)
+
+    pub async fn chat_insert(&mut self, row: &ChatMessageRow) -> StoreResult<()> {
+        dispatch!(self, chat_insert(row))
+    }
+
+    /// One message, or `None`.
+    pub async fn chat_get(&mut self, message_id: &str) -> StoreResult<Option<ChatMessageRow>> {
+        dispatch!(self, chat_get(message_id))
+    }
+
+    /// B53: the newest `limit` messages between the two (either way) sent before `before` (epoch
+    /// ms; every one when `None`), newest LAST, the id breaking a tie.
+    pub async fn chat_page(
+        &mut self,
+        x: &str,
+        y: &str,
+        before: Option<i64>,
+        limit: i64,
+    ) -> StoreResult<Vec<ChatMessageRow>> {
+        dispatch!(self, chat_page(x, y, before, limit))
+    }
+
+    /// B53: `reader` read these messages at `at`: each one sent to `reader` and not yet read.
+    pub async fn chat_mark_read(&mut self, reader: &str, message_ids: &[String], at: i64) -> StoreResult<()> {
+        dispatch!(self, chat_mark_read(reader, message_ids, at))
+    }
+
+    /// B53: how many unread messages each sender has sent `profile_id`, by sender id.
+    pub async fn chat_unread(&mut self, profile_id: &str) -> StoreResult<IndexMap<String, i64>> {
+        dispatch!(self, chat_unread(profile_id))
+    }
+
+    /// B53: stores the report; false, and nothing written, when its reporter already reported the
+    /// message.
+    pub async fn chat_report(&mut self, row: &ChatReportRow) -> StoreResult<bool> {
+        dispatch!(self, chat_report(row))
+    }
+
+    /// B53: deletes every message sent before `before` (epoch ms), and their reports; answers how
+    /// many messages went.
+    pub async fn chat_purge(&mut self, before: i64) -> StoreResult<i64> {
+        dispatch!(self, chat_purge(before))
+    }
+}
+// ---- end Social ----

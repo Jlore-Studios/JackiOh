@@ -1793,3 +1793,39 @@ pub const AI_EMOTE: AiEmoteConfig = AiEmoteConfig {
     delay_min_ms: 800.0,
     delay_max_ms: 2500.0,
 };
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (#936, Play together): friends, blocks, presence, challenges, watching and chat. PUBLIC:
+// the client reads the heartbeat, the poll, the chat's caps and a challenge's life.
+// ---------------------------------------------------------------------------------------------
+
+/// B43: friend requests one account may send in an hour; the next is 429.
+pub const FRIEND_REQUESTS_PER_HOUR: usize = 20;
+/// B43: friends one account may hold; a request or an accept past it is 409 `friend_cap`.
+pub const MAX_FRIENDS: i64 = 200;
+/// B47: a friend is online while their last heartbeat is at most this old.
+pub const PRESENCE_TTL_MS: i64 = 90_000;
+/// B47: how often a signed-in client sends `POST /api/presence`: half the TTL, so one lost beat
+/// never shows a friend offline.
+pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
+/// B49: how long a challenge, and the room it opened, stays open unanswered.
+pub const CHALLENGE_TTL_MS: i64 = 120_000;
+/// B50: how far behind the live game a watcher's view runs.
+pub const SPECTATE_DELAY_MS: i64 = 30_000;
+/// B50: watchers one live match may hold at once.
+pub const SPECTATORS_PER_MATCH: usize = 8;
+/// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).
+pub const CHAT_MAX_CHARS: usize = 500;
+/// B53: chat messages one account may send in a minute; the next is 429.
+pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
+/// B53: how long a chat message is kept before the purge deletes it, and its reports with it.
+pub const CHAT_RETENTION_DAYS: i64 = 30;
+/// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
+pub const CHAT_PAGE: i64 = 50;
+/// B58: how often an open chat panel reads its conversation again.
+pub const CHAT_POLL_MS: i64 = 4_000;
+// NOT IN SPEC: how often the challenge sweeper marks lapsed challenges expired. A lapsed challenge
+// is already shut (its room expired with it, the reaper takes the room's row, and no read lists the
+// challenge), so the sweep only tidies the rows; ten seconds keeps them honest for one cheap update.
+pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
+// ---- end Social ----
