@@ -6460,6 +6460,14 @@
           "muse": "medium"
         }
       }
+    },
+    "856": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T03:15:05Z",
+      "issue": 821,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
