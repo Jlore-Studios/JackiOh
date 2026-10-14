@@ -4041,7 +4041,9 @@
       "round_tier": "strong",
       "run_id": "38617553057",
       "started_at": "2026-10-14T18:44:10Z",
-      "stop_requested": false,
+      "stop_requested": true,
+      "stopped_at": "2026-10-14T19:40:56Z",
+      "stopped_by": "squishy-squooby",
       "taken_asks": [],
       "verdict_rounds": 0
     },
