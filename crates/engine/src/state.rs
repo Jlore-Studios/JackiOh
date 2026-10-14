@@ -2020,6 +2020,15 @@ pub fn is_turn_of(state: &GameState, player: PlayerId) -> bool {
     state.turn != SETUP_TURN && state.active == player
 }
 
+/// R68: the two sides in the order simultaneous things happen on them, the active player's first.
+pub fn active_first(state: &GameState) -> [PlayerId; 2] {
+    if state.active == PlayerId::P1 {
+        [PlayerId::P1, PlayerId::P2]
+    } else {
+        [PlayerId::P2, PlayerId::P1]
+    }
+}
+
 /// Every place a card can be, in `find_instance`'s order, for one side.
 fn side_cards(side: &PlayerState) -> impl Iterator<Item = &CardInstance> {
     side.hand

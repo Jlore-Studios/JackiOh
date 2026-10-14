@@ -20,7 +20,7 @@ use crate::catalog::def_of;
 use crate::faces::card_type_of;
 use crate::layers::unit_view;
 use crate::script::{Effect, EffectContext, EngineSink};
-use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
+use crate::state::{CardInstance, GameState, active_first, find_instance, find_instance_mut};
 use crate::stays::moves_in;
 use crate::wire::{
     CardType, GameEvent, GameEventType, PLAYER_IDS, PlayerId, QuestItemView, QuestOpenView, QuestView, Row,
@@ -337,11 +337,7 @@ fn quest_card_of(ctx: &EffectContext<'_>) -> Option<CardInstance> {
 
 /// Every card with a quest tree acting on the field, in R68's order: the active side first.
 fn quest_cards_in_order(state: &GameState) -> Vec<CardInstance> {
-    let sides: [PlayerId; 2] = if state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    };
+    let sides = active_first(state);
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         let units: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
