@@ -5880,6 +5880,8 @@
       "run_id": "38504880519",
       "started_at": "2026-10-14T03:11:20Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
