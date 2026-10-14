@@ -9482,5 +9482,37 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.8",
+    "date": "2026-10-14",
+    "title": "Anti-oneshot Armor wording",
+    "source": "#814 (part 1), #820",
+    "notes": "Unify the per-instance hero damage cap wording: core-073 Anti-oneshot Armor prints 'at a time' like classicplus-011 Anime Armor. Wording only; mechanics, params and numbers unchanged.",
+    "player": {
+      "title": "Anti-oneshot Armor wording",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Anti-oneshot Armor reads at a time, matching Anime Armor; nothing plays differently."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "d787d2a8fb00749737be6fddde97855e77b4b6ef"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
