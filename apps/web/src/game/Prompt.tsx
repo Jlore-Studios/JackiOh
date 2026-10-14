@@ -522,17 +522,17 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
-    case "magnetic":
-      // R1086: one zone with both a plain and a Magnetic play asks which.
+    case "equip":
+      // R1086: one zone with both a plain and an Equip play asks which.
       return {
         ...common,
         chrome: "mode",
-        title: t("Magnetic or Stack?"),
+        title: t("Equip or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
-          label: value ? t("Magnetic") : t("Stack"),
+          label: value ? t("Equip") : t("Stack"),
         })),
-        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ equip: keys[0] === "true" })),
       };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
@@ -588,12 +588,14 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     }
     case "faceDown": {
-      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
+      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap. R783004: a
+      // Cloaked set has no timing; it reveals when its controller uses its Activate: Reveal.
       const labels: Record<FaceDownChoice, string> = {
         up: t("Play it face-up"),
         endOfThisTurn: t("Set face-down: reveal at the end of this turn"),
         startOfNextTurn: t("Set face-down: reveal at the start of your next turn"),
         endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
+        cloaked: t("Set face-down: reveal it with its Activate"),
       };
       return {
         ...common,

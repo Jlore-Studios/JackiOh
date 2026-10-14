@@ -1439,7 +1439,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r21_draws_random_keywords_from_the_fourteen_entry_pool_and_never_repeats_one_on_a_unit() {
+    fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repeats_one_on_a_unit() {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
@@ -1448,15 +1448,19 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 "Rush",
                 "Charge",
                 "First Strike",
+                "Flying",
+                "Ranged",
                 "Poisonous",
-                "Lifesteal",
                 "Reborn",
                 "Divine Shield",
-                "Trample",
-                "Cleave",
-                "Pierce",
                 "Windfury",
+                "Cleave",
+                "Indestructible",
                 "Deft",
+                "Spell Damage 1",
+                "Lifesteal",
+                "Pierce",
+                "Trample",
             ]
         );
 
@@ -1476,9 +1480,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
             .iter()
             .map(Keyword::kind)
             .collect();
-        assert_eq!(kinds.len(), RANDOM_KEYWORD_POOL.len());
+        // Every pool keyword, but no Taunt once Indestructible came first (R347, R781004).
+        let expected = if kinds.contains(&KeywordKind::Taunt) {
+            RANDOM_KEYWORD_POOL.len()
+        } else {
+            RANDOM_KEYWORD_POOL.len() - 1
+        };
+        assert_eq!(kinds.len(), expected);
         assert_eq!(kinds.iter().collect::<BTreeSet<_>>().len(), kinds.len());
-        assert!(!kinds.contains(&KeywordKind::Indestructible));
+        assert!(kinds.contains(&KeywordKind::Indestructible));
         assert!(!kinds.contains(&KeywordKind::Immutable));
         assert!(!kinds.contains(&KeywordKind::Stack));
         assert!(!kinds.contains(&KeywordKind::Lucky));
@@ -1489,10 +1499,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             effects::grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": 1 }))),
             targeting(P1, pick(&unit)),
         );
-        assert_eq!(
-            instance_in(&state, &unit.id).granted_keywords.len(),
-            RANDOM_KEYWORD_POOL.len()
-        );
+        assert_eq!(instance_in(&state, &unit.id).granted_keywords.len(), expected);
     }
 
     #[test]

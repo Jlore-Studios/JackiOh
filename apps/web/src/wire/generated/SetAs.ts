@@ -2,13 +2,15 @@
 import type { RevealAt } from "./RevealAt";
 
 /**
- * ME-ALTPLAY, R1040, R1044: what a card played face-down as a Trap carries until it has revealed —
- * when it reveals, the turn it was set in, the Echo a Radiant Paranoia gave it (R1045), and, once
- * a set Spell has turned face-up, that its own text now resolves (`revealing`).
+ * R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
+ * it reveals (`cloaked`, by its Reveal; the three timings are from before patch v0.3.7), the turn it
+ * was set in, the Echo stamped as it was set (none since then, R1045), and, once a set Spell has
+ * turned face-up, that its own text now resolves (`revealing`).
  */
 export type SetAs = { reveal: RevealAt, setTurn: number, 
 /**
- * R1045: the Echo the permission added as the card was set (Radiant Paranoia's +1), once.
+ * R1045: the Echo stamped as the card was set, once. Nothing stamps one since patch v0.3.7:
+ * Radiant Paranoia's Echo is read as the Spell reveals (`alt_play::reveal_echo_bonus`).
  */
 echo?: number, 
 /**

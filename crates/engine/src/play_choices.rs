@@ -63,15 +63,15 @@ pub struct PlayAction {
     pub zone: Option<ZoneChoice>,
     pub x: Option<i32>,
     pub embiggen: Option<bool>,
-    /// R1086: play this Magnetic card onto the zone's host Unit (ME-MAGNETIC).
-    pub magnetic: Option<bool>,
+    /// R1086: play this Equip card onto the zone's host Unit (ME-EQUIP).
+    pub equip: Option<bool>,
     /// Units sacrificed to pay a Tribute cost (§6.3).
     pub tributes: Option<Vec<String>>,
     pub targets: Option<Vec<Selection>>,
     pub modes: Option<Vec<String>>,
     /// B5 E11, E19: Plague Counters paying part of the price of a play from the graveyard.
     pub plague: Option<PlagueSpend>,
-    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    /// R783004: play face-down as a Trap by the card's Cloaked (`cloaked`).
     pub face_down: Option<RevealAt>,
 }
 
@@ -94,7 +94,7 @@ impl From<PlayAction> for ActionBody {
             zone: action.zone,
             x: action.x,
             embiggen: action.embiggen,
-            magnetic: action.magnetic,
+            equip: action.equip,
             tributes: action.tributes,
             targets: action.targets,
             modes: action.modes,
@@ -114,7 +114,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 zone,
                 x,
                 embiggen,
-                magnetic,
+                equip,
                 tributes,
                 targets,
                 modes,
@@ -125,7 +125,7 @@ impl TryFrom<ActionBody> for PlayAction {
                 zone,
                 x,
                 embiggen,
-                magnetic,
+                equip,
                 tributes,
                 targets,
                 modes,
@@ -394,23 +394,23 @@ fn onto_stack_base(state: &GameState, player: PlayerId, card: &CardInstance, slo
         && crate::zones::stack_base_at(state, player, slot)
 }
 
-/// R1086 (ME-MAGNETIC): whether this card may be played as Magnetic — a Unit with the Magnetic
+/// R1086 (ME-EQUIP): whether this card may be played as Equip — a Unit with the Equip
 /// keyword that needs a zone. Read off the card's keywords as they stand where it is (§10.4), as
 /// `plays_on_stack` is.
-pub fn plays_magnetic(state: &GameState, card: &CardInstance) -> bool {
+pub fn plays_equip(state: &GameState, card: &CardInstance) -> bool {
     if !needs_zone(state, card) {
         return false;
     }
     if row_for_card(state, card) != Row::Units {
         return false;
     }
-    crate::layers::unit_has(state, card, KeywordKind::Magnetic)
+    crate::layers::unit_has(state, card, KeywordKind::Equip)
 }
 
-/// R1086: the host a Magnetic play onto `slot` fuses into — the top card of the zone when it is a
+/// R1086: the host an Equip play onto `slot` fuses into — the top card of the zone when it is a
 /// Unit its controller acts with that is not Immutable (R23), and not one this same play tributes.
 /// Both the legal-action listing and the refusal read this one function, so the two cannot disagree.
-pub fn magnetic_host_at(
+pub fn equip_host_at(
     state: &GameState,
     player: PlayerId,
     slot: &ZoneSlot,
@@ -435,20 +435,20 @@ pub fn magnetic_host_at(
     Some(top.id.clone())
 }
 
-/// R1086: the unit-row zones that hold a host for a Magnetic play, in lane order. Empty unless the
-/// card plays Magnetic at all.
-pub fn legal_magnetic_zones_for(
+/// R1086: the unit-row zones that hold a host for an Equip play, in lane order. Empty unless the
+/// card plays Equip at all.
+pub fn legal_equip_zones_for(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
     tributes: &[String],
 ) -> Vec<ZoneChoice> {
-    if !plays_magnetic(state, card) {
+    if !plays_equip(state, card) {
         return Vec::new();
     }
     crate::zones::slots_of(player, Row::Units)
         .iter()
-        .filter(|slot| magnetic_host_at(state, player, slot, tributes).is_some())
+        .filter(|slot| equip_host_at(state, player, slot, tributes).is_some())
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
@@ -1006,6 +1006,11 @@ fn reachable(
     if crate::restrictions::spell_cannot_reach(state, Some(card), candidate) {
         return false;
     }
+    // R781001: a Spell's, a Field Spell's or a Field Trap's `target` declaration never offers an
+    // Immutable card in play.
+    if decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), candidate) {
+        return false;
+    }
     // MD-B1, R940: a harmful declaration whose filter names a tribal tag never offers an immune card.
     if crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm {
         let (tags, not_tags) = match decl.filter.as_ref() {
@@ -1231,6 +1236,8 @@ pub fn interceptor_fits_decl(
     };
     card_allowed(state, decl.filter.as_ref(), &probe, card, player)
         && !crate::restrictions::spell_cannot_reach(state, Some(card), &probe)
+        // R781001: nor to an Immutable one, when the source is one Immutable bars.
+        && !(decl.kind == PromptKind::Target && crate::restrictions::immutable_bars(state, Some(card), &probe))
         // MD-B1, R940: a harmful declaration's tribal filter never diverts to an immune interceptor.
         && !(crate::targeting::target_aim(decl) == crate::wire::TargetAim::Harm
             && {
@@ -1696,7 +1703,7 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
             Vec::new()
         }
     });
-    out.extend(face_down_play_actions(state, player, card, false, |cost| {
+    out.extend(face_down_play_actions(state, player, card, |cost| {
         if cost <= mana {
             vec![PlayPayment::default()]
         } else {
@@ -1706,20 +1713,16 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
     out
 }
 
-/// ME-ALTPLAY, R1040, R1044: every face-down `play` this card could legally produce — one per timing,
-/// price, payment, tribute set and open backrow zone. No targets or modes are declared when set.
+/// R783004: every face-down `play` a Cloaked card in hand could legally produce — one per price,
+/// payment, tribute set and open backrow zone. No targets or modes are declared when set.
 fn face_down_play_actions(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
-    from_graveyard: bool,
     payments: impl Fn(i32) -> Vec<PlayPayment>,
 ) -> Vec<PlayAction> {
-    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
-        return Vec::new();
-    };
     let mut out: Vec<PlayAction> = Vec::new();
-    for reveal in crate::alt_play::timings(kind) {
+    for (_, reveal) in crate::alt_play::face_down_options(state, card, false) {
         let probe = CardInstance {
             set_as: Some(crate::state::SetAs {
                 reveal,
@@ -1734,11 +1737,8 @@ fn face_down_play_actions(
             if paid.is_empty() {
                 continue;
             }
-            let tribute_sets: Vec<Vec<String>> = match kind {
-                crate::alt_play::SetKind::Unit => legal_tribute_sets(state, player, &probe),
-                crate::alt_play::SetKind::Spell => vec![Vec::new()],
-            };
-            for tributes in &tribute_sets {
+            // R783004: a Cloaked card pays its own price, a Tribute included.
+            for tributes in &legal_tribute_sets(state, player, &probe) {
                 for zone in crate::alt_play::open_backrow_zones(state, player) {
                     for payment in &paid {
                         out.push(PlayAction {
@@ -1746,7 +1746,7 @@ fn face_down_play_actions(
                             zone: Some(zone),
                             x: price.x,
                             embiggen: price.embiggen,
-                            magnetic: None,
+                            equip: None,
                             tributes: if tributes.is_empty() {
                                 None
                             } else {
@@ -1776,13 +1776,9 @@ pub fn graveyard_play_actions_for(
     if !crate::graveyard_play::playable_from_graveyard(state, card) || card.zone.player() != player {
         return Vec::new();
     }
-    let mut out = priced_play_actions(state, player, card, |price| {
+    priced_play_actions(state, player, card, |price| {
         crate::graveyard_play::graveyard_payments_for(state, player, card, price)
-    });
-    out.extend(face_down_play_actions(state, player, card, true, |price| {
-        crate::graveyard_play::graveyard_payments_for(state, player, card, price)
-    }));
-    out
+    })
 }
 
 /// One price a card's X and embiggen choices come to now (R65): the choices, the probe stamped with
@@ -1977,8 +1973,8 @@ pub fn priced_play_actions(
         let face = resolving_face(state, player, card, cost);
         let bound = declares_bound_tribute(state, &face);
         for tributes in &tribute_sets {
-            // R1086: the plain zones first, then the Magnetic host zones after them (D14: a game that
-            // never plays Magnetic lists what it listed before).
+            // R1086: the plain zones first, then the Equip host zones after them (D14: a game that
+            // never plays Equip lists what it listed before).
             let zones: Vec<(Option<ZoneChoice>, Option<bool>)> = if needs_zone(state, card) {
                 let mut paired: Vec<(Option<ZoneChoice>, Option<bool>)> =
                     legal_zones_for(state, player, card, tributes)
@@ -1986,7 +1982,7 @@ pub fn priced_play_actions(
                         .map(|zone| (Some(zone), None))
                         .collect();
                 paired.extend(
-                    legal_magnetic_zones_for(state, player, card, tributes)
+                    legal_equip_zones_for(state, player, card, tributes)
                         .into_iter()
                         .map(|zone| (Some(zone), Some(true))),
                 );
@@ -1994,7 +1990,7 @@ pub fn priced_play_actions(
             } else {
                 vec![(None, None)]
             };
-            for (zone, magnetic) in &zones {
+            for (zone, equip) in &zones {
                 for choices in play_choice_combinations(state, player, &face, None) {
                     let targets: &[Selection] = choices.targets.as_deref().unwrap_or(&[]);
                     let modes: &[String] = choices.modes.as_deref().unwrap_or(&[]);
@@ -2021,7 +2017,7 @@ pub fn priced_play_actions(
                             zone: *zone,
                             x,
                             embiggen,
-                            magnetic: *magnetic,
+                            equip: *equip,
                             tributes: if tributes.is_empty() {
                                 None
                             } else {
@@ -2073,10 +2069,10 @@ fn refuse(message: String) -> Result<(), EngineError> {
     Err(EngineError::new(message))
 }
 
-/// R1086: the refusal for a Magnetic play. A play with `magnetic: false` is a plain play. The
-/// card must play Magnetic at all, the zone must name a unit-row lane in range, and that zone must
-/// hold a host — read off `magnetic_host_at`, the same function the listing uses.
-fn refuse_magnetic(
+/// R1086: the refusal for an Equip play. A play with `equip: false` is a plain play. The
+/// card must play Equip at all, the zone must name a unit-row lane in range, and that zone must
+/// hold a host — read off `equip_host_at`, the same function the listing uses.
+fn refuse_equip(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
@@ -2084,14 +2080,14 @@ fn refuse_magnetic(
     tributes: &[String],
 ) -> Result<(), EngineError> {
     let name = name_of(state, &card.def_id);
-    if !plays_magnetic(state, card) {
-        return refuse(format!("{name} is not Magnetic"));
+    if !plays_equip(state, card) {
+        return refuse(format!("{name} is not Equip"));
     }
     let Some(zone) = zone else {
-        return refuse(format!("{name} played as Magnetic takes a zone"));
+        return refuse(format!("{name} played as Equip takes a zone"));
     };
     if zone.row != Row::Units {
-        return refuse(format!("{name} played as Magnetic goes in the units row"));
+        return refuse(format!("{name} played as Equip goes in the units row"));
     }
     if zone.lane < 1 || zone.lane > crate::zones::row_size(zone.row) {
         return refuse(format!("there is no {} zone {}", zone.row, zone.lane));
@@ -2101,7 +2097,7 @@ fn refuse_magnetic(
         row: zone.row,
         lane: zone.lane,
     };
-    if magnetic_host_at(state, player, &slot, tributes).is_none() {
+    if equip_host_at(state, player, &slot, tributes).is_none() {
         return refuse(format!("that units zone holds no Unit for {name}"));
     }
     Ok(())
@@ -2399,9 +2395,9 @@ fn refuse_modes(
     Ok(())
 }
 
-/// ME-ALTPLAY, R1040, R1044: refusal for a face-down play — no kind, a timing outside its
-/// timings, a named zone outside the open backrow zones, or any target or mode. X, embiggen and
-/// tributes are still checked.
+/// R783004: refusal for a face-down play — a card with no Cloaked (or in a graveyard), a timing other
+/// than Cloaked's (the three of R1044 are offered no more), a named zone outside the open backrow
+/// zones, or any target or mode. X, embiggen and tributes are still checked.
 fn why_face_down_refused(
     state: &GameState,
     player: PlayerId,
@@ -2412,13 +2408,14 @@ fn why_face_down_refused(
         return refuse("no face-down timing".to_string());
     };
     let from_graveyard = matches!(card.zone, crate::wire::Zone::Graveyard { .. });
-    let Some(kind) = crate::alt_play::face_down_kind(state, player, card, from_graveyard) else {
+    let options = crate::alt_play::face_down_options(state, card, from_graveyard);
+    if options.is_empty() {
         return refuse(format!(
             "{} cannot be played face-down",
             name_of(state, &card.def_id)
         ));
-    };
-    if !crate::alt_play::timings(kind).contains(&reveal) {
+    }
+    if !options.iter().any(|(_, timing)| *timing == reveal) {
         return refuse(format!(
             "{} cannot reveal at that time",
             name_of(state, &card.def_id)
@@ -2437,9 +2434,9 @@ fn why_face_down_refused(
         ));
     }
     // R1086 beside R1044: a face-down play goes into an open backrow zone, never onto a host.
-    if action.magnetic == Some(true) {
+    if action.equip == Some(true) {
         return refuse(format!(
-            "{} is not played Magnetic face-down",
+            "{} is not played Equip face-down",
             name_of(state, &card.def_id)
         ));
     }
@@ -2472,8 +2469,8 @@ pub fn why_choices_refused(
         return why_face_down_refused(state, player, card, action);
     }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
-    if action.magnetic == Some(true) {
-        refuse_magnetic(state, player, card, action.zone.as_ref(), tributes)?;
+    if action.equip == Some(true) {
+        refuse_equip(state, player, card, action.zone.as_ref(), tributes)?;
     } else {
         refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
     }

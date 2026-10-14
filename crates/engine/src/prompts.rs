@@ -1227,6 +1227,24 @@ pub fn run_start_of_game(sink: &mut EngineSink<'_>, card: &CardInstance, control
     )
 }
 
+/// R781004: a card's `fusedInto` hook, run on the card a Fuse keeps once the text that carries it is
+/// fused into it (`subsystems::fuse::fuse`). Resumable like the start-of-game clause beside it.
+pub fn run_fused_into(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    // A Vanilla card carries no text (§6.3), and a card without the hook has nothing to run.
+    if crate::scripts::script_of(sink.state, card).fused_into.is_none() {
+        return true;
+    }
+    run_hook_resumable(
+        sink,
+        card,
+        "fusedInto",
+        HookResumableOptions {
+            controller: Some(controller),
+            ..HookResumableOptions::default()
+        },
+    )
+}
+
 /// MD-B18, R925: a card's "When this enters your hand" clause, run as the card arrives in a hand —
 /// after R151's start-of-game clause (`draw::run_arrival_hooks`). An effect list like any other, so
 /// it runs the resumable way too: a question in it pauses the effects after it. Returns true when

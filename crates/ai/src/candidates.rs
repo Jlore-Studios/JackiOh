@@ -40,14 +40,14 @@ fn zone_group_key(play: &ActionBody) -> String {
 }
 
 /// The lane of a play that names a zone (`action.type === "play" && action.zone !== undefined`).
-/// A Magnetic play fuses where it lands, so it is no zone variant of the plain play (R1086).
+/// An Equip play fuses where it lands, so it is no zone variant of the plain play (R1086).
 fn play_lane(action: &ActionBody) -> Option<i32> {
     match action {
         ActionBody::Play {
             zone: Some(zone),
-            magnetic,
+            equip,
             ..
-        } if *magnetic != Some(true) => Some(zone.lane),
+        } if *equip != Some(true) => Some(zone.lane),
         _ => None,
     }
 }

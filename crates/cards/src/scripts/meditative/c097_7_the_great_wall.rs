@@ -65,6 +65,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const TIMMY: &str = "core-011"; // (1) Unit 3/3.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
     const SOFTLOCK: &str = "classicplus-077"; // (2) Spell: Unlock every zone.
     const SCHOOL: &str = "meditative-097-3";
     const HEADQUARTERS: &str = "meditative-097-9";
@@ -233,15 +234,20 @@ mod tests {
         }
 
         #[test]
-        fn r1260_the_locks_outlast_the_wall() {
-            let mut s = setup(false, &[HIT_JOB], crowd());
+        fn r1260_r781001_the_locks_outlast_the_wall() {
+            let mut s = setup(false, &[HIT_JOB, NETHER], crowd());
             play_wall(&mut s);
             s.end_turn().end_turn();
             let wall = s.card(ID).id.clone();
-            s.play(
-                HIT_JOB,
-                json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
-            );
+            // Immutable: Hit Job, a Spell, can't target the Wall in play (R781001); destroying every
+            // permanent reaches it.
+            s.expect_refused(|s| {
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
+                )
+            });
+            s.play(NETHER, json!({}));
             assert!(s.unit(P1, 1).is_none_or(|unit| unit.def_id != ID));
             for lane in LANES {
                 assert!(is_locked(s.state(), slot(P1, lane)), "p1 lane {lane}");

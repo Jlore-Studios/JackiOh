@@ -232,7 +232,7 @@ mod r175_reborns_return_for_a_unit_token_and_onto_a_stack_pile {
         jackioh_cards::register_all();
         // On this seed Plastic Surgery's random keyword is Reborn: §6.1's pool keeps Reborn for tokens.
         let mut g = scenario(json!({
-            "seed": "re-entry-reborn-token-32", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19", R49's Deft off "-31"
+            "seed": "re-entry-reborn-token-34", // R346's Pierce moved the roll off "-4", R636's Windfury off "-10" and "-19", R49's Deft off "-31", R781005's pool off "-32"
             "p1": { "hand": [SURGERY, HIT_JOB], "field": [{ "def": RUSH_TOKEN, "lane": 1 }], "library": LIBRARY },
             "p2": { "hand": [HIT_JOB], "library": LIBRARY },
         }));

@@ -300,7 +300,7 @@ fn dry_running(state: &GameState) -> bool {
 struct PlayFields<'a> {
     x: i32,
     embiggen: bool,
-    magnetic: bool,
+    equip: bool,
     tributes: &'a [String],
     zone: Option<&'a ZoneChoice>,
     first_target: Option<&'a Selection>,
@@ -310,7 +310,7 @@ fn play_fields(action: &PlayAction) -> PlayFields<'_> {
     PlayFields {
         x: action.x.unwrap_or(0),
         embiggen: action.embiggen == Some(true),
-        magnetic: action.magnetic == Some(true),
+        equip: action.equip == Some(true),
         tributes: action.tributes.as_deref().unwrap_or(&[]),
         zone: action.zone.as_ref(),
         first_target: action.targets.as_ref().and_then(|targets| targets.first()),
@@ -352,11 +352,11 @@ fn dry_run_plays(state: &GameState, viewer: PlayerId, card: &CardInstance) -> Ve
                 return false;
             }
             // TS keys by `JSON.stringify` (SURFACE §4.4.3): the same struct's serde JSON. R1086: a
-            // Magnetic play pays the fusion too, so it keys apart from the plain play.
+            // Equip play pays the fusion too, so it keys apart from the plain play.
             let paying = format!(
                 "{}|{}",
                 serde_json::to_string(fields.tributes).unwrap_or_default(),
-                fields.magnetic
+                fields.equip
             );
             let zone = serde_json::to_string(&fields.zone).unwrap_or_default();
             let kept = zone_for.get(&paying).cloned();

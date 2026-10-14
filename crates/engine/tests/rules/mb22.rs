@@ -253,14 +253,19 @@ fn r1200_choices_return_once_the_mayor_leaves() {
 
 #[test]
 fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
-    // Paranoia lets p1 set Spells face-down (ME-ALTPLAY); a face-down play declares nothing, so
-    // the Mayor draws nothing for it, and every one `legal_actions` offers is accepted.
-    use super::fixtures::alt_play::{bolt as targeted, paranoia, register_alt_play};
+    // An aura lends p1's Spells Cloaked, as Paranoia's does (R1044); a face-down play declares
+    // nothing, so the Mayor draws nothing for it, and every one `legal_actions` offers is accepted.
+    use super::fixtures::keywords_783::{cloak_spells, register_keywords_783};
     let mut state = playing("mb22-face-down");
-    register_alt_play();
+    register_keywords_783();
     put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
-    put(&mut state, &paranoia().id, slot(P1, Row::Backrow, 1), json!({}));
-    let spell = in_hand(&mut state, &targeted().id, P1, 1).remove(0);
+    put(
+        &mut state,
+        &cloak_spells().id,
+        slot(P1, Row::Backrow, 1),
+        json!({}),
+    );
+    let spell = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
 
     let sets: Vec<ActionBody> = legal_actions(&state, P1)
         .into_iter()

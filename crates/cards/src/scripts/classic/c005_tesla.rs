@@ -50,13 +50,19 @@ fn zap() -> TriggerDef {
         let Some(target) = arrival(ctx, event) else {
             return vec![];
         };
-        vec![
-            damage(json_as(json!({
+        // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
+        // animates but deals it nothing.
+        let state: &GameState = &*ctx.state;
+        let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
+        let mut effects = Vec::new();
+        if !shielded {
+            effects.push(damage(json_as(json!({
                 "to": { "of": "instance", "instanceId": target },
                 "amount": param(&*ctx, "damage"),
-            }))),
-            animate(json_as(json!({ "position": "DEF" }))),
-        ]
+            }))));
+        }
+        effects.push(animate(json_as(json!({ "position": "DEF" }))));
+        effects
     })
     .with_when(|ctx, event| arrival(ctx, event).is_some())
 }
@@ -171,6 +177,24 @@ mod tests {
                     &hit.unwrap_or(Value::Null),
                     &json!({ "sourceId": tesla.id, "amount": 4 })
                 ));
+            }
+
+            #[test]
+            fn r781002_an_immutable_unit_it_fires_on_takes_no_damage_and_tesla_still_animates() {
+                crate::register_all();
+                let mut s = setup(json!({ "hand": [{ "def": MENACE, "radiant": true }, FILLER], "mana": 10 }), json!({}), false);
+                let menace = s.card(MENACE).clone();
+
+                s.play(&menace, json!({ "zone": 2 }));
+
+                // A Field Trap can't target an Immutable Unit in play (R781001): Tesla fires and animates,
+                // but its hit passes the Radiant Menace by, so its Lifesteal heals nothing.
+                let tesla = s.card(TESLA).clone();
+                assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
+                assert_eq!(count(s.events(), "trapFired"), 1);
+                assert_eq!(count(s.events(), "damage"), 0);
+                s.expect_stats(&menace, json!({ "health": 18 }));
+                s.expect_health(P1, 20);
             }
 
             #[test]

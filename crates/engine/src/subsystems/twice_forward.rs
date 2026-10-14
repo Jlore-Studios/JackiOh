@@ -163,9 +163,17 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
     let Some(play) = opponents_play(ctx, event) else {
         return Vec::new();
     };
+    // R781001: a Field Trap can't target an Immutable card in play, so neither the card nor a copy
+    // of it is fused in; the trap still fires and gains its Brittle.
+    let shielded = still_there(ctx.sink.state, &play)
+        .is_some_and(|card| crate::restrictions::immutable_bars(ctx.sink.state, Some(&self_), card));
     // The first fuse reveals the card (R687): firing turned it face-up, and its printed Brittle
     // starts now, before the gain lands on it.
     reveal_self(ctx.sink.state, &self_.id);
+    let gain = gain_brittle(json_as(json!({ "instanceId": self_.id, "n": param(ctx, GAIN) })));
+    if shielded {
+        return vec![gain];
+    }
     let fused = if radiant_copy {
         fuse_cards(json_as(json!({
             "defIds": [play.def_id],
@@ -178,10 +186,7 @@ fn fire(radiant_copy: bool, ctx: &mut EffectContext<'_>, event: &GameEvent) -> V
             "targetInstanceId": self_.id,
         })))
     };
-    vec![
-        fused,
-        gain_brittle(json_as(json!({ "instanceId": self_.id, "n": param(ctx, GAIN) }))),
-    ]
+    vec![fused, gain]
 }
 
 /// `twice_forward_trigger`'s argument (data, so a card may write the literal:

@@ -658,7 +658,7 @@ mod vanilla_s6_3_r23_m3_t1 {
     use super::*;
 
     #[test]
-    fn clears_printed_keywords_while_stats_buffs_damage_and_granted_keywords_stay() {
+    fn r781003_clears_printed_keywords_and_buffs_while_damage_and_granted_keywords_stay() {
         let mut state = game();
         // The fixture Taunt unit is a 2/5 with Taunt.
         let unit = put(
@@ -686,10 +686,13 @@ mod vanilla_s6_3_r23_m3_t1 {
         assert!(!unit_has(&state, &now, KeywordKind::Taunt));
         // A granted keyword is another layer and is not printed text, so it survives (§10.4).
         assert!(unit_has(&state, &now, KeywordKind::Rush));
+        // R781003: back to the 2/5 it prints, its +1/+1 gone; its 2 damage stays.
         let view = unit_view(&state, &now);
-        assert_eq!(view.attack, 3);
-        assert_eq!(view.max_health, 6);
-        assert_eq!(view.health, 4);
+        assert_eq!(view.attack, 2);
+        assert_eq!(view.max_health, 5);
+        assert_eq!(view.health, 3);
+        assert_eq!((now.buffs.attack, now.buffs.health), (0, 0));
+        assert_eq!(now.damage, 2);
         assert_eq!(now.def_id, combat_fx::taunter.id.clone());
 
         // No instance is created and no definition changes, so both sides name the same card.
@@ -705,6 +708,106 @@ mod vanilla_s6_3_r23_m3_t1 {
                 },
             ])
         );
+    }
+
+    #[test]
+    fn r781003_the_stat_half_of_its_tuning_goes_and_the_rest_stays() {
+        let mut state = game();
+        let unit = put(
+            &mut state,
+            &combat_fx::taunter.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        {
+            let card = live_mut(&mut state, &unit.id);
+            card.tuning = Some(json_as(
+                json!({ "attack": 4, "health": -2, "numbers": { "n": 1 } }),
+            ));
+        }
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).attack, 6);
+
+        run(
+            &mut state,
+            vanilla(json_as(json!({ "instanceId": unit.id }))),
+            by(PlayerId::P1),
+        );
+
+        let now = live(&state, &unit.id);
+        let view = unit_view(&state, &now);
+        assert_eq!((view.attack, view.max_health), (2, 5));
+        let tuning = now.tuning.clone().expect("the rest of its tuning stays");
+        assert_eq!((tuning.attack, tuning.health), (None, None));
+        assert_eq!(to_json(&tuning.numbers), json!({ "n": 1 }));
+    }
+
+    #[test]
+    fn r781003_a_tokens_summoned_x_x_stays_and_a_radiant_card_keeps_its_radiant_numbers() {
+        let mut state = game();
+        let token = put(
+            &mut state,
+            &combat_fx::taunter.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let radiant = put(
+            &mut state,
+            &combat_fx::taunter.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({ "radiant": true }),
+        );
+        {
+            let card = live_mut(&mut state, &token.id);
+            card.stats_override = Some(AttackHealth { attack: 7, health: 7 });
+            card.buffs = AttackHealth { attack: 1, health: 1 };
+        }
+        live_mut(&mut state, &radiant.id).buffs = AttackHealth { attack: 3, health: 3 };
+        let printed_radiant = unit_view(&state, &live(&state, &radiant.id)).max_health - 3;
+
+        for id in [&token.id, &radiant.id] {
+            run(
+                &mut state,
+                vanilla(json_as(json!({ "instanceId": id }))),
+                by(PlayerId::P1),
+            );
+        }
+
+        let view = unit_view(&state, &live(&state, &token.id));
+        assert_eq!(
+            (view.attack, view.max_health),
+            (7, 7),
+            "summoned as a 7/7, not a buff"
+        );
+        let now = live(&state, &radiant.id);
+        assert!(now.radiant);
+        assert_eq!(unit_view(&state, &now).max_health, printed_radiant);
+    }
+
+    #[test]
+    fn r781003_a_unit_the_lost_stats_would_kill_stays_alive_at_1_health() {
+        let mut state = game();
+        let unit = put(
+            &mut state,
+            &combat_fx::taunter.id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        {
+            let card = live_mut(&mut state, &unit.id);
+            card.buffs = AttackHealth { attack: 0, health: 4 };
+            card.damage = 7;
+        }
+        assert_eq!(unit_view(&state, &live(&state, &unit.id)).health, 2);
+
+        run(
+            &mut state,
+            vanilla(json_as(json!({ "instanceId": unit.id }))),
+            by(PlayerId::P1),
+        );
+
+        let now = live(&state, &unit.id);
+        assert_eq!(now.damage, 4, "capped at its printed max health 5, minus 1");
+        assert_eq!(unit_view(&state, &now).health, 1);
     }
 
     #[test]
