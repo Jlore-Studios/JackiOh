@@ -214,6 +214,65 @@ routes/lobby.css        the lobby's, the series screen's and its picker's tavern
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
 
+## Play together and Duos
+
+Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §12) are screens over the server's answers and
+views, and decide nothing: a friend's status, whether they may be challenged or watched, a chat
+message's mask and every refusal come from the server, shown in its own words, and a Duos board's
+legality comes from the `legal` array its socket sends (rule 7). Every screen here needs a signed-in,
+active account, and asks for one the way `/play` does.
+
+```
+routes (net/navigate.ts paths, and both vercel.json route tables):
+  /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
+                         (accept, decline, cancel), the blocked players (unblock), the add form by
+                         name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
+                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+  /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
+                         legal action, SPECTATE_DELAY_MS behind
+  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
+  /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
+                         bindings, with a seat switcher (development only, as /dev/hotseat)
+net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
+                         Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
+net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
+together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel
+together/ChallengeToast.tsx  mounted once in the shell; polls GET /api/challenges while signed in and
+                         toasts an incoming challenge anywhere: Accept opens /play with the room code
+                         filled in (R767), Decline declines
+together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
+duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
+                         invite a friend by sending the code in chat, join by code; both players go to
+                         /duos/:matchId once the guest joins
+duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
+                         spent seat's bar giving way to its pool), the pass control, the portal, the
+                         teammate strip and the ping wheel
+```
+
+The landing page offers Play together beside Play online. The replays list and the replay player offer
+"Share with a friend". On the Duos board:
+
+- the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
+  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §12.5);
+- the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
+  where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
+  count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
+- the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
+  sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
+  the other view (SPEC §12.10). A Duos board deals no emote hand and draws no aim arrow.
+
+The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
+`duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
+`/dev/duos`; a networked co-op game's state stays on the server.
+
+Test ids, mirrored in `e2e/support/testids.ts`: `landing-play-together`, `together-add-input`,
+`together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
+`together-challenge`, `together-watch`, `together-chat-open`, `chat-input`, `chat-send`,
+`chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
+`duos-ping-<kind>` and `duos-ping-marker`.
+
 ## Practice
 
 `/practice` (SPEC §9.9, R187) is a game against the AI with no account and no server. The engine
@@ -440,9 +499,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
-- Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
-  (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
-  `decide`), with `tutorial/harness.ts` for tests.
+- Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
+  (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
+  `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
+  Duos bindings), with `tutorial/harness.ts` for tests.
 
 ## Internationalisation
 

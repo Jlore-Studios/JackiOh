@@ -12,6 +12,8 @@ Each player owns a hand, a library, a graveyard, an exile pile, a hero, 5 unit z
 | Backrow zone x5 | Field Spells, Traps, Field Traps, or a backrow pile ([[§3.2]]) | Field Spells: both; Traps: the controller only, and the other player sees a face-down card and its cost even if they own it ([[R33]], [[R351]]) | Lane 1 to 5 | Lock flag per zone; traps hidden until they fire |
 | Hero | Health, hero armor, Heroic Power | Both |  | Health has no upper cap |
 
+In Duos a player's teammate also sees their hand and face-down cards ([[§12.6]]), and a hero's health is its own HP and then its team's pool, which has a cap ([[§12.4]]).
+
 ### 3.1 Lanes and adjacency
 
 Your lane N faces the opponent's lane N. "This lane" (Zoomerbin Oomen) means the backrow zone in the same column as the unit. Adjacent means index N-1 and N+1 on the same side and same row: Cleave hits the units beside the target, radiant Hit Job destroys the units beside the target, radiant Collateral Damage exiles the permanents beside the target in its row.

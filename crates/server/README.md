@@ -7,7 +7,9 @@ Conquest series, the ranked ladder and the ladder bots it plays itself when the 
 (R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
 `GameState` in memory, one WebSocket per player, `reduce` on every action and `view_for` pushed to
 each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
-for the card statistics (§9.11, R376–R378).
+for the card statistics (§9.11, R376–R378). Play together lives here too: friends, blocks and
+presence (§9.4), friend challenges, watching a friend's game, shared replays and chat (§9.5), and
+Duos co-op, two players against an AI team this server plays, one co-op actor per match (§12).
 
 The client sends intent and renders `view_for`; it never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7). Deployment, the schema, RLS and the env contract are in
@@ -35,6 +37,8 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
+| Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
+| Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§12) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -48,7 +52,10 @@ when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); i
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
-no rule is restated here. The catalog and its version are compiled in from `crates/cards`.
+no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
+`duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
+`duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§12). The
+catalog and its version are compiled in from `crates/cards`.
 
 ## Running it
 
@@ -151,10 +158,19 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436) |
-| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged |
+| `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; the settings carry `allowSpectators`, whether friends may watch (§9.5) |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
-| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
+| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4) |
+| `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend |
+| `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship and every request either way) and unblock |
+| `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it |
+| `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room |
+| `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
+| `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; share a finished match the caller held a seat in with a friend, and unshare it |
+| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS` (§12.9) |
+| `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a co-op match, step by step, 404 to anyone else (§12.9) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -201,6 +217,41 @@ What the actor holds, each with a test named after it:
 After a result commits, `api::results` files the game in `game_records` (`api::game_records`, the
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
 "live"`; a failure is logged as `game.record.failed` and the result stands.
+
+### The co-op socket (§12)
+
+A co-op match has its own socket, `/ws/duos`, authenticated as `/ws/match` is. The client sends
+`hello {matchId}`, `action {nonce, body}` (a `DuosActionBody`: a duel action, a pass or the team's
+concede) and `ping {ping, target}`; the server sends `view {view, legal}` (the seat's `DuosView` and
+its legal actions), `ack {nonce, seq}`, `error {code, message, nonce?}` (`malformed`,
+`illegal_action`, `forbidden`, `rate_limited`, `match_over`, `internal`), `clock {now, roundDeadline,
+graceDeadlines}`, `teammate {connected, aiPlaying}` and the teammate's `ping`. The co-op actor holds
+what the match actor holds, with four seats:
+
+- the seat is stamped from the verified token, the host's A1 and the guest's A2; B1 and B2 are the
+  AI's, played here through `duos_decide`, one action every `DUOS_AI_STEP_DELAY_MS`, whenever they owe
+  one;
+- every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
+  illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
+  log with `duos_fold`, and the end writes the result and `ended_at` once, unranked, for both humans;
+- the round clock (`DUOS_ROUND_CLOCK_MS`) answers every unended round seat's prompts by the AI and
+  ends its turn; a prompt held off the round has `DUOS_PROMPT_CLOCK_MS`; the four mulligans share
+  `DUOS_MULLIGAN_CLOCK_MS`;
+- a human seat disconnected past `DISCONNECT_GRACE_SECONDS` is played by the AI until it reconnects,
+  its teammate told `teammate {aiPlaying: true}`; a team never loses to a disconnect;
+- a ping is shape-checked (a `hand` target names the sender's own team's side and an index inside that
+  hand), limited to `PING_RATE_LIMIT` per `PING_RATE_WINDOW_MS` (the rest dropped silently) and
+  relayed to the teammate's socket alone; it never enters the log, a replay or a view. A co-op match
+  deals no emote hand and relays no emote or aim.
+
+### The watch socket (§9.5)
+
+A friend watches at `/ws/watch`, authenticated as `/ws/match` is: `hello {matchId, friendId}` for a
+friend's live, unranked match whose player allows watching (`profiles.allow_spectators`) and has fewer
+than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
+`view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
+close. Every frame a watcher sends after `hello` is ignored, and leaving changes nothing in the match.
+Both players' own match sockets get `watchers {count}` when the count changes.
 
 ## Card statistics (§9.11, R376–R378)
 
@@ -457,6 +508,16 @@ with its bot id in `rated_games`, and is read only when a query asks for it (R14
 Migration 0033 adds `bots.trio` and `bots.trio_catalog_version`: the Conquest trio the pool dealt
 the bot, frozen as a ticket's is, and the catalog it was dealt for (R641000). The table stays
 server-only.
+
+Migration 0036 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
+per pair, `a < b`), `blocks`, `presence` (server-only), `challenges`, `chat_messages` (1 to 500
+characters), `chat_reports` (one per message and reporter) and `replay_shares`, each with RLS on and a
+select policy for its own players only, and `profiles.allow_spectators` (on by default). The retention
+loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0037 adds the co-op tables
+(§12.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
+starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
+the result) and `duos_match_actions` (the log, unique by seq and by nonce); the seed and the log are
+the server's alone, as a 1v1 match's are.
 
 ## Tests
 
