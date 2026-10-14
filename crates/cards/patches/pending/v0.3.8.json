@@ -1,8 +1,8 @@
 {
   "version": "v0.3.8",
   "title": "Card wording consistency",
-  "sources": "#814 (parts 1 and 4), #820, #911",
-  "notes": "Same effect, same words: cards that run the same engine verb print the same clause (draw, random discard, steal, Make Radiant, adjacent, gains, Attack and Health, Recruit, Return to hand, (N) Cost, each enemy, Plague Counter placement, damage or heal), and core-073 Anti-oneshot Armor prints 'at a time' like classicplus-011 Anime Armor. Wording only; mechanics, params and numbers unchanged.",
+  "sources": "#814 (parts 1, 4 and 5), #820, #911, #912",
+  "notes": "Same effect, same words: cards that run the same engine verb print the same clause (draw, random discard, steal, Make Radiant, adjacent, gains, Attack and Health, Recruit, Return to hand, (N) Cost, each enemy, Plague Counter placement, damage or heal), and core-073 Anti-oneshot Armor prints 'at a time' like classicplus-011 Anime Armor (#911). Shorter words for long faces: Fortify Mind's rules sentence, Jade Beauty without the Allure reminder its glossary line gives, Jungle Loser's Radiant face without its parenthesis, The Maestro's opponent and piles (#912). Wording only; mechanics, params and numbers unchanged.",
   "player": {
     "title": "Card wording consistency",
     "new": [],
@@ -19,7 +19,9 @@
       "Attack and Health are capitalised on every card, and Mid Loser and Bot Loser gain their stats as other Units do.",
       "Gravedigger returns a card from your graveyard to hand, and Call to Arms recruits Units of (1) Cost or less, as Cookie Guild does.",
       "Permanent Underclassman and Upperclassman summon a (1) and a (4) Cost Unit, and Upperclassman's Death says the fusion goes to your hand.",
-      "Rotten Grape says Lose 5 health, Jlockeed Shredder-10 hits each enemy, Fed Fauci places its Plague Counter and Claude's Datacenter adds an AI generated card."
+      "Rotten Grape says Lose 5 health, Jlockeed Shredder-10 hits each enemy, Fed Fauci places its Plague Counter and Claude's Datacenter adds an AI generated card.",
+      "Fortify Mind says who beats whom in one short sentence, and The Maestro names your opponent's field, hand, deck and graveyard.",
+      "Jade Beauty no longer repeats what Allure does, which the keyword's glossary line says; Jungle Loser's Radiant face drops its reminder in brackets."
     ],
     "fixes": []
   },
@@ -43,6 +45,7 @@
     "classic-089",
     "classicplus-012-1",
     "classicplus-012-2",
+    "classicplus-019-2",
     "classicplus-019-3",
     "classicplus-019-5",
     "classicplus-020",
@@ -60,11 +63,13 @@
     "meditative-019-1",
     "meditative-020",
     "meditative-022",
+    "meditative-022-1",
     "meditative-023",
     "meditative-024",
     "meditative-039-5",
     "meditative-058",
     "meditative-059",
+    "meditative-069",
     "meditative-079",
     "meditative-080",
     "meditative-081",

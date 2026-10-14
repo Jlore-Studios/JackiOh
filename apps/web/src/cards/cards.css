@@ -583,9 +583,6 @@
   text-align: center;
   overflow-wrap: break-word;
   word-break: normal;
-  /* Issue #814: overflow truncates with an ellipsis, never spills; the whole text rides on the
-     box's tooltip and the inspect overlays. */
-  text-overflow: ellipsis;
 }
 
 .cf .cf-text-base {
@@ -719,8 +716,9 @@
 .cf .card-text[data-clamped="true"] {
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  /* The clamp ends its last line with "…" on its own (#912 took out #825's text-overflow, which a
+     wrapping box ignores); the hover preview and the inspect overlays show the whole text. */
   -webkit-line-clamp: var(--cf-clamp-lines, 14);
-  text-overflow: ellipsis;
   /* A line clamp only sets an auto height: in a fixed-height box the lines after it still paint.
      So a clamped box is as tall as its lines, up to the box it had, and its bottom padding becomes
      a transparent border (the parchment still fills it), because overflow clips at the padding

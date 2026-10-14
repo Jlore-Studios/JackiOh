@@ -3,7 +3,7 @@ local J = require("@jackioh")
 
 -- "Place 1 Plague Counter on this", once per mana spent.
 local PER_MANA = 1
--- "Exile … from each of the opponent's field, hand, deck, and graveyard zones."
+-- "Exile … from each of your opponent's field, hand, deck and graveyard."
 local ZONES: { J.ExileRandomZone } = { "field", "hand", "library", "graveyard" }
 
 -- "Whenever you spend mana, place 1 Plague Counter on this": one placement per mana the controller
@@ -26,8 +26,8 @@ local MANA_TRIGGER = {
 	end,
 }
 
--- "Activate: Spend ({price}) Plague Counters: Exile {exiles} from each of the opponent's field,
--- hand, deck, and graveyard zones." Refused below {price} counters (MD-D27).
+-- "Activate: Spend ({price}) Plague Counters: Exile {exiles} from each of your opponent's field,
+-- hand, deck and graveyard." Refused below {price} counters (MD-D27).
 local function exile_ability(label: string)
 	return {
 		id = "maestro-exile",

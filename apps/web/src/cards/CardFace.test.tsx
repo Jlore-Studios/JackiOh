@@ -976,11 +976,18 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     }
   });
 
-  it("a shortened Summit keeps its whole text in the rules box's tooltip", () => {
+  it("#912: with hover previews on (the default) the rules box has no tooltip, the preview has the whole text", () => {
     const box = summitBox(10);
     expect(box.getAttribute("data-short")).toBe("true");
     expect(box.textContent).toContain("Ascent 10: Win the game.");
     expect(box.textContent).not.toContain("Ascent 0:");
+    expect(box.hasAttribute("title")).toBe(false);
+  });
+
+  it("#912: with hover previews off, a shortened Summit keeps its whole text in the rules box's tooltip", () => {
+    writeCardSettings({ hoverPreviews: false });
+    const box = summitBox(10);
+    expect(box.getAttribute("data-short")).toBe("true");
     const whole = faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false }).text.full;
     expect(box.getAttribute("title")).toBe(whole);
     expect(box.getAttribute("title")).toContain("Ascent 0:");
@@ -991,7 +998,6 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(whole.hasAttribute("data-short")).toBe(false);
     expect(whole.textContent).toContain("Ascent 0:");
     expect(whole.textContent).toContain("Ascent 10:");
-    expect(whole.getAttribute("title")).toContain("Ascent 10:");
     cleanup();
 
     // A level past the printed lines falls back to the whole text rather than hiding any.
@@ -1006,7 +1012,6 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     const heroic = one(container, ".card-text");
     expect(heroic.hasAttribute("data-short")).toBe(false);
     expect(heroic.textContent).toContain("Gain one of 13 random powers");
-    expect(heroic.getAttribute("title")).toBe(faceModel({ defId: "core-098", def: def("core-098"), radiant: false }).text.full);
   });
 });
 

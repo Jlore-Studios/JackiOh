@@ -7927,7 +7927,7 @@
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead (its \"Whenever this destroys a Unit\" triggers)."
+      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -11867,7 +11867,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. Attack beats Greed, Greed beats Defend, Defend beats Attack. If yours wins, cancel their reward; if it loses, take its penalty; a tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
     },
     "radiant": {
       "keywords": [
@@ -11875,7 +11875,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. Attack beats Greed, Greed beats Defend, Defend beats Attack. If yours wins, cancel their reward; if it loses, take its penalty; a tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
     }
   },
   "meditative-023": {
@@ -12684,7 +12684,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn, steal them, or they die of heartbreak if you have no room.\nYou summon this when your Jade Counter reaches 5."
+      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5."
     },
     "radiant": {
       "attack": 40,
@@ -12697,7 +12697,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn, steal them, or they die of heartbreak if you have no room.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
+      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
     }
   },
   "meditative-040": {
@@ -13926,13 +13926,13 @@
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of your opponent's field, hand, deck and graveyard."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of your opponent's field, hand, deck and graveyard."
     }
   },
   "meditative-070": {

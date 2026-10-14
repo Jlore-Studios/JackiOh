@@ -1,9 +1,8 @@
 //! Meditative #22.1 Fortify Mind (SPEC §8.8 row 22.1, BUILD M10 row M 22.1): (0) Spell, Token
 //! (printed Epic).
 //!   Base:    "Temporary. Choose one: Greed, Attack or Defend, to guess your opponent's Mind Games.
-//!            If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack),
-//!            cancel their reward. If you chose the same, nothing happens. If theirs beats yours,
-//!            take your choice's penalty. Greed: You have {mana} less mana next turn. Discard
+//!            Attack beats Greed, Greed beats Defend, Defend beats Attack. If yours wins, cancel
+//!            their reward; if it loses, take its penalty; a tie does nothing. Greed: You have {mana} less mana next turn. Discard
 //!            {discards} random cards. Attack: Deal {damage} damage to your hero and each of your
 //!            Units. Defend: Heal your opponent's hero and each of their Units {heal}. They gain
 //!            +{armor} Armor. When you discard this, take all three penalties."
