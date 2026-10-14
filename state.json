@@ -6609,11 +6609,13 @@
         "by": "`claude` (strong)",
         "sha": "48d485d8569252003d254d62f62c3b6f212f9afe"
       },
+      "closed_at": "2026-10-14T04:57:23Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T04:03:03Z",
       "issue": 843,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
