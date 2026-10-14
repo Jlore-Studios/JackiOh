@@ -52,7 +52,7 @@ deployment decision that can be made later without touching the code.
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
 | `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log |
-| `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
+| `crates/engine` + `crates/cards` (its Luau scripts run by `crates/luau`) | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
 
@@ -228,8 +228,8 @@ cannot hold a comment, and three things in them are not obvious:
   `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
   (but their manifests, which cargo reads), `render.yaml`, the root docs, a crate's `tests/`, and the
   client's test files (`*.test.ts(x)`, `apps/web/src/test/`), `apps/web/scripts/` and its README. The
-  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
-  and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
+  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/luau`,
+  `crates/ai` and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
   commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
   no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
@@ -245,16 +245,17 @@ cannot hold a comment, and three things in them are not obvious:
   the script's decisions, over diffs in a throwaway repo.
 - **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
   `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
-  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
-  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
+  against the engine, cards, Luau and AI crates beside it: `rust:1.97-slim-bookworm` stages, with `g++`
+  for Luau's C++, run `cargo build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
   workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
   `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
   patch history and every migration are compiled into the binary, so nothing at run time needs Node,
   pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
   catalog and serves; `render.yaml` sets no build or start command, and
   `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
-  `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
-  `pnpm install`, because the web build compiles the WASM module.
+  `vercel.json`'s install step (`scripts/vercel-install.sh`) installs rustup and the
+  `wasm32-unknown-emscripten` target before `pnpm install`, because the web build compiles the WASM
+  module, and `scripts/build-wasm.sh` installs the pinned emsdk it links with when it is missing.
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each

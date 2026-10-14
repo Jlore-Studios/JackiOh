@@ -25,6 +25,7 @@ use crate::wire::Zone;
 /// `addLibraryCopies`'s arguments: whose deck the copies come `of`, how many, and the Brittle a copy
 /// that reaches the hand is given.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddLibraryCopiesArgs {
     pub of: PlayerSpec,

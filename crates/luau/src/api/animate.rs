@@ -1,0 +1,4 @@
+
+verbs! {
+    verb!(animate, AnimateArgs);
+}

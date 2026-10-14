@@ -14,6 +14,7 @@ use crate::wire::{CraftRecipe, Zone};
 
 /// `craft_card`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CraftCardArgs {
     pub recipe: CraftRecipe,

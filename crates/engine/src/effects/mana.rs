@@ -13,6 +13,7 @@ use crate::wire::GameEvent;
 
 /// `gainMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GainManaArgs {
     pub amount: i32,
@@ -33,6 +34,7 @@ pub fn gain_mana(args: GainManaArgs) -> Effect {
 
 /// `refreshMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RefreshManaArgs {
     pub amount: i32,
@@ -57,6 +59,7 @@ pub fn refresh_mana(args: RefreshManaArgs) -> Effect {
 
 /// `nextTurnMana`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct NextTurnManaArgs {
     pub amount: i32,

@@ -147,6 +147,7 @@ pub struct FuseArgs {
 
 /// R352: the two prices a fused hand card can have.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum HandPrice {
     Free,

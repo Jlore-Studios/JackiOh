@@ -68,6 +68,7 @@ fn total_for(heads: i32, tails: i32, per_heads: &BuffAmount, per_tails: &BuffAmo
 
 /// `flip_coins`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FlipCoinsArgs {
     pub target: TargetSpec,
@@ -118,6 +119,7 @@ pub fn flip_coins(args: FlipCoinsArgs) -> Effect {
 
 /// `flip_coin_keyword`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FlipCoinKeywordArgs {
     pub target: TargetSpec,

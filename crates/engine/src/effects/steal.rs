@@ -26,6 +26,7 @@ use crate::zones::{
 /// captured earlier — K-Pop Fanatic's delayed steal names its target that way (R76). Both are plain
 /// data, so a card file never holds a closure over state (CLAUDE.md rule 5).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct StealTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -39,6 +40,7 @@ pub struct StealTarget {
 /// R963, MD-C4 (Meditative #39.5 Jade Beauty's Allure): what a steal does when the card cannot be
 /// taken because its new side has no free zone.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum StealOtherwise {
     /// An ordinary destroy (§6.3), so Death and Reborn apply and an Indestructible card stays (R46).
@@ -179,6 +181,7 @@ pub fn give_control(args: StealTarget) -> Effect {
 
 /// `stealAll`'s arguments: the row defaults to "units".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct StealAllArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -204,6 +207,7 @@ pub fn steal_all(args: StealAllArgs) -> Effect {
 
 /// MD-F16, R1284: capture an opponent's card, moving it dormant beneath the holder under the holder's controller.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CaptureArgs {
     pub instance_id: String,

@@ -12,6 +12,7 @@ use crate::script::Effect;
 
 /// `draw`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawArgs {
     pub count: i32,
@@ -28,6 +29,7 @@ pub fn draw(args: DrawArgs) -> Effect {
 
 /// `drawFromLibrary`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawFromLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

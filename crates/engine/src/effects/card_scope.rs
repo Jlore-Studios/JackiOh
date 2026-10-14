@@ -27,6 +27,7 @@ use crate::zones::{card_at, slots_of};
 
 /// The piles a card scope reaches: the field (both rows unless `rows` narrows it), a hand, a deck.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CardZone {
     Field,
@@ -35,6 +36,7 @@ pub enum CardZone {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CardScope {
     /// Sides, relative to `ctx.controller`. Default "self".
@@ -59,6 +61,7 @@ pub struct CardScope {
 
 /// R242: who may read a card where it sits.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum Readers {
     Everyone,
@@ -71,6 +74,7 @@ const READER_ORDER: &[Readers] = &[Readers::Everyone, Readers::Owner, Readers::N
 
 /// One card of a scope: where it is, who reads it there, and whether it passes the scope's filters.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ScopedCard {
     pub card: CardInstance,
@@ -81,6 +85,7 @@ pub struct ScopedCard {
 
 /// `cards_in_card_scope`'s options (TS `{ wholeHiddenPiles?: boolean }`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CardScopeOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -20,6 +20,7 @@ use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, Row
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum NumberedKey {
     Armor,
     Lucky,
@@ -48,6 +49,7 @@ impl NumberedKey {
 
 /// Which number on a card: its cost, attack or health, a numbered keyword, or a declared number.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NumberRef {
     Cost,
@@ -61,6 +63,7 @@ pub enum NumberRef {
 /// continuation's data (`number_ref_id`, `parse_number_ref`), `label` is what a client shows, `value` what
 /// it is now.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct NumberOnCard {
     pub id: String,

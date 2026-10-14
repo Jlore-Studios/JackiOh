@@ -21,6 +21,7 @@ use super::targets::{ScopeSide, TargetSpec, instance_of, sides_of};
 
 /// Which sides and rows a zone-wide Lock or Unlock covers: both sides and both rows by default.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ZoneScope {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -71,6 +72,7 @@ fn unlock_one(ctx: &mut EffectContext<'_>, slot: &ZoneSlot) {
 /// Which lane: the one a card stands in (`self` by default, or a named card), or a number
 /// (TS `number | TargetSpec`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum LaneSpec {
     Lane(i32),
@@ -95,6 +97,7 @@ fn lane_of(ctx: &EffectContext<'_>, spec: &LaneSpec) -> Option<i32> {
 
 /// `lockLane`'s argument: `{ lane? } & ZoneScope` (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct LockLaneArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -154,6 +157,7 @@ fn zone_played_into(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<ZoneSl
 
 /// `lockPlayedZone`'s argument (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct LockPlayedZoneArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

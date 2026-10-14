@@ -12,6 +12,7 @@ use crate::script::Effect;
 use crate::state::Position;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AnimateArgs {
     /// B3.1 rule 2: Attack Position unless the text says otherwise (Tesla: "DEF").

@@ -1,11 +1,11 @@
 # `jackioh-luau`
 
-The host that will run card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
+The host that runs card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
 runs in, the integer boundary every value crosses, the lint that refuses what the sandbox cannot
 stop, one VM per thread, and `load_card`, which turns a compiled script into the engine's
-`CardScripts`. **Nothing depends on it yet.** Part 4 wires it into `crates/cards` (whose `build.rs`
-will call `compile`), ports the pilot cards, and adds `g++` to the server's Docker image. Until then
-no build from `main` compiles it except the workspace's own (`cargo build/clippy/test --workspace`).
+`CardScripts`. `crates/cards` depends on it: its `build.rs` calls `compile` on every card's
+`.luau`, and its registry calls `load_card` on the bytecode, so every build that takes the cards
+(the server's, the browser's, the tools') compiles it. The engine and the AI do not depend on it.
 The decisions it follows are #442's L3–L8. This file is the contract.
 
 ## Pinned versions
@@ -74,8 +74,13 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   its garbage not yet collected included, so a hook that builds one huge string or table without
   looping (`string.rep`), which spends no interrupts, is bounded too. The allocation that would pass
   the cap fails, and the hook call with it, with an error naming the card, face and hook:
-  `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`, whether the allocation was the
-  hook's own or a reader's. Luau collects nothing when an allocation fails, so an outermost hook call
+  `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`. Every hook call, a nested one
+  included, runs under the cap (`vm::BudgetGuard`), but a reader, `J.query` and `J.pool` lift it
+  while they build their answer (`sandbox::MemoryCap`): under a cap mlua runs each value the host
+  builds through a protected call, which cost a hook call about half its time, and what the
+  host builds is bounded by the state it reads, not by the script. It is still counted, so the
+  hook's next allocation past the cap fails. For the same reason `J`'s verbs are Luau closures, not
+  Rust functions. Luau collects nothing when an allocation fails, so an outermost hook call
   that finds the VM holding more than `LUAU_MEMORY_COLLECT_BYTES` (half the cap) first collects all
   its garbage: a call that ran out of memory does not fail the next one. `pcall` catches a memory
   error as it catches any Luau error; the allocation never happened, so the cap holds;
@@ -149,28 +154,43 @@ Building a sandbox, once per thread, took about 0.2 ms.
 ## How a hook is called
 
 A card's module returns a table with a `base` table, a `radiant` table or both (the same table for
-a card whose faces act alike). Each maps hook names to functions; the names are `vm::HOOKS`, the
-effect-list hooks `Script::hook_named` answers: `cry`, `death`, `startOfGame`, `delayed`,
-`startOfTurn`, `endOfTurn`, `onPlayHook`, `afterAttack`, `startOfOpponentTurn`. Any other key, at
-either level, is refused when the card loads (`LuauError::Load`).
+a card whose faces act alike, spelled `radiant = "base"`). Each maps hook names to functions; the
+names are `vm::HOOKS` (every hook type but L14's `quests`, `records_play_as` and `start_of_game`,
+which stay in Rust and are refused here like any other unknown key) and `vm::SUB_HOOKS`, the
+named sub-hooks closure-taking verbs call back by name. Any other key, at either level, is
+refused when the card loads (`LuauError::Load`), so a misspelled hook stays a load error.
 
 ```luau
 local J = require("@jackioh")
 
 return {
 	base = {
-		cry = function(ctx)
+		cry = function(ctx: J.EffectContext)
 			local hero = ctx:hero_of(ctx:controller())
 			return { J.damage({ to = { of = "enemyHero" }, amount = J.div(hero.health, 7) }) }
 		end,
 	},
+	radiant = "base",
 }
 ```
+
+Annotate every hook's context (`ctx: J.EffectContext`, `ctx: J.ConditionContext`, …): an
+unannotated parameter degrades what the readers answer, and the checker cannot see through it
+(`#ctx:zone_cards(...)` and `unit.id` in a loop both fail without the annotation). A verb whose
+argument is a union (several table shapes, `HealArgs`) cannot narrow an inline literal either:
+hoist the inner table into an annotated local (`local target: J.TargetSpec = { of = "selfHero" }`).
+`luau-analyze --mode=strict` (Luau 0.740, above) is clean over the module, the pilots and every
+card-shaped fixture; the checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
+`@jackioh` at the committed module, which the CLI resolves (the mapping drops the `.luau`
+extension, which luau-analyze 0.740 refuses as `Unknown require`, #464 gap 15), so local
+strict runs check the files in place.
 
 - `load_card(id, bytecode)` runs the module once to read which hooks each face declares, and
   fills those slots of `CardScripts` with closures that capture only the hook's `Site` (card, face
   and hook) and the `&'static` bytecode, so any thread's VM can load the chunk the first time it
-  needs it. No Lua value outlives a call.
+  needs it. One function value named under two hooks — two hooks of one face, or one hook of
+  each face — fills both slots with one shared closure, which serves each run from the running
+  face's table (#464 gaps 10 and 14). No Lua value outlives a call.
 - A call runs the module afresh, takes `module[face][hook]` and calls it with `ctx`, a userdata
   scoped to the call (`Lua::scope`), so a script cannot keep it.
 - An effect is data. `J.<verb>(args)` returns `{ verb = "<verb>", args = args }` and touches
@@ -189,8 +209,8 @@ return {
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
 `load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
-`crates/cards/build.rs` will call it in part 4; until then only the tests do. Its errors name the
-file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
+`crates/cards/build.rs` calls it on every card's `.luau`, and the tests on their fixtures. Its
+errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
 `"<file>:<line>: <Luau's message>"`.
 
 The lint (`lint.rs`, L6, L7) is a pure function over the source: a lexer that knows Luau's
@@ -214,14 +234,92 @@ method or a type and is never refused. It refuses:
 
 ## What is bound
 
-Only enough to test the host: the verbs `J.destroy` and `J.damage` (`api::VERBS`, named and typed
-as the engine's `destroy` and `damage`), `J.div` and `J.rem`, and the readers `ctx:controller()`,
-`ctx:hero_of(player)` and `ctx:effects_of(card, face, hook)` (the kinds of the effects another
-card's hook returns, standing in for the readers that nest until they exist). Part 6 binds the
-rest.
+Everything a ported card can say in Rust (#448; `docs/v0.4.0/api-gaps.md` lists what is left and
+which cards wait on it):
+
+- **Effects.** One Luau function per effect verb in `crates/engine/src/effects/` (`api/`, one
+  file per module, each line a `verb!` call), same name, its argument struct's fields as table
+  fields named as serde names them (camelCase). An effect is data: `J.damage(args)` returns
+  `{ verb = "damage", args = args }` and touches nothing.
+
+```luau
+J.damage({ to = { of = "enemyHero" }, amount = 2 })
+```
+
+- **Readers.** The read helpers (`ctx:hero_of(player)`), the effect-context readers
+  (`ctx:chosen_options()`), `J.query` and `J.pool` (the only random pools) and the context's
+  rng draws — arrays, never maps, wherever order matters, plus `J.sort_by` (a stable sort done
+  in Rust).
+
+```luau
+local ids = {}
+for _, unit in ipairs(ctx:active_units_of(ctx:opponent_of(ctx:controller()))) do
+	ids[#ids + 1] = unit.id
+end
+```
+
+- **Hooks.** Every hook type a ported card uses (`hooks.rs`, one adapter each): each takes what
+  its Rust type takes and returns what it returns. A hook that fails panics with its error, which
+  names its card, face and hook: an engine `Hook` has no error to return.
+
+```luau
+conditionMet = function(ctx: J.ConditionContext)
+	return ctx:unspent_mana_of(ctx:controller()) >= 0
+end,
+```
+
+- **Declarations.** Targets, modes, static flags, activations, triggers, replacements, target
+  checks, resume and grants load as data (`script.rs`); `when`/`run`/`canActivate` functions
+  inside them are adapted like hooks.
+
+```luau
+triggers = {
+	{
+		id = "t1",
+		on = { "turnStarted" },
+		when = function(ctx: J.EffectContext, event: J.GameEvent)
+			return true
+		end,
+		run = function(ctx: J.EffectContext, event: J.GameEvent)
+			return { J.draw({ count = 1 }) }
+		end,
+	},
+},
+```
+
+- **Closure verbs by name.** `after_state_check`, `draw_while` and `for_each_card` take the
+  *name* of a face function plus data — never a function (L6: a function cannot cross into Rust,
+  and L8: nothing a script sets survives the call, so there is no registry to keep one in). The
+  closure the host builds captures only the card, the face, the name, the data and the site, and
+  re-runs the card's chunk to call `module[face][hook]` when the engine reaches it. A second use
+  of one verb in a face appends `_2` (`each_cards_2`), and a name that resolves to nothing fails
+  the card's own test with an error naming the card, face and function. `vm::SUB_HOOKS` lists
+  the valid names.
+
+```luau
+cry = function(ctx: J.EffectContext)
+	return {
+		J.after_state_check({ hook = "after_check", data = { amount = 2 } }),
+	}
+end,
+after_check = function(ctx: J.EffectContext, data: J.JsonValue)
+	return {
+		J.damage({ to = { of = "enemyHero" }, amount = data.amount }),
+	}
+end,
+```
+
+- **Types.** `crates/cards/luau/jackioh.luau`: the `export type`s and typed function stubs,
+  generated from the Rust types through ts-rs (the engine's off-by-default `ts` feature) by
+  `tests/export_api.rs` and committed; scripts `require("@jackioh")`, so strict mode checks
+  every script against it. CI fails when a run changes the module without committing it.
 
 ## Tests
 
 `tests/host.rs`, over the card-shaped modules in `tests/fixtures/*.luau` (none is a real card):
 the sandbox, the interrupt's cap (nested calls included), the depth cap, the walk, `J.div` and
-`J.rem`, statelessness, nesting, two threads, the loader and the lint. `cargo test -p jackioh-luau`.
+`J.rem`, statelessness, nesting, two threads, the loader and the lint. `tests/api.rs`: one test
+per hook adapter over fixture scripts, and Luau-vs-Rust parity per verb group — the same card as
+a Luau fixture and as an engine fixture, played in identical scenarios, with equal `hash_state`
+and equal events. `tests/export_api.rs` (with `--features ts`) regenerates the typed module and
+fails when the run changes it. `cargo test -p jackioh-luau --features ts`.

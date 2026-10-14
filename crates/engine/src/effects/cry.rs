@@ -15,6 +15,7 @@ use crate::state::{CardInstance, GameState};
 
 /// `trigger_cry`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerCryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

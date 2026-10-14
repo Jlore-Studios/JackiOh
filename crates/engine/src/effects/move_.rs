@@ -97,6 +97,7 @@ pub fn bounce_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
 
 /// `exile`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileArgs {
     pub target: TargetSpec,
@@ -114,6 +115,7 @@ pub fn exile(args: ExileArgs) -> Effect {
 
 /// `exileRandomFrom`'s zone: whose cards the picks come from.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum ExileRandomZone {
     Field,
@@ -124,6 +126,7 @@ pub enum ExileRandomZone {
 
 /// `exileRandomFrom`'s argument: the seat whose cards, the zone, and how many.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileRandomFromArgs {
     pub player: PlayerSpec,
@@ -190,6 +193,7 @@ pub fn exile_all(args: BoardScope) -> Effect {
 /// `exileAdjacentTo`'s arguments: the target, and the scope its neighbours must match
 /// (TS `{ target: TargetSpec } & BoardScope`, the scope's keys beside `target`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileAdjacentToArgs {
     pub target: TargetSpec,
@@ -218,6 +222,7 @@ pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
 
 /// The three zones a card can be exiled out of by a sweep; the exile pile is where they go.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum ExileZone {
     Library,
@@ -241,6 +246,7 @@ pub const EXILE_ZONE_ORDER: &[ExileZone] = &[ExileZone::Library, ExileZone::Hand
 
 /// `CostFilter.parity`: "odd" | "even".
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CostParity {
     Odd,
@@ -252,6 +258,7 @@ pub enum CostParity {
 /// `costMod` #7 Jewelosco Scarab left on an instance or the discount #95 Call to Chaos put across a
 /// whole library, and R66 asks for each card's cost at resolution.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CostFilter {
     /// The parity of the card's current cost (#94's "every odd-cost card", R26).
@@ -287,6 +294,7 @@ fn matches_cost(ctx: &EffectContext<'_>, card: &CardInstance, filter: &CostFilte
 
 /// `exileMatching`'s arguments (TS `{ zones?; player? } & CostFilter`, the filter's keys beside them).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileMatchingArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -331,6 +339,7 @@ pub fn exile_matching(args: ExileMatchingArgs) -> Effect {
 
 /// `bounce`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BounceArgs {
     pub target: TargetSpec,
@@ -401,6 +410,7 @@ fn discard_card(ctx: &mut EngineSink<'_>, card: &CardInstance) {
 
 /// `discard`'s arguments: the target defaults to the first chosen selection.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscardArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -426,6 +436,7 @@ pub fn discard(args: DiscardArgs) -> Effect {
 
 /// `discardRandom`'s arguments: `count` defaults to 1, `player` to "self".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscardRandomArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -465,6 +476,7 @@ pub fn discard_random_cards(ctx: &mut EngineSink<'_>, player: PlayerId, count: i
 
 /// `discardHand`'s and `exileHand`'s arguments: `player` defaults to "self".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscardHandArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -521,6 +533,7 @@ pub fn exile_hand(args: ExileHandArgs) -> Effect {
 /// the hand of the player whose effect countered it, as their own (E2's steal off the stack: Classic
 /// #4, #72 Radiant).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CounterDestination {
     Graveyard,
@@ -531,6 +544,7 @@ pub enum CounterDestination {
 /// `counterPlay`'s arguments: `to` defaults to "graveyard"; with no `target` it is the innermost
 /// announce still live.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CounterPlayArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -619,6 +633,7 @@ pub fn counter_play(args: CounterPlayArgs) -> Effect {
 
 /// `counter`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CounterArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

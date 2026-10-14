@@ -23,6 +23,7 @@ use crate::wire::{PlayerId, Selection, opponent_of};
 /// wherever it ends up (R74), and a price goes on only once the card is in the hand — one the hand cap
 /// burned is an ordinary graveyard card (R4).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TakenRiders {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -68,6 +69,7 @@ fn chosen_ids(ctx: &EffectContext<'_>) -> Vec<String> {
 
 /// `giveFromHand`'s `cards`: which cards of the hand go.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum GiveFromHandCards {
     Chosen,
@@ -78,6 +80,7 @@ pub enum GiveFromHandCards {
 
 /// `giveFromHand`'s argument: `{ from?; cards?; count? } & TakenRiders`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GiveFromHandArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -134,6 +137,7 @@ pub fn give_from_hand(args: GiveFromHandArgs) -> Effect {
 
 /// `takeFromLibrary`'s `pick`: which matching cards of the library go.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum TakeFromLibraryPick {
     Random,
@@ -144,6 +148,7 @@ pub enum TakeFromLibraryPick {
 
 /// `takeFromLibrary`'s argument: `{ from?; pick?; count?; filter? } & TakenRiders`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TakeFromLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -200,6 +205,7 @@ pub fn take_from_library(args: TakeFromLibraryArgs) -> Effect {
 
 /// `drawFromOpponent`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawFromOpponentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

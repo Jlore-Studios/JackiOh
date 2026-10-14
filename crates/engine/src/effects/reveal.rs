@@ -27,6 +27,7 @@ fn self_spec() -> TargetSpec {
 
 /// `reveal`'s arguments: the target defaults to the running card.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RevealArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

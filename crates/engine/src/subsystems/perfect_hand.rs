@@ -20,6 +20,7 @@ use crate::wire::PlayerId;
 
 /// `rank_perfect_hand`'s options.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RankPerfectHandOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -30,6 +31,7 @@ pub struct RankPerfectHandOptions {
 
 /// `replace_hand_with_perfect`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ReplaceHandWithPerfectArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

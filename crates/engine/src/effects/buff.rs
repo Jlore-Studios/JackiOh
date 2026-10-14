@@ -30,6 +30,7 @@ use crate::zones::active_units_of;
 
 /// A stat change in attack, max health, or both (#4 Gary, #43 Friend of Felinors, #63).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BuffAmount {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -101,6 +102,7 @@ fn apply_buff(ctx: &mut EffectContext<'_>, unit: &CardInstance, amount: &BuffAmo
 
 /// `buff`'s argument: `{ target } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BuffArgs {
     pub target: TargetSpec,
@@ -122,6 +124,7 @@ pub fn buff(args: BuffArgs) -> Effect {
 
 /// `buffAllUnits`' side: a `PlayerSpec`, or "both".
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum BuffAllSide {
     One(PlayerSpec),
@@ -130,6 +133,7 @@ pub enum BuffAllSide {
 
 /// The literal "both" of `buffAllUnits`' side.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum BuffAllBoth {
     #[serde(rename = "both")]
     Both,
@@ -137,6 +141,7 @@ pub enum BuffAllBoth {
 
 /// `buffAllUnits`' argument: `{ side?: PlayerSpec | "both" } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BuffAllUnitsArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -218,6 +223,7 @@ fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyw
 
 /// `grantKeyword`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantKeywordArgs {
     pub target: TargetSpec,
@@ -236,6 +242,7 @@ pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
 /// `grantAbility`'s argument: the card, the grant `<defId>#<key>`, the face it was granted on, and
 /// the numbers it was granted with.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantAbilityArgs {
     #[serde(flatten)]
@@ -311,6 +318,7 @@ pub const COMBAT_KEYWORDS_KEY: &str = "combatKeywords";
 
 /// `drawCombatKeywords`' argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawCombatKeywordsArgs {
     pub count: i32,
@@ -365,6 +373,7 @@ pub fn drawn_combat_keywords(card: &CardInstance, key: Option<&str>) -> Vec<Keyw
 
 /// `grantRandomKeywords`' argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantRandomKeywordsArgs {
     pub target: TargetSpec,
@@ -402,6 +411,7 @@ pub fn grant_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
 
 /// `buffCards`' argument: `{ scope: CardScope } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BuffCardsArgs {
     pub scope: CardScope,
@@ -430,6 +440,7 @@ pub fn buff_cards(args: BuffCardsArgs) -> Effect {
 
 /// `grantKeywordCards`' argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantKeywordCardsArgs {
     pub scope: CardScope,

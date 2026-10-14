@@ -1,7 +1,8 @@
-//! `golden record` and `luau diff` on the built `jackioh` (#559): the forced cards are in both decks of
-//! every recorded game and the file replays clean; a build is its own parent without a mismatch; and
-//! a doctored hash is named by seed, step and hash, with exit 1. The timings of `luau bench` are not
-//! tested (its comparison is unit-tested in `src/luau.rs`).
+//! `golden record` and `luau diff` on the built `jackioh` (#559, #449): the forced cards are in
+//! both decks of every recorded game and the file replays clean; a build is its own parent without
+//! a mismatch, including with the three Luau pilot cards forced; and a doctored hash is named by
+//! seed, step and hash, with exit 1. The timings of `luau bench` are not tested (its comparison is
+//! unit-tested in `src/luau.rs`).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -13,6 +14,10 @@ const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
 
 /// Two Core cards, forced into every deck.
 const FORCED: [&str; 2] = ["core-055", "core-024"];
+
+/// The three Luau pilot cards (part 4, #446): forcing them proves a Luau script records and replays
+/// exactly as its Rust twin did.
+const PILOTS: [&str; 3] = ["core-001", "core-002", "core-003"];
 
 /// A directory for one test, empty, under the temporary directory.
 fn scratch(test: &str) -> PathBuf {
@@ -112,6 +117,24 @@ fn luau_diff_with_this_binary_as_its_own_parent_reports_0_mismatches() {
         BIN,
         "--cards",
         &FORCED.join(","),
+        "--games",
+        "3",
+        "--seed",
+        "1",
+    ]);
+    assert!(output.status.success(), "{}{}", stdout(&output), stderr(&output));
+    assert!(stdout(&output).contains("0 mismatches"), "{}", stdout(&output));
+}
+
+#[test]
+fn luau_diff_with_the_pilot_cards_forced_reports_0_mismatches() {
+    let output = jackioh(&[
+        "luau",
+        "diff",
+        "--parent-bin",
+        BIN,
+        "--cards",
+        &PILOTS.join(","),
         "--games",
         "3",
         "--seed",

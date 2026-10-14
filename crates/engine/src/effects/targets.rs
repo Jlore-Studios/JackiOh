@@ -19,6 +19,7 @@ use crate::zones::{ZoneSlot, adjacent, card_at, carried_units_of, is_buried, row
 
 /// Which card or hero an effect names (TS `TargetSpec`, discriminated on `of`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "of", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum TargetSpec {
     /// The unit running the script.
@@ -42,6 +43,7 @@ pub enum TargetSpec {
 
 /// `"self" | "enemy"`: a player relative to the controller.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum PlayerSpec {
     #[serde(rename = "self")]
     SelfSide,
@@ -214,6 +216,7 @@ pub fn instance_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardIns
 /// `BoardScope["side"]`: sides, relative to `ctx.controller` (also `ZoneScope.side` and
 /// `CardScope.side`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum ScopeSide {
     #[serde(rename = "any")]
     Any,
@@ -229,6 +232,7 @@ pub enum ScopeSide {
 /// vocabulary, defined once here, and each board-wide verb is a thin walk over `cards_in_scope`.
 /// `buffAllUnits`, `stealAll` and `switchAllPositions` are the same shape from before it existed.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct BoardScope {
     /// Sides, relative to `ctx.controller`. Default "any".

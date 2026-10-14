@@ -202,6 +202,36 @@ fn writing_a_global_fails() {
 }
 
 #[test]
+fn writing_into_the_modules_tables_fails() {
+    // `J`'s tables live as long as the thread's VM, so a write would reach the next hook (L8).
+    for (card, write) in [
+        ("fixture-write-trap-types", "J.TRAP_TYPES[3] = \"Unit\""),
+        ("fixture-write-config", "J.config.HERO_HEALTH = 1"),
+        ("fixture-write-module", "J.damage = J.heal"),
+    ] {
+        let code = bytecode(
+            "write_module.luau",
+            &format!(
+                "local J = require(\"@jackioh\")\nreturn {{ base = {{ cry = function(ctx)\n\t{write}\n\treturn nil\nend }} }}\n"
+            ),
+        );
+        let text = error_text(with_ctx(|ctx| {
+            call_hook(site(card, Face::Base, "cry"), code, ctx)
+        }));
+        assert!(text.contains("readonly"), "{card}: {text}");
+    }
+    let code = bytecode(
+        "read_trap_types.luau",
+        "local J = require(\"@jackioh\")\n\
+         return { base = { cry = function(ctx)\n\
+         \treturn { J.damage({ to = { of = \"enemyHero\" }, amount = #J.TRAP_TYPES }) }\n\
+         end } }\n",
+    );
+    let calls = with_ctx(|ctx| call_hook(site("fixture-read-trap-types", Face::Base, "cry"), code, ctx));
+    assert_eq!(calls, Ok(vec![hit(2)]));
+}
+
+#[test]
 fn require_answers_only_the_jackioh_module() {
     let error = load_card("fixture-require-other", fixture!("require_other")).err();
     let Some(LuauError::Load { card, message }) = error else {
@@ -670,6 +700,33 @@ fn load_card_reads_the_declared_hooks() {
         error_text(load_card("fixture-value", not_a_function)),
         "fixture-value: radiant cry is of type integer, not a function"
     );
+}
+
+#[test]
+fn load_card_reads_declarations_and_aura() {
+    let source = r#"
+local J = require("@jackioh")
+local base = {
+    targets = {
+        { kind = "target", min = 1, max = 1, filter = { side = "enemy", of = { "unit" }, notTags = { "Human" } } }
+    },
+    aura = function(ctx)
+        return {
+            J.defense_armor_aura({ armor = ctx:param("armor") })
+        }
+    end,
+}
+return {
+    base = base,
+    radiant = "base",
+}
+"#;
+    let code = bytecode("decl.luau", source);
+    let scripts = load_card("fixture-decl", code).expect("loads");
+    assert_eq!(scripts.base.targets.len(), 1);
+    assert_eq!(scripts.radiant.targets.len(), 1);
+    assert!(scripts.base.aura.is_some());
+    assert!(scripts.radiant.aura.is_some());
 }
 
 // ---- compiling and the lint (L6, L7) -------------------------------------------------------------

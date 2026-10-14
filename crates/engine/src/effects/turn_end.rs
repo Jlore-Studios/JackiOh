@@ -22,6 +22,7 @@ use super::targets::{PlayerSpec, player_of};
 
 /// `endTurn`'s argument (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct EndTurnArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -41,6 +42,7 @@ pub fn end_turn(args: EndTurnArgs) -> Effect {
 
 /// `endTurnAfterActions`'s argument (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct EndTurnAfterActionsArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

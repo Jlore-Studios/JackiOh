@@ -171,6 +171,7 @@ pub fn run_hook(sink: &mut EngineSink<'_>, instance: &CardInstance, name: HookNa
 
 /// `afterward: "exile"` (R453).
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CastAfterward {
     Exile,

@@ -61,7 +61,7 @@ enum Command {
     Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden bless`, `golden record` (part 23).
     Golden(golden::Args),
-    /// Two builds compared: `luau diff`, `luau bench` (v0.4.0's proofs, #442).
+    /// Two builds compared: `luau diff`, `luau bench`; and `luau surface`, the card scripts' API (v0.4.0, #442).
     Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
