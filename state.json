@@ -5419,6 +5419,13 @@
     "861": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T14:22:31Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails easy lines 1 and 6 (16 files, ~500 lines, render.yaml is review-only); not hard, since all of it stays in crates/server with no engine, AI or migration work"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
