@@ -5805,6 +5805,13 @@
     "834": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T01:11:11Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 is the one I am least sure of: with no GitHub access I cannot verify that no open pull request touches crates/tools/src, and 'cannot tell' rates medium at least"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
