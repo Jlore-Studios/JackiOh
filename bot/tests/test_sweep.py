@@ -9,7 +9,7 @@ from harness import events, sweep
 from harness.clock import iso
 from datetime import timedelta as _td  # noqa: F401
 from harness.config import (LABELS, LABEL_BLOCKED, LABEL_BUILD, LABEL_NEEDS_PLAN, LABEL_PR,
-                            LABEL_PR_OPEN, LABEL_REVISE)
+                            LABEL_PR_OPEN, LABEL_REVISE, LABEL_SUGGESTION)
 from harness.errors import GitHubError, StateConflict
 from harness.state import item as state_item
 from harness.trust import Trust
@@ -47,6 +47,26 @@ class LostCommentTests(Base):
         self.assertIn((comment["id"], "rocket"), self.gh.reacted)
         self.assertIn("answered a comment on #5", notes[0])
         self.assertEqual(sweep.sweep(self.ctx), [])  # answered once, never twice
+
+    def test_a_bare_approve_vote_is_answered_by_the_sweep(self):
+        # #929: a vote is no command, so the sweep read past it and nobody ever answered it.
+        self.gh.add_issue(6, "A suggestion", labels=(LABEL_SUGGESTION,))
+        self.gh.add_comment(6, "approve", OPERATOR, created_at=AN_HOUR_AGO)
+        notes = sweep.sweep(self.ctx)
+        self.assertEqual(self.gh.label_names(6), {LABEL_BUILD, LABEL_NEEDS_PLAN})  # queued, then planned first
+        self.assertIn("Queued #6", self.replies(6)[-1])
+        self.assertIn("answered a comment on #6", notes[0])
+        self.assertEqual(sweep.sweep(self.ctx), [])  # answered once, never twice
+
+    def test_a_bare_reject_vote_is_answered_by_the_sweep(self):
+        self.gh.add_issue(6, "A suggestion", labels=(LABEL_SUGGESTION,))
+        self.gh.add_comment(6, "reject", OPERATOR, created_at=AN_HOUR_AGO)
+        notes = sweep.sweep(self.ctx)
+        issue = self.gh.get_issue(6)
+        self.assertEqual((issue["state"], issue["state_reason"]), ("closed", "not_planned"))
+        self.assertIn("Rejected: I closed #6", self.replies(6)[-1])
+        self.assertIn("answered a comment on #6", notes[0])
+        self.assertEqual(sweep.sweep(self.ctx), [])
 
     def test_what_the_sweep_leaves_alone(self):
         self.gh.add_comment(5, "/harness build", OPERATOR, created_at=JUST_NOW)  # handler may run
