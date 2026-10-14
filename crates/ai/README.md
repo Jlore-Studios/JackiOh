@@ -128,7 +128,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 ## Commands
 
 ```
-cargo test -p jackioh-ai                      # every AI test (the unit tests and tests/ai.rs)
+cargo test -p jackioh-ai                      # every AI test (the unit tests, tests/ai.rs, ai_slow_a.rs, ai_slow_b.rs)
+cargo test -p jackioh-ai --test ai_slow_b     # one binary: CI gives each its own job (#873)
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --full --shard 1/4 --out ai-gate-shards && cargo jackioh gate merge ai-gate-shards

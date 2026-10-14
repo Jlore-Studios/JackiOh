@@ -9,7 +9,7 @@ local FUSABLE = "fusable"
 local function fusion_lab(radiant: boolean)
 	return {
 		targetChecks = {
-			[FUSABLE] = function(args)
+			[FUSABLE] = function(args: J.TargetCheckArgs): boolean
 				local candidate = args:candidate()
 				return candidate ~= nil and not args:unit_has(candidate.id, "Immutable")
 			end,
@@ -21,9 +21,10 @@ local function fusion_lab(radiant: boolean)
 				uses = 1,
 				targets = { { kind = "hand", min = 1, max = 1, filter = { check = FUSABLE } } },
 				run = function(ctx: J.EffectContext)
+					local chosen: J.TargetSpec = { of = "chosen" }
 					return {
 						J.fuse_random_into({
-							into = { target = { of = "chosen" } },
+							into = { target = chosen },
 							radiant = radiant,
 							keepCost = true,
 						}),

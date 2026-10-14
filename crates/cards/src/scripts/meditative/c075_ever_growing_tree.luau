@@ -12,7 +12,8 @@ local function tree(radiant: boolean)
 				label = "Fuse a random Field Spell into this",
 				uses = 1,
 				run = function(ctx: J.EffectContext)
-					local into: J.FuseInto = { target = { of = "self" } }
+					local me: J.TargetSpec = { of = "self" }
+					local into: J.FuseInto = { target = me }
 					return {
 						J.fuse_random_into({
 							into = into,

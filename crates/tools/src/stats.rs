@@ -27,6 +27,9 @@
 //! R377's card win rates over them with no database, with `stats-cards`' flags: the figures a
 //! notebook computes over the same files (`analysis/`) are checked against these.
 //!
+//! `cargo jackioh stats fit-dealt <file>…` refits `DEALT_Q` and `DEALT_Q_PRIOR` over arena record
+//! files and prints them to paste (`dealt_fit.rs`).
+//!
 //! Tooling, so it may read files, the clock and the console; `crates/ai` stays pure.
 
 use std::io::Write as _;
@@ -42,6 +45,8 @@ use jackioh_engine::{
     PILOT_FILTERS, PilotFilter, SOURCE_FILTERS, SourceFilter, Winner, card_stats, format_card_stats,
     parse_game_record_lines,
 };
+
+use crate::dealt_fit;
 
 /// Seconds print with this many decimals.
 const SECONDS_DECIMALS: usize = 1;
@@ -109,6 +114,8 @@ pub struct Args {
 pub enum Command {
     /// R377's card win rates over record files, with no database.
     Report(ReportArgs),
+    /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
+    FitDealt(dealt_fit::Args),
 }
 
 /// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]`:
@@ -230,8 +237,10 @@ fn run_report(args: &ReportArgs) -> Result<()> {
 
 /// `cargo jackioh stats`.
 pub fn run(args: Args) -> Result<()> {
-    if let Some(Command::Report(report)) = &args.command {
-        return run_report(report);
+    match &args.command {
+        Some(Command::Report(report)) => return run_report(report),
+        Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
+        None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
     let series = args
@@ -388,7 +397,7 @@ mod tests {
         let cli = Cli::try_parse_from(["stats", "report"].into_iter().chain(argv.iter().copied()))?;
         match cli.args.command {
             Some(Command::Report(report)) => Ok(report),
-            None => panic!("`stats report` parsed as a run"),
+            _ => panic!("`stats report` parsed as something else"),
         }
     }
 
@@ -440,6 +449,18 @@ mod tests {
         assert!(report_args(&["a.jsonl", "--pilot=robot"]).is_err());
         assert!(parse(&["--games=3", "report", "a.jsonl"]).is_err());
         assert_eq!(parse(&["--games=3"]).unwrap().command, None);
+    }
+
+    #[test]
+    fn fit_dealt_names_record_files_and_takes_no_run_option() {
+        assert_eq!(
+            parse(&["fit-dealt", "a.jsonl", "b.jsonl"]).unwrap().command,
+            Some(Command::FitDealt(dealt_fit::Args {
+                files: vec![PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")],
+            }))
+        );
+        assert!(parse(&["fit-dealt"]).is_err());
+        assert!(parse(&["fit-dealt", "a.jsonl", "--games=3"]).is_err());
     }
 
     /// A game record as a line of JSON: the shape `--out` writes. A live game is two people's, a

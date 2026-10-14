@@ -11,6 +11,8 @@
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs (V21)
 #   web             the audio, fx and asset unit tests the pull requests leave out
 #   db              sql invariants, the store contract and the deploy rehearsal against a real Postgres
+#   notebooks       analysis/'s tests on its committed fixtures: the loader's card figures against the
+#                   Rust report's, and every notebook run end to end (#442 L19, #445)
 #
 # On failure the `report` job opens one issue titled `CI: daily super run failed`, or comments on it
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
@@ -298,6 +300,29 @@ jobs:
         run: pnpm exec vitest run --project web src/audio/ src/fx/ src/cards/art/convention.test.ts
 
   # ------------------------------------------------------------------------------------------------
+  # notebooks
+  # ------------------------------------------------------------------------------------------------
+
+  # The balance notebooks (#442 L19): analysis/'s tests on its committed fixtures, which hold the
+  # loader's card win rates to the Rust report's and run every notebook. No pull request runs them:
+  # analysis/ is on scripts/ci-scope.sh's skip list, since nothing a per-pull-request job reads is in it.
+  notebooks:
+    name: notebooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: uv, pinned
+        run: python3 -m pip install uv==0.13.0
+      - name: the pinned dependencies, exactly as the lock has them
+        run: python3 -m uv sync --frozen --project analysis
+      - name: the loader's tests and every notebook, on the fixtures
+        run: python3 -m uv run --project analysis pytest analysis/tests
+
+  # ------------------------------------------------------------------------------------------------
   # db
   # ------------------------------------------------------------------------------------------------
 
@@ -342,7 +367,7 @@ jobs:
   # API's JSON and env, never through `${{ }}` in the script.
   report:
     name: report
-    needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, coverage, e2e, component, web-extra, db]
+    needs: [rust-build, wasm, fuzz, gate-shard, gate, golden, coverage, e2e, component, web-extra, notebooks, db]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5

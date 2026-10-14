@@ -54,4 +54,4 @@ jobs:
             .github/workflows/bot-selftest.yml .github/workflows/triage.yml \
             .github/workflows/bot-status.yml .github/workflows/squishy-run.yml \
             .github/workflows/squishy-commands.yml .github/workflows/pr-title.yml \
-            .github/workflows/hygiene.yml
+            .github/workflows/hygiene.yml .github/workflows/hygiene-delete.yml

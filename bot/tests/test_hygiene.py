@@ -1,5 +1,6 @@
-"""The weekly hygiene run's branch rule (.github/hygiene/branches.py, #839): what it offers a person
-to delete, what it lists for them to judge, and what it never touches. It deletes nothing itself."""
+"""The weekly hygiene run's branch rule (.github/hygiene/branches.py, #839, #888): what it offers a
+person to tick, what it never touches, and how a `/delete-branches` comment deletes only the ticked
+branches a fresh survey still lets go."""
 
 from __future__ import annotations
 
@@ -62,19 +63,47 @@ class ReportTests(unittest.TestCase):
     def survey(self, *found):
         return {"at": NOW.isoformat(), "branches": list(found)}
 
-    def test_the_command_deletes_exactly_the_safe_branches(self):
+    def test_each_stale_branch_is_a_box_to_tick(self):
         text = branches.report(self.survey(
             dict(branch("bot/issue-5", prs=[(9, "MERGED")]), bucket="candidate", why="restorable"),
             dict(branch("claude/lost"), bucket="list", why="unique commits"),
             dict(branch("main"), bucket="keep", why="infrastructure")))
-        self.assertIn("git push origin --delete bot/issue-5\n", text)
-        self.assertIn("`claude/lost`", text)
+        self.assertIn("- [ ] `bot/issue-5` · ", text)
+        self.assertIn("- [ ] `claude/lost` · ", text)
         self.assertNotIn("`main`", text)
-        self.assertIn("Nothing has been deleted", text)
+        self.assertIn("comment `/delete-branches`", text)
+        self.assertEqual(branches.TICKED.findall(text), [])
 
-    def test_no_safe_branch_offers_no_command(self):
-        text = branches.report(self.survey(dict(branch("claude/lost"), bucket="list", why="x")))
-        self.assertNotIn("git push", text)
+    def test_no_stale_branch_offers_no_box(self):
+        text = branches.report(self.survey(dict(branch("main"), bucket="keep", why="infrastructure")))
+        self.assertNotIn("- [ ]", text)
+
+
+class DeleteTests(unittest.TestCase):
+    BODY = ("intro\n- [x] `bot/issue-5` · 2026-09-01 `aaaaaaa` x · #9 (merged)\n"
+            "- [ ] `claude/same` · 2026-09-01 `aaaaaaa` x\n"
+            "  - [X] `claude/lost` · 2026-09-01 `aaaaaaa` x\n"
+            "- [x] ~~`bot/issue-3`~~ deleted · gone\n- [x] `claude/now-open` · x\n- [x] `gone/branch` · x\n")
+
+    def test_only_ticked_and_not_yet_deleted_boxes_count(self):
+        self.assertEqual(branches.TICKED.findall(self.BODY),
+                         ["bot/issue-5", "claude/lost", "claude/now-open", "gone/branch"])
+
+    def test_a_fresh_survey_decides_what_goes(self):
+        data = {"branches": [dict(branch("bot/issue-5"), bucket="candidate", why="restorable"),
+                             dict(branch("claude/lost"), bucket="list", why="unique commits"),
+                             dict(branch("claude/now-open"), bucket="keep", why="an open pull request")]}
+        go, skipped = branches.to_delete(branches.TICKED.findall(self.BODY), data)
+        self.assertEqual([b["name"] for b in go], ["bot/issue-5", "claude/lost"])
+        self.assertEqual(skipped, [("claude/now-open", "the rule keeps it now: an open pull request"),
+                                   ("gone/branch", "it is already gone")])
+
+    def test_a_deleted_branch_is_struck_and_not_ticked_again(self):
+        body = branches.strike(self.BODY, ["bot/issue-5", "claude/lost"])
+        self.assertIn("- [x] ~~`bot/issue-5`~~ deleted · 2026-09-01", body)
+        self.assertIn("  - [X] ~~`claude/lost`~~ deleted · ", body)
+        self.assertIn("- [ ] `claude/same` · ", body)
+        self.assertEqual(branches.TICKED.findall(body), ["claude/now-open", "gone/branch"])
 
 
 if __name__ == "__main__":

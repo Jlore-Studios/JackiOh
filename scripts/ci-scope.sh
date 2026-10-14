@@ -14,6 +14,8 @@
 #   rust_cards
 #   rust_server
 #   rust_ai
+#   rust_ai_slow_a
+#   rust_ai_slow_b
 #   rust_tools_wasm
 #   web                `web (typecheck, eslint)` and `web (unit k/3)`
 #   e2e                `e2e smoke`
@@ -28,7 +30,9 @@
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
 # training lanes' prompts and loop (training/*.md, training/loop.sh: Devin and the training box read
-# them, no job does). Nothing a test, a build or a check reads is on the list. The other docs are
+# them, no job does), and the notebooks' project, analysis/ (#445: no file in crates/, apps/, e2e/,
+# spec/ or a per-pull-request job reads it; super.yml's `notebooks` job runs its tests once a day).
+# Nothing a test, a build or a check reads is on the list. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
 # training/history/. A `full=false` diff prints every other line false too.
@@ -50,8 +54,8 @@
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine,
 #    the cards or the Luau host run every group (the engine's tests build on the cards and read their
-#    catalog, and the cards build on the host); the AI runs ai, server and tools, wasm; the server
-#    runs server; tools and wasm run tools, wasm.
+#    catalog, and the cards build on the host); the AI runs its three groups (ai, ai slow a and
+#    ai slow b), server and tools, wasm; the server runs server; tools and wasm run tools, wasm.
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
@@ -94,8 +98,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_tools_wasm web e2e"
-RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm web e2e"
+RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
@@ -124,6 +128,7 @@ skipped() {
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/*.md | training/loop.sh) ;;
+    analysis/*) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
@@ -184,7 +189,7 @@ for file in $files; do
   case "$file" in
     crates/server/.env.example) on rust_server rust_tools_wasm ;;
     crates/engine/* | crates/cards/* | crates/luau/*) on $RUST ;;
-    crates/ai/*) on rust_ai rust_server rust_tools_wasm ;;
+    crates/ai/*) on rust_ai rust_ai_slow_a rust_ai_slow_b rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
     crates/*)

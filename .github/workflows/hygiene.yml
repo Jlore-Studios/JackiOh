@@ -1,18 +1,21 @@
-# The weekly hygiene run (#839): an issue that hands the cleanup to Squishy, for a person to review and
-# merge (`person merges`). Its body asks for dead files, archives and the agent instructions held to
-# Anthropic's current guidance, and lists the stale branches safe to delete for a person to delete by
-# hand. Nothing here deletes or merges anything. Mondays at 06:41 UTC, and on demand:
-# `gh workflow run hygiene.yml`, with `-f dry_run=true` to open nothing.
+# The weekly hygiene run (#839, #888): two issues that hand the cleanup to Squishy, one pull request each,
+# for a person to review and merge (`person merges`): dead files and archives (.github/hygiene/files.md),
+# which also lists the stale branches as checkboxes for a person to tick and delete with a
+# `/delete-branches` comment (hygiene-delete.yml), and the agent instructions held to Anthropic's current
+# guidance (instructions.md). Nothing here deletes or merges anything. Tuesdays at 22:07 UTC, just
+# after Squishy's weekly usage resets at 5pm Central: 5:07pm CDT, 4:07pm CST in winter, since GitHub's
+# cron is UTC and actionlint 1.7.7 refuses a `timezone:` key. And on demand: `gh workflow run
+# hygiene.yml`, with `-f dry_run=true` to open nothing.
 #
 # Two jobs, so the model never holds a GitHub token. `research` runs the model on Squishy's
 # subscription to read Anthropic's pages for the guidance, since a builder has no web access. `sweep`
-# reads the branches and opens the issue, with no model. The rule, the prompt and the issue's text are
+# reads the branches and opens the issues, with no model. The rule, the prompt and the issues' text are
 # in .github/hygiene/, where no bot may change them; bot/tests/test_hygiene.py tests the rule.
 name: hygiene
 
 on:
   schedule:
-    - cron: "41 6 * * 1"
+    - cron: "7 22 * * 2"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -96,10 +99,14 @@ jobs:
           name: survey
           path: survey.json
           retention-days: 30
-      - name: open the issue for Squishy
+      - name: open the two issues for Squishy
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           DRY_RUN: ${{ inputs.dry_run || false }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: python3 .github/hygiene/branches.py issue .github/hygiene/issue.md report.md guidance.md | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          python3 .github/hygiene/branches.py issue files .github/hygiene/files.md report.md /dev/null \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 .github/hygiene/branches.py issue instructions .github/hygiene/instructions.md /dev/null guidance.md \
+            | tee -a "$GITHUB_STEP_SUMMARY"

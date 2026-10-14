@@ -34,6 +34,8 @@ const NAMES = [
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
   "web",
   "e2e",
@@ -49,6 +51,8 @@ const RUST = [
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
 
@@ -162,58 +166,61 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
     // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
+    // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
+    expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
 
-  it("runs everything the moment one changed file is read by a job", () => {
-    for (const file of [
-      "crates/engine/src/reduce.rs",
-      "crates/cards/catalog.json",
-      "crates/ai/src/decide.rs",
-      "crates/ai/generation.json",
-      "crates/server/src/main.rs",
-      "crates/tools/src/fuzz.rs",
-      "Cargo.toml",
-      "Cargo.lock",
-      "rust-toolchain.toml",
-      "scripts/build-wasm.sh",
-      "apps/web/src/main.tsx",
-      "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-      // `spec check` reads the notes; the training gate reads the lanes' history.
-      "spec/rulings/R0195.md",
-      "spec/README.md",
-      "training/history/improve.jsonl",
-      "training/loop.sh.bak",
-      "training/lanes/x.ts",
-      "SPEC.md",
-      "BUILD.md",
-      "REVIEW.md",
-      "README.md",
-      "docs/architecture.md",
-      "docs/radiant-audit.md",
-      "package.json",
-      "pnpm-lock.yaml",
-      "vercel.json",
-      "scripts/ci-scope.sh",
-      ".github/workflows/ci.yml",
-      ".github/workflows/super.yml",
-      ".github/coverage-floor.txt",
-      // promote-production.test.ts runs the script and reads the workflow.
-      ".github/workflows/promote-production.yml",
-      "scripts/promote-production.sh",
-      ".github/actions/setup/action.yml",
-      ".github/workflows/bot-selftest.yml-not",
-      "apps/bot/x.ts",
-      "botany/x.ts",
-      ".harness-copy/x.json",
-      ".squishy-copy/x.json",
-      ".github/workflows/squishy-run.yml-not",
-      ".github/ISSUE_TEMPLATE-copy/x.yml",
-      ".github/CODEOWNERS.bak",
-      "docs/CONTRIBUTING.md",
-    ]) {
-      expect(fullFor(file), file).toBe(true);
-      expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
-    }
+  // One case per file: each makes four processes, so a case never nears vitest's time limit.
+  it.each([
+    "crates/engine/src/reduce.rs",
+    "crates/cards/catalog.json",
+    "crates/ai/src/decide.rs",
+    "crates/ai/generation.json",
+    "crates/server/src/main.rs",
+    "crates/tools/src/fuzz.rs",
+    "Cargo.toml",
+    "Cargo.lock",
+    "rust-toolchain.toml",
+    "scripts/build-wasm.sh",
+    "apps/web/src/main.tsx",
+    "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
+    // `spec check` reads the notes; the training gate reads the lanes' history.
+    "spec/rulings/R0195.md",
+    "spec/README.md",
+    "training/history/improve.jsonl",
+    "training/loop.sh.bak",
+    "training/lanes/x.ts",
+    "SPEC.md",
+    "BUILD.md",
+    "REVIEW.md",
+    "README.md",
+    "docs/architecture.md",
+    "docs/radiant-audit.md",
+    "package.json",
+    "pnpm-lock.yaml",
+    "vercel.json",
+    "scripts/ci-scope.sh",
+    ".github/workflows/ci.yml",
+    ".github/workflows/super.yml",
+    ".github/coverage-floor.txt",
+    // promote-production.test.ts runs the script and reads the workflow.
+    ".github/workflows/promote-production.yml",
+    "scripts/promote-production.sh",
+    ".github/actions/setup/action.yml",
+    ".github/workflows/bot-selftest.yml-not",
+    "apps/bot/x.ts",
+    "botany/x.ts",
+    ".harness-copy/x.json",
+    ".squishy-copy/x.json",
+    ".github/workflows/squishy-run.yml-not",
+    ".github/ISSUE_TEMPLATE-copy/x.yml",
+    ".github/CODEOWNERS.bak",
+    "docs/CONTRIBUTING.md",
+    "analysis-copy/x.py",
+    "crates/tools/analysis/x.rs",
+  ])("runs everything the moment %s changes, alone or beside the bot's code", (file) => {
+    expect(fullFor(file), file).toBe(true);
+    expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
   });
 
   it("runs everything when it cannot tell what changed", () => {
@@ -449,7 +456,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/.env.example", ["rust_server", "rust_tools_wasm"]],
     ["crates/engine/src/reduce.rs", [...RUST]],
     ["crates/cards/catalog.json", [...RUST]],
-    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -465,7 +472,7 @@ describe("scripts/ci-scope.sh", () => {
     ["ladder/x.ts", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
-    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
   ];
   it("runs each Rust test group for the crates it builds on and the files its tests read", () => {
     const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));

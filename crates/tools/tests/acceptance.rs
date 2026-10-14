@@ -230,6 +230,8 @@ const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_cards", &["jackioh-cards"]),
     ("rust_server", &["jackioh-server"]),
     ("rust_ai", &["jackioh-ai"]),
+    ("rust_ai_slow_a", &["jackioh-ai"]),
+    ("rust_ai_slow_b", &["jackioh-ai"]),
     ("rust_tools_wasm", &[]),
 ];
 

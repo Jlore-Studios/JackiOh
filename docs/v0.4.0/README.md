@@ -538,4 +538,5 @@ What the reconcile changed, beyond merging the parts:
     - `register_all` (the module's `init()` in node, five runs): 115–145 ms (budget 200 ms;
       `main`'s 28–33 ms).
   - `luau-analyze --mode=strict` did not run: the box had no Luau 0.740 release. Part 8's CI step
-    runs it.
+    runs it. Its first run found 31 errors, all fixed in #872: 18 were readers the context types
+    left out, and 13 were annotations in the scripts.

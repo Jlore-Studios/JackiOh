@@ -32,6 +32,80 @@ mod generator {
     use jackioh_luau::reads::TurnView;
     use ts_rs::TS;
 
+    /// The pure-read contexts the hand-written block declares, in its order: each is registered
+    /// with `shared_readers!` in crates/luau/src/reads.rs.
+    const PURE_READ_CONTEXTS: [&str; 5] = [
+        "ConditionContext",
+        "ReplacementContext",
+        "HookArgs",
+        "CostArgs",
+        "TargetCheckArgs",
+    ];
+
+    /// The readers `shared_readers!` (crates/luau/src/reads.rs) registers on every context with a
+    /// state, in its order, read off the macro's source so the typed module follows the host.
+    fn shared_reader_names() -> Vec<&'static str> {
+        const READS: &str = include_str!("../src/reads.rs");
+        let start = READS
+            .find("macro_rules! shared_readers {")
+            .expect("reads.rs defines shared_readers!");
+        let body = &READS[start..];
+        let body = &body[..body.find("\n}\n").expect("shared_readers! closes")];
+        let mut names = Vec::new();
+        for piece in body.split("$registry.add_method(").skip(1) {
+            let piece = piece
+                .trim_start()
+                .strip_prefix('"')
+                .expect("a reader's name is a string literal");
+            let name = &piece[..piece.find('"').expect("a reader's name is a string literal")];
+            if !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        assert!(
+            !names.is_empty(),
+            "shared_readers! registers no reader the generator can read"
+        );
+        names
+    }
+
+    /// `block` with every shared reader added to each pure-read context's type that does not
+    /// declare it already, typed as the effect context's line for it (#872): the host registers
+    /// them all on each, so a strict script may call any of them.
+    fn with_shared_readers(block: &str, effect_context: &[&str]) -> String {
+        let shared: Vec<(&str, &str)> = shared_reader_names()
+            .into_iter()
+            .map(|name| {
+                let prefix = format!("\t{name}: (self: EffectContext");
+                let line = effect_context.iter().find(|line| line.starts_with(&prefix)).unwrap_or_else(|| {
+                    panic!("`{name}` is a shared reader (reads.rs `shared_readers!`) with no line in EffectContext's type: add one")
+                });
+                (name, *line)
+            })
+            .collect();
+        let mut out = String::new();
+        let mut rest = block;
+        for context in PURE_READ_CONTEXTS {
+            let open = format!("export type {context} = {{\n");
+            let start = rest
+                .find(&open)
+                .unwrap_or_else(|| panic!("the hand-written block declares {context}"))
+                + open.len();
+            let close = start + rest[start..].find("\n}").expect("the type closes") + 1;
+            let declared = &rest[start..close];
+            out.push_str(&rest[..close]);
+            for (name, line) in &shared {
+                if !declared.contains(&format!("\t{name}: ")) {
+                    out.push_str(&line.replace("EffectContext", context));
+                    out.push('\n');
+                }
+            }
+            rest = &rest[close..];
+        }
+        out.push_str(rest);
+        out
+    }
+
     fn repo_root() -> PathBuf {
         let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         manifest_dir
@@ -860,7 +934,7 @@ mod generator {
         // crates/luau/src/reads.rs, in the same order, so the stub and the
         // binding cannot drift (tests/api.rs proves every name).
         out.push_str("export type EffectContext = {\n");
-        for line in [
+        let effect_context_readers = [
             "\tcontroller: (self: EffectContext) -> PlayerId,",
             "\tradiant: (self: EffectContext) -> boolean,",
             "\tx: (self: EffectContext) -> number,",
@@ -993,7 +1067,8 @@ mod generator {
             "\tsubsystems_feng_shui_element_preview: (self: EffectContext, label: string, elem: any) -> any,",
             "\tsubsystems_pareto_judgement_of: (self: EffectContext) -> any,",
             "\teffects_of: (self: EffectContext, card: string, face: string, hook: string) -> {string},",
-        ] {
+        ];
+        for line in effect_context_readers {
             out.push_str(line);
             out.push('\n');
         }
@@ -1001,8 +1076,9 @@ mod generator {
 
         // Hand-written (Plan Risk: ts-rs cannot derive these — each carries Rust
         // closures — so their declaration shapes are written here, matching what
-        // crates/luau/src/script.rs reads off a face table).
-        out.push_str(
+        // crates/luau/src/script.rs reads off a face table), with every shared reader added to
+        // each pure-read context's type.
+        out.push_str(&with_shared_readers(
             "-- A trigger a card registers while it is in a zone (Script.triggers and\n\
              -- handTriggers/deckTriggers/graveyardTriggers entries).\n\
              export type TriggerDef = {\n\
@@ -1036,10 +1112,10 @@ mod generator {
              -- The pure-read contexts a predicate hook is called with, as methods:\n\
              -- what `reads.rs` registers (`register_condition_ctx`,\n\
              -- `register_replacement_ctx`, `register_hook_args`).\n\
-             -- Every context with a state carries the shared readers too \
-             -- (`reads.rs` `shared_readers!`): the lists below name the ones a \
-             -- condition, cost or value hook reaches for most; the rest read as \
-             -- on the effect context.\n\
+             -- Each also declares every reader `reads.rs` `shared_readers!` adds to a\n\
+             -- context with a state, typed as on the effect context: the generator reads\n\
+             -- the macro (`with_shared_readers`), so a strict script finds every reader\n\
+             -- the host registers (#872).\n\
              export type ConditionContext = {\n\
              \tcontroller: (self: ConditionContext) -> PlayerId,\n\
              \tradiant: (self: ConditionContext) -> boolean,\n\
@@ -1145,7 +1221,8 @@ mod generator {
              export type GainBrittleArgs = GiveBrittleArgs\n\
              export type SetRadiantArgs = RadiantTarget\n\
              export type ClearRadiantArgs = RadiantTarget\n\n",
-        );
+            &effect_context_readers,
+        ));
 
         // Emit J module definition
         out.push_str("local J = {}\n\n");

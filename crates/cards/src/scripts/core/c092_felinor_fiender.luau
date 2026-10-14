@@ -22,7 +22,7 @@ end
 -- field, dormant ones included (R13, §3.2), never this card itself (R131).
 local function felinors_of(ctx: J.HookArgs): { any }
 	local me = ctx:self_()
-	local mine = {}
+	local mine: { any } = {}
 	for _, unit in ipairs(ctx:active_units_of(me.controller)) do
 		mine[#mine + 1] = unit
 	end
