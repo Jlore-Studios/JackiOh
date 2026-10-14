@@ -79,6 +79,8 @@ export const playTestid = {
   searching: "play-searching",
   rank: "play-rank",
   leaderboard: "play-leaderboard",
+  /** R768000: the recent games and their replays. */
+  replays: "play-replays",
   leanNewest: "play-lean-newest",
 } as const;
 
@@ -559,6 +561,9 @@ function RankPanel({ rank }: { rank: OwnRankResponse | null }): ReactElement {
       )}
       <a href={paths.leaderboard} data-testid={playTestid.leaderboard} onClick={followInApp(paths.leaderboard)}>
         {t("Leaderboard →")}
+      </a>
+      <a href={paths.replays} data-testid={playTestid.replays} onClick={followInApp(paths.replays)}>
+        {t("Your replays →")}
       </a>
     </section>
   );

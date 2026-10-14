@@ -31,6 +31,11 @@ pub mod query;
 /// Classic+ #42 KY's Test's problem bank (R420).
 pub mod ky_test_bank;
 
+/// R767000: the shipped catalog versions a replay folds under.
+mod history;
+
+pub use history::{KEPT_SCRIPTS, KeptScript, carried_versions, has_script_at, shipped_catalog};
+
 pub use query::*;
 
 /// `packages/cards/catalog.json` as compiled in: the card data proved against SPEC §8.
@@ -115,8 +120,9 @@ pub static WIN_RATES: LazyLock<WinRateTable> = LazyLock::new(|| {
         .unwrap_or_else(|error| panic!("crates/cards/data/win_rates.json: {error}"))
 });
 
-/// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4): the
-/// engine's two `OnceLock`s are set here, once per process, and read-only after. Idempotent: a second
+/// Registers the shipped catalog (§9.4) and the card scripts with the engine (SURFACE §7.4), and where
+/// the older shipped catalogs a replay folds under are found (R767000): the engine's `OnceLock`s are
+/// set here, once per process, and read-only after. Idempotent: a second
 /// call does nothing. A test that wants fixture cards uses the testkit's thread-local override
 /// (`testkit::register_scripts`, SURFACE §8), never a second registration.
 pub fn register_all() {
@@ -124,6 +130,7 @@ pub fn register_all() {
     REGISTERED.get_or_init(|| {
         jackioh_engine::catalog::register_catalog(CATALOG.clone(), CATALOG_VERSION, WIN_RATES.clone());
         jackioh_engine::scripts::register_scripts(scripts_of());
+        jackioh_engine::catalog::register_shipped(history::shipped_catalog);
     });
 }
 

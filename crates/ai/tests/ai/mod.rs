@@ -25,6 +25,7 @@ pub mod redact_last_boards;
 pub mod redact_live_face_down;
 pub mod redact_play_records;
 pub mod redact_twice;
+pub mod replay_versions;
 pub mod reply;
 pub mod search;
 pub mod secrets;

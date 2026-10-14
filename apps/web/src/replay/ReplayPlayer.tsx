@@ -8,6 +8,9 @@
 // `Game` a fresh key: the board mounts on that view with nothing animating, and its log history,
 // which reads a window that does not overlap the last as a gap, starts over (`useLogHistory`). The
 // last step is `Game`'s own result chip, with both hands (R434).
+//
+// R768000: a result screen opens it at step 0 ("Watch the replay") or at the last step with the
+// last turn's GIF already being made ("Share the last turn").
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactElement } from "react";
@@ -48,6 +51,10 @@ export type ReplayPlayerProps = {
   source: ReplaySource;
   /** Back: the route's own way out. */
   onLeave: () => void;
+  /** R768000: the step it opens at: the first (the default) or the last. */
+  start?: "first" | "last";
+  /** R768000: once the opening step is on the board, open "Share as GIF" and make its turn's GIF. */
+  shareOnOpen?: boolean;
 };
 
 /** The step on the board, and which mount of the board shows it (`Game`'s key). */
@@ -102,7 +109,7 @@ function focusedControl(): string | null {
   return active.dataset.testid ?? null;
 }
 
-export default function ReplayPlayer({ source, onLeave }: ReplayPlayerProps): ReactElement {
+export default function ReplayPlayer({ source, onLeave, start = "first", shareOnOpen = false }: ReplayPlayerProps): ReactElement {
   useLocale();
   const cache = useMemo(() => createStepCache(source), [source]);
   const total = cache.total;
@@ -219,9 +226,20 @@ export default function ReplayPlayer({ source, onLeave }: ReplayPlayerProps): Re
     };
   }, []);
 
+  const opening = start === "last" ? last : 0;
   useEffect(() => {
-    show(0);
-  }, [show]);
+    show(opening);
+  }, [show, opening]);
+
+  // "Share the last turn": once, when the opening step is the one on the board, the GIF of its turn.
+  const shared = useRef(false);
+  const onOpening = at !== null && at.step.step === opening;
+  useEffect(() => {
+    if (!shareOnOpen || shared.current || !onOpening) return;
+    shared.current = true;
+    if (!gif.open) gif.toggle();
+    gif.make();
+  }, [shareOnOpen, onOpening, gif]);
 
   // A fresh board is new elements, so the control that was pressed has gone: focus its successor.
   const board = at?.board ?? 0;
