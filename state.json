@@ -5959,6 +5959,13 @@
     "841": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T03:28:39Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the rule rates the AI's search (crates/ai/src/) hard, and this changes its move order, reply and evaluation; nothing else is borderline"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
