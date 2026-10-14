@@ -6512,9 +6512,12 @@
     "927": {
       "action": "revise",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "ebe72f566cfad1598df6839b49e6ff1205d3f55a": 1
       },
+      "ci_run_id": 38640530424,
+      "ci_sha": "ebe72f566cfad1598df6839b49e6ff1205d3f55a",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -6527,11 +6530,12 @@
       "pending_request": false,
       "provider": "muse",
       "question": "",
-      "queued_at": "2026-10-14T21:28:32Z",
+      "queued_at": "2026-10-14T21:49:52Z",
+      "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
       "run_id": "38636514451",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-10-14T20:59:04Z",
       "stop_requested": false,
       "taken_asks": [],
