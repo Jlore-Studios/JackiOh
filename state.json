@@ -5891,6 +5891,13 @@
     "882": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T17:57:54Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Easy-rule line 7 is the closest call: correctness is unit-checked, but the 5-minute goal itself can only be proven by CI timing, and line 6 (scripts/) plus the required person edit to .github/ fail easy outright."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
