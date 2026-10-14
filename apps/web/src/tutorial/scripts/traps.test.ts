@@ -2,15 +2,13 @@
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { aiToAct } from "@jackioh/ai";
-import { beginGame, createGame, fold, hashState, legalActions, reduce, viewFor, type GameState } from "@jackioh/engine";
-import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView } from "@jackioh/shared";
+import { beginGame, createGame, fold, hashState, viewFor } from "@jackioh/engine";
+import { opponentOf, type PlayerId } from "@jackioh/shared";
 
-import { newEventsSince } from "../../game/animations.ts";
-import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
 import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./traps.ts";
+import { gameTurnOf, gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
 const LESSON = "traps";
 /** The coach's line wins on the player's 7th turn; this leaves one turn of slack. */
@@ -36,71 +34,6 @@ const TEMPO_TIMMY = "core-011";
 
 const lesson = lessonById(LESSON);
 if (lesson === undefined) throw new Error(`no lesson "${LESSON}"`);
-
-/** Accepted action, emitted events, and surrounding states. */
-type Step = { action: Action; events: GameEvent[]; before: GameState; after: GameState };
-
-/** Folds the unredacted log, which test code may inspect. */
-function stepsOf(run: LessonRun): Step[] {
-  const { seed, decks, handicaps, log } = run.debug;
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  const steps: Step[] = [];
-  for (const action of log) {
-    const result = reduce(state, action);
-    if (result.error !== undefined) throw new Error(`the log does not fold: ${result.error}`);
-    steps.push({ action, events: result.events, before: state, after: result.state });
-    state = result.state;
-  }
-  return steps;
-}
-
-/** Rebuilds prompted tip/info sequences shown between human actions. */
-function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } {
-  const { seed, decks, handicaps, log } = run.debug;
-  const human = run.humanSeat;
-  const ai = opponentOf(human);
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  let coach = COACH_START;
-  let previous: PlayerView | null = null;
-  const runs: string[][] = [];
-  const tips: string[] = [];
-  let current: string[] = [];
-  const close = (): void => {
-    if (current.length > 0) runs.push(current);
-    current = [];
-  };
-  const observe = (): void => {
-    const view = viewFor(state, human);
-    const ctx: CoachCtx = {
-      view,
-      legal: legalActions(state, human),
-      fresh: previous === null ? [] : newEventsSince(previous.events, view.events),
-      aiToAct: aiToAct(state, ai),
-    };
-    previous = view;
-    coach = coachObserve(run.script, coach, ctx);
-    let display = coachDisplay(run.script, coach, ctx);
-    while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
-      current.push(display.id);
-      if (display.mode === "tip") tips.push(display.id);
-      coach = coachAck(run.script, coach, ctx);
-      display = coachDisplay(run.script, coach, ctx);
-    }
-    if (display.mode === "step") close();
-  };
-  observe();
-  for (const action of log) {
-    if (action.playerId === human) close();
-    state = reduce(state, action).state;
-    observe();
-  }
-  close();
-  return { runs, tips };
-}
-
-function gameTurnOf(seat: PlayerId, n: number): number {
-  return seat === "p1" ? 2 * n - 1 : 2 * n;
-}
 
 /** Verifies every backrow mechanic appears on the coach line. */
 function expectMechanics(run: LessonRun, steps: Step[]): void {

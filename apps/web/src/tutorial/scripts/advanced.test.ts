@@ -2,16 +2,14 @@
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { aiToAct } from "@jackioh/ai";
-import { beginGame, createGame, fold, hashState, legalActions, reduce, viewFor, type GameState } from "@jackioh/engine";
+import { beginGame, createGame, fold, hashState, viewFor } from "@jackioh/engine";
 import { AI_TUTORIAL, HERO_HEALTH } from "@jackioh/engine/config";
-import { opponentOf, type Action, type CardView, type GameEvent, type PlayerId, type PlayerView } from "@jackioh/shared";
+import { opponentOf, type Action, type CardView, type PlayerId, type PlayerView } from "@jackioh/shared";
 
-import { newEventsSince } from "../../game/animations.ts";
-import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
 import { LESSON_GAME_MS, LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./advanced.ts";
+import { gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
 const LESSON = "advanced";
 const COACH_TURNS_MAX = 8;
@@ -35,69 +33,10 @@ const RENO = "core-053";
 const lesson = lessonById(LESSON);
 if (lesson === undefined) throw new Error(`no lesson "${LESSON}"`);
 
-type Step = { action: Action; events: GameEvent[]; before: GameState; after: GameState };
-
-function stepsOf(run: LessonRun): Step[] {
-  const { seed, decks, handicaps, log } = run.debug;
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  const steps: Step[] = [];
-  for (const action of log) {
-    const result = reduce(state, action);
-    if (result.error !== undefined) throw new Error(`the log does not fold: ${result.error}`);
-    steps.push({ action, events: result.events, before: state, after: result.state });
-    state = result.state;
-  }
-  return steps;
-}
-
 function lowestHealth(run: LessonRun): number {
   const { seed, decks, handicaps } = run.debug;
   const start = beginGame(createGame({ seed, decks, handicaps })).state.players[run.humanSeat].hero.health;
   return Math.min(start, ...stepsOf(run).map((step) => step.after.players[run.humanSeat].hero.health));
-}
-
-/** Rebuild consecutive coach bubbles from the snapshots used by the harness. */
-function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } {
-  const { seed, decks, handicaps, log } = run.debug;
-  const human = run.humanSeat;
-  const ai = opponentOf(human);
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  let coach = COACH_START;
-  let previous: PlayerView | null = null;
-  const runs: string[][] = [];
-  const tips: string[] = [];
-  let current: string[] = [];
-  const close = (): void => {
-    if (current.length > 0) runs.push(current);
-    current = [];
-  };
-  const observe = (): void => {
-    const view = viewFor(state, human);
-    const ctx: CoachCtx = {
-      view,
-      legal: legalActions(state, human),
-      fresh: previous === null ? [] : newEventsSince(previous.events, view.events),
-      aiToAct: aiToAct(state, ai),
-    };
-    previous = view;
-    coach = coachObserve(run.script, coach, ctx);
-    let display = coachDisplay(run.script, coach, ctx);
-    while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
-      current.push(display.id);
-      if (display.mode === "tip") tips.push(display.id);
-      coach = coachAck(run.script, coach, ctx);
-      display = coachDisplay(run.script, coach, ctx);
-    }
-    if (display.mode === "step") close();
-  };
-  observe();
-  for (const action of log) {
-    if (action.playerId === human) close();
-    state = reduce(state, action).state;
-    observe();
-  }
-  close();
-  return { runs, tips };
 }
 
 function handOf(view: PlayerView): CardView[] {

@@ -7,15 +7,13 @@
 
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { aiToAct } from "@jackioh/ai";
-import { beginGame, createGame, findInstance, fold, hashState, legalActions, reduce, viewFor, type GameState } from "@jackioh/engine";
-import { opponentOf, type Action, type GameEvent, type PlayerId, type PlayerView, type UnitView } from "@jackioh/shared";
+import { findInstance, fold, hashState, legalActions, viewFor, type GameState } from "@jackioh/engine";
+import { opponentOf, type PlayerId, type UnitView } from "@jackioh/shared";
 
-import { newEventsSince } from "../../game/animations.ts";
-import { COACH_START, coachAck, coachDisplay, coachObserve, type CoachCtx } from "../coach.ts";
 import { LESSON_GAME_TIMEOUT_MS, RANDOM_GAME_MS, playLesson, type LessonRun } from "../harness.ts";
 import { lessonById } from "../lessons.ts";
 import { script } from "./spells.ts";
+import { gotItRuns, stepsOf, type Step } from "./testkit.ts";
 
 const LESSON = "spells";
 /** The coach's line wins on the player's 8th turn; the lesson is meant to take 6 to 9. */
@@ -45,72 +43,6 @@ const COIN = "core-t-coin";
 
 const lesson = lessonById(LESSON);
 if (lesson === undefined) throw new Error(`no lesson "${LESSON}"`);
-
-/** One accepted action of the game and everything it emitted, unredacted, with the states around it. */
-type Step = { action: Action; events: GameEvent[]; before: GameState; after: GameState };
-
-/** Fold the run's log one action at a time, keeping every event (the test may read what the page may not). */
-function stepsOf(run: LessonRun): Step[] {
-  const { seed, decks, handicaps, log } = run.debug;
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  const steps: Step[] = [];
-  for (const action of log) {
-    const result = reduce(state, action);
-    if (result.error !== undefined) throw new Error(`the log does not fold: ${result.error}`);
-    steps.push({ action, events: result.events, before: state, after: result.state });
-    state = result.state;
-  }
-  return steps;
-}
-
-/**
- * Every run of "Got it" bubbles the coach showed on this line, in order: tips and info steps, with
- * no move of the player's and no step asking for one between them. Rebuilt by folding the run's
- * log and reading each snapshot the way the harness's coach did (the page's own reads: the human's
- * view, legal actions and whether the AI owes a move), which the tips it saw prove.
- */
-function gotItRuns(run: LessonRun): { runs: string[][]; tips: string[] } {
-  const { seed, decks, handicaps, log } = run.debug;
-  const human = run.humanSeat;
-  const ai = opponentOf(human);
-  let state = beginGame(createGame({ seed, decks, handicaps })).state;
-  let coach = COACH_START;
-  let previous: PlayerView | null = null;
-  const runs: string[][] = [];
-  const tips: string[] = [];
-  let current: string[] = [];
-  const close = (): void => {
-    if (current.length > 0) runs.push(current);
-    current = [];
-  };
-  const observe = (): void => {
-    const view = viewFor(state, human);
-    const ctx: CoachCtx = {
-      view,
-      legal: legalActions(state, human),
-      fresh: previous === null ? [] : newEventsSince(previous.events, view.events),
-      aiToAct: aiToAct(state, ai),
-    };
-    previous = view;
-    coach = coachObserve(run.script, coach, ctx);
-    let display = coachDisplay(run.script, coach, ctx);
-    while (display.mode === "tip" || (display.mode === "step" && display.ack)) {
-      current.push(display.id);
-      if (display.mode === "tip") tips.push(display.id);
-      coach = coachAck(run.script, coach, ctx);
-      display = coachDisplay(run.script, coach, ctx);
-    }
-    if (display.mode === "step") close();
-  };
-  observe();
-  for (const action of log) {
-    if (action.playerId === human) close();
-    state = reduce(state, action).state;
-    observe();
-  }
-  close();
-  return { runs, tips };
-}
 
 function defIdOf(state: GameState, instanceId: string): string | undefined {
   return findInstance(state, instanceId)?.defId;
