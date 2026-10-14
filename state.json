@@ -208,6 +208,7 @@
       "action": "build",
       "asks": [],
       "closeout": true,
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
