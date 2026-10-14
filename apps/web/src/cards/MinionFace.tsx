@@ -32,12 +32,13 @@
 // ▼ Nerfed, ◆ Tuned, R386) and the enchantments (E39). A tuned stat carries `data-tuned` and a ▲ or
 // ▼ pip beside its tone (cardstate.css), the number itself unchanged.
 //
-// The face draws no "zzz" itself. `canAct` is false for every unit whose controller is not the
-// active player, and a summoning-sick unit may still switch (§4.1), so read bare it can neither say
-// "this unit is asleep" nor "this one can attack". The board's card root draws the "can't act yet"
-// cue only where it means something, a unit of the player acting now with no action left
-// (game/spent.ts, #258). Whether a unit can attack is `legalActions`', drawn by the board's
-// highlight (task 7's green), never read off the view here (CLAUDE.md rule 7).
+// The "zzz" (R849000). The face draws it (`.cf-sick[data-sick]`) where the view marks the unit `sick`:
+// summoning sick with neither Rush nor Charge (`combat::is_asleep`), on both seats. `canAct` still draws
+// nothing here: it is false for every unit whose controller is not the active player, and a
+// summoning-sick unit may still switch (§4.1), so read bare it can say neither "asleep" nor "can
+// attack". A spent unit of the player acting now wears only the cue from game/spent.ts (#258). Whether
+// a unit can attack is `legalActions`', drawn by the board's highlight (task 7's green), never read off
+// the view here (CLAUDE.md rule 7).
 //
 // ME-CN, R1301: a Chinese unit's name plate is the model's Chinese name and its keyword titles are
 // the table's words (chinese.ts); its chips keep their marks, and its art the English name's motif.
@@ -70,6 +71,9 @@ const DRAWN_BY_TREATMENTS: readonly StateBadgeKind[] = ["brittle", "animated"];
 
 /** How many keyword chips a minion shows before the last becomes a "+n" count. */
 export const KEYWORD_CHIPS_MAX = 3;
+
+/** R849000: the zzz's words. */
+export const SICK_WORDS = "Summoning sick: it can't attack this turn";
 
 /** Keywords the minion draws as a state rather than a chip: the Taunt frame, the Divine Shield bubble, the Armor plate. */
 export function drawnAsState(keyword: Keyword, armor: number): boolean {
@@ -174,6 +178,13 @@ export function MinionFace({ face, unit, className }: MinionFaceProps): ReactEle
             <span className="cf-vanilla-mark" aria-hidden="true">
               V
             </span>
+          </span>
+        )}
+
+        {/* R849000: summoning sick with neither Rush nor Charge (`UnitView.sick`), Hearthstone's zzz. */}
+        {unit.sick === true && (
+          <span className="cf-sick" data-sick="true" role="img" aria-label={t(SICK_WORDS)} title={t(SICK_WORDS)}>
+            <span aria-hidden="true">zzz</span>
           </span>
         )}
 

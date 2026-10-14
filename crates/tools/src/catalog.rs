@@ -565,8 +565,8 @@ fn validate_face(
 
 /// B3.4 rule 5: `params` — distinct camelCase keys, integer values within [min, max], a direction,
 /// a positive step — each written `{key}` in at least one face's text, and every `{key}` a text
-/// writes declared. A number one face alone writes may be tuned on that face only (`tunedOn`, R749),
-/// and one only the base face writes must be (R1431); a number that belongs to a power names it by
+/// writes declared. A number one face alone writes is tuned on that face only (`tunedOn`, R749),
+/// and says so (R1431, R824000); a number that belongs to a power names it by
 /// its Activate ability's id (`power`, R1430).
 fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
     let params = value.get("params");
@@ -711,6 +711,16 @@ fn validate_params(failures: &mut Vec<String>, at: &str, value: &Object) {
                     &p_at,
                     &format!(
                         "{key}: only the base face's text writes {{{key}}}, so it is `tunedOn: \"base\"`"
+                    ),
+                );
+            }
+            // R824000: a number only the Radiant face prints is tuned on the Radiant face only.
+            if tuned_face != Some("radiant") && writes(&texts[1], key) && !writes(&texts[0], key) {
+                fail(
+                    failures,
+                    &p_at,
+                    &format!(
+                        "{key}: only the Radiant face's text writes {{{key}}}, so it is `tunedOn: \"radiant\"`"
                     ),
                 );
             }
@@ -2033,6 +2043,30 @@ mod tests {
                 "Exile {cards} twice."
             ),
             ["x.params[0]: cards: `tunedOn` is \"radiant\" or \"base\" when present (got \"both\")"]
+        );
+    }
+
+    #[test]
+    fn r824000_a_number_only_the_radiant_face_writes_is_tuned_there_alone() {
+        let marked = r#"[{"key":"discount","base":1,"radiant":1,"better":"up","tunedOn":"radiant"}]"#;
+        let unmarked = r#"[{"key":"discount","base":1,"radiant":1,"better":"up"}]"#;
+        let (plain, shining) = ("Discover a card.", "Discover a card. It costs ({discount}) less.");
+        // Jewelosco Scarab's shape: the Radiant face alone writes the number, tuned there alone.
+        assert_eq!(params_failures(marked, plain, shining), Vec::<String>::new());
+        // Unmarked, it is refused.
+        assert_eq!(
+            params_failures(unmarked, plain, shining),
+            [
+                "x.params[0]: discount: only the Radiant face's text writes {discount}, so it is `tunedOn: \"radiant\"`"
+            ]
+        );
+        // Both faces write it: unmarked passes, marked is refused.
+        assert_eq!(params_failures(unmarked, shining, shining), Vec::<String>::new());
+        assert_eq!(
+            params_failures(marked, shining, shining),
+            [
+                "x.params[0]: discount: tuned on the Radiant face only, but the base face's text writes {discount}"
+            ]
         );
     }
 

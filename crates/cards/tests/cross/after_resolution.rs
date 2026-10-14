@@ -443,6 +443,7 @@ mod r174_r118_r61_the_play_follows_the_stay_step_4_put_the_card_on_not_a_reborn_
         // answers the play: "if it was a Unit, they attack it" — but the unit that was played has left
         // the field, so the tokens attack nothing and the Reborn body is left standing.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-honeypot-martyr",
             "p1": { "hand": [STOCKPILE], "library": LIBRARY },
             "p2": { "backrow": [{ "def": HONEYPOT, "faceUp": false }], "hand": [STOCKPILE], "library": LIBRARY },
@@ -493,6 +494,7 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
     fn r174_r78_c63_plastic_surgery_does_not_buff_or_grant_a_keyword_to_its_target_in_the_graveyard_after_a_step_4_trap_destroyed_it_s8_conventions()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-surgery-on-the-dead",
             "p1": { "hand": [PLASTIC_SURGERY], "mana": 4 },
             "p2": { "field": [POINTMASTER] },
@@ -539,6 +541,7 @@ mod r174_a_target_a_trap_answering_the_play_took_off_the_field_is_gone_for_the_p
     fn r174_r55_c34_collateral_damage_does_not_exile_its_target_out_of_the_graveyard_after_a_step_4_trap_destroyed_it_s8_conventions()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-collateral-on-the-dead",
             "p1": { "hand": [COLLATERAL_DAMAGE], "mana": 4 },
             "p2": { "field": [POINTMASTER], "library": [TIMMY, TIMMY] },

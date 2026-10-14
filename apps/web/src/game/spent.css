@@ -64,3 +64,8 @@
 :root[data-reduce-motion="true"] .card-unit > .spent-badge {
   animation: none !important;
 }
+
+/* R849000: a spent unit wears this "Zz" alone; the face's zzz (cards.css) would say it twice. */
+.card-unit[data-spent="true"] .cf-sick {
+  display: none;
+}

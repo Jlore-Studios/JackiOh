@@ -63,7 +63,7 @@ mod tests {
             assert_eq!(def["refs"], json!([ACQUISITION]));
             assert_eq!(
                 def["params"],
-                json!([{ "key": "returnCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }]),
+                json!([{ "key": "returnCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant" }]),
             );
             let scripts = crate::scripts_of()[ID].clone();
             for face in [&scripts.base, &scripts.radiant] {

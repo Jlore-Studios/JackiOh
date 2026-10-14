@@ -57,7 +57,7 @@ mod tests {
             crate::register_all();
             assert_eq!(
                 js(&crate::card_def(CRACKER).params),
-                json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }])
+                json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
             );
             let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.triggers.is_empty());

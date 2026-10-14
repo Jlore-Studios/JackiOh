@@ -1,11 +1,13 @@
 //! C+ #32.3 Blade Storm (SPEC §8.7 row 32.3; §4.5, R59, R283, R386, R652). (1) Spell token, printed Epic.
-//!   Base:    "Cast Whirlwind until a Unit dies." (the round cap stays a declared number, not shown)
+//!   Base:    "Cast Whirlwind until a Unit dies." (the round cap stays a declared number, not shown
+//!            and never tuned there, R824000)
 //!   Radiant: "Deal 1 damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
 //!
 //! Each round is one effect list followed by its own state check (one of the two lists R59 lets check
 //! inside themselves, beside R283's) so killed Units die and Death hooks resolve before the next round. The storm stops after a round in which any Unit died
 //! (Reborn counts), after its round cap, or when no Unit is left. Cap is declared `rounds` (R386),
-//! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces. Base face casts Whirlwind (C+ #21)
+//! read through `param`: `BLADE_STORM_ROUNDS` (30) on both faces, tuned on the Radiant face
+//! only (R824000). Base face casts Whirlwind (C+ #21)
 //! as a real Spell cast (R70, §4.4), so Divine Shield, Armor (Pierce goes through it, R652) and Spell
 //! Damage apply round by round.
 //! Radiant face hits enemy Units only; a death on either side still stops it (refs Whirlwind, R279).
@@ -128,8 +130,8 @@ mod tests {
             assert_eq!(
                 js(&def.params),
                 json!([
-                    { "key": "rounds", "base": BLADE_STORM_ROUNDS, "radiant": BLADE_STORM_ROUNDS, "better": "up", "step": 8, "min": 1 },
-                    { "key": "damage", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }
+                    { "key": "rounds", "base": BLADE_STORM_ROUNDS, "radiant": BLADE_STORM_ROUNDS, "better": "up", "step": 8, "min": 1, "tunedOn": "radiant" },
+                    { "key": "damage", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }
                 ])
             );
             assert_eq!(def.base.text, "Cast Whirlwind until a Unit dies.");
@@ -250,18 +252,18 @@ mod tests {
             }
 
             #[test]
-            fn r386_a_degrade_moves_the_cap_by_its_step_of_8_22_rounds() {
+            fn r824000_a_nerf_or_a_buff_never_reaches_the_base_face_s_numbers_and_a_recorded_step_leaves_it_at_30_rounds()
+            {
                 crate::register_all();
-                let s = storm(json!({}), json!({ "field": [UNBREAKABLE, counter()] }), false, Some(-1));
-                assert_eq!(hits(&s, s.unit(P2, 2)).len(), (BLADE_STORM_ROUNDS - 8) as usize);
-            }
-
-            #[test]
-            fn r386_an_upgrade_moves_it_the_other_way_38_rounds() {
-                crate::register_all();
-                let s = storm(json!({}), json!({ "field": [UNBREAKABLE, counter()] }), false, Some(1));
-                assert_eq!(hits(&s, s.unit(P2, 2)).len(), (BLADE_STORM_ROUNDS + 8) as usize);
-                assert_eq!(param_decl_of(s.state(), STORM, "rounds").and_then(|decl| decl.step), Some(8));
+                for tune in [-1, 1] {
+                    let s = storm(json!({}), json!({ "field": [UNBREAKABLE, counter()] }), false, Some(tune));
+                    assert_eq!(hits(&s, s.unit(P2, 2)).len(), BLADE_STORM_ROUNDS as usize);
+                }
+                let s = scenario(json!({ "p1": { "hand": [STORM] } }));
+                for key in ["rounds", "damage"] {
+                    assert!(!crate::can_upgrade_number(&s, STORM, key), "{key}");
+                    assert!(!crate::can_degrade_number(&s, STORM, key), "{key}");
+                }
             }
         }
 
@@ -293,6 +295,21 @@ mod tests {
                 let s = storm(json!({ "field": [TIMMY] }), json!({ "field": [UNBREAKABLE, counter()] }), true, None);
                 assert_eq!(hits(&s, s.unit(P2, 2)).len(), BLADE_STORM_ROUNDS as usize);
                 assert!(hits(&s, s.unit(P1, 1)).is_empty());
+            }
+
+            #[test]
+            fn r386_a_degrade_moves_the_cap_by_its_step_of_8_22_rounds() {
+                crate::register_all();
+                let s = storm(json!({}), json!({ "field": [UNBREAKABLE, counter()] }), true, Some(-1));
+                assert_eq!(hits(&s, s.unit(P2, 2)).len(), (BLADE_STORM_ROUNDS - 8) as usize);
+            }
+
+            #[test]
+            fn r386_an_upgrade_moves_it_the_other_way_38_rounds() {
+                crate::register_all();
+                let s = storm(json!({}), json!({ "field": [UNBREAKABLE, counter()] }), true, Some(1));
+                assert_eq!(hits(&s, s.unit(P2, 2)).len(), (BLADE_STORM_ROUNDS + 8) as usize);
+                assert_eq!(param_decl_of(s.state(), STORM, "rounds").and_then(|decl| decl.step), Some(8));
             }
         }
 

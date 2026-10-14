@@ -204,11 +204,14 @@ Replay one fuzz seed with `cargo jackioh fuzz --from <seed> --seeds 1`.
 
 One more card shifts every random draw from the pool (R380), so tests and games that were lucky stop being so:
 
-- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `crates/cards/tests/cross/`'s
-  `play_choices.rs`, `resolving_face.rs`, `fused_hooks.rs`, `tributes.rs` and `pools_and_randomness.rs`, #98 Heroic Power's own
-  tests (`src/scripts/core/c098_heroic_power.rs`, Stitching), and `crates/ai/tests/ai/shadow_ban.rs`. Re-pin by looping seeds in a throwaway test
-  (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers match, and update the
-  comment beside the seed.
+- **Seed-pinned tests** ("the first Discover offers Bigot, the second Twisted Sorcerer"): `crates/cards/tests/cross/` pins no
+  pool's roll (#848). A test that needs a roll to land one way searches at run time with the testkit's `seed_where(prefix, accept)` or
+  `cursor_where(seed, accept)` (bounded by `SEED_SEARCH_BOUND`; `accept` builds the position and reads where the roll landed), and
+  a test about a Craft a Card result and not about its offers builds the fused card with `cross::craft_fused` (R77). Keep a
+  search within a few hundred tries; past that, build the position directly. A seed pinned anywhere else (look in #98 Heroic
+  Power's own tests, `src/scripts/core/c098_heroic_power.rs`, and `crates/ai/tests/ai/shadow_ban.rs`) is re-pinned by looping seeds
+  in a throwaway test (`for n in 0.. { let mut s = scenario(json!({ "seed": format!("craft-{n}"), … })); … }`) until the offers
+  match, and the comment beside the seed updated; better, convert it to a search.
 - **The golden traces** (`crates/engine/tests/golden/games.jsonl`, replayed by `cargo test` and `cargo jackioh golden check`) are games
   recorded from the TypeScript engine. A recorded game that draws from a pool the new card joins can diverge; the failure names the seed,
   the step and the hash. If the divergence is the new card's pool and nothing else, re-record with `cargo jackioh golden bless` and say so

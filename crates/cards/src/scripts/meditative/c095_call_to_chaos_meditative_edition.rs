@@ -73,7 +73,8 @@ mod tests {
     const BEAR: &str = "core-060"; // (1) Trap
 
     const SEED: &str = "chaos-meditative";
-    const CURSOR_SEARCH: u32 = 800;
+    /// How many cursors the sweep of R423's list order walks.
+    const ORDER_SWEEP: u32 = 800;
 
     /// The names of the entries the roll at `cursor` of `seed` picks, with this card's table.
     fn rolled_names(seed: &str, cursor: u32, radiant: bool) -> Vec<&'static str> {
@@ -85,15 +86,11 @@ mod tests {
     }
 
     fn cursor_for(name: &str) -> u32 {
-        (0..CURSOR_SEARCH)
-            .find(|cursor| rolled_names(SEED, *cursor, false).first() == Some(&name))
-            .unwrap_or_else(|| panic!("no cursor rolls {name}"))
+        cursor_where(SEED, |cursor| rolled_names(SEED, cursor, false).first() == Some(&name))
     }
 
     fn radiant_cursor_where(accept: impl Fn(&[&str]) -> bool) -> u32 {
-        (0..CURSOR_SEARCH * 4)
-            .find(|cursor| accept(&rolled_names(SEED, *cursor, true)))
-            .unwrap_or_else(|| panic!("no radiant cursor"))
+        cursor_where(SEED, |cursor| accept(&rolled_names(SEED, cursor, true)))
     }
 
     fn label_of(name: &str) -> &'static str {
@@ -454,8 +451,13 @@ mod tests {
         fn r1240_entry_recast_casts_a_shipped_edition() {
             crate::register_all();
             let mut editions: Vec<String> = Vec::new();
-            for seed in ["a", "b", "c", "d", "e", "f", "g", "h"] {
-                let game_seed = format!("{SEED}-{seed}");
+            // Which edition a recast picks is a roll of the pool, which a card joining it moves, so no fixed
+            // handful of games is known to cast each one: eight games, and on until one casts this edition.
+            for n in 0..SEED_SEARCH_BOUND {
+                if n >= 8 && editions.iter().any(|id| id == ID) {
+                    break;
+                }
+                let game_seed = format!("{SEED}-{n}");
                 let mut s = scenario(json!({
                     "seed": game_seed,
                     "p1": side(false, json!([])),
@@ -468,9 +470,9 @@ mod tests {
                         json!(CALL_TO_CHAOS_CHAIN_CAP - 1),
                     );
                 }
-                let cursor = (0..CURSOR_SEARCH)
-                    .find(|at| rolled_names(&game_seed, *at, false).first() == Some(&"recast"))
-                    .unwrap_or_else(|| panic!("no cursor rolls recast"));
+                let cursor = cursor_where(&game_seed, |at| {
+                    rolled_names(&game_seed, at, false).first() == Some(&"recast")
+                });
                 s.state_mut().rng_cursor = cursor;
                 s.play(ID, json!({}));
                 let cast: Vec<Value> = events_of(&s, "cardPlayed").into_iter().skip(1).collect();
@@ -479,7 +481,7 @@ mod tests {
                 editions.push(cast[0]["defId"].as_str().unwrap_or("").to_string());
             }
             // R1240, R1420: the Meditative set ships, so the pool holds all three editions, and
-            // these seeds cast this one too (re-pinned for v0.3.5: the Meditative set joins the pool).
+            // the games cast this one too.
             assert!(editions.iter().all(|id| EDITIONS.contains(&id.as_str())), "{editions:?}");
             assert!(editions.iter().any(|id| id == ID), "{editions:?}");
         }
@@ -520,7 +522,7 @@ mod tests {
                 .iter()
                 .map(|entry| entry.name)
                 .collect();
-            for at in 0..CURSOR_SEARCH {
+            for at in 0..ORDER_SWEEP {
                 let names = rolled_names(SEED, at, true);
                 assert_eq!(names.len(), 3);
                 let places: Vec<usize> = names

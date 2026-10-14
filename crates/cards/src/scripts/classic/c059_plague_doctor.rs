@@ -80,7 +80,7 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
-            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }]));
+            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]));
             // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());

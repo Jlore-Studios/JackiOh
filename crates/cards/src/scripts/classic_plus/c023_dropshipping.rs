@@ -159,14 +159,13 @@ mod tests {
                 // Each seed below picks a Grape mid-pool (read off the probe rng): the card Dropshipping
                 // generates for it is the re-roll, so the generated triple equals `pickGenerated` three times
                 // over — and differs from the picked triple, which a plain `rng.pick` would generate as is.
+                // Which seeds do is a roll of the pool, which a card joining it moves, so each is searched for.
                 crate::register_all();
                 let pool = query(&json_as(json!({ "withTokens": true, "excludeDefId": DROP })));
                 let grapes: IndexSet<&str> = GRAPE_ODDS.iter().map(|grape| grape.def_id).collect();
                 let table: i32 = GRAPE_ODDS.iter().map(|grape| grape.percent).sum();
-                let mut differed = 0;
-                // Re-pinned for v0.3.5: the Meditative set joins the pool, so other seeds pick the Grapes.
-                for seed in ["drop-reroll-7", "drop-reroll-16", "drop-reroll-19", "drop-reroll-46"] {
-                    let mut s = shop(seed, false, &[FILLER]);
+                let rolled = |seed: &str| {
+                    let s = shop(seed, false, &[FILLER]);
                     let mut rng = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut probe = Rng::new(&s.state().seed, s.state().rng_cursor);
                     let mut expected: Vec<Option<String>> = Vec::new();
@@ -181,6 +180,15 @@ mod tests {
                         firsts.push(first);
                         expected.push(pick_generated(&mut rng, &pool, None).map(|card| card.id.clone()));
                     }
+                    (s, firsts, expected)
+                };
+                let mut differed = 0;
+                for tag in ["drop-reroll-a", "drop-reroll-b", "drop-reroll-c", "drop-reroll-d"] {
+                    let seed = seed_where(tag, |seed| {
+                        let (_, firsts, expected) = rolled(seed);
+                        firsts.iter().any(|id| id.as_deref().is_some_and(|id| grapes.contains(id))) && firsts != expected
+                    });
+                    let (mut s, firsts, expected) = rolled(&seed);
                     assert!(firsts.iter().any(|id| id.as_deref().is_some_and(|id| grapes.contains(id))));
                     if firsts != expected {
                         differed += 1;

@@ -107,7 +107,7 @@ mod tests {
             js(&crate::card_def(TAX).params),
             json!([
                 { "key": "draws", "base": 2, "radiant": 2, "better": "down", "step": 1, "min": 2 },
-                { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 },
+                { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" },
             ])
         );
         let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();

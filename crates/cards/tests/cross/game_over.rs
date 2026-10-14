@@ -55,6 +55,7 @@ mod r216_nothing_happens_after_the_game_is_over {
         // §2.4's chain runs §4.5's check after that cast, which ends the game (§2.5). Stockpile's
         // "heal your hero 2" is the rest of a script whose game is already decided.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-after-game-over",
             "p1": { "hand": [STOCKPILE], "health": 1, "library": [CN_VIRUS, RENO, MENACE] },
             "p2": { "hand": [RENO], "field": [MENACE] },
@@ -81,6 +82,7 @@ mod r216_nothing_happens_after_the_game_is_over {
         // rest of p2's turn to the AI (R44), which has nothing left but to end it. Shredder's
         // end-of-turn 2 damage kills p1 and the game is over (§2.5) — and nothing then consumes the trap.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-pawn-after-game-over",
             "active": "p2",
             "p1": { "health": 2, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "hand": [RENO] },
@@ -189,6 +191,7 @@ mod r216_a_question_still_open_when_the_game_ends_is_closed_with_it {
     #[test]
     fn r216_r211_a_game_that_ends_while_a_prompt_is_open_leaves_no_prompt_open_2_5() {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-concede-at-prompt",
             "p1": { "hand": [SCARAB], "mana": 4 },
             "p2": { "field": [POINTMASTER] },

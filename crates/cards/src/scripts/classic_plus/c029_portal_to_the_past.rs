@@ -93,7 +93,7 @@ mod tests {
             assert_eq!(
                 js(&def.params),
                 json!([
-                    { "key": "cards", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1 },
+                    { "key": "cards", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" },
                     { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
                 ])
             );

@@ -225,12 +225,18 @@ mod tests {
 
             #[test]
             fn discount_reads_through_param() {
-                // Re-pinned for v0.3.5: the Meditative set joins the pool. The old seed now draws
-                // M #37 CN in a bottle, which replaces itself on arrival with a fresh card that
-                // carries no discount; this one draws M #40 Feng Shui.
-                let mut s = decreed("mandate-radiant-param-0", true, json!([VANILLA]), json!([]));
-                set_param(s.card_mut(ID), "discount", 3);
-                s.play(ID, json!({}));
+                // A card that replaces itself on arrival (M #37 CN in a bottle) carries no discount, so the
+                // pool's roll must land on one that keeps it: search for a seed where it does.
+                let play = |seed: &str| {
+                    let mut s = decreed(seed, true, json!([VANILLA]), json!([]));
+                    set_param(s.card_mut(ID), "discount", 3);
+                    s.play(ID, json!({}));
+                    s
+                };
+                let seed = seed_where("mandate-radiant-param", |seed| {
+                    added(&play(seed)).iter().map(|card| card.cost_mod).collect::<Vec<i32>>() == vec![-3]
+                });
+                let s = play(&seed);
                 assert_eq!(added(&s).iter().map(|card| card.cost_mod).collect::<Vec<i32>>(), vec![-3]);
             }
         }

@@ -185,10 +185,11 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_reads_the_numbers_lines_as_the_brief_writes_them_on_cards_that_show_one_of_each_kind() {
-        // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only.
+        // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only, so it
+        // is tuned there alone (R824000).
         assert_eq!(
             serde_json::to_value(&card_def("classic-006").params).expect("params serialise"),
-            json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
         );
         assert!(!card_def("classic-006").base.text.contains("{mana}"));
         // A stated step and a lower-is-better threshold with a stated floor (Flame Lance deals 10 [20],
@@ -305,8 +306,8 @@ mod b3_4_params_the_numbers_a_card_declares {
 }
 
 /// Which declared numbers a Degrade, an Upgrade or KY's Constant reaches (`param_in_reach`): a number
-/// only one face prints is tuned on that face alone (R749, R1431), and a number that belongs to a power
-/// is tuned only while the card has that power (R1430).
+/// only one face prints is tuned on that face alone (R749, R1431, R824000), and a number that belongs to a
+/// power is tuned only while the card has that power (R1430).
 mod r1430_r1431_the_numbers_a_change_reaches {
     use super::*;
     use jackioh_engine::effects::TuneDirection;
@@ -389,6 +390,71 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 "meditative-049-1 picks".to_string(),
                 "meditative-076 marks".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn r824000_every_number_only_the_radiant_face_prints_is_tuned_there_alone_and_reads_printed_on_the_base_face()
+     {
+        let mut radiant_only: Vec<String> = Vec::new();
+        for card in entries() {
+            for param in card.params.iter().flatten() {
+                let alone = writes(&card.radiant.text, &param.key) && !writes(&card.base.text, &param.key);
+                assert_eq!(
+                    alone,
+                    param.tuned_on == Some(ParamTunedOn::Radiant),
+                    "{} {}: tuned on the Radiant face only exactly when the Radiant face alone prints it",
+                    card.id,
+                    param.key
+                );
+                if !alone {
+                    continue;
+                }
+                radiant_only.push(format!("{} {}", card.id, param.key));
+                let mut s = super::super::scenario(json!({
+                    "p1": { "hand": [{ "def": card.id, "radiant": true }, { "def": card.id }] }
+                }));
+                let [shining, plain] = [0, 1].map(|at| s.hand(PlayerId::P1)[at].id.clone());
+                for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
+                    let reached = steppable_params(s.state(), s.card(plain.as_str()), direction);
+                    assert!(
+                        !reached.iter().any(|entry| entry.param.key == param.key),
+                        "{} {}: drawn on the base face",
+                        card.id,
+                        param.key
+                    );
+                }
+                let id = format!("param:{}", param.key);
+                assert!(
+                    !numbers_on(s.state(), s.card(plain.as_str()))
+                        .iter()
+                        .any(|entry| entry.id == id)
+                );
+                assert!(
+                    numbers_on(s.state(), s.card(shining.as_str()))
+                        .iter()
+                        .any(|entry| entry.id == id)
+                );
+                for card_id in [&shining, &plain] {
+                    step_param(s.card_mut(card_id.as_str()), &param.key, 1);
+                }
+                let read = |s: &jackioh_engine::testkit::Scenario, at: &str| {
+                    param_value(s.state(), Some(s.card(at)), &param.key, Default::default())
+                };
+                assert_eq!(read(&s, &plain), param.base, "{} {}", card.id, param.key);
+                assert_ne!(read(&s, &shining), param.radiant, "{} {}", card.id, param.key);
+            }
+        }
+        // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
+        // before (C #46's and C #54's among them, R749); and the Meditative set's twenty-three.
+        let meditative = radiant_only
+            .iter()
+            .filter(|entry| entry.starts_with("meditative-"))
+            .count();
+        assert_eq!(
+            (radiant_only.len() - meditative, meditative),
+            (44, 23),
+            "{radiant_only:#?}"
         );
     }
 

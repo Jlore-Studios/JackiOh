@@ -231,6 +231,12 @@ function formOf(card: CardView | null, unit: UnitView | null | undefined, type: 
   return "full";
 }
 
+/** R849000: a card's native tooltip, its name and why your own unit cannot attack now. */
+function cardTitle(name: string, unit: UnitView | null | undefined): string {
+  const reason = unit?.attackReason;
+  return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
+}
+
 export default function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
@@ -428,8 +434,9 @@ export default function Card(props: CardProps): ReactElement {
       // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
       // It is the root's only inline style; the faces put theirs on inner elements.
       style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
-      // The hover preview replaces the native tooltip; with previews off, the name comes back.
-      title={settings.hoverPreviews && panelHover ? undefined : face.name}
+      // The hover preview replaces the native tooltip; with previews off, the name comes back, and
+      // with it (R849000) the engine's reason a unit of yours cannot attack now.
+      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit)}
     >
       {unit !== undefined && unit !== null ? (
         <MinionFace face={face} unit={unit} />
