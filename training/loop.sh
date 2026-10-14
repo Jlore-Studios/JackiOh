@@ -12,20 +12,29 @@
 #   2. otherwise fetch main, reset the lane's branch ai/<lane> to it, build jackioh from it and keep
 #      that binary as the parent (~/parent-jackioh): the parent is always the AI on main. The unban
 #      lane stops here while the parent shadow-bans no card: nothing could promote, so the cycle
-#      waits TRAIN_IDLE_SECONDS and looks again. Otherwise push ai/<lane> as main plus an empty
-#      `[skip ci]` commit naming the session, and make the lane's pull request this session's
-#      draft (opening one when none is open). The draft's description opens with the gate's latest
-#      pass, which `promote` rewrites in ~/training-out/<lane>/last-pass.md every time it runs: how
-#      many games the candidate beat the AI on main in, by seat and game by game;
+#      waits TRAIN_IDLE_SECONDS and looks again. The improve lane checks out its stack,
+#      ai/improve-stack, rebased onto main (`restore_stack`): its kept, measured changes, one
+#      commit each, which the session starts from. When main already holds the stack's change (its
+#      promotion merged) the stack is emptied; when main's AI moved under it, the loop screens it
+#      against the new parent on the dev set and notes the tally in attempts.md; when it does not
+#      rebase, the session starts from main, attempts.md says so, its commits are kept as a local
+#      branch, and the stack stays until a session rebuilds it. Then push ai/<lane> as that start
+#      plus an empty `[skip ci]` commit naming the session, and make the lane's pull request this
+#      session's draft (opening one when none is open). The draft's description opens with the
+#      gate's latest pass, which `promote` rewrites in ~/training-out/<lane>/last-pass.md every
+#      time it runs: how many games the candidate beat the AI on main in, by seat and game by game;
 #   3. run one Devin session on the lane's standing prompt (training/<lane>.md). Every
 #      TRAIN_PROGRESS_SECONDS, push the checkout as it is to ai/<lane> as one `[skip ci]` commit
 #      when it changed, rewrite the session's comment on the draft (how long it has run, the diff
 #      against main and what attempts.md gained), and rewrite the draft's description when a new
-#      pass of the gate changed it;
-#   4. when the session ends with a promotion commit, land it on main (`land`), run the web's tests
+#      pass of the gate changed it. When the session ends, stop the jackioh processes it left
+#      running (`stop_strays`);
+#   4. when the session ends with a promotion commit, fold the session's commits into it, keep it
+#      as the improve lane's stack until it merges, land it on main (`land`), run the web's tests
 #      that play the AI when the box has pnpm, push ai/<lane>, retitle the pull request with the
 #      promotion's subject (`AI gen <N> (<lane>): …`), give it the gate's report as its body, mark
-#      it ready and turn on auto-merge. A promotion that fails any of that is set back;
+#      it ready and turn on auto-merge. A promotion that fails any of that is set back. Without a
+#      promotion, the improve lane saves the session's commits as its stack (`save_stack`);
 #   5. sleep and repeat.
 #
 # Each cycle also loads the finished days' game records (~/training-out/<lane>/<date>.jsonl) into
@@ -43,7 +52,8 @@
 #
 # Environment: DEVIN_MODEL (required, but by the gather lane), GH_TOKEN (the lane user's own, for
 # gh), DATABASE_URL (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS (default
-# 16200: the standing prompt's four hours, plus half an hour for the last gate run to finish),
+# 18000: the standing prompt's four hours, plus an hour for the last gate run to finish, since the
+# improve lane's 400 games take half an hour or more on the box's two cores),
 # TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
 # waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle),
 # TRAIN_GATHER_PATCH_GAMES (default 5000: its games a patch).
@@ -80,8 +90,18 @@ logs="$HOME/logs"
 out="$HOME/training-out/$lane"
 work="$HOME/.cache/jackioh-train/$lane"
 parent="$HOME/parent-jackioh"
+# The improve lane's stack (training/README.md, The improve stack): its kept, measured changes, as
+# commits on a branch of their own that each session starts from. The unban lane keeps none.
+stack=""
+[ "$lane" != improve ] || stack="ai/$lane-stack"
+start_from='`main`'
+[ -z "$stack" ] || start_from="the stack (\`$stack\`) rebased on \`main\`"
+# What restore_stack found, for the session's comment, and how it went: "" (rebased, emptied or no
+# stack yet), "yes" (it does not rebase onto main) or "unread" (the loop could not read it).
+stack_note=""
+stack_conflict=""
 pause="${TRAIN_PAUSE_SECONDS:-60}"
-session_limit="${TRAIN_SESSION_SECONDS:-16200}"
+session_limit="${TRAIN_SESSION_SECONDS:-18000}"
 progress_every="${TRAIN_PROGRESS_SECONDS:-900}"
 idle_pause="${TRAIN_IDLE_SECONDS:-900}"
 gather_games="${TRAIN_GATHER_GAMES:-100}"
@@ -113,6 +133,138 @@ sleep_for="$pause"
 idle_generation=""
 # The patch the gather lane has all its games of, once it has said so.
 gathered=""
+
+# Notes $1, a clause, in attempts.md (which the standing prompt has Devin read first) and the log.
+note() {
+  printf '\n- %s (loop): %s.\n' "$(date -u +%Y-%m-%dT%H:%MZ)" "$1" >>"$out/attempts.md"
+  log "$1"
+}
+
+# Stops the jackioh processes the session left running as the lane's user, such as an arena or a
+# gate that outlived a session cut off by the time limit, and the parent agents they spawned, so the
+# next measurement does not share the box with them.
+stop_strays() {
+  pkill -u "$(id -u)" -f 'jackioh (agent|arena|promote|sweep|trace|think|gate|fuzz|stats)( |$)' &&
+    log "stopped the jackioh processes the session left running"
+  return 0
+}
+
+# The improve lane's session starts from its stack (training/README.md, The improve stack). Fetches
+# it, and when it holds anything main does not:
+# - when main holds its change already (its promotion merged), empties it: the stack becomes main;
+# - otherwise rebases it onto main and checks it out as the lane's branch, and when main's AI moved
+#   under it, screens it against the new parent (remeasure_stack);
+# - when it does not rebase, keeps its commits as a local branch, notes it in attempts.md, and the
+#   session starts from main. The stack stays on GitHub as it was until a session rebuilds it.
+# A stack the loop cannot read is left alone, and so are the session's commits (save_stack).
+restore_stack() {
+  stack_note=""
+  stack_conflict=""
+  [ -n "$stack" ] || return 0
+  git ls-remote --exit-code --heads origin "$stack" >/dev/null 2>&1
+  case $? in
+    0) ;;
+    2) return 0 ;;
+    *) stack_unread "the loop cannot list origin's branches"; return 0 ;;
+  esac
+  if ! git fetch --quiet origin "+refs/heads/$stack:refs/remotes/origin/$stack"; then
+    stack_unread "the loop cannot fetch it"
+    return 0
+  fi
+  tip=$(git rev-parse "origin/$stack") || {
+    stack_unread "the loop cannot read its tip"
+    return 0
+  }
+  ! git merge-base --is-ancestor "$tip" "$base" || return 0
+  old=$(git merge-base "$tip" "$base")
+  if git diff --binary "$old" "$tip" -- crates/ai ':(exclude)crates/ai/generation.json' | git apply --check -R 2>/dev/null; then
+    log "main holds the stack's change ($(git rev-parse --short "$tip")), so the stack is emptied"
+    git push --quiet --force origin "$base:refs/heads/$stack" || log "cannot push $stack"
+    return 0
+  fi
+  if git checkout --quiet -B "$branch" "$tip" && git rebase --quiet "$base"; then
+    stack_note="It starts from the stack, \`$stack\`: $(git rev-list --count "$base..HEAD") commits rebased onto \`main\`."
+    log "the session starts from $stack ($(git rev-parse --short "$tip")), rebased onto main"
+    git diff --quiet "$old" "$base" -- crates/ai || remeasure_stack
+    return 0
+  fi
+  conflicts=$(git diff --name-only --diff-filter=U | joined)
+  git rebase --abort >/dev/null 2>&1
+  git checkout --quiet -B "$branch" "$base"
+  kept="$stack-conflict-$stamp"
+  git branch --quiet -f "$kept" "$tip"
+  stack_conflict=yes
+  stack_note="It starts from \`main\`: the stack does not rebase onto it (\`attempts.md\`)."
+  note "the stack (\`$(git rev-parse --short "$tip")\`) does not rebase onto \`main\` (conflicts in ${conflicts:-files the loop could not name}): this session starts from \`main\`, the stack's commits are the local branch \`$kept\`, and \`$stack\` stays as it was until a session rebuilds it (training/improve.md, The stack)"
+}
+
+# restore_stack's stack it cannot read, $1 saying why: the session starts from main, and save_stack
+# leaves the stack as it is.
+stack_unread() {
+  stack_conflict=unread
+  stack_note="It starts from \`main\`: the loop could not read the stack (\`attempts.md\`)."
+  note "$1, so it cannot read the stack, \`$stack\`: this session starts from \`main\`, and the stack stays as it was"
+}
+
+# main's AI moved under the rebased stack: builds the stack and screens it against the new parent on
+# the dev set (R850001, 400 games, about 40 minutes on the box), and notes the tally in attempts.md
+# for the session. A screen, not the gate: the gate reads the hold-out deals, and this one is not
+# trusted alone.
+remeasure_stack() {
+  if ! cargo build --release --quiet -p jackioh-tools; then
+    note "main's AI moved under the stack, which does not build on it"
+    return 0
+  fi
+  log "main's AI moved under the stack; screening it against the new parent on the dev set"
+  tally=$(target/release/jackioh arena --a self --b "bin:$parent" --set improve-dev | grep '^{"a":' | tail -n 1)
+  note "main's AI moved, so the loop screened the stack against the new parent (generation $generation) on the dev set: \`${tally:-no tally}\`"
+}
+
+# The session's commits become the stack: HEAD is pushed to it unless they change anything outside
+# crates/ai/, or crates/ai/generation.json, which no stack holds (a promotion's record is
+# save_promoted_stack's). A stack that did not rebase is overwritten only once the session committed
+# something; one the loop could not read is never, and the session's commits are kept as a local
+# branch instead.
+save_stack() {
+  [ -n "$stack" ] || return 0
+  if [ "$stack_conflict" = unread ]; then
+    git branch --quiet -f "$stack-unsaved-$stamp" HEAD
+    note "the loop could not read \`$stack\` when the session started, so it leaves it as it was and keeps the session's commits as the local branch \`$stack-unsaved-$stamp\`"
+    return 0
+  fi
+  [ "$stack_conflict" != yes ] || [ "$(git rev-parse HEAD)" != "$base" ] || return 0
+  outside=$(
+    git diff --name-only "$base" HEAD | grep -v '^crates/ai/'
+    git diff --name-only "$base" HEAD -- crates/ai/generation.json
+  )
+  if [ -n "$outside" ]; then
+    git branch --quiet -f "$stack-unsaved-$stamp" HEAD
+    note "the session's commits change $(printf '%s\n' "$outside" | joined), which a stack may not, so \`$stack\` is left as it was and the commits are the local branch \`$stack-unsaved-$stamp\`"
+    return 0
+  fi
+  git push --quiet --force origin "HEAD:refs/heads/$stack" || log "cannot push $stack"
+}
+
+# The promotion $1 (the session's commits folded into one, its record included), its session's HEAD
+# before the fold $2, becomes the stack as one commit on main less the record, its message the
+# promotion's subject and every folded commit's message. A promotion set back, or refused by closing
+# its pull request, resumes from it; one that merges empties it (restore_stack).
+save_promoted_stack() {
+  [ -n "$stack" ] || return 0
+  index="$work/stack.index"
+  rm -f "$index"
+  if GIT_INDEX_FILE="$index" git read-tree "$1" &&
+    GIT_INDEX_FILE="$index" git reset --quiet "$base" -- crates/ai/generation.json "training/history/$lane.jsonl" &&
+    tree=$(GIT_INDEX_FILE="$index" git write-tree) &&
+    kept=$({
+      printf 'Stack (%s): promoted as "%s"\n\n' "$lane" "$(git log -1 --format=%s "$1")"
+      git log --reverse --format=%B "$base..$2"
+    } | git commit-tree "$tree" -p "$base") &&
+    git push --quiet --force origin "$kept:refs/heads/$stack"; then
+    return 0
+  fi
+  log "cannot keep the promotion as $stack"
+}
 
 # Loads every finished day's record file not loaded yet (today's is still being written).
 import_records() {
@@ -405,7 +557,7 @@ set_back() {
   [ -n "$3" ] || return 0
   {
     printf '**Set back:** `%s` (%s): %s.\n\n' "$subject" "$short" "$2"
-    printf 'The pull request is a draft again. The commit is kept on the box as the branch `%s`, and `attempts.md` says what happened, for the next session, which starts from `main`.\n' "$keep"
+    printf 'The pull request is a draft again. The commit is kept on the box as the branch `%s`, and `attempts.md` says what happened, for the next session, which starts from %s.\n' "$keep" "$start_from"
   } >"$work/note.md"
   comment "$3" "$work/note.md" >/dev/null
   gh pr merge "$3" --disable-auto >/dev/null 2>&1
@@ -446,8 +598,8 @@ publish() {
   fi
   gh pr merge "$1" --auto --squash || log "auto-merge could not be turned on for #$1; the next cycle tries again"
   {
-    printf '**%s:** `%s` (%s) is up. CI runs every check now, the training gate included, and auto-merge lands it once they pass. If one fails, it comes back to draft and the next session starts from `main`.\n' \
-      "$2" "$title" "$(git rev-parse --short HEAD)"
+    printf '**%s:** `%s` (%s) is up. CI runs every check now, the training gate included, and auto-merge lands it once they pass. If one fails, it comes back to draft and the next session starts from %s.\n' \
+      "$2" "$title" "$(git rev-parse --short HEAD)" "$start_from"
     if [ -n "$report" ]; then
       printf '\nThe gate on the box:\n\n'
       sed -n '/^|/p' "$report"
@@ -528,6 +680,7 @@ progress() {
     printf '### Session %s\n\n' "$stamp"
     printf 'Devin (`%s`) on [`training/%s.md`](https://github.com/%s/blob/main/training/%s.md), from `main` at %s (AI generation %s). %s\n\n' \
       "$DEVIN_MODEL" "$lane" "$slug" "$lane" "$(git rev-parse --short "$base")" "$generation" "$1"
+    [ -z "$stack_note" ] || printf '%s\n\n' "$stack_note"
     if [ -n "$wip" ]; then
       printf '**The checkout at %s** ([its diff against `main`](https://github.com/%s/compare/%s...%s)):\n\n```\n' \
         "$wip_time" "$slug" "$base" "$wip"
@@ -552,7 +705,7 @@ session() {
   attempts_mark=0
   [ ! -f "$out/attempts.md" ] || attempts_mark=$(wc -c <"$out/attempts.md")
   wip=""
-  wip_tree=$(git rev-parse "$base^{tree}")
+  wip_tree=$(git rev-parse "HEAD^{tree}")
   wip_time=""
   printf '### Session %s\n\nStarting.\n' "$stamp" >"$work/session.md"
   session_comment=$(comment "$pr" "$work/session.md") || session_comment=""
@@ -572,6 +725,7 @@ session() {
   wait "$devin_pid"
   devin_status=$?
   log "Devin session $stamp ended with status $devin_status"
+  stop_strays
 }
 
 cycle() {
@@ -643,7 +797,10 @@ cycle() {
     idle_generation=""
   fi
 
-  if ! start=$(git commit-tree "$base^{tree}" -p "$base" -m "[skip ci] AI training ($lane): session $stamp") ||
+  # The improve lane starts from its stack, rebased onto main.
+  restore_stack
+
+  if ! start=$(git commit-tree "HEAD^{tree}" -p HEAD -m "[skip ci] AI training ($lane): session $stamp") ||
     ! git push --quiet --force origin "$start:refs/heads/$branch"; then
     log "cannot push $branch"
   fi
@@ -655,10 +812,16 @@ The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com
 - each session gets a comment, rewritten every $((progress_every / 60)) minutes while it runs: how long it has run, the checkout's diff against \`main\`, and what \`~/training-out/$lane/attempts.md\` gained (each attempt, its dry run's numbers and whether it was kept);
 - the checkout is pushed here as one commit whenever it changes, so **Files changed** is the session's work in progress (its message tells CI to skip it);
 - once a promotion passes its gate on the box, the loop lands it on \`main\`, retitles this pull request \`AI gen <N> ($lane): …\`, puts the gate's report here, marks it ready and turns on auto-merge. CI then runs every check, the training gate included;
-- a promotion that fails a check comes back to draft with a comment saying which, \`attempts.md\` notes it for the next session, and the next session starts from \`main\`.
+- a promotion that fails a check comes back to draft with a comment saying which, \`attempts.md\` notes it for the next session, and the next session starts from $start_from.
 
 Stop the lane with \`sudo systemctl stop jackioh-train@$lane\` on the box. Closing this pull request refuses whatever is in it; the lane opens a new draft with its next session.
 EOF
+  if [ -n "$stack" ]; then
+    cat >>"$work/draft.md" <<EOF
+
+The lane keeps its kept, measured changes as commits on [\`$stack\`](https://github.com/$slug/commits/$stack), one per change, each message carrying its screen's numbers. Each session starts from that stack rebased onto \`main\`, and the loop saves the session's commits to it when the session ends ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md#the-improve-stack), The improve stack). A promotion empties it once it merges. Closing this pull request leaves the stack as it is: to refuse the stack's changes, stop the lane, delete \`$stack\`, and start the lane again.
+EOF
+  fi
   body
   if [ -n "$pr" ]; then
     if gh pr edit "$pr" --title "$title" --body-file "$work/body.md" >/dev/null; then
@@ -680,15 +843,19 @@ EOF
 
   # 4. A promotion: land it on main and put it up.
   if ! promoted; then
-    progress "Ended after $minutes minutes (Devin's exit status $devin_status) with no promotion; the next session starts from \`main\`."
+    save_stack
+    progress "Ended after $minutes minutes (Devin's exit status $devin_status) with no promotion; the next session starts from $start_from."
     return 0
   fi
   progress "Ended after $minutes minutes (Devin's exit status $devin_status) with a promotion, \`$(git log -1 --format=%s)\`, which the loop checks again before it goes up."
   promo=$(git rev-parse HEAD)
-  # One commit on main, as land expects: anything Devin committed before it is folded in.
+  session_head=$promo
+  # One commit on main, as land expects: anything Devin committed before it (the stack) is folded in.
   if [ "$(git rev-parse HEAD^)" != "$base" ]; then
     git reset --quiet --soft "$base" && git commit --quiet -C "$promo" && promo=$(git rev-parse HEAD)
   fi
+  # Until it merges, the promotion is the stack the next session starts from.
+  save_promoted_stack "$promo" "$session_head"
   git fetch --quiet origin main || {
     log "git fetch failed before landing the promotion; it is kept as $branch-set-back-$stamp"
     git branch --quiet -f "$branch-set-back-$stamp" "$promo"
