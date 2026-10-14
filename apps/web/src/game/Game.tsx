@@ -48,7 +48,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import {
   animTestid,
   createAnimationQueue,
@@ -465,6 +465,12 @@ export default function Game({
 
   const handleClick = useCallback(
     (target: ClickTarget) => {
+      // R821000: "Place N Plague Counters" is answered by a click on the board, not from a list.
+      const placement = answerPlaguePlacement(shown, legal, shown.pending, target);
+      if (placement !== null) {
+        dispatch(placement);
+        return;
+      }
       const next = onClickTarget(shown, legal, interaction, target);
       setInteraction(next.interaction);
       if (next.interaction !== interaction && next.interaction.stage === "attacking") {
@@ -472,7 +478,7 @@ export default function Game({
       }
       if (next.action !== undefined) onAction(next.action);
     },
-    [shown, legal, interaction, onAction, pickUp],
+    [shown, legal, interaction, onAction, dispatch, pickUp],
   );
 
   const handleControl = useCallback(
