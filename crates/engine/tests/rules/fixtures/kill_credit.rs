@@ -29,7 +29,7 @@ fn unit(name: &str, index: i32, attack: i32, health: i32) -> CardDef {
     }))
 }
 
-/// Classic+ #19.5's shape: "Whenever this destroys a Unit, it gets +5 Attack."
+/// Classic+ #19.5's shape: "Whenever this destroys a Unit, it gains +5 Attack."
 pub static bot: LazyLock<CardDef> = LazyLock::new(|| unit("bot", 5801, 5, 5));
 /// Classic+ #19.2's shape with no roll: at end of turn it attacks a random enemy Unit; base sends the bot across Berserk, Radiant credits it the kill.
 pub static jungle: LazyLock<CardDef> = LazyLock::new(|| unit("jungle", 5802, 5, 5));

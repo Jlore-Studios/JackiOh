@@ -80,14 +80,11 @@ const TOKEN_POOLS: &[TokenPool] = &[
         tag: Tag::Pancake,
         phrase: "Pancake token",
     },
+    // Balance patch 1 reworded C+ #78 to "AI Generated card"; #911 put it back in the pool's one
+    // spelling, with Meditative #59's granted Death.
     TokenPool {
         tag: Tag::Ai,
         phrase: "AI generated card",
-    },
-    // Balance patch 1 reworded C+ #78 to "AI Generated card": the pool is named in either case.
-    TokenPool {
-        tag: Tag::Ai,
-        phrase: "AI Generated card",
     },
     // Balance patch 1 hid the odds: "Grape" names the five Grapes (C+ #65, C+ #66).
     TokenPool {
@@ -311,18 +308,21 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             strings(&["classicplus-012", "classicplus-013"])
         );
         // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #53
-        // Prestige adds one and #60 Eschews casts one (§8.8 rows 53 and 60, R1421).
+        // Prestige adds one, #59's granted Death fuses one and #60 Eschews casts one (§8.8 rows
+        // 53, 59 and 60, R1421). Issue #911 put Claude's Datacenter's "AI Generated card" back in
+        // the pool's one spelling.
         assert_eq!(
             naming("AI generated card"),
             strings(&[
                 "classicplus-043",
+                "classicplus-078",
                 "classicplus-t-ai-02",
                 "meditative-053",
+                "meditative-059",
                 "meditative-060"
             ])
         );
-        // Balance patch 1 reworded Claude's Datacenter to "AI Generated card".
-        assert_eq!(naming("AI Generated card"), strings(&["classicplus-078"]));
+        assert_eq!(naming("AI Generated card"), Vec::<String>::new());
         assert_eq!(
             indices_of(Tag::Fruit),
             strings(&["65.1", "65.2", "65.3", "65.4", "65.5"])

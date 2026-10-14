@@ -27,7 +27,7 @@ mod tests {
 
     const SCEPTER: &str = "classic-007";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 (1) Cost or less Units.
+    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.
     const FLAME: &str = "classic-016"; // (1) Spell, Book: Deal 4 damage (8 Radiant).
     const DIVIDEND: &str = "core-024"; // (X) Spell: modes damage / heal / mana.

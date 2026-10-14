@@ -857,7 +857,7 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         let inside = "does not start \"Death:\" on a line of its own";
         // Quoted in double quotes, the label first and the full stop inside: the granted card's text.
         assert_eq!(
-            check("Cry: Summon a random (1) Unit. It gains \"Death: Add 1 random Book card to your hand.\""),
+            check("Cry: Summon a random (1) Cost Unit. It gains \"Death: Add 1 random Book to your hand.\""),
             Vec::<String>::new()
         );
         assert_eq!(

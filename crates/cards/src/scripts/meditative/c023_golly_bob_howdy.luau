@@ -4,7 +4,7 @@ local J = require("@jackioh")
 -- §7: the Sheep Token.
 local SHEEP_TOKEN = "core-t-sheep"
 
--- The Units next to this (§3.1: lanes N − 1 and N + 1 on its own side and row, the tops of piles,
+-- The Units adjacent to this (§3.1: lanes N − 1 and N + 1 on its own side and row, the tops of piles,
 -- R13), listed once before the first transform.
 local function neighbours(ctx: J.EffectContext): { string }
 	local ids: { string } = {}
