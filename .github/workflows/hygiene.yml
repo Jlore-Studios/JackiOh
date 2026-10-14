@@ -2,8 +2,10 @@
 # for a person to review and merge (`person merges`): dead files and archives (.github/hygiene/files.md),
 # which also lists the stale branches as checkboxes for a person to tick and delete with a
 # `/delete-branches` comment (hygiene-delete.yml), and the agent instructions held to Anthropic's current
-# guidance (instructions.md). Nothing here deletes or merges anything. Mondays at 06:41 UTC, and on
-# demand: `gh workflow run hygiene.yml`, with `-f dry_run=true` to open nothing.
+# guidance (instructions.md). Nothing here deletes or merges anything. Tuesdays at 22:07 UTC, just
+# after Squishy's weekly usage resets at 5pm Central: 5:07pm CDT, 4:07pm CST in winter, since GitHub's
+# cron is UTC and actionlint 1.7.7 refuses a `timezone:` key. And on demand: `gh workflow run
+# hygiene.yml`, with `-f dry_run=true` to open nothing.
 #
 # Two jobs, so the model never holds a GitHub token. `research` runs the model on Squishy's
 # subscription to read Anthropic's pages for the guidance, since a builder has no web access. `sweep`
@@ -13,7 +15,7 @@ name: hygiene
 
 on:
   schedule:
-    - cron: "41 6 * * 1"
+    - cron: "7 22 * * 2"
   workflow_dispatch:
     inputs:
       dry_run:
