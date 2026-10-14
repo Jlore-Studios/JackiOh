@@ -15,7 +15,7 @@ import {
   type LoadoutResult,
 } from "@jackioh/validator";
 
-import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import {
   ApiRequestError,
   createRoom,
@@ -342,6 +342,7 @@ export function roomLinkStatus(mode: QueueMode): string {
  */
 type Status =
   | { kind: "queued"; mode: QueueMode }
+  | { kind: "queueEnded" }
   | { kind: "roomLink"; mode: QueueMode }
   | { kind: "found" }
   | { kind: "left" }
@@ -359,26 +360,60 @@ export function pairTargetOf(me: {
 
 export { MATCH_FOUND_STATUS };
 
-/** Polls while waiting and reports a pairing once before navigating. */
-function useLobbyWatch(token: string, waiting: boolean, onTick: () => void, onPair: (target: string) => void): void {
+/**
+ * Polls while waiting and reports a pairing once before navigating. R897000: while waiting, and
+ * the server says the ticket is gone `QUEUE_ENDED_AFTER_READS` reads in a row, reports the ended
+ * queue once instead, so an expired ticket ends the wait with a way back in.
+ */
+function useLobbyWatch(
+  token: string,
+  waiting: boolean,
+  onTick: () => void,
+  onPair: (target: string) => void,
+  onQueueEnded: () => void,
+): void {
   // Prevents a slow response from navigating twice after a re-render.
   const navigated = useRef(false);
+  // R897000: like `navigated`, but for the queue ending under the wait.
+  const ended = useRef(false);
   const tick = useRef(onTick);
   tick.current = onTick;
   const paired = useRef(onPair);
   paired.current = onPair;
+  const queueEnded = useRef(onQueueEnded);
+  queueEnded.current = onQueueEnded;
+  /** R897000: consecutive reads saying the ticket is gone. */
+  const endedReads = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    if (!waiting) {
+      // Idle again: a later wait judges its own reads from nothing.
+      ended.current = false;
+      endedReads.current = 0;
+    }
 
     const check = (): void => {
       attempt(() => getMe(token))
         .then((me) => {
-          if (cancelled || navigated.current) return;
+          if (cancelled || navigated.current || ended.current) return;
           const target = pairTargetOf(me);
           if (target !== null) {
             navigated.current = true;
             paired.current(target);
+            return;
+          }
+          if (!waiting) return;
+          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a
+          // wait, and a failed read leaves the count alone.
+          if (me.queued === false) {
+            endedReads.current += 1;
+            if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
+              ended.current = true;
+              queueEnded.current();
+            }
+          } else {
+            endedReads.current = 0;
           }
         })
         .catch(() => undefined);
@@ -583,6 +618,8 @@ function statusWords(status: Status): string {
   switch (status.kind) {
     case "queued":
       return queuedStatus(status.mode);
+    case "queueEnded":
+      return t("Your queue expired. Find a match to queue again.");
     case "roomLink":
       return roomLinkStatus(status.mode);
     case "found":
@@ -651,7 +688,14 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
       navigate(target);
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
-  useLobbyWatch(token, waiting, refreshPopulation, goFound);
+  // R897000: a queue the server no longer holds ends the wait with a way back in: the
+  // existing Find-a-match button is the rejoin path.
+  const onQueueEnded = useCallback((): void => {
+    forgetQueued();
+    setWaiting(false);
+    setStatus({ kind: "queueEnded" });
+  }, []);
+  useLobbyWatch(token, waiting, refreshPopulation, goFound, onQueueEnded);
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);

@@ -51,7 +51,8 @@ use crate::app::{App, now_ms};
 use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
 use crate::config::{
     BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS,
-    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
+    QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS,
+    rating_window,
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
@@ -131,6 +132,67 @@ pub fn e2e_seed_count() -> usize {
 
 fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
+}
+
+// R897000 — a queued ticket's presence
+
+/// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms.
+///
+/// Every signed-in request refreshes its caller (`api::http`'s router), which a queued client
+/// already sends every `SERIES_POLL_SECONDS` from wherever it is, so a silent profile reads as
+/// gone and its ticket expires before it can seat anyone. In memory, beside `E2E_SEED_BY_TICKET`:
+/// a restart loses it, and live clients re-touch within one poll, so `enqueued_at` covers what was
+/// never heard. One per `App`, not module state: profile ids repeat across parallel tests.
+pub struct QueuePresence {
+    born: i64,
+    heard: Mutex<IndexMap<String, i64>>,
+}
+
+impl QueuePresence {
+    /// This server's start, on its clock: nothing expires before it has listened one window.
+    pub fn new() -> QueuePresence {
+        QueuePresence {
+            born: now_ms(),
+            heard: Mutex::new(IndexMap::new()),
+        }
+    }
+
+    /// The caller was heard from now: its ticket stays pairable.
+    pub fn touch(&self, profile_id: &str, now: i64) {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .insert(profile_id.to_string(), now);
+    }
+
+    /// The ticket is gone (paired, cancelled, left or expired): its entry goes with it.
+    pub fn forget(&self, profile_id: &str) {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .shift_remove(profile_id);
+    }
+
+    /// Whether the server has listened long enough to judge any ticket: one full
+    /// `QUEUE_TICKET_STALE_MS` since it started, so a restart cancels nothing on its first sweep.
+    pub fn expiry_due(&self, now: i64) -> bool {
+        now - self.born >= QUEUE_TICKET_STALE_MS
+    }
+
+    /// When this profile was last heard from, or never.
+    pub fn last_heard(&self, profile_id: &str) -> Option<i64> {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(profile_id)
+            .copied()
+    }
+}
+
+impl Default for QueuePresence {
+    fn default() -> QueuePresence {
+        QueuePresence::new()
+    }
 }
 
 /// The older of two tickets first: R166's "oldest first", ties on ticket id.
@@ -583,6 +645,68 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         });
     }
 
+    // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is cancelled
+    // before pairing, so an absent player is never seated, never charged the disconnect grace and
+    // never takes a phantom ranked loss. A profile never heard from gets `enqueued_at`'s grace of
+    // one window (an old client that never touches), and a restarted server judges nothing until it
+    // has listened one window (`expiry_due`). `tickets_cancel` only closes an open ticket, so a
+    // claim that landed between the list and the cancel stands.
+    if app.queue_presence.expiry_due(now) {
+        let mut live = Vec::with_capacity(open.len());
+        let mut stale = Vec::new();
+        for ticket in open {
+            let heard = app
+                .queue_presence
+                .last_heard(&ticket.profile_id)
+                .unwrap_or(ticket.enqueued_at);
+            if now - heard > QUEUE_TICKET_STALE_MS {
+                stale.push(ticket);
+            } else {
+                live.push(ticket);
+            }
+        }
+        open = live;
+        if !stale.is_empty() {
+            // The listing read commits before the cancels write: each cancel is its own transaction.
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            for ticket in &stale {
+                let mut cancel = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                cancel
+                    .tickets_cancel(&ticket.id, now)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                cancel
+                    .commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                forget_seed(&ticket.id);
+                app.queue_presence.forget(&ticket.profile_id);
+                tracing::info!(
+                    event = "queue.expired",
+                    profileId = %ticket.profile_id,
+                    ticketId = %ticket.id,
+                );
+            }
+            if open.is_empty() {
+                return Ok(SweepReport {
+                    made: 0,
+                    failed: Vec::new(),
+                });
+            }
+            tx = app
+                .db
+                .begin(None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+        }
+    }
+
     // §9.5's "not in a match" holds at pairing too: a ticket left open while its owner joined a room
     // match must not become a second match, nor (R264) while they are in a series. One read each for
     // the sweep; `taken` covers the pairs this sweep makes.
@@ -692,6 +816,10 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
 
             taken.insert(a.id.clone());
             taken.insert(b.id.clone());
+            // SPEC §11 R897000: both tickets left `open`, paired or claimed; their presence goes
+            // with them, win or lose of the start that follows.
+            app.queue_presence.forget(&a.profile_id);
+            app.queue_presence.forget(&b.profile_id);
             match start_paired_match(app, a, b, &match_id).await {
                 Ok(()) => {
                     report.made += 1;
@@ -782,7 +910,10 @@ async fn pair_with_bots(
         let match_id = new_uuid();
         if ticket.mode == QueueMode::Bo3 {
             match start_bot_series(app, ticket, bot, &match_id, now).await {
-                Ok(true) => {}
+                // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+                Ok(true) => {
+                    app.queue_presence.forget(&ticket.profile_id);
+                }
                 Ok(false) => continue,
                 // One bot pairing's failed start ends that pairing, not the fallback: the ticket
                 // is marked taken so no later iteration retries it, and the loop moves on.
@@ -837,6 +968,8 @@ async fn pair_with_bots(
         }
         taken.insert(ticket.id.clone());
         busy.insert(bot.profile_id.clone());
+        // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+        app.queue_presence.forget(&ticket.profile_id);
         // One bot pairing's failed start ends that pairing, not the fallback: `start_bot_match`
         // already freed both sides, and the ticket and bot are marked taken above.
         if let Err(error) = start_bot_match(app, ticket, bot, &match_id).await {
@@ -1179,6 +1312,8 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
         .map_err(|error| ApiError::internal(error.to_string()))?;
     // R143: a cancelled ticket will never be paired, so its seed is dropped with it.
     forget_seed(&ticket.id);
+    // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+    app.queue_presence.forget(&profile.id);
     tracing::info!(event = "queue.cancelled", profileId = %profile.id, ticketId = %ticket.id);
     Ok(json(200, json!({ "cancelled": true, "ticketId": ticket.id })))
 }

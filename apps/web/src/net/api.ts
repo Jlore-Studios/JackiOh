@@ -201,6 +201,11 @@ export type MeResponse = {
   ageCheckOwed?: boolean;
   /** R757001: the account has not agreed to the terms in force (`TERMS_VERSION`). Missing: not owed. */
   termsOwed?: boolean;
+  /**
+   * R897000: whether this profile holds an open queue ticket. Optional because a server from
+   * before R897000 (or a test stub) omits it; missing never ends a wait.
+   */
+  queued?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */

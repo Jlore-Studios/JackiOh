@@ -234,6 +234,53 @@ describe("R765 a pairing takes the player to the game from any screen", () => {
     expect(navigate).toHaveBeenCalledWith("/series/s-4");
   });
 
+  it("R897000 a queue the server no longer names twice in a row is forgotten, and the follower stops", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("bo1");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue({ ...me(null), queued: false });
+    render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(readQueued(), "one ended read is not enough").toBe("bo1");
+
+    await advance(POLL_MS);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(readQueued(), "two ended reads in a row end the follow").toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    const reads = read.mock.calls.length;
+    await advance(POLL_MS * 3);
+    expect(read).toHaveBeenCalledTimes(reads);
+  });
+
+  it("R897000 one false read, or none at all, keeps the wait", async () => {
+    vi.useFakeTimers();
+    signIn();
+    rememberQueued("random");
+    const read = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue({ ...me(null), queued: false });
+    render(<Follower path={paths.decks} read={read} />);
+    await flush();
+    expect(readQueued()).toBe("random");
+
+    // A live read between two ended ones resets the count.
+    read.mockResolvedValue({ ...me(null), queued: true });
+    await advance(POLL_MS);
+    expect(readQueued()).toBe("random");
+    read.mockResolvedValue({ ...me(null), queued: false });
+    await advance(POLL_MS);
+    expect(readQueued(), "ended reads on either side of a live one never meet").toBe("random");
+    cleanup();
+
+    // A server that never names the queue (older than R897000) never ends it either.
+    rememberQueued("random");
+    const silent = vi.fn<(token: string) => Promise<MeResponse>>().mockResolvedValue(me(null));
+    render(<Follower path={paths.decks} read={silent} />);
+    await flush();
+    await advance(POLL_MS * 3);
+    expect(silent).toHaveBeenCalled();
+    expect(readQueued()).toBe("random");
+  });
+
   it("R765 a read that fails is ignored and retried; a tab with no session forgets the queue", async () => {
     vi.useFakeTimers();
     signIn();
