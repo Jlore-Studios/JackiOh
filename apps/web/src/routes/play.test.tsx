@@ -15,7 +15,12 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import { newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import {
+  DECK_NAME_MAX_LENGTH,
+  MAX_SAVED_DECKS,
+  MAX_SAVED_TRIOS,
+  QUEUE_ENDED_AFTER_READS,
+} from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import {
   ApiRequestError,
@@ -869,6 +874,28 @@ describe("the lobby's queue state", () => {
     expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
     expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
     expect(readQueued()).toBe("bo1");
+  });
+
+  it("R897000 a room wait holds no ticket, so ticketless reads never end it", async () => {
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
+    // The room host holds no queue ticket: every read says so, and no series has formed yet.
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+
+    // Past the queue's ended threshold, all ticketless: still the room ticket, Find a match
+    // still locked, and no rejoin message.
+    await waitFor(
+      () => {
+        expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThanOrEqual(QUEUE_ENDED_AFTER_READS + 1);
+      },
+      { timeout: 8000 },
+    );
+    expect(screen.getByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
   });
 
   it("a join that pairs at once announces before navigating", async () => {

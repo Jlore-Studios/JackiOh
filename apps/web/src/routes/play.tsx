@@ -37,7 +37,7 @@ import {
   type SavedTrio,
 } from "../net/api.ts";
 import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
-import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
+import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued, useQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { forgetRoomLink, readRoomLink, roomLinkUrl, sendRoomLink } from "../net/roomLink.ts";
 import { rankWords } from "../rank/rank.ts";
@@ -363,9 +363,11 @@ export function pairTargetOf(me: {
 export { MATCH_FOUND_STATUS };
 
 /**
- * Polls while waiting and reports a pairing once before navigating. R897000: while waiting, and
- * the server says the ticket is gone `QUEUE_ENDED_AFTER_READS` reads in a row, reports the ended
- * queue once instead, so an expired ticket ends the wait with a way back in.
+ * Polls while waiting and reports a pairing once before navigating. R897000: while waiting in a
+ * queue, and the server says the ticket is gone `QUEUE_ENDED_AFTER_READS` reads in a row,
+ * reports the ended queue once instead, so an expired ticket ends the wait with a way back in.
+ * A room wait never ends this way: its host holds no queue ticket, so `queued` is always false
+ * there.
  */
 function useLobbyWatch(
   token: string,
@@ -373,6 +375,7 @@ function useLobbyWatch(
   onTick: () => void,
   onPair: (target: string) => void,
   onQueueEnded: () => void,
+  queueWait: boolean,
 ): void {
   // Prevents a slow response from navigating twice after a re-render.
   const navigated = useRef(false);
@@ -407,8 +410,9 @@ function useLobbyWatch(
           }
           if (!waiting) return;
           // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a
-          // wait, and a failed read leaves the count alone.
-          if (me.queued === false) {
+          // wait, and a failed read leaves the count alone. Room waits never count: their host
+          // holds no ticket, so `false` there says nothing about anyone being gone.
+          if (me.queued === false && queueWait) {
             endedReads.current += 1;
             if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
               ended.current = true;
@@ -436,7 +440,7 @@ function useLobbyWatch(
       cancelled = true;
       clearInterval(handle);
     };
-  }, [token, waiting]);
+  }, [token, waiting, queueWait]);
 }
 
 // UI pieces
@@ -694,13 +698,16 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
     }, MATCH_FOUND_NAV_DELAY_MS);
   }, []);
   // R897000: a queue the server no longer holds ends the wait with a way back in: the
-  // existing Find-a-match button is the rejoin path.
+  // existing Find-a-match button is the rejoin path. Only a queue wait can end this way: this
+  // tab remembers exactly the waits Find-a-match started, never a room's, and a stale room from
+  // an earlier wait does not stop a later queue from ending.
+  const queueWait = useQueued() !== null;
   const onQueueEnded = useCallback((): void => {
     forgetQueued();
     setWaiting(false);
     setStatus({ kind: "queueEnded" });
   }, []);
-  useLobbyWatch(token, waiting, refreshPopulation, goFound, onQueueEnded);
+  useLobbyWatch(token, waiting, refreshPopulation, goFound, onQueueEnded, queueWait);
   useEffect(() => {
     refreshPopulation();
   }, [refreshPopulation]);
