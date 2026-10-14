@@ -5743,7 +5743,7 @@
       "pending_request": false,
       "provider": "claude-1",
       "question": "The night bot could not get the Luau 0.740 analyzer. The sandbox denied the `curl` for https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip, and there is no `luau-analyze` on the box. Please do one of these: (a) allow that download for the bot's builder, or (b) run `luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau` yourself with the checksummed 0.740 binary and paste the output on the issue. Then re-assign it to the bot, which will fix what the analyzer prints and run the checks in the plan's \u00a75.",
-      "queued_at": "2026-10-14T11:46:39Z",
+      "queued_at": "2026-10-14T15:32:26Z",
       "requested_by": "jgoetzmann",
       "run_id": "38576052073",
       "started_at": "2026-10-14T13:57:58Z",
