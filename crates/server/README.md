@@ -115,7 +115,7 @@ placeholders (`app::load_server_env`).
 
 `mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
-`balance-watch`, `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
+`balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.
 
 ## HTTP surface
@@ -233,17 +233,23 @@ only development records (a live record is refused, R378). It reads
 `DATABASE_URL` like `stats-cards`, writes nothing to the database, and holds live games unless `--source=dev`
 or `--source=all` asks for a development run's (R378).
 
-`balance-watch --patch=<version> [--source=live|all]` is the offline, advisory outlier watch whose
+`balance-watch --patch=<version> [--source=live|all] [--file=<records.jsonl>]…` is the offline, advisory outlier watch whose
 Markdown pastes into #699: per card it prints the in-deck win rate with its games, z-score against
 50% and played delta, flagging too-strong and too-weak bands (`BALANCE_WATCH_Z_THRESHOLD`, 2.5, at
 `BALANCE_WATCH_MIN_GAMES`, 40 games) and large played deltas (`BALANCE_WATCH_PLAYED_DELTA_THRESHOLD`,
 15 points). Cards under `CARD_STATS_MIN_SAMPLE` games are listed as not enough games and never
 flagged. Below `PUBLIC_STATS_MIN_LIVE_GAMES` live games the report says provisional; seat counting
 matches the public endpoint (live records count human seats only, development runs every seat,
-R1451). It reads `DATABASE_URL`, changes no card and files nothing.
+R1451). It reads `DATABASE_URL` or, with `--file` (repeatable), those record files (what `stats-export` and
+`cargo jackioh stats --out` write, the gather lane's `~/training-out/gather/*.jsonl`), so the played delta, the
+detector for a card the AI cannot use, runs over a development corpus with no database. The files are resolved
+as `stats-import` resolves its file, filtered to the patch and source the query names, one record per id, so it
+prints the database path's report; a file it cannot read, or a line that is not a record, is an error naming
+the file and line. It changes no card and files nothing.
 
 ```
 target/release/jackioh-server balance-watch --patch=v0.3.6
+target/release/jackioh-server balance-watch --patch=v0.3.6 --file=2026-10-13.jsonl --file=2026-10-14.jsonl
 ```
 
 ## Play telemetry (§9.11, R1442)

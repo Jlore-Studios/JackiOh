@@ -10,6 +10,7 @@ mod agent;
 mod arena;
 mod board;
 mod catalog;
+mod dealt_fit;
 mod fuzz;
 mod gate;
 mod golden;
