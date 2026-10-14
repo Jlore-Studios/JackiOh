@@ -4761,11 +4761,11 @@
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-3",
       "queued_at": "2026-10-14T00:54:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "38608730937",
-      "started_at": "2026-10-14T17:41:43Z",
+      "run_id": "38617195815",
+      "started_at": "2026-10-14T18:41:29Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -6189,9 +6189,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-14T18:27:01Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38615123592",
-    "what": "revise #896 on muse"
+    "at": "2026-10-14T18:41:29Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38617195815",
+    "what": "plan #831 on claude-3"
   },
   "last_sweep": {
     "at": "2026-10-14T18:40:26Z",
