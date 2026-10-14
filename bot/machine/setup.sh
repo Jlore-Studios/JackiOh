@@ -38,7 +38,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Change it with rust-toolchain.toml, then run this again on both boxes.
 RUST_TOOLCHAIN=1.97.0
 TRAIN_REPO="${TRAIN_REPO:-Jlore-Studios/JackiOh}"
-TRAIN_LANES="improve unban"
+TRAIN_LANES="improve unban gather"
 [ -n "$training" ] || date +%s > /run/night-vm-last-busy  # a long setup is not idle time
 
 # Swap: three jobs at once on 8 GB, each running the repo's checks; on the training box, room for
@@ -172,7 +172,7 @@ if [ -n "$training" ]; then
 
   # One lane, forever: training/loop.sh <lane> as the lane's user, from its checkout. A system
   # unit's %h is root's home whatever User= says, so the paths name the lane's home in full; the
-  # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: two lanes'
+  # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: three lanes'
   # games share the box's vCPUs. DEVIN_MODEL is the knob for Devin's model.
   cat > /etc/systemd/system/jackioh-train@.service <<'EOF'
 [Unit]
@@ -199,7 +199,7 @@ EOF
   systemctl daemon-reload
   # A lane already running keeps its Devin session; it reads a changed unit at its next restart
   # (`systemctl restart jackioh-train@<lane>`).
-  systemctl enable --now jackioh-train@improve jackioh-train@unban
+  systemctl enable --now jackioh-train@improve jackioh-train@unban jackioh-train@gather
   apt-get clean
 
   for lane in $TRAIN_LANES; do

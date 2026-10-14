@@ -35,9 +35,10 @@ run.
 
 ## How a lane runs
 
-The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs two systemd services,
-`jackioh-train@improve` and `jackioh-train@unban`, each as its own Linux user (`agent-train-improve`,
-`agent-train-unban`) with its own checkout, Devin login and GitHub token. Each runs
+The training box (an always-on EC2 `m7i-flex.large`, set up by #306's part 39) runs three systemd services,
+`jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user
+(`agent-train-improve`, `agent-train-unban`, `agent-train-gather`) with its own checkout (the two
+training lanes also hold a Devin login and GitHub token, which the gather lane needs neither of). Each runs
 [`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
 
 The steps below are the `improve` and `unban` lanes'. The `gather` lane's cycle is its own (The
@@ -281,9 +282,9 @@ records back to the AI, the gate or the shadow ban (`gather.md`, What it never d
 The training box sets up its lanes in `bot/machine/setup.sh`, which the bot never edits, so a person
 does this once:
 
-- Add `gather` to `TRAIN_LANES` and to the `systemctl enable --now` line in `bot/machine/setup.sh`,
-  then run `setup.sh --training` (`bot/machine/README.md`, The training box). It creates the user
-  `agent-train-gather` with its own checkout and the service `jackioh-train@gather`.
+- Run `setup.sh --training` on the training box (`bot/machine/README.md`, The training box),
+  whose `TRAIN_LANES` already holds `gather`. It creates the user `agent-train-gather` with its own
+  checkout and the service `jackioh-train@gather`.
 - To load its records into Postgres, run `sudo systemctl edit jackioh-train@gather` and add
   `Environment=DATABASE_URL=…`. Without it the lane keeps only the files.
 - It needs no Devin login. A `gh` login is needed only if the repository is private, so the lane can
