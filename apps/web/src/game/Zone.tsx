@@ -67,6 +67,9 @@ export default function Zone(props: ZoneProps): ReactElement {
   // Lanes are 1-based (`contract.ts`, matching the engine); the view's arrays are 0-based.
   const unit = row === "units" ? (seat.units[laneIndex(lane)] ?? null) : null;
   const backrow = row === "backrow" ? (seat.backrow[laneIndex(lane)] ?? null) : null;
+  // WCAG 4.1.2 (#757): a zone the player may pick is a button, unless a card in it takes focus of
+  // its own, which a button may not hold; otherwise it is a named group of what it holds.
+  const role = legal && unit === null && backrow === null ? "button" : "group";
 
   return (
     <div
@@ -81,6 +84,7 @@ export default function Zone(props: ZoneProps): ReactElement {
       data-glow={glowAttr(props.highlight, testId)}
       data-selected={selected ? "true" : undefined}
       data-animating={props.animating?.get(testId)}
+      role={role}
       aria-disabled={legal ? undefined : "true"}
       aria-label={zoneLabel(side, row, lane)}
       tabIndex={legal ? 0 : undefined}

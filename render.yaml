@@ -59,7 +59,7 @@ services:
       # R388's test holds it equal to patches.json; the bump of the line below is the same patch
       # commit's.
       - key: CATALOG_VERSION
-        value: v0.3.6
+        value: v0.3.7b
       # SPEC §11 R190: how many X-Forwarded-For entries this deployment's own proxies append; the
       # per-IP limits key on the entry that many places from the right, never on what the caller
       # wrote to its left. The server's default is 0 (no proxy), so this must be set. 1 is a safe
@@ -70,6 +70,10 @@ services:
       # (docs/architecture.md §10, step 8). Never set it above the lowest count any request showed.
       - key: TRUSTED_PROXY_HOPS
         value: "1"
+      # SPEC §9.5 R1453: seat a ladder bot against a ranked ticket left alone past its
+      # fallback time. Needs a host with room for the AI's search (docs/architecture.md).
+      - key: LADDER_BOTS
+        value: "on"
       # PORT and RENDER_GIT_COMMIT are injected by Render and read by src/env.rs; do not set them
       # here.
       #

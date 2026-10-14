@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
-import { X_CARD_LIMIT } from "./contract.ts";
+import { X_CARD_LIMIT, testid } from "./contract.ts";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -427,14 +427,14 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     const view = viewWith();
     const interaction = playing([
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
-      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, equip: true },
     ]);
 
     render(<Prompt view={view} interaction={interaction} onAction={onAction} />);
 
     expect(kindOfModal()).toBe("mode");
     expect(optionTestids()).toEqual(["prompt-option-true", "prompt-option-false"]);
-    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Magnetic");
+    expect(screen.getByTestId("prompt-option-true")).toHaveTextContent("Equip");
     expect(screen.getByTestId("prompt-option-false")).toHaveTextContent("Stack");
 
     fireEvent.click(screen.getByTestId("prompt-option-true"));
@@ -443,7 +443,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
       type: "play",
       instanceId: "h1",
       zone: { row: "units", lane: 1 },
-      magnetic: true,
+      equip: true,
     });
   });
 
@@ -611,6 +611,50 @@ describe("the R81 kinds render the same picker when the engine does open them as
 // The other seat, and the confirm gate.
 // ---------------------------------------------------------------------------------------------
 
+describe("R821000 a Plague Counter placement is answered on the board, not from a list", () => {
+  const placement = (prompt: string) =>
+    pendingFor(
+      "target",
+      [
+        { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+        { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+        { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+      ],
+      { prompt },
+    );
+
+  it.each(["Place a Plague Counter on a permanent", "Place 3 Plague Counters on a permanent"])(
+    "'%s' shows its question and where the answers are, with no list, no confirm and no cancel",
+    (prompt) => {
+      const onAction = vi.fn();
+      render(<Prompt view={viewWith({ pending: placement(prompt) })} legal={[]} onAction={onAction} />);
+
+      const modal = screen.getByTestId("prompt-modal");
+      expect(kindOfModal()).toBe("target");
+      expect(modal.getAttribute("data-board-only")).toBe("true");
+      expect(modal).toHaveTextContent(prompt);
+      expect(modal.querySelector(".prompt-list")).toBeNull();
+      expect(optionTestids()).toEqual([]);
+      expect(screen.queryByTestId("prompt-submit")).toBeNull();
+      expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+
+      // The board is what lights: both units and the zone a face-down card's back lies in.
+      const lit = (modal.getAttribute("data-board-testids") ?? "").split(" ");
+      expect(lit).toContain(testid.card("u1"));
+      expect(lit).toContain(testid.card("e1"));
+      expect(lit).toContain(testid.zone("opponent", "backrow", 3));
+      expect(onAction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("any other target prompt over the same cards still lists them", () => {
+    render(<Prompt view={viewWith({ pending: placement("Choose a target") })} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("prompt-modal").getAttribute("data-board-only")).toBeNull();
+    expect(optionTestids()).toContain("prompt-option-instance:e1");
+  });
+});
+
 describe("the seat that is only watching (§10.6, §10.8)", () => {
   it("shows 'waiting for choice' and not one option", () => {
     const onAction = vi.fn();
@@ -748,6 +792,40 @@ describe("R1044 the face-down picker asks how to play it", () => {
       instanceId: "h1",
       zone: { row: "units", lane: 3 },
     });
+    expect(onInteraction).toHaveBeenCalledWith(IDLE);
+  });
+
+  it("R783004 offers a Cloaked set as its own choice", () => {
+    const onAction = vi.fn();
+    const onInteraction = vi.fn();
+    const view = viewWith();
+    const cloaked = {
+      type: "play",
+      instanceId: "h1",
+      zone: { row: "backrow", lane: 1 },
+      faceDown: "cloaked",
+    } as const;
+    const interaction = playing([{ type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } }, cloaked]);
+
+    render(
+      <Prompt
+        view={view}
+        interaction={interaction}
+        legal={interaction.stage === "playing" ? interaction.candidates : []}
+        onAction={onAction}
+        onInteraction={onInteraction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("mode");
+    expect(screen.getByText("Play it how?")).not.toBeNull();
+    expect(optionTestids()).toEqual(["prompt-option-up", "prompt-option-cloaked"]);
+    expect(screen.getByText("Play it face-up")).not.toBeNull();
+    expect(screen.getByText("Set face-down: reveal it with its Activate")).not.toBeNull();
+
+    fireEvent.click(screen.getByTestId("prompt-option-cloaked"));
+
+    expect(onAction).toHaveBeenCalledWith(cloaked);
     expect(onInteraction).toHaveBeenCalledWith(IDLE);
   });
 });

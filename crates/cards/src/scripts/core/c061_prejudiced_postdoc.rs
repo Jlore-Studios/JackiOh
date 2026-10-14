@@ -2,60 +2,25 @@
 //! Base: "Cry: choose a Human unit on the field; summon a Vanilla copy". The radiant cell is "Any
 //! unit", which per §8's Conventions restates only which units the pick may name.
 //!
-//! The copy is R57's (form, radiant flag and buffs carried; damage, exertion and counters reset) with
-//! two deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla
-//! flag is on and it has no granted keywords (BUILD M4-T4 #8). R23: Immutable blocks Vanilla on the
+//! The copy is R57's (form and radiant flag carried; damage, exertion and counters reset) with three
+//! deviations only #61 asks for, both arguments to `summon_copy` (CLAUDE.md rule 5): its Vanilla flag is
+//! on, so it is at its printed stats with no buffs (R781003), and it has no granted keywords (BUILD
+//! M4-T4 #8). R23: Immutable blocks Vanilla on the
 //! Immutable card ITSELF, so an Immutable target is a legal pick. Auras (§10.4) are computed on read.
 //!
 //! R81/R90: the pick travels in the `play` action, so resolution never pauses. The Postdoc is still in
 //! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
 //! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
 
-use jackioh_engine::effects::summon_copy;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-061";
-
-/// The one difference between the faces: base narrows the pick to Humans, radiant does not.
-fn postdoc(humans_only: bool) -> Script {
-    let mut filter = json!({
-        // "on the field" and §8's Conventions: either side unless the cell narrows it.
-        "side": "any",
-        "of": ["unit"],
-    });
-    if humans_only {
-        filter["tags"] = json!(["Human"]);
-    }
-    let targets = vec![TargetDecl::target(1, 1, filter)];
-
-    Script {
-        targets,
-        cry: Some(hook(|_ctx| {
-            vec![summon_copy(json_as(json!({
-                "of": { "of": "chosen" },
-                // §8.3: the copy has no text and no granted keywords of its own.
-                "vanilla": true,
-                "grantedKeywords": false,
-            })))]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: postdoc(true),
-        radiant: postdoc(false),
-    }
-}
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
 //
-// Must-pass: "Vanilla copy of a Human keeps the target's form and buffs, no keywords or text, no
+// Must-pass: "Vanilla copy of a Human keeps the target's form at its printed stats, no buffs (R781003), no keywords or text, no
 // damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
 mod tests {
-    use super::script;
+    use super::ID;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -100,7 +65,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r57_the_copy_keeps_the_target_s_buffs_and_resets_its_damage() {
+        fn r781003_the_copy_is_at_its_printed_stats_with_no_buffs_and_no_damage() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [SURGERY, POSTDOC], "mana": 8 },
@@ -115,8 +80,10 @@ mod tests {
 
             let copy = unit_at(&s, P1, COPY_LANE);
             assert_eq!(copy.def_id, TIMMY);
-            // The target's form and buffs, at full health: R57 copies buffs and resets damage.
-            s.expect_stats(&copy, json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
+            // The target's form at its printed 3/3: a Vanilla copy is a Vanilla'd Unit like any other, so
+            // the buffs R57 would carry go (R781003), and R57 resets its damage.
+            s.expect_stats(&copy, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
+            assert_eq!((copy.buffs.attack, copy.buffs.health), (0, 0));
             assert_eq!(copy.damage, 0);
         }
 
@@ -245,7 +212,7 @@ mod tests {
             // The pick travels in the play action, so the narrowing lives in the declaration `legalActions`
             // and R90 read — not in the hook. This is the only place the base/radiant difference exists.
             crate::register_all();
-            let faces = script();
+            let faces = crate::scripts_of()[ID].clone();
             assert_eq!(
                 serde_json::to_value(&faces.base.targets).expect("declarations serialise"),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"], "tags": ["Human"] } }])

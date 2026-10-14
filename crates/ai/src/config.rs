@@ -6,6 +6,7 @@
 //! the web client (`apps/web/src/practice/personas.ts`, part 21). Each TS constant object is a `const`
 //! of a struct named after it (SURFACE §4.2); `EvalWeights` keeps TS's own name for `AI_EVAL`'s shape.
 
+use jackioh_engine::config::CN_TECH_MIN_GAMES;
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +19,11 @@ pub const AI_STYLE_EXACT: AiStyle = AiStyle {
     temperature: 0.0,
     missed_lethal_chance: 0.0,
 };
+
+/// R747000: the skill knob's range (`skill::clamp_skill`): 0.0 plays a random legal action at every
+/// decision, 1.0 follows the AI at every decision as it did before the knob.
+pub const AI_SKILL_MIN: f64 = 0.0;
+pub const AI_SKILL_MAX: f64 = 1.0;
 
 /// The practice AI's budget (SPEC §9.9): the same at every difficulty (R180).
 pub const AI_BUDGET: SearchBudget = SearchBudget {
@@ -59,6 +65,32 @@ pub struct AiSearch {
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
     pub tribute_sets: i32,
+    /// A decision's width at or under which the searched part of its budget is spent in full. Above
+    /// it the budget shrinks in inverse proportion, so the slow states a long hand and a full board
+    /// make (R186's sweep flags a decision over 2 s) cost about what an ordinary one does. A card
+    /// held or in play on either side counts toward the width beside the root's candidates, since a
+    /// prompt's few answers hide the fat state they answer into (decide.rs `fat_width`).
+    pub fat_reference: i32,
+    /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
+    /// the beam a few expansions at the widest states).
+    pub fat_min_nodes: i32,
+    /// The least of the scaled budget the lethal solver's allowance shrinks to.
+    pub fat_min_lethal: i32,
+    /// The cards a simulated Play of which `simulate` charges `expensive_def_nodes` for (its
+    /// `surcharge_nodes`): resolving one ranks every shipped card for the state (the §10.7 scorer,
+    /// R29's Zephyrs faces), about a hundred ordinary reduces, so a hand that holds one is budgeted
+    /// for what the step really costs.
+    pub expensive_def_ids: &'static [&'static str],
+    /// Nodes a Play of an `expensive_def_ids` card pays beyond the one every `simulate` takes.
+    pub expensive_def_nodes: i32,
+    /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
+    /// (§8.5 core-096's "an AI plays the rest of their turn": a whole random turn inside the one
+    /// reduce). `surcharge_nodes` asks it only of an attack that could be the lethal one the trap
+    /// answers, so an ordinary poke at an armed board is not priced like losing the turn.
+    pub ai_turn_trap_ids: &'static [&'static str],
+    /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
+    /// takes — the playout's rough share of the nodes it burns.
+    pub ai_turn_trap_nodes: i32,
 }
 
 pub const AI_SEARCH: AiSearch = AiSearch {
@@ -70,6 +102,13 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lines_per_action: 2,
     probe_seed: "ai:probe",
     tribute_sets: 120,
+    fat_reference: 30,
+    fat_min_nodes: 150,
+    fat_min_lethal: 60,
+    expensive_def_ids: &["core-097", "classicplus-027"],
+    expensive_def_nodes: 100,
+    ai_turn_trap_ids: &["core-096"],
+    ai_turn_trap_nodes: 40,
 };
 
 /// `AI_EVAL.keyword`: the worth of each keyword in `unitView.keywords` (spent Divine Shield and Reborn
@@ -111,6 +150,21 @@ pub struct KeywordWeights {
     /// E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs.
     #[serde(rename = "Immune to Spells")]
     pub immune_to_spells: f64,
+    /// R783000: its attacks take no strike back from a defender that is not Ranged.
+    #[serde(rename = "Ranged")]
+    pub ranged: f64,
+    /// R783002, R783003: in Attack Position only Flying and Ranged attackers may attack it.
+    #[serde(rename = "Flying")]
+    pub flying: f64,
+    /// R783004: a hand card's face-down play; a unit on the field has no use for it.
+    #[serde(rename = "Cloaked")]
+    pub cloaked: f64,
+    /// R783010: the Lock it makes as it arrives; a unit already on the field has made it.
+    #[serde(rename = "Crater")]
+    pub crater: f64,
+    /// R783012: one more play from the graveyard after the unit dies.
+    #[serde(rename = "Flashback")]
+    pub flashback: f64,
 }
 
 impl KeywordWeights {
@@ -133,6 +187,11 @@ impl KeywordWeights {
             KeywordKind::Stack => Some(self.stack),
             KeywordKind::Lucky => Some(self.lucky),
             KeywordKind::ImmuneToSpells => Some(self.immune_to_spells),
+            KeywordKind::Ranged => Some(self.ranged),
+            KeywordKind::Flying => Some(self.flying),
+            KeywordKind::Cloaked => Some(self.cloaked),
+            KeywordKind::Crater => Some(self.crater),
+            KeywordKind::Flashback => Some(self.flashback),
             _ => None,
         }
     }
@@ -258,6 +317,18 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         lucky: 0.2,
         // E35: no Spell targets it or touches it — protection from removal, and from its owner's buffs.
         immune_to_spells: 1.0,
+        // Patch v0.3.7 (#841): untuned, conservative starts for the training lanes to move. R783000:
+        // Ranged spares its attacks the strike back, as First Strike spares a kill's, but guards
+        // nothing on defense, so half First Strike's worth.
+        ranged: 0.5,
+        // R783002: the reach Flying denies ground attackers is counted by `face_threat` and the reply
+        // already, so on its own it is worth what Trample is.
+        flying: 0.5,
+        // R783004, R783010: a hand card's play and an arrival's Lock, nothing left on the field.
+        cloaked: 0.0,
+        crater: 0.0,
+        // R783012: no card prints it yet (§6.1), so nothing until one does and the lanes measure it.
+        flashback: 0.0,
     },
     spell_damage: 0.5,
     brittle_discount: 0.5,
@@ -324,6 +395,12 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         // E35, E6, B3.1, B3.3 and B3.4 (patch v0.2.0) came after the gates were fixed, so the frozen
         // baseline gives each of these terms nothing, as it did.
         immune_to_spells: 0.0,
+        // Patch v0.3.7's keywords came after the gates were fixed too: nothing, as it gave them.
+        ranged: 0.0,
+        flying: 0.0,
+        cloaked: 0.0,
+        crater: 0.0,
+        flashback: 0.0,
     },
     spell_damage: 0.0,
     brittle_discount: 0.0,
@@ -419,6 +496,31 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// held until then: the AI's decks are dealt from every set that ships. Gating a set that ships
 /// before the AI is trained on it is listing it here.
 pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+
+/// `AI_WIN_RATE`'s shape: how a deal's `strength` leans the draw on the compiled win-rate table.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct AiWinRate {
+    /// The in-deck games a card's row needs before its rate moves its weight (R377's figures).
+    pub min_games: i32,
+    /// The most a card's weight is multiplied by at strength 1 and a 100% rate, above the 1.0 a 50%
+    /// rate keeps.
+    pub max_boost: f64,
+    /// The least a card's weight is multiplied by, however low its rate.
+    pub floor: f64,
+}
+
+/// #750 (R1454): a ladder bot's random decks lean on the cards that win. At `strength` s (0 to 1,
+/// `AiDeckOptions::strength`) a card whose row has at least `min_games` in-deck games has its weight
+/// multiplied by `1 + s × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`;
+/// a card with a thinner row or none, and every card at strength 0, keeps its weight, so a deal with
+/// no strength is the one the seed always dealt. 20 games is CN Tech's floor (`CN_TECH_MIN_GAMES`)
+/// and the public stats' (`CARD_STATS_MIN_SAMPLE`); 3.0 sits under `AI_DECK.themeBoost` (4.0), so a
+/// win rate never outweighs the theme or the curve.
+pub const AI_WIN_RATE: AiWinRate = AiWinRate {
+    min_games: CN_TECH_MIN_GAMES,
+    max_boost: 3.0,
+    floor: 0.25,
+};
 
 // ---------------------------------------------------------------------------
 // R645: the AI's emote personas (`EMOTE_TRIGGERS`, `EMOTE_REPLY_KEYS`, `AI_EMOTE`, `AI_PERSONAS`,

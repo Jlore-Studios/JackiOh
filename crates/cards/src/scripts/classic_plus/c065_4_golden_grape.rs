@@ -11,68 +11,7 @@
 //! "Next to it" is read as the Spell resolves: §3.1's adjacency on the pick's own side and row
 //! (an empty or dormant neighbour is nothing), or the hand cards at the indices either side of it.
 
-use jackioh_engine::effects::{BoardScope, TargetSpec, adjacent_to, instance_of, set_radiant};
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classicplus-065-4";
-
-/// §8.7: a card on your side of the field or in your hand.
-fn targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "ally", "of": ["unit", "backrow", "hand"] }))]
-}
-
-fn chosen() -> TargetSpec {
-    json_as(json!({ "of": "chosen" }))
-}
-
-/// "The cards next to it": its row neighbours on the field, or its neighbours by index in your hand.
-fn neighbours_of(ctx: &EffectContext<'_>, picked: &CardInstance) -> Vec<CardInstance> {
-    if picked.zone.z() == ZoneName::Field {
-        return adjacent_to(ctx, &chosen(), &BoardScope::default());
-    }
-    if picked.zone.z() != ZoneName::Hand {
-        return Vec::new();
-    }
-    let hand = zone_cards(ctx.state, picked.owner, OffFieldZone::Hand);
-    let Some(at) = hand.iter().position(|card| card.id == picked.id) else {
-        return Vec::new();
-    };
-    let mut neighbours = Vec::new();
-    if let Some(before) = at.checked_sub(1).and_then(|index| hand.get(index)) {
-        neighbours.push(before.clone());
-    }
-    if let Some(after) = hand.get(at + 1) {
-        neighbours.push(after.clone());
-    }
-    neighbours
-}
-
-pub fn script() -> CardScripts {
-    let base = Script {
-        targets: targets(),
-        cry: Some(hook(|_ctx| vec![set_radiant(json_as(json!({ "target": { "of": "chosen" } })))])),
-        ..Script::default()
-    };
-
-    let radiant = Script {
-        targets: targets(),
-        cry: Some(hook(|ctx| {
-            let Some(picked) = instance_of(ctx, &chosen()) else {
-                return Vec::new();
-            };
-            let mut effects = vec![set_radiant(json_as(json!({ "target": { "of": "chosen" } })))];
-            effects.extend(
-                neighbours_of(ctx, &picked)
-                    .into_iter()
-                    .map(|card| set_radiant(json_as(json!({ "instanceId": card.id })))),
-            );
-            effects
-        })),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
-}
 
 // BUILD M9 Classic+ row C+ 65.4: the pick is declared with the play (R81), in your hand or a permanent
 // you control (face-down included); it becomes Radiant, no change if it already is (§5.2); a hand or
@@ -126,7 +65,7 @@ mod tests {
         assert_eq!(js(&def.cost), json!(1));
         assert_eq!(js(&def.printed_rarity), json!("Legendary"));
         let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit", "backrow", "hand"] } }]);
-        let CardScripts { base, radiant } = script();
+        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
         assert_eq!(js(&base.targets), decl);
         assert_eq!(js(&radiant.targets), decl);
     }
@@ -178,16 +117,25 @@ mod tests {
         }
 
         #[test]
-        fn s6_1_immutable_never_blocks_it_radiant_is_the_card_s_own_text() {
+        fn r781001_an_immutable_card_in_play_is_no_target_and_in_hand_radiant_is_still_its_own_text() {
             crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, FILLER], "field": [FELINORS] }, "p2": { "hand": [FILLER] } }));
-            let id = s.card(FELINORS).id.clone();
-            find_instance_mut(s.state_mut(), &id).expect("Felinors is on the field").granted_keywords =
-                vec![json_as(json!({ "kind": "Immutable" }))];
-            let targets = pick(&s, FELINORS);
-            s.play(GOLDEN, json!({ "targets": targets }));
-            assert!(s.card(FELINORS).radiant);
-            s.expect_stats(FELINORS, json!({ "attack": 6, "maxHealth": 9 }));
+            let mut s = scenario(json!({
+                "p1": { "hand": [GOLDEN, TIMMY, FILLER], "field": [FELINORS] },
+                "p2": { "hand": [FILLER] },
+            }));
+            for card in [FELINORS, TIMMY] {
+                let id = s.card(card).id.clone();
+                find_instance_mut(s.state_mut(), &id).expect("the card is in the game").granted_keywords =
+                    vec![json_as(json!({ "kind": "Immutable" }))];
+            }
+            // A Spell can't target an Immutable card in play (R781001)…
+            let on_field = pick(&s, FELINORS);
+            s.expect_refused(|s| s.play(GOLDEN, json!({ "targets": on_field })));
+            // …but in a hand it may, and Immutable never blocks Radiant, the card's own text (§6.1).
+            let held = pick(&s, TIMMY);
+            s.play(GOLDEN, json!({ "targets": held }));
+            assert!(s.card(TIMMY).radiant);
+            assert!(!s.card(FELINORS).radiant);
         }
 
         #[test]

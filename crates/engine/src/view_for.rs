@@ -22,7 +22,8 @@
 //!     up to the end of its action read as the sentinel for each card the state no longer holds.
 //!   - R227: a card set face-down took a fresh id, so the events that named its old id follow it to
 //!     its zone through the `formerId` that set it, and `formerId` itself travels only with the card.
-//!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only,
+//!   - R177: more fields follow R97 — a prompt option offering a face-down card names it by id only
+//!     (and the zone it lies in, R821000),
 //!     a `costChanged` on an unreadable card hides its cost and a `buffed` one its amounts, and a
 //!     `transformed` whose new card is unreadable hides the card it replaced, as does one whose old
 //!     card was unreadable where it ceased to exist (`hiddenFrom`), whatever became of its
@@ -45,6 +46,8 @@
 //!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
 //!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
 //!     only, beside the normal price `cost` already is.
+//!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
+//!     (`attack_reason_of`).
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -62,7 +65,7 @@ use serde_json::{Map, Value};
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
 use crate::catalog::registered_catalog;
-use crate::combat::{ExertionKind, has_exertion};
+use crate::combat::{ExertionKind, has_exertion, is_asleep, why_cannot_declare};
 use crate::condition::condition_active;
 use crate::config::VIEW_EVENT_LIMIT;
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
@@ -520,7 +523,24 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         created: card.created,
         // ME-GRANT (MD-D13): the granted Death abilities, as the Unit's lines read them.
         grants: crate::grants::grant_texts(state, top),
+        // R849000: summoning sick with neither Rush nor Charge, from the turn the unit entered and its
+        // viewed keywords — both public on the field.
+        sick: if is_asleep(state, top, &layers.keywords) {
+            Some(true)
+        } else {
+            None
+        },
+        attack_reason: attack_reason_of(state, top, viewer),
     })
+}
+
+/// R849000: why the viewer's own unit that may act now cannot declare an attack, gated as
+/// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer.
+fn attack_reason_of(state: &GameState, top: &CardInstance, viewer: PlayerId) -> Option<String> {
+    if top.controller != viewer || !can_act(state, top) {
+        return None;
+    }
+    why_cannot_declare(state, top).err().map(|error| error.message)
 }
 
 /// MD-D5, R1121: the yellow a dragged attack paints — the enemy Units an `attack_mods` entry would
@@ -641,7 +661,7 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         } else {
             None
         },
-        // ME-ALTPLAY (R1046, D3): the card's own reveal timing rides the controller's view only.
+        // R1046, D3: how the card reveals rides the controller's view only.
         reveal_at: if card.controller == viewer {
             card.set_as.as_ref().map(|set| set.reveal)
         } else {
@@ -1096,6 +1116,13 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
                 let mut hidden =
                     bare_option(format!("instance:{instance_id}"), HIDDEN_OPTION_LABEL.to_string());
                 hidden.instance_id = Some(instance_id.clone());
+                // R821000: where the back lies on the board is public (its zone draws it), so a client can
+                // answer a prompt by a click on that zone while the card itself stays unnamed.
+                if let Zone::Field { player, row, lane } = &card.zone {
+                    hidden.player = Some(*player);
+                    hidden.row = Some(*row);
+                    hidden.lane = Some(*lane);
+                }
                 return hidden;
             }
             base.instance_id = Some(instance_id.clone());
@@ -1575,7 +1602,7 @@ fn redact_event(
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
             if hidden(&instance) {
-                // ME-ALTPLAY, R1046: a card set face-down by a permission shows neither its `x` nor its
+                // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`. Any other hidden play keeps both, as it always has (D14).
                 if find_instance(state, &instance).is_some_and(|card| card.set_as.is_some()) {
                     shown.remove("x");

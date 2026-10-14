@@ -3014,6 +3014,9 @@ mod r102_r43_a_fused_heroic_power_s_prompted_power {
         }
         assert_eq!(g.state().active, P2);
         assert_eq!(g.state().phase, Phase::Main);
+        // R345: p2's turn ends when the test ends it, never on its own (R82). Whether the Unit Discovered
+        // leaves p2 a play is the pool's roll, and the spent use is read on this turn.
+        g.state_mut().players.p2.auto_end_turn = Some(false);
         let hand_before = g.state().players.p2.hand.len();
         // One activation of the card's power: Witness Value Discovers (§10.6), and the answer finishes it.
         g.activate(&fused.id, json!({}));

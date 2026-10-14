@@ -27,10 +27,10 @@ use std::rc::Rc;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
-    can_attack, has_exertion, legal_actions, unit_view,
+    attacks_per_turn, can_attack, has_exertion, legal_actions, unit_view,
 };
 
-use crate::candidates::{action_key, candidate_actions};
+use crate::candidates::candidate_actions;
 use crate::config::AI_SEARCH;
 use crate::evaluate::damage_past_taunts;
 use crate::simulate::{LineStatus, create_sub_counter, line_status, search_signature, simulate};
@@ -86,8 +86,8 @@ fn push_moves(stack: &mut Vec<Frame>, state: Rc<GameState>, line: Rc<Vec<ActionB
 }
 
 /// Replays a lethal line on every determinization but the first: each action must be legal there
-/// (action_key equality with legal_actions) and the line must end with `seat` the winner. `None` when
-/// the counter ran out.
+/// (equality with legal_actions, ActionBody being plain data) and the line must end with `seat` the
+/// winner. `None` when the counter ran out.
 fn holds_everywhere(
     dets: &[GameState],
     seat: PlayerId,
@@ -100,11 +100,7 @@ fn holds_everywhere(
             if state.result.is_some() {
                 break;
             }
-            let key = action_key(action);
-            if !legal_actions(&state, seat)
-                .iter()
-                .any(|legal| action_key(legal) == key)
-            {
+            if !legal_actions(&state, seat).iter().any(|legal| legal == action) {
                 return Some(false);
             }
             match simulate(&state, seat, action, counter) {
@@ -147,6 +143,17 @@ fn has_attack(state: &GameState, unit: &CardInstance) -> bool {
     })
 }
 
+/// R636: the attacks `unit` may still declare this turn, `attacks_per_turn` less those it has declared
+/// (`exertion.attacks`, or 1 when it has only `attacked`): two for a fresh Windfury unit, one after
+/// its first swing.
+fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
+    let spent = unit
+        .exertion
+        .attacks
+        .unwrap_or(if unit.exertion.attacked { 1 } else { 0 });
+    attacks_per_turn(state, unit) - spent
+}
+
 /// How far the seat stands from lethal this turn: the enemy hero's health less what the units that
 /// may still attack (those `legal_actions` lists an attack for) would deal it past the enemy's Taunts,
 /// counted as `face_threat` counts it. Zero or less means the attacks left could end the game. It
@@ -168,11 +175,13 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
     // were this state's own before its layers were read. Rust builds fused scripts from the state on
     // every lookup (SURFACE §6.6), so there is nothing to sync.
-    let mut attacks: Vec<i32> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
         if attack > 0 && has_attack(state, unit) {
-            attacks.push(attack);
+            for _ in 0..attacks_left(state, unit) {
+                attacks.push((unit, attack));
+            }
         }
     }
     f64::from(health - damage_past_taunts(state, opp, &attacks))
@@ -310,8 +319,8 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
 /// AI_SEARCH.lethalMaxDepth long, a visited set keyed on `search_signature`. A depth-first walk in
 /// move order gets AI_SEARCH.lethalQuickNodes; if it neither found a lethal nor searched the whole
 /// tree, a best-first walk by `ready_gap` gets the rest (the header says why). A line is lethal when
-/// simulate leaves state.result.winner === seat, and it is returned only if replaying it (action_key
-/// equality with legal_actions at each step) also wins on every other determinization; otherwise the
+/// simulate leaves state.result.winner === seat, and it is returned only if replaying it (equality
+/// with legal_actions at each step) also wins on every other determinization; otherwise the
 /// search continues. Spends at most `limit` nodes of `counter`.
 pub fn find_lethal(
     dets: &[GameState],

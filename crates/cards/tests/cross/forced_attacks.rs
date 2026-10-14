@@ -73,6 +73,7 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
     fn r173_once_moths_to_the_flame_is_stolen_by_the_attackers_side_mid_run_the_rest_of_the_run_does_not_attack_it_8_9_86()
      {
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-moths-mrow",
             "p1": { "hand": [VANILLA], "field": [{ "def": MOTHS, "lane": 3 }], "library": [TIMMY, TIMMY] },
             "p2": { "hand": [VANILLA], "field": [{ "def": MROW, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "library": [TIMMY] },
@@ -145,6 +146,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
         // it; Reborn returns it at 1 health, and the other three tokens do not attack the body that
         // came back.
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-reborn-run",
             "active": "p2",
             "p1": { "backrow": [{ "def": HONEYPOT, "radiant": true, "faceUp": false, "lane": 3 }] },
@@ -172,29 +174,45 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
     #[test]
     fn r174_r96_r83_a_felinor_fiender_that_dies_mid_run_to_moths_to_the_flame_and_comes_back_through_reborn_does_not_attack_in_that_run()
      {
-        // On this seed Plastic Surgery's random keyword for the Fiender is Reborn (§6.1's pool, R21).
-        let mut g = scenario(json!({
-            "seed": "r4-fiender-reborn-33", // R346's Pierce moved the roll off "-7", R49's Deft off "-8"
-            "active": "p2",
-            "turn": 10,
-            "p1": { "field": [{ "def": MOTHS, "lane": 1 }], "hand": [STOCKPILE], "library": LIBRARY },
-            "p2": {
-                "hand": [SURGERY, STOCKPILE],
-                // Big Felinor feeds the Fiender's layer 2 (§10.4) and dies to Moths' strike back; the
-                // Fiender's damage is then more than it has without it.
-                "field": [
-                    { "def": BIG_FELINOR, "lane": 1, "damage": 9 },
-                    { "def": FIENDER, "lane": 2, "damage": 12 },
-                ],
-                "library": LIBRARY,
-            },
-        }));
-        let fiender = unit_at(&g, P2, 2);
-        g.play(
-            SURGERY,
-            json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
-        );
-        let kinds: Vec<KeywordKind> = g.stats(&fiender.id).keywords.iter().map(Keyword::kind).collect();
+        let setup = |seed: &str| {
+            let g = scenario(json!({
+                "seed": seed,
+                "active": "p2",
+                "turn": 10,
+                "p1": { "field": [{ "def": MOTHS, "lane": 1 }], "hand": [STOCKPILE], "library": LIBRARY },
+                "p2": {
+                    "hand": [SURGERY, STOCKPILE],
+                    // Big Felinor feeds the Fiender's layer 2 (§10.4) and dies to Moths' strike back; the
+                    // Fiender's damage is then more than it has without it.
+                    "field": [
+                        { "def": BIG_FELINOR, "lane": 1, "damage": 9 },
+                        { "def": FIENDER, "lane": 2, "damage": 12 },
+                    ],
+                    "library": LIBRARY,
+                },
+            }));
+            let fiender = unit_at(&g, P2, 2);
+            (g, fiender)
+        };
+        let surgery_on = |g: &mut Scenario, fiender: &CardInstance| {
+            g.play(
+                SURGERY,
+                json!({ "targets": [{ "pick": "instance", "instanceId": fiender.id }] }),
+            );
+            g.stats(&fiender.id)
+                .keywords
+                .iter()
+                .map(Keyword::kind)
+                .collect::<Vec<KeywordKind>>()
+        };
+        // Plastic Surgery's random keyword for the Fiender is rolled from §6.1's pool (R21), and every
+        // keyword added to it moves the roll: search for a seed where it is Reborn.
+        let seed = seed_where("surgery-reborn-fiender", |seed| {
+            let (mut g, fiender) = setup(seed);
+            surgery_on(&mut g, &fiender).contains(&KeywordKind::Reborn)
+        });
+        let (mut g, fiender) = setup(&seed);
+        let kinds = surgery_on(&mut g, &fiender);
         assert!(kinds.contains(&KeywordKind::Reborn));
 
         // p1's start of turn: every p2 unit attacks Moths, in lane order (R53). Big Felinor dies in

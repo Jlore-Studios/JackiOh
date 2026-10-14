@@ -11,34 +11,7 @@
 //!   that ships (R380, R382, R1420), never this card (R387), repeats allowed (R60), each on its base
 //!   face at its printed cost; the Radiant face's are Radiant (§5.2).
 
-use jackioh_engine::effects::add_random_from_catalog;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-077";
-
-fn bulk_booster(radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let room = hand_cap_of(ctx.state, ctx.controller) - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand);
-            if room <= 0 {
-                return vec![];
-            }
-            vec![add_random_from_catalog(json_as(json!({
-                "query": { "rarity": "Common" },
-                "count": room,
-                "radiant": radiant,
-            })))]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: bulk_booster(false),
-        radiant: bulk_booster(true),
-    }
-}
 
 // M #77 Bulk Booster — SPEC §8.8 row 77, BUILD M10 row M 77: "Adds random non-token Common cards of
 // any set, never itself, until your hand holds your hand cap (10, or 12 after M 79), counted as it
@@ -52,7 +25,8 @@ mod tests {
 
     const FILLER: &str = "core-016";
 
-    /// p1 holds Bulk Booster (Radiant on `radiant`) and `others` fillers.
+    /// p1 holds Bulk Booster (Radiant on `radiant`) and `others` fillers. Every test's assertions hold
+    /// for whatever the pool rolls, so its seed is only a label, save the one that searches for it.
     fn holding(seed: &str, radiant: bool, others: usize) -> Scenario {
         let mut hand = vec![json!({ "def": ID, "radiant": radiant })];
         hand.extend((0..others).map(|_| json!(FILLER)));
@@ -96,13 +70,20 @@ mod tests {
 
             #[test]
             fn r1420_unpreviewed_it_draws_only_the_shipped_sets() {
-                let mut s = holding("bulk-booster-shipped", false, 0);
+                // The Meditative set ships, so its Commons are in the pool unpreviewed: search for a seed
+                // that draws at least one, which a pool change would otherwise move.
+                let seed = seed_where("bulk-booster-shipped", |seed| {
+                    let mut s = holding(seed, false, 0);
+                    s.play(ID, json!({}));
+                    added(&s, 0)
+                        .iter()
+                        .any(|card| crate::card_def(&card.def_id).set == SetName::Meditative)
+                });
+                let mut s = holding(&seed, false, 0);
                 s.play(ID, json!({}));
                 let added = added(&s, 0);
                 assert_eq!(added.len() as i32, HAND_CAP);
                 assert!(added.iter().all(|card| SHIPPED_SETS.contains(&crate::card_def(&card.def_id).set)));
-                // The Meditative set ships, so its Commons are in the pool unpreviewed: this seed
-                // draws at least one (re-pinned for v0.3.5: the Meditative set joins the pool).
                 assert!(added.iter().any(|card| crate::card_def(&card.def_id).set == SetName::Meditative));
             }
 

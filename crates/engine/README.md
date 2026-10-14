@@ -84,8 +84,8 @@ same case again.
 ## Constants (CLAUDE.md rule 9)
 
 Every rules number is a named constant in `src/config.rs` (BUILD §2), the "decide" rulings (R1, R4,
-R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_GAMES`,
-`TRAINING_IMPROVE`, `TRAINING_UNBAN`). The ones the web reads are written to
+R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
+`TRAINING_UNBAN`: each lane's games, pairing and wins). The ones the web reads are written to
 `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript
@@ -103,7 +103,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs, the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs, the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override, the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests

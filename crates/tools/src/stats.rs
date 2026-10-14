@@ -113,8 +113,8 @@ pub enum Command {
 
 /// `cargo jackioh stats report <file>… [--source] [--mode] [--patch] [--pilot] [--card] [--json]`:
 /// `jackioh-server stats-cards`' flags and defaults (R378: live games unless `--source` says
-/// otherwise; R1451: their human seats unless `--pilot` says otherwise), over record files instead
-/// of the database.
+/// otherwise; R807000: every counted seat merged unless `--pilot` names a side), over record
+/// files instead of the database.
 #[derive(clap::Args, Debug, Clone, PartialEq)]
 pub struct ReportArgs {
     /// Record files, one GameRecord per line, read in the order named.
@@ -129,8 +129,8 @@ pub struct ReportArgs {
     /// One patch, as patches.json names it. Default: every patch.
     #[arg(long, value_name = "VERSION")]
     pub patch: Option<String>,
-    /// The seats counted: human, ai or unified (every seat). Default: human for live games, a
-    /// ladder bot's side left out; unified, every seat, with --source=dev or all (R1451).
+    /// The seats counted: human, ai or unified (every seat). Default: unified, every counted
+    /// seat; human reads the people's sides only, ai the bots' (R807000).
     #[arg(long, value_parser = pilot_filter)]
     pub pilot: Option<PilotFilter>,
     /// One card's row only.
@@ -175,15 +175,10 @@ pub fn read_records(files: &[PathBuf]) -> Result<Vec<GameRecord>> {
     Ok(records)
 }
 
-/// R1451: the seats a report that names no `--pilot` counts, as `stats-cards` counts them: the
-/// human seats when it reads live games alone, so a ladder bot's side is read only when asked
-/// for, and every seat when it reads development data.
-pub fn default_pilot(source: SourceFilter) -> PilotFilter {
-    if source == SourceFilter::Live {
-        PilotFilter::Human
-    } else {
-        PilotFilter::Unified
-    }
+/// R807000: the seats a report that names no `--pilot` counts, as `stats-cards` counts them:
+/// every counted seat merged, whatever the source reads.
+pub fn default_pilot(_source: SourceFilter) -> PilotFilter {
+    PilotFilter::Unified
 }
 
 /// R377: the report the arguments ask for, over the records of the files they name.
@@ -519,14 +514,14 @@ mod tests {
         ]);
         let records = parse_game_record_lines(&format!("{live}\n{dev_a}\n{dev_b}\n")).unwrap();
 
-        // Live games unless asked otherwise (R378), their human seats (R1451).
+        // Live games unless asked otherwise (R378), every counted seat merged (R807000).
         let (_, by_default) = report_of(&paths, &[]);
         assert_eq!(by_default.games, 1);
-        let live_people = CardStatsFilter {
-            pilot: PilotFilter::Human,
+        let live_merged = CardStatsFilter {
+            pilot: PilotFilter::Unified,
             ..DEFAULT_CARD_STATS_FILTER.clone()
         };
-        assert_eq!(by_default, card_stats(&records, &live_people));
+        assert_eq!(by_default, card_stats(&records, &live_merged));
 
         let (_, everything) = report_of(&paths, &["--source=all"]);
         assert_eq!(everything.games, 3);
@@ -579,7 +574,7 @@ mod tests {
         assert_eq!(parsed, serde_json::to_value(&report).unwrap());
         assert_eq!(
             parsed["filter"],
-            serde_json::json!({ "source": "live", "mode": null, "patch": null, "pilot": "human" })
+            serde_json::json!({ "source": "live", "mode": null, "patch": null, "pilot": "unified" })
         );
         assert_eq!((&parsed["games"], &parsed["decks"]), (&1.into(), &2.into()));
         // core-001 is in p1's deck only: it is in the opening hand and played, a win going first.
@@ -598,14 +593,17 @@ mod tests {
         let table = render(&report, &ReportArgs { json: false, ..args }, |card| {
             (card == "core-001").then(|| "Alpha".to_string())
         });
-        assert!(table.starts_with("Card win rates: live games, every mode, every patch, human pilots."));
+        assert!(table.starts_with(
+            "Card win rates: live games, every mode, every patch, human and AI pilots (unified)."
+        ));
         assert!(table.contains("core-001 Alpha"));
         std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
-    fn r1451_report_reads_a_ladder_bots_side_of_a_live_game_only_when_asked() {
+    fn r807000_report_splits_human_bot_and_merged_and_displays_merged() {
         // p1 a person, p2 a ladder bot holding core-003; and a development game, both seats AIs.
+        // p1's deck holds core-001 and core-002, and p2 (the winner) holds core-003.
         let bot_game = record_line_piloted("m1", "live", "bo1", "p2", &["core-003"], ["human", "ai"]);
         let dev = record_line("dev:v0.2.5:dev:1", "dev", "random", "p1", &["core-003"]);
         let (dir, paths) = scratch(&[("a.jsonl", format!("{bot_game}\n{dev}\n"))]);
@@ -617,18 +615,21 @@ mod tests {
                 .map(|stats| stats.in_deck.games)
         };
 
-        // With no --pilot: the person's side counts, the bot's does not.
+        // With no --pilot: every counted seat merged, both sides of the bot game.
         let (_, by_default) = report_of(&paths, &[]);
-        assert_eq!((by_default.games, by_default.decks), (1, 1));
-        assert_eq!(by_default.filter.pilot, PilotFilter::Human);
+        assert_eq!((by_default.games, by_default.decks), (1, 2));
+        assert_eq!(by_default.filter.pilot, PilotFilter::Unified);
         assert_eq!(held(&by_default, "core-001"), Some(1));
-        assert_eq!(held(&by_default, "core-003"), None);
-        // Asked for, the bot's side is read.
+        assert_eq!(held(&by_default, "core-003"), Some(1));
+        // Split: each side reads alone.
+        let (_, people) = report_of(&paths, &["--pilot=human"]);
+        assert_eq!((people.games, people.decks), (1, 1));
+        assert_eq!(held(&people, "core-001"), Some(1));
+        assert_eq!(held(&people, "core-003"), None);
         let (_, bots) = report_of(&paths, &["--pilot=ai"]);
         assert_eq!((bots.games, bots.decks), (1, 1));
+        assert_eq!(held(&bots, "core-001"), None);
         assert_eq!(held(&bots, "core-003"), Some(1));
-        let (_, every) = report_of(&paths, &["--pilot=unified"]);
-        assert_eq!(every.decks, 2);
         // Development data counts every seat unless told otherwise, as stats-cards does.
         let (_, dev_default) = report_of(&paths, &["--source=dev"]);
         assert_eq!(

@@ -57,6 +57,7 @@ fn add_entry(ctx: &mut EffectContext<'_>, entry: &LastBoardEntry, cost_override:
 
 /// `discoverFromLastBoard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverFromLastBoardArgs {
     pub step: String,
@@ -116,6 +117,7 @@ pub fn discover_from_last_board(args: DiscoverFromLastBoardArgs) -> Effect {
 
 /// `addFromLastBoard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddFromLastBoardArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -137,6 +139,7 @@ pub fn add_from_last_board(args: AddFromLastBoardArgs) -> Effect {
 
 /// `addRandomFromLastBoard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddRandomFromLastBoardArgs {
     pub count: i32,

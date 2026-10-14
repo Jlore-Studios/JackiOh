@@ -18,23 +18,7 @@
 //! printed (10), with no Cry to fire.
 //! Tunes: none; the thresholds are ME-JADE's config.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-039-5";
-
-fn beauty() -> Script {
-    Script {
-        end_of_turn: Some(hook(|_ctx| vec![allure_enemy_units()])),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    // Both faces Allure alike; the Radiant face's stats and keywords are catalog data.
-    let base = beauty();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // Meditative #39.5 Jade Beauty — SPEC §8.8 row 39.5, BUILD M10 row M 39.5: "Summoned with no Cry
 // when its player's Jade Counter crosses 5, once a game, none at a full row with the threshold
@@ -61,8 +45,11 @@ mod tests {
     const LIBRARY: [&str; 3] = ["core-025", "core-008", "core-020"];
     /// #17 Flood (Bounce all Units).
     const FLOOD: &str = "core-017";
-    /// #34 Collateral Damage (Exile a permanent).
-    const EXILE: &str = "core-034";
+    /// C+ #44 Simplicity Audit (Exile every permanent whose card has fewer lines of code than this one,
+    /// 27): an "every" effect, which reaches an Immutable card a Spell may not target (R781001).
+    const AUDIT: &str = "classicplus-044";
+    /// #50 K-Pop Fanatic, a Unit of 65 lines of code: the Audit leaves it standing.
+    const FANATIC: &str = "core-050";
     /// #66 The Rock (10/10 Indestructible, the wall).
     const WALL: &str = "core-066";
     /// #81 Radiant Saintess (Reborn; Death: all your other units become Radiant).
@@ -206,16 +193,16 @@ mod tests {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
-            "p2": { "hand": [EXILE, FILLER], "field": [{ "def": FILLER, "lane": 3 }], "library": LIBRARY },
+            "p2": { "hand": [AUDIT, FILLER], "field": [{ "def": FANATIC, "lane": 3 }], "library": LIBRARY },
         }));
         let prey = s.unit(P2, 3).expect("p2's unit").id.clone();
         let lane = beauty_lane(&s);
-        let beauty = s.unit(P1, lane).expect("the Beauty").id.clone();
 
         s.end_turn();
-        // R76: the Beauty is exiled (Immutable stops Nerf, Buff, Transform and Fuse — not exile),
-        // yet the Allure still lands at p1's next start.
-        s.play(EXILE, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] }));
+        // R76: the Beauty is exiled (Immutable stops Nerf, Buff, Transform and Fuse, and a Spell's
+        // target in play, R781001 — not an exile of every permanent), yet the Allure still lands at
+        // p1's next start.
+        s.play(AUDIT, json!({}));
         assert!(s.unit(P1, lane).is_none());
         s.end_turn();
 
@@ -223,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn cant_attack_and_core_016_hit_job_leaves_it() {
+    fn r781001_cant_attack_and_core_016_hit_job_cannot_target_it() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
@@ -235,15 +222,15 @@ mod tests {
         // Can't attack: its attack is refused.
         s.expect_refused(|s| s.attack(&beauty, "hero"));
 
-        // Hit Job marks it for destroy, but Indestructible (R46) leaves it standing.
+        // Hit Job is a Spell, so it can't target the Immutable Beauty in play (R781001).
         s.end_turn();
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] }));
+        s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
         s.end_turn();
         assert_eq!(s.unit(P1, lane).map(|unit| unit.id), Some(beauty));
     }
 
     #[test]
-    fn r23_classicplus_072_book_of_nerf_changes_nothing() {
+    fn r781001_r23_classicplus_072_book_of_nerf_cannot_target_it() {
         crate::register_all();
         let mut s = scenario(json!({
             "p1": { "hand": [FILLER], "field": [{ "def": ID, "lane": 1 }], "library": LIBRARY },
@@ -253,9 +240,9 @@ mod tests {
         let beauty = s.unit(P1, lane).expect("the Beauty").id.clone();
 
         s.end_turn();
-        s.play(NERF, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] }));
+        s.expect_refused(|s| s.play(NERF, json!({ "targets": [{ "pick": "instance", "instanceId": beauty }] })));
 
-        // R23 Immutable: no Nerf lands — still 20/20.
+        // R781001, R23 Immutable: no Nerf lands — still 20/20.
         s.expect_stats(&beauty, json!({ "attack": 20, "health": 20 }));
     }
 

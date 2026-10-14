@@ -51,6 +51,7 @@ import {
   REVEAL_AT_LABEL,
   REVEAL_AT_NOTE,
   UNREVEALED_NOTE,
+  ascentLevelOf,
   faceDownLabel,
   faceModel,
   isInspectKey,
@@ -231,6 +232,12 @@ function formOf(card: CardView | null, unit: UnitView | null | undefined, type: 
   return "full";
 }
 
+/** R849000: a card's native tooltip, its name and why your own unit cannot attack now. */
+function cardTitle(name: string, unit: UnitView | null | undefined): string {
+  const reason = unit?.attackReason;
+  return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
+}
+
 export default function Card(props: CardProps): ReactElement {
   const { card, unit, target, testId } = props;
   const info = useCardInfo(card?.defId ?? "", card?.radiant ?? false);
@@ -342,7 +349,14 @@ export default function Card(props: CardProps): ReactElement {
     // the backrow shows the cost the view gives it (R370), and opens what the view says of it.
     if (faceDown === undefined) {
       return (
-        <div {...shared} className={cx("card", "card-back", props.className)} data-face-down="true" aria-label={t("Face-down card")}>
+        // WCAG 4.1.2 (#757): a name needs a role; a back is a picture, or a button when it is clickable.
+        <div
+          {...shared}
+          className={cx("card", "card-back", props.className)}
+          data-face-down="true"
+          role={clickable ? "button" : "img"}
+          aria-label={t("Face-down card")}
+        >
           <CardBack />
         </div>
       );
@@ -421,13 +435,16 @@ export default function Card(props: CardProps): ReactElement {
       // style attribute (BUILD M5-T4 `positionSwitched`), and the scale keeps it inside its lane.
       // It is the root's only inline style; the faces put theirs on inner elements.
       style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
-      // The hover preview replaces the native tooltip; with previews off, the name comes back.
-      title={settings.hoverPreviews && panelHover ? undefined : face.name}
+      // The hover preview replaces the native tooltip; with previews off, the name comes back, and
+      // with it (R849000) the engine's reason a unit of yours cannot attack now.
+      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit)}
     >
       {unit !== undefined && unit !== null ? (
         <MinionFace face={face} unit={unit} />
       ) : (
-        <CardFace face={face} layout={form === "compact" ? "compact" : "full"} />
+        // Issue #814: a Summit in play shortens to its header and next Ascent line; the inspect
+        // overlays (which render their own CardFace from `face`) keep the whole text.
+        <CardFace face={face} layout={form === "compact" ? "compact" : "full"} ascentLevel={ascentLevelOf(face.values)} />
       )}
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the

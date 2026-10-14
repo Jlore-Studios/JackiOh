@@ -433,7 +433,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
     // R419: C+ #35 Rollback's history holds whole instances — face-down traps, cards since gone to a hand.
-    // ponytail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
+    // maxi-tail: dropped whole, so the AI simulates a Rollback as restoring nothing; redact each snapshot's
     // hidden cards instead if the AI should ever plan around one.
     next.board_history = None;
     // R676, R678: the decks the match began with and the boards a Glitch may lay down are no seat's to

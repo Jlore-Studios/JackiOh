@@ -486,6 +486,16 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub grants: Option<Vec<String>>,
+    /// §4.1, R849000: summoning sick with neither Rush nor Charge (`combat::is_asleep`), on both seats.
+    /// Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub sick: Option<bool>,
+    /// R849000: why the viewer's own unit cannot declare an attack now (`combat::why_cannot_declare`),
+    /// as `ActivationView.reason` (R384). Only while `canAct`; never on the opponent's units.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub attack_reason: Option<String>,
 }
 
 /// A public backrow card's counters: `grade` is #93 Combo-Index's counter, 1..6; `gradeLetter` is the

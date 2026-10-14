@@ -11,28 +11,7 @@
 //!            attack; R275's stat half makes it 10/30 (⚠ designer), 30 in its lane. Tunes: multiplier 3 ↑
 //!            (step 1); Armor 3 ↑ (Radiant 5); Tribute 2 ↓ (never below 1)."
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-097-5";
-
-/// §8.8: "Tribute 2".
-const TRIBUTE_COST: i32 = 2;
-
-/// Multiplies attack by 3 when striking across its own lane.
-const MULTIPLIER: i32 = 3;
-
-pub fn script() -> CardScripts {
-    let base = Script {
-        static_flags: Some(StaticFlags {
-            tribute: Some(TRIBUTE_COST),
-            lane_multiplier: Some(MULTIPLIER),
-            ..StaticFlags::default()
-        }),
-        ..Script::default()
-    };
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // M 97.5 Bunker — SPEC §8.8 row 97.5, BUILD M10 row M 97.5: "Tribute 2, Armor 3, Can't attack, First Strike;
 // attacked by the Unit across from it, it strikes first for 15 (MD-F14), through that Unit's Armor and Divine
@@ -41,7 +20,7 @@ pub fn script() -> CardScripts {
 // 30 in its lane".
 #[cfg(test)]
 mod tests {
-    use super::{ID, script};
+    use super::ID;
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -91,7 +70,7 @@ mod tests {
                 { "kind": "First Strike" }
             ])
         );
-        let s = script();
+        let s = crate::scripts_of()[ID].clone();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(2));
         assert_eq!(
             s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier),

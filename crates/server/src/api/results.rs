@@ -8,9 +8,10 @@
 //! One function is that sentence: `record_result` is the `RecordResult` port the actor calls for
 //! every one of §2.5's seven endings — `hero-death`, `both-heroes-dead`, `concede`,
 //! `draw-accepted`, `turn-cap`, `disconnect` and `match-ceiling` — and it writes exactly one
-//! `results` row, rates both players when the match is ranked (R604) and clears both in-match
-//! flags in one transaction. (TS built it with the factory `createRecordResult(deps)`; with no
-//! ports in the Rust server it is the function itself, and `void_match` is `createVoidMatch`'s.)
+//! `results` row, rates both players when the match is ranked (R604), clears both in-match flags and
+//! stores the final state's hash on the match for its replay (R768) in one transaction. (TS built
+//! it with the factory `createRecordResult(deps)`; with no ports in the Rust server it is the
+//! function itself, and `void_match` is `createVoidMatch`'s.)
 //!
 //! It is idempotent by design, not by luck: the actor and the reaper can both reach the same
 //! terminal match (a crashed actor is exactly the case §9.5's reaper exists for), so the first
@@ -30,6 +31,7 @@
 //! game leaves the series in its next game already (both sides had one deck left, so both picks were
 //! made for them, R332), that game is started after the commit.
 
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -37,6 +39,7 @@ use indexmap::IndexMap;
 use jackioh_engine::{GameOverReason, PlayerId, Winner};
 
 use crate::actor::contracts::{RecordResultInput, TerminalOutcome, VoidMatchInput};
+use crate::actor::{engine, match_actor, registry};
 use crate::api::game_records::record_live_game;
 use crate::api::http::{ApiError, ApiErrorCode};
 use crate::api::queue::json_list;
@@ -286,7 +289,7 @@ async fn write_once(
     tx.results_insert(&row).await.map_err(insert_error)?;
 
     // R417, R565: each seat's board as this game ended, read from its own side, becomes its last
-    // server board, with the result or not at all. The reaper reads no state, so it writes none.
+    // server board, with the result or not at all. The reaper's ceiling draw reads no state, so it writes none.
     if let Some(last_boards) = &input.last_boards {
         let boards = [&last_boards.0, &last_boards.1];
         for (at, seat) in [seat_a, seat_b].into_iter().enumerate() {
@@ -322,6 +325,12 @@ async fn write_once(
         tx.matches_finish(&input.match_id, input.at)
             .await
             .map_err(failed)?;
+        // R768: the final state's hash, with the result or not at all; the reaper's ceiling draw has none to write.
+        if let Some(final_hash) = &input.final_hash {
+            tx.matches_record_final_hash(&input.match_id, final_hash)
+                .await
+                .map_err(failed)?;
+        }
     }
 
     // R263: the series' record of this game, and R262's rating move if it ends the series, in this
@@ -403,15 +412,20 @@ pub async fn void_match(app: &Arc<App>, input: VoidMatchInput) -> Result<(), Api
     Ok(())
 }
 
-/// R112: the reaper's ceiling draw records no turn count.
+/// R112: the reaper's ceiling draw records no turn count (R833000: a log that ends records its own).
 const REAPER_TURNS: i32 = 0;
 
 /// §9.5's reaper: "a reaper resolves anything past the ceiling". Every `live` match whose
-/// `clocks.ceiling_at` has passed ends as a draw by `match-ceiling` (§2.5, R79) with both players'
-/// in-match state cleared, and its in-memory actor — if the process still has one — is dropped.
+/// `clocks.ceiling_at` has passed is ended with both players' in-match state cleared, and its
+/// in-memory actor — if the process still has one — is dropped.
 ///
-/// R112 fixes what a reaper-resolved draw records: `turns = 0` and both ratings unchanged. A match
-/// the reaper reaches is one whose actor is not answering, so the turn count it would need is
+/// R833000: it folds the match's `(seed, log)` first, and a log that already ends in a result
+/// (R1437's write that never landed, with no socket to rebuild the actor) records that real result,
+/// as the actor would have (`fold_terminal_input`). Any other match ends as a draw by
+/// `match-ceiling` (§2.5, R79).
+///
+/// R112 fixes what that ceiling draw records: `turns = 0` and both ratings unchanged. A match whose
+/// log does not end is one whose actor is not answering, so the turn count it would need is
 /// exactly the thing it cannot read, and it does not guess.
 ///
 /// Safe to run beside a live actor: both paths go through the same idempotent write, so whichever
@@ -432,6 +446,23 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         if match_row.clocks.ceiling_at > now {
             continue;
         }
+        // R833000: a log that already ends is recorded as it ended; a recovery that fails falls
+        // through to the ceiling's draw below, which is what the reaper did before it looked.
+        if let Some(recovered) = fold_terminal_input(app, &match_row, now).await {
+            match record_result(app, recovered).await {
+                Ok(_) => {
+                    resolved.push(match_row.id.clone());
+                    if app.matches.has(&match_row.id) {
+                        app.matches.stop(&match_row.id).await;
+                    }
+                    tracing::info!(event = "reaper.recovered", matchId = %match_row.id);
+                    continue;
+                }
+                Err(error) => {
+                    tracing::error!(event = "reaper.recovery.failed", matchId = %match_row.id, message = %error.message);
+                }
+            }
+        }
         let input = RecordResultInput {
             match_id: match_row.id.clone(),
             seats: seats_of(&match_row),
@@ -442,6 +473,7 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
             turns: REAPER_TURNS,
             at: now,
             last_boards: None,
+            final_hash: None,
         };
         let advanced = match write_result(app, &input, RatingPolicy::Unchanged).await {
             Ok(written) => written.series,
@@ -464,6 +496,70 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
         tracing::warn!(event = "reaper.resolved", matches = %json_list(&resolved));
     }
     Ok(resolved)
+}
+
+/// R833000: the result a reap-bound match's log already holds, as the actor would have recorded it
+/// (`MatchActor::on_terminal`): its `(seed, log)` folded once, as a rebuild folds it (§9.5). `None`
+/// leaves the match to R112's ceiling draw: a log that does not end, a fold that panics or refuses
+/// an action the log holds (§9.3's determinism break: no permanent result is written from a game that
+/// does not reconstruct), one that ends in a void (R679: the void path forgets the match, a result
+/// write never does), or a store that fails to read the log.
+async fn fold_terminal_input(app: &Arc<App>, match_row: &MatchRow, now: i64) -> Option<RecordResultInput> {
+    let read = async {
+        let mut tx = app.db.begin(None).await?;
+        let log = tx.matches_actions(&match_row.id).await?;
+        let mode = tx.matches_mode_of(&match_row.id).await?;
+        tx.commit().await?;
+        Ok::<_, StoreError>((log, mode))
+    };
+    let (log, mode) = match read.await {
+        Ok(read) => read,
+        Err(error) => {
+            tracing::error!(event = "reaper.fold.unread", matchId = %match_row.id, message = %error);
+            return None;
+        }
+    };
+
+    let (last_boards, glitch_boards) = match_actor::last_boards_of(match_row);
+    let args = engine::fold_args(
+        &match_row.seed,
+        &match_row.decks,
+        log.into_iter().map(|row| row.action).collect(),
+        last_boards,
+        glitch_boards,
+        registry::dealt_for(mode),
+    );
+    let folded = match catch_unwind(AssertUnwindSafe(|| engine::fold(&args))) {
+        Ok(folded) => folded,
+        Err(payload) => {
+            tracing::error!(event = "reaper.fold.panicked", matchId = %match_row.id, message = %registry::panic_text(payload));
+            return None;
+        }
+    };
+    if !folded.errors.is_empty() {
+        tracing::error!(event = "reaper.fold.errors", matchId = %match_row.id, errors = ?folded.errors);
+        return None;
+    }
+    let snapshot = engine::snapshot(&folded.state);
+    let result = snapshot.result?;
+    if result.reason == GameOverReason::Voided {
+        return None;
+    }
+
+    // R677: credited by who plays each seat now, as the actor's `credited_seats` does.
+    let mut seats = seats_of(match_row);
+    if snapshot.seats_swapped {
+        std::mem::swap(&mut seats.0.profile_id, &mut seats.1.profile_id);
+    }
+    Some(RecordResultInput {
+        match_id: match_row.id.clone(),
+        seats,
+        outcome: result,
+        turns: snapshot.turn,
+        at: now,
+        last_boards: Some(engine::last_boards(&folded.state)),
+        final_hash: Some(engine::hash_state(&folded.state)),
+    })
 }
 
 /// R1450: the reaper's second sweep. Every `open` row more than `OPEN_MATCH_REAP_GRACE_SECONDS` past

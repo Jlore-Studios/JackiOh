@@ -368,6 +368,7 @@ pub fn read_hook<R: 'static>(
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct StatMod {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -401,7 +402,9 @@ pub fn aura_hook(f: impl for<'a> Fn(HookArgs<'a>) -> Vec<AuraEntry<'a>> + Send +
 /// MD-D4, R1120: what one combat-only attack modifier adds to an attacker's strike in the combat it
 /// started against a Unit — attack on top of the layered value, and Poisonous on those hits (§4.4
 /// step 7). Never a layer: the shown attack and §4.2 step 1's "attack above 0" do not see it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
 pub struct AttackMod {
     pub attack: i32,
     pub poisonous: bool,
@@ -431,6 +434,7 @@ pub fn attack_mod_hook(
 
 /// `boolean | number`: a static flag a fused card may carry several times (R102).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum FlagOrCount {
     Flag(bool),
@@ -452,6 +456,7 @@ impl FlagOrCount {
 /// (`upgrade`) and Nerfs (`degrade`) are on this card. Each direction names its own multiplier;
 /// a direction no ingredient names is plain.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TuneMultiplier {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -464,6 +469,7 @@ pub struct TuneMultiplier {
 /// (`json_as(json!({ "castOnDraw": true }))`). `deftDuelist` (legacy, read nowhere) is not ported
 /// (SURFACE §7.2).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct StaticFlags {
     /// Plays itself on draw, then draws again (§6.2, R58).
@@ -718,6 +724,7 @@ pub fn cost_hook(f: impl for<'a> Fn(CostArgs<'a>) -> i32 + Send + Sync + 'static
 
 /// `Script.setStat`'s answer.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetStat {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -743,6 +750,7 @@ string_union! {
 /// is `minCost` or more (Classic #68 Radiant), and never a cast (R70). (TS `costRules.ts`:
 /// `CostRule & { whose; ban? }`, the rule's fields flattened beside these.)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CostAura {
     #[serde(flatten)]
@@ -769,6 +777,7 @@ pub type CostAuraHook = Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<CostAura> + 
 ///   price, and the rest in mana. Such a play must spend tokens; a permission without `plague` is paid
 ///   in mana alone.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GraveyardPlayPermission {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -783,23 +792,9 @@ pub struct GraveyardPlayPermission {
 pub type GraveyardPlayHook =
     Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<GraveyardPlayPermission> + Send + Sync>;
 
-/// ME-ALTPLAY, R1040, R1044: the permission this card gives its controller to play cards face-down
-/// as Traps — Units under Knowledge Breaker's Aura, Spells under Paranoia's. `echo` is the Echo a
-/// Radiant Paranoia adds to a set Spell (R1045), once per play.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct FaceDownPlayPermission {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub units: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub spells: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub echo: Option<i32>,
-}
-
-/// ME-ALTPLAY, R1040, R1044: the face-down play permissions this card grants while it acts.
-pub type FaceDownPlayHook =
-    Arc<dyn for<'a> Fn(CostAuraArgs<'a>) -> Vec<FaceDownPlayPermission> + Send + Sync>;
+/// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their field
+/// (Radiant Paranoia's "Spells you reveal have Echo +{echo}"), read as the Spell reveals. 0 adds none.
+pub type RevealEchoHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
 
 /// B5 E5: "to target this with anything but an attack, a player must also discard N cards".
 pub type TargetingDiscardsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> i32 + Send + Sync>;
@@ -809,6 +804,7 @@ pub type RecordsPlayAsHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> Option<PlayReco
 
 /// One guard `Script.heroGuard` returns: a per-hit cap and a divisor applied after Armor.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct HeroGuard {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -869,6 +865,10 @@ pub struct Script {
     /// MD-B18, R925: "When this enters your hand" (Meditative #37) — run by `draw::run_arrival_hooks`
     /// on every hand arrival, after R151's start-of-game clause.
     pub enters_hand: Option<Hook>,
+    /// R781004: run on the card a Fuse keeps, once this card's text is fused into it (Meditative #65
+    /// Keymaster Keenus's Equip play), as R43's start-of-game roll is: what this text drew for its own
+    /// card ceased to exist with it, so the kept card draws its own.
+    pub fused_into: Option<Hook>,
     /// Named continuations a prompt answer re-enters (§10.6, R81). Empty: none.
     pub resume: IndexMap<&'static str, Hook>,
     /// A delayed effect this card scheduled, resolved at its R62 point.
@@ -913,9 +913,9 @@ pub struct Script {
     pub cost_aura: Option<CostAuraHook>,
     /// E11, R454: the permissions this card gives its controller to play cards from their graveyard.
     pub graveyard_play: Option<GraveyardPlayHook>,
-    /// ME-ALTPLAY, R1040, R1044: the permissions this card gives its controller to play cards
-    /// face-down as Traps.
-    pub face_down_play: Option<FaceDownPlayHook>,
+    /// R1045: the Echo this card adds to each Spell its controller reveals while it acts on their
+    /// field (`alt_play::reveal_echo_bonus`).
+    pub reveal_echo: Option<RevealEchoHook>,
     /// B5 E5, Classic #89 Paul Allen's Ghost: "to target this with anything but an attack, a player must
     /// also discard N cards" — N now, read while the card is on the field (a pure read, so a Degrade or
     /// Upgrade of the declared number reaches it through `param`). 0 or absent is no cost. The discards
@@ -1028,7 +1028,8 @@ pub struct Script {
 impl Script {
     /// `script[name]` for the effect-list hooks TS named by string (`work.scriptStepFor`,
     /// `triggers.TRIGGER_HOOKS`, `Resume.hook`): "cry", "death", "startOfGame", "entersHand",
-    /// "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack", "startOfOpponentTurn".
+    /// "fusedInto", "delayed", "startOfTurn", "endOfTurn", "onPlayHook", "afterAttack",
+    /// "startOfOpponentTurn".
     /// `None` for any other name or an absent hook.
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
@@ -1036,6 +1037,7 @@ impl Script {
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
             "entersHand" => self.enters_hand.as_ref(),
+            "fusedInto" => self.fused_into.as_ref(),
             "delayed" => self.delayed.as_ref(),
             "startOfTurn" => self.start_of_turn.as_ref(),
             "endOfTurn" => self.end_of_turn.as_ref(),
@@ -1055,6 +1057,7 @@ impl Script {
 
 /// `ActivationDecl.uses`: "Activate" (1), "Activate N" (N) or "Activate ♾️" ("unlimited").
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum ActivationUses {
     Count(i32),
@@ -1083,6 +1086,7 @@ mod unlimited {
 
 /// `ActivationDecl.cost`: what the ability pays as it is activated.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ActivationCost {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1181,6 +1185,7 @@ string_union! {
 /// the opponent (Classic #4), "both" every player (Classic #49); `count` is how many draws that player
 /// may make each turn, whoever's turn it is.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawLimit {
     pub player: DrawLimitPlayer,
@@ -1233,6 +1238,7 @@ string_union! {
 
 /// A heal's target, by id, so a replaced event is plain JSON (§10.1).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum HealedRef {
     Hero {
@@ -1246,6 +1252,7 @@ pub enum HealedRef {
 
 /// One unit a `wouldDie` event names.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DyingUnit {
     pub instance_id: String,
@@ -1262,6 +1269,7 @@ string_union! {
 
 /// The event a replacement is offered, as plain JSON: the follow-up step reads it back (R113).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "moment", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ReplacedEvent {
     /// A hit of `amount` (after Armor, divisor and caps) would bring `player`'s hero — or, since
@@ -1392,6 +1400,7 @@ string_union! {
 /// What a replacement does instead. The moment fixes which keys it may set (see `ReplacementDef`);
 /// data, so a card may write it as the TS literal (`json_as(json!({ "to": "exile" }))`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ReplacementInstead {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1462,6 +1471,7 @@ pub type TargetedReplacement = ReplacementDef;
 ///   included), `unitTotals` (your Units' total attack and total health both at least `total`),
 ///   `unitsInGraveyard` (Units in your graveyard).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum QuestGoal {
     Draws { count: i32 },
@@ -1477,6 +1487,7 @@ pub enum QuestGoal {
 
 /// One quest: its text as the view shows it, what completes it, and the rewards it offers, in order.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct QuestDef {
     pub id: String,
@@ -1487,6 +1498,7 @@ pub struct QuestDef {
 
 /// One reward: its text, and the quest it opens next (null at the end of a line).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct QuestRewardDef {
     pub id: String,
@@ -1496,6 +1508,7 @@ pub struct QuestRewardDef {
 
 /// A card's quest tree (`Script.quests`): the quest that opens as it enters, every quest, every reward.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct QuestBook {
     pub first: String,

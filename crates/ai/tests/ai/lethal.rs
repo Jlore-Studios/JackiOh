@@ -12,13 +12,15 @@
 
 use indexmap::IndexSet;
 use jackioh_ai::{
-    AI_BUDGET, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, MatchHooks, Matchup,
-    NodeCounter, create_node_counter, damage_past_taunts, determinize, find_lethal,
-    find_lethal_with_quick_nodes, game_config, play_match, ready_gap, redact, simulate,
+    AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus,
+    MatchHooks, Matchup, NextSwing, NodeCounter, action_key, candidate_actions, create_node_counter,
+    damage_past_taunts, determinize, evaluate, find_lethal, find_lethal_with_quick_nodes, game_config,
+    line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, CardInstance, GameState, PLAYER_IDS, PlayerId, Row, Value, Winner, ZoneChoice,
-    create_rng, find_instance, json, legal_actions, opponent_of, unit_view,
+    ActionBody, ActionType, CardInstance, GameState, IndexMap, PLAYER_IDS, PlayerId, Row, Value, Winner,
+    ZoneChoice, attacks_per_turn, create_rng, find_instance, json, json_as, legal_actions, opponent_of,
+    seat_to_act, unit_view,
 };
 
 use super::support::{
@@ -84,18 +86,47 @@ fn ready_gap_by_legal_actions(state: &GameState, seat: PlayerId) -> f64 {
             ready.insert(attacker_id);
         }
     }
-    let mut attacks: Vec<i32> = Vec::new();
+    let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for id in &ready {
         let Some(unit) = find_instance(state, id) else {
             continue;
         };
         let attack = unit_view(state, unit).attack;
         if attack > 0 {
-            attacks.push(attack);
+            // R636: once per attack the unit has left this turn.
+            let spent = unit.exertion.attacks.unwrap_or(i32::from(unit.exertion.attacked));
+            for _ in spent..attacks_per_turn(state, unit) {
+                attacks.push((unit, attack));
+            }
         }
     }
     let opp = opponent_of(seat);
     f64::from(state.players[opp].hero.health - damage_past_taunts(state, opp, &attacks))
+}
+
+/// p1 (the AI) holds Silence (0 mana, "Vanilla a Unit.") beside Pointmaster 7/1 and Mr. Vanilla 4/4,
+/// ready; p2 stands behind Midrange Menace, a 9/9 Taunt, at 10 health. Silence on the Taunt and both
+/// attacks to the face win; Silence on an own unit reaches a position that differs only in which unit
+/// is Vanilla. Both sides hold a library, so ending the turn decks nobody out.
+fn silence_board() -> Value {
+    json!({
+        "p1": { "hand": ["classicplus-009"], "field": ["core-020", "core-008"], "library": ["core-008", "core-011"] },
+        "p2": { "field": ["core-019"], "health": 10, "library": ["core-008", "core-011"] },
+    })
+}
+
+/// `legal_actions` by `action_key`, each play's lane blanked: `search_signature` leaves a unit's lane
+/// out, so the two lanes `candidate_actions` keeps for one play stay one position.
+fn moves_but_lanes(state: &GameState, seat: PlayerId) -> Vec<String> {
+    legal_actions(state, seat)
+        .into_iter()
+        .map(|mut action| {
+            if let ActionBody::Play { zone: Some(zone), .. } = &mut action {
+                zone.lane = -1;
+            }
+            action_key(&action)
+        })
+        .collect()
 }
 
 /// Plays `line` on `state` through `simulate`; panics on a refusal.
@@ -137,7 +168,7 @@ mod the_lethal_solvers_walks {
                 }),
                 x: None,
                 embiggen: None,
-                magnetic: None,
+                equip: None,
                 tributes: Some(vec![
                     vanilla.id.clone(),
                     menace.id.clone(),
@@ -297,5 +328,132 @@ mod the_lethal_solvers_walks {
             "{}",
             trace(&run.turn)
         );
+    }
+}
+
+mod the_positions_the_search_merges {
+    use super::*;
+
+    #[test]
+    fn silencing_the_enemy_taunt_is_not_the_position_silencing_an_own_unit_reaches_and_the_solver_finds_its_lethal()
+     {
+        register_cards();
+        let mut options = json!({ "seed": "lethal-silence", "active": AI, "turn": 9 });
+        if let (Some(base), Value::Object(extra)) = (options.as_object_mut(), silence_board()) {
+            for (key, value) in extra {
+                base.insert(key, value);
+            }
+        }
+        let state = scenario(options).state().clone();
+
+        let silence = mine(&state, AI, "classicplus-009");
+        let silencing = |target: &CardInstance| -> ActionBody {
+            json_as::<ActionBody>(json!({
+                "type": "play",
+                "instanceId": silence.id,
+                "targets": [{ "pick": "instance", "instanceId": target.id }],
+            }))
+        };
+        let on_taunt = silencing(&mine(&state, HUMAN, "core-019"));
+        let on_own = silencing(&mine(&state, AI, "core-020"));
+        // Two positions that play differently: the Taunt walls the face in one and not in the other.
+        assert_ne!(
+            search_signature(&play_out(&state, std::slice::from_ref(&on_taunt)), AI),
+            search_signature(&play_out(&state, &[on_own]), AI)
+        );
+
+        let dets = worlds(&state, "lethal-silence", 2);
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let line = find_lethal(&dets, AI, &counter, AI_BUDGET.lethal_nodes).unwrap_or_default();
+        assert_eq!(line.first().map(action_key), Some(action_key(&on_taunt)));
+        for det in &dets {
+            assert_eq!(
+                play_out(det, &line)
+                    .result
+                    .and_then(|result| result.winner.player()),
+                Some(AI)
+            );
+        }
+    }
+
+    #[test]
+    fn two_one_step_children_with_one_signature_score_the_same_and_offer_the_same_moves() {
+        register_cards();
+        let mut merged = 0;
+        for k in 1..=8 {
+            for state in random_policy_states(&format!("signature-{k}"), 2, 600) {
+                let Some(seat) = seat_to_act(&state) else {
+                    continue;
+                };
+                let counter = create_node_counter(1_000_000, None);
+                let mut groups: IndexMap<String, Vec<GameState>> = IndexMap::new();
+                for action in candidate_actions(&state, seat) {
+                    let Some(Ok(child)) = simulate(&state, seat, &action, &counter) else {
+                        continue;
+                    };
+                    if line_status(&child, seat, state.turn) != LineStatus::Open {
+                        continue;
+                    }
+                    groups
+                        .entry(search_signature(&child, seat))
+                        .or_default()
+                        .push(child);
+                }
+                for children in groups.values() {
+                    let first = &children[0];
+                    for other in &children[1..] {
+                        merged += 1;
+                        assert_eq!(
+                            evaluate(first, seat, NextSwing::Enemy, &AI_EVAL),
+                            evaluate(other, seat, NextSwing::Enemy, &AI_EVAL),
+                            "turn {}, {seat}",
+                            state.turn
+                        );
+                        assert_eq!(
+                            moves_but_lanes(first, seat),
+                            moves_but_lanes(other, seat),
+                            "turn {}, {seat}",
+                            state.turn
+                        );
+                    }
+                }
+            }
+        }
+        assert!(merged > 200, "{merged} merges");
+    }
+
+    #[test]
+    fn ready_gap_counts_a_windfury_unit_once_per_attack_it_has_left() {
+        register_cards();
+        // p1 has no library and no hand, so the Prime's attack trigger summons nothing.
+        let fresh = scenario(json!({
+            "seed": "lethal-windfury",
+            "active": AI,
+            "turn": 9,
+            "p1": { "field": ["meditative-091-1"] },
+            "p2": { "health": 20, "library": ["core-008", "core-011"] },
+        }))
+        .state()
+        .clone();
+        // Windfurious Prime is 5 attack: two attacks left, 10 off 20 health.
+        assert_eq!(ready_gap(&fresh, AI), 10.0);
+
+        let prime = mine(&fresh, AI, "meditative-091-1");
+        let swing = ActionBody::Attack {
+            attacker_id: prime.id.clone(),
+            target_id: format!("hero-{HUMAN}"),
+        };
+        let once = play_out(&fresh, std::slice::from_ref(&swing));
+        assert_eq!(once.players[HUMAN].hero.health, 15);
+        // One swing is left: 5 off 15 health.
+        assert_eq!(ready_gap(&once, AI), 10.0);
+        assert_eq!(ready_gap(&once, AI), ready_gap_by_legal_actions(&once, AI));
+
+        // Both swings in one line: `simulate` numbers its actions from its counter, so a second call
+        // from `once` would repeat the first swing's action id.
+        let twice = play_out(&fresh, &[swing.clone(), swing]);
+        assert_eq!(twice.players[HUMAN].hero.health, 10);
+        // Both swings are spent: nothing left to count, the gap is the hero's health.
+        assert_eq!(ready_gap(&twice, AI), 10.0);
     }
 }

@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SHIPPED_SETS, setShips, type SetName } from "@jackioh/shared";
+import { SHIPPED_SETS, type SetName } from "@jackioh/shared";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { MUSIC_BUDGET_BYTES, MUSIC_INTRO_MAX_S, MUSIC_INTRO_MIN_S, MUSIC_STATIONS } from "./constants.ts";
@@ -94,8 +94,8 @@ describe("R631 the rendered music", () => {
         // The tail past the loop's end is what lets a decoder's priming offset loop cleanly.
         expect(t.duration - (t.loopEnd ?? 0), id).toBeGreaterThan(0.25);
         // #51: two to four minutes for whatever can play for a long stretch, the menu theme and each
-        // station's in-game and low-health tracks. A result's loop and a Mythic's theme play for a
-        // moment of the match and are shorter, though still longer than a few bars.
+        // station's in-game and low-health tracks. A result's loop plays for a moment of the match and
+        // is shorter, though still longer than a few bars.
         const minimum = /^(tavern|edm|lofi|epic)-(\d+|danger)$/.test(id) || id === MENU_TRACK ? 120 : 15;
         expect((t.loopEnd ?? 0) - (t.loopStart ?? 0), id).toBeGreaterThanOrEqual(minimum - 1e-6);
       }
@@ -111,23 +111,17 @@ describe("R631 the rendered music", () => {
 });
 
 describe("R631 the cards that play music", () => {
-  it("R631 gives every Mythic a unique theme, every Legendary a shared entrance theme, and names only real cards", () => {
-    // The sets that ship: a card of a set still being built gets its intro with the set's release
-    // (R1352, R1420, docs/ADDING_CARDS.md row 12).
-    const mythics = Object.entries(CATALOG)
-      .filter(([, c]) => c.rarity === "Mythic" && c.token !== true && setShips(c.set))
-      .map(([id]) => id);
-    expect(mythics.length).toBeGreaterThan(0);
-    for (const id of mythics) expect(MUSIC_CARDS[id]?.theme, id).toBeDefined();
-    const mythicTracks = mythics.map((id) => MUSIC_CARDS[id]?.theme);
-    expect(new Set(mythicTracks).size, "no two Mythics share a track").toBe(mythics.length);
-    const legendaries = Object.entries(CATALOG)
-      .filter(([, c]) => c.rarity === "Legendary" && c.token !== true && setShips(c.set))
-      .map(([id]) => id);
-    expect(legendaries.length).toBeGreaterThan(0);
-    for (const id of legendaries) expect(MUSIC_CARDS[id]?.theme, id).toMatch(/^legendary-[12]$/);
-    for (const id of ["legendary-1", "legendary-2"]) expect(mythicTracks, id).not.toContain(id);
+  it("R631 names only real cards", () => {
     for (const id of Object.keys(MUSIC_CARDS)) expect(CATALOG[id], id).toBeDefined();
+  });
+
+  it("R822000 plays no theme: no card names one, and no Mythic or Legendary theme is left to render, ship or license", () => {
+    const raw = JSON.parse(readFileSync(join(here, "music-cards.json"), "utf8")) as { cards: Record<string, Record<string, unknown>> };
+    for (const [id, entry] of Object.entries(raw.cards)) expect(Object.keys(entry), id).not.toContain("theme");
+    expect(entries.map(([id]) => id).filter((id) => /^(mythic|legendary)-/.test(id))).toEqual([]);
+    expect(readdirSync(MUSIC_DIR).filter((f) => /^(mythic|legendary)-/.test(f))).toEqual([]);
+    expect(readFileSync(LICENSES, "utf8")).not.toMatch(/`(mythic|legendary)-/);
+    expect(() => parseMusicCards({ version: 1, cards: { "core-097": { theme: "menu", intro: "intro-core-097" } } }, MUSIC_MANIFEST)).toThrow(/theme/);
   });
 
   it("R631 has at least one card that switches its caster's station, and one for every station", () => {
@@ -143,8 +137,6 @@ describe("R631 the cards that play music", () => {
     for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBeDefined();
     const intros = cards.map((id) => MUSIC_CARDS[id]?.intro);
     expect(new Set(intros).size, "no two cards share an intro").toBe(cards.length);
-    const themes = new Set(Object.values(MUSIC_CARDS).map((e) => e.theme));
-    for (const intro of intros) expect(themes.has(intro), `${String(intro)} is no theme`).toBe(false);
   });
 
   it("R1352 gives an intro to no card that is not printed Legendary or Mythic", () => {
@@ -170,10 +162,9 @@ describe("R631 the cards that play music", () => {
     expect(parseMusicCards({ version: 1, cards: { "core-097": { intro: "intro-core-097" } } }, MUSIC_MANIFEST)).toEqual({ "core-097": { intro: "intro-core-097" } });
   });
 
-  it("R631 refuses a table that names a track the manifest lacks, or a station that does not exist", () => {
-    expect(() => parseMusicCards({ version: 1, cards: { "core-097": { theme: "nope" } } }, MUSIC_MANIFEST)).toThrow(/theme/);
+  it("R631 refuses a table that names a station that does not exist, or an entry with nothing to play", () => {
     expect(() => parseMusicCards({ version: 1, cards: { "core-004": { station: "polka" } } }, MUSIC_MANIFEST)).toThrow(/station/);
-    expect(() => parseMusicCards({ version: 1, cards: { "core-004": {} } }, MUSIC_MANIFEST)).toThrow(/a theme, a station or an intro/);
+    expect(() => parseMusicCards({ version: 1, cards: { "core-004": {} } }, MUSIC_MANIFEST)).toThrow(/a station or an intro/);
   });
 
   it("R631 refuses a manifest whose loop does not sit inside its file", () => {

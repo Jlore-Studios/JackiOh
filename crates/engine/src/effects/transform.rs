@@ -16,14 +16,14 @@ use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, glitch_or_not, 
 use crate::damage::DamageTarget;
 use crate::enchantments::add_enchantment;
 use crate::faces::card_type_of;
-use crate::layers::unit_has;
+use crate::layers::{unit_has, unit_view};
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::temporary::is_temporary_card;
 use crate::wire::{
-    CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Zone,
-    ZoneName, opponent_of,
+    AttackHealth, CardDef, CardType, Enchantment, GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row,
+    Tuning, Zone, ZoneName, opponent_of,
 };
 use crate::zones::{
     LibraryPosition, MoveToZoneOptions, OffFieldZone, cease_to_exist, is_carried, move_to_zone, pile_at,
@@ -37,6 +37,7 @@ use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 /// Which card to rewrite: the pick the play or a prompt carried (R81), or an instance id a trigger
 /// read off the event it answers — Sheepish transforms the unit the opponent just played (#41).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -201,6 +202,7 @@ fn replace_off_field(
 
 /// `transform`'s argument: `TransformTarget & { defId; radiant?; costOverride?; chinese? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformArgs {
     #[serde(flatten)]
@@ -316,10 +318,27 @@ fn unreadable_by(ctx: &EffectContext<'_>, card: &CardInstance) -> Vec<PlayerId> 
     }
 }
 
-/// §6.3 Vanilla: the card's text stops applying — its printed keywords and its scripts — while its
-/// stats, buffs and damage stay. Immutable refuses it (R23), and a card that is already Vanilla is
-/// unchanged. The flag lives on the instance; the layers read it (§10.4) and R78 clears it when the
-/// card leaves the field. (TS default argument `{}`.)
+/// R781003: a Vanilla returns a card to the attack and health printed on the face it wears (§6.3):
+/// its buffs and the stat half of its `tuning` go, and the rest of its tuning (cost, X, numbers,
+/// keywords) stays. A summon's X/X (`statsOverride`) is what it was summoned as, not a buff, so it stays,
+/// and so does the Radiant flag, so a Radiant card keeps its Radiant face's numbers.
+pub(crate) fn to_printed_stats(card: &mut CardInstance) {
+    card.buffs = AttackHealth { attack: 0, health: 0 };
+    if let Some(tuning) = card.tuning.as_mut() {
+        tuning.attack = None;
+        tuning.health = None;
+        if *tuning == Tuning::default() {
+            card.tuning = None;
+        }
+    }
+}
+
+/// §6.3 Vanilla: the card's text stops applying — its printed keywords and its scripts — and it
+/// returns to its printed stats (`to_printed_stats`, R781003), while its damage stays: a Unit that
+/// would die from the stats it loses stays alive at 1 health, its damage capped at its max health
+/// minus 1. Immutable refuses it (R23), and a card that is already Vanilla is unchanged. The flag
+/// lives on the instance; the layers read it (§10.4) and R78 clears it when the card leaves the
+/// field. (TS default argument `{}`.)
 pub fn vanilla(args: TransformTarget) -> Effect {
     Effect::new("vanilla", move |ctx| {
         let Some(card) = instance_of(ctx, &args) else {
@@ -332,8 +351,19 @@ pub fn vanilla(args: TransformTarget) -> Effect {
             return;
         }
 
+        let in_units_row = matches!(card.zone, Zone::Field { row: Row::Units, .. });
+        let alive_before = in_units_row && unit_view(ctx.state, &card).health > 0;
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
             live.vanilla = true;
+            to_printed_stats(live);
+        }
+        if alive_before && let Some(live) = find_instance(ctx.state, &card.id).cloned() {
+            let view = unit_view(ctx.state, &live);
+            if view.health <= 0
+                && let Some(stored) = find_instance_mut(ctx.state, &card.id)
+            {
+                stored.damage = (view.max_health - 1).max(0);
+            }
         }
         // No instance is created and no definition changes, so both sides of `transformed` name the
         // same card and the same def: the event the client animates is the text going away.
@@ -364,6 +394,7 @@ fn can_replace(old: &CardInstance, def: &CardDef) -> bool {
 
 /// `"keep"`: `transformRandom`'s radiant literal for the old card's face.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum KeepFace {
     #[serde(rename = "keep")]
     Keep,
@@ -371,6 +402,7 @@ pub enum KeepFace {
 
 /// `transformRandom`'s `radiant`: `boolean | "keep"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum TransformRadiant {
     Flag(bool),
@@ -380,6 +412,7 @@ pub enum TransformRadiant {
 /// `transformRandom`'s argument: `TransformTarget & { query?; radiant?; readyToAttack?;
 /// scope?; same?; costOverride?; chinese?; arrives? }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformRandomArgs {
     #[serde(flatten)]
@@ -521,6 +554,7 @@ pub fn transform_random(args: TransformRandomArgs) -> Effect {
 
 /// `transformBeneath`'s argument (TS default `{}`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TransformBeneathArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -589,6 +623,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
 
 /// `swapBook`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SwapBookArgs {
     pub instance_id: String,

@@ -10,6 +10,8 @@
 //! ← {"generation":7,"lane":"improve","shadowBan":["core-042", …]}
 //! → {"op":"decide","state":<redact(state, seat) JSON>,"seat":"p1","rngSeed":"…","rngCursor":0}
 //! ← {"action":<ActionBody JSON>,"rngCursor":3}
+//! → {"op":"decide", …, "verbose":true}
+//! ← {"action":<ActionBody JSON>,"rngCursor":3,"reason":"search","line":[<ActionBody JSON>, …],"stats":{…}}
 //! → {"op":"quit"}
 //! ```
 //!
@@ -19,13 +21,14 @@
 //! to the random policy on the same stream when the AI has no move (match.ts's `playMatch`), and a
 //! game played through this protocol is the game the in-process `self` agent plays.
 //!
-//! `{"action":null,…}` means the AI had no move. A request the agent cannot read, or a decision that
+//! `"verbose":true` (default false) adds the `Decision`'s other fields to the answer, for a person
+//! reading a game back; the referee never sets it. `{"action":null,…}` means the AI had no move. A request the agent cannot read, or a decision that
 //! panicked, is answered `{"error":"…"}`, which the referee records as a thrown controller.
 
 use std::io::{BufRead, Write};
 
 use anyhow::Context;
-use jackioh_ai::{AI_GATE_BUDGET, AiOptions, SHADOW_BAN_IDS, decide};
+use jackioh_ai::{AI_GATE_BUDGET, AiOptions, Decision, DecisionReason, SHADOW_BAN_IDS, SearchStats, decide};
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -60,6 +63,8 @@ struct Request {
     rng_seed: Option<String>,
     #[serde(default)]
     rng_cursor: Option<u32>,
+    #[serde(default)]
+    verbose: bool,
 }
 
 /// `decide`'s answer. `action` is `null` when the AI had no move.
@@ -68,6 +73,18 @@ struct Request {
 struct DecideAnswer {
     action: Option<ActionBody>,
     rng_cursor: u32,
+    /// Only for a `verbose` request that got a move.
+    #[serde(flatten)]
+    detail: Option<DecisionDetail>,
+}
+
+/// What a `Decision` holds besides its action.
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct DecisionDetail {
+    reason: DecisionReason,
+    line: Vec<ActionBody>,
+    stats: SearchStats,
 }
 
 /// Answers requests until `quit` or the end of stdin.
@@ -123,13 +140,24 @@ fn answer_decide(request: Request) -> Value {
         return json!({ "error": "agent: decide needs an rngSeed" });
     };
     let rng = Rng::new(&rng_seed, request.rng_cursor.unwrap_or(0));
-    let decided = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| decide_with(&state, seat, rng)));
+    let decided = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| decide_full(&state, seat, rng)));
     match decided {
-        Ok((action, rng)) => serde_json::to_value(DecideAnswer {
-            action,
-            rng_cursor: rng.cursor(),
-        })
-        .unwrap_or_else(|error| json!({ "error": format!("agent: answer did not serialise: {error}") })),
+        Ok((decision, rng)) => {
+            let detail = decision
+                .as_ref()
+                .filter(|_| request.verbose)
+                .map(|decision| DecisionDetail {
+                    reason: decision.reason,
+                    line: decision.line.clone(),
+                    stats: decision.stats,
+                });
+            serde_json::to_value(DecideAnswer {
+                action: decision.map(|decision| decision.action),
+                rng_cursor: rng.cursor(),
+                detail,
+            })
+            .unwrap_or_else(|error| json!({ "error": format!("agent: answer did not serialise: {error}") }))
+        }
         Err(panic) => json!({ "error": format!("agent: decide panicked: {}", panic_message(&*panic)) }),
     }
 }
@@ -139,13 +167,19 @@ fn answer_decide(request: Request) -> Value {
 /// stream after it. `arena.rs`'s in-process `self` agent calls this too, so `self` and `bin:<this
 /// binary>` play the same games.
 pub(crate) fn decide_with(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<ActionBody>, Rng) {
+    let (decision, rng) = decide_full(state, seat, rng);
+    (decision.map(|decision| decision.action), rng)
+}
+
+/// `decide_with`'s decision whole, with its reason, line and stats.
+fn decide_full(state: &GameState, seat: PlayerId, rng: Rng) -> (Option<Decision>, Rng) {
     let mut options = AiOptions {
         rng,
         budget: AI_GATE_BUDGET,
         should_stop: None,
     };
     let decision = decide(state, seat, &mut options);
-    (decision.map(|decision| decision.action), options.rng)
+    (decision, options.rng)
 }
 
 /// This build's `info`: its generation and lane from the compiled-in `crates/ai/generation.json`, and
@@ -198,6 +232,54 @@ mod tests {
             serde_json::from_str(r#"{"op":"decide","seat":"p1","rngSeed":"s","rngCursor":0}"#).unwrap();
         let answer = answer_decide(request);
         assert_eq!(answer["error"], json!("agent: decide needs a state"));
+    }
+
+    /// A `decide` request for p2 at the hotseat fixture's mid-game position (entry 13: turn 4, a search),
+    /// as the referee sends it.
+    fn mid_game_request(verbose: bool) -> Request {
+        use jackioh_engine::replay::{ReplayInput, fold};
+        jackioh_cards::register_all();
+        let text = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../engine/tests/golden/01-hotseat-full-game.json"
+        ))
+        .unwrap();
+        let mut input: ReplayInput = serde_json::from_str(&text).unwrap();
+        input.log.truncate(13);
+        let state = jackioh_ai::redact(&fold(&input).state, PlayerId::P2);
+        let mut request = json!({
+            "op": "decide", "state": state, "seat": "p2", "rngSeed": "think-test", "rngCursor": 0,
+        });
+        if verbose {
+            request["verbose"] = json!(true);
+        }
+        serde_json::from_value(request).unwrap()
+    }
+
+    #[test]
+    fn verbose_decide_carries_reason_line_stats() {
+        let plain = answer_decide(mid_game_request(false));
+        let object = plain.as_object().unwrap();
+        assert!(
+            object.contains_key("action") && object.contains_key("rngCursor"),
+            "{plain}"
+        );
+        assert_eq!(
+            object.len(),
+            2,
+            "a plain answer is exactly {{action, rngCursor}}: {plain}"
+        );
+
+        let verbose = answer_decide(mid_game_request(true));
+        assert_eq!(verbose["action"], plain["action"]);
+        assert_eq!(verbose["rngCursor"], plain["rngCursor"]);
+        assert_eq!(verbose["reason"], json!("search"));
+        assert_eq!(verbose["line"][0], verbose["action"]);
+        assert!(
+            verbose["stats"]["nodes"].as_u64().is_some_and(|nodes| nodes > 0),
+            "{verbose}"
+        );
+        assert!(verbose["stats"]["stoppedBy"].is_string(), "{verbose}");
     }
 
     #[test]

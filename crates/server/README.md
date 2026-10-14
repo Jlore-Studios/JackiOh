@@ -27,13 +27,13 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops, `serve` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
 | Persistence | `db/store.rs` (`Db`, `Tx`), `db/pg.rs`, `db/fake.rs`, `db/migrate.rs` | one method per store operation, over Postgres or the in-memory fake |
 | Ranked | `ranked/*.rs` | Glicko-2, the ladder and seasons, pure |
-| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, and the pool (R1453, R641000, R1454, R1452) |
+| Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
@@ -130,14 +130,15 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, and the caller's `username: { name, nextChangeAt, promptOwed }` (R1435) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), and `ageCheckOwed` and `termsOwed` (R757000, R757001) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
 | `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
 | `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match or series |
+| `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
-| `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption |
+| `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
 | `GET` | `/api/codes/status` | user | whether redemption is paused, and the caller's attempts left (R192) |
 | `GET` | `/api/collection` | active | the ledger; there is no write route |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256) |
@@ -153,6 +154,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged |
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
+| `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -185,6 +187,10 @@ What the actor holds, each with a test named after it:
   server-only action (`timeout`, `disconnectExpired`, `ceilingReached`) that goes through `reduce` and
   the log like any other. Every terminal reason writes exactly one `results` row and moves the rating
   once when the match is ranked (R604); a voided game writes none (R679).
+  A clock's server action whose row the store fails to write is tried again `MATCH_SERVER_ACTION_RETRY_MS`
+  later, its clock run out once more, until it lands; an append the store refuses as
+  `StoreError::SeqClash` makes the actor let go as an unrecorded result does (R1437), for the next
+  socket to rebuild it from the log (R776000).
 - A seat a ladder bot holds has no socket: the actor plays it itself (`drive_bots`), its moves
   server actions with `srv-bot-<seq>` nonces through the same path a client's take, its seat never
   disconnected and so never given a grace, and its persona's emotes relayed as a player's are (R1452).
@@ -214,6 +220,9 @@ cargo jackioh stats report live.jsonl --json                                # th
 counts the human seats when it reads live data alone and every seat when it reads development data,
 so a ladder bot's side is read only with `--pilot=ai` or `--pilot=unified`, or with `--source=all`,
 which counts every seat of both sources unless a pilot is named (R1451).
+The training box's gather lane (`training/README.md`, The gather lane) runs `cargo jackioh stats` without
+end under its own series and loads each finished day with `stats-import`, so `stats-cards --source=dev
+--patch=<version>` reads its games.
 
 `stats-export` writes the records a `stats-cards` call with the same `--source`, `--mode` and `--patch` reads,
 one `GameRecord` (R376) per line in id order, to the file `--out=<file>` names (required, resolved against
@@ -264,7 +273,7 @@ emote delay windows and the persona weights, each a `pub const` to paste over th
 or a comment keeping the hand-set prior when fewer than `TIMING_FIT_MIN_SAMPLES` observations back
 it. Neither takes an option.
 
-## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000)
+## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
 With `LADDER_BOTS=on`, a ranked ticket of any mode that has waited past its fallback time (15–40 s,
 drawn from its id and a key the server keeps to itself) with no person inside its window is seated
@@ -295,7 +304,8 @@ series still makes its picks.
   `{seed_base}:bot-pick:{seat}:{game}`, from the series seed no client holds. A series game draws
   its bot no rematch plan (`MatchActorInput::series_game`), as a series game offers no rematch.
 - `bots::seat` is a bot's move: `decide_styled` at the bot's strength (`BOT_STRENGTHS`: a search
-  budget, a softmax temperature and a chance to miss a lethal) on the spec's resources, then a
+  budget, a softmax temperature, a chance to miss a lethal and, R747000, a skill) on the spec's
+  resources, then a
   think time from `THINK_TIME_FITS` or the hand-set priors, times the bot's speed, inside its
   acting clock, the search's deadline too; a move whose write failed is decided again
   `BOT_WRITE_RETRY_MS` later. A move decided before the person acted still goes while
@@ -308,7 +318,10 @@ series still makes its picks.
   offer by `bots::signals` rather than the AI's refusal (R188 holds for practice), never offering one
   (`never_played`). A rebuild reads the turn each bot last moved in off the log
   (`match_actor::bot_moved_turns`), so a restart in the middle of the bot's turn does not begin that
-  turn again.
+  turn again. R747000: the skill is rolled first, on the bot's AI stream (`jackioh_ai::plays_best`,
+  no draw at full or zero skill); a decision the roll does not give to the AI is the random policy's
+  (`random_action`) with no search, whose draw-offer answer is still the bot's own roll's, and `r188_forbidden`
+  filters either.
 - `bots::signals` draws a ladder bot's other habits from `config.rs`'s fitted rows (R639000), each
   on a stream of its own from cursor 0 (`{seed}:bot-concede:{home}`, `bot-draw`, `bot-idle`,
   `bot-rematch`, `bot-aim`), so the actor keeps no cursor and a rebuilt actor draws the same: its
@@ -353,6 +366,72 @@ series still makes its picks.
   (`release_stale_starts`), which is what a restart mid-start leaves; it does so whatever
   `LADDER_BOTS` says, since a restart may have turned it off, and long before the reaper's
   open-row sweep (R1450) would delete the skeleton.
+- `bots::calibrate` measures the seed ratings `BOT_SEED_RATINGS` holds (R748000,
+  `docs/bot-calibration.md`). `jackioh-server bot-calibrate` plays every pair of `BOT_STRENGTHS`
+  `BOT_CALIBRATION_GAMES_PER_PAIR` games as the bot seat plays them (the skill's roll, then
+  `decide_styled` or the random policy, and no clock), fits each strength's Elo offset from the
+  strongest and prints the two config rows; it reads no database, and its anchor is the seed of
+  record shifted by the AI promotions in `training/history` since `BOT_CALIBRATION_GENERATION`. The
+  seeds in `BOT_SEED_RATINGS` are the skill curve's (R747000, "Skill to Elo" below), which the
+  calibration checks for the strengths as built; a row pasted over them goes over the curve's too. `bot-calibrate-live [--since=<epoch ms>]` reads the strongest bot's
+  rated games against people (`ranked_bot_games_since`) and prints the rating they say it performs
+  at, to give `bot-calibrate` as `--anchor`. Run it again after each AI promotion.
+
+### Skill to Elo (R747000)
+
+A strength's `skill` is the chance each of a bot's decisions follows the AI, the rest being a random
+legal action (`crates/ai/README.md`, Matches). `expected_elo_for_skill(skill)` in `config.rs` is the
+Elo a bot at that skill is expected to hold: `SKILL_ELO_TABLE` read by straight lines between its
+rows, clamped to its ends, with the full-skill reference at `SKILL_ELO_ANCHOR` (1200: the strongest
+bot's old seed, so that a player who has climbed still finds a bot to be paired with, R1453). Each
+strength's `seed_rating` is that function at its skill, and a test holds them equal. The table is a
+prior: a bot's live Glicko-2 rating (R610) is the calibration that goes on.
+
+| Skill | Elo | Gap to the reference | Against the reference | Against random |
+| --- | --- | --- | --- | --- |
+| 0 (the random policy) | 570 | −628 | 21 of 800 | the null check: 107 wins, 1 draw, 92 losses of 200 |
+| 0.25 | 740 | −461 | 14 of 200 (−449) | 142 of 200 (+155, −472) |
+| 0.5 | 900 | −300 | 32 of 200 (−288) | 172 of 200 (+315, −312) |
+| 0.75 | 1080 | −123 | 66 of 200 (−123) | not run |
+| 1 (the reference) | 1200 | 0 | | |
+
+The games are `cargo jackioh arena` between this build's AI at each skill and the reference, and
+between each skill and the random policy, in a release build, on seeds a run's own name gives
+(`elo-747/…`), with the seats alternating. "Against the reference" is the wins of the skill's side;
+the figures in brackets are the Elo gap those games give and, against random, the gap to the
+reference after adding the random policy's. The 0 row is the random policy exactly (skill 0 plays
+`random_action` and nothing else), so its row is the reference's games against `random`: 779 wins of
+800 for the reference. The reference against 0.0 is not run again, and 0.75 against random, which
+the AI wins nearly always, resolves nothing, so it is not run. A cross-check ladder of adjacent
+skills, 100 games each, agrees with the table to within its noise: 0.5 beat 0.25 73–27 (+173, the
+table's +160), 0.75 beat 0.5 73–27 (+173, the table's +180), the reference beat 0.75 74–26 (+182,
+the table's +120).
+
+**Re-measuring** (after a new best AI, or when a set ships, and the table pasted over):
+
+1. `cargo build --release -p jackioh-tools`, then, with the AI whose curve is wanted as `self`:
+   `cargo jackioh arena --a self --b random --games 200 --seed "elo-<run>/random-vs-ref"`, four
+   times with the seeds `…/random-vs-ref`, `…-b`, `…-c` and `…-d` (the shut-out needs the games);
+   then for each skill
+   `S` in 0.25, 0.5 and 0.75, `--a self --a-skill S --b self --games 200 --seed "elo-<run>/sS-vs-ref"`
+   (the duel lines and the tally are on stderr, with no `--out`), and for 0.25 and 0.5,
+   `--a self --a-skill S --b random --games 200 --seed "elo-<run>/sS-vs-random"`.
+2. Score each run from the measured side: `p = (wins + draws / 2) / games`, held inside `[1 / 2N,
+   1 − 1 / 2N]` for N games (so a shut-out reads as a bound, not infinity), and the gap
+   `400 · log10(p / (1 − p))`. The random policy's gap to the reference is its own run's. A skill's
+   gap is the mean of the gaps it has: its games against the reference, and its games against
+   random plus the random policy's gap.
+3. A row's Elo is `SKILL_ELO_ANCHOR` plus the gap, rounded to the nearest 10. Paste the rows over
+   `SKILL_ELO_TABLE` and `BOT_SEED_RATINGS`, the strengths' `seed_rating`s (the test
+   `r747000_strength_seed_ratings_match_skill_curve` fails until they agree), and the new numbers
+   over this table.
+
+A run of 200 games near an even match is good to about ±50 Elo (95%), and a run of 50 to about ±95,
+which is as fast a check that an AI change moved the curve as is worth running; a shut-out run
+(the random policy against the reference) is a bound, and why it has four times the games. The
+curve is the AI at the arena's budget (`agent::decide_with`, the browser's): the budgets,
+temperatures and missed-lethal chances of the strengths' rows are not measured by it, which live
+ratings take in.
 
 Migration 0032 adds `profiles.kind` (`human`, or `bot` for a ladder bot; no client role may read
 it), the server-only `bots` table (one row per bot's profile: strength, speed, persona, schedule,
@@ -383,7 +462,7 @@ sh crates/server/tests/db/run.sh                      # the store contract again
 sh crates/server/tests/deploy/rehearse.sh             # Render's deploy rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-`tests/server.rs` is one binary over `tests/{api,actor,bots,store,support}/`. `support/deps.rs` builds a
+`tests/server.rs` is one binary over `tests/{api,actor,bots,loops,store,support}/`. `support/deps.rs` builds a
 test `App` on `Db::Fake` and `Auth::E2e` and calls the router with `tower`'s `oneshot`;
 `support/engine.rs` installs test cards (`test-prompt-self`, `test-prompt-enemy`, `test-lethal`)
 through the engine testkit's override; `support/socket.rs` is an in-memory socket; time is

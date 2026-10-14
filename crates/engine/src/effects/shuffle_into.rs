@@ -44,6 +44,7 @@ fn source_of<'a>(state: &'a GameState, id: Option<&str>) -> Option<&'a CardInsta
 
 /// `shuffleInto`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ShuffleIntoArgs {
     pub def_id: String,
@@ -105,6 +106,7 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
 
 /// `shuffleCopiesOfSelf`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ShuffleCopiesOfSelfArgs {
     pub count: i32,

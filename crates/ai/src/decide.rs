@@ -26,14 +26,18 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexMap;
-use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for};
+use jackioh_engine::{
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, PlayerId, Rng, active_units_of,
+    mulligan_prompt_for, reduce,
+};
 
-use crate::candidates::{action_key, candidate_actions};
+use crate::candidates::candidate_actions;
 use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
-use crate::determinize::{DeterminizeOptions, determinize};
+use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::lethal::find_lethal;
+use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_shaped;
-use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
+use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
 use crate::simulate::{CountingNodeCounter, create_node_counter, create_sub_counter};
@@ -72,19 +76,18 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
 }
 
 /// Lines in order, at most `perAction` for any one first action, `count` in all.
-fn shortlist_lines(found: &[Line], count: usize) -> Vec<&Line> {
-    let mut taken: IndexMap<String, i32> = IndexMap::new();
-    let mut out: Vec<&Line> = Vec::new();
+fn shortlist_lines<'a>(found: &'a [Line], count: usize) -> Vec<&'a Line> {
+    let mut taken: IndexMap<&ActionBody, i32> = IndexMap::new();
+    let mut out: Vec<&'a Line> = Vec::new();
     for line in found {
         let Some(first) = line.actions.first() else {
             continue;
         };
-        let key = action_key(first);
-        let already = taken.get(&key).copied().unwrap_or(0);
+        let already = taken.get(first).copied().unwrap_or(0);
         if already >= AI_SEARCH.lines_per_action {
             continue;
         }
-        taken.insert(key, already + 1);
+        taken.insert(first, already + 1);
         out.push(line);
         if out.len() >= count {
             break;
@@ -102,15 +105,14 @@ struct Scored<'a> {
 
 /// The best-scoring line for each distinct first action, best first, at most `count` of them.
 fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<'a>> {
-    let mut best: IndexMap<String, Scored<'a>> = IndexMap::new();
+    let mut best: IndexMap<&'a ActionBody, Scored<'a>> = IndexMap::new();
     for entry in scored {
         let Some(first) = entry.line.actions.first() else {
             continue;
         };
-        let key = action_key(first);
-        match best.get_mut(&key) {
+        match best.get_mut(first) {
             None => {
-                best.insert(key, *entry);
+                best.insert(first, *entry);
             }
             Some(held) => {
                 if entry.score > held.score {
@@ -127,6 +129,47 @@ fn best_per_first_action<'a>(scored: &[Scored<'a>], count: usize) -> Vec<Scored<
     entries
 }
 
+/// A decision's width (AI_SEARCH.fat_*): the more of its root candidates, or the more cards held and
+/// in play across both sides, the more every `reduce` and `legal_actions` under it costs. A prompt's
+/// short list of answers hides the state it answers into, so the cards count beside the candidates.
+fn fat_width(probe: &GameState, candidates: usize) -> usize {
+    let mut size = 0usize;
+    for player in PLAYER_IDS {
+        let side = &probe.players[player];
+        size += side.hand.len();
+        size += active_units_of(probe, player).len();
+        size += side.backrow.iter().flatten().count();
+    }
+    candidates.max(size)
+}
+
+/// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes` in inverse proportion to
+/// the width past fat_reference, floored at fat_min_nodes; the lethal solver keeps its share of it,
+/// floored at fat_min_lethal. The search's shape (determinizations, widths, depths, finalists) is
+/// the caller's unchanged.
+fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
+    let reference = AI_SEARCH.fat_reference.max(1) as usize;
+    let nodes = if fat <= reference {
+        budget.nodes
+    } else {
+        (budget.nodes * reference / fat).max(AI_SEARCH.fat_min_nodes.max(0) as usize)
+    };
+    // A budget that gives the lethal solver nothing (lethal_nodes 0) is a caller that does not
+    // want it run at all, not one to be floored up to fat_min_lethal.
+    let lethal_nodes = if budget.lethal_nodes == 0 {
+        0
+    } else {
+        (budget.lethal_nodes * nodes / budget.nodes.max(1))
+            .max(AI_SEARCH.fat_min_lethal.max(0) as usize)
+            .min(nodes)
+    };
+    SearchBudget {
+        nodes,
+        lethal_nodes,
+        ..budget
+    }
+}
+
 /// R1452: whether this decision passes over the lethal line the solver found. A style that never
 /// misses takes no draw.
 fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
@@ -138,7 +181,6 @@ fn passes_over_lethal(style: &AiStyle, rng: &mut Rng) -> bool {
 /// missed lethal keeps off every line that wins on the determinization it was searched on and every
 /// line that opens with the solver's first lethal action. When that leaves nothing, every line.
 fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: PlayerId) -> Vec<Line> {
-    let lethal_key = action_key(first_lethal);
     let kept: Vec<Line> = found
         .iter()
         .filter(|line| {
@@ -147,10 +189,7 @@ fn lines_missing_lethal(found: Vec<Line>, first_lethal: &ActionBody, seat: Playe
                 .result
                 .as_ref()
                 .is_some_and(|result| result.winner.player() == Some(seat));
-            let opens_lethal = line
-                .actions
-                .first()
-                .is_some_and(|action| action_key(action) == lethal_key);
+            let opens_lethal = line.actions.first().is_some_and(|action| action == first_lethal);
             !wins && !opens_lethal
         })
         .cloned()
@@ -236,12 +275,17 @@ fn plan(
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
-    // 4. Forced: a throwaway world lists the candidates without touching options.rng.
-    let probe = determinize(
+    // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
+    // determinization of this decision starts from the same public state, so the read-only part
+    // of the determinization (the pools, what the opponent has shown, each side's face-down
+    // grants) is computed once (det_ground) and handed to each.
+    let ground = det_ground(&public, seat);
+    let probe = determinize_on(
         &public,
         seat,
         &mut Rng::new(AI_SEARCH.probe_seed, 0),
         DeterminizeOptions::default(),
+        &ground,
     );
     scratch.candidates = candidate_actions(&probe, seat);
     if scratch.candidates.len() == 1
@@ -250,12 +294,27 @@ fn plan(
         return Plan::Immediate(only.clone(), DecisionReason::Forced);
     }
 
+    // A decision's nodes cost more the wider the state is, so the searched part of the budget
+    // shrinks where the state is fat (AI_SEARCH.fat_*): the 2 s the sweep flags a decision over
+    // (R186) buys a fraction of the nodes there that it buys in the opening. The whole searched
+    // section — the lethal solver's slice, the beam's and the replies' — is drawn from one
+    // sub-counter of that size, so the replies cannot spend what the beam was denied.
+    let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
+    let stage = create_sub_counter(counter, budget.nodes);
+    let counter: &dyn NodeCounter = &stage;
+
     // The determinizations' draws: with a style's own two (passing over lethal, picking a
     // finalist), the only draws decide ever takes from options.rng.
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
-        dets.push(determinize(&public, seat, rng, DeterminizeOptions::default()));
+        dets.push(determinize_on(
+            &public,
+            seat,
+            rng,
+            DeterminizeOptions::default(),
+            &ground,
+        ));
     }
     scratch.determinizations = k;
 
@@ -422,6 +481,80 @@ fn plan(
     }
 }
 
+/// The body a decision submits: the chosen one when the reducer accepts it on the true state, and
+/// the first of the match's replacements (`replacements_for`: endTurn, then an answer, then any
+/// other legal action) when it does not. A chosen action can be legal on every determinization and
+/// still refuse on the true state — a face-down aura trap taxes the hand the determinization could
+/// not see (R403) — and a submitted refusal is recorded against the AI and replaced anyway, so the
+/// same replacement is better submitted directly: the trajectory is the same one the match would
+/// have made of it, minus the rejection.
+fn submitted(state: &GameState, seat: PlayerId, decision: Decision) -> Decision {
+    if holds_placeholder(state) {
+        // `decide` is handed the observed view outside the gate's drivers (the worker and arena
+        // send the redacted state), and its `ai:hidden` placeholders have no definition the
+        // reducer could resolve — an endTurn's opponent draw throws on one. Only a true state
+        // proves a refusal, so here the chosen action goes in as decided and the match's own
+        // replacement machinery stands in for the refusal, exactly as it does without this check.
+        return decision;
+    }
+    let trial = |action: &ActionBody| {
+        catch_unwind(AssertUnwindSafe(|| {
+            reduce(state, &Action::new(action.clone(), seat, "submitted".to_string()))
+                .error
+                .is_none()
+        }))
+        .unwrap_or(false)
+    };
+    if trial(&decision.action) {
+        return decision;
+    }
+    for replacement in replacements_for(state, seat) {
+        if trial(&replacement) {
+            return Decision {
+                line: vec![replacement.clone()],
+                action: replacement,
+                reason: DecisionReason::Fallback,
+                ..decision
+            };
+        }
+    }
+    decision
+}
+
+/// Any `ai:hidden` placeholder anywhere in the state (determinize.rs `is_placeholder`): a state the
+/// observer redacted is not one a trial `reduce` can run on.
+fn holds_placeholder(state: &GameState) -> bool {
+    fn any(pile: &[CardInstance]) -> bool {
+        pile.iter().any(|card| card.def_id == HIDDEN_DEF_ID)
+    }
+    PLAYER_IDS.iter().any(|seat| {
+        let player = &state.players[*seat];
+        any(&player.hand)
+            || any(&player.library)
+            || any(&player.graveyard)
+            || any(&player.exile)
+            || any(&player.resolving)
+            || player.units.iter().flatten().any(|pile| any(pile))
+            || player
+                .backrow
+                .iter()
+                .flatten()
+                .any(|card| card.def_id == HIDDEN_DEF_ID)
+            || player
+                .backrow_piles
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|card| card.def_id == HIDDEN_DEF_ID)
+            || player
+                .carried
+                .iter()
+                .flatten()
+                .flatten()
+                .any(|card| card.def_id == HIDDEN_DEF_ID)
+    })
+}
+
 /// The AI's one entry point. `None` when !ai_to_act(state, seat). Never panics out.
 pub fn decide(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> Option<Decision> {
     decide_styled(state, seat, options, &AI_STYLE_EXACT)
@@ -465,27 +598,35 @@ pub fn decide_styled(
     };
 
     match outcome {
-        Ok(Plan::Immediate(action, reason)) => Some(immediate(action, reason)),
+        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason))),
         Ok(Plan::Searched {
             action,
             reason,
             line,
             score,
             stopped_by,
-        }) => Some(Decision {
-            action,
-            reason,
-            line,
-            stats: stats(&counter, 0, score, stopped_by),
-        }),
+        }) => Some(submitted(
+            state,
+            seat,
+            Decision {
+                action,
+                reason,
+                line,
+                stats: stats(&counter, 0, score, stopped_by),
+            },
+        )),
         Err(_) => {
             let action = fallback_action(&scratch.candidates);
-            Some(Decision {
-                line: vec![action.clone()],
-                action,
-                reason: DecisionReason::Fallback,
-                stats: stats(&counter, 1, 0.0, None),
-            })
+            Some(submitted(
+                state,
+                seat,
+                Decision {
+                    line: vec![action.clone()],
+                    action,
+                    reason: DecisionReason::Fallback,
+                    stats: stats(&counter, 1, 0.0, None),
+                },
+            ))
         }
     }
 }

@@ -33,6 +33,8 @@ export function screenNameFor(path: string): string | null {
       return "Terms";
     case paths.accessibility:
       return "Accessibility";
+    case paths.copyright:
+      return "Copyright";
     case paths.patchNotes:
       return "Patch notes";
     case paths.almanac:
@@ -44,6 +46,8 @@ export function screenNameFor(path: string): string | null {
     case paths.hotseat:
       // Read here, not at load: Vite's config loader runs this file with no `import.meta.env`.
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;
+    case paths.devReplays:
+      return import.meta.env.MODE !== "production" ? "Replays" : null;
   }
   if (matchIdOf(path) !== null) return "Match";
   if (seriesIdOf(path) !== null) return "Conquest";

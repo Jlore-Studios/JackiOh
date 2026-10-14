@@ -21,6 +21,8 @@ use jackioh_cards::register_all;
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
+use super::craft_fused;
+
 const MR_VANILLA: &str = "core-008";
 const MIDRANGE_MENACE: &str = "core-019";
 const EFFICIENCY_DIVIDEND: &str = "core-024";
@@ -32,7 +34,6 @@ const BIGOT: &str = "core-002";
 const TWISTED_SORCERER: &str = "core-068";
 const HEROIC_POWER: &str = "core-098";
 const CALL_TO_CHAOS: &str = "core-095";
-const CRAFT_A_CARD: &str = "core-099";
 const KYS_TUTOR: &str = "core-051";
 
 /// TS `let nonce = 0`: the file's action counter, so every action this file sends has its own nonce.
@@ -99,8 +100,9 @@ mod r43_r151_a_heroic_power_created_on_the_field_rolls_its_power {
         // card can be looked at". #95's "summon 5 random Field Spells or Traps into your backrow" puts a
         // Heroic Power straight onto the field — never through a hand or a library, the only arrivals
         // that roll. (Carnivorous Cube's copies were this test's route until R428 took backrow meals
-        // away from the Cube.) The roll is pinned: the play's first rng draw is #95's roll, and the first
-        // backrow pick follows it, from the pool of every set (R380).
+        // away from the Cube.) The roll is searched for: the play's first rng draw is #95's roll, and the
+        // first backrow pick follows it, from the pool of every set (R380). The seed is arbitrary; the
+        // cursor is found at run time, so a card joining the pool moves nothing.
         let seed = "r151-chaos";
         let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
         let backrow = subsystems::CHAOS_EFFECTS
@@ -201,13 +203,12 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
      {
         register_all();
         let mut g = scenario(json!({
-            "seed": "craft-9344", // the first Discover offers Bigot, the second Twisted Sorcerer (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
-            "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4 },
+            "p1": { "hand": [RENO], "mana": 4 },
             "p2": { "hand": [RENO], "field": [PREM_PANTHER] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(BIGOT));
-        g.answer(json!(TWISTED_SORCERER));
+        // Craft a Card's result for Bigot and Twisted Sorcerer, made directly (R77): the test is about the
+        // fused card, not about which two Discover offers the pools of every set (R380) make.
+        craft_fused(&mut g, P1, &[BIGOT, TWISTED_SORCERER]);
         let crafted = must(
             g.hand(P1)
                 .iter()
@@ -249,13 +250,11 @@ mod r90_r102_a_fused_card_s_declarations_each_read_their_own_slice_of_the_play_s
      {
         register_all();
         let mut g = scenario(json!({
-            "seed": "craft-1439", // the first Discover offers Archivist, the second Silly Silas (pools of every set, R380; re-pinned for v0.3.5: the Meditative set joins the pool)
-            "p1": { "hand": [CRAFT_A_CARD, RENO], "mana": 4, "library": [MR_VANILLA, MIDRANGE_MENACE, MR_VANILLA] },
+            "p1": { "hand": [RENO], "mana": 4, "library": [MR_VANILLA, MIDRANGE_MENACE, MR_VANILLA] },
             "p2": { "hand": [RENO], "field": [MR_VANILLA] },
         }));
-        g.play(CRAFT_A_CARD, json!({}));
-        g.answer(json!(ARCHIVIST));
-        g.answer(json!(SILLY_SILAS));
+        // Craft a Card's result for Archivist and Silly Silas, made directly (R77), as above.
+        craft_fused(&mut g, P1, &[ARCHIVIST, SILLY_SILAS]);
         let crafted = must(
             g.hand(P1)
                 .iter()

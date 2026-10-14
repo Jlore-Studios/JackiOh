@@ -13,22 +13,22 @@ import { RADIANT_PALETTE, type ArtThemeId, type Composition } from "./themes.ts"
 
 const DATA_PREFIX = "data:image/svg+xml,";
 /** Rays reach past every corner of the box from anywhere inside it. */
-const RAY_LENGTH = 150;
-const EMBLEM_STROKE_WIDTH = 1.1;
+export const RAY_LENGTH = 150;
+export const EMBLEM_STROKE_WIDTH = 1.1;
 /** The glow's gradient keeps this share of its opacity at its midpoint. */
-const GLOW_MID_STOP = 0.45;
-const VIGNETTE_RADIUS = 72;
-const VIGNETTE_START = 0.6;
-const VIGNETTE_OPACITY = 0.5;
+export const GLOW_MID_STOP = 0.45;
+export const VIGNETTE_RADIUS = 72;
+export const VIGNETTE_START = 0.6;
+export const VIGNETTE_OPACITY = 0.5;
 const DEGREES = Math.PI / 180;
 
 /** The procedural-art memo is cleared once it would pass this many entries. */
 const ART_CACHE_MAX = 512;
 
 /** The accent glyph is quieter than the emblem. */
-const ACCENT_OPACITY = 0.8;
+export const ACCENT_OPACITY = 0.8;
 /** An ink-drop mote (Book): its tail rises this many radii above its centre. */
-const DROP_TAIL = 2.2;
+export const DROP_TAIL = 2.2;
 
 /** One glyph from EMBLEMS, placed, turned and scaled into the box. */
 function glyphMarkup(placed: NonNullable<ArtSpec["accent"]>, opacity: number): string {

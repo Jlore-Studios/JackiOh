@@ -349,6 +349,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     fn r212_a_bear_honeypot_its_opponent_s_spell_stole_after_a_cast_in_the_same_list_answers_that_cast_for_the_player_who_held_it_then()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-honeypot-lifted",
             "p1": {
                 "hand": [VANILLA],
@@ -435,6 +436,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     fn r212_a_bread_and_butter_an_earlier_trap_of_the_end_of_turn_window_stole_answers_that_turn_end_for_the_player_who_held_it_when_it_ended()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-window-lift",
             "p1": { "hand": [VANILLA], "field": [{ "def": VANILLA, "lane": 5 }], "library": LIBRARY },
             "p2": {
@@ -491,6 +493,7 @@ mod r212_for_traps_a_trap_answers_an_event_as_the_board_stood_when_it_happened {
     #[test]
     fn r212_r174_a_bear_honeypot_that_arrived_after_a_cast_in_the_same_list_does_not_answer_that_cast() {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-honeypot-late",
             "p1": {
                 "hand": [VANILLA],

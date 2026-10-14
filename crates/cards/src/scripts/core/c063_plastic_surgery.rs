@@ -1,6 +1,6 @@
 //! #63 Plastic Surgery (SPEC §8.3, §6.1, R21, R78, R81, R90, R703).
 //!
-//! Base: "Target unit gets +3/+3 and 1 random keyword". Radiant: "+6/+6 and 2 random keywords",
+//! Base: "Target unit gets +3/+3 and 1 random combat keyword". Radiant: "+6/+6 and 2 random combat keywords",
 //! which §8's Conventions read as changing only those numbers.
 //!
 //! §8.3's Engine cell is "Pool in 6.1", i.e. R21's eleven keywords. R21 also fixes the two
@@ -16,49 +16,7 @@
 //! and fizzle. A cast still fizzles (R70, a cast is never refused), so both effects resolve
 //! `{ of: "chosen" }` and do nothing when it is empty.
 
-use jackioh_engine::effects::{buff, grant_random_keywords};
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-063";
-
-/// "Target unit": either side, §8's Conventions, and no narrowing in either cell.
-fn targets() -> Vec<TargetDecl> {
-    vec![
-        // R656: a buff and a keyword help, so a random cast that targets enemies aims this at friends.
-        // R703: and the play needs it, so no Unit to target means no play.
-        json_as(json!({
-            "kind": "target",
-            "min": 1,
-            "max": 1,
-            "filter": { "side": "any", "of": ["unit"] },
-            "aim": "help",
-            "required": true,
-        })),
-    ]
-}
-
-/// The radiant face is the same card at doubled numbers, so one script carries both: the declared
-/// numbers `buff` (3, 6) and `keywords` (1, 2), R386.
-fn surgery() -> Script {
-    Script {
-        targets: targets(),
-        cry: Some(hook(|ctx| {
-            let stat = param(&*ctx, "buff");
-            let keywords = param(&*ctx, "keywords");
-            vec![
-                buff(json_as(json!({ "target": { "of": "chosen" }, "attack": stat, "health": stat }))),
-                grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": keywords }))),
-            ]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    let base = surgery();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
 //
@@ -68,6 +26,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::reduce::legal_actions;
     use jackioh_engine::resolve::cast_card;
+    use jackioh_engine::effects::random_pool_keywords;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -77,13 +36,10 @@ mod tests {
     const TIMMY: &str = "core-011"; // 3/3 with Rush and First Strike, both in the pool
     const MENACE: &str = "core-019"; // 9/9 with Taunt, in the pool
 
-    /// R21's pool as keyword KINDS: "Armor 1" is its one numbered entry (§6.1). Read from
-    /// `RANDOM_KEYWORD_POOL`, so this test never restates the eleven keywords (SPEC §6.1).
+    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1). Read from the
+    /// engine's pool, so this test never restates the keywords (SPEC §6.1, R781005).
     fn pool_kinds() -> Vec<&'static str> {
-        RANDOM_KEYWORD_POOL
-            .iter()
-            .map(|entry| if *entry == "Armor 1" { "Armor" } else { *entry })
-            .collect()
+        random_pool_keywords().iter().map(|keyword| keyword.kind().as_str()).collect()
     }
 
     fn sel(card: &CardInstance) -> Value {

@@ -85,6 +85,8 @@ export const paths = {
   privacy: "/privacy",
   terms: "/terms",
   accessibility: "/accessibility",
+  /** Issue #757: the copyright and takedown page. */
+  copyright: "/copyright",
   /** R388: patch notes and touched cards. */
   patchNotes: "/patch-notes",
   /** R630: browsable cards, including tokens. */
@@ -94,6 +96,8 @@ export const paths = {
   /** R654: public card and player statistics. */
   stats: "/stats",
   hotseat: "/dev/hotseat",
+  /** #511: the replay player's dev list; production serves a 404 there, as at the hotseat. */
+  devReplays: "/dev/replays",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
   series: (seriesId: string): string => `/series/${seriesId}`,

@@ -355,10 +355,51 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
-  Magnetic: () => (
+  Equip: () => (
     <Part className="kw-glyph-art kw-magnet" anim fit="contain">
       <path d="M28 24 V56 A22 22 0 0 0 72 56 V24 H58 V54 A8 8 0 0 1 42 54 V24 Z" fill="#e0574f" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
       <path d="M28 24 H42 V38 H28 Z M58 24 H72 V38 H58 Z" fill="#f3e3b4" />
+    </Part>
+  ),
+
+  // #783's keywords (R783000, R783002, R783004, R783010, R783012).
+  Ranged: () => (
+    <Part className="kw-glyph-art kw-bow" anim fit="contain">
+      <path d="M30 10 C66 26 66 74 30 90" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
+      <path d="M30 10 C66 26 66 74 30 90" fill="none" stroke="#c98a45" strokeWidth="4.5" strokeLinecap="round" />
+      <path d="M30 10 V90" stroke="#f1f5fb" strokeWidth="2" />
+      <Inked d="M14 50 H84 M74 42 L86 50 L74 58" ink="#e6fdff" width={3.4} />
+    </Part>
+  ),
+
+  Flying: () => (
+    <Part className="kw-glyph-art kw-wings" anim fit="contain">
+      <path d="M50 58 C38 36 20 28 4 30 C14 40 18 52 30 58 C22 60 16 66 12 72 C28 72 42 68 50 58 Z" fill="#e6f0ff" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M50 58 C62 36 80 28 96 30 C86 40 82 52 70 58 C78 60 84 66 88 72 C72 72 58 68 50 58 Z" fill="#e6f0ff" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+    </Part>
+  ),
+
+  Cloaked: () => (
+    <Part className="kw-glyph-art kw-cloak" anim fit="contain">
+      <path d="M50 6 C26 6 16 30 16 52 C16 72 12 84 8 94 H92 C88 84 84 72 84 52 C84 30 74 6 50 6 Z" fill="#5b4a7a" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M50 26 C36 26 30 40 30 54 C30 64 40 72 50 72 C60 72 70 64 70 54 C70 40 64 26 50 26 Z" fill="#14101f" />
+      <path d="M40 52 H46 M54 52 H60" stroke="#c9b8f0" strokeWidth="3" strokeLinecap="round" />
+    </Part>
+  ),
+
+  Crater: () => (
+    <Part className="kw-glyph-art kw-crater" anim fit="contain">
+      <path d="M6 62 C18 50 30 56 34 48 L66 48 C70 56 82 50 94 62 C82 88 18 88 6 62 Z" fill="#8a6a4a" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M28 62 C36 74 64 74 72 62 C62 56 38 56 28 62 Z" fill="#3a2a1a" />
+      <path d="M22 36 L30 28 L34 38 Z M46 24 L54 14 L58 26 Z M70 34 L78 26 L80 38 Z" fill="#c9a27a" stroke="#0b0d12" strokeWidth="2" strokeLinejoin="round" />
+    </Part>
+  ),
+
+  Flashback: () => (
+    <Part className="kw-glyph-art kw-rewind" anim fit="contain">
+      <path d="M76 30 A32 32 0 1 0 82 56" fill="none" stroke="#0b0d12" strokeWidth="10" strokeLinecap="round" />
+      <path d="M76 30 A32 32 0 1 0 82 56" fill="none" stroke="#ffb35c" strokeWidth="5" strokeLinecap="round" />
+      <path d="M64 12 L82 28 L60 36 Z" fill="#ffb35c" stroke="#0b0d12" strokeWidth="3" strokeLinejoin="round" />
     </Part>
   ),
 

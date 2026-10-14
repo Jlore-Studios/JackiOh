@@ -194,6 +194,7 @@ const FULLSEND: &str = "core-078";
 const CALL_TO_CHAOS: &str = "core-095";
 
 const R119_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
+/// The seed is arbitrary: `quickstriker_cursor` finds the cursor where #95 rolls what the test needs.
 const R119_SEED: &str = "r9-c2c-0";
 
 /// A cursor at which #95's one roll is "summon 5 random Field Spells or Traps" and a Quickstriker is
@@ -204,10 +205,10 @@ fn quickstriker_cursor() -> u32 {
     let backrow = subsystems::CHAOS_EFFECTS
         .iter()
         .position(|effect| effect.name == "backrow");
-    for cursor in 0..100_000u32 {
+    cursor_where(R119_SEED, |cursor| {
         let mut rng = Rng::new(R119_SEED, cursor);
         if Some(rng.int(subsystems::CHAOS_EFFECTS.len() as i32) as usize) != backrow {
-            continue;
+            return false;
         }
         let picks: Vec<Option<String>> = (0..5)
             .map(|_| {
@@ -215,11 +216,8 @@ fn quickstriker_cursor() -> u32 {
                     .map(|def| def.id.clone())
             })
             .collect();
-        if picks.contains(&Some(QUICKSTRIKER.to_string())) {
-            return cursor;
-        }
-    }
-    panic!("no cursor rolls a Quickstriker into #95's backrow");
+        picks.contains(&Some(QUICKSTRIKER.to_string()))
+    })
 }
 
 fn drawn_count(events: &[GameEvent]) -> usize {

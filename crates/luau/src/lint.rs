@@ -112,6 +112,11 @@ fn follows_access(tokens: &[(Token<'_>, u32)], at: usize) -> bool {
 fn name_rule(name: &str, before: Option<Token<'_>>, rest: &[(Token<'_>, u32)]) -> Option<Rule> {
     let next = |k: usize| rest.get(k).map(|(token, _)| *token);
     match name {
+        // `pairs` names a `with_kill_credit` argument as a record key (`pairs = "kill_pairs"`):
+        // a key is not iteration — the sandbox removes the `pairs` global, so no key can hand a
+        // `for` the iterator — while `pairs(t)` and `for … in pairs` stay refused (#464 gap 9).
+        // `next` keeps no carve-out: no verb argument uses it.
+        "pairs" if next(0) == Some(Token::Op("=")) => None,
         "pairs" => Some(Rule::Pairs),
         "next" => Some(Rule::Next),
         "ipairs" if before != Some(Token::Name("in")) => Some(Rule::Ipairs),

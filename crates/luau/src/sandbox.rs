@@ -1,15 +1,15 @@
 //! The sandbox (#442 L5): the Luau a card script runs in. Five libraries (string, table, math, bit32
 //! and utf8), with the base library's ways out of a pure function taken away, a `require` that answers
 //! only the host's own module, Luau's own sandbox (`Lua::sandbox(true)`: every library and the
-//! globals read-only) and an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts.
-//! What the lint refuses by name (L6, L7) is taken away here too, so a key the lint cannot read
-//! (`_G["pairs"]`, `math["sqrt"]`) finds nothing.
+//! globals read-only), an interrupt that stops a hook after `LUAU_HOOK_INTERRUPTS` interrupts and a
+//! cap of `LUAU_MEMORY_BYTES` on what the VM holds (#843). What the lint refuses by name (L6, L7) is
+//! taken away here too, so a key the lint cannot read (`_G["pairs"]`, `math["sqrt"]`) finds nothing.
 
 use mlua::{Error, Lua, LuaOptions, StdLib, Table, Value, VmState};
 
 use crate::Site;
 use crate::api;
-use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS};
+use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES};
 use crate::lint::MATH_ALLOWED;
 
 /// The base library's globals a script never sees: output, environments, loading code at run time,
@@ -165,6 +165,41 @@ impl Budget {
     }
 }
 
+/// The VM's memory cap set to a limit until this drops, then put back as it was (#843). Every hook
+/// call runs under `LUAU_MEMORY_BYTES` (`vm::BudgetGuard`), a nested one included; a reader lifts it
+/// while it builds its answer. Under a cap mlua runs each value the host builds through a
+/// protected call, which cost a hook call about half its time; what a reader builds is bounded by
+/// the state it reads, not by the script, and is still counted, so the script's next allocation past
+/// the cap fails as before.
+pub(crate) struct MemoryCap<'l> {
+    lua: &'l Lua,
+    previous: usize,
+}
+
+impl<'l> MemoryCap<'l> {
+    /// The cap at `LUAU_MEMORY_BYTES`, as a hook call runs under it.
+    pub(crate) fn hold(lua: &'l Lua) -> MemoryCap<'l> {
+        MemoryCap::set(lua, LUAU_MEMORY_BYTES)
+    }
+
+    /// No cap (mlua's limit 0), as a reader builds its answer.
+    pub(crate) fn lift(lua: &'l Lua) -> MemoryCap<'l> {
+        MemoryCap::set(lua, 0)
+    }
+
+    fn set(lua: &'l Lua, limit: usize) -> MemoryCap<'l> {
+        let previous = lua.set_memory_limit(limit).unwrap_or(limit);
+        MemoryCap { lua, previous }
+    }
+}
+
+impl Drop for MemoryCap<'_> {
+    fn drop(&mut self) {
+        // Only a Luau in module mode has no memory control, and this host never is one.
+        let _ = self.lua.set_memory_limit(self.previous);
+    }
+}
+
 /// The error a hook stopped at L5's cap fails with, naming its card, face and hook.
 pub fn stopped(site: Site) -> String {
     format!("{site}: stopped after {LUAU_HOOK_INTERRUPTS} interrupts (L5)")
@@ -176,9 +211,22 @@ pub fn too_deep(site: Site) -> String {
     format!("{site}: hook calls nested deeper than {LUAU_HOOK_DEPTH} (L5)")
 }
 
-/// A Luau with the sandbox above, the host's module behind `require`, and the interrupt. Rust panics
-/// are not Lua errors here (`catch_rust_panics(false)`): `pcall` and `xpcall` raise a panic again,
-/// so a hook cannot catch a nested hook's failure and go on.
+/// The error a hook call that ran out of memory fails with, naming its card, face and hook.
+pub fn out_of_memory(site: Site) -> String {
+    format!("{site}: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)")
+}
+
+/// Whether `error` is an allocation past `LUAU_MEMORY_BYTES`, raised in the hook's own code or, under
+/// a `CallbackError`, in a reader it called.
+pub fn ran_out_of_memory(error: &Error) -> bool {
+    error
+        .chain()
+        .any(|layer| matches!(layer.downcast_ref::<Error>(), Some(Error::MemoryError(_))))
+}
+
+/// A Luau with the sandbox above, the host's module behind `require`, the interrupt and the memory
+/// cap. Rust panics are not Lua errors here (`catch_rust_panics(false)`): `pcall` and `xpcall` raise
+/// a panic again, so a hook cannot catch a nested hook's failure and go on.
 pub fn new_sandbox() -> mlua::Result<Sandbox> {
     let lua = Lua::new_with(
         StdLib::STRING | StdLib::TABLE | StdLib::MATH | StdLib::BIT | StdLib::UTF8,
@@ -220,6 +268,7 @@ pub fn new_sandbox() -> mlua::Result<Sandbox> {
     lua.sandbox(true)?;
     lua.set_app_data(Budget::new());
     lua.set_interrupt(interrupt);
+    lua.set_memory_limit(LUAU_MEMORY_BYTES)?;
     Ok(Sandbox { env, lua })
 }
 

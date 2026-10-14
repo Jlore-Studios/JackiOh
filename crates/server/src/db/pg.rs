@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0032) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0035) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -70,16 +70,17 @@ use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant,
+    ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
     EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchClocks, MatchRow, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
+    MatchActionRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
     PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
-    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
+    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
+    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
+    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -572,6 +573,8 @@ struct MatchDbRow {
     mode: Option<String>,
     /// R672 (migration 0023): 2 on a double-or-nothing rematch; null is a normal game.
     stake: Option<i16>,
+    /// R768 (migration 0035): the final state's hash, written with the result.
+    final_hash: Option<String>,
 }
 
 impl MatchDbRow {
@@ -601,6 +604,7 @@ impl MatchDbRow {
             p2_portrait: get(row, "p2_portrait")?,
             mode: get(row, "mode")?,
             stake: get(row, "stake")?,
+            final_hash: get(row, "final_hash")?,
         })
     }
 }
@@ -611,7 +615,7 @@ macro_rules! match_columns {
         "id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
   catalog_version, turn_deadline_at, prompt_deadline_at, p1_disconnected_at, p2_disconnected_at,
   ceiling_at, created_at, ended_at, p1_last_board, p2_last_board, ranked, p1_portrait, p2_portrait,
-  mode, stake, p1_glitch_board, p2_glitch_board"
+  mode, stake, p1_glitch_board, p2_glitch_board, final_hash"
     };
 }
 
@@ -707,6 +711,8 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         mode: row.mode.as_deref().map(queue_mode_of).transpose()?,
         stake: row.stake.map(stake_of).transpose()?,
         portraits,
+        // R768 (migration 0035): absent until the result writes it.
+        final_hash: row.final_hash,
     })
 }
 
@@ -2793,7 +2799,8 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
 ///
 /// The port hands in the `seq` the actor already used, so the two must agree: a mismatch means
 /// the log and the actor have diverged (a replayed nonce, a gap, a second writer), and it is
-/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists."
+/// raised rather than swallowed — ports.ts: "Rejects a seq that already exists." It is
+/// `StoreError::SeqClash` (R776000), which the actor answers by letting go of the match.
 pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -> Result<(), StoreError> {
     run_as(t, None).await?;
     for row in rows {
@@ -2824,7 +2831,7 @@ pub async fn matches_append_actions(t: &mut PgTx<'_>, rows: &[MatchActionRow]) -
         // rollback takes that insert with it. A store that wrote the row and then complained
         // would be worse than one that refused.
         if assigned != row.seq {
-            return Err(StoreError::from(format!(
+            return Err(StoreError::SeqClash(format!(
                 "match_actions is append-only: seq {} exists (app.append_match_action assigned {} for nonce {})",
                 row.seq, assigned, action.nonce
             )));
@@ -3044,6 +3051,135 @@ pub async fn matches_reap_open(t: &mut PgTx<'_>, before: i64) -> Result<u64, Sto
     .await
     .map_err(db_error)?;
     Ok(done.rows_affected())
+}
+
+/// R768 (migration 0035): the `final_hash is null` guard is what makes it written once.
+pub async fn matches_record_final_hash(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    final_hash: &str,
+) -> Result<(), StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(());
+    }
+    run_as(t, None).await?;
+    sqlx::query("update public.matches set final_hash = $2::text where id = $1::uuid and final_hash is null")
+        .bind(match_id)
+        .bind(final_hash)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(())
+}
+
+/// R768: read off the row whatever its status. A claimed room's or a queue pair's reservation is an
+/// `open` row under the match id (KNOWN DIVERGENCES, reserved match ids), which `matches_get` skips.
+pub async fn matches_seats(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<MatchSeats>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row =
+        sqlx::query("select status, p1_profile_id, p2_profile_id from public.matches where id = $1::uuid")
+            .bind(match_id)
+            .fetch_optional(&mut **t)
+            .await
+            .map_err(db_error)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let status: String = get(&row, "status")?;
+    let players = [
+        uuid_text_or_null(&row, "p1_profile_id")?,
+        uuid_text_or_null(&row, "p2_profile_id")?,
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    Ok(Some(MatchSeats {
+        phase: from_literal(&status)?,
+        players,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// Replays (R768)
+// ---------------------------------------------------------------------------
+
+/// One finished match with a result, read for its replay. Unlike `to_match`'s other callers it
+/// reads a deleted second seat as the empty id too (KNOWN DIVERGENCES, deleted accounts), so a
+/// player keeps the replay of a match whose opponent has deleted their account.
+async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Option<ReplayRow>, StoreError> {
+    let row = sqlx::query(concat!(
+        "select ",
+        match_columns!(),
+        " from public.matches
+          where id = $1::uuid and status = 'over'"
+    ))
+    .bind(match_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let Some(row) = row else {
+        return Ok(None);
+    };
+    let mut row = MatchDbRow::read(&row)?;
+    row.p2_profile_id.get_or_insert_with(String::new);
+    let row = to_match(row)?;
+    let Some(result) = results_get_by_match(t, match_id).await? else {
+        return Ok(None);
+    };
+    Ok(Some(ReplayRow { row, result, actions }))
+}
+
+pub async fn replays_list(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    limit: i64,
+    offset: i64,
+) -> Result<Vec<ReplayRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select m.id, (select count(*) from public.match_actions a where a.match_id = m.id) as actions
+           from public.matches m
+          where m.status = 'over'
+            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
+            and exists (select 1 from public.results r where r.match_id = m.id)
+            and exists (select 1 from public.match_actions a where a.match_id = m.id)
+          order by m.ended_at desc nulls last, m.id desc
+          limit $2::bigint offset $3::bigint",
+    )
+    .bind(profile_id)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut replays = Vec::with_capacity(rows.len());
+    for row in &rows {
+        let match_id = uuid_text(row, "id")?;
+        if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
+            replays.push(replay);
+        }
+    }
+    Ok(replays)
+}
+
+pub async fn replays_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<ReplayRow>, StoreError> {
+    if !is_uuid(match_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let counted =
+        sqlx::query("select count(*) as actions from public.match_actions where match_id = $1::uuid")
+            .bind(match_id)
+            .fetch_one(&mut **t)
+            .await
+            .map_err(db_error)?;
+    replay_row(t, match_id, get(&counted, "actions")?).await
 }
 
 // ---------------------------------------------------------------------------
@@ -5206,6 +5342,24 @@ pub async fn ranked_game(t: &mut PgTx<'_>, game_id: &str) -> Result<Option<Rated
         .transpose()
 }
 
+pub async fn ranked_bot_games_since(t: &mut PgTx<'_>, since: i64) -> Result<Vec<RatedGameRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        rated_game_columns!(),
+        " from public.rated_games where (p1_bot_id is not null or p2_bot_id is not null) and ended_at >= ",
+        ts!("$1"),
+        " order by ended_at, id"
+    ))
+    .bind(since)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| RatedGameDbRow::read(row).and_then(to_rated_game))
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // Player statistics on the account (SPEC §9.11, R639, R654)
 // ---------------------------------------------------------------------------
@@ -5254,6 +5408,105 @@ pub async fn player_stats_put(
     .bind(profile_id)
     .bind(json(stats)?)
     .bind(is_private)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Consent on the account (R757000, R757001, migration 0034). No `app.*` function: each table's
+// one rule is "the first row stands", which its primary key and `on conflict do nothing` say.
+// ---------------------------------------------------------------------------
+
+pub async fn consent_get(t: &mut PgTx<'_>, profile_id: &str) -> Result<ConsentRow, StoreError> {
+    let mut consent = ConsentRow {
+        profile_id: profile_id.to_string(),
+        age_checked_at: None,
+        age_min: None,
+        terms: Vec::new(),
+    };
+    if !is_uuid(profile_id) {
+        return Ok(consent);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let age = sqlx::query("select min_age, passed_at from public.age_checks where profile_id = $1::uuid")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    if let Some(row) = age {
+        consent.age_min = Some(i32::from(get::<i16>(&row, "min_age")?));
+        consent.age_checked_at = Some(ms_of(get(&row, "passed_at")?));
+    }
+    let rows = sqlx::query(
+        "select terms_version, source, accepted_at from public.terms_acceptances
+          where profile_id = $1::uuid
+          order by accepted_at, terms_version",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    for row in rows {
+        consent.terms.push(TermsAcceptanceRow {
+            version: get(&row, "terms_version")?,
+            source: get::<String>(&row, "source")?.parse::<TermsSource>()?,
+            accepted_at: ms_of(get(&row, "accepted_at")?),
+        });
+    }
+    Ok(consent)
+}
+
+pub async fn consent_record_age(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    min_age: i32,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    let min_age = i16::try_from(min_age).map_err(|_| StoreError::Other(format!("min_age {min_age}")))?;
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.age_checks (profile_id, min_age, passed_at)
+         values ($1::uuid, $2::smallint, ",
+        ts!("$3"),
+        ")
+         on conflict (profile_id) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(min_age)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn consent_record_terms(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    version: &str,
+    source: TermsSource,
+    at: i64,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(());
+    }
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.terms_acceptances (profile_id, terms_version, source, accepted_at)
+         values ($1::uuid, $2::text, $3::text, ",
+        ts!("$4"),
+        ")
+         on conflict (profile_id, terms_version) do nothing"
+    ))
+    .bind(profile_id)
+    .bind(version)
+    .bind(source.as_str())
     .bind(at)
     .execute(&mut **t)
     .await
@@ -5427,9 +5680,10 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 //    `ranked_game` can read back a null where the port types a profile id. TS handed that null on in
 //    a string-typed slot; a Rust `String` cannot hold it, so a deleted seat reads back as the empty
 //    string (a match's second seat excepted: `to_match` refuses a row with no `p2_profile_id`, as
-//    TS's did). The in-memory store keeps the id (it has no foreign keys). Nothing reads a finished
-//    match's seats back, and a live match or series cannot lose a seat: the delete is refused, by
-//    constraint here and by `DELETE /api/account` first.
+//    TS's did, except for a replay's read, `replay_row`, R768). The in-memory store keeps the id (it
+//    has no foreign keys). Only a replay reads a finished match's seats back, and a live match or
+//    series cannot lose a seat: the delete is refused, by constraint here and by
+//    `DELETE /api/account` first.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one
 //    `grace_deadline_at` plus two `*_disconnected_at`. The per-player deadlines are stored in the
 //    two `*_disconnected_at` columns and `grace_deadline_at` keeps the nearer of them. A migration

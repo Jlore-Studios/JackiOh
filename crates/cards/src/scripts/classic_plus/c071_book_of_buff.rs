@@ -5,26 +5,7 @@
 //! Upgrades, each its own draw (R386); an Immutable card is left alone. The Radiant ten is the declared
 //! `times`, so both faces run this one script.
 
-use jackioh_engine::effects::upgrade;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classicplus-071";
-
-pub fn script() -> CardScripts {
-    let base = Script {
-        // R656: an Upgrade helps, so a random cast that targets enemies aims this at friends.
-        targets: vec![TargetDecl {
-            aim: Some(TargetAim::Help),
-            ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] }))
-        }],
-        cry: Some(hook(|ctx| vec![upgrade(json_as(json!({ "target": { "of": "chosen" }, "times": param(ctx, "times") })))])),
-        ..Script::default()
-    };
-
-    let radiant = base.clone();
-
-    CardScripts { base, radiant }
-}
 
 // C+ #71 Book of Buff — SPEC §8.7 row 71, BUILD M9 row C+ 71: Upgrades one card 5 times, the target
 // chosen with the play (R81) — a permanent on either side (an enemy face-down trap offered by id only,
@@ -35,6 +16,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
+    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -72,7 +54,7 @@ mod tests {
         assert_eq!(def["cost"], json!(1));
         assert_eq!(def["type"], json!("Spell"));
         assert_eq!(def["tags"], json!(["Book"]));
-        let CardScripts { base, radiant } = script();
+        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(js(&base.targets), js(&radiant.targets));
     }
@@ -164,11 +146,11 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_immutable_target_is_unchanged_with_no_draw() {
+        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.play(BOOK, json!({ "targets": pick(&menace.id) }));
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick(&menace.id) })));
             assert!(upgrades(s.events()).is_empty());
             assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));

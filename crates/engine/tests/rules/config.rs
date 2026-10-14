@@ -47,8 +47,7 @@ mod config_constants_build_s2 {
     }
 
     #[test]
-    fn r21_r346_r636_r49_random_keyword_pool_has_the_fourteen_listed_keywords_pierce_windfury_and_deft_last()
-    {
+    fn r21_r781005_random_keyword_pool_is_the_designers_eighteen_combat_keywords_in_order() {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
@@ -57,15 +56,19 @@ mod config_constants_build_s2 {
                 "Rush",
                 "Charge",
                 "First Strike",
+                "Flying",
+                "Ranged",
                 "Poisonous",
-                "Lifesteal",
                 "Reborn",
                 "Divine Shield",
-                "Trample",
-                "Cleave",
-                "Pierce",
                 "Windfury",
+                "Cleave",
+                "Indestructible",
                 "Deft",
+                "Spell Damage 1",
+                "Lifesteal",
+                "Pierce",
+                "Trample",
             ]
         );
     }

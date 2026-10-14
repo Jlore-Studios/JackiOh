@@ -22,6 +22,7 @@ use crate::zones::{card_at, slots_of};
 /// pick, R81), `{ of: "self" }` for Radiant Saintess including itself (R22), or an instance id a
 /// script captured earlier. All plain data, so a card file stays pure (CLAUDE.md rule 5).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RadiantTarget {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -32,6 +33,7 @@ pub struct RadiantTarget {
 
 /// Where a random "becomes Radiant" looks: one zone, or the union of several (#28).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum RadiantZone {
     Hand,
@@ -209,6 +211,7 @@ pub fn clear_radiant(args: RadiantTarget) -> Effect {
 
 /// `setRadiantRandom`'s arguments: one zone or several, `count` (default 1), `player` (default "self").
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetRadiantRandomArgs {
     pub zones: OneOrMany<RadiantZone>,
@@ -345,6 +348,7 @@ fn keep_success(a: bool, b: bool) -> bool {
 
 /// `radiantChance`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RadiantChanceArgs {
     /// Which zones are rolled. Singular to match the card files; `set_radiant_random` above spells the

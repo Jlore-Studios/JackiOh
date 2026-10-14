@@ -133,22 +133,7 @@ describe("R631 the menu theme and the board's music", () => {
     expect(player.requests.at(-1)?.track).toBe("tavern-2");
   });
 
-  it("R631 a Mythic's theme starts as the sound director voices its cast", () => {
-    setReducedMotion(true);
-    vi.useFakeTimers();
-    const first = baseView();
-    const { rerender } = render(<Game view={first} legal={[]} onAction={() => undefined} />);
-    const zephyrs: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "c9", defId: "core-097", costPaid: 7 };
-    rerender(<Game view={withEvents(first, [zephyrs])} legal={[]} onAction={() => undefined} />);
-    act(() => {
-      vi.advanceTimersByTime(5_000);
-    });
-    expect(player.requests.map((r) => r.track)).toContain("mythic-zephyrs");
-  });
-});
-
-describe("R1350 a mounted board's intros", () => {
-  it("R1350 a played Mythic's intro plays under Reduce motion too, before its theme: it is sound, not motion", () => {
+  it("R822000 a Mythic's cast, voiced by the sound director, leaves the board on the station's in-game track", () => {
     setReducedMotion(true);
     vi.useFakeTimers();
     const first = baseView();
@@ -159,7 +144,24 @@ describe("R1350 a mounted board's intros", () => {
       vi.advanceTimersByTime(5_000);
     });
     expect(player.intros).toEqual(["intro-core-097"]);
-    expect(player.requests.map((r) => r.track)).toContain("mythic-zephyrs");
+    expect(player.requests.length).toBeGreaterThan(0);
+    expect(player.requests.filter((r) => r.track !== "tavern-1" && r.track !== "menu")).toEqual([]);
+  });
+});
+
+describe("R1350 a mounted board's intros", () => {
+  it("R1350 a played Mythic's intro plays under Reduce motion too: it is sound, not motion", () => {
+    setReducedMotion(true);
+    vi.useFakeTimers();
+    const first = baseView();
+    const { rerender } = render(<Game view={first} legal={[]} onAction={() => undefined} />);
+    const zephyrs: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "c9", defId: "core-097", costPaid: 7 };
+    rerender(<Game view={withEvents(first, [zephyrs])} legal={[]} onAction={() => undefined} />);
+    act(() => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(player.intros).toEqual(["intro-core-097"]);
+    expect(player.requests.at(-1)?.track).toBe("tavern-1");
   });
 
   it("R1351 a board that leaves cuts the intro it started", () => {

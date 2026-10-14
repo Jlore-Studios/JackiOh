@@ -190,25 +190,32 @@ pub const WINDFURY_ATTACKS: i32 = 2;
 /// ones, so the action lists one attack per attacker under this sentinel.
 pub const RANDOM_ATTACK_TARGET: &str = "random";
 
-/// R21: Plastic Surgery and Zao Gao draw from this pool; a unit never gets a keyword it has. R346:
-/// patch v0.1.1 added Pierce, at the end. R636 added Windfury after it; Deft (R49) was added by
-/// patch v0.2.4; Temporary (R637) stays out, since a card on the field is never in a hand to be discarded.
-/// (Keyword keys, as `keyword_key` writes them.)
+/// R21: the combat keyword pool, which Plastic Surgery, Zao Gao, the Conjure Rush Tokens, a Buff's
+/// keyword row and Keymaster Keenus's Aura draw from; a unit never gets a keyword it has. R346: patch
+/// v0.1.1 added Pierce, R636 Windfury and R49 (patch v0.2.4) Deft. Patch v0.3.7 (R781005) made it the
+/// designer's combat keyword pool, in the designer's order, adding Flying, Ranged, Indestructible and
+/// Spell Damage +1; the order picks which keyword a seeded draw returns. Temporary (R637) stays out,
+/// since a card on the field is never in a hand to be discarded. (Keyword keys, as `keyword_key`
+/// writes them.)
 pub const RANDOM_KEYWORD_POOL: &[&str] = &[
     "Taunt",
     "Armor 1",
     "Rush",
     "Charge",
     "First Strike",
+    "Flying",
+    "Ranged",
     "Poisonous",
-    "Lifesteal",
     "Reborn",
     "Divine Shield",
-    "Trample",
-    "Cleave",
-    "Pierce",
     "Windfury",
+    "Cleave",
+    "Indestructible",
     "Deft",
+    "Spell Damage 1",
+    "Lifesteal",
+    "Pierce",
+    "Trample",
 ];
 
 /// R349: a Unit that prints no Radiant form (the Ghoul Token) is, made Radiant, its base face with
@@ -978,29 +985,43 @@ pub const NIGHT_MARKET_AI_LOTS: i32 = 1;
 // The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
 // ---------------------------------------------------------------------------------------------
 
-/// SURFACE §14.2: the games `cargo jackioh promote` plays against the parent.
-pub const TRAINING_GAMES: i32 = 100;
-
-/// A promotion gate: the wins out of `TRAINING_GAMES` a candidate needs against the parent, the AI on
-/// `main` (a draw is not a win). The lanes play no games against SPEC §10.7's random policy: they
-/// dropped them once generation 9, the first AI dealt the Meditative set (issue #732), had beaten
-/// random in at least 90 of 100 (R732001). The daily quality gates (`cargo jackioh gate --full`)
-/// still hold every AI on `main` to their floor against random.
+/// A promotion gate (SURFACE §14.2): the games `cargo jackioh promote` plays against the parent, the
+/// AI on `main`, how they are seated, and the wins out of them a candidate needs (a draw is not a
+/// win). The lanes play no games against SPEC §10.7's random policy: they dropped them once
+/// generation 9, the first AI dealt the Meditative set (issue #732), had beaten random in at least 90
+/// of 100 (R732001). The daily quality gates (`cargo jackioh gate --full`) still hold every AI on
+/// `main` to their floor against random.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TrainingGate {
+    pub games: i32,
+    /// R850000: the games are deals, each played twice with the seats swapped: deal `d` is game
+    /// `2d − 1`, the candidate on p1, and game `2d`, the candidate on p2, both on deal `d`'s seed.
+    /// Otherwise every game has its own seed and the candidate sits p1 on odd games.
+    pub paired: bool,
     pub vs_parent: i32,
 }
 
-/// SURFACE §14.2: the `improve` lane's gate. Against the parent the bar only has to be out of
-/// variance's reach: a successor no stronger than its parent wins about 50 of 100, with a standard
-/// deviation of 5, so 65 is three deviations out. It was 85, then 75, until the lane's sessions
-/// measured a ceiling near 55–60 of 100 for the AI's design at its fixed budget (R732001).
-pub const TRAINING_IMPROVE: TrainingGate = TrainingGate { vs_parent: 65 };
+/// SURFACE §14.2: the `improve` lane's gate, 220 of 400 games on 200 deals each played twice with
+/// the seats swapped (R850000). A successor no stronger than its parent wins about 200 of 400, with
+/// a standard deviation of 10 if the games were independent, so 220 is two deviations out; pairing
+/// cancels much of the deal's luck, which lowers the chance further. It was 85, then 75, then 65 of
+/// 100 (R732001), a bar no change of the lane's sessions came near: the gain the lane can bank is a
+/// few points at a time.
+pub const TRAINING_IMPROVE: TrainingGate = TrainingGate {
+    games: 400,
+    paired: true,
+    vs_parent: 220,
+};
 /// SURFACE §14.2: the `unban` lane's gate (plus strictly fewer shadow bans than the parent). Its bar
-/// against the parent is lower than improve's, since unbanning cards is its gain: 60 is two
-/// deviations above an equal successor's 50 of 100. It was 75, then 65 (R732001).
-pub const TRAINING_UNBAN: TrainingGate = TrainingGate { vs_parent: 60 };
+/// against the parent is lower than improve's was, since unbanning cards is its gain: 60 is two
+/// deviations above an equal successor's 50 of 100. It was 75, then 65 (R732001), and R850000 left it
+/// as it was, unpaired.
+pub const TRAINING_UNBAN: TrainingGate = TrainingGate {
+    games: 100,
+    paired: false,
+    vs_parent: 60,
+};
 
 // ---------------------------------------------------------------------------------------------
 // Replays (R768, issue #508).
@@ -1011,6 +1032,16 @@ pub const TRAINING_UNBAN: TrainingGate = TrainingGate { vs_parent: 60 };
 pub const REPLAY_CHECKPOINT_EVERY: usize = 16;
 /// R768: the most steps one page of a replay gives.
 pub const REPLAY_PAGE_STEPS: usize = 16;
+
+// ---------------------------------------------------------------------------------------------
+// The testkit's seed search (issue #848).
+// ---------------------------------------------------------------------------------------------
+
+/// Issue #848: how many seeds (`<prefix>-0` … `<prefix>-N-1`) or rng cursors (`0..N`) the testkit's
+/// `seed_where` and `cursor_where` try before they panic. A test that needs a pool roll to land one way
+/// searches for it, so a card or keyword joining the pool moves the position it finds and breaks nothing;
+/// a roll that takes more than a few hundred tries is built directly instead of widening this bound.
+pub const SEED_SEARCH_BOUND: usize = 4000;
 
 // ---------------------------------------------------------------------------------------------
 // ME-CRAFT (Meditative #17 True Craft a Card, docs/meditative-set.md M6 #17, R880–R883).

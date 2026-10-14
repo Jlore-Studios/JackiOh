@@ -416,8 +416,10 @@ describe("R745 the log keeps the whole game, not only the view's window", () => 
         ])}
       />,
     );
-    const dividers = screen.getAllByRole("separator");
+    // #757: drawn only, kept from assistive tech: a list holds list items, and the line names the turn.
+    const dividers = [...screen.getByTestId(testid.log).querySelectorAll(".log-divider")];
     expect(dividers).toHaveLength(1);
+    expect(dividers[0]).toHaveAttribute("aria-hidden", "true");
     expect(dividers[0]?.nextElementSibling?.textContent).toBe("Turn 4: Opponent");
     expect(lines()).toEqual(["Turn 3: You", said(1), "Turn 4: Opponent", said(2)]);
   });

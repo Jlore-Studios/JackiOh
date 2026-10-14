@@ -1,0 +1,154 @@
+/* The age screen's and the terms box's fields (`auth/ConsentFields.tsx`, R757000, R757001), on the
+   sign-up form and the consent screen. Both sit in the tavern frame (`tavern.css`), whose `.form-card
+   label` rules these override where a fieldset or a checkbox needs its own. */
+
+.consent-birth {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.consent-birth legend {
+  padding: 0;
+  color: color-mix(in srgb, var(--tavern-parchment, #efe0bf) 80%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.consent-birth__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 10px;
+}
+
+.consent-birth__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tavern.app-shell .consent-birth__field label {
+  margin-top: 0;
+  font-weight: 400;
+}
+
+/* Like the tavern's text fields, at 16px so a phone does not zoom into it (auth.css). */
+.consent-birth select {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(201, 149, 63, 0.5);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #0b0704, var(--tavern-well, #0e0905));
+  color: var(--tavern-parchment, #efe0bf);
+  font: inherit;
+  font-size: max(16px, 1em);
+}
+
+.consent-birth select:hover:not(:disabled) {
+  border-color: rgba(243, 201, 105, 0.7);
+}
+
+.consent-birth select:focus-visible {
+  outline: 2px solid var(--tavern-gold, #f3c969);
+  outline-offset: 2px;
+}
+
+.consent-birth select[aria-invalid="true"] {
+  border-color: var(--tavern-danger, #e8664f);
+}
+
+.consent-agree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+}
+
+.consent-agree__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.consent-agree input[type="checkbox"] {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--tavern-gold, #f3c969);
+}
+
+.consent-agree input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--tavern-gold, #f3c969);
+  outline-offset: 2px;
+}
+
+.tavern.app-shell .consent-agree label {
+  margin-top: 0;
+  color: var(--tavern-parchment, #efe0bf);
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.45;
+}
+
+/* The issue's ask: blue and underlined, with a focus state that shows. */
+.consent-link,
+.consent-link:visited {
+  color: #9cc8ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.consent-link:hover {
+  color: #c4ddff;
+}
+
+.consent-link:focus-visible {
+  outline: 2px solid #9cc8ff;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.consent-error {
+  margin: 2px 0 0;
+}
+
+.consent-refused {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A phone on its side: the sign-up button stays on the first screen (the component spec's
+   above-the-fold check), so the two fields share less height. */
+@media (max-height: 500px) {
+  .consent-birth {
+    margin-top: 4px;
+    gap: 2px;
+  }
+
+  .consent-birth__field label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .consent-birth select {
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+
+  .consent-agree {
+    margin-top: 4px;
+  }
+}

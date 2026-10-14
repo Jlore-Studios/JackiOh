@@ -25,6 +25,8 @@ export const REVEAL_AT_LABEL: Record<string, string> = {
   endOfThisTurn: "End of your turn",
   startOfNextTurn: "Start of your next turn",
   endOfNextTurn: "End of your next turn",
+  // R783004, R783006: a Cloaked set has no timing; it reveals only by its own Activate: Reveal.
+  cloaked: "When you reveal it",
 };
 
 /** R1046: what your own face-down play's timing badge tooltips. */

@@ -11,30 +11,7 @@
 //! controller's next turn on the Radiant face, taking the hand held then. It is a discard (§6.3), so
 //! C #64 Malzahar's Recycler sees each card. By design a fatigue clock.
 
-use jackioh_engine::prelude::*;
-use jackioh_engine::effects::{discard_hand_at_turn_end, draw};
-
 pub const ID: &str = "classic-037";
-
-fn last_hurrah(turn: &'static str) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            vec![
-                draw(json_as(json!({ "count": zone_count(ctx.state, ctx.controller, OffFieldZone::Library) }))),
-                discard_hand_at_turn_end(json_as(json!({ "turn": turn }))),
-            ]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    let base = last_hurrah("this");
-
-    let radiant = last_hurrah("next");
-
-    CardScripts { base, radiant }
-}
 
 // C #37 Last Hurrah — SPEC §8.6 row 37, BUILD M9 Classic row C 37: draws the whole deck (R58), the
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
@@ -43,7 +20,7 @@ pub fn script() -> CardScripts {
 // case uses C #4 Palantir's aura, whose own test file proves the limit in full.
 #[cfg(test)]
 mod tests {
-    use super::{script, ID};
+    use super::ID;
     use jackioh_engine::testkit::*;
 
     const HURRAH: &str = "classic-037";
@@ -105,7 +82,7 @@ mod tests {
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], HURRAH);
             assert!(def["params"].is_null());
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

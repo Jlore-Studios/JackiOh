@@ -554,3 +554,49 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
         );
     }
 }
+
+// R781000: Magnetic is now Equip. A log recorded before the rename spells the play's flag `magnetic`
+// (golden seed 43 as it was recorded, its Sentient Cat Ears played onto a Unit at step 7), and it reads
+// as `equip`: the old log and the same log renamed fold to one state, the old-name play accepted.
+const PRE_EQUIP_LOG: &str = include_str!("golden/pre-equip-log.json");
+
+mod r781000_a_log_recorded_before_the_equip_rename_still_folds {
+    use super::*;
+
+    fn fold_text(text: &str) -> FoldResult {
+        let input: FoldArgs = serde_json::from_str(text).expect("the log is a fold's input");
+        fold(&input)
+    }
+
+    #[test]
+    fn r781000_the_old_flag_reads_as_equip_and_folds_to_the_state_the_renamed_log_does() {
+        register_all();
+        assert!(
+            PRE_EQUIP_LOG.contains("\"magnetic\":true"),
+            "the fixture is the log as recorded"
+        );
+        let old = fold_text(PRE_EQUIP_LOG);
+        let renamed = fold_text(&PRE_EQUIP_LOG.replace("\"magnetic\":true", "\"equip\":true"));
+
+        assert!(
+            old.errors.iter().all(|error| error.nonce != "golden-7"),
+            "the Equip play recorded as `magnetic` is accepted: {:?}",
+            old.errors
+        );
+        assert_eq!(hash_state(&old.state), hash_state(&renamed.state));
+        assert_eq!(old.errors.len(), renamed.errors.len());
+        let input: FoldArgs = serde_json::from_str(PRE_EQUIP_LOG).expect("the log is a fold's input");
+        let played = input
+            .log
+            .iter()
+            .find(|action| action.nonce == "golden-7")
+            .map(|action| serde_json::to_value(action).expect("an action serialises"));
+        let played = played.expect("step 7 is in the log");
+        assert_eq!(
+            played["equip"],
+            json!(true),
+            "it is written back under the new name"
+        );
+        assert!(played.get("magnetic").is_none(), "and never under the old one");
+    }
+}

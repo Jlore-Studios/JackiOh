@@ -28,7 +28,8 @@ use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{MATCH_CEILING_MINUTES, RATING_DEVIATION_START, RATING_VOLATILITY_START};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{
-    Db, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError, Ticket,
+    Db, MatchActionRow, MatchClocks, MatchRow, MatchSeat, ResultRow, SeriesRow, StartMatchInput, StoreError,
+    Ticket,
 };
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use jackioh_server::ranked::season::season_id_of;
@@ -36,7 +37,9 @@ use serde::Serialize;
 use serde_json::{Value, json};
 
 use crate::support::deps::test_app;
-use crate::support::engine::{fake_deck, install_test_cards};
+use crate::support::engine::{
+    TEST_GLITCH_SWAP, TEST_GLITCH_VOID, begun_game, fake_deck, hand_card, hand_ids, install_test_cards,
+};
 
 const MINUTE: i64 = 60 * 1000;
 /// A minute past the ceiling (R79, R389), whatever it is.
@@ -372,10 +375,74 @@ async fn record(app: &Arc<App>, inputs: &[Value]) -> ResultRow {
             turns,
             at: now_ms(),
             last_boards: None,
+            final_hash: None,
         },
     )
     .await
     .expect("the result is written")
+}
+
+/// The two queue tickets a match in `mode` was paired from (§9.5): what tells its game record the mode.
+async fn paired_tickets(app: &App, mode: &str) {
+    for profile_id in [A, B] {
+        let ticket: Ticket = serde_json::from_value(json!({
+            "id": format!("ticket-{profile_id}"),
+            "profileId": profile_id,
+            "rating": 1000.0,
+            "mode": mode,
+            "deck": [],
+            "trio": null,
+            "catalogVersion": catalog_version(),
+            "enqueuedAt": 0,
+            "status": "matched",
+            "matchId": MATCH_ID,
+        }))
+        .expect("a Ticket");
+        store!(app, |t| t.tickets_insert(&ticket));
+    }
+}
+
+/// The log a match the actor never finished holds: `inputs` as the rows the actor writes, in order.
+/// Every input carries its `playerId`; each gets the nonce `log-<seq>`.
+async fn append_log(app: &App, inputs: &[Value]) {
+    let rows: Vec<MatchActionRow> = inputs
+        .iter()
+        .enumerate()
+        .map(|(n, input)| {
+            let seq = i64::try_from(n).expect("a count") + 1;
+            let mut input = input.clone();
+            input["nonce"] = json!(format!("log-{seq}"));
+            MatchActionRow {
+                match_id: MATCH_ID.to_owned(),
+                seq,
+                action: serde_json::from_value(input).expect("an Action"),
+                at: now_ms(),
+            }
+        })
+        .collect();
+    store!(app, |t| t.matches_append_actions(&rows));
+}
+
+/// The log of a game on `decks` under the scenario's seed that ends at p1's play of `card` on turn 1:
+/// both mulligans keep the whole hand, then p1 plays it. The instance ids are the ones the seed and
+/// decks deal, read off the game's own opening.
+fn p1_plays_log(decks: &(Vec<String>, Vec<String>), card: &str) -> Vec<Value> {
+    let opening = begun_game("seed-1", decks.clone());
+    let played = hand_card(&opening, PlayerId::P1, card).expect("the card is dealt to p1");
+    vec![
+        json!({ "type": "mulligan", "keep": hand_ids(&opening, PlayerId::P1), "playerId": "p1" }),
+        json!({ "type": "mulligan", "keep": hand_ids(&opening, PlayerId::P2), "playerId": "p2" }),
+        json!({ "type": "play", "instanceId": played, "playerId": "p1" }),
+    ]
+}
+
+/// `seats()`' decks, p1's holding `card` as well (the scripted cards `scenario` deals are fixed): in
+/// the match row, as every fold of it reads them. Answers the decks.
+async fn deal_p1(app: &App, card: &str) -> (Vec<String>, Vec<String>) {
+    let mut data = fake(app).lock().await;
+    let row = &mut data.tables.matches[0];
+    row.decks.0 = fake_deck(&[card]);
+    row.decks.clone()
 }
 
 /// What `expect_one_ending` checks: the winner (a profile, or `None` for a draw), the reason and
@@ -547,6 +614,7 @@ mod results_m7_t2 {
                 turns,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -625,6 +693,7 @@ mod results_m7_t2 {
                 turns: 99,
                 at: now_ms() + 1,
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -639,6 +708,70 @@ mod results_m7_t2 {
             },
         )
         .await;
+    }
+
+    /// R768: the input the actor hands over for p1's concede win, with the final state's hash.
+    fn hashed(final_hash: &str, at: i64) -> RecordResultInput {
+        RecordResultInput {
+            match_id: MATCH_ID.to_owned(),
+            seats: seats(),
+            outcome: TerminalOutcome {
+                winner: Winner::P1,
+                reason: GameOverReason::Concede,
+            },
+            turns: 3,
+            at,
+            last_boards: None,
+            final_hash: Some(final_hash.to_owned()),
+        }
+    }
+
+    /// R768: the final state's hash is written with the result, and a second write of the same
+    /// match writes no other.
+    #[tokio::test]
+    async fn r768_records_the_final_hash_with_the_result_once() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions::default()).await;
+        assert!(match_row(&app, MATCH_ID).await.get("finalHash").is_none());
+
+        record_result(&app, hashed("hash-1", now_ms()))
+            .await
+            .expect("the result is written");
+        assert_eq!(match_row(&app, MATCH_ID).await["finalHash"], "hash-1");
+        record_result(&app, hashed("hash-2", now_ms() + 1))
+            .await
+            .expect("the second write answers the first row");
+        assert_eq!(match_row(&app, MATCH_ID).await["finalHash"], "hash-1");
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(1)
+        );
+    }
+
+    /// R768: the hash is part of the result's transaction, so a failure to write it writes nothing.
+    #[tokio::test]
+    async fn r768_a_failed_final_hash_write_rolls_the_whole_result_back() {
+        install_test_cards();
+        let app = scenario(ScenarioOptions::default()).await;
+        fake(&app).lock().await.on_call = Some(Arc::new(|method: &str| -> Result<(), StoreError> {
+            if method == "matches.recordFinalHash" {
+                Err(StoreError::from("the hash write fails".to_owned()))
+            } else {
+                Ok(())
+            }
+        }));
+        assert!(record_result(&app, hashed("hash-1", now_ms())).await.is_err());
+        fake(&app).lock().await.on_call = None;
+
+        assert_eq!(
+            table(&app, |data| json!(data.tables.results.len())).await,
+            json!(0)
+        );
+        let row = match_row(&app, MATCH_ID).await;
+        assert_eq!(row["status"], "live");
+        assert!(row.get("finalHash").is_none());
+        assert_eq!(profile(&app, A).await["inMatchId"], MATCH_ID);
+        assert_eq!(profile(&app, A).await["rating"].as_f64(), Some(1000.0));
     }
 
     #[tokio::test]
@@ -702,6 +835,7 @@ mod results_m7_t2 {
                 turns: 12,
                 at: now_ms(),
                 last_boards: None,
+                final_hash: None,
             },
         )
         .await
@@ -886,6 +1020,184 @@ mod results_m7_t2 {
             assert!(!app.matches.has(MATCH_ID));
         }
 
+        /// R768: the reaper reads no state, so it has no final hash to write; the match's replay is
+        /// held to its results row.
+        #[tokio::test]
+        async fn r768_the_reaper_records_no_final_hash() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+            let row = match_row(&app, MATCH_ID).await;
+            assert_eq!(row["status"], "finished");
+            assert!(row.get("finalHash").is_none());
+        }
+
+        /// R833000: the actor's result write never landed (R1437) and no socket came back to rebuild
+        /// it, so the reaper folds the log it finds and records the real ending, with its rating
+        /// move, turn count, last boards, final hash and game record, rather than a ceiling draw.
+        #[tokio::test]
+        async fn r833000_reaped_terminal_log_records_the_real_win() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                ratings: Some((1200.0, 1000.0)),
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            paired_tickets(&app, "bo1").await;
+            let (first, second) = seats();
+            append_log(&app, &p1_plays_log(&(first.deck, second.deck), "test-lethal")).await;
+            let (_, turns) = play(&[json!({ "type": "play", "card": "test-lethal", "playerId": "p1" })]);
+
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+
+            let (win, loss) = rating_move(1200.0, 1000.0, 1.0);
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: Some(A),
+                    reason: "hero-death",
+                    rating_after: (win, loss),
+                },
+            )
+            .await;
+            let results = table(&app, |data| j(&data.tables.results)).await;
+            // R112's ceiling draw records 0; the log's own game ended on turn 1.
+            assert_eq!(results[0]["turns"], json!(turns));
+            assert_eq!(results[0]["ratingBefore"], json!([1200.0, 1000.0]));
+            assert!(match_row(&app, MATCH_ID).await["finalHash"].is_string());
+            let records = table(&app, |data| j(&data.tables.game_records)).await;
+            assert_eq!(records.as_array().map(Vec::len), Some(1));
+            assert_eq!(records[0]["id"], MATCH_ID);
+            assert!(!app.matches.has(MATCH_ID));
+        }
+
+        /// R833000: a log that does not end is R112's stalled match: the ceiling draw, `turns = 0`,
+        /// both ratings unchanged, no hash and no game record.
+        #[tokio::test]
+        async fn r833000_reaped_unfinished_log_still_draws_the_ceiling() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                ratings: Some((1200.0, 1000.0)),
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            paired_tickets(&app, "bo1").await;
+            append_log(
+                &app,
+                &[
+                    json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p1" }),
+                    json!({ "type": "setAutoEndTurn", "enabled": false, "playerId": "p2" }),
+                ],
+            )
+            .await;
+
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: None,
+                    reason: "match-ceiling",
+                    rating_after: (1200.0, 1000.0),
+                },
+            )
+            .await;
+            let results = table(&app, |data| j(&data.tables.results)).await;
+            assert_eq!(results[0]["turns"], json!(0));
+            assert!(match_row(&app, MATCH_ID).await.get("finalHash").is_none());
+            assert_eq!(table(&app, |data| j(&data.tables.game_records)).await, json!([]));
+        }
+
+        /// R833000, R677: credited by who plays each seat as the log ends, as the actor's write is: a
+        /// Glitch's swap left A in p2, so p1's concede is A's win.
+        #[tokio::test]
+        async fn r833000_reaped_log_after_a_seat_swap_credits_the_account_now_in_the_seat() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                ratings: Some((1200.0, 1000.0)),
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            let decks = deal_p1(&app, TEST_GLITCH_SWAP).await;
+            let mut log = p1_plays_log(&decks, TEST_GLITCH_SWAP);
+            log.push(json!({ "type": "concede", "playerId": "p1" }));
+            append_log(&app, &log).await;
+
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+
+            let results = table(&app, |data| j(&data.tables.results)).await;
+            assert_eq!(results.as_array().map(Vec::len), Some(1));
+            assert_eq!(results[0]["reason"], "concede");
+            assert_eq!(results[0]["winnerProfileId"], A);
+            // The row's players are the seats as credited, p1 first: B holds p1 now.
+            assert_eq!(results[0]["players"], json!([B, A]));
+            let (win, loss) = rating_move(1200.0, 1000.0, 1.0);
+            assert_eq!(profile(&app, A).await["rating"], json!(win));
+            assert_eq!(profile(&app, B).await["rating"], json!(loss));
+        }
+
+        /// R833000, R679: a Glitch's void records nothing, so the reaper leaves it to R112's draw
+        /// rather than writing a `voided` result.
+        #[tokio::test]
+        async fn r833000_reaped_voided_log_still_draws_the_ceiling() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            let decks = deal_p1(&app, TEST_GLITCH_VOID).await;
+            append_log(&app, &p1_plays_log(&decks, TEST_GLITCH_VOID)).await;
+
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: None,
+                    reason: "match-ceiling",
+                    rating_after: (1000.0, 1000.0),
+                },
+            )
+            .await;
+        }
+
+        /// R833000: a log whose fold refuses an action it holds does not reconstruct the game (§9.3),
+        /// so no permanent result is written from it: the ceiling's draw, as before.
+        #[tokio::test]
+        async fn r833000_reaped_log_the_engine_refuses_still_draws_the_ceiling() {
+            install_test_cards();
+            let app = scenario(ScenarioOptions {
+                started_offset_ms: Some(PAST_CEILING_MS),
+                ..Default::default()
+            })
+            .await;
+            let (first, second) = seats();
+            let mut log = p1_plays_log(&(first.deck, second.deck), "test-lethal");
+            // p2 cannot end a turn that is p1's, ahead of the lethal play that does end the game.
+            log.insert(2, json!({ "type": "endTurn", "playerId": "p2" }));
+            append_log(&app, &log).await;
+
+            assert_eq!(reap(&app).await, vec![MATCH_ID.to_owned()]);
+
+            expect_one_ending(
+                &app,
+                Ending {
+                    winner: None,
+                    reason: "match-ceiling",
+                    rating_after: (1000.0, 1000.0),
+                },
+            )
+            .await;
+        }
+
         #[tokio::test]
         async fn leaves_a_match_that_has_not_reached_its_ceiling_alone() {
             install_test_cards();
@@ -1013,6 +1325,7 @@ mod results_m7_t2 {
                     turns: 3,
                     at: now_ms(),
                     last_boards: None,
+                    final_hash: None,
                 },
             )
             .await

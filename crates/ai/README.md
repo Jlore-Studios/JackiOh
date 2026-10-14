@@ -66,14 +66,15 @@ is the same budget, so both measure the AI that ships. The same state, seed and 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
-## Decks and the shadow ban (R184, R186, R390, R1370, R1390)
+## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
 otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of the deck comes from, a
 hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
 was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
-chosen by. `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
+chosen by. Every deck holds at most `AI_DECK.max_quickdraw` (2) Quickdraw cards, an `include`d one
+counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
 `AI_DECK_GATED_SETS` in `src/config.rs`, so every AI deck holds none of them whatever ships or a
 thread previews, and a lean on a gated set leans on the newest ungated set that ships (`ungated_lean`).
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
@@ -106,6 +107,16 @@ within the node budget and under `AI_GATE.max_decision_ms`. Tuning changes the w
 `src/config.rs`, never the floors, the seed counts or the brief's rates. The gates see only a broken
 AI; whether a change made it stronger is the training lanes' question (`training/README.md`,
 `cargo jackioh promote`).
+
+A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }`, the chance in
+`[0, 1]` that each decision follows the AI, the rest being a random legal action (`random_action`,
+§10.7's policy). `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one
+plays as it did before the knob; `AI_SKILL_MIN` is the random policy exactly, with no search. In
+between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
+(`skill::clamp_skill` pins the range, a NaN reading as full), so a seeded run reproduces. The knob
+knows nothing of cards or sets: it keeps meaning the same when the AI improves or a set ships. The
+arena (`crates/tools/README.md`) and the server's ladder-bot seat (`crates/server/README.md`) roll it
+the same way, and the skill-to-Elo curve is measured with the arena.
 
 ## Development runs for the card statistics (R378)
 

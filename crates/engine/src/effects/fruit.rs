@@ -42,6 +42,7 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
 
 /// `addRolledGrapes`' argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddRolledGrapesArgs {
     pub count: i32,
@@ -55,6 +56,7 @@ pub struct AddRolledGrapesArgs {
 
 /// R960: which weighted table an `addRolled` rolls on.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum RollTable {
     /// C+ #65, #66's Grapes (`GRAPE_ODDS`).
@@ -77,6 +79,7 @@ impl RollTable {
 /// `addRolled`'s argument: one weighted roll per `count` (default 1), each rolled and added before
 /// the next is rolled, so a fixed seed gives fixed cards in a fixed order (§10.7).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddRolledArgs {
     pub table: RollTable,
@@ -167,6 +170,7 @@ fn add_rolled_from(
 
 /// `damageEnemyOrHealFriend`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DamageEnemyOrHealFriendArgs {
     pub amount: i32,
@@ -251,6 +255,7 @@ pub fn card_this_draw_put_in_hand(
 
 /// `drawPriced`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawPricedArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -315,6 +320,7 @@ pub fn draw_priced(args: DrawPricedArgs) -> Effect {
 
 /// `replaceHandWithRandom`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ReplaceHandWithRandomArgs {
     pub query: CatalogQueryArgs,

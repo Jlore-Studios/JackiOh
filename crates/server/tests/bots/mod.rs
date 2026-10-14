@@ -1,3 +1,4 @@
+pub mod calibrate;
 pub mod persona;
 pub mod pick;
 pub mod pool;

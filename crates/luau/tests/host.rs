@@ -12,11 +12,12 @@ use jackioh_engine::testkit::{
     CardDef, CardDefs, EffectContext, EngineSink, IndexMap, PlayerId, Rng, catalog_override, json_as,
     register_catalog, register_scripts, scenario,
 };
-use jackioh_luau::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_VALUE_NODES};
+use jackioh_luau::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES, LUAU_VALUE_NODES};
 use jackioh_luau::lint::MATH_ALLOWED;
 use jackioh_luau::numbers::{div, number_to_i32, rem, to_json};
 use jackioh_luau::sandbox::{
     ABSENT_LIBRARIES, REMOVED_GLOBALS, REMOVED_ITERATORS, REMOVED_MATH, REMOVED_TABLE, new_sandbox,
+    ran_out_of_memory,
 };
 use jackioh_luau::vm::{call_hook, declared_hooks};
 use jackioh_luau::{EffectCall, Face, Finding, LuauError, Rule, Site, compile, compiler, lint, load_card};
@@ -201,6 +202,36 @@ fn writing_a_global_fails() {
 }
 
 #[test]
+fn writing_into_the_modules_tables_fails() {
+    // `J`'s tables live as long as the thread's VM, so a write would reach the next hook (L8).
+    for (card, write) in [
+        ("fixture-write-trap-types", "J.TRAP_TYPES[3] = \"Unit\""),
+        ("fixture-write-config", "J.config.HERO_HEALTH = 1"),
+        ("fixture-write-module", "J.damage = J.heal"),
+    ] {
+        let code = bytecode(
+            "write_module.luau",
+            &format!(
+                "local J = require(\"@jackioh\")\nreturn {{ base = {{ cry = function(ctx)\n\t{write}\n\treturn nil\nend }} }}\n"
+            ),
+        );
+        let text = error_text(with_ctx(|ctx| {
+            call_hook(site(card, Face::Base, "cry"), code, ctx)
+        }));
+        assert!(text.contains("readonly"), "{card}: {text}");
+    }
+    let code = bytecode(
+        "read_trap_types.luau",
+        "local J = require(\"@jackioh\")\n\
+         return { base = { cry = function(ctx)\n\
+         \treturn { J.damage({ to = { of = \"enemyHero\" }, amount = #J.TRAP_TYPES }) }\n\
+         end } }\n",
+    );
+    let calls = with_ctx(|ctx| call_hook(site("fixture-read-trap-types", Face::Base, "cry"), code, ctx));
+    assert_eq!(calls, Ok(vec![hit(2)]));
+}
+
+#[test]
 fn require_answers_only_the_jackioh_module() {
     let error = load_card("fixture-require-other", fixture!("require_other")).err();
     let Some(LuauError::Load { card, message }) = error else {
@@ -251,6 +282,49 @@ fn a_loop_that_never_ends_stops_at_the_cap_naming_the_card() {
         text.contains("fixture-endless-load base load: stopped after"),
         "{text}"
     );
+}
+
+#[test]
+fn an_allocation_past_the_memory_cap_fails_naming_the_card() {
+    // One `string.rep` spends no interrupts between its call and its return: only the memory cap
+    // stops it.
+    let huge = format!("string.rep(\"x\", {})", LUAU_MEMORY_BYTES + 1);
+    let code = bytecode(
+        "huge.luau",
+        &format!("return {{ base = {{ cry = function(ctx)\n\tlocal s = {huge}\n\treturn nil\nend }} }}\n"),
+    );
+    let text = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-huge", Face::Base, "cry"), code, ctx)
+    }));
+    let expected = format!("fixture-huge base cry: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)");
+    assert!(text.contains(&expected), "{text}");
+
+    let at_load = bytecode("huge_load.luau", &format!("local s = {huge}\nreturn {{}}\n"));
+    let text = error_text(load_card("fixture-huge-load", at_load));
+    assert!(
+        text.contains("fixture-huge-load base load: out of memory, past"),
+        "{text}"
+    );
+}
+
+#[test]
+fn a_memory_error_is_known_under_a_readers_callback_error() {
+    // An allocation that fails in a reader, a Rust function, reaches the hook's call wrapped in the
+    // reader's `CallbackError`.
+    let sandbox = new_sandbox().unwrap();
+    let reader = sandbox
+        .lua
+        .create_function(|_, ()| Err::<(), _>(mlua::Error::MemoryError("not enough memory".into())))
+        .unwrap();
+    let error = sandbox
+        .lua
+        .load("local reader = ...\nreader()\n")
+        .set_environment(sandbox.env.clone())
+        .call::<()>(reader)
+        .unwrap_err();
+    assert!(matches!(error, mlua::Error::CallbackError { .. }), "{error:?}");
+    assert!(ran_out_of_memory(&error));
+    assert!(!ran_out_of_memory(&mlua::Error::runtime("not enough memory")));
 }
 
 // ---- integers at the boundary (L6) ---------------------------------------------------------------
@@ -425,6 +499,29 @@ fn a_hook_runs_another_scripts_hook_from_a_reader() {
     let cry = outer.base.cry.expect("the base face declares cry");
     let kinds: Vec<&str> = with_ctx(|ctx| cry(ctx).iter().map(|effect| effect.kind).collect());
     assert_eq!(kinds, ["damage"]);
+}
+
+#[test]
+fn a_vm_that_ran_out_of_memory_serves_the_next_call() {
+    // The hook holds strings until an allocation fails, which leaves the cap's worth of garbage in
+    // the thread's VM: Luau collects nothing when an allocation fails. The next outermost call
+    // collects it first (`LUAU_MEMORY_COLLECT_BYTES`), so the VM is not left full.
+    let fill = bytecode(
+        "fill.luau",
+        &format!(
+            "return {{ base = {{ cry = function(ctx)\n\tlocal held = {{}}\n\tfor i = 1, {LUAU_MEMORY_BYTES} do\n\t\theld[i] = string.rep(\"x\", 1000) .. i\n\tend\n\treturn nil\nend }} }}\n"
+        ),
+    );
+    let text = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-fill", Face::Base, "cry"), fill, ctx)
+    }));
+    let expected = format!("fixture-fill base cry: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)");
+    assert!(text.contains(&expected), "{text}");
+    let code = fixture!("counter");
+    let at = site("fixture-counter", Face::Base, "cry");
+    for _ in 0..3 {
+        assert_eq!(with_ctx(|ctx| call_hook(at, code, ctx)), Ok(vec![hit(1)]));
+    }
 }
 
 /// A card whose cry runs a loop of two thirds of L5's cap: under the cap alone, over it twice.
@@ -603,6 +700,33 @@ fn load_card_reads_the_declared_hooks() {
         error_text(load_card("fixture-value", not_a_function)),
         "fixture-value: radiant cry is of type integer, not a function"
     );
+}
+
+#[test]
+fn load_card_reads_declarations_and_aura() {
+    let source = r#"
+local J = require("@jackioh")
+local base = {
+    targets = {
+        { kind = "target", min = 1, max = 1, filter = { side = "enemy", of = { "unit" }, notTags = { "Human" } } }
+    },
+    aura = function(ctx)
+        return {
+            J.defense_armor_aura({ armor = ctx:param("armor") })
+        }
+    end,
+}
+return {
+    base = base,
+    radiant = "base",
+}
+"#;
+    let code = bytecode("decl.luau", source);
+    let scripts = load_card("fixture-decl", code).expect("loads");
+    assert_eq!(scripts.base.targets.len(), 1);
+    assert_eq!(scripts.radiant.targets.len(), 1);
+    assert!(scripts.base.aura.is_some());
+    assert!(scripts.radiant.aura.is_some());
 }
 
 // ---- compiling and the lint (L6, L7) -------------------------------------------------------------

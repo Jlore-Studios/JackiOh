@@ -13,67 +13,7 @@
 //! copies. A cast is a play (R70); a countered card never reached the log (R448). Double Header does
 //! not answer its own play (R119), so the turn it lands copies nothing (R826).
 
-use jackioh_engine::effects::add_to_hand;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-011";
-
-/// Whether `instance_id` is the first card `player` played this turn, and played that once (R826).
-fn first_played(state: &GameState, player: PlayerId, instance_id: &str) -> bool {
-    let played = played_ids_this_turn(state, player);
-    played.first().is_some_and(|first| first == instance_id)
-        && played.iter().filter(|id| *id == instance_id).count() == 1
-}
-
-/// `radiant`: the Radiant face's copy is Radiant; the base face's never is.
-fn first_card_copied(radiant: bool) -> TriggerDef {
-    TriggerDef::new(
-        if radiant {
-            "m11r-first-card-copied"
-        } else {
-            "m11-first-card-copied"
-        },
-        &[GameEventType::CardResolved],
-        move |ctx, event| {
-            let GameEvent::CardResolved {
-                player,
-                instance_id,
-                def_id,
-                ..
-            } = event
-            else {
-                return vec![];
-            };
-            let Some(this) = ctx.self_.as_ref() else {
-                return vec![];
-            };
-            if *player != ctx.controller || *instance_id == this.id {
-                return vec![];
-            }
-            if !first_played(&*ctx.state, *player, instance_id) {
-                return vec![];
-            }
-            vec![add_to_hand(json_as(json!({
-                "defId": def_id,
-                "costOverride": param(&*ctx, "setCost"),
-                "radiant": radiant,
-            })))]
-        },
-    )
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            triggers: vec![first_card_copied(false)],
-            ..Script::default()
-        },
-        radiant: Script {
-            triggers: vec![first_card_copied(true)],
-            ..Script::default()
-        },
-    }
-}
 
 // Meditative #11 Double Header — SPEC §8.8 row 11, BUILD M10 row M 11: "From the turn after it
 // lands, the first card you play each turn, once it resolves, adds a fresh base copy costing (0)
@@ -152,7 +92,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }])
         );
-        let scripts = super::script();
+        let scripts = crate::scripts_of()[ID].clone();
         assert_eq!(scripts.base.triggers.len(), 1);
         assert_eq!(scripts.radiant.triggers.len(), 1);
     }
@@ -257,29 +197,35 @@ mod tests {
 
         #[test]
         fn r826_a_fused_card_copies_its_fused_definition() {
-            // Re-pinned for v0.3.5: the Meditative set joins the pool. The old seed's Discovers now
-            // fuse a card whose Cry opens a prompt, so its play had not resolved; this one fuses
-            // Jlockheed's J15 Fighter and Mr. Vanilla, whose play resolves at once.
-            let mut s = scenario(json!({
-                "seed": "double-header-fuse-1",
-                "p1": side(json!({ "backrow": [ID], "hand": [CRAFT, SPARE] })),
-                "p2": side(json!({ "field": [VANILLA] })),
-            }));
-            s.play(CRAFT, json!({}));
-            for _ in 0..2 {
-                let pending = open(&s);
-                s.answer(first_key(&pending));
-            }
-            let fused = must(
-                s.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
-                "the fused card in hand",
-            );
-            let fused_id = fused.id.clone();
+            // Craft a Card's two Discovers fuse whatever their first options are, and a fused card whose
+            // play needs a pick the test does not give is refused, and one whose Cry opens a prompt has
+            // not resolved by the time it is read: search for a seed whose fused card plays out at once.
+            let crafted = |seed: &str| {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": side(json!({ "backrow": [ID], "hand": [CRAFT, SPARE] })),
+                    "p2": side(json!({ "field": [VANILLA] })),
+                }));
+                s.play(CRAFT, json!({}));
+                for _ in 0..2 {
+                    let pending = open(&s);
+                    s.answer(first_key(&pending));
+                }
+                let fused = must(
+                    s.hand(P1).iter().find(|card| card.def_id.starts_with("t-")).cloned(),
+                    "the fused card in hand",
+                );
+                s.end_turn();
+                s.end_turn();
+                s.play(&fused.id, json!({}));
+                (s, fused)
+            };
+            let seed = seed_where("double-header-fuse", |seed| {
+                std::panic::catch_unwind(|| crafted(seed).0.state().pending.is_none()).unwrap_or(false)
+            });
+            let (s, fused) = crafted(&seed);
             let fused_def = fused.def_id.clone();
-            s.end_turn();
-            s.end_turn();
             // The fused card's first play on a later turn copies its transient definition (R77).
-            s.play(&fused_id, json!({}));
             let copies: Vec<CardInstance> = copies(&s, P1)
                 .into_iter()
                 .filter(|card| card.def_id == fused_def)

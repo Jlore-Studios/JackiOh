@@ -348,6 +348,7 @@ mod s6_2_this_turn_on_the_opponent_s_turn {
     fn r40_r70_s6_2_a_card_cast_on_the_opponent_s_turn_counts_only_the_plays_of_that_turn_so_quickstriker_s_x_is_0()
      {
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l8-stale-log",
             "p1": {
                 "hand": [QUICKSTRIKER, VANILLA],
@@ -386,6 +387,7 @@ mod s10_6_a_prompt_s_options_can_each_be_picked_through_the_view {
         // Two Duplicating Felinors — #12's own copy makes this an ordinary board — among the four
         // permanents Classic #40 MC Tech's Radiant face picks from in a prompt its Cry opens (§10.6).
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "inv-r4-prompt-keys",
             "p1": { "hand": [{ "def": MC_TECH, "radiant": true }, RENO], "mana": 8 },
             "p2": { "field": [FELINORS, FELINORS, MENACE], "backrow": [{ "def": SHEEPISH, "faceUp": false }] },

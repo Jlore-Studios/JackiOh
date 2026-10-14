@@ -10,39 +10,7 @@
 //! One script serves both faces: Tribute 3 is its static flag, and Immutable (R23) and the Radiant face's
 //! Armor 2 and 0/100 are catalog data.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-097-7";
-
-/// §6.3 "Tribute 3": three of your Units, or one Sheep Token plus one more, worth 3 (§3.2).
-const TRIBUTE_COST: i32 = 3;
-
-fn the_great_wall() -> Script {
-    Script {
-        static_flags: Some(StaticFlags {
-            tribute: Some(TRIBUTE_COST),
-            ..StaticFlags::default()
-        }),
-        // R1260: all five of the Wall's side, its own zone and the occupied ones included; `lock` skips
-        // a zone Locked already and evicts no one.
-        cry: Some(hook(|_ctx| {
-            (1..=UNIT_ZONES)
-                .map(|lane| {
-                    lock(json_as(
-                        json!({ "zone": { "of": "lane", "row": "units", "lane": lane } }),
-                    ))
-                })
-                .collect()
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    let base = the_great_wall();
-    let radiant = the_great_wall();
-    CardScripts { base, radiant }
-}
 
 // M 97.7 The Great Wall — SPEC §8.8 row 97.7, BUILD M10 row M 97.7: "Tribute 3, Immutable, Can't attack; Cry
 // (played): all five of your unit zones are Locked, its own and the occupied ones included, nothing evicted
@@ -53,9 +21,12 @@ pub fn script() -> CardScripts {
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a play.
 #[cfg(test)]
 mod tests {
-    use super::{ID, TRIBUTE_COST, script};
+    use super::ID;
     use crate::js;
     use jackioh_engine::testkit::*;
+
+    /// §6.3 "Tribute 3": three of your Units, or one Sheep Token plus one more, worth 3 (§3.2).
+    const TRIBUTE_COST: i32 = 3;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -65,6 +36,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const TIMMY: &str = "core-011"; // (1) Unit 3/3.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+    const NETHER: &str = "core-088"; // (4) Spell: Destroy all permanents.
     const SOFTLOCK: &str = "classicplus-077"; // (2) Spell: Unlock every zone.
     const SCHOOL: &str = "meditative-097-3";
     const HEADQUARTERS: &str = "meditative-097-9";
@@ -153,7 +125,7 @@ mod tests {
             json!([{ "kind": "Immutable" }, { "kind": "Armor", "n": 2 }, { "kind": "Can't attack" }])
         );
         assert_eq!(def.params, None);
-        let scripts = script();
+        let scripts = crate::scripts_of()[ID].clone();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
                 face.static_flags.as_ref().and_then(|flags| flags.tribute),
@@ -233,15 +205,20 @@ mod tests {
         }
 
         #[test]
-        fn r1260_the_locks_outlast_the_wall() {
-            let mut s = setup(false, &[HIT_JOB], crowd());
+        fn r1260_r781001_the_locks_outlast_the_wall() {
+            let mut s = setup(false, &[HIT_JOB, NETHER], crowd());
             play_wall(&mut s);
             s.end_turn().end_turn();
             let wall = s.card(ID).id.clone();
-            s.play(
-                HIT_JOB,
-                json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
-            );
+            // Immutable: Hit Job, a Spell, can't target the Wall in play (R781001); destroying every
+            // permanent reaches it.
+            s.expect_refused(|s| {
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": wall }] }),
+                )
+            });
+            s.play(NETHER, json!({}));
             assert!(s.unit(P1, 1).is_none_or(|unit| unit.def_id != ID));
             for lane in LANES {
                 assert!(is_locked(s.state(), slot(P1, lane)), "p1 lane {lane}");

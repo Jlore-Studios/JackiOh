@@ -1,7 +1,7 @@
 // The music player (SPEC §10.11 "Music", R631) keeps requests idempotent and changes tracks on bar
 // lines; stings hand off there and station tracks resume where they left off. The opponent's turn is
 // a mix, not a track; focus, mute or zero volume prevent new playback.
-// Card intros (R1350, R1351) play above and duck the bed, take precedence over themes, and use their
+// Card intros (R1350, R1351) play above and duck the bed, take precedence over every track, and use their
 // own cache. Nothing fetches or decodes during animation (B58); failures retry on a later request.
 
 import {
@@ -630,7 +630,7 @@ export function createMusicPlayer(options: MusicPlayerOptions = {}): MusicPlayer
         // Nothing waits for a resume: an intro asked for on a stopped context is dropped.
         if (ensureGraph() === null || !running() || graph === null) return;
         const c = graph.ctx;
-        // R1351: an intro whose music still runs is not restarted by its own card again, as a theme is not.
+        // R1351: an intro whose music still runs is not restarted by its own card again.
         if (clip !== null && !clip.stopping && clip.id === id && c.currentTime < clip.end) return;
         const ready = introDecoded.get(id);
         if (ready !== undefined) {

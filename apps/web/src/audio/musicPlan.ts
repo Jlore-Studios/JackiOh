@@ -2,10 +2,10 @@
 // viewer's own situation. Highest wins:
 //
 //   1. the result: the victory, defeat or draw sting and its loop
-//   2. a Mythic card's theme
-//   3. low health: the station's urgency track
-//   4. the station's in-game track, through the opponent's-turn mix while it is not the viewer's turn
+//   2. low health: the station's urgency track
+//   3. the station's in-game track, through the opponent's-turn mix while it is not the viewer's turn
 //
+// No card plays a theme (R822000): a Legendary's or Mythic's intro plays over the stack (R1350).
 // With dynamic music off only the station's in-game track plays, and nothing in the game moves it.
 
 import { MENU_TRACK, RESULT_TRACKS, dangerTrack, stationTracks } from "./musicData.ts";
@@ -18,8 +18,6 @@ export type MusicMoment = {
   rotation: number;
   dynamic: boolean;
   result: keyof typeof RESULT_TRACKS | null;
-  /** The track of the Mythic theme holding the music, or null. */
-  theme: string | null;
   lowHealth: boolean;
   /** True while the opponent has the turn in play (the mulligan is nobody's turn). */
   opponentTurn: boolean;
@@ -37,7 +35,6 @@ export function chooseMusic(m: MusicMoment, manifest?: MusicManifest): MusicChoi
   const base = defaultTrack(m.station, m.rotation, manifest);
   if (!m.dynamic) return { track: base, opponentTurn: false };
   if (m.result !== null) return { track: RESULT_TRACKS[m.result], opponentTurn: false };
-  if (m.theme !== null) return { track: m.theme, opponentTurn: false };
   if (m.lowHealth) return { track: dangerTrack(m.station), opponentTurn: false };
   return { track: base, opponentTurn: m.opponentTurn };
 }

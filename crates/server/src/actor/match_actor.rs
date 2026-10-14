@@ -36,6 +36,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
 use indexmap::IndexMap;
+use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
@@ -57,6 +58,7 @@ use crate::actor::protocol::{
 };
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
+use crate::api::http::log_alert;
 use crate::api::rematch::{RematchStakes, STAKE_NORMAL, offer_for_bot};
 use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
@@ -64,16 +66,23 @@ use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
 use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_ACTIONS_PER_SECOND,
-    MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_VOIDED_CLOSE_CODE,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MALFORMED_FRAMES_PER_WINDOW,
+    MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
+    MATCH_SERVER_ACTION_RETRY_MS, MATCH_VOIDED_CLOSE_CODE, REJECTION_ALERT_THRESHOLD,
+    REJECTION_ALERT_WINDOW_MS,
 };
-use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus};
+use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
 
 /// §9.8: the action flood limit, measured over this window.
 const FLOOD_WINDOW_MS: i64 = 1000;
+
+/// R835002 (CLAUDE.md rule 9: the malformed budget itself is `MALFORMED_FRAMES_PER_WINDOW` in
+/// `config.rs`; this close code is wire vocabulary, not a tuned number): RFC 6455's policy
+/// violation, sent when a seat's malformed frames cross the budget.
+const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
 /// R639000: a bot home's rematch answer on its way (`Core::bot_rematch_replying`), taken off when
 /// the task that sends it ends.
@@ -168,6 +177,9 @@ enum Task {
     Arm,
     Hello {
         home: PlayerId,
+        /// R835001: the socket generation that sent it (`Core::socket_generation`), so a Hello
+        /// queued by an older socket is never mistaken for the newer socket's own.
+        generation: u64,
     },
     Action {
         home: PlayerId,
@@ -260,6 +272,22 @@ struct Core {
     attached_once: PerPlayer<bool>,
     /// One window per seat; see `flood_exceeded`.
     recent_actions: PerPlayer<VecDeque<i64>>,
+    /// R835000: one window per seat of refused actions (reducer refusals plus flood rejections),
+    /// pruned to `REJECTION_ALERT_WINDOW_MS`; crossing `REJECTION_ALERT_THRESHOLD` raises
+    /// `match.rejections.unusual` once per match per seat (§9.8).
+    rejections: PerPlayer<VecDeque<i64>>,
+    /// R835000: whether the seat's alert has already gone this match.
+    rejection_alerted: PerPlayer<bool>,
+    /// R835002: one window per seat of malformed frames, pruned to `REJECTION_ALERT_WINDOW_MS`;
+    /// past `MALFORMED_FRAMES_PER_WINDOW` the seat's socket is closed.
+    malformed_at: PerPlayer<VecDeque<i64>>,
+    /// R835001: the socket generation each seat's queued-but-unrun Hello belongs to (`None` when
+    /// none is queued). A repeat for the same home and generation is absorbed; a Hello from a
+    /// newer generation always enqueues.
+    hello_pending: PerPlayer<Option<u64>>,
+    /// R835001: bumped on every `attach` (the first included, so generations start at 1), keying
+    /// `hello_pending` so a reattach's Hello is never swallowed by the older socket's queued one.
+    socket_generation: PerPlayer<u64>,
     /// R643: each seat's recent emote sends, the one input the shared `emote_gate` decides on. The
     /// client runs the same gate against its own copy, so the two can never disagree about the
     /// limit, and a dropped emote is simply never relayed — not an error, not a rejected action.
@@ -507,6 +535,11 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         // R1452: a bot's seat is never away, so R744's grace never starts for it.
         attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
         recent_actions: PerPlayer::new(VecDeque::new(), VecDeque::new()),
+        rejections: PerPlayer::new(VecDeque::new(), VecDeque::new()),
+        rejection_alerted: PerPlayer::new(false, false),
+        malformed_at: PerPlayer::new(VecDeque::new(), VecDeque::new()),
+        hello_pending: PerPlayer::new(None, None),
+        socket_generation: PerPlayer::new(0, 0),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
         aims: PerPlayer::new(empty_aim_slot(), empty_aim_slot()),
         voided: false,
@@ -619,8 +652,16 @@ impl MatchActor {
                     self.drive_bots();
                 }
             }
-            Task::Hello { home } => {
-                // §9.5: "Reconnect gets a fresh full view, never a log replay."
+            Task::Hello { home, generation } => {
+                // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: the flag is
+                // cleared only for the generation that set it, so a newer socket's queued Hello is
+                // never unmarked by the older one's run.
+                {
+                    let mut core = self.lock();
+                    if core.hello_pending[home] == Some(generation) {
+                        core.hello_pending[home] = None;
+                    }
+                }
                 let core = self.lock();
                 let player = playing(&core, home);
                 self.push_view(&core, player);
@@ -829,7 +870,23 @@ impl MatchActor {
             // rebuild, so a rebuilt actor cannot collide with a nonce already in the log. Its prefix is
             // one no client may send (R270), so no client can pre-empt it.
             let nonce = format!("{SERVER_NONCE_PREFIX}{}-{next_seq}", expiry.kind());
-            self.apply_action(player, nonce, body).await;
+            let reply = self.apply_action(player, nonce, body).await;
+            // R776000: a row the store did not take. The clock that ran out runs out again, and the
+            // action is derived again then, under the same nonce while no other row has taken its seq.
+            // The `return` ends R268's loop: the retried mulligan expiry derives the seats still owing.
+            if matches!(
+                reply,
+                ServerMessage::Error {
+                    code: SocketErrorCode::Internal,
+                    ..
+                }
+            ) {
+                if !self.lock().stopped {
+                    tracing::warn!(event = "match.clock.retrying", matchId = %self.match_id_str(), kind = expiry.kind(), player = %player, inMs = MATCH_SERVER_ACTION_RETRY_MS);
+                    self.shared.clock.retry(expiry, MATCH_SERVER_ACTION_RETRY_MS);
+                }
+                return;
+            }
         }
     }
 
@@ -1039,7 +1096,7 @@ impl MatchActor {
     async fn on_terminal(&self, snapshot: &MatchSnapshot) {
         let Some(result) = snapshot.result else { return };
         let at = now_ms();
-        let (swapped, last_boards) = {
+        let (swapped, last_boards, final_hash) = {
             let mut core = self.lock();
             if core.finished {
                 return;
@@ -1056,7 +1113,11 @@ impl MatchActor {
             if result.reason != GameOverReason::Voided {
                 self.plan_bot_rematches(&mut core, at);
             }
-            (core.swapped, engine::last_boards(&core.state))
+            (
+                core.swapped,
+                engine::last_boards(&core.state),
+                engine::hash_state(&core.state),
+            )
         };
         // R679: the one ending that records nothing. Only the engine's state reaches it.
         if result.reason == GameOverReason::Voided {
@@ -1075,6 +1136,8 @@ impl MatchActor {
             at,
             // R417, R565: each seat's board as the game ended, from its own side.
             last_boards: Some(last_boards),
+            // R768: the final state's hash, which the match's replay is held to.
+            final_hash: Some(final_hash),
         };
         // The write finishes the match row in the same transaction, so nothing else here does: a row
         // finished apart from it would outlive a failed write, with no result and both players stuck
@@ -1223,6 +1286,19 @@ impl MatchActor {
         tracing::warn!(event = "match.result.unrecorded", matchId = %self.match_id_str());
     }
 
+    /// R776000: the log holds a row at the seq this actor was about to write (a write that committed and
+    /// whose answer was lost, or a second writer), so the actor is behind its log. It lets go as
+    /// `let_go_unrecorded` does, and the next socket folds `(seed, log)`, that row included. An actor
+    /// already stopped lets nothing go: the registry may hold its rebuilt successor by now.
+    fn let_go_diverged(&self) {
+        if self.lock().stopped {
+            return;
+        }
+        self.shared.deps.matches.forget(self.match_id_str());
+        self.halt();
+        tracing::warn!(event = "match.log.diverged", matchId = %self.match_id_str());
+    }
+
     /// The one path every action takes — a client's and the clock's alike. Reduce, append exactly one
     /// log row at the next gapless seq, then push.
     async fn apply_action(&self, player: PlayerId, nonce: String, body: ActionBody) -> ServerMessage {
@@ -1253,6 +1329,26 @@ impl MatchActor {
                 "type" = %action.action_type(),
                 reason = %reason,
             );
+            // R835000: a reducer refusal counts toward the seat's unusual-rejection alert.
+            // `player` is an engine seat; `playing` maps it back to the account's home (its own
+            // inverse, R677). The dedupe-ack and `MatchOver` paths above return before this, and
+            // store failures below never reach `reduce`'s verdict, so none of them counts.
+            let alert = {
+                let mut core = self.lock();
+                let home = playing(&core, player);
+                self.note_rejection(&mut core, home, now_ms())
+            };
+            if let Some((profile_id, rejected)) = alert {
+                log_alert(
+                    "match.rejections.unusual",
+                    json!({
+                        "profileId": profile_id,
+                        "matchId": self.match_id_str(),
+                        "rejected": rejected,
+                        "windowMs": REJECTION_ALERT_WINDOW_MS,
+                    }),
+                );
+            }
             return error_message(SocketErrorCode::IllegalAction, reason, Some(&nonce));
         }
 
@@ -1269,6 +1365,9 @@ impl MatchActor {
             .await?);
         if let Err(error) = appended {
             tracing::error!(event = "match.append.failed", matchId = %self.match_id_str(), seq = seq, message = %error);
+            if matches!(error, StoreError::SeqClash(_)) {
+                self.let_go_diverged();
+            }
             return error_message(
                 SocketErrorCode::Internal,
                 "the action could not be recorded; try again",
@@ -1624,15 +1723,43 @@ impl MatchActor {
             Err(malformed) => {
                 // A bad frame is answered, not fatal: the actor stays up and the other seat is untouched.
                 tracing::warn!(event = "match.frame.malformed", matchId = %self.match_id_str(), player = %player, reason = %malformed.reason);
+                // R835002: past `MALFORMED_FRAMES_PER_WINDOW` in the window the seat is a flooder,
+                // not a stale client, so its socket is closed after the usual answer. The guard is
+                // dropped first: the socket's close handler re-locks the actor (`attach` closes a
+                // replaced socket the same way).
+                let now = now_ms();
+                let recent = &mut core.malformed_at[home];
+                while recent
+                    .front()
+                    .is_some_and(|at| *at <= now - REJECTION_ALERT_WINDOW_MS)
+                {
+                    recent.pop_front();
+                }
+                recent.push_back(now);
+                let over = recent.len() > MALFORMED_FRAMES_PER_WINDOW;
                 self.send_to_home(
                     &core,
                     home,
                     &error_message(SocketErrorCode::Malformed, &malformed.reason, None),
                 );
+                if over {
+                    let socket = core.sockets[home].clone();
+                    drop(core);
+                    if let Some(socket) = socket {
+                        socket.close(Some(CLOSE_POLICY_VIOLATED), Some("too many malformed frames"));
+                    }
+                }
             }
             Ok(ClientMessage::Hello(_)) => {
-                // §9.5: "Reconnect gets a fresh full view, never a log replay."
-                self.enqueue(Task::Hello { home });
+                // §9.5: "Reconnect gets a fresh full view, never a log replay." R835001: a Hello
+                // while one for the same home and socket generation is still queued is absorbed —
+                // reconnect is idempotent — so a hello flood costs one view push. A newer
+                // generation (a reattach) always enqueues.
+                let generation = core.socket_generation[home];
+                if core.hello_pending[home] != Some(generation) {
+                    core.hello_pending[home] = Some(generation);
+                    self.enqueue(Task::Hello { home, generation });
+                }
             }
             Ok(ClientMessage::Emote(emote)) => self.relay_emote(&mut core, home, emote.emote),
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
@@ -1641,6 +1768,8 @@ impl MatchActor {
                 if flood_exceeded(&mut core, home, now) {
                     // §9.8: reject the overflow; the socket stays open.
                     tracing::warn!(event = "match.action.flooded", matchId = %self.match_id_str(), player = %player);
+                    // R835000: a flood rejection counts toward the seat's unusual-rejection alert.
+                    let alert = self.note_rejection(&mut core, home, now);
                     self.send_to_home(
                         &core,
                         home,
@@ -1650,6 +1779,17 @@ impl MatchActor {
                             Some(&action.nonce),
                         ),
                     );
+                    if let Some((profile_id, rejected)) = alert {
+                        log_alert(
+                            "match.rejections.unusual",
+                            json!({
+                                "profileId": profile_id,
+                                "matchId": self.match_id_str(),
+                                "rejected": rejected,
+                                "windowMs": REJECTION_ALERT_WINDOW_MS,
+                            }),
+                        );
+                    }
                     return;
                 }
                 self.enqueue(Task::Action {
@@ -1817,6 +1957,10 @@ impl MatchActor {
             } else {
                 let previous = core.sockets[home].replace(socket.clone());
                 core.attached_once[home] = true;
+                // R835001: every attach — the first included — moves the seat to a new socket
+                // generation, so a Hello from this socket is never absorbed by an older one's
+                // queued Hello.
+                core.socket_generation[home] += 1;
                 Some(previous)
             }
         };
@@ -2006,6 +2150,37 @@ fn flood_exceeded(core: &mut Core, player: PlayerId, now: i64) -> bool {
     }
     recent.push_back(now);
     false
+}
+
+impl MatchActor {
+    /// R835000: counts one refused action for `home` (a reducer refusal or a flood rejection) and
+    /// answers the alert's payload the first time the seat's window crosses
+    /// `REJECTION_ALERT_THRESHOLD`: the seat's profile id and the count. `None` before that and
+    /// after the alert has gone — exactly one alert per match per seat. The window is pruned to
+    /// `REJECTION_ALERT_WINDOW_MS` first, so old refusals fall out and the crossing is strictly
+    /// over the threshold.
+    fn note_rejection(&self, core: &mut Core, home: PlayerId, now: i64) -> Option<(String, usize)> {
+        let recent = &mut core.rejections[home];
+        while recent
+            .front()
+            .is_some_and(|at| *at <= now - REJECTION_ALERT_WINDOW_MS)
+        {
+            recent.pop_front();
+        }
+        recent.push_back(now);
+        if recent.len() > REJECTION_ALERT_THRESHOLD && !core.rejection_alerted[home] {
+            core.rejection_alerted[home] = true;
+            let (first, second) = self.seats();
+            let profile_id = [first, second]
+                .into_iter()
+                .find(|seat| seat.player == home)
+                .map(|seat| seat.profile_id.clone())
+                .unwrap_or_default();
+            Some((profile_id, recent.len()))
+        } else {
+            None
+        }
+    }
 }
 
 fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {

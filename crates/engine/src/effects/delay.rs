@@ -57,6 +57,7 @@ pub const HAND_WATCH_KEY: &str = "handWatch";
 /// `DelayAt.player`: a `PlayerSpec`, relative to the controller like every other, or `"turn"`
 /// (`THIS_TURN`): the player whose turn is running as the effect is made.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum DelayPlayer {
     #[serde(rename = "self")]
     SelfSide,
@@ -82,6 +83,7 @@ impl DelayPlayer {
 /// turn is running as the effect is made — R350's "at the end of this turn", whoever's turn that is
 /// (#90.1 CN-Virus, cast on a draw that may come on either player's turn).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DelayAt {
     /// Only `Phase::Start` or `Phase::End` (TS `DelayedEffect["at"]["phase"]`).
@@ -99,6 +101,7 @@ fn delay_player(ctx: &EffectContext<'_>, at: &DelayAt) -> PlayerId {
 
 /// `delay`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DelayArgs {
     pub at: DelayAt,
@@ -282,6 +285,7 @@ fn maker_of(ctx: &EffectContext<'_>) -> (String, bool) {
 /// `destroyAtNextTurnStart`'s argument: one unit by a `TargetSpec`, or a board scope read when it
 /// resolves (TS `{ target; mark? } | { scope; mark? }`, told apart by `"scope" in args`).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum DestroyAtNextTurnStartArgs {
     Scope {
@@ -405,6 +409,7 @@ pub fn allure_enemy_units() -> Effect {
 
 /// `discardHandAtTurnEnd`'s `turn`: the end of this turn, or of the controller's next one.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum DiscardHandTurn {
     This,
@@ -423,6 +428,7 @@ impl DiscardHandTurn {
 
 /// `discardHandAtTurnEnd`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscardHandAtTurnEndArgs {
     pub turn: DiscardHandTurn,
@@ -567,6 +573,7 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
 
 /// `forRestOfGame`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ForRestOfGameArgs {
     pub step: String,
@@ -601,6 +608,7 @@ pub fn for_rest_of_game(args: ForRestOfGameArgs) -> Effect {
 
 /// `watchLaneThisTurn`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct WatchLaneArgs {
     pub lane: i32,

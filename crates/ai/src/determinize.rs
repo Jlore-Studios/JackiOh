@@ -13,8 +13,8 @@
 use indexmap::IndexSet;
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
-    CardInstance, CardType, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PlayerId, RevealAt, Rng,
-    SecretChoice, SetAs, active_units_of, effective_cost, find_def, query, scripts_for, unit_view,
+    CardInstance, CatalogQueryArgs, CostOptions, GameState, PLAYER_IDS, PerPlayer, PlayerId, RevealAt, Rng,
+    SecretChoice, SetAs, active_units_of, effective_cost, query, scripts_for, unit_view,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -147,39 +147,27 @@ fn slot_card_mut(state: &mut GameState, side: PlayerId, slot: TrapSlot) -> Optio
     }
 }
 
-/// ME-ALTPLAY, R1046: stamp a sampled Unit or Spell as a set card — a Unit at the start of the
-/// next turn, a Spell at a uniformly sampled timing. With no permission nothing is stamped and no
-/// extra rng draw happens.
+/// R783009, R1046: stamp a sampled card that may be set by its Cloaked (`cloakable`) as a set card
+/// (`cloaked`, which has no timing), with no rng draw. Any other sampled card is a Trap or a Field
+/// Trap and stays unstamped.
 fn stamp_sampled_set_as(
     state: &mut GameState,
     side: PlayerId,
     slot: TrapSlot,
-    grants: &jackioh_engine::alt_play::FaceDownGrant,
+    cloakable: &[String],
     set_turn: i32,
-    rng: &mut Rng,
 ) {
     let Some(def_id) = slot_card(state, side, slot).map(|card| card.def_id.clone()) else {
         return;
     };
-    let Some(def) = find_def(Some(&*state), &def_id) else {
-        return;
-    };
-    let is_unit = def.type_ == CardType::Unit && grants.units;
-    let is_spell = def.type_ == CardType::Spell && grants.spells;
-    if !is_unit && !is_spell {
+    if !cloakable.contains(&def_id) {
         return;
     }
-    // D4: a sampled Spell's timing is uniform; a Unit needs no draw.
-    let reveal = if is_unit {
-        RevealAt::StartOfNextTurn
-    } else {
-        RevealAt::ALL[rng.int(3) as usize]
-    };
     let Some(card) = slot_card_mut(state, side, slot) else {
         return;
     };
     card.set_as = Some(SetAs {
-        reveal,
+        reveal: RevealAt::Cloaked,
         set_turn,
         echo: None,
         revealing: None,
@@ -274,12 +262,96 @@ fn query_ids(args: serde_json::Value) -> Vec<String> {
     query(&args).into_iter().map(|def| def.id.clone()).collect()
 }
 
+/// What a determinization reads off `public_state` before its first draw: the opponent's shown def
+/// ids (step 2's `seen`), the trap pools, the aura baseline `shown` and each side's widened slot
+/// pool (step 3's head), and step 4/5's card pool. Every determinization of one decision starts from
+/// the same `public_state`, so all of it is identical call to call; `decide` computes it once
+/// (`det_ground`) and hands it to each (`determinize_on`). A side's `cloakable` reads only the auras
+/// that reach that side's own hand (R783007's `cloak_hand_aura` applies where `player == controller`),
+/// so the walk's sampling of the other side's slots first does not change it.
+pub struct DetGround {
+    seen: IndexSet<String>,
+    trap_pool: Vec<String>,
+    aura_traps: Vec<String>,
+    shown: String,
+    cloakable: PerPlayer<Vec<String>>,
+    slot_pool: PerPlayer<Vec<String>>,
+    card_pool: Vec<String>,
+}
+
+/// The `DetGround` of a public state: step 2's `seen`, step 3's pools and aura baseline, steps 4/5's
+/// card pool — every read made on the state as it was handed in, before any sampling.
+pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
+    let opp = seat.opponent();
+    let mut seen: IndexSet<String> = IndexSet::new();
+    for card in all_cards(public_state) {
+        if card.owner == opp && !is_placeholder(card) {
+            seen.insert(card.def_id.clone());
+        }
+    }
+    let trap_pool = query_ids(json!({ "type": ["Trap", "Field Trap"] }));
+    let aura_traps: Vec<String> = trap_pool
+        .iter()
+        .filter(|id| has_aura(public_state, id))
+        .cloned()
+        .collect();
+    let shown = if !aura_traps.is_empty() {
+        shown_units(public_state)
+    } else {
+        String::new()
+    };
+    // R783009: a hidden backrow card may also be a card set by its Cloaked — one that prints it, or
+    // one an aura lends it to in that side's hand now.
+    let printed_cloaked = jackioh_engine::alt_play::printed_cloaked_def_ids();
+    let mut cloakable: PerPlayer<Vec<String>> = PerPlayer::default();
+    let mut slot_pool: PerPlayer<Vec<String>> = PerPlayer::default();
+    for side in PLAYER_IDS {
+        // R1046: Knowledge Breaker's and Paranoia's auras lend Cloaked to a hand's Units and Spells,
+        // so while one acts those cards are `lent_cloaked_def_ids` too.
+        let mut side_cloakable = printed_cloaked.clone();
+        for id in jackioh_engine::alt_play::lent_cloaked_def_ids(public_state, side) {
+            if !side_cloakable.contains(&id) {
+                side_cloakable.push(id);
+            }
+        }
+        let mut pool = trap_pool.clone();
+        for id in &side_cloakable {
+            if !pool.contains(id) {
+                pool.push(id.clone());
+            }
+        }
+        cloakable[side] = side_cloakable;
+        slot_pool[side] = pool;
+    }
+    let card_pool = query_ids(json!({ "excludeDefId": AI_DETERMINIZE.exclude_def_ids }));
+    DetGround {
+        seen,
+        trap_pool,
+        aura_traps,
+        shown,
+        cloakable,
+        slot_pool,
+        card_pool,
+    }
+}
+
 /// R185: one concrete world consistent with `public_state` (the output of redact). Pure given rng.
 pub fn determinize(
     public_state: &GameState,
     seat: PlayerId,
     rng: &mut Rng,
     options: DeterminizeOptions,
+) -> GameState {
+    determinize_on(public_state, seat, rng, options, &det_ground(public_state, seat))
+}
+
+/// `determinize` on a `DetGround` already computed: the same world `determinize` would build.
+pub fn determinize_on(
+    public_state: &GameState,
+    seat: PlayerId,
+    rng: &mut Rng,
+    options: DeterminizeOptions,
+    ground: &DetGround,
 ) -> GameState {
     let opp = seat.opponent();
     let mut next = public_state.clone();
@@ -288,51 +360,27 @@ pub fn determinize(
     next.seed = format!("ai:{}", int_2_31(rng));
     next.rng_cursor = 0;
 
-    // Step 2: what the opponent has shown, in any zone.
-    let mut seen: IndexSet<String> = IndexSet::new();
-    for card in all_cards(&next) {
-        if card.owner == opp && !is_placeholder(card) {
-            seen.insert(card.def_id.clone());
-        }
-    }
+    // Step 2: what the opponent has shown, in any zone (det_ground's `seen`).
+    let seen = &ground.seen;
     let mut sampled: IndexSet<String> = IndexSet::new();
 
     // Step 3: face-down backrow placeholders, in lane order, from the Trap and Field Trap pool. R602: a
     // face-down Trap's aura is live (R403) and the units it changes are on the board for the seat to read,
     // so a candidate whose aura would change any unit's shown stats is not in the pool for that card.
-    let trap_pool = query_ids(json!({ "type": ["Trap", "Field Trap"] }));
-    let aura_traps: Vec<String> = trap_pool
-        .iter()
-        .filter(|id| has_aura(&next, id))
-        .cloned()
-        .collect();
-    let shown = if !aura_traps.is_empty() {
-        shown_units(&next)
-    } else {
-        String::new()
-    };
     let base_sampler = TrapSampler {
-        trap_pool: &trap_pool,
-        aura_traps: &aura_traps,
-        shown: &shown,
+        trap_pool: &ground.trap_pool,
+        aura_traps: &ground.aura_traps,
+        shown: &ground.shown,
         match_shown_cost: options.match_shown_cost.unwrap_or(true),
     };
     for side in [opp, seat] {
-        // ME-ALTPLAY, R1046: while a face-down permission acts, a hidden backrow card may be a set
-        // Unit or Spell, so that side's pool widens by the Unit and Spell pools.
-        let grants = jackioh_engine::alt_play::grants_of(&next, side);
-        let mut pool = trap_pool.clone();
-        if grants.units {
-            pool.extend(query_ids(json!({ "type": ["Unit"] })));
-        }
-        if grants.spells {
-            pool.extend(query_ids(json!({ "type": ["Spell"] })));
-        }
-        let sampler = if grants.units || grants.spells {
+        let cloakable = &ground.cloakable[side];
+        let pool = &ground.slot_pool[side];
+        let sampler = if !cloakable.is_empty() {
             TrapSampler {
-                trap_pool: &pool,
-                aura_traps: &aura_traps,
-                shown: &shown,
+                trap_pool: pool,
+                aura_traps: &ground.aura_traps,
+                shown: &ground.shown,
                 match_shown_cost: options.match_shown_cost.unwrap_or(true),
             }
         } else {
@@ -362,9 +410,9 @@ pub fn determinize(
             } else {
                 None
             };
-            let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, &seen, &mut sampled, rng);
+            let def_id = sampler.trap_for(&mut next, side, slot, shown_cost, seen, &mut sampled, rng);
             set_slot_def(&mut next, side, slot, &def_id);
-            stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
+            stamp_sampled_set_as(&mut next, side, slot, cloakable, set_turn);
         }
         // R448: a card being set face-down waits in the resolving zone as a placeholder; it is a trap too.
         for at in 0..next.players[side].resolving.len() {
@@ -377,31 +425,31 @@ pub fn determinize(
             }
             let set_turn = card.summoned_turn.unwrap_or(next.turn);
             if slot_card(&next, side, slot).is_some_and(is_placeholder) {
-                let def_id = sampler.trap_for(&mut next, side, slot, None, &seen, &mut sampled, rng);
+                let def_id = sampler.trap_for(&mut next, side, slot, None, seen, &mut sampled, rng);
                 set_slot_def(&mut next, side, slot, &def_id);
-                stamp_sampled_set_as(&mut next, side, slot, &grants, set_turn, rng);
+                stamp_sampled_set_as(&mut next, side, slot, cloakable, set_turn);
             }
         }
     }
 
     // Step 4: the opponent's hand, then its library, in (sorted) order, from the non-token pool of
-    // every set.
-    let pool = query_ids(json!({ "excludeDefId": AI_DETERMINIZE.exclude_def_ids }));
+    // every set (det_ground's card_pool).
+    let pool = &ground.card_pool;
     for at in 0..next.players[opp].hand.len() {
         if is_placeholder(&next.players[opp].hand[at]) {
-            next.players[opp].hand[at].def_id = sample_def(&pool, &seen, &mut sampled, rng);
+            next.players[opp].hand[at].def_id = sample_def(pool, seen, &mut sampled, rng);
         }
     }
     for at in 0..next.players[opp].library.len() {
         if is_placeholder(&next.players[opp].library[at]) {
-            next.players[opp].library[at].def_id = sample_def(&pool, &seen, &mut sampled, rng);
+            next.players[opp].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
         }
     }
 
     // Step 5: the seat's own library — the opponent's cards in it sampled as in step 4, then shuffled.
     for at in 0..next.players[seat].library.len() {
         if is_placeholder(&next.players[seat].library[at]) {
-            next.players[seat].library[at].def_id = sample_def(&pool, &seen, &mut sampled, rng);
+            next.players[seat].library[at].def_id = sample_def(pool, seen, &mut sampled, rng);
         }
     }
     next.players[seat].library = rng.shuffle(&next.players[seat].library);

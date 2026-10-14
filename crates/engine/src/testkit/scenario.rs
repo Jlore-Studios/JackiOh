@@ -455,9 +455,9 @@ pub struct PlayOptions {
     pub x: Option<i32>,
     #[serde(default)]
     pub embiggen: Option<bool>,
-    /// R1086: play this Magnetic card onto the zone's host Unit.
+    /// R1086: play this Equip card onto the zone's host Unit.
     #[serde(default)]
-    pub magnetic: Option<bool>,
+    pub equip: Option<bool>,
     #[serde(default)]
     pub targets: Option<Vec<Selection>>,
     #[serde(default)]
@@ -465,7 +465,7 @@ pub struct PlayOptions {
     /// Units sacrificed for a Tribute cost; each entry is any card reference on the field.
     #[serde(default)]
     pub tributes: Option<Vec<String>>,
-    /// ME-ALTPLAY, R1040, R1044: play face-down as a Trap revealing at this timing.
+    /// R783004: play face-down as a Trap by the card's Cloaked (`cloaked`).
     #[serde(default)]
     pub face_down: Option<RevealAt>,
 }
@@ -1441,7 +1441,7 @@ impl Scenario {
 
     // --- steps ----------------------------------------------------------------------------------
 
-    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "magnetic"?, "targets"?, "modes"?,
+    /// `opts`: `json!({ "zone"?, "row"?, "x"?, "embiggen"?, "equip"?, "targets"?, "modes"?,
     /// "tributes"?, "faceDown"? })`.
     pub fn play(&mut self, card: impl Into<CardRef>, opts: Value) -> &mut Scenario {
         let opts: PlayOptions = options_of(opts, "play");
@@ -1488,7 +1488,7 @@ impl Scenario {
                 zone,
                 x: opts.x,
                 embiggen: opts.embiggen,
-                magnetic: opts.magnetic,
+                equip: opts.equip,
                 tributes,
                 targets: opts.targets,
                 modes: opts.modes,

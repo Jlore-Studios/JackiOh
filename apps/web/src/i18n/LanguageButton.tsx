@@ -21,7 +21,8 @@ export default function LanguageButton({ placement }: LanguageButtonProps): Reac
       className={`language-button language-button--${placement}`}
       data-testid={`language-${placement}`}
       data-locale={locale}
-      aria-label={t("Language: {name}. Switch to {next}.", { name: LOCALES[locale].name, next: LOCALES[next].name })}
+      // WCAG 2.5.3 (#757): the name starts with the shown short name, so a voice user can say what they see.
+      aria-label={`${LOCALES[locale].short}. ${t("Language: {name}. Switch to {next}.", { name: LOCALES[locale].name, next: LOCALES[next].name })}`}
       title={t("Language")}
       onClick={() => {
         void setLocale(next);

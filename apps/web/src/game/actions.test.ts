@@ -2,16 +2,18 @@
 // computes legality itself — every one of them feeds a hand-built `ActionBody[]` and checks that
 // what comes out was derived from that array and nothing else.
 
-import type { ActionBody, CraftRecipe, PlayerView, RevealAt, Selection } from "@jackioh/shared";
+import type { ActionBody, CraftRecipe, PendingOption, PendingView, PlayerView, RevealAt, Selection } from "@jackioh/shared";
 import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
 import {
   IDLE,
   answerAction,
+  answerPlaguePlacement,
   attackTargetTestid,
   heroTargetId,
   highlightFor,
+  isPlaguePlacementPrompt,
   onClickTarget,
   onControl,
   outstandingNeed,
@@ -1034,36 +1036,36 @@ describe("R1044 playing face-down as a Trap", () => {
   });
 });
 
-describe("R1086 Magnetic plays (issue #532)", () => {
-  it("R1086 a Magnetic card onto a friendly Unit sends magnetic: true", () => {
+describe("R1086 Equip plays (issue #532)", () => {
+  it("R1086 an Equip card onto a friendly Unit sends equip: true", () => {
     const legal: ActionBody[] = [
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
-      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, equip: true },
     ];
     const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
 
     // One zone, two ways to play it: the picker asks which.
     expect(outstandingNeed(playing.interaction)).toEqual({
-      kind: "magnetic",
+      kind: "equip",
       min: 1,
       max: 1,
       values: [true, false],
     });
 
-    const result = pickInPlay(playing.interaction, { magnetic: true });
+    const result = pickInPlay(playing.interaction, { equip: true });
 
     expect(result.action).toEqual({
       type: "play",
       instanceId: "h1",
       zone: { row: "units", lane: 1 },
-      magnetic: true,
+      equip: true,
     });
   });
 
-  it("R1086 Stack and Magnetic on one zone ask which", () => {
+  it("R1086 Stack and Equip on one zone ask which", () => {
     const legal: ActionBody[] = [
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
-      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, magnetic: true },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 }, equip: true },
       { type: "play", instanceId: "h1", zone: { row: "units", lane: 3 } },
     ];
     const playing = onClickTarget(seatedView(), legal, IDLE, { on: "hand", instanceId: "h1" });
@@ -1086,18 +1088,106 @@ describe("R1086 Magnetic plays (issue #532)", () => {
       lane: 1,
     });
     expect(outstandingNeed(zoned.interaction)).toEqual({
-      kind: "magnetic",
+      kind: "equip",
       min: 1,
       max: 1,
       values: [true, false],
     });
 
-    const stacked = pickInPlay(zoned.interaction, { magnetic: false });
+    const stacked = pickInPlay(zoned.interaction, { equip: false });
     expect(stacked.action).toEqual({
       type: "play",
       instanceId: "h1",
       zone: { row: "units", lane: 1 },
-      magnetic: false,
+      equip: false,
     });
+  });
+});
+
+describe("R821000 a Plague Counter placement is answered on the board", () => {
+  const ONE = "Place a Plague Counter on a permanent";
+  const MANY = "Place 3 Plague Counters on a permanent";
+  const view = seatedView();
+  // Every permanent on the field: your unit, their unit and their face-down card, which names its zone.
+  const options: PendingOption[] = [
+    { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+    { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+    { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+  ];
+  const placement = pendingFor("target", options, { prompt: MANY });
+  const answer = (instanceId: string): ActionBody => ({
+    type: "answer",
+    choiceId: "ch1",
+    selection: [{ pick: "instance", instanceId }],
+  });
+
+  it("is recognised by the engine's two sentences and the shape of its options, and nothing else", () => {
+    expect(isPlaguePlacementPrompt(placement)).toBe(true);
+    expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: ONE }))).toBe(true);
+    // Another target prompt over the same cards, a pick of several, another kind, a prompt not for you.
+    expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: "Choose a target" }))).toBe(false);
+    expect(isPlaguePlacementPrompt(pendingFor("target", options, { prompt: MANY, min: 1, max: 2 }))).toBe(false);
+    expect(isPlaguePlacementPrompt(pendingFor("pick", options, { prompt: MANY }))).toBe(false);
+    expect(
+      isPlaguePlacementPrompt(pendingFor("target", [...options, { key: "hero:p2", label: "Hero", player: "p2" }], { prompt: MANY })),
+    ).toBe(false);
+    expect(isPlaguePlacementPrompt(pendingFor("target", [], { prompt: MANY }))).toBe(false);
+    expect(isPlaguePlacementPrompt(waitingPending)).toBe(false);
+    expect(isPlaguePlacementPrompt(null)).toBe(false);
+  });
+
+  it("selects an option by its id even when it names its zone too (R177)", () => {
+    expect(selectionForOption(options[2]!)).toEqual({ pick: "instance", instanceId: "t1" });
+    // A zone option, which has no id, still selects its zone.
+    expect(selectionForOption({ key: "zone:p1:units:2", label: "Lane 2", player: "p1", row: "units", lane: 2 })).toEqual({
+      pick: "zone",
+      player: "p1",
+      row: "units",
+      lane: 2,
+    });
+  });
+
+  it("lights the cards and the zone a face-down card lies in, and only for this prompt", () => {
+    const lit = pendingHighlight(view, placement);
+    expect(lit.has(testid.card("u1"))).toBe(true);
+    expect(lit.has(testid.card("e1"))).toBe(true);
+    expect(lit.has(testid.zone("opponent", "backrow", 3))).toBe(true);
+    const other = pendingHighlight(view, pendingFor("target", options, { prompt: "Choose a target" }));
+    expect(other.has(testid.zone("opponent", "backrow", 3))).toBe(false);
+  });
+
+  it("answers a click on an offered unit, or on the zone of a face-down card, with the engine's answer", () => {
+    expect(answerPlaguePlacement(view, [], placement, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toEqual(
+      answer("e1"),
+    );
+    expect(answerPlaguePlacement(view, [], placement, { on: "unit", instanceId: "u1", side: "you", lane: 1 })).toEqual(
+      answer("u1"),
+    );
+    expect(answerPlaguePlacement(view, [], placement, { on: "zone", side: "opponent", row: "backrow", lane: 3 })).toEqual(
+      answer("t1"),
+    );
+    // The body the engine itself lists wins, as for a list.
+    const listed = answer("t1");
+    expect(answerPlaguePlacement(view, [listed], placement, { on: "zone", side: "opponent", row: "backrow", lane: 3 })).toBe(
+      listed,
+    );
+  });
+
+  it("answers nothing else: another zone, a card or hero it did not offer, a hand card, another prompt", () => {
+    const click = (target: Parameters<typeof answerPlaguePlacement>[3], pending: PendingView | null = placement) =>
+      answerPlaguePlacement(view, [], pending, target);
+    expect(click({ on: "zone", side: "opponent", row: "backrow", lane: 4 })).toBeNull();
+    // Your side's zone 3 is not their face-down card's.
+    expect(click({ on: "zone", side: "you", row: "backrow", lane: 3 })).toBeNull();
+    // A zone holding a card with an id is picked by that card, not by the zone.
+    expect(click({ on: "zone", side: "opponent", row: "units", lane: 1 })).toBeNull();
+    expect(click({ on: "unit", instanceId: "u2", side: "you", lane: 2 })).toBeNull();
+    expect(click({ on: "backrow", instanceId: "b9", side: "you", lane: 1 })).toBeNull();
+    expect(click({ on: "hand", instanceId: "h1" })).toBeNull();
+    expect(click({ on: "hero", side: "opponent" })).toBeNull();
+    const target = pendingFor("target", options, { prompt: "Choose a target" });
+    expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, target)).toBeNull();
+    expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, waitingPending)).toBeNull();
+    expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, null)).toBeNull();
   });
 });

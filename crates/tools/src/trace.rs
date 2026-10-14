@@ -20,16 +20,11 @@ use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE_BUDGET, AI_TUNING_SERIES, MatchHooks, NextSwing, evaluate, game_config,
     play_match,
 };
-use jackioh_engine::layers::unit_view;
-use jackioh_engine::state::find_instance;
-use jackioh_engine::zones::active_units_of;
-use jackioh_engine::{ActionBody, GameState, PLAYER_IDS, Phase, PlayerId, Position};
+use jackioh_engine::{ActionBody, GameState, PLAYER_IDS, Phase, PlayerId};
 
+use crate::board::{EVAL_DECIMALS, board, describe, hand_names};
 use crate::gate::{parse_matchup, subject_seat_of};
 use crate::sweep::to_fixed;
-
-/// The evaluation prints with this many decimals.
-const EVAL_DECIMALS: usize = 1;
 
 /// `cargo jackioh trace …`.
 #[derive(clap::Args, Debug)]
@@ -45,102 +40,6 @@ pub struct Args {
     /// The seed series (also `SERIES`); default AI_TUNING_SERIES.
     #[arg(long, value_name = "NAME")]
     pub series: Option<String>,
-}
-
-/// A card's name, by its def (a transient one first, as `findDef` reads it), else its id.
-fn name_of(state: &GameState, def_id: &str) -> String {
-    state
-        .transient_defs
-        .get(def_id)
-        .or_else(|| jackioh_cards::CATALOG.get(def_id))
-        .map_or_else(|| def_id.to_string(), |def| def.name.clone())
-}
-
-/// One seat's side of the board on one line: hero, mana, hand and library sizes, its units with
-/// their stats and keyword initials, and its backrow.
-fn board(state: &GameState, p: PlayerId) -> String {
-    let units: Vec<String> = active_units_of(state, p)
-        .iter()
-        .map(|u| {
-            let v = unit_view(state, u);
-            let kw: String = v
-                .keywords
-                .iter()
-                .filter_map(|keyword| keyword.kind().as_str().chars().next())
-                .collect();
-            format!(
-                "{}{} {}/{}{}{}",
-                name_of(state, &u.def_id),
-                if u.radiant { "*" } else { "" },
-                v.attack,
-                v.health,
-                if v.position == Position::Def { " DEF" } else { "" },
-                if kw.is_empty() {
-                    String::new()
-                } else {
-                    format!(" [{kw}]")
-                }
-            )
-        })
-        .collect();
-    let side = &state.players[p];
-    let back: Vec<String> = side
-        .backrow
-        .iter()
-        .flatten()
-        .map(|card| name_of(state, &card.def_id))
-        .collect();
-    format!(
-        "{p} hp {} mana {}/{} hand {} lib {} | {}{}",
-        side.hero.health,
-        side.mana.current,
-        side.mana.max,
-        side.hand.len(),
-        side.library.len(),
-        units.join(", "),
-        if back.is_empty() {
-            String::new()
-        } else {
-            format!(" || {}", back.join(", "))
-        }
-    )
-}
-
-/// An action in words: what is played, what attacks what, what switches; anything else as its JSON.
-fn describe(state: &GameState, _seat: PlayerId, action: &ActionBody) -> String {
-    match action {
-        ActionBody::Play {
-            instance_id, targets, ..
-        } => {
-            let card = find_instance(state, instance_id);
-            let targets = match targets {
-                Some(targets) => serde_json::to_string(targets).unwrap_or_default(),
-                None => String::new(),
-            };
-            let name = card.map_or_else(|| instance_id.clone(), |card| name_of(state, &card.def_id));
-            format!("play {name} {targets}")
-        }
-        ActionBody::Attack {
-            attacker_id,
-            target_id,
-        } => {
-            let attacker = find_instance(state, attacker_id)
-                .map_or_else(|| attacker_id.clone(), |card| name_of(state, &card.def_id));
-            let target = if target_id.starts_with("hero") {
-                target_id.clone()
-            } else {
-                find_instance(state, target_id)
-                    .map_or_else(|| target_id.clone(), |card| name_of(state, &card.def_id))
-            };
-            format!("attack {attacker} -> {target}")
-        }
-        ActionBody::SwitchPosition { instance_id } => {
-            let name = find_instance(state, instance_id)
-                .map_or_else(String::new, |card| name_of(state, &card.def_id));
-            format!("switch {name}")
-        }
-        other => serde_json::to_string(other).unwrap_or_default(),
-    }
 }
 
 /// `cargo jackioh trace`.
@@ -184,11 +83,7 @@ pub fn run(args: Args) -> Result<()> {
                     for p in PLAYER_IDS {
                         println!("   {}", board(before, p));
                     }
-                    let hand: Vec<String> = before.players[before.active]
-                        .hand
-                        .iter()
-                        .map(|card| name_of(before, &card.def_id))
-                        .collect();
+                    let hand = hand_names(before, before.active);
                     println!("   hand({}): {}", before.active, hand.join(", "));
                 }
                 let who = if seat == subject { "AI " } else { "OPP" };

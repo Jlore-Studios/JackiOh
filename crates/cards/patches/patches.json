@@ -9062,5 +9062,425 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.3.7",
+    "date": "2026-10-14",
+    "title": "Patch v0.3.7: the keyword update: Ranged, Flying, Cloaked, Crater and Flashback, Magnetic renamed Equip, Immutable and Vanilla",
+    "source": "issue #781, issue #783",
+    "notes": "The keyword update. Five keywords join the game (R783000 to R783013): Ranged, Flying, Cloaked, Crater and Flashback. Magnetic is renamed Equip, its old name read as Equip in the shipped snapshots and recorded logs (R781000). Immutable keeps what it did and, while in play, can't be targeted by Spells, Field Spells or Field Traps (R781001, R781002); no card's data changes for it. Vanilla returns a card to its printed stats, never killing it (R781003). The random keyword pool is the combat keyword pool, eighteen keywords in the designer's order (R781005), and the ten faces that draw from it say so. Keymaster Keenus prints Equip and an Aura of 5 (Radiant 10) random combat keywords (R781004). Knowledge Breaker, its Prime and Paranoia lend Cloaked in place of ME-ALTPLAY's face-down permission, which is gone (R1040 to R1046); Cloaked Toe Cracker prints Cloaked and Doom Shroom Crater (R783005, R783011).",
+    "player": {
+      "title": "Keyword update",
+      "new": [
+        "Five keywords: Ranged, Flying, Cloaked, Crater and Flashback.",
+        "Combat keyword: the name of the keywords a random keyword comes from, eighteen of them, listed in the glossary."
+      ],
+      "balance": [],
+      "changes": [
+        "Random keywords now come from the combat keywords, which adds Flying, Ranged, Indestructible and Spell Damage +1.",
+        "Immutable: while it is in play, Spells, Field Spells and Field Traps can't target it.",
+        "Vanilla returns a Unit to the attack and health printed on its face; one that would die from it stays at 1 health.",
+        "Prejudiced Postdoc's Vanilla copy no longer keeps the target's buffs.",
+        "Keymaster Keenus has Equip and an Aura that gives it 5 random combat keywords (Radiant 10), in place of every keyword and its Radiant Death.",
+        "Knowledge Breaker and Knowledge Breaker Prime: \"Aura: Your Units have Cloaked.\"",
+        "Paranoia: \"Aura: Your Spells have Cloaked.\" A Spell you set costs its own price and reveals when you choose.",
+        "Radiant Paranoia: \"Spells you reveal have Echo +1.\"",
+        "Cloaked Toe Cracker has Cloaked, and its Aura never makes a Cloaked card free.",
+        "Doom Shroom has Crater in place of \"Lock this zone.\""
+      ],
+      "text": [
+        "Magnetic is now called Equip.",
+        "Plastic Surgery, Zao Gao and the Conjure Rush Token cards say \"random combat keyword\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "189bb91c1f4559fee7266c91fe9846d1bb7b66dd"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-063",
+        "name": "Plastic Surgery",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-080",
+        "name": "Zao Gao",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-006",
+        "name": "Cloaked Toe Cracker",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-001",
+        "name": "Doom Shroom",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-015",
+        "name": "Conjure Rush Token",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-016",
+        "name": "Conjure Rush Token+",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-017",
+        "name": "Conjure Rush Token++",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-045-1",
+        "name": "Knowledge Breaker Prime",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-065",
+        "name": "Keymaster Keenus",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "meditative-067",
+        "name": "Sentient Cat Ears",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-099",
+        "name": "Paranoia",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.3.7b",
+    "date": "2026-10-14",
+    "title": "Patch v0.3.Y: a number only the Radiant face prints is tuned on the Radiant face only",
+    "source": "issue #824",
+    "notes": "Thirty-one numbers only the Radiant face prints, on thirty cards, were still tuned on both faces. Each is now tuned on the Radiant face only (R824000), as R749 did for Divine Favor and Rewind; Blade Storm's base face always stops after 30 rounds.",
+    "player": {
+      "title": "Radiant numbers stay on the Radiant face",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Blade Storm's base face always stops after 30 rounds; a Nerf or a Buff moves that cap on its Radiant face only."
+      ],
+      "text": [],
+      "fixes": [
+        "A Nerf, a Buff or KY's Constant on a card that is not Radiant no longer lands on a number only its Radiant face prints."
+      ]
+    },
+    "commits": [
+      "799b3aeede37ce6d37380852164a52192d7e2379"
+    ],
+    "reconstructed": false,
+    "changes": [
+      {
+        "id": "core-007",
+        "name": "Jewelosco Scarab",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-017",
+        "name": "Flood",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-037",
+        "name": "Gravedigger",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-039",
+        "name": "Recycling Initiative",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-041",
+        "name": "Sheepish",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-057",
+        "name": "Conjure KY",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-058",
+        "name": "Rush Token Farm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-062",
+        "name": "Friend of Felinors",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-072",
+        "name": "Reminisce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-078",
+        "name": "/fullsend",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "core-082",
+        "name": "KY's Trial",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-002",
+        "name": "The Trickster",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-004",
+        "name": "Palantir",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-006",
+        "name": "Cloaked Toe Cracker",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-009",
+        "name": "Income Tax",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-013",
+        "name": "Boots on the Ground",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-017",
+        "name": "Counterspell",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-030",
+        "name": "Recycle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-047",
+        "name": "Recurring Felinor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-049",
+        "name": "Anti-Greed Machine",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-059",
+        "name": "Plague Doctor",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classic-085",
+        "name": "King Wagtoggle",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-023",
+        "name": "Dropshipping",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-026",
+        "name": "Tommy Tempo",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-029",
+        "name": "Portal to the Past",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-032-3",
+        "name": "Blade Storm",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-052",
+        "name": "Jlockheed's Permanent Defense Contract",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-068",
+        "name": "Organic Produce",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      },
+      {
+        "id": "classicplus-075-1",
+        "name": "J-lease J-Jungle EX-plorer Pack",
+        "kind": "changed",
+        "fields": [
+          "params"
+        ]
+      }
+    ]
   }
 ]

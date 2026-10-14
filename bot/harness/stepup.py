@@ -26,9 +26,9 @@ from harness.config import (BRANCH_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABE
                             LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE, SLASH, STEP_UP_AFTER)
 from harness.context import Context
 from harness.errors import GitHubError
-from harness.queue import (branch_for_issue, carried_difficulty, difficulty_of, is_human,
-                           label_names, open_pull_for_branch, rating_source, set_state_label,
-                           wip_branch)
+from harness.queue import (branch_for_issue, carried_difficulty, difficulty_of, human_reply,
+                           is_human, label_names, open_pull_for_branch, rating_source,
+                           set_state_label, wip_branch)
 from harness.state import item as state_item
 
 #: How many strike reasons an item keeps, for the comment that says why it stepped up.
@@ -228,8 +228,7 @@ def rebuild_request(ctx: Context, number: int, by: str) -> str:
     difficulty. Returns the reply."""
     thread = ctx.gh.get_issue(number)
     if is_human(label_names(thread)):
-        return (f"#{number} is labelled `human`: people do it, so I leave it alone. Take that "
-                "label off to hand it to me.")
+        return human_reply(number, label_names(thread))
     if "pull_request" in thread:
         if LABEL_PR not in label_names(thread):
             return f"#{number} is not a pull request I opened, so I will not close it."

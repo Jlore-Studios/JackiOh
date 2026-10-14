@@ -21,14 +21,15 @@ use serde_json::{Value, json};
 use jackioh_engine::CreateGameArgs;
 use jackioh_engine::wire::{Phase, PlayerId};
 use jackioh_server::actor::match_actor::MatchActor;
+use jackioh_server::actor::protocol::SERVER_NONCE_PREFIX;
 use jackioh_server::api::results::reap_stuck_matches;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_RECORD_RESULT_ATTEMPTS, PROMPT_CLOCK_SECONDS,
-    TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_SERVER_ACTION_RETRY_MS, PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::{Db, StoreError};
+use jackioh_server::db::store::{Db, MatchActionRow, StoreError};
 
 use crate::support::deps::empty_test_app;
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -1270,5 +1271,161 @@ mod r1437_a_result_the_store_fails_to_take {
             last_view(&back)["result"],
             json!({ "winner": "p2", "reason": "concede" })
         );
+    }
+}
+
+/// R776000: an action a clock's expiry becomes, whose row the store fails to write, is tried again
+/// when the clock runs out once more, a retry interval later; a row the log holds at the seq the actor
+/// is about to write means the actor is behind its log, so it lets go and the next socket folds the
+/// log it missed. The fake store's `on_call` seam fails the append before it writes anything.
+mod r776000_a_server_action_the_store_fails_to_take {
+    use super::*;
+
+    /// From here on, counts the store's `matches.appendActions` calls and fails the first.
+    async fn fail_first_append(h: &Harness) -> Arc<AtomicUsize> {
+        let appends = Arc::new(AtomicUsize::new(0));
+        let seen = Arc::clone(&appends);
+        fake(&h.app).lock().await.on_call = Some(Arc::new(move |method: &str| {
+            if method == "matches.appendActions" && seen.fetch_add(1, Ordering::SeqCst) == 0 {
+                return Err(StoreError::Other("the store is away".to_string()));
+            }
+            Ok(())
+        }));
+        appends
+    }
+
+    /// The log's rows after the opening's mulligans.
+    async fn rows_after_opening(h: &Harness) -> Vec<Value> {
+        table(&h.app, |data| json!(data.tables.match_actions))
+            .await
+            .into_iter()
+            .skip(h.opening)
+            .collect()
+    }
+
+    /// Both seats attached, no profile in a match.
+    async fn attached() -> (Harness, MatchActor, FakeSocket, FakeSocket) {
+        let h = start_match(StartOptions::default()).await;
+        let actor = actor_of(&h).await;
+        let p1 = create_fake_socket();
+        let p2 = create_fake_socket();
+        actor.attach(PlayerId::P1, p1.socket());
+        actor.attach(PlayerId::P2, p2.socket());
+        actor.idle().await;
+        (h, actor, p1, p2)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_a_turn_timeout_the_store_fails_once_ends_the_turn_one_retry_later() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, _p1, _p2) = attached().await;
+        let appends = fail_first_append(&h).await;
+
+        advance(TURN_CLOCK_SECONDS * 1000).await;
+        actor.idle().await;
+        assert_eq!(appends.load(Ordering::SeqCst), 1);
+        assert_eq!(logs.count("match.append.failed"), 1);
+        assert_eq!(rows_after_opening(&h).await, Vec::<Value>::new());
+        assert_eq!(actor.snapshot().active, PlayerId::P1);
+
+        advance(MATCH_SERVER_ACTION_RETRY_MS - 1).await;
+        actor.idle().await;
+        assert_eq!(rows_after_opening(&h).await, Vec::<Value>::new());
+
+        advance(1).await;
+        actor.idle().await;
+        let rows = rows_after_opening(&h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        let seq = rows[0]["seq"].as_u64().expect("a seq");
+        assert_eq!(seq, h.opening as u64 + 1);
+        assert_eq!(rows[0]["action"]["type"], "timeout");
+        assert_eq!(rows[0]["action"]["playerId"], "p1");
+        assert_eq!(
+            rows[0]["action"]["nonce"],
+            format!("{SERVER_NONCE_PREFIX}turn-{seq}")
+        );
+        assert_eq!(actor.snapshot().active, PlayerId::P2);
+
+        // The turn passed to p2, whose clock is a whole turn long: the retry is spent.
+        advance(MATCH_SERVER_ACTION_RETRY_MS).await;
+        actor.idle().await;
+        assert_eq!(rows_after_opening(&h).await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_a_disconnect_forfeit_the_store_fails_once_still_ends_the_match_one_retry_later() {
+        let (_logs, _recording) = Logs::record();
+        let (h, actor, p1, _p2) = attached().await;
+        p1.drop();
+        actor.idle().await;
+        fail_first_append(&h).await;
+
+        advance(DISCONNECT_GRACE_SECONDS * 1000).await;
+        actor.idle().await;
+        assert_eq!(results(&h).await, Vec::<Value>::new());
+        assert!(actor.snapshot().result.is_none());
+
+        advance(MATCH_SERVER_ACTION_RETRY_MS).await;
+        actor.idle().await;
+        let forfeits: Vec<Value> = rows_after_opening(&h)
+            .await
+            .into_iter()
+            .filter(|row| row["action"]["type"] == "disconnectExpired")
+            .collect();
+        assert_eq!(forfeits.len(), 1, "{forfeits:?}");
+        assert_eq!(forfeits[0]["action"]["player"], "p1");
+        let rows = results(&h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["reason"], "disconnect");
+        assert_eq!(rows[0]["winnerProfileId"], "profile-2");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_an_actor_behind_its_log_lets_go_and_the_next_socket_folds_the_row_it_missed() {
+        let (logs, _recording) = Logs::record();
+        let (h, actor, p1, p2) = attached().await;
+        let seq = i64::try_from(h.opening).expect("a count") + 1;
+        let row = MatchActionRow {
+            match_id: MATCH_ID.to_string(),
+            seq,
+            action: from(json!({ "type": "endTurn", "playerId": "p1", "nonce": "by-hand" })),
+            at: h.clock.now(),
+        };
+        store!(h.app, t => t.matches_append_actions(std::slice::from_ref(&row)).await.expect("matches.appendActions"));
+
+        let reply = to_json(
+            &actor
+                .submit(PlayerId::P1, "n1".to_string(), from(json!({ "type": "endTurn" })))
+                .await,
+        );
+        assert_eq!(reply["type"], "error", "{reply}");
+        assert_eq!(reply["code"], "internal", "{reply}");
+        assert!(logs.has("match.log.diverged"));
+        assert!(!h.app.matches.has(MATCH_ID));
+        assert_eq!(p1.close_code(), Some(1001));
+        assert_eq!(p2.close_code(), Some(1001));
+        let rows = rows_after_opening(&h).await;
+        assert_eq!(rows.len(), 1, "{rows:?}");
+        assert_eq!(rows[0]["action"]["nonce"], "by-hand");
+
+        let back = create_fake_socket();
+        h.app
+            .matches
+            .attach(&h.app, MATCH_ID, "profile-1", back.socket())
+            .await
+            .expect("profile-1 attaches");
+        let revived = actor_of(&h).await;
+        revived.idle().await;
+        assert!(logs.has("match.rebuilt"));
+        assert_eq!(revived.snapshot().active, PlayerId::P2);
+        assert_eq!(last_view(&back)["active"], "p2");
+
+        let reply = to_json(
+            &revived
+                .submit(PlayerId::P2, "n2".to_string(), from(json!({ "type": "endTurn" })))
+                .await,
+        );
+        assert_eq!(reply["type"], "ack", "{reply}");
+        assert_eq!(reply["seq"], json!(seq + 1));
     }
 }

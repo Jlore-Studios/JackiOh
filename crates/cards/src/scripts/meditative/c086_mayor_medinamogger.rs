@@ -6,22 +6,7 @@
 //! `random_targets` (ME-RANDOMTARGETS, R1200). The Radiant face's Lucky 1 rolls its controller's
 //! random targets again (R1201). Keywords and the aura are catalog data; there is nothing to run.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-086";
-
-pub fn script() -> CardScripts {
-    // Both faces carry the aura; the Radiant face's Lucky 1 is catalog data beside it.
-    let base = Script {
-        static_flags: Some(StaticFlags {
-            random_targets: Some(true),
-            ..Default::default()
-        }),
-        ..Script::default()
-    };
-    let radiant = base.clone();
-    CardScripts { base, radiant }
-}
 
 // M #86 Mayor Medinamogger — SPEC §8.8 row 86, BUILD M10 row M 86: "While it acts on either side,
 // both players' declared targets are drawn by the engine at §10.5 step 1 (MD-E9), `legalActions`
@@ -128,6 +113,25 @@ mod tests {
                 assert_eq!(hits.len(), 1, "the drawn target took the hit: {hits:?}");
                 assert_eq!(hits[0].1, 2, "the drawn target took the 2 damage");
                 s.expect_in_zone(BURN, "graveyard");
+            }
+
+            #[test]
+            fn r1200_r781001_the_drawn_target_is_never_an_immutable_unit_a_spell_cannot_target() {
+                crate::register_all();
+                for n in 0..8 {
+                    let mut s = scenario(json!({
+                        "seed": format!("mayor-immutable-{n}"),
+                        "p1": { "hand": ["core-016", FILLER], "field": [MAYOR], "mana": 10 },
+                        "p2": { "hand": [FILLER], "field": [{ "def": "core-019", "radiant": true }] },
+                    }));
+                    let menace = s.card("core-019").id.clone();
+                    let mayor = s.card(MAYOR).id.clone();
+                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell can't target the
+                    // Radiant Midrange Menace in play (R781001): only the Mayor is left to draw.
+                    s.play("core-016", json!({}));
+                    s.expect_in_zone(&menace, "field");
+                    s.expect_in_zone(&mayor, "graveyard");
+                }
             }
 
             #[test]

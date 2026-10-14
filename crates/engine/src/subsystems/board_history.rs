@@ -391,6 +391,7 @@ pub fn restore_board(
 
 /// `roll_back`'s "self" | "enemy" | "both": the sides of the field, seen from the card's controller.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum RollBackSides {
     #[serde(rename = "self")]
     SelfSide,
@@ -402,6 +403,7 @@ pub enum RollBackSides {
 
 /// `roll_back`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RollBackArgs {
     pub turns_ago: i32,

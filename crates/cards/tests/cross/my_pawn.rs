@@ -48,6 +48,7 @@ mod section_4_2_step_4_the_window_after_a_cancel {
     fn r99_section_6_3_a_second_my_pawn_does_not_fire_on_an_attack_the_first_one_already_cancelled() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-two-pawns",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -87,6 +88,7 @@ mod section_4_2_step_4_the_window_after_a_cancel {
         // p2 has nothing to do on turn 10, so R82 ends it inside the first My Pawn's AI turn and p1's
         // turn 11 begins. That turn is p1's own: nothing may play it for them.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-two-pawns-next",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -156,6 +158,7 @@ mod section_3_2_section_5_1_where_a_fired_my_pawn_ends_up {
         // Gravedigger ("Start of turn: add a random card from your GY to your hand") finds it there — it
         // is the only card in that graveyard.
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "pawn-gravedigger",
             "p1": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }], "library": [RENO, RENO] },
             "p2": {
@@ -183,6 +186,7 @@ mod r168_section_10_8_my_pawns_ai_turn_reaches_the_view_once_in_order {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-two-pawns",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -320,6 +324,7 @@ mod r44_section_8_96_the_ai_answers_every_question_of_the_turn_it_plays {
         // to the AI (R44). The AI plays Jewelosco Scarab, and p2's trap asks p2 about that play at
         // §10.5 step 4, before the Scarab's Cry (Discover a 2-cost card).
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-lock-0",
             "p1": { "field": [TEMPO_TIMMY], "hand": [JEWELOSCO_SCARAB], "library": [RENO, RENO], "mana": 1 },
             "p2": {
@@ -452,6 +457,7 @@ mod r152_the_ai_turns_lockout_ends_with_the_turn_it_was_set_for {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-double-pawn",
             "active": "p2",
             "turn": 10,
@@ -505,6 +511,7 @@ mod r212_my_pawns_ai_turn_happened_after_the_window_it_was_handed_over_in {
         // inside this action. The loop hands the window's death to the triggers only after the AI turn
         // (§10.3), but the Eater reached the hand after that death, and R212 says it must not feed on it.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r11-pawn-eater",
             "p1": { "field": [SORCERER, { "def": MR_VANILLA, "lane": 2 }], "library": [GIGA, GIGA, GIGA] },
             "p2": {

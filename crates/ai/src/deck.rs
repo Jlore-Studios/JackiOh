@@ -22,6 +22,14 @@
 //! is dealt from every set, and a lean on a gated set leans on the newest set that ships and is not
 //! gated. An empty gate deals exactly what the draw dealt before it.
 //!
+//! The Quickdraw cap (R817000): once a deck holds `max_quickdraw` Quickdraw cards, its includes
+//! counted, the draw passes over the rest of them; until then it is untouched. Quickdraw is never a
+//! theme, whose floor the cap could not meet. Neither adds an rng draw.
+//!
+//! A ladder bot's deal leans on the cards that win (#750, R1454): its `strength` multiplies each
+//! card's weight by `win_rate_weight`, read off the compiled win-rate table. No strength, the default,
+//! multiplies every weight by exactly 1.0.
+//!
 //! Port of `packages/ai/src/deck.ts` (SURFACE §9: `build_ai_deck(&mut Rng, i32, &AiDeckOptions)`). TS
 //! threw on a bad request; this panics with the same message.
 
@@ -32,10 +40,11 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::MAX_MANA;
 use jackioh_engine::{
     CardDef, CardType, CatalogQueryArgs, Rng, SHIPPED_SETS, SetName, Tag, query, query_cost,
+    registered_win_rates,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::config::AI_DECK_GATED_SETS;
+use crate::config::{AI_DECK_GATED_SETS, AI_WIN_RATE};
 use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
 
 /// `"0-1" | "2" | "3" | "4+"`.
@@ -151,6 +160,12 @@ pub struct AiDeckOptions {
     /// leans on `ungated_lean`'s set instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gated_sets: Option<Vec<SetName>>,
+    /// #750 (R1454): how far the draw leans on the cards that win (`AI_WIN_RATE`, read off the
+    /// compiled win-rate table), from 0.0 (none) to 1.0 (all of `AI_WIN_RATE.max_boost`), clamped to
+    /// that range. A ladder bot's random deck passes its strength's share; `None` and `Some(0.0)` deal
+    /// exactly the deck the seed always dealt, and the lean takes no rng draw.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strength: Option<f64>,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -197,6 +212,8 @@ pub struct AiDeck {
     pub lean_min_share: f64,
     /// R1370: weight for a card of the leaned set while the deck is short of `leanMinShare`.
     pub lean_boost: f64,
+    /// R817000: a random deck holds at most this many Quickdraw cards, and Quickdraw is never a theme.
+    pub max_quickdraw: i32,
 }
 
 pub const AI_DECK: AiDeck = AiDeck {
@@ -232,6 +249,8 @@ pub const AI_DECK: AiDeck = AiDeck {
     // 17.6 of 30, against 11.5, 14.8 and 17.2 at 6). The boost stops once the floor is met, so the rest
     // is dealt as without it.
     lean_boost: 6.0,
+    // R817000 (#817): "less Quickdraw bloat".
+    max_quickdraw: 2,
 };
 
 /// The buckets in curve order; the last one, "4+", takes every cost above the others' ceilings.
@@ -251,6 +270,9 @@ const BUCKET_CEILINGS: [(CostBucket, i32); 3] = [
 
 /// The tag every token carries; never a theme (the pool holds no tokens anyway, §2.6 L3).
 const TOKEN_TAG: Tag = Tag::Token;
+
+/// R817000: the tag a random deck holds at most `AI_DECK.maxQuickdraw` cards of, so never a theme.
+const QUICKDRAW_TAG: Tag = Tag::Quickdraw;
 
 /// By queryCost (X → 0, embiggen → base).
 pub fn cost_bucket(def: &CardDef) -> CostBucket {
@@ -320,12 +342,12 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
     targets
 }
 
-/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name.
+/// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name; never Token or Quickdraw (R817000).
 fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     let mut counts: IndexMap<String, i32> = IndexMap::new();
     for def in defs {
         for tag in &def.tags {
-            if *tag == TOKEN_TAG {
+            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG {
                 continue;
             }
             *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
@@ -363,18 +385,24 @@ fn is_unit(def: &CardDef) -> bool {
     def.type_ == CardType::Unit
 }
 
+/// R817000: whether a card counts toward `AI_DECK.maxQuickdraw`.
+fn is_quickdraw(def: &CardDef) -> bool {
+    def.tags.contains(&QUICKDRAW_TAG)
+}
+
 /// R1370: whether a card is of the set the deck leans on.
 fn is_leaned(def: &CardDef, lean: Option<SetName>) -> bool {
     lean.is_some_and(|set| def.set == set)
 }
 
 /// The running tallies `count` keeps (TS's closure over `counts`, `units` and `themed`), and the
-/// leaned set's (R1370).
+/// leaned set's (R1370) and the Quickdraw cards' (R817000).
 struct Tally<'a> {
     counts: ByBucket<i32>,
     units: i32,
     themed: i32,
     leaned: i32,
+    quickdraw: i32,
     theme: Option<&'a str>,
     lean: Option<SetName>,
 }
@@ -392,6 +420,9 @@ impl Tally<'_> {
         }
         if is_leaned(def, self.lean) {
             self.leaned += 1;
+        }
+        if is_quickdraw(def) {
+            self.quickdraw += 1;
         }
     }
 }
@@ -579,6 +610,26 @@ fn narrow_leaning<'a>(
     remaining.to_vec()
 }
 
+/// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0, for a
+/// card the win-rate table has no row for and for a row under `min_games` games; else `1 + strength
+/// × max_boost × (rate − 0.5) × 2`, held between `floor` and `1 + max_boost`. The table is looked up by
+/// the pool's id, so a row for a card the catalog no longer holds is never read. Pure arithmetic: no
+/// rng draw, so a seed's deck moves only by the weights.
+fn win_rate_weight(id: &str, strength: f64) -> f64 {
+    if strength <= 0.0 {
+        return 1.0;
+    }
+    let Some(row) = registered_win_rates().cards.iter().find(|row| row.id == id) else {
+        return 1.0;
+    };
+    if row.games < AI_WIN_RATE.min_games {
+        return 1.0;
+    }
+    let rate = f64::from(row.wins) / f64::from(row.games);
+    (1.0 + strength * AI_WIN_RATE.max_boost * (rate - 0.5) * 2.0)
+        .clamp(AI_WIN_RATE.floor, 1.0 + AI_WIN_RATE.max_boost)
+}
+
 /// `build_ai_deck`'s deck and how many of its picks the leaned set's floor forced (R1370): a pick
 /// whose eligible cards were narrowed to the set's alone, because the slots left had come down to the
 /// cards the floors still owed. The measurement `AI_DECK.leanBoost` was chosen by.
@@ -684,6 +735,12 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .map(|boost| boost.ids.iter().cloned().collect())
         .unwrap_or_default();
     let boost_by = options.boost.as_ref().map_or(1.0, |boost| boost.by);
+    // #750: 0.0 unless a ladder bot's deal asks, so every other deal is the one it always was.
+    let strength = options
+        .strength
+        .filter(|strength| strength.is_finite())
+        .unwrap_or(0.0)
+        .clamp(0.0, 1.0);
     // The unban lane's deck shaping (shadow_ban.rs): exactly the seat an arena or a promotion deals
     // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS under a handicap's `mana_cap`, no
     // `include` or `boost` — gets its weights multiplied by the dealt-quality the lane's records
@@ -712,6 +769,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         units: 0,
         themed: 0,
         leaned: 0,
+        quickdraw: 0,
         theme: theme.as_deref(),
         lean,
     };
@@ -723,6 +781,11 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
     let mut lean_forced = 0;
     while (deck.len() as i32) < size {
         let slots_left = size - deck.len() as i32;
+        // R817000: once the deck holds `maxQuickdraw` Quickdraw cards (its includes counted), no more are
+        // dealt. Before that the draw is untouched, so a deck that would have held no more deals as it did.
+        if tally.quickdraw >= AI_DECK.max_quickdraw {
+            remaining.retain(|def| !is_quickdraw(def));
+        }
 
         let eligible: Vec<&CardDef> = if lean.is_none() {
             narrow_unleaned(&remaining, slots_left, &tally, theme_needed, units_needed)
@@ -770,6 +833,7 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
                 if shape {
                     weight *= shaped_weight(&def.id);
                 }
+                weight *= win_rate_weight(&def.id, strength);
                 weight
             })
             .collect();

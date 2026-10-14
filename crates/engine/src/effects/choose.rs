@@ -61,6 +61,7 @@ fn slice_end(len: usize, end: i32) -> usize {
 
 /// Which cards a `target` prompt may offer.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TargetScope {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -189,6 +190,7 @@ fn find_on_board<'c>(ctx: &'c EffectContext<'_>, instance_id: &str) -> Option<&'
 
 /// `choose_mode`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseModeArgs {
     pub options: Vec<String>,
@@ -256,6 +258,7 @@ fn mode_option(option: &str, label: &str) -> PromptOption {
 
 /// `choose_target`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseTargetArgs {
     pub step: String,
@@ -308,6 +311,7 @@ pub type HandFilter = Arc<dyn Fn(&EffectContext<'_>, &CardInstance) -> bool + Se
 /// `choose_from_hand`'s arguments (TS's inline object). `where_` is a callback, so serde skips it and a
 /// card sets it in Rust.
 #[derive(Serialize, Deserialize, Clone, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseFromHandArgs {
     pub step: String,
@@ -408,6 +412,7 @@ pub fn choose_from_hand(args: ChooseFromHandArgs) -> Effect {
 
 /// `choose_cost_in_hand`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseCostInHandArgs {
     pub step: String,
@@ -464,6 +469,7 @@ pub fn choose_cost_in_hand(args: ChooseCostInHandArgs) -> Effect {
 
 /// `choose_number`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseNumberArgs {
     pub step: String,
@@ -529,6 +535,7 @@ pub fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
 
 /// `choose_craft`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseCraftArgs {
     pub step: String,
@@ -591,6 +598,7 @@ pub const ANSWER_OPTION_IDS: &[&str] = &["A", "B", "C", "D", "E", "F", "G", "H"]
 /// `choose_answer`'s arguments (TS's inline object). `correct` is an index into `options`, so the
 /// half of TS's guard that refused a negative one cannot arise.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseAnswerArgs {
     pub step: String,
@@ -680,6 +688,7 @@ pub fn answered_correctly(ctx: &EffectContext<'_>) -> bool {
 
 /// `CellScope.side`: sides, relative to the card's controller.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum CellSide {
     Any,
@@ -690,6 +699,7 @@ pub enum CellSide {
 
 /// Which board cells a `cell` prompt offers (B5 E18).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct CellScope {
     /// Sides, relative to the card's controller. Default both.
@@ -705,6 +715,7 @@ pub struct CellScope {
 
 /// `choose_cell`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseCellArgs {
     pub step: String,
@@ -810,6 +821,7 @@ pub fn chosen_cells(ctx: &EffectContext<'_>) -> Vec<ZoneRef> {
 
 /// One reward `choose_reward` offers: the id the answer carries back, under its caption.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RewardOption {
     pub id: String,
@@ -818,6 +830,7 @@ pub struct RewardOption {
 
 /// `choose_reward`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChooseRewardArgs {
     pub step: String,
@@ -857,6 +870,7 @@ pub fn choose_reward(args: ChooseRewardArgs) -> Effect {
 
 /// `PileSpec.zone`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum PileZone {
     Graveyard,
@@ -871,6 +885,7 @@ pub enum PileZone {
 /// the unit piles and the backrow cards of that side — Classic #78's Radiant "on your field, in your
 /// hand or in your deck").
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PileSpec {
     pub zone: PileZone,
@@ -921,6 +936,7 @@ fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardI
 
 /// Which cards of those piles a `pick` prompt offers.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PickFilter {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -961,6 +977,7 @@ fn pickable(state: &GameState, card: &CardInstance, filter: &PickFilter) -> bool
 
 /// `choose_pick`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ChoosePickArgs {
     pub step: String,
@@ -1044,6 +1061,7 @@ pub fn choose_pick(args: ChoosePickArgs) -> Effect {
 /// definition, and the resume step turns the number it gets back into its card (`def_by_index`, with
 /// the set its pool named, since a number is unique only within its set).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum DiscoverOffer {
     Card,
@@ -1057,6 +1075,7 @@ pub type CatalogQueryFn = Arc<dyn Fn(&mut EffectContext<'_>) -> CatalogQueryArgs
 /// function of the context; here the function is `query_fn`, a callback serde skips, which wins over
 /// `query` when it is set.
 #[derive(Serialize, Deserialize, Clone, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverFromCatalogArgs {
     pub step: String,
@@ -1165,6 +1184,7 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
 /// are here, and a card that needs tags or rarity out of a library should widen this rather than be
 /// routed through `catalog::query`, which would offer cards the library does not hold.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct LibraryFilter {
     #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
@@ -1233,6 +1253,7 @@ pub fn matches_library_filter(state: &GameState, card: &CardInstance, filter: &L
 
 /// `discover_from_library`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverFromLibraryArgs {
     pub step: String,
@@ -1314,6 +1335,7 @@ pub fn discover_from_library(args: DiscoverFromLibraryArgs) -> Effect {
 
 /// `discover_from_graveyard`'s arguments (TS's inline object).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoverFromGraveyardArgs {
     pub step: String,

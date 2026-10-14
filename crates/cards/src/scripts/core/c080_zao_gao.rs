@@ -1,6 +1,6 @@
 //! #80 Zao Gao (SPEC §8.3, §5.2, §7; R11, R16, R21, R64, R215, R275, R276, R354). Spell, CN, cost 2.
-//!   Base:    "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
-//!   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
+//!   Base:    "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random combat keywords."
+//!   Radiant: "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random combat keywords."
 //!
 //! R354: the discard is random (so R682's default, never a prompt) and the Radiant tokens' third
 //! keyword is added on top of the face the Radiant pass gave them (R276). `discardRandom` picks off
@@ -11,60 +11,7 @@
 //! summoned Radiant and then rolls its keywords" (§8). R64: with no free zone a summon fizzles.
 //! `summon` rolls them (`randomKeywords`), after the discards and next to its own summon (§9.3).
 
-use jackioh_engine::effects::{discard_random, summon};
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-080";
-
-/// §7: the token this card makes, taken from the catalog rather than restated.
-fn rush_token_id() -> String {
-    crate::card_def("core-t-rush").id
-}
-
-const TOKEN_COUNT: i32 = 2;
-
-/// What a face summons: whether the tokens are Radiant (R276, R354), and how many keywords each rolls
-/// (R21) — the declared number `keywords`, 2 and 3 on the Radiant face.
-#[derive(Clone, Copy)]
-struct Tokens {
-    radiant: bool,
-    keywords: i32,
-}
-
-/// One Rush Token with its rolled keywords (R21, R64).
-fn rush_token(def_id: &str, tokens: Tokens) -> Effect {
-    summon(json_as(json!({
-        "defId": def_id,
-        "radiant": tokens.radiant,
-        "randomKeywords": tokens.keywords
-    })))
-}
-
-/// The faces differ only in the tokens they summon. The discard is the declared number `discard`
-/// (R386), less being better.
-fn zao_gao(rush_token_def: String, radiant: bool) -> Script {
-    Script {
-        cry: Some(hook(move |ctx| {
-            let tokens = Tokens {
-                radiant,
-                keywords: param(&*ctx, "keywords"),
-            };
-            // R16, R354: "random" is stated, so the match rng picks and nobody is asked.
-            let mut effects = vec![discard_random(json_as(json!({ "count": param(&*ctx, "discard") })))];
-            effects.extend((0..TOKEN_COUNT).map(|_| rush_token(&rush_token_def, tokens)));
-            effects
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    let rush = rush_token_id();
-    CardScripts {
-        base: zao_gao(rush.clone(), false),
-        radiant: zao_gao(rush, true),
-    }
-}
 
 // BUILD M4-T4's must-pass row: each Radiant token is summoned on its Radiant face (§7: 6/6, Rush,
 // Cleave) and then rolls three keywords that never repeat one it has (R21), so neither Rush nor
@@ -73,6 +20,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use indexmap::IndexSet;
+    use jackioh_engine::prelude::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -83,12 +31,11 @@ mod tests {
     const DISCARDABLE: [&str; 3] = ["core-001", "core-002", "core-003"];
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
 
-    /// R21's pool as keyword KINDS; "Armor 1" is its one numbered entry (§6.1).
+    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1, R781005).
     fn pool_kinds() -> IndexSet<String> {
-        RANDOM_KEYWORD_POOL
+        random_pool_keywords()
             .iter()
-            .map(|entry| if *entry == "Armor 1" { "Armor" } else { *entry })
-            .map(str::to_string)
+            .map(|keyword| keyword.kind().as_str().to_string())
             .collect()
     }
 
@@ -115,8 +62,17 @@ mod tests {
         }
         // R21: "no repeats on one unit".
         assert_eq!(kinds.iter().collect::<IndexSet<_>>().len(), kinds.len(), "{kinds:?}");
-        let granted: Vec<&String> = kinds.iter().filter(|kind| !printed.contains(&kind.as_str())).collect();
-        assert_eq!(granted.len(), count, "{kinds:?}");
+        // The keywords it was given: an Indestructible one has no Taunt to show (R347, R781004), so the
+        // grant is read off the card, not off its acting set.
+        let given: Vec<String> = s
+            .unit(P1, lane)
+            .expect("a token in that lane")
+            .granted_keywords
+            .iter()
+            .map(|keyword| keyword.kind().as_str().to_string())
+            .collect();
+        let granted: Vec<&String> = given.iter().filter(|kind| !printed.contains(&kind.as_str())).collect();
+        assert_eq!(granted.len(), count, "{given:?}");
         let pool = pool_kinds();
         for kind in &granted {
             assert!(pool.contains(*kind), "{kind} is not in the pool");
@@ -185,11 +141,11 @@ mod tests {
             // The faces as printed: their declared numbers filled in (R386, R482).
             assert_eq!(
                 fill_params(&def, FaceKind::Base, None),
-                "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random keywords."
+                "Discard 2 random cards. Summon 2 Rush Tokens, each with 2 random combat keywords."
             );
             assert_eq!(
                 fill_params(&def, FaceKind::Radiant, None),
-                "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random keywords."
+                "Discard 2 random cards. Summon 2 Radiant Rush Tokens, each with 3 random combat keywords."
             );
         }
     }
@@ -389,7 +345,7 @@ mod tests {
         #[test]
         fn r276_the_radiant_face_is_its_own_script_not_the_base_object() {
             // Identity of each face's Cry.
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

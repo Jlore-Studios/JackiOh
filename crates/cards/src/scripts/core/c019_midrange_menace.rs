@@ -11,26 +11,7 @@
 //! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between
 //! turns, which is why the card needs this at all.
 
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "core-019";
-
-/// The one clause both faces share; a fresh Script per face so neither can be mutated into the other.
-fn menace() -> Script {
-    Script {
-        end_of_turn: Some(hook(|_ctx| {
-            vec![heal(json_as(json!({ "target": { "of": "self" }, "toFull": true })))]
-        })),
-        ..Script::default()
-    }
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: menace(),
-        radiant: menace(),
-    }
-}
 
 // #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19.
 //
@@ -187,6 +168,98 @@ mod tests {
             s.end_turn();
 
             s.expect_stats("core-019", json!({ "health": 8 }));
+        }
+    }
+
+    // R781001: the Radiant face prints Immutable, so while it is in play no Spell, Field Spell or Field
+    // Trap can target it, its controller's own included; a Unit's Cry can, and an effect on every Unit or
+    // a random pick still reaches it.
+    mod n19_midrange_menace_radiant_immutable {
+        use super::*;
+
+        const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy a Unit.
+        const POSTDOC: &str = "core-061"; // (2) Unit; Radiant Cry: summon a Vanilla copy of any unit.
+        const WHIRLWIND: &str = "classicplus-021"; // (0) Spell: Pierce, deal 1 damage to all Units.
+        const SOUL_SHOT: &str = "classicplus-025"; // (2) Spell: Destroy a random enemy Unit.
+        const PUNISH: &str = "classic-020"; // Field Spell: Activate, choose one, one mode destroys a Unit.
+        const DOOM: &str = "destroy a Unit at the start of your next turn";
+        const FILLER: &str = "core-010";
+
+        fn at(id: &str) -> Value {
+            json!([{ "pick": "instance", "instanceId": id }])
+        }
+
+        fn menace_board(p1: Value) -> Scenario {
+            let mut p1 = p1;
+            p1["library"] = json!([FILLER, FILLER]);
+            p1["mana"] = json!(10);
+            scenario(json!({
+                "p1": p1,
+                "p2": { "field": [{ "def": "core-019", "radiant": true }, "core-012"], "library": [FILLER, FILLER] },
+            }))
+        }
+
+        #[test]
+        fn r781001_a_spell_cannot_target_it_and_a_units_cry_can() {
+            crate::register_all();
+            let mut s = menace_board(json!({ "hand": [HIT_JOB, { "def": POSTDOC, "radiant": true }, FILLER] }));
+            let menace = s.card("core-019").id.clone();
+
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": at(&menace) })));
+            s.play(POSTDOC, json!({ "targets": at(&menace) }));
+
+            let copies = (1..=5)
+                .filter_map(|lane| s.unit(P1, lane))
+                .filter(|unit| unit.def_id == "core-019")
+                .count();
+            assert_eq!(copies, 1, "the Postdoc's Cry named it and copied it");
+            s.expect_in_zone(&menace, "field");
+        }
+
+        #[test]
+        fn r781001_its_own_controllers_spell_cannot_target_it_either() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [HIT_JOB, FILLER], "field": [{ "def": "core-019", "radiant": true }], "library": [FILLER], "mana": 10 },
+                "p2": { "library": [FILLER] },
+            }));
+            let menace = s.card("core-019").id.clone();
+            s.expect_refused(|s| s.play(HIT_JOB, json!({ "targets": at(&menace) })));
+        }
+
+        #[test]
+        fn r781001_an_effect_on_every_unit_still_reaches_it() {
+            crate::register_all();
+            let mut s = menace_board(json!({ "hand": [WHIRLWIND, FILLER] }));
+
+            s.play(WHIRLWIND, json!({}));
+
+            s.expect_stats("core-019", json!({ "health": 17, "maxHealth": 18 }));
+        }
+
+        #[test]
+        fn r781001_a_random_pick_still_reaches_it() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "p1": { "hand": [SOUL_SHOT, FILLER], "library": [FILLER, FILLER], "mana": 10 },
+                "p2": { "field": [{ "def": "core-019", "radiant": true }], "library": [FILLER, FILLER] },
+            }));
+            let menace = s.card("core-019").id.clone();
+
+            s.play(SOUL_SHOT, json!({}));
+
+            s.expect_in_zone(&menace, "graveyard");
+        }
+
+        #[test]
+        fn r781001_a_field_spells_activate_cannot_target_it() {
+            crate::register_all();
+            let mut s = menace_board(json!({ "hand": [FILLER, FILLER], "backrow": [PUNISH] }));
+            let menace = s.card("core-019").id.clone();
+            let other = s.card("core-012").id.clone();
+
+            s.expect_refused(|s| s.activate(PUNISH, json!({ "modes": [DOOM], "targets": at(&menace) })));
+            s.activate(PUNISH, json!({ "modes": [DOOM], "targets": at(&other) }));
         }
     }
 }

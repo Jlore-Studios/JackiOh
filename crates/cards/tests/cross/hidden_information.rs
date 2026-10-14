@@ -19,6 +19,25 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::subsystems::hero_power::power_of;
 use jackioh_engine::testkit::*;
 
+/// A seed on which a base #95's one roll is "every card in your hand and library costs 2 less" in the game
+/// `game` builds from it (R28), searched at test time: the roll's place in the effect table moves whenever
+/// an effect joins it.
+fn discount_seed(game: impl Fn(&str) -> Scenario) -> String {
+    let label = jackioh_engine::subsystems::chaos_effect_by_name("discount")
+        .map(|effect| effect.label)
+        .unwrap_or_default();
+    seed_where("chaos-discount", |seed| {
+        game(seed)
+            .events()
+            .iter()
+            .find_map(|event| match event {
+                GameEvent::ChaosRolled { effects, .. } => Some(effects.iter().all(|rolled| rolled == label)),
+                _ => None,
+            })
+            .unwrap_or(false)
+    })
+}
+
 /// viewFor's R97 sentinel.
 const HIDDEN: &str = "hidden";
 
@@ -111,6 +130,7 @@ mod r177_a_prompt_option_that_offers_a_face_down_card {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-echo",
             "p1": { "hand": [TWINSPELL, MIND_CONTROL, STOCKPILE], "mana": 10, "library": [HIT_JOB, HIT_JOB] },
             "p2": {
@@ -171,6 +191,7 @@ mod r177_a_card_replaced_where_the_viewer_cannot_see_it {
     fn r177_r35_transmogulates_transformed_events_name_no_replaced_library_card_or_face_down_trap() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-transmogulate",
             "p1": {
                 "hand": [TRANSMOGULATE, STOCKPILE],
@@ -223,6 +244,7 @@ mod r177_a_cost_change_on_a_card_the_viewer_may_not_read {
         let mut hand = vec![SPEK];
         hand.extend_from_slice(held);
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-l10-combo",
             "p1": { "backrow": [COMBO_INDEX], "hand": hand, "library": [HIT_JOB, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -249,10 +271,15 @@ mod r177_a_cost_change_on_a_card_the_viewer_may_not_read {
         );
     }
 
-    /// "chaos-2" is a seed whose #95 rolls "every card in your hand and library costs 2 less".
+    /// A game on a seed whose #95 rolls "every card in your hand and library costs 2 less" (`discount_seed`).
     fn chaos_discount_game(library: &[&str]) -> Scenario {
+        let seed = discount_seed(|seed| discount_game_on(seed, library));
+        discount_game_on(&seed, library)
+    }
+
+    fn discount_game_on(seed: &str, library: &[&str]) -> Scenario {
         let mut s = scenario(json!({
-            "seed": "chaos-2",
+            "seed": seed,
             "p1": { "hand": [CALL_TO_CHAOS, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
         }));
@@ -280,6 +307,7 @@ mod r177_identities_an_event_carries_outside_its_redacted_fields {
     fn r177_r97_destroyed_killer_id_does_not_name_a_killer_that_now_sits_in_the_opponents_hand() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r2-hidden-killer",
             "p1": { "hand": [MATH_EQUATION, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": [GARY], "hand": [STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -339,6 +367,7 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r2-transmogulated-trap",
             "p1": { "hand": [SHEEPISH, TRANSMOGULATE, STOCKPILE], "mana": 10, "library": [HIT_JOB, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -378,10 +407,15 @@ mod r177_a_card_that_ceased_to_exist_in_a_hidden_zone_stays_hidden_in_earlier_ev
         assert!(!json_text(&view.events).contains(&format!("\"{}\"", sheep.id)));
     }
 
-    /// "chaos-2" is a seed whose #95 rolls "every card in your hand and library costs 2 less".
+    /// A game on a seed whose #95 rolls "every card in your hand and library costs 2 less" (`discount_seed`).
     fn chaos_then_transmogulate(library: &[&str]) -> Scenario {
+        let seed = discount_seed(|seed| transmogulate_game_on(seed, library));
+        transmogulate_game_on(&seed, library)
+    }
+
+    fn transmogulate_game_on(seed: &str, library: &[&str]) -> Scenario {
         let mut s = scenario(json!({
-            "seed": "chaos-2",
+            "seed": seed,
             "p1": { "hand": [CALL_TO_CHAOS, TRANSMOGULATE, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
         }));
@@ -412,6 +446,7 @@ mod r177_a_hidden_hand_cards_buff {
     /// p1 Hit Jobs p2's Mr. Vanilla (3/3); p2 holds a Corpse Eater, base or Radiant.
     fn eater_game(radiant: bool) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-hidden-eater",
             "p1": { "hand": [HIT_JOB, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": {
@@ -472,17 +507,28 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     fn r177_r33_r35_a_face_down_trap_transmogulate_replaced_stays_hidden_after_its_replacement_reaches_the_graveyard()
      {
         jackioh_cards::register_all();
-        let mut s = scenario(json!({
-            "seed": "hunt-r3-transmog-trap",
-            "p1": {
-                "hand": [TRANSMOGULATE],
-                "backrow": [{ "def": SHEEPISH, "lane": 1 }],
-                "mana": 10,
-                "library": [HIT_JOB],
-            },
-            "p2": { "hand": [MAGIC_JAMMED, STOCKPILE], "library": [HIT_JOB] },
-        }));
-        let sheep = must(s.backrow("p1", 1), "p1's Sheepish");
+        let setup = |seed: &str| {
+            let s = scenario(json!({
+                "seed": seed,
+                "p1": {
+                    "hand": [TRANSMOGULATE],
+                    "backrow": [{ "def": SHEEPISH, "lane": 1 }],
+                    "mana": 10,
+                    "library": [HIT_JOB],
+                },
+                "p2": { "hand": [MAGIC_JAMMED, STOCKPILE], "library": [HIT_JOB] },
+            }));
+            let sheep = must(s.backrow("p1", 1), "p1's Sheepish");
+            (s, sheep)
+        };
+        // Transmogulate's pick for the trap is a random Legendary Trap of every set (R35, R380), and every
+        // Trap joining the pool moves it: search for a seed where it is #85 Unlicensed Experimentation.
+        let seed = seed_where("hunt-r3-transmog-trap", |seed| {
+            let (mut s, _) = setup(seed);
+            s.play(TRANSMOGULATE, json!({}));
+            s.backrow("p1", 1).is_some_and(|card| card.def_id == UNLICENSED)
+        });
+        let (mut s, sheep) = setup(&seed);
 
         s.play(TRANSMOGULATE, json!({}));
         s.expect_in_zone(&sheep, "gone");
@@ -523,6 +569,7 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     /// view (a card in p1's own hand would have been replaced too, R365).
     fn library_game(card: &str) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-transmog-library",
             "p1": { "hand": [TRANSMOGULATE], "mana": 10, "library": [card] },
             "p2": { "hand": [COLLATERAL, STOCKPILE], "field": [{ "def": GARY, "lane": 1 }], "library": [HIT_JOB] },
@@ -562,6 +609,7 @@ mod r177_a_card_that_ceased_to_exist_where_the_viewer_could_not_read_it_stays_un
     /// `{ def, radiant }` entry.
     fn immutable_library_game(first: Value) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-transmog-immutable",
             "p1": { "hand": [TRANSMOGULATE, STOCKPILE], "mana": 10, "library": [first, HIT_JOB] },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -595,6 +643,7 @@ mod r177_a_number_the_view_carries_is_never_taken_by_a_hidden_card {
     /// A Rush Token dies (no Eater gain, R11), then p1 installs a modifier with Lunar Eclipse.
     fn modifier_game(p2_hand: &str) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r3-seq",
             "p1": { "hand": [HIT_JOB, LUNAR_ECLIPSE, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": ["T-rush"], "hand": [p2_hand, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
@@ -636,6 +685,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         // the games differ only in the face p1's 4-mana 7/7 had while p2 could not read it.
         fn giga(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
+                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-giga",
                 "p1": { "hand": [GIGA, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -653,6 +703,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         // #26: "Choose a card in your hand; it becomes Radiant". The same no-op on the chosen card.
         fn glowy(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
+                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-glowy",
                 "p1": { "hand": [GLOWY, { "def": SEVEN_SEVEN, "radiant": radiant }, BIGOT], "mana": 10, "library": [HIT_JOB] },
                 "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -679,6 +730,7 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
         // (R213). It lands face-down and Radiant in both games; only its face in hand differed.
         fn game(radiant: bool) -> Scenario {
             let mut s = scenario(json!({
+                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "hunt-r4-gifted",
                 "p1": {
                     "backrow": [GIFTED],
@@ -715,6 +767,7 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
             .map(|at| json!({ "def": SEVEN_SEVEN, "radiant": left_card_radiant && at == 5 }))
             .collect();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r5-eugenics-7",
             "p1": { "hand": [EUGENICS, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
@@ -757,6 +810,7 @@ mod r177_a_number_taken_by_a_face_down_trap_owed_an_event {
     /// p2 answers, then plays Lunar Eclipse, whose modifier both seats read with its id (R169).
     fn pawn_game(lane_two: &str) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r5-owed-window",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -828,6 +882,7 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
     /// declared attack and never a play).
     fn zephyrs_against(trap: &str) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r6-zephyrs-trap",
             "p1": { "hand": [ZEPHYRS, STOCKPILE], "library": [HIT_JOB, HIT_JOB] },
             "p2": { "field": [MOTHS], "backrow": [{ "def": trap, "lane": 1 }], "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -864,6 +919,7 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
     /// Glowy Jelly Bean (cast on draw: lose 5) is on top, or at the bottom.
     fn zephyrs_over_library(library: &[&str]) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r6-zephyrs-library",
             "p1": { "hand": [ZEPHYRS, STOCKPILE], "health": 5, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
@@ -895,13 +951,18 @@ mod r222_97_zephyrs_dry_run_and_hidden_information {
 mod r177_a_library_cards_place_in_a_library_wide_event_sequence {
     use super::*;
 
-    /// "chaos-2" is a seed whose #95 rolls "every card in your hand and library costs 2 less", which
-    /// emits one `costChanged` per hand card and then one per library card, top first. #69 Call to
+    /// A game on a seed whose #95 rolls "every card in your hand and library costs 2 less" (`discount_seed`),
+    /// which emits one `costChanged` per hand card and then one per library card, top first. #69 Call to
     /// Arms then recruits p1's one Unit (Gary, 1 cost) out of the library. The games differ only in
     /// where Gary was: on top of the two Hit Jobs, or between them.
     fn chaos_then_recruit(library: &[&str]) -> Scenario {
+        let seed = discount_seed(|seed| recruit_game_on(seed, library));
+        recruit_game_on(&seed, library)
+    }
+
+    fn recruit_game_on(seed: &str, library: &[&str]) -> Scenario {
         let mut s = scenario(json!({
-            "seed": "chaos-2",
+            "seed": seed,
             "p1": { "hand": [CALL_TO_CHAOS, CALL_TO_ARMS, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [HIT_JOB] },
         }));
@@ -1148,6 +1209,7 @@ mod r177_a_random_make_radiant_over_a_hidden_hand {
     /// Radiant or both not — hidden from p2 (§9.1, §10.8).
     fn blood_ridden_game(hand_radiant: bool) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r7-blood-ridden",
             "p1": {
                 "hand": [STOCKPILE, { "def": HIT_JOB, "radiant": hand_radiant }, { "def": RAPID, "radiant": hand_radiant }],
@@ -1188,6 +1250,7 @@ mod r223_instance_ids_transmogulate_gives_a_library {
         jackioh_cards::register_all();
         let sixteen_hit_jobs = [HIT_JOB; 16];
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-r7-transmog-ids",
             "p1": {
                 "hand": [TRANSMOGULATE, RAPID],
@@ -1454,6 +1517,7 @@ mod r119_the_arrivals_a_plays_card_resolved_names_stay_the_engines {
         // Classic #60 Pile On's Radiant face, "Recruit every permanent in your deck": a play whose Recruit
         // sets a trap as it resolves.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-hp-honeypot",
             "p1": {
                 "hand": [{ "def": PILE_ON, "radiant": true }, MR_VANILLA],
@@ -1803,6 +1867,7 @@ mod r177_r60_28s_cues_keep_the_hidden_faces_hidden {
         // cards, which p1 reads, their number would spell out how many library cards were base-face.
         fn cues_for(library_radiant: bool) -> Vec<GameEvent> {
             let mut s = scenario(json!({
+                // Arbitrary seed: no pool or random roll decides this test (audited under #848).
                 "seed": "edge-r9-view-28-owner",
                 "p1": {
                     "mana": 2,
@@ -1931,6 +1996,7 @@ mod r242_28s_pick_over_public_and_hidden_cards {
     /// faces everywhere.
     fn order_game(trap_base: bool) -> Scenario {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r10-l10-knockoff-order",
             "p1": {
                 "mana": 2,
@@ -2097,6 +2163,7 @@ mod r227_r177_a_card_set_face_down_takes_a_fresh_id {
     /// the new id.
     fn reset_sheepish() -> (Scenario, String, String) {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r227-reset-sheepish",
             "active": "p2",
             "p1": { "hand": [MR_VANILLA, RENO], "mana": 4, "library": [MR_VANILLA, MR_VANILLA, MR_VANILLA] },

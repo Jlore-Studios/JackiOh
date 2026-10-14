@@ -153,6 +153,7 @@ const STATUSES: readonly StatusTermId[] = [
   "Can't be attacked",
   "Only Units in this lane can attack this",
   "Berserk",
+  "Combat keyword",
 ];
 
 const VERBS_6_3: readonly VerbTermId[] = [
@@ -187,7 +188,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
 
 /**
  * "Moved unchanged out of Card.tsx": TA RU CH FS PO LS RB DS TR CL ND IM ST NA AR LK, R346's PI, and
- * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT.
+ * patch v0.2.0's AN AT BR SD IS, then R636's WF and R637's TE, then patch v0.2.4's DE, then R1220's UT,
+ * then R1086's MG, then #783's RG FL CK CR FB.
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -217,7 +219,12 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Temporary: "TE",
   Deft: "DE",
   Untributable: "UT",
-  Magnetic: "MG",
+  Equip: "EQ",
+  Ranged: "RG",
+  Flying: "FL",
+  Cloaked: "CK",
+  Crater: "CR",
+  Flashback: "FB",
 };
 
 type Term = { text: string; term: GlossaryTermId };
@@ -255,6 +262,32 @@ describe("B10: tokenizeRules and termsIn", () => {
     expect([GLOSSARY.Windfury, GLOSSARY.Temporary].map((entry) => [entry.section, entry.rule])).toEqual([
       ["§6.1", "Can attack twice each turn"],
       ["§6.1", "Discarded from its owner's hand at the end of their turn"],
+    ]);
+  });
+
+  it("R781005 combat keywords are a term the cards that draw them print, its entry listing the eighteen", () => {
+    expect(termsOf("Aura: Has 5 random combat keywords.")).toEqual([
+      { text: "Aura:", term: "Aura" },
+      { text: "combat keywords", term: "Combat keyword" },
+    ]);
+    expect(termsOf("Give a Unit +3/+3 and 1 random combat keyword.")).toEqual([
+      { text: "combat keyword", term: "Combat keyword" },
+    ]);
+    const entry = GLOSSARY["Combat keyword"];
+    expect(entry.section).toBe("§6.1");
+    for (const word of ["Taunt", "Flying", "Ranged", "Indestructible", "Spell Damage +1", "Trample"]) {
+      expect(entry.rule).toContain(word);
+    }
+  });
+
+  it("R781001 R781003 Immutable and Vanilla read the rules the SPEC rows give", () => {
+    expect(termsOf("Indestructible, Immutable")).toEqual([
+      { text: "Indestructible", term: "Indestructible" },
+      { text: "Immutable", term: "Immutable" },
+    ]);
+    expect([GLOSSARY.Immutable, GLOSSARY.Vanilla].map((entry) => [entry.section, entry.rule])).toEqual([
+      ["§6.1", "Text can't be changed or transformed. While in play, Spells, Field Spells and Field Traps can't target it"],
+      ["§6.3", "Remove a unit's text and return it to its printed stats"],
     ]);
   });
 
@@ -573,9 +606,39 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
         expect(entry.aliases, key).toEqual(["hand size"]);
       } else if (key === "Mark in a hand") {
         expect(entry.aliases, key).toEqual(["Mark"]);
+      } else if (key === "Start of turn") {
+        // Issue #814: the lowercase second half of a compound trigger bolds as the term.
+        expect(entry.aliases, key).toEqual(["start of turn"]);
+      } else if (key === "End of turn") {
+        expect(entry.aliases, key).toEqual(["end of turn"]);
+      } else if (key === "Combat keyword") {
+        // R781005: the cards print it lower-case, in the singular and the plural.
+        expect(entry.aliases, key).toEqual(["combat keywords", "combat keyword"]);
       } else {
         expect(entry.aliases, key).toEqual([]);
       }
+    }
+  });
+
+  it("issue #814: a compound trigger's lowercase half tokenizes as its term", () => {
+    expect(termsIn("Cry and start of turn: Summon a Right-house defender.")).toEqual(["Cry", "Start of turn"]);
+    expect(termsIn("Start of turn and end of turn: Draw a card.")).toEqual(["Start of turn", "End of turn"]);
+    expect(termsIn("While Berserk: Start of turn and end of turn: this attacks your hero.")).toEqual([
+      "Berserk",
+      "Start of turn",
+      "End of turn",
+    ]);
+    // The six catalog faces that print compounds name both terms now.
+    for (const [id, face] of [
+      ["classicplus-007", "base"],
+      ["classicplus-007", "radiant"],
+      ["classic-058", "radiant"],
+      ["classicplus-019-5", "base"],
+      ["classicplus-070", "base"],
+      ["classicplus-070", "radiant"],
+    ] as const) {
+      const text = played(id, face);
+      expect(termsIn(text), `${id} ${face}`).toContain("Start of turn");
     }
   });
 });

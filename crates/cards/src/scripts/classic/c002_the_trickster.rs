@@ -9,38 +9,7 @@
 //! R65 floors the price at (0); a cast pays nothing, so it never uses the rule (R70). The Radiant
 //! face's "costs (0)" is a `setTo`, which wins over every add (B5 E15).
 
-use jackioh_engine::effects::add_cost_rule;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classic-002";
-
-/// "Trap or Field Spell": a Field Trap is a Trap.
-const REACHES: &[CardType] = &[CardType::Trap, CardType::FieldTrap, CardType::FieldSpell];
-
-pub fn script() -> CardScripts {
-    let base = Script {
-        cry: Some(hook(|ctx| {
-            vec![add_cost_rule(json_as(json!({
-                "rule": { "types": REACHES, "amount": -param(&*ctx, "discount") },
-                "lasts": "used",
-            })))]
-        })),
-        ..Script::default()
-    };
-
-    let radiant = Script {
-        // "costs (0)": the declared number `setCost` (R386).
-        cry: Some(hook(|ctx| {
-            vec![add_cost_rule(json_as(json!({
-                "rule": { "types": REACHES, "setTo": param(&*ctx, "setCost") },
-                "lasts": "used",
-            })))]
-        })),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
-}
 
 // C #2 — SPEC §8.6 row 2, BUILD M9 Classic row C 2: the next Trap, Field Trap or Field Spell costs (2)
 // less, waiting across turns (R65 floors at (0)); a cast never uses it (R70), shown by Classic+ #37
@@ -88,10 +57,10 @@ mod tests {
                 js(&crate::card_def(TRICKSTER).params),
                 json!([
                     { "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" },
-                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
+                    { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant" }
                 ])
             );
-            let scripts = script();
+            let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());
         }

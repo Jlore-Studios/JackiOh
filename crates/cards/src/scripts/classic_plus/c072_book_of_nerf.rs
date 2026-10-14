@@ -6,28 +6,7 @@
 //! hand (a broader scope, R275). `times` separate Degrades, each its own draw (R386): attack floors at
 //! 0, current health at 1, cost stops at (4), no harmful keyword goes; an Immutable card is left alone.
 
-use jackioh_engine::effects::degrade;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classicplus-072";
-
-pub fn script() -> CardScripts {
-    let cry: Hook = hook(|ctx| vec![degrade(json_as(json!({ "target": { "of": "chosen" }, "times": param(ctx, "times") })))]);
-
-    let base = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))],
-        cry: Some(cry.clone()),
-        ..Script::default()
-    };
-
-    let radiant = Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow", "hand"] }))],
-        cry: Some(cry),
-        ..Script::default()
-    };
-
-    CardScripts { base, radiant }
-}
 
 // C+ #72 Book of Nerf — SPEC §8.7 row 72, BUILD M9 row C+ 72: Degrades a target permanent on either
 // side 5 times, each its own draw (R386): attack floors at 0, current health never below 1 (it never
@@ -92,7 +71,7 @@ mod tests {
         assert_eq!(def["cost"], json!(1));
         assert_eq!(def["type"], json!("Spell"));
         assert_eq!(def["tags"], json!(["Book"]));
-        let CardScripts { base, radiant } = script();
+        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
         assert_eq!(js(&base.targets)[0]["filter"]["of"], json!(["unit", "backrow"]));
         assert_eq!(js(&radiant.targets)[0]["filter"]["of"], json!(["unit", "backrow", "hand"]));
     }
@@ -170,11 +149,11 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_immutable_target_is_unchanged() {
+        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.play(BOOK, json!({ "targets": pick(&menace.id) }));
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick(&menace.id) })));
             assert!(degrades(s.events()).is_empty());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));
         }

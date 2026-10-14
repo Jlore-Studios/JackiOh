@@ -14,45 +14,7 @@
 //! one `draw` of 3, which burns past the cap and takes fatigue past the deck card by card (§2.4);
 //! Quickdraw is the static flag `setup.rs` reads (R640), beside the catalog tag filters see.
 
-use jackioh_engine::effects::{draw, exile};
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "meditative-080";
-
-/// What the end of its controller's turn draws.
-const DRAWS: i32 = 3;
-
-fn aluneth(radiant: bool) -> Script {
-    let mut script = Script {
-        static_flags: Some(StaticFlags {
-            quickdraw: Some(true),
-            ..StaticFlags::default()
-        }),
-        end_of_turn: Some(hook(|_ctx| vec![draw(json_as(json!({ "count": DRAWS })))])),
-        ..Script::default()
-    };
-    if radiant {
-        script.activations = vec![ActivationDecl {
-            id: "exile".to_string(),
-            label: "Exile this".to_string(),
-            uses: ActivationUses::Count(1),
-            cost: None,
-            targets: vec![],
-            modes: vec![],
-            can_activate: None,
-            has: None,
-            run: hook(|_ctx| vec![exile(json_as(json!({ "target": { "of": "self" } })))]),
-        }];
-    }
-    script
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: aluneth(false),
-        radiant: aluneth(true),
-    }
-}
 
 // M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80: "Quickdraw: in the opening hand (R640); at
 // your end of turn only, three draws, burning past the cap and taking fatigue past the deck;
@@ -62,16 +24,20 @@ pub fn script() -> CardScripts {
 // Activate: exile this".
 #[cfg(test)]
 mod tests {
-    use super::{DRAWS, ID, script};
+    use super::ID;
     use jackioh_engine::effects::{TuneDirection, applicable_changes, transform};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
+    /// What the end of its controller's turn draws.
+    const DRAWS: i32 = 3;
+
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-016";
     const JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     /// Aluneth in p1's backrow, both sides with hands and libraries to draw into.
     fn fielded(seed: &str, radiant: bool) -> Scenario {
@@ -94,7 +60,7 @@ mod tests {
                 crate::register_all();
                 // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
                 // the base face and the Radiant one alike.
-                let scripts = script();
+                let scripts = crate::scripts_of()[ID].clone();
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
                 // Plain Core Units, then Aluneth: one copy of each (§2.6 L3).
@@ -146,18 +112,23 @@ mod tests {
             }
 
             #[test]
-            fn a_destroy_leaves_it() {
+            fn r781001_a_spell_cannot_target_it_and_a_destroy_of_every_permanent_leaves_it() {
                 let mut s = crate::scenario(json!({
                     "seed": "aluneth-stays",
                     "active": "p2",
                     "p1": { "backrow": [ID], "hand": [FILLER], "library": [VANILLA, VANILLA] },
-                    "p2": { "hand": [JAMMED, FILLER], "library": [VANILLA, VANILLA], "mana": 10 },
+                    "p2": { "hand": [JAMMED, NETHER, FILLER], "library": [VANILLA, VANILLA], "mana": 10 },
                 }));
                 let aluneth = s.card(ID).id.clone();
-                s.play(
-                    JAMMED,
-                    json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
-                );
+                // Immutable: a Spell can't target it in play (R781001)…
+                s.expect_refused(|s| {
+                    s.play(
+                        JAMMED,
+                        json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
+                    )
+                });
+                // …and an effect on every permanent reaches it, which Indestructible survives.
+                s.play(NETHER, json!({}));
                 s.expect_in_zone(ID, "field");
             }
 

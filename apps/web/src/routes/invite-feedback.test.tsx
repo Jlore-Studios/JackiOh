@@ -659,6 +659,23 @@ describe("an active account on the code screen", () => {
     await screen.findByTestId(inviteTestid.goToDecks);
     expect(screen.queryByTestId(inviteTestid.submit)).toBeNull();
   });
+
+  it("R757001 a redemption refused because the account owes the consent screen reads the account again", async () => {
+    vi.mocked(getMe).mockImplementation(async () => meBody("pending", true));
+    vi.mocked(redeemCode).mockRejectedValue(
+      new ApiRequestError(403, { code: "consent_owed", message: "Finish setting up your account first." }),
+    );
+    await mount();
+    const readsBefore = vi.mocked(getMe).mock.calls.length;
+    fill(GOOD);
+    fireEvent.click(submit());
+
+    // The server's sentence, and a fresh read of the account, whose gate then shows the consent screen.
+    expect((await screen.findByTestId(inviteTestid.error)).textContent).toBe("Finish setting up your account first.");
+    await waitFor(() => {
+      expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThan(readsBefore);
+    });
+  });
 });
 
 describe("R194 a redemption the API refuses as unauthorised", () => {

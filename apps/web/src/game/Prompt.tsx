@@ -75,6 +75,7 @@ import {
   IDLE,
   highlightFor,
   isBuilding,
+  isPlaguePlacementPrompt,
   outstandingNeed,
   pickInPlay,
   answerAction,
@@ -339,7 +340,8 @@ function pickerForPending(
     if (option.radiant === true) base.radiant = true;
     if (option.chinese === true) base.chinese = true;
     if (option.cost !== undefined) base.cost = option.cost;
-    if (option.row !== undefined) base.group = rowName(option.row);
+    // A face-down card's option names its zone too (R821000), but it is a card here, not a zone to group.
+    if (option.row !== undefined && option.instanceId === undefined) base.group = rowName(option.row);
     // R514: a `cell` is a zone of either side, so its list groups by side and row, lane by lane.
     if (pending.kind === "cell" && option.player !== undefined && option.row !== undefined && option.lane !== undefined) {
       const yours = sideOf(view, option.player) === "you";
@@ -522,17 +524,17 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         items: need.instanceIds.map((id) => itemForInstance(view, id, id)),
         submit: (keys) => play({ tributes: [...keys] }),
       };
-    case "magnetic":
-      // R1086: one zone with both a plain and a Magnetic play asks which.
+    case "equip":
+      // R1086: one zone with both a plain and an Equip play asks which.
       return {
         ...common,
         chrome: "mode",
-        title: t("Magnetic or Stack?"),
+        title: t("Equip or Stack?"),
         items: need.values.map((value) => ({
           key: String(value),
-          label: value ? t("Magnetic") : t("Stack"),
+          label: value ? t("Equip") : t("Stack"),
         })),
-        submit: (keys) => (keys[0] === undefined ? {} : play({ magnetic: keys[0] === "true" })),
+        submit: (keys) => (keys[0] === undefined ? {} : play({ equip: keys[0] === "true" })),
       };
     case "target": {
       const byKey = new Map(need.selections.map((selection) => [selectionKey(selection), selection]));
@@ -588,12 +590,14 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
       };
     }
     case "faceDown": {
-      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap.
+      // ME-ALTPLAY (R1040, R1044): how the card is played — face-up, or set as a Trap. R783004: a
+      // Cloaked set has no timing; it reveals when its controller uses its Activate: Reveal.
       const labels: Record<FaceDownChoice, string> = {
         up: t("Play it face-up"),
         endOfThisTurn: t("Set face-down: reveal at the end of this turn"),
         startOfNextTurn: t("Set face-down: reveal at the start of your next turn"),
         endOfNextTurn: t("Set face-down: reveal at the end of your next turn"),
+        cloaked: t("Set face-down: reveal it with its Activate"),
       };
       return {
         ...common,
@@ -894,6 +898,39 @@ function BoardHint(props: { chrome: PromptKind }) {
 }
 
 /**
+ * R689, R821000: "Place N Plague Counters" names one of every permanent on the field, and a list of
+ * them covered the board it is answered on. The pick is a click on the highlighted card or zone
+ * (`answerPlaguePlacement`, Game.tsx), so the panel is only the question and where the answers are.
+ * No Confirm, since a click answers; no Cancel, since an engine prompt must be answered.
+ */
+function BoardOnlyPrompt(props: {
+  pending: Extract<PendingView, { forYou: true }>;
+  boardTestids: readonly string[];
+  animating: string | undefined;
+}) {
+  const title = t(props.pending.prompt);
+  return (
+    <div className="prompt-scrim" data-testid="prompt-scrim">
+      <div
+        className="prompt prompt-target"
+        data-testid="prompt-modal"
+        data-prompt-kind="target"
+        data-prompt-source="engine"
+        data-board-only="true"
+        data-animating={props.animating}
+        data-board-testids={props.boardTestids.join(" ")}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <p className="prompt-title">{title}</p>
+        <p className="prompt-board-note">{t("Tap a highlighted target on the board.")}</p>
+      </div>
+    </div>
+  );
+}
+
+/**
  * #492: the card picker (`isCardLayout`): a mulligan, a Discover, a card from hand, a pick, a short
  * "Choose one" (Appropriations'), an embiggen price and a short X, each option a card in a row in
  * the middle of the picker. `data-choice` names the picker's chrome.
@@ -993,7 +1030,7 @@ function PromptModal(props: {
 
   // R514: a click on a zone of the board a `cell` prompt offers, or Enter or Space on it, picks that
   // cell. The board's own handler builds nothing from a zone while a prompt is open, so this is the
-  // one answer. ponytail: document listeners for the one board-answered prompt kind; move them into
+  // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
   const live = useRef({ pick, keys: picker.boardKeys });
   live.current = { pick, keys: picker.boardKeys };
@@ -1437,6 +1474,9 @@ export default function Prompt(props: PromptProps) {
           />
         </MatchCardsProvider>
       );
+    }
+    if (isPlaguePlacementPrompt(pending)) {
+      return <BoardOnlyPrompt key={pending.choiceId} pending={pending} boardTestids={boardTestids} animating={props.animating} />;
     }
     return (
       <MatchCardsProvider view={props.view}>

@@ -7,8 +7,8 @@ what you like. At an edge, this file is law. It does not change during Waves 1�
 contact part (part 31) records the hole in `.fullsend/notes/spec-gaps.md` and the orchestrator
 patches this file between waves, never a builder in the middle of one.
 
-The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: [A-engine](research/A-engine.md), [B-ai](research/B-ai.md), [C-server](research/C-server.md), [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
-[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are in [parts/](parts/).
+The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832, in git history) and [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
+[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are #306's sub-issues.
 
 Contents:
 
@@ -782,8 +782,9 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
 `dealEmoteHand`, …).
-`apps/web/src/main.tsx` awaits `loadWasm()` before the first render (the deck builder calls the
-validator synchronously); `practice.worker.ts` awaits it before handling a message.
+`apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
+calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
+`practice.worker.ts` awaits it before handling a message.
 
 ### 10.4 `apps/web/src/wire/` and the aliases
 
@@ -1077,31 +1078,48 @@ must share an engine version: an `ai/*` branch differs from `main` only under `c
 ### 14.2 `arena` and `promote`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> --games N --seed <base> [--out <dir>]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] | --seed <base> --games N [--paired]) [--out <dir>]
 cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 ```
 
-`arena` writes one `GameRecord` JSONL line per game (`packages/shared/src/stats.ts`'s format, R376;
-`source: "dev"`, `mode: "random"`, `pilots` naming the two agents) to `--out` (default
-`$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout).
+`arena` plays game `n` on the seed `<base>:<n>`, agent `a` on `p1` in odd games. `--paired` (R850000)
+plays each deal twice with the seats swapped: deal `d`'s seed is `<base>:<d>`, game `2d − 1` seats `a`
+on `p1` and game `2d` on `p2`, so the game count is even. `--set improve-dev` is the improve lane's
+fixed dev set (R850001): the base `improve-dev`, paired, 400 games unless `--games` says more, and never fewer.
+A base that is a lane's name (`improve`, `unban`) or starts with one and `:` is refused: those are
+the gate's hold-out seeds, which no screen plays (R850001). It writes one `GameRecord` JSONL line per
+game (`packages/shared/src/stats.ts`'s format, R376; `source: "dev"`, `mode: "random"`, `pilots`
+naming the two agents; a paired game's id ends with `a`'s seat, `:p1` or `:p2`, so a deal's two games
+are two records) to `--out` (default `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout). A tally
+closes its duel lines: `a`, `b`, `games`, `aWins`, `bWins`, `draws`, `aborted`, and `aShare` (`aWins`
+over `games`) with its 95% Wilson interval `aLow` and `aHigh`, then, for a paired series only,
+`deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's two games (from −1 to
+1), with its 95% interval `edgeLow` and `edgeHigh` (the mean ± 1.96 standard errors), each share
+rounded to three decimals.
 
-`promote` plays `TRAINING_GAMES` (100) games against the parent, seats alternating (candidate `p1`
-on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
+`promote` plays the lane's `games` against the parent, seats alternating (candidate `p1` on odd
+games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
 committing `generation.json` does not change the seeds), each seat's deck `build_ai_deck` over every
-set that ships minus **its own** AI's shadow-ban list, no handicap (Easy both). It promotes when:
+set that ships minus **its own** AI's shadow-ban list, no handicap (Easy both). A paired gate's `k` is
+a deal, played twice with the seats swapped as `arena --paired` plays one, and its deals are the lane's
+hold-out set, read only by the committed AI they are named for: its dry run refuses uncommitted
+changes in `crates/ai/src`, as a promotion and a verification do (R850001). It promotes when:
 
-| Lane | vs parent | shadow bans |
-|---|---|---|
-| `improve` | ≥ `TRAINING_IMPROVE.vs_parent` = 65 | — |
-| `unban` | ≥ `TRAINING_UNBAN.vs_parent` = 60 | strictly fewer than the parent's |
+| Lane | games | vs parent | shadow bans |
+|---|---|---|---|
+| `improve` | `TRAINING_IMPROVE.games` = 400, `paired`: 200 deals | ≥ `TRAINING_IMPROVE.vs_parent` = 220 | — |
+| `unban` | `TRAINING_UNBAN.games` = 100, unpaired | ≥ `TRAINING_UNBAN.vs_parent` = 60 | strictly fewer than the parent's |
 
-It played `TRAINING_GAMES` more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
+The improve lane's bar was 65 of 100 until issue #850 (R732001, R850000).
+
+It played 100 more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
 needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
 90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
 The daily quality gates (`cargo jackioh gate --full`) still play random.
 
-A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` are constants in
-`crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9; part 1 writes them). Without
+A draw is not a win. `TRAINING_IMPROVE` and `TRAINING_UNBAN` (`TrainingGate { games, paired,
+vs_parent }`) are constants in `crates/engine/src/config.rs` next to `AI_GATE` (CLAUDE.md rule 9;
+part 1 writes them). Without
 `--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends the same object to
 `training/history/<lane>.jsonl`:
 
@@ -1110,7 +1128,15 @@ A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` a
 ```
 
 `--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
-a failed gate.
+a failed gate. The report (Markdown, stdout) gives the wins, the bar and their 95% Wilson interval,
+and for a paired gate the edge over its deals with its interval, as `arena`'s tally computes it, in
+points of the games.
+
+Every run that plays its games, in any mode and whether or not it passes, rewrites
+`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
+candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
+all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
+request.
 
 ### 14.3 `crates/ai/generation.json`
 
@@ -1203,3 +1229,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§11.2, handlers:** `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult` (a handler that starts a match needs the `Arc` for `Registry::start`); `app::Handler`, `h!` and `api::http::dispatch` follow.
 - **§14.2, the arena's records:** `pilots` are both `"ai"` (R376's `Pilot` allows only `human`/`ai`); the two agents are named in the record's `id`, `dev:<patch>:arena:<a>-vs-<b>:<seed>`.
 - **§11.3, the Docker build stage** (part 35): `rust:1.97-slim-bookworm`, not `rust:1.97-slim` (that tag is Debian trixie, whose glibc 2.38 the bookworm runtime lacks; the binary would not start).
+- **§6.1 / §13.2, the unit view (#849, R849000):** `UnitView` carries `sick` (`combat::is_asleep`) and `attackReason` (`combat::why_cannot_declare`, now `pub`); a view field moves only the golden `v` hashes, so `golden bless` rewrote those alone.

@@ -12,6 +12,7 @@ use crate::state::{ModifierExpiry, ModifierKind};
 
 /// `setHealth`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SetHealthArgs {
     pub to: TargetSpec,
@@ -33,6 +34,7 @@ pub fn set_health(args: SetHealthArgs) -> Effect {
 
 /// `convertHealing`'s argument.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ConvertHealingArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

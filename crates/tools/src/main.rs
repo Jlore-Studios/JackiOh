@@ -8,6 +8,7 @@
 
 mod agent;
 mod arena;
+mod board;
 mod catalog;
 mod fuzz;
 mod gate;
@@ -19,6 +20,7 @@ mod replay;
 mod spec;
 mod stats;
 mod sweep;
+mod think;
 mod trace;
 mod winrates;
 
@@ -41,6 +43,8 @@ enum Command {
     Replay(replay::Args),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
+    /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
+    Think(think::Args),
     /// `catalog check` (the catalog's data checks) and `catalog loc <path>` (part 22).
     Catalog(catalog::Args),
     /// Print the newest version in `patches.json` (part 22).
@@ -57,7 +61,7 @@ enum Command {
     Winrates(winrates::Args),
     /// Golden traces: `golden check`, `golden bless`, `golden record` (part 23).
     Golden(golden::Args),
-    /// Two builds compared: `luau diff`, `luau bench` (v0.4.0's proofs, #442).
+    /// Two builds compared: `luau diff`, `luau bench`; and `luau surface`, the card scripts' API (v0.4.0, #442).
     Luau(luau::Args),
     /// The spec graph: `spec check`, `spec index` (part 28).
     Spec(spec::Args),
@@ -75,6 +79,7 @@ fn main() -> ExitCode {
         Command::Fuzz(args) => fuzz::run(args),
         Command::Replay(args) => replay::run(args),
         Command::Trace(args) => trace::run(args),
+        Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),

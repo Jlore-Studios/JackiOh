@@ -37,7 +37,7 @@ ALIASES: dict[str, str] = {
 }
 
 #: The level each verb needs. `request` is naming the bot with free text; `typo` is a near miss
-#: of a verb, which only gets a reply.
+#: of a verb, which only gets a reply; `approve` and `reject` are a vote on a suggestion (`VOTES`).
 LEVELS: dict[str, int] = {
     "status": 1,
     "help": 1,
@@ -52,6 +52,8 @@ LEVELS: dict[str, int] = {
     "stop": 2,
     "suggest": 2,
     "request": 2,
+    "approve": 2,
+    "reject": 2,
     "halt": 3,
     "start": 3,
     "run": 3,
@@ -220,6 +222,26 @@ def parse(body: str, bot_login: str) -> list[Command]:
     return found
 
 
+#: The words that answer one of the bot's suggestions (#760): `approve` queues it to build,
+#: `reject` closes it. A vote is a line of its own holding only the word, bare or after `@<bot>`
+#: or `/harness`, and it counts only on an open suggestion (`events.on_comment`).
+VOTES: tuple[str, ...] = ("approve", "reject")
+
+
+def vote(body: str, bot_login: str) -> tuple[str, str]:
+    """The first vote in a comment, `(word, line)`, or `("", "")`. Quoted and fenced lines never
+    vote, so quoting a vote back cannot cast it again."""
+    mention = re.compile(r"^@" + re.escape(bot_login.lstrip("@")) + r"\b[:,]?\s*", re.IGNORECASE)
+    for raw in command_lines(body):
+        line = _unmark(raw)
+        slash = _SLASH.match(line)
+        rest = slash.group(1) if slash else mention.sub("", line)
+        word = _unmark(rest).rstrip(".!").strip().lower()
+        if word in VOTES:
+            return word, line.strip()
+    return "", ""
+
+
 def mentions(body: str, bot_login: str) -> bool:
     """True when a command line of `body` names the bot or says `/harness`."""
     return bool(parse(body, bot_login))
@@ -246,7 +268,8 @@ HELP_ROWS: tuple[tuple[str, str], ...] = (
     ("review", "| `review [strong\\|medium] [notes]` | queue a review run of this PR's head, by that tier or stronger; no revision | pull request | 2 |"),
     ("rebuild", "| `rebuild` | close my PR and build its issue again from `main`, its branch kept | issue or PR | 2 |"),
     ("stop", "| `stop` | take this issue or PR out of the queue and stop work on it | issue or PR | 2 |"),
-    ("suggest", "| `suggest` | ask for improvement suggestions when the queue is empty | anywhere | 2 |"),
+    ("suggest", "| `suggest` | ask for improvement suggestions the next time a lane has nothing to start | anywhere | 2 |"),
+    ("suggest", "| `approve`, `reject` | alone on a line, no prefix needed: build one of my suggestions, or close it unbuilt | suggestion | 2 |"),
     ("status", "| `status` | halt state, each subscription, the queue | anywhere | 1 |"),
     ("help", "| `help [verb]` | this list, or one command in detail | anywhere | 1 |"),
     ("halt", "| `halt [reason]` | stop all model work until `start` | anywhere | 3 |"),
@@ -285,6 +308,7 @@ Anything else after `{slash}` or `@{bot}` is a request: a build on an issue, a r
 After `@{bot}`, a control verb followed by more words reads as plain English, so `@{bot} stop using the old sprite` is a request. Write the verb alone, or with a colon (`@{bot} halt: away this week`), for the command.
 Add `--force` (level 3) to {forced} to start now, outside a subscription's hours if need be. Label an issue `difficulty:easy`, `difficulty:medium` (the default) or `difficulty:hard` to set the weakest model tier that may build it; `difficulty:hard` keeps it for Opus.
 Labels do the same as the verbs: `{prefix}build` on an issue, `{prefix}revise` on a PR; assigning @{bot} queues the thread.
+An issue is mine (my `{prefix}…` labels) or people's, never both: `human` keeps me off it, and `human required` is my hand-over when I find I cannot do it (I take my labels off, unassign myself, assign you and say what a person must do). Take either label off to hand it back, then `{slash} build`.
 On your comment: 👀 seen · 👍 a model will read it · 🚀 answered · ❤️ a run has it · 🎉 done · 😕 it ended without an answer.
 """)
 
@@ -320,7 +344,8 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
                 "{slash} rebuild"),
     "stop": ("stop", "Take this issue or pull request out of the queue. A run working on it gives "
              "up at its next checkpoint and keeps what it has.", "{slash} stop"),
-    "suggest": ("suggest", "Ask for a suggestion survey the next time the queue is empty.",
+    "suggest": ("suggest", "Ask for a suggestion survey the next time a lane has nothing to "
+                "start, without waiting out the 30 idle minutes a survey otherwise waits for.",
                 "@{bot} suggest"),
     "status": ("status", "Halt state, which subscriptions are running what right now, each "
                "subscription (its hours, usage, and what it is doing), and what is queued.",
@@ -343,6 +368,13 @@ VERB_HELP: dict[str, tuple[str, str, str]] = {
                 "@{bot} suspend: claude-3 using it myself"),
 }
 
+#: `help approve` and `help reject`: the votes on a suggestion (#760), which are not verbs.
+VOTE_HELP = ("**`approve`** or **`reject`** (level 2, maintainer), alone on a line of a comment on "
+             "one of my open suggestions (`{prefix}suggestion`), bare or after `{slash}` or "
+             "`@{bot}`. `approve` queues it to build, as `{prefix}build` does; `reject` closes it "
+             "unbuilt, which makes room for the next survey. Anywhere else the words are only "
+             "words.\n\nFor example: `approve`. ")
+
 POINTER = "`{slash} help` (or `@{bot} help`) lists the commands."
 
 
@@ -359,6 +391,8 @@ def help_text(bot: str, topic: str = "") -> str:
             "forced": FORCED}
     if not word:
         return HELP.format(**said)
+    if word.lower().strip("`") in VOTES and offered("suggest"):
+        return VOTE_HELP.format(**said) + POINTER.format(**said)
     verb = _canonical(word)
     if verb is None or not offered(verb):
         return f"I do not know `{word}`. " + HELP.format(**said)

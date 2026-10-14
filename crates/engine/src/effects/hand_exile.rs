@@ -34,6 +34,7 @@ fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 
 /// `exileRandomFromHand`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ExileRandomFromHandArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

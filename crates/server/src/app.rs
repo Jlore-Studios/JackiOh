@@ -37,6 +37,7 @@ use crate::api::http::{ApiResult, AuthLevel, Req};
 use crate::auth::{Auth, E2eAuth, SupabaseAuth, SupabaseAuthInput};
 use crate::db;
 use crate::env::{self, Env};
+use crate::loops;
 
 /// The server: every port bound exactly once (TS `ServerDeps` + the registry, SURFACE §11.2).
 pub struct App {
@@ -57,6 +58,8 @@ pub struct App {
     /// §9.4's redemption circuit breaker (R106), held here for the same reason as the limiter
     /// (TS kept it in `createCodesRoutes()`'s closure).
     pub breaker: Mutex<api::codes::BreakerState>,
+    /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
+    pub replays: api::replays::Replays,
 }
 
 // ---------------------------------------------------------------------------
@@ -231,6 +234,13 @@ pub static ROUTES: &[Route] = &[
         h!(api::auth::delete_account),
     ),
     ("GET", "/api/auth/me", AuthLevel::User, h!(api::auth::get_me)),
+    // api/consent.rs (R757000, R757001)
+    (
+        "POST",
+        "/api/account/consent",
+        AuthLevel::User,
+        h!(api::consent::post_consent),
+    ),
     // api/catalog.rs
     (
         "GET",
@@ -440,6 +450,19 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // api/replays.rs
+    (
+        "GET",
+        "/api/replays",
+        AuthLevel::Active,
+        h!(api::replays::list_replays),
+    ),
+    (
+        "GET",
+        "/api/replays/:matchId",
+        AuthLevel::Active,
+        h!(api::replays::get_replay),
+    ),
 ];
 
 /// TS `allRoutes()`.
@@ -515,6 +538,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         ),
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
+        replays: api::replays::Replays::default(),
     });
 
     if app.env.e2e {
@@ -645,13 +669,15 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
     // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
     // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
-    // once now and then hourly.
-    tokio::spawn(api::queue::run_matchmaker(app.clone()));
-    tokio::spawn(api::series::run_sweeper(app.clone()));
-    tokio::spawn(api::results::run_reaper(app.clone()));
-    tokio::spawn(api::retention::run_purge(app.clone()));
+    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
+    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
+    // instead of dying silently (#842).
+    loops::spawn_supervised("matchmaker", app.clone(), api::queue::run_matchmaker);
+    loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper);
+    loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper);
+    loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge);
     if app.env.ladder_bots {
-        tokio::spawn(crate::bots::pool::run_bot_pool(app.clone()));
+        loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool);
     }
 
     axum::serve(

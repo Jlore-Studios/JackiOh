@@ -1,41 +1,10 @@
 //! C+ #17 Conjure Rush Token++ (SPEC §8.7 row 17): summon a Rush Token (Radiant: 3) with {keywords} (6)
 //! different random keywords from R21's pool it lacks; a summon with no open zone rolls nothing (R129).
 
-use jackioh_engine::effects::summon;
-use jackioh_engine::prelude::*;
-
 pub const ID: &str = "classicplus-017";
 
-/// §7's shared Rush Token, 3/3 with Rush.
-const RUSH_TOKEN: &str = "core-t-rush";
-
-/// "Summon 3 Rush Tokens" on the Radiant face: the declared number `tokens` (R386), tuned on the
-/// Radiant face only — the base face's "a Rush Token" is 1 and never moves (R749), so both faces read
-/// the one number.
-fn conjure() -> Hook {
-    hook(|ctx| {
-        let keywords = param(&*ctx, "keywords");
-        (0..param(&*ctx, "tokens"))
-            .map(|_| summon(json_as(json!({ "defId": RUSH_TOKEN, "randomKeywords": keywords }))))
-            .collect()
-    })
-}
-
-pub fn script() -> CardScripts {
-    CardScripts {
-        base: Script {
-            cry: Some(conjure()),
-            ..Script::default()
-        },
-        radiant: Script {
-            cry: Some(conjure()),
-            ..Script::default()
-        },
-    }
-}
-
 // C+ #17 Conjure Rush Token++ — SPEC §8.7 row 17, BUILD M9 Classic+ row C+ 17: "As C+ #15 with 6 different random
-// keywords the token lacks, out of the 11 R21 leaves it; the keyword count reads through `param()`; radiant 3 tokens
+// keywords the token lacks, out of the 17 R21 leaves it; the keyword count reads through `param()`; radiant 3 tokens
 // with 6 each".
 
 /// `describe("C+ #17 Conjure Rush Token++")`.
@@ -66,10 +35,11 @@ mod tests {
     }
 
     /// The keywords a token gained beyond its printed Rush: all from R21's pool, all different, never Rush.
+    /// Read off the card's grants, since an Indestructible one shows no Taunt (R347, R781004).
     fn gained(s: &Scenario, token: &str) -> Vec<String> {
         let keys: Vec<String> = s
-            .stats(token)
-            .keywords
+            .card(token)
+            .granted_keywords
             .iter()
             .map(keyword_key)
             .filter(|key| key != "Rush")
@@ -95,7 +65,7 @@ mod tests {
         assert_eq!(def.id, CARD);
         assert_eq!(js(&def.cost), json!(4));
         assert_eq!(def.type_, CardType::Spell);
-        let scripts = script();
+        let scripts = crate::scripts_of()[ID].clone();
         assert!(scripts.base.targets.is_empty());
         assert!(scripts.radiant.targets.is_empty());
     }
@@ -149,13 +119,26 @@ mod tests {
             assert_eq!(gained(&down, &first_token(&down)).len(), KEYWORDS - STEP);
         }
 
-        /// R21 tuned past the pool, the token gains every keyword R21 leaves it, 13, and no repeat
+        /// R21 tuned past the pool, the token gains every keyword R21 leaves it and no repeat: all but
+        /// Rush, and Taunt only when it came before Indestructible, which never leaves Taunt standing
+        /// (R347, R781004)
         #[test]
-        fn r21_tuned_past_the_pool_the_token_gains_every_keyword_r21_leaves_it_13_and_no_repeat() {
+        fn r21_r781004_r781005_tuned_past_the_pool_the_token_gains_every_keyword_r21_leaves_it_and_no_repeat() {
             let mut s = scenario(json!({ "p1": { "hand": [CARD, FILLER] }, "p2": { "hand": [FILLER] } }));
-            step_param(s.card_mut(CARD), "keywords", 4);
+            step_param(s.card_mut(CARD), "keywords", 6);
             s.play(CARD, json!({}));
-            assert_eq!(gained(&s, &first_token(&s)).len(), RANDOM_KEYWORD_POOL.len() - 1);
+            let token = first_token(&s);
+            let gained = gained(&s, &token);
+            for key in RANDOM_KEYWORD_POOL.iter().filter(|key| !["Rush", "Taunt"].contains(key)) {
+                assert!(gained.iter().any(|got| got == key), "{key} was granted: {gained:?}");
+            }
+            assert!(
+                !s.stats(token.as_str())
+                    .keywords
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Taunt),
+                "an Indestructible token has no Taunt"
+            );
         }
     }
 
