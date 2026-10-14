@@ -4560,6 +4560,7 @@
     "765": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -4573,11 +4574,14 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "landed": "c0cdf981b852fa16997e6b3a1402bf5b9aa7096a",
       "last_findings": [],
       "onto": "bot/issue-442",
+      "parked_on": "",
       "part_of": 442,
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-13T07:06:25Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
