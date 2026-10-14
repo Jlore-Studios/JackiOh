@@ -291,6 +291,15 @@ mod seed_search_survives_a_pool_change {
     /// How many seeds' first Discover the test compares across the two catalogs.
     const SEEDS_COMPARED: usize = 50;
 
+    /// Back to the production catalog when it drops, so a failure mid-test cannot leak the changed
+    /// pool (a thread-local override) onto whatever test runs next on this thread.
+    struct ClearOnDrop;
+    impl Drop for ClearOnDrop {
+        fn drop(&mut self) {
+            clear_overrides();
+        }
+    }
+
     /// The def ids the open Discover offers.
     fn offered(s: &Scenario) -> Vec<String> {
         let pending = serde_json::to_value(s.state().pending.as_ref()).unwrap_or_default();
@@ -321,6 +330,7 @@ mod seed_search_survives_a_pool_change {
     #[test]
     fn converted_reborn_and_craft_scenarios_pass_on_a_changed_pool_while_the_old_craft_pins_move() {
         register_all();
+        let _clear = ClearOnDrop;
         let shipped = first_offers();
 
         // The shipped catalog with one uninvolved Unit removed: a pool that changed.
@@ -398,7 +408,5 @@ mod seed_search_survives_a_pool_change {
             json!({ "targets": [{ "pick": "instance", "instanceId": token }] }),
         );
         assert!(reborn(&s, &token));
-
-        clear_overrides();
     }
 }

@@ -25,9 +25,12 @@ pub fn seed_where(prefix: &str, accept: impl Fn(&str) -> bool) -> String {
 /// `state.rng_cursor` so a seed's next roll is the one it needs.
 pub fn cursor_where(seed: &str, accept: impl Fn(u32) -> bool) -> u32 {
     let bound = u32::try_from(SEED_SEARCH_BOUND).unwrap_or(u32::MAX);
-    (0..bound)
-        .find(|cursor| accept(*cursor))
-        .unwrap_or_else(|| panic!("no cursor among the first {SEED_SEARCH_BOUND} (0 to {}) is accepted from seed \"{seed}\"", SEED_SEARCH_BOUND - 1))
+    (0..bound).find(|cursor| accept(*cursor)).unwrap_or_else(|| {
+        panic!(
+            "no cursor among the first {SEED_SEARCH_BOUND} (0 to {}) is accepted from seed \"{seed}\"",
+            SEED_SEARCH_BOUND - 1
+        )
+    })
 }
 
 #[cfg(test)]
