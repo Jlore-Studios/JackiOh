@@ -5979,6 +5979,14 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false,
       "suggestion": true
+    },
+    "845": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T01:53:23Z",
+      "issue": 822,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "07194ccb3614e7ac",
