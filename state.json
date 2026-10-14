@@ -6055,6 +6055,14 @@
           "claude": "strong"
         }
       }
+    },
+    "846": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T01:29:33Z",
+      "issue": 817,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "07194ccb3614e7ac",
