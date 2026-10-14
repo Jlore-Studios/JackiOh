@@ -2611,3 +2611,71 @@ impl Tx<'_> {
     }
 }
 // ---- end Social ----
+// ---- Social: watching and shared replays (#939, #940) ----
+//
+// Migration 0036's `friendships`, `blocks`, `replay_shares` and `profiles.allow_spectators`, as
+// watching a friend's game (B50) and sharing a replay with one (B52) read and write them.
+
+/// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
+/// `match_id`, shares its replay with `friend`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayShare {
+    pub match_id: String,
+    pub sharer: String,
+    pub friend: String,
+    pub created_at: i64,
+}
+
+/// B52: a share its friend may read now, as `GET /api/replays/shared` lists it: the sharer held a
+/// seat in the match, which is over (`ended_at` its end, when the row has one), and the two are still
+/// friends with neither blocking the other.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedReplayRow {
+    pub match_id: String,
+    pub sharer: String,
+    pub created_at: i64,
+    pub ended_at: Option<i64>,
+}
+
+impl Tx<'_> {
+    /// B50, B52: whether `a` and `b` are friends (a `friendships` row) and neither has blocked the
+    /// other (`blocks`, either way). False for one profile twice.
+    pub async fn watch_friends_unblocked(&mut self, a: &str, b: &str) -> StoreResult<bool> {
+        dispatch!(self, watch_friends_unblocked(a, b))
+    }
+
+    /// S7: the profile's `allow_spectators` (true until it is turned off); false for no profile.
+    pub async fn watch_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
+        dispatch!(self, watch_allows_spectators(profile_id))
+    }
+
+    /// S7: sets the profile's `allow_spectators`. An unknown profile is an error.
+    pub async fn watch_set_allows_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
+        dispatch!(self, watch_set_allows_spectators(profile_id, allow))
+    }
+
+    /// B52: records a share; one already held is left as it was (its first `created_at`).
+    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<()> {
+        dispatch!(self, shares_put(share))
+    }
+
+    /// B52: removes `sharer`'s share of `match_id` with `friend`; a no-op when there is none.
+    pub async fn shares_remove(&mut self, match_id: &str, sharer: &str, friend: &str) -> StoreResult<()> {
+        dispatch!(self, shares_remove(match_id, sharer, friend))
+    }
+
+    /// B52: who shared the finished match `match_id` with `friend` and may still be read through: each
+    /// held a seat in it and is still `friend`'s friend, neither blocking the other. First shared
+    /// first.
+    pub async fn shares_sharers(&mut self, match_id: &str, friend: &str) -> StoreResult<Vec<String>> {
+        dispatch!(self, shares_sharers(match_id, friend))
+    }
+
+    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first.
+    pub async fn shares_for(&mut self, friend: &str) -> StoreResult<Vec<SharedReplayRow>> {
+        dispatch!(self, shares_for(friend))
+    }
+}
+// ---- end Social: watching and shared replays ----

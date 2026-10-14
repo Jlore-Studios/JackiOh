@@ -719,3 +719,69 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
             unregister_client(key, &socket);
         })
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+/// S7: the socket a friend's live game is watched on (`social::watch`).
+pub const WATCH_PATH: &str = "/ws/watch";
+
+/// The `?token=` of an upgrade, read exactly as `/ws/match` reads it.
+pub(crate) fn upgrade_token(uri: &Uri) -> Option<String> {
+    token_from(&query_pairs(uri))
+}
+
+/// The `/ws/watch` upgrade, held to all `/ws/match`'s is (`handle_with`): the origin check, the
+/// per-address count, the frame cap and the one subprotocol. The watch's frame handlers go in before
+/// the pump starts, so a hello sent the moment the socket opens is never dropped.
+pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
+    let options = AttachOptions::for_app(&app);
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+
+    if !origin_allowed(&allowed, &parts.headers) {
+        let origin = parts
+            .headers
+            .get("origin")
+            .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
+        tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(&app);
+    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
+        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let uri = parts.uri.clone();
+
+    upgrade
+        .max_message_size(MAX_FRAME_BYTES)
+        .max_frame_size(MAX_FRAME_BYTES)
+        .protocols([WS_SUBPROTOCOL])
+        .on_upgrade(move |ws| async move {
+            let _slot = slot;
+            let (socket, frames) = Socket::channel();
+            let listener = crate::social::watch::listen(&socket);
+            let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
+            register_client(key, &socket);
+            crate::social::watch::serve(&app, &socket, &uri, listener).await;
+            let _ = pumping.await;
+            unregister_client(key, &socket);
+        })
+}
+// ---- end Social: watching and shared replays ----

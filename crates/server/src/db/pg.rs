@@ -6410,6 +6410,191 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
     })
 }
 
+// ---- Social: watching and shared replays (#939, #940) ----
+// ---------------------------------------------------------------------------
+// Watching a friend (B50) and sharing a replay with one (B52), over migration 0036's tables. Plain
+// statements: 0036 adds no `app.*` function for them. An id that is not a UUID names nobody, as
+// `matches_seats` reads one.
+// ---------------------------------------------------------------------------
+
+use crate::db::store::{ReplayShare, SharedReplayRow};
+
+/// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
+/// sharer held a seat in it, and the two are still friends (`a < b`) with neither blocking the other.
+macro_rules! readable_share {
+    () => {
+        "m.status = 'over'
+            and s.sharer in (m.p1_profile_id, m.p2_profile_id)
+            and exists (select 1 from public.friendships f
+                         where f.a = least(s.sharer, s.friend) and f.b = greatest(s.sharer, s.friend))
+            and not exists (select 1 from public.blocks k
+                             where (k.blocker = s.sharer and k.blocked = s.friend)
+                                or (k.blocker = s.friend and k.blocked = s.sharer))"
+    };
+}
+
+pub async fn watch_friends_unblocked(t: &mut PgTx<'_>, a: &str, b: &str) -> Result<bool, StoreError> {
+    if a == b || !is_uuid(a) || !is_uuid(b) {
+        return Ok(false);
+    }
+    run_as(t, Some(a)).await?;
+    let row = sqlx::query(
+        "select exists (select 1 from public.friendships f
+                         where f.a = least($1::uuid, $2::uuid) and f.b = greatest($1::uuid, $2::uuid))
+            and not exists (select 1 from public.blocks k
+                             where (k.blocker = $1::uuid and k.blocked = $2::uuid)
+                                or (k.blocker = $2::uuid and k.blocked = $1::uuid)) as ok",
+    )
+    .bind(a)
+    .bind(b)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    get(&row, "ok")
+}
+
+pub async fn watch_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(false);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    match row {
+        Some(row) => get(&row, "allow_spectators"),
+        None => Ok(false),
+    }
+}
+
+pub async fn watch_set_allows_spectators(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    allow: bool,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    run_as(t, Some(profile_id)).await?;
+    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
+        .bind(profile_id)
+        .bind(allow)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    Ok(())
+}
+
+pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+    if !is_uuid(&share.match_id) || !is_uuid(&share.sharer) || !is_uuid(&share.friend) {
+        return Err(StoreError::from(format!(
+            "a replay share names an id that is not a UUID: {}",
+            stringify(share)
+        )));
+    }
+    run_as(t, Some(&share.sharer)).await?;
+    sqlx::query(concat!(
+        "insert into public.replay_shares (match_id, sharer, friend, created_at)
+         values ($1::uuid, $2::uuid, $3::uuid, ",
+        ts!("$4"),
+        ")
+         on conflict (match_id, sharer, friend) do nothing"
+    ))
+    .bind(share.match_id.as_str())
+    .bind(share.sharer.as_str())
+    .bind(share.friend.as_str())
+    .bind(share.created_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn shares_remove(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    sharer: &str,
+    friend: &str,
+) -> Result<(), StoreError> {
+    if !is_uuid(match_id) || !is_uuid(sharer) || !is_uuid(friend) {
+        return Ok(());
+    }
+    run_as(t, Some(sharer)).await?;
+    sqlx::query(
+        "delete from public.replay_shares
+          where match_id = $1::uuid and sharer = $2::uuid and friend = $3::uuid",
+    )
+    .bind(match_id)
+    .bind(sharer)
+    .bind(friend)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn shares_sharers(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    friend: &str,
+) -> Result<Vec<String>, StoreError> {
+    if !is_uuid(match_id) || !is_uuid(friend) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(friend)).await?;
+    let rows = sqlx::query(concat!(
+        "select s.sharer
+           from public.replay_shares s
+           join public.matches m on m.id = s.match_id
+          where s.match_id = $1::uuid and s.friend = $2::uuid and ",
+        readable_share!(),
+        "
+          order by s.created_at, s.sharer"
+    ))
+    .bind(match_id)
+    .bind(friend)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "sharer")).collect()
+}
+
+pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+    if !is_uuid(friend) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(friend)).await?;
+    let rows = sqlx::query(concat!(
+        "select s.match_id, s.sharer, s.created_at, m.ended_at
+           from public.replay_shares s
+           join public.matches m on m.id = s.match_id
+          where s.friend = $1::uuid and ",
+        readable_share!(),
+        "
+          order by s.created_at desc, s.match_id desc, s.sharer desc"
+    ))
+    .bind(friend)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| -> Result<SharedReplayRow, StoreError> {
+            Ok(SharedReplayRow {
+                match_id: uuid_text(row, "match_id")?,
+                sharer: uuid_text(row, "sharer")?,
+                created_at: ms_of(get(row, "created_at")?),
+                ended_at: ms_or_null(get(row, "ended_at")?),
+            })
+        })
+        .collect()
+}
+// ---- end Social: watching and shared replays ----
+
 // =============================================================================
 // KNOWN DIVERGENCES from `src/db/fake.rs` (TS: `src/api/e2e-store.ts`)
 //
