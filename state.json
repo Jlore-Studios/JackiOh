@@ -6478,15 +6478,23 @@
           "claude"
         ],
         "builder": "claude",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/INDEX.md"
+          ],
+          "from": "c45683bbc04f7a3933dd6466c706e02a1498f6e9",
+          "main": "1064a34807325c3b052f386b0428203b51c2de34"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "run": "38503844106",
+            "run": "38511333294",
             "tier": "strong"
           }
         ],
-        "sha": "c45683bbc04f7a3933dd6466c706e02a1498f6e9",
+        "sha": "5039910291f2bcc74a18eb5481d57071aa256df9",
         "tiers": {
           "claude": "strong"
         }
