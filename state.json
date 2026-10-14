@@ -6160,6 +6160,11 @@
       "taken_asks": []
     },
     "851": {
+      "cleared": {
+        "at": "2026-10-14T03:42:20Z",
+        "by": "`claude` (strong)",
+        "sha": "145e30a63e3878d55b2d9261715b0d6261e4688a"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T02:48:22Z",
