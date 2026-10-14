@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
-import { X_CARD_LIMIT } from "./contract.ts";
+import { X_CARD_LIMIT, testid } from "./contract.ts";
 import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
@@ -610,6 +610,50 @@ describe("the R81 kinds render the same picker when the engine does open them as
 // ---------------------------------------------------------------------------------------------
 // The other seat, and the confirm gate.
 // ---------------------------------------------------------------------------------------------
+
+describe("R821000 a Plague Counter placement is answered on the board, not from a list", () => {
+  const placement = (prompt: string) =>
+    pendingFor(
+      "target",
+      [
+        { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+        { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+        { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+      ],
+      { prompt },
+    );
+
+  it.each(["Place a Plague Counter on a permanent", "Place 3 Plague Counters on a permanent"])(
+    "'%s' shows its question and where the answers are, with no list, no confirm and no cancel",
+    (prompt) => {
+      const onAction = vi.fn();
+      render(<Prompt view={viewWith({ pending: placement(prompt) })} legal={[]} onAction={onAction} />);
+
+      const modal = screen.getByTestId("prompt-modal");
+      expect(kindOfModal()).toBe("target");
+      expect(modal.getAttribute("data-board-only")).toBe("true");
+      expect(modal).toHaveTextContent(prompt);
+      expect(modal.querySelector(".prompt-list")).toBeNull();
+      expect(optionTestids()).toEqual([]);
+      expect(screen.queryByTestId("prompt-submit")).toBeNull();
+      expect(screen.queryByTestId("prompt-cancel")).toBeNull();
+
+      // The board is what lights: both units and the zone a face-down card's back lies in.
+      const lit = (modal.getAttribute("data-board-testids") ?? "").split(" ");
+      expect(lit).toContain(testid.card("u1"));
+      expect(lit).toContain(testid.card("e1"));
+      expect(lit).toContain(testid.zone("opponent", "backrow", 3));
+      expect(onAction).not.toHaveBeenCalled();
+    },
+  );
+
+  it("any other target prompt over the same cards still lists them", () => {
+    render(<Prompt view={viewWith({ pending: placement("Choose a target") })} legal={[]} onAction={vi.fn()} />);
+
+    expect(screen.getByTestId("prompt-modal").getAttribute("data-board-only")).toBeNull();
+    expect(optionTestids()).toContain("prompt-option-instance:e1");
+  });
+});
 
 describe("the seat that is only watching (§10.6, §10.8)", () => {
   it("shows 'waiting for choice' and not one option", () => {

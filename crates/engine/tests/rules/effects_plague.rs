@@ -340,9 +340,15 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             .cloned();
         assert_eq!(
             trap_option,
-            Some(
-                json!({ "key": format!("instance:{}", trap.id), "label": HIDDEN_OPTION_LABEL, "instanceId": trap.id })
-            )
+            Some(json!({
+                "key": format!("instance:{}", trap.id),
+                "label": HIDDEN_OPTION_LABEL,
+                "instanceId": trap.id,
+                // R821000: its zone is public, so the option names it too.
+                "player": "p2",
+                "row": "backrow",
+                "lane": 3,
+            }))
         );
         assert!(!mine.to_string().contains(&quiet_trap.id));
 
@@ -387,6 +393,47 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
             &owner_zone,
             &json!({ "faceDown": false, "counters": { "plague": 2 } })
         ));
+    }
+
+    #[test]
+    fn r821000_a_face_down_option_names_the_zone_it_lies_in_and_never_the_card() {
+        let Board {
+            run: mut start,
+            theirs,
+            trap,
+            ..
+        } = board("plague-zone");
+        let book = hand_card(&mut start.state, &plague_book.id, PlayerId::P1);
+        let mut run = frozen(&start);
+        run = act(&run, play(&book));
+
+        let mine = view_json(&run.state, PlayerId::P1)["pending"].clone();
+        let option_of = |id: &str| -> Value {
+            mine["options"]
+                .as_array()
+                .and_then(|options| options.iter().find(|option| option["instanceId"] == id))
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
+        // The back's place is on the board for both players; its identity is not.
+        let hidden = option_of(&trap.id);
+        assert_eq!(hidden["player"], json!("p2"));
+        assert_eq!(hidden["row"], json!("backrow"));
+        assert_eq!(hidden["lane"], json!(3));
+        assert!(
+            hidden.get("defId").is_none(),
+            "a hidden option must not name its card"
+        );
+        assert!(!mine.to_string().contains(&trap.def_id));
+        // A card the placer may read is offered as before: its id and definition, no coordinates.
+        let readable = option_of(&theirs.id);
+        assert_eq!(readable["defId"], json!(theirs.def_id));
+        for field in ["player", "row", "lane"] {
+            assert!(
+                readable.get(field).is_none(),
+                "a readable option names no zone ({field})"
+            );
+        }
     }
 }
 
