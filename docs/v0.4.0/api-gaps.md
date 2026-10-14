@@ -1,5 +1,7 @@
 # v0.4.0 Luau card-API gaps
 
+> **Superseded for official cards by v0.5.0 ([#902](https://github.com/Jlore-Studios/JackiOh/issues/902)):** every official card is a Rust script again ([README.md](README.md) §8). This list is kept as the record of the port, and for the Luau host custom cards use.
+
 Part 6 of 29 (#448): what `cargo jackioh luau surface` lists (all 447 catalog
 cards, Meditative included; 45 hook types, 176 verbs, 151 readers, 4 pools, 2
 unclassified names) minus what the Luau API binds — and, for each leftover, why it

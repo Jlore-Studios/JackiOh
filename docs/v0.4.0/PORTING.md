@@ -1,5 +1,7 @@
 # Porting a Rust card script to Luau (v0.4.0)
 
+> **Superseded for official cards by v0.5.0 ([#902](https://github.com/Jlore-Studios/JackiOh/issues/902)):** every official card is a Rust script again ([README.md](README.md) §8). This guide is kept as the record of the port, and for the Luau host custom cards use.
+
 How a batch (parts 9–27) replaces its cards' Rust scripts with Luau, and how
 it proves the result equal and fast enough. The host, the sandbox and every
 binding this guide names are part 6's (`crates/luau`, `crates/cards/luau/jackioh.luau`);
