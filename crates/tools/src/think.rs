@@ -6,7 +6,8 @@
 //! step 0 is the opening after `begin_game`), and prints what `seat` (default `seat_to_act`) sees there:
 //! both sides of the board and its own hand as `redact` leaves them (R185), the legal-action count, the
 //! `evaluate` score and `decide`'s answer: its reason, the planned line in words and the search's stats.
-//! Nothing the seat cannot see is printed, so the output can be pasted into an issue.
+//! Nothing the seat cannot see is printed (not the match seed either: R185 redacts it, and with the decks
+//! it gives back the shuffles), so the output can be pasted into an issue.
 //!
 //! The decision is the AI's at the quality gates' budget, from the stream a gate match starts the seat's
 //! AI on (`{seed}:ctl:{seat}` at cursor 0): the same position gives the same answer on every run. A
@@ -57,7 +58,6 @@ pub struct Args {
 #[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 struct Inspection {
-    seed: String,
     /// The log entries folded, and how many the log holds.
     at: usize,
     log_len: usize,
@@ -142,7 +142,6 @@ fn inspect(
         None => (None, None, Vec::new(), None),
     };
     Ok(Inspection {
-        seed: input.seed.clone(),
         at,
         log_len: input.log.len(),
         turn: state.turn,
@@ -168,8 +167,8 @@ fn inspect(
 /// The inspection as text, one block.
 fn render(found: &Inspection) -> String {
     let mut out = format!(
-        "seed {} at {}/{} turn {} active {} seat {} hash {}\n",
-        found.seed, found.at, found.log_len, found.turn, found.active, found.seat, found.hash
+        "at {}/{} turn {} active {} seat {} hash {}\n",
+        found.at, found.log_len, found.turn, found.active, found.seat, found.hash
     );
     for side in &found.board {
         out.push_str(&format!("   {side}\n"));
@@ -396,7 +395,7 @@ mod tests {
         let found = inspect(&hotseat(), Some(MID_GAME), None, false).unwrap();
         let text = render(&found);
         for needle in [
-            "seed 01-hotseat at 13/37 turn 4 active p2 seat p2",
+            "at 13/37 turn 4 active p2 seat p2",
             "hand(p2): ",
             "seatToAct p2 legal ",
             " eval ",
@@ -408,6 +407,10 @@ mod tests {
             assert!(text.contains(needle), "{needle:?} missing from:\n{text}");
         }
         assert!(!text.contains("foldErrors"));
+        // R185: the match seed rebuilds both libraries' order, so it is never printed.
+        let seed = hotseat().seed;
+        assert!(!text.contains(&seed));
+        assert!(!serde_json::to_string(&found).unwrap().contains(&seed));
         assert_eq!(text.lines().filter(|line| line.starts_with("   p")).count(), 2);
     }
 
