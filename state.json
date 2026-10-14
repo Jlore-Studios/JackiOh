@@ -6163,6 +6163,13 @@
     "847": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T03:57:54Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "easy line 9 (stands alone: no open PR touches the same files) cannot be verified with no GitHub access, so the rule says medium at least"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
