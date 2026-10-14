@@ -25,6 +25,8 @@
 //! Games of one matchup run in parallel (rayon); a game is a pure function of matchup and number, so
 //! the verdict matches a sequential run. Output goes to stdout; a failed gate returns `Err` naming
 //! every problem (exit 1).
+//!
+//! `gate --duos [--games N]` plays the Duos gate instead (#936 B32): `duos_gate.rs`.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -64,6 +66,13 @@ pub struct Args {
     /// Where a shard writes its games (also `JACKIOH_AI_GATE_OUT`; default `ai-gate-shards`).
     #[arg(long, value_name = "DIR")]
     pub out: Option<PathBuf>,
+    /// Play the Duos gate instead (#936 B32, `duos_gate.rs`): the Easy AI team against a
+    /// random-policy team; prints the report and fails under DUOS_GATE_WIN_FLOOR.
+    #[arg(long, conflicts_with_all = ["full", "shard", "out"])]
+    pub duos: bool,
+    /// With `--duos`: the games to play (default DUOS_GATE_GAMES_SMOKE).
+    #[arg(long, value_name = "N", requires = "duos")]
+    pub games: Option<usize>,
 }
 
 /// `gate`'s one subcommand.
@@ -1078,8 +1087,11 @@ fn flag_or_env(flag: Option<String>, variable: &str) -> Option<String> {
     flag.or_else(|| std::env::var(variable).ok())
 }
 
-/// `cargo jackioh gate …`: the three matchups and the perf gate, or `merge`.
+/// `cargo jackioh gate …`: the three matchups and the perf gate, or `merge`, or the Duos gate.
 pub fn run(args: Args) -> Result<()> {
+    if args.duos {
+        return crate::duos_gate::run(args.games);
+    }
     if let Some(GateCommand::Merge { dir }) = args.command {
         return merge(&dir);
     }
