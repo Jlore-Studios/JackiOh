@@ -6126,11 +6126,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-14T17:52:08Z",
+        "at": "2026-10-14T21:01:27Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "line 5 of the easy rule (nothing in crates/ai/src) fails outright: this changes the AI's search, which the hard rule names explicitly"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "the 'hard' line holds outright: the change is the AI's search (crates/ai/src/simulate.rs, reply.rs); easy's rule 5 rules out crates/ai/src/ entirely"
       },
       "failures": 0,
       "forced": false,
