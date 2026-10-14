@@ -6226,6 +6226,52 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false,
       "suggestion": true
+    },
+    "902": {
+      "closeout": false,
+      "tree": {
+        "adopted": true,
+        "at": "2026-10-14T19:35:57Z",
+        "children": [
+          903,
+          904,
+          905,
+          906,
+          907,
+          908,
+          909
+        ],
+        "mode": "fullsend",
+        "onto": "bot/issue-902"
+      }
+    },
+    "903": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "904": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "905": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "906": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "907": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "908": {
+      "onto": "bot/issue-902",
+      "part_of": 902
+    },
+    "909": {
+      "onto": "bot/issue-902",
+      "part_of": 902
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
