@@ -70,6 +70,10 @@ services:
       # (docs/architecture.md §10, step 8). Never set it above the lowest count any request showed.
       - key: TRUSTED_PROXY_HOPS
         value: "1"
+      # SPEC §9.5 R1453: seat a ladder bot against a ranked ticket left alone past its
+      # fallback time. Needs a host with room for the AI's search (docs/architecture.md).
+      - key: LADDER_BOTS
+        value: "on"
       # PORT and RENDER_GIT_COMMIT are injected by Render and read by src/env.rs; do not set them
       # here.
       #
