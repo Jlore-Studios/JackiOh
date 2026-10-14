@@ -9,7 +9,7 @@
 //! three print are one computation.
 //!
 //! Port of `packages/shared/src/stats.ts` and, as `mod tests`, `packages/shared/test/stats.test.ts`
-//! (SURFACE §4.1, §10.4: the web keeps its TS copy, `apps/web/src/wire/stats.ts`).
+//! (SURFACE §4.1). The web's TS copy, which no screen read, went in #900.
 
 use std::ops::Index;
 
