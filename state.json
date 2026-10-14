@@ -118,6 +118,12 @@
       "lines": [
         "(named the bot)"
       ]
+    },
+    "c:6176735779": {
+      "at": "2026-10-14T19:37:32Z",
+      "lines": [
+        "/harness stop"
+      ]
     }
   },
   "items": {
