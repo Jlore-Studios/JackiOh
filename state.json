@@ -6013,6 +6013,8 @@
       "run_id": "38508986720",
       "started_at": "2026-10-14T04:00:46Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
