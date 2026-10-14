@@ -50,6 +50,8 @@ import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankWords } from "../rank/rank.ts";
+import { InMatchChat } from "../together/InMatchChat.tsx";
+import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
@@ -359,6 +361,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           load={() => openOnlineMatchReplay(token, matchId)}
           start={watching.share ? "last" : "first"}
           shareOnOpen={watching.share}
+          // #936 B59: the finished match's replay, shared with a friend.
+          actions={<ShareWithFriend matchId={matchId} />}
           onLeave={() => {
             setWatching(null);
           }}
@@ -448,6 +452,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       boardRail={
         <>
           <BackLink showSettings={false} />
+          {/* #936 B58: chat with a friend without leaving the board. */}
+          <InMatchChat />
           <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
           {/*
             The rematch navigation that survives "View the board": the buttons above live in the

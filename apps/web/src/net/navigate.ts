@@ -97,10 +97,14 @@ export const paths = {
   stats: "/stats",
   /** R768000: the recent games and their replays. */
   replays: "/replays",
+  /** #936 S8: Play together: friends, requests, challenges, chat and shared replays. */
+  together: "/together",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
   series: (seriesId: string): string => `/series/${seriesId}`,
+  /** #936 S8 (B50): a friend's live game, watched from their seat; the friend rides on `?friend=`. */
+  watch: (matchId: string): string => "/watch/" + matchId,
 } as const;
 
 function idUnder(path: string, first: string): string | null {
@@ -115,6 +119,11 @@ export function matchIdOf(path: string): string | null {
 
 export function seriesIdOf(path: string): string | null {
   return idUnder(path, "series");
+}
+
+/** #936 S8: the match a `/watch/:matchId` path watches, or null. */
+export function watchIdOf(path: string): string | null {
+  return idUnder(path, "watch");
 }
 
 // Sign-in screen entry states.
