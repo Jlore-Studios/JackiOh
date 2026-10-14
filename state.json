@@ -6572,6 +6572,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
+      "question": "every change this needs is under `bot/` or `.github/workflows/`, which the night bot may not touch (CLAUDE.md, \"The night bot\"). A person makes the two small edits below, runs the bot's own unit tests, and closes #899 by hand as the end-to-end proof.",
       "queued_at": "2026-10-14T21:21:05Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38640573939",
