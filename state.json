@@ -6110,6 +6110,8 @@
       "provider": "claude-3",
       "question": "",
       "queued_at": "2026-10-14T03:16:48Z",
+      "review_floor": "",
+      "review_notes": "",
       "round_tier": "medium",
       "run_id": "38507750442",
       "self_check_findings": [],
