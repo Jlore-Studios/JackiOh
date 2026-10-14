@@ -6506,9 +6506,12 @@
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T19:20:40Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 882,
       "kind": "revise",
       "last_findings": [
