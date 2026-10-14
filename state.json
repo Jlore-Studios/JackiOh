@@ -6604,28 +6604,28 @@
       "verdict_rounds": 2,
       "votes": {
         "approvals": [
-          "muse"
+          "claude"
         ],
-        "builder": "muse",
+        "builder": "claude",
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/INDEX.md"
+            "spec/11-rulings.md"
           ],
-          "from": "21d0554de440cdcdbe67c2e103d451aab6adb475",
-          "main": "7b17f76893bfdf9a84754e35671fb34c668c7145"
+          "from": "df4023cb9089f855d0cefaa8f060030133a3a9e1",
+          "main": "65ca66d7577331b4cd630cb0092dbe77b9efd100"
         },
         "rejections": [],
         "reviews": [
           {
-            "family": "muse",
-            "run": "38510888184",
-            "tier": "medium"
+            "family": "claude",
+            "run": "38514435528",
+            "tier": "strong"
           }
         ],
-        "sha": "df4023cb9089f855d0cefaa8f060030133a3a9e1",
+        "sha": "253da7047d8e252d2c674004a4adda0ed01aa887",
         "tiers": {
-          "muse": "medium"
+          "claude": "strong"
         }
       }
     },
