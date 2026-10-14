@@ -124,6 +124,12 @@ pub const TIMEOUT_ANSWER_CAP: usize = 500;
 pub const CALL_TO_CHAOS_CHAIN_CAP: i32 = 20;
 /// R58: cast-on-draw cards one draw may cast before the next one goes to hand uncast.
 pub const CAST_ON_DRAW_CHAIN_CAP: i32 = 20;
+/// R874000: how many times one trap answers the same identical arrival in one action's resolution.
+/// The rules bring the same instance back at most once per action without a new cause (Reborn's
+/// return, R83), so the second answering covers every finite return; a third identical answering in
+/// one action is always the same stay coming back through a replacement loop (a Flicker re-summoning
+/// into its Field Trap), which the rope then cuts with the game going on.
+pub const TRAP_IDENTICAL_ARRIVAL_ANSWERS: usize = 2;
 
 /// `{ base, radiant }`: a number by the face that prints it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]

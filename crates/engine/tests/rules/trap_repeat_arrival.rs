@@ -1,14 +1,17 @@
-//! R874000: a trap answers an identical arrival once per action (SPEC §10.3; the Tesla/Flicker
+//! R874000: a trap answers an identical arrival twice per action (SPEC §10.3; the Tesla/Flicker
 //! loop of issue #874).
 //!
-//!   * A trap that has fired on an arrival — the event as the rules read it — in one action's
-//!     resolution does not fire on its identical twin: a Flicker re-summoning the same Unit
-//!     re-offers the same `summoned` (§6.3: it counts as summoned), so a Field Trap answering
-//!     every twin loops forever, past the settle cap's reach.
+//!   * The second identical twin still answers: a Flicker re-summoning the same Unit re-offers the
+//!     same `summoned` (§6.3: it counts as summoned), and the finite return — a Reborn body, a
+//!     second Flicker — is answered like the first.
+//!   * The third identical twin in one action's resolution is always the same stay coming back
+//!     through a replacement loop, so it is declined: a Field Trap answering every twin
+//!     (Tesla into a Flicker replacement) loops forever, past the settle cap's reach.
 //!   * Other arrivals still answer: the same trap fires again on a different Unit's summon.
 //!
-//! The events are offered on one sink, as one action's resolution loop offers them: two flickers of
-//! the same Unit, then one settle. Fixtures: `fixtures/field.rs` (the Tesla shape), `fixtures/combat.rs`.
+//! The events are offered on one sink, as one action's resolution loop offers them: flickers of
+//! the same Unit, then one settle. Fixtures: `fixtures/field.rs` (the Tesla shape),
+//! `fixtures/combat.rs`.
 
 use jackioh_engine::effects::flicker::flicker;
 use jackioh_engine::testkit::*;
@@ -68,34 +71,72 @@ fn trap_fired_ids(events: &[GameEvent]) -> Vec<String> {
         .collect()
 }
 
-mod trap_answers_an_identical_arrival_once_r874000 {
+fn destroyed_ids(events: &[GameEvent]) -> Vec<String> {
+    events_of_type(events, GameEventType::Destroyed)
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::Destroyed { instance_id, .. } => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+mod trap_answers_an_identical_arrival_twice_r874000 {
     use super::*;
 
-    #[test]
-    fn r874000_answers_the_second_identical_flicker_summon_no_more() {
-        let mut state = playing("r874000-repeat");
-        let zapper = put(
-            &mut state,
-            &tesla.id,
-            slot(PlayerId::P2, Row::Backrow, 1),
-            json!({}),
-        );
-        // A 5/7: it lives through the first 4-damage zap, so the second summon is still offered.
-        let unit = put(
-            &mut state,
+    /// A 10/14 radiant stacker: it lives through two 4-damage zaps, so a declined summon below is
+    /// declined by the count alone — the victim stands on the field the whole time.
+    fn tough_unit(state: &mut GameState) -> CardInstance {
+        put(
+            state,
             &stacker.id,
             slot(PlayerId::P1, Row::Units, 1),
-            json!({}),
-        );
+            json!({ "radiant": true }),
+        )
+    }
+
+    fn zapper(state: &mut GameState) -> CardInstance {
+        put(state, &tesla.id, slot(PlayerId::P2, Row::Backrow, 1), json!({}))
+    }
+
+    #[test]
+    fn r874000_answers_two_identical_flicker_summons() {
+        let mut state = playing("r874000-repeat");
+        let zapper = zapper(&mut state);
+        let unit = tough_unit(&mut state);
         let mut sink = sink_for(&state);
         // Two flickers of the same Unit, then one settle offering both identical summons.
         sink.apply(&mut state, flicker_unit(&unit), PlayerId::P1);
         sink.apply(&mut state, flicker_unit(&unit), PlayerId::P1);
         settle(&mut sink.on(&mut state), Default::default());
 
-        // The first twin fires; the second, identical in every rule-read field, is declined, so
-        // the Tesla/Flicker cycle ends instead of looping: one firing, not two.
-        assert_eq!(trap_fired_ids(&sink.events), vec![zapper.id.clone()]);
+        // Finite twins both answer: two firings, two hits, and the victim still stands.
+        assert_eq!(
+            trap_fired_ids(&sink.events),
+            vec![zapper.id.clone(), zapper.id.clone()]
+        );
+        assert_eq!(destroyed_ids(&sink.events), Vec::<String>::new());
+    }
+
+    #[test]
+    fn r874000_declines_the_third_identical_summon() {
+        let mut state = playing("r874000-third");
+        let zapper = zapper(&mut state);
+        let unit = tough_unit(&mut state);
+        let mut sink = sink_for(&state);
+        // Three flickers of the same Unit, then one settle offering three identical summons.
+        sink.apply(&mut state, flicker_unit(&unit), PlayerId::P1);
+        sink.apply(&mut state, flicker_unit(&unit), PlayerId::P1);
+        sink.apply(&mut state, flicker_unit(&unit), PlayerId::P1);
+        settle(&mut sink.on(&mut state), Default::default());
+
+        // The first two answer; the third, with the victim alive on the field, is declined by the
+        // count alone, so the Tesla/Flicker cycle ends instead of looping: two firings, not three.
+        assert_eq!(
+            trap_fired_ids(&sink.events),
+            vec![zapper.id.clone(), zapper.id.clone()]
+        );
+        assert_eq!(destroyed_ids(&sink.events), Vec::<String>::new());
     }
 
     #[test]
@@ -124,7 +165,7 @@ mod trap_answers_an_identical_arrival_once_r874000 {
         sink.apply(&mut state, flicker_unit(&other), PlayerId::P1);
         settle(&mut sink.on(&mut state), Default::default());
 
-        // Different arrivals are different answers: the guard skips twins, nothing else.
+        // Different arrivals are different answers: the guard skips third twins, nothing else.
         assert_eq!(
             trap_fired_ids(&sink.events),
             vec![zapper.id.clone(), zapper.id.clone()]

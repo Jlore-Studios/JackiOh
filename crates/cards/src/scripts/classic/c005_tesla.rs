@@ -461,16 +461,17 @@ mod tests {
             const TAOTIE: &str = "meditative-047";
             const STEP: &str = "classic-014";
 
-            /// R874000: a Flicker re-summon answers once, then the game goes on. P2's Radiant 饕餮
+            /// R874000: a Flicker re-summon answers twice, then the game goes on. P2's Radiant 饕餮
             /// eats a Shadowstep out of p1's library, and the fused Unit reads its Radiant face,
             /// which is every ingredient's Radiant face fused — so it carries the Radiant
             /// Shadowstep's would-die Flicker. P1's board is full, so Tesla never animates away.
-            /// The Unit p2 then plays is zapped, flickered, and zapped again — and the loop ends
-            /// there: the second Flicker re-offers the identical `summoned`, which Tesla has
-            /// answered, so the victim lives at full health and the game continues. (Without the
-            /// fix this never returns: each twin is a new event, past the settle cap's reach.)
+            /// The Unit p2 then plays is zapped, flickered, zapped and flickered again — and the
+            /// loop ends there: the third Flicker re-offers the identical `summoned`, which Tesla
+            /// has answered twice, so the victim lives at full health and the game continues.
+            /// (Without the fix this never returns: each twin is a new event, past the settle
+            /// cap's reach.)
             #[test]
-            fn r874000_a_flicker_resummon_identical_to_the_last_answers_once() {
+            fn r874000_a_flicker_resummon_identical_to_the_last_answers_twice() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "seed": "r874000-tesla-flicker",
@@ -513,10 +514,10 @@ mod tests {
                 let victim = s.card(VANILLA).clone();
                 s.play(&victim, json!({ "zone": 2 }));
 
-                // Two firings — the play's `cardResolved`, then the first Flicker's `summoned` —
-                // and the identical second summon is declined: the victim stands at full health,
-                // Tesla is still a face-up trap, and the game is not over.
-                assert_eq!(count(s.events(), "trapFired"), 2);
+                // Three firings — the play's `cardResolved`, then the first two Flickers'
+                // `summoned` — and the identical third summon is declined: the victim stands at
+                // full health, Tesla is still a face-up trap, and the game is not over.
+                assert_eq!(count(s.events(), "trapFired"), 3);
                 s.expect_in_zone(&victim, "field");
                 s.expect_stats(&victim, json!({ "attack": 4, "health": 4 }));
                 let tesla_now = s.card(TESLA).clone();

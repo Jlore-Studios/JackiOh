@@ -75,11 +75,12 @@ pub struct TrapMatch {
 }
 
 /// R874000: the arrivals one action's traps have answered, as the trap that answered each and the
-/// event as the rules read it. A sink of the action's own keeps its own list (`EngineSink::new`);
-/// every sink borrowed from it (`EngineSink::reborrow`, which `resolve::make_context` builds each
-/// context with) answers into its parent's, so a firing nested inside an effect counts with the
-/// action's own firings, as TS's module-level sets were one. Plain per-action memory, never state:
-/// it changes no hash and survives no replay boundary, since every replayed action rebuilds it.
+/// event as the rules read it, one entry per answering so repeats are counted. A sink of the
+/// action's own keeps its own list (`EngineSink::new`); every sink borrowed from it
+/// (`EngineSink::reborrow`, which `resolve::make_context` builds each context with) answers into
+/// its parent's, so a firing nested inside an effect counts with the action's own firings, as TS's
+/// module-level sets were one. Plain per-action memory, never state: it changes no hash and
+/// survives no replay boundary, since every replayed action rebuilds it.
 #[derive(Debug)]
 pub enum TrapAnswerSlot<'a> {
     Own(Vec<(String, GameEvent)>),
@@ -427,17 +428,25 @@ pub fn fire_trap(
     if armed.is_empty() {
         return false;
     }
-    // R874000: one answering per arrival. A trap that has fired on this arrival — the event as the
-    // rules read it — in this action's resolution does not fire on its identical twin. A Flicker
-    // re-summoning the same Unit re-offers the same `summoned` (§6.3: it counts as summoned), so a
-    // Field Trap answering every twin (Tesla into a Flicker replacement) loops forever, past the
-    // settle cap's reach: each twin is a new event, and the uncapped inner dispatch never returns
-    // to the capped loop. Other arrivals still answer, including the same Unit arriving
-    // differently — played (which carries `arrivedDuring`), then back through Reborn (which does
-    // not) — and so does every twin of a prompt-split chain, whose answer rebuilds this list.
+    // R874000: two answerings per identical arrival. A trap that has answered this arrival —
+    // the event as the rules read it — twice in this action's resolution declines its identical
+    // twin. A Flicker re-summoning the same Unit re-offers the same `summoned` (§6.3: it counts as
+    // summoned), so a Field Trap answering every twin (Tesla into a Flicker replacement) loops
+    // forever, past the settle cap's reach: each twin is a new event, and the uncapped inner
+    // dispatch never returns to the capped loop. The second answering covers the finite return —
+    // the same Unit back through Reborn, or flickered twice in one resolution — so those still
+    // answer, as does the same Unit arriving differently (played, which carries `arrivedDuring`,
+    // then back through Reborn, which does not), and every twin of a prompt-split chain, whose
+    // answer rebuilds this list.
     if ARRIVAL_EVENTS.contains(&event.event_type()) {
         let answered = (trap.id.clone(), event.as_rules_read());
-        if sink.trap_answers.get().contains(&answered) {
+        let times = sink
+            .trap_answers
+            .get()
+            .iter()
+            .filter(|prior| *prior == &answered)
+            .count();
+        if times >= crate::config::TRAP_IDENTICAL_ARRIVAL_ANSWERS {
             return false;
         }
         sink.trap_answers.get_mut().push(answered);
