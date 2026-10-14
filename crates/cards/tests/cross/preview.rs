@@ -1922,7 +1922,8 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     }
 
     #[test]
-    fn r280_base_on_the_field_it_previews_the_tokens_there_now_plus_the_1_another_cry_would_place_for_both_seats() {
+    fn r280_base_on_the_field_it_previews_the_tokens_there_now_plus_the_1_another_cry_would_place_for_both_seats()
+     {
         jackioh_cards::register_all();
         let s = scenario(json!({
             "p1": { "field": [{ "def": PLAGUE_DOCTOR, "counters": { "plague": 1 } }], "hand": [RAPID_REPLENISH] },

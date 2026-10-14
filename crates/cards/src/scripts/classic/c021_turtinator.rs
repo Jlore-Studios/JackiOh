@@ -88,7 +88,7 @@ mod tests {
             // closure.
             assert!(Arc::ptr_eq(&scripts.radiant.activations[0].run, &scripts.base.activations[0].run));
             let ability = &scripts.base.activations[0];
-            assert_eq!(ability.uses, ActivationUses::Unlimited);
+            assert_eq!(ability.uses, ActivationUses::Count(1));
             assert_eq!(serde_json::to_value(ability.cost).unwrap(), json!({ "tribute": 1, "tributeExcludesSelf": true }));
             assert_eq!(serde_json::to_value(&ability.targets[0].filter).unwrap(), json!({ "of": ["unit", "hero"] }));
         }
@@ -255,6 +255,8 @@ mod tests {
                 eat(&mut s, POINTMASTER, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
                 s.expect_stats(&menace, json!({ "health": 2 }));
 
+                // Once a turn (patch v0.3.9), so the hero target is a second board.
+                let mut s = setup(json!({ "field": [TURTLE, VANILLA] }), json!({}));
                 eat(&mut s, VANILLA, json!([{ "pick": "hero", "player": "p1" }]), TURTLE);
                 s.expect_health(P1, 26);
             }

@@ -18,7 +18,8 @@ pub const ID: &str = "core-012";
 // #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
 // (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".
 //
-// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/9.
+// Radiant (R275): the cell is "Same", so the copy keeps the radiant flag (R57): a Radiant 6/8 (6/9 before
+// patch v0.3.9).
 //
 // HARNESS GAP: layer-4 buffs and damage cannot be seeded, nor reached through play (a Cry fires the
 // instant the unit enters). R78 resets both on leaving the field and the play path resets neither on
@@ -150,7 +151,7 @@ mod tests {
             }
 
             #[test]
-            fn r275_r57_the_radiant_body_is_a_6_9_and_so_is_its_copy_which_keeps_the_radiant_flag() {
+            fn r275_r57_the_radiant_body_is_a_6_8_and_so_is_its_copy_which_keeps_the_radiant_flag() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
 
@@ -162,8 +163,8 @@ mod tests {
                 );
                 let first = lane(&s, PlayerId::P1, 1);
                 let second = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&first, json!({ "attack": 6, "health": 9, "maxHealth": 9 }));
-                s.expect_stats(&second, json!({ "attack": 6, "health": 9, "maxHealth": 9 }));
+                s.expect_stats(&first, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
+                s.expect_stats(&second, json!({ "attack": 6, "health": 8, "maxHealth": 8 }));
                 assert!(first.radiant);
                 assert!(second.radiant);
                 assert_ne!(second.id, first.id);
@@ -186,7 +187,7 @@ mod tests {
             }
 
             #[test]
-            fn r57_the_radiant_copy_keeps_buffs_and_not_damage_on_the_6_9_face() {
+            fn r57_the_radiant_copy_keeps_buffs_and_not_damage_on_the_6_8_face() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": radiant_hand(), "library": ["core-005"] } }));
                 // HARNESS GAP (see the header): seeded on the hand instance.
@@ -197,8 +198,8 @@ mod tests {
 
                 let original = lane(&s, PlayerId::P1, 1);
                 let copy = lane(&s, PlayerId::P1, 2);
-                s.expect_stats(&original, json!({ "attack": 7, "health": 6, "maxHealth": 10 }));
-                s.expect_stats(&copy, json!({ "attack": 7, "health": 10, "maxHealth": 10 }));
+                s.expect_stats(&original, json!({ "attack": 7, "health": 5, "maxHealth": 9 }));
+                s.expect_stats(&copy, json!({ "attack": 7, "health": 9, "maxHealth": 9 }));
             }
 
             #[test]

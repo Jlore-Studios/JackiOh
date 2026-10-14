@@ -22,7 +22,7 @@ mod tests {
     const BOOK: &str = "classic-070";
     const CRAWLER: &str = "classic-053"; // (1) Unit: whenever Plague Counters are placed on this, draw 1.
     const SLIME: &str = "classic-027"; // (0) Unit: Plague Counters placed on this are doubled.
-    const PALANTIR: &str = "classic-004"; // (1) Field Spell: when your opponent plays a Book, you may Tribute this to steal it.
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: when your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself.
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const FIENDER: &str = "core-092"; // (2) Unit 5/7 Stack.
@@ -248,20 +248,22 @@ mod tests {
             assert_eq!(placements(&s), vec![2, 2, 2, 2, 2]);
         }
 
-        /// C #4 tagged Book: the opponent's Palantir steals it outright, and the stolen Book places nothing
+        /// C #4: the opponent's Palantir steals the (1) Cost Book outright and casts it, its pick made at random
         #[test]
-        fn c_n4_tagged_book_the_opponents_palantir_steals_it_outright_and_the_stolen_book_places_nothing() {
+        fn r831001_c_n4_the_opponents_palantir_steals_it_and_casts_it_placing_on_the_one_permanent_left() {
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, ANCHOR], "field": [VANILLA] }, "p2": { "hand": [ANCHOR], "backrow": [PALANTIR] } }));
             let book = s.card(BOOK).clone();
 
             s.play(&book, json!({}));
 
-            // No "you may": the steal is answered without asking, so no prompt ever opens.
+            // No "you may": the steal is answered without asking, and the cast's pick is random, so
+            // no prompt ever opens.
             assert!(s.state().pending.is_none());
-            assert!(placements(&s).is_empty());
-            assert!(s.hand(P2).iter().any(|card| card.id == book.id));
-            // Palantir paid its price.
+            // Palantir paid its price, so p1's Unit is the one permanent left: all five land there.
             s.expect_in_zone(PALANTIR, "graveyard");
+            assert_eq!(placements(&s), vec![1, 1, 1, 1, 1]);
+            assert_eq!(s.card(VANILLA).counters.plague, Some(5));
+            assert_eq!(s.card(&book).zone, Zone::Graveyard { player: P2 });
         }
 
         /// §9.3 the open prompt survives a JSON round trip and finishes as the live one does

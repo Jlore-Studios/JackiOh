@@ -991,7 +991,7 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
     #[test]
     fn r176_r63_a_defenders_lifesteal_heals_only_what_its_trample_strike_back_really_deals_so_the_swing_is_lethal_s4_4_steps_2_8_9()
      {
-        // p1's Bigot (6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample, shield spent)
+        // p1's Bigot (set to its old 6/1, Trample) attacks p2's Jilliax (3/2, Taunt, Lifesteal, Trample, shield spent)
         // with p2 at 3 and p1's hero behind Going Long (Armor 2). The swing sends 6 - 2 = 4 through.
         // Jilliax's 3 into a 1-health Bigot lands 1 (heals p2 for 1); the 2 that tramples on is stopped
         // by Armor 2 (the zero rule) and heals nothing. p2 ends at 3 - 4 + 1 = 0: lethal, so My Pawn cancels.
@@ -999,7 +999,7 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-pawn-trample-strikeback",
             "p1": {
-                "field": [{ "def": BIGOT, "lane": 1 }],
+                "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                 "backrow": [{ "def": GOING_LONG, "lane": 1 }],
                 "hand": [STOCKPILE],
                 "library": [GIGA, GIGA, GIGA],

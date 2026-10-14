@@ -40,19 +40,22 @@ local base = {
 		local permission: J.GraveyardPlayPermission = { units = true, plague = true }
 		return { permission }
 	end,
-	-- The play from your graveyard that the arming allowed spends it.
+	-- The play from your graveyard that the arming allowed spends it. A field trigger's `when` is not
+	-- read (only a trap's reveal condition is), so `run` asks it.
 	triggers = {
 		{
 			id = "plantation-spent",
 			on = { "cardPlayed" },
-			when = function(ctx: J.EffectContext, event: J.GameEvent)
-				return event.type == "cardPlayed"
+			run = function(ctx: J.EffectContext, event: J.GameEvent)
+				if
+					event.type == "cardPlayed"
 					and event.player == ctx:controller()
 					and event.from == "graveyard"
 					and ctx:recalled(ARMED) == ctx:turn().number
-			end,
-			run = function(ctx: J.EffectContext, event: J.GameEvent)
-				return { J.remember({ key = ARMED, value = 0 }) }
+				then
+					return { J.remember({ key = ARMED, value = 0 }) }
+				end
+				return {}
 			end,
 		},
 	},

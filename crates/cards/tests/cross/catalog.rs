@@ -5248,7 +5248,7 @@ mod faces_that_change_more_than_text_b2_7_e40 {
     }
 
     #[test]
-    fn prints_buff_billy_s_3x_3x_and_7x_7x_as_x_multiples_on_a_0_0_face_and_no_other_face_has_them() {
+    fn prints_buff_billy_s_3x_3x_and_6x_6x_as_x_multiples_on_a_0_0_face_and_no_other_face_has_them() {
         let with_x: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.base.x_stats.is_some() || entry.radiant.x_stats.is_some())
@@ -5263,7 +5263,7 @@ mod faces_that_change_more_than_text_b2_7_e40 {
         );
         assert_eq!(
             billy.and_then(|entry| entry.radiant.x_stats).map(json),
-            Some(serde_json::json!({ "attack": 7, "health": 7 }))
+            Some(serde_json::json!({ "attack": 6, "health": 6 }))
         );
     }
 }
@@ -5463,7 +5463,11 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
                 "meditative-049-1" => Some("YileGPT Unleashed"),
                 _ => None,
             } {
-                assert_eq!(prime.map(|entry| entry.name.clone()), Some(name.to_string()), "{id}");
+                assert_eq!(
+                    prime.map(|entry| entry.name.clone()),
+                    Some(name.to_string()),
+                    "{id}"
+                );
                 continue;
             }
             assert_eq!(

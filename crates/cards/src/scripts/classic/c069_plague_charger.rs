@@ -175,22 +175,24 @@ mod tests {
         #[test]
         fn both_follow_the_tokens_as_they_go_c_n78_mutate_spells_removals_take_the_bonus_then_first_strike() {
             let mut s = scenario(json!({
-                "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [MUTATE] },
+                // The Radiant Mutate Spell: Activate ♾️ since patch v0.3.9, so it removes twice in a turn.
+                "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [{ "def": MUTATE, "radiant": true }] },
                 "p2": { "hand": [FILLER], "health": 30 },
             }));
             let charger = s.card(CHARGER).clone();
             s.expect_stats(&charger, json!({ "attack": 8 }));
 
-            // Each removal comes before the forced attack it buys, which here can only be at the hero.
+            // Each removal comes before the two forced attacks it buys (the Radiant face's), which here
+            // can only be at the hero.
             s.activate(MUTATE, json!({ "targets": at(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge", "First Strike"]);
-            s.expect_health(P2, 24);
+            s.expect_health(P2, 18);
 
             s.activate(MUTATE, json!({ "targets": at(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 4 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge"]);
-            s.expect_health(P2, 20);
+            s.expect_health(P2, 10);
         }
 
         /// R78 they are gone when it leaves: bounced to hand and played again, it is a plain 4/2

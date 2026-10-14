@@ -12,7 +12,9 @@
 //! every `addedToHand`, minus every card that leaves it. A `cardPlayed` naming a card in that hand is
 //! a play from hand; a cast names a card that never entered it. A play countered in its announce
 //! window has no `cardPlayed` (§10.5, R448), so it is none; a play step 3 replaced (R449) is followed
-//! by its `transformed` to the card it resolves as, the one its `cardPlayed` names.
+//! by its `transformed` to the card it resolves as, the one its `cardPlayed` names. A card a Counter
+//! sends to the countering player's hand and that player's effect then casts in the same step (C #4
+//! Palantir, R831001) passes through a hand too, and is a cast all the same.
 //!
 //! Port of `packages/engine/src/gameSummary.ts` (part 5).
 
@@ -21,7 +23,7 @@ use indexmap::IndexMap;
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
 use crate::state::{CreateGameOptions, GameState, create_game};
-use crate::wire::{GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary};
+use crate::wire::{CounteredTo, GameEvent, GameSummary, PLAYER_IDS, PerPlayer, PlayerId, SeatSummary};
 
 /// Each seat's hand as instance id → catalog id, in hand order.
 type Hands = PerPlayer<IndexMap<String, String>>;
@@ -71,8 +73,18 @@ fn leave(hands: &mut Hands, instance_id: &str) {
 
 /// One step's events, in the order they happened.
 fn read(reading: &mut Reading, events: &[GameEvent]) {
+    // The cards this step countered into a hand: a `cardPlayed` naming one in the same step is the
+    // countering player's cast (R831001), never a play from hand.
+    let mut stolen: Vec<&str> = Vec::new();
     for (at, event) in events.iter().enumerate() {
         match event {
+            GameEvent::Countered {
+                instance_id,
+                to: CounteredTo::Hand,
+                ..
+            } => {
+                stolen.push(instance_id);
+            }
             GameEvent::TurnStarted { player, turn, .. } => {
                 reading.current_turn = *turn;
                 // §2.1: the mulligans have resolved and The Coin is dealt; the first turn's draw comes next.
@@ -118,6 +130,10 @@ fn read(reading: &mut Reading, events: &[GameEvent]) {
                 // R227: a Trap set face-down took a fresh id; the hand knew it by the old one.
                 let id = former_id.as_ref().unwrap_or(instance_id);
                 if !reading.hands[*player].contains_key(id) {
+                    continue;
+                }
+                if stolen.contains(&id.as_str()) {
+                    leave(&mut reading.hands, id);
                     continue;
                 }
                 reading.played[*player].push(def_id.clone());

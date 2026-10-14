@@ -15,7 +15,7 @@ pub const ID: &str = "meditative-097-1";
 // M 97.1 Empty Plot — SPEC §8.8 row 97.1, BUILD M10 row M 97.1: "Can't attack; while it tops its
 // zone, you may play any Unit onto it as if the Unit had Stack (MD-F12), the Plot dormant beneath
 // until the pile above is gone, then resuming; a Locked or reserved zone refuses; a summon never
-// stacks onto it, and the opponent's Units cannot; radiant 0/8, and the Unit is Buffed once as it
+// stacks onto it, and the opponent's Units cannot; radiant 0/6 (0/8 before patch v0.3.9), and the Unit is Buffed once as it
 // lands, before its Cry".
 #[cfg(test)]
 mod tests {
@@ -58,7 +58,7 @@ mod tests {
                 js(&def.radiant.attack),
                 js(&def.radiant.health)
             ],
-            [json!(0), json!(3), json!(0), json!(8)]
+            [json!(0), json!(3), json!(0), json!(6)]
         );
         assert_eq!(js(&def.base.keywords), json!([{ "kind": "Can't attack" }]));
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Can't attack" }]));

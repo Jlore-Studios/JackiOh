@@ -353,7 +353,10 @@ mod r14_rotation_m3_t7 {
         let it = live(&state, &crossing);
         assert_eq!(it.damage, 1);
         assert_eq!(it.buffs, AttackHealth { attack: 2, health: 2 });
-        assert!(jackioh_engine::zones::is_locked(&state, slot(PlayerId::P2, Row::Units, 5)));
+        assert!(jackioh_engine::zones::is_locked(
+            &state,
+            slot(PlayerId::P2, Row::Units, 5)
+        ));
 
         assert_eq!(where_is(&state, &staying), "p1 units 2");
     }

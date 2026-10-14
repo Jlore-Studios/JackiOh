@@ -32,7 +32,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TAX: &str = "classic-009";
-    const PALANTIR: &str = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
     const STOCKPILE: &str = "core-005"; // (1) Spell: "Draw 2. Heal your hero 2."
     const JELLY_BEAN: &str = "core-027"; // (1) Spell: "Cast on draw: Make a random card in your hand Radiant. Lose 5 health."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
@@ -122,7 +122,7 @@ mod tests {
         #[test]
         fn r33_it_sits_face_down_the_opponent_reads_a_face_down_card_and_nothing_more() {
             let s = tax_board(json!({}));
-            assert_eq!(js(&s.view(P1))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 2 }));
+            assert_eq!(js(&s.view(P1))["opponent"]["backrow"][0], json!({ "faceDown": true, "cost": 3 }));
         }
 
         #[test]
@@ -184,32 +184,23 @@ mod tests {
         }
 
         #[test]
-        fn on_your_turn_too_their_second_draw_of_your_turn_sets_it_off_c_38_jackiestan_auctioneer_draws_for_them() {
-            // p1's Radiant Auctioneer animates on p2's 2nd play and from then on draws p1 a card on each
-            // play, so p2's 3rd and 4th plays are p1's 1st and 2nd draws of this, p2's, turn.
-            const RECYCLING: &str = "core-039"; // (0) Spell
+        fn on_your_turn_too_their_second_draw_of_your_turn_sets_it_off_c_4_palantir_casts_a_stolen_draw_for_them() {
+            // p1's Palantir steals p2's Stockpile and casts it (R831001), so p1 draws 2 on p2's turn.
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
                     "hand": [VANILLA, MENACE],
-                    "backrow": [{ "def": "classic-038", "radiant": true, "faceUp": false }],
+                    "backrow": [{ "def": PALANTIR, "faceUp": true }],
                     "library": [FELINORS, SEVEN, TIMMY],
                 },
                 "p2": {
-                    "hand": [RECYCLING, RECYCLING, RECYCLING, RECYCLING, VANILLA],
+                    "hand": [STOCKPILE, VANILLA],
                     "backrow": [{ "def": TAX, "faceUp": false }],
                     "library": [VANILLA, VANILLA],
                 },
             }));
-            for _play in 0..3 {
-                let filler = must(s.hand(P2).into_iter().find(|card| card.def_id == RECYCLING), "a filler");
-                s.play(&filler, json!({}));
-            }
-            assert_eq!(drawn_by(s.events(), P1), 1);
-            // The Auctioneer's own firing is a trap's too; the Tax is still set.
-            assert_eq!(backrow_def(&s, P2, 1), Some(TAX.to_string()));
-            let filler = must(s.hand(P2).into_iter().find(|card| card.def_id == RECYCLING), "a filler");
-            s.play(&filler, json!({}));
+            s.play(STOCKPILE, json!({}));
+            assert_eq!(drawn_by(s.events(), P1), 2);
             assert_eq!(s.state().active, P2);
             let keep = open(&s);
             assert_eq!(keep.player_id, P1);
@@ -267,7 +258,8 @@ mod tests {
 
         #[test]
         fn sec2_4_a_draw_a_limit_stops_does_not_happen_and_does_not_count_under_palantir_s_limit_of_1_it_never_fires() {
-            let mut s = tax_board(json!({ "p2Backrow": [PALANTIR] }));
+            // A Stockpile at (2), so Palantir lets it resolve and only limits its draws.
+            let mut s = tax_board(json!({ "p2Backrow": [PALANTIR], "p1Hand": [{ "def": STOCKPILE, "costMod": 1 }, MENACE] }));
             s.start_turn(); // the one draw p1 may make this turn
             s.play(STOCKPILE, json!({})); // both draws stopped
             assert!(!fired(&s));

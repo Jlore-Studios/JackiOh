@@ -424,13 +424,13 @@ mod tests {
                     "health": 2,
                 })))],
             );
-            s.expect_stats(id.as_str(), json!({ "attack": 5, "health": 5 }));
+            s.expect_stats(id.as_str(), json!({ "attack": 3, "health": 3 }));
         }
 
         #[test]
         fn r1160_kys_constant_is_not_doubled() {
-            // KY's Constant sets a random number on a hand card to 3: Volatility's only number
-            // not already 3 is its cost (1), set to (3) outright, not moved twice as far.
+            // KY's Constant sets a random number on a hand card to 3: Volatility's numbers are its
+            // cost (1) and its 1/1 (patch v0.3.9), and the one picked goes to 3 outright, not twice as far.
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "vol-constant",
@@ -442,7 +442,13 @@ mod tests {
                 KY_CONSTANT,
                 json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
             );
-            assert_eq!(cost_now(s.state(), s.card(id.as_str())), 3);
+            let card = s.card(id.as_str()).clone();
+            let Some(stats) = jackioh_engine::current_stats(s.state(), &card) else {
+                panic!("Volatility has stats");
+            };
+            let mut numbers = vec![cost_now(s.state(), &card), stats.attack, stats.health];
+            numbers.sort();
+            assert_eq!(numbers, vec![1, 1, 3]);
         }
 
         #[test]

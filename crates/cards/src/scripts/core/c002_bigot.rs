@@ -92,7 +92,7 @@ mod tests {
             s.play("core-002", json!({}));
             s.expect_in_zone("core-008", "field");
             s.expect_in_zone("core-020", "field");
-            s.expect_stats("core-002", json!({ "attack": 12, "maxHealth": 2 }));
+            s.expect_stats("core-002", json!({ "attack": 8, "maxHealth": 2 }));
         }
     }
 }

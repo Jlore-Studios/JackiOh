@@ -260,12 +260,14 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, CRAWLER, ANCHOR], "library": lib(3) }, "p2": { "hand": [ANCHOR] } }));
                 let (first, second) = two_crawlers(&s);
+                // The first one alone on the field may only place on itself (R831016), and draws for it.
                 s.play(&first, json!({}));
-                assert_eq!(draws_by(s.events(), P1), 0);
+                s.answer(json!(first.id));
+                assert_eq!(draws_by(s.events(), P1), 1);
 
                 crawl(&mut s, &second, &first);
 
-                assert_eq!(s.card(&first).counters.plague, Some(1));
+                assert_eq!(s.card(&first).counters.plague, Some(2));
                 assert_eq!(draws_by(s.last_events(), P1), 1);
             }
 

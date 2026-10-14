@@ -107,11 +107,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
+        fn is_a_1_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
             crate::register_all();
             let def = js(&crate::card_def(ID));
             assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 2);
+            assert_eq!(def["cost"], 1);
             assert!(def["params"].is_null());
             let scripts = crate::scripts_of()[ID].clone();
             assert!(scripts.base.end_of_turn.is_some());

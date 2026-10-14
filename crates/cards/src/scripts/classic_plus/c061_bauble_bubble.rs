@@ -72,11 +72,12 @@ mod tests {
     }
 
     #[test]
-    fn is_a_1_field_spell_fruit_naming_stockpile() {
+    fn is_a_1_field_spell_with_no_tag_naming_stockpile() {
         crate::register_all();
         let def = crate::card_def(super::ID);
         assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.tags, vec![Tag::Fruit]);
+        // Patch v0.3.9 (#831) took its Fruit tag away.
+        assert!(def.tags.is_empty());
         assert_eq!(def.refs, Some(vec![STOCKPILE.to_string()]));
     }
 

@@ -459,6 +459,11 @@ mod tests {
                 .unwrap();
             let before_p1 = cnky_ids(&s, P1);
             let before_p2 = cnky_ids(&s, P2);
+            // Each Printer at (2), as before patch v0.3.9 made it (3): a Nerf that lifts the cost has
+            // two steps left under the cap of (4), so both Nerfs change something.
+            for id in before_p1.iter().chain(before_p2.iter()) {
+                s.card_mut(id.as_str()).cost_mod = -1;
+            }
             s.play(&breaker.id, json!({ "zone": 2 }));
             let degraded = degraded_ids(&s);
             for id in before_p1.iter().chain(before_p2.iter()) {

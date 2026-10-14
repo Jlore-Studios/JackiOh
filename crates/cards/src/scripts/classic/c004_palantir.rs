@@ -62,11 +62,10 @@ mod tests {
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
-    const RECYCLE: &str = "core-039"; // (0) Spell: Exile this.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell.
     const CALL: &str = "core-069"; // (2) Spell: Recruit 3.
     const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell.
-    const AUCTIONEER: &str = "classic-038"; // Field Trap: from its reveal on, each play draws its controller 1.
+    const GAMBIT: &str = "classic-052"; // Trap: reveals at a lethal hit on your hero; redirects it, heals 10, draws 3.
 
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
@@ -89,6 +88,11 @@ mod tests {
             ),
             "p2": merged(json!({ "hand": [BOOK, STOCKPILE, VANILLA], "library": DECK }), p2),
         }))
+    }
+
+    /// Stockpile with (1) more on its cost: a draw Spell Palantir does not steal, for the Aura's tests.
+    fn dear_stockpile() -> Value {
+        json!({ "def": STOCKPILE, "costMod": 1 })
     }
 
     fn count(events: &[GameEvent], event_type: &str) -> usize {
@@ -130,7 +134,7 @@ mod tests {
             #[test]
             fn s2_4_the_opponent_s_draws_beyond_1_in_a_turn_do_not_happen_at_all() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -145,7 +149,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TIMMY], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA, VANILLA] },
-                    "p2": { "hand": [STOCKPILE, VANILLA], "library": DECK },
+                    "p2": { "hand": [dear_stockpile(), VANILLA], "library": DECK },
                 }));
 
                 s.end_turn();
@@ -162,7 +166,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(
                     json!({}),
-                    json!({ "hand": [STOCKPILE, VANILLA], "library": [VANILLA, { "def": HINDER, "radiant": true }, VANILLA] }),
+                    json!({ "hand": [dear_stockpile(), VANILLA], "library": [VANILLA, { "def": HINDER, "radiant": true }, VANILLA] }),
                     false,
                 );
                 let hinder = s.card(HINDER).clone();
@@ -176,7 +180,7 @@ mod tests {
             #[test]
             fn s2_4_a_stopped_draw_from_an_empty_deck_deals_no_fatigue() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({ "library": [VANILLA] }), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA], "library": [VANILLA] }), false);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -188,34 +192,27 @@ mod tests {
             #[test]
             fn s2_4_it_holds_on_its_controller_s_turn_too_the_opponent_s_off_turn_draw_counts_and_a_second_is_stopped() {
                 crate::register_all();
-                // p2's C #38 Jackiestan Auctioneer reveals on p1's 3rd play; from then on each play makes p2
-                // draw 1, on p1's own turn. The first such draw happens, the second is past the limit.
+                // p1's Book of Flame would take p2 from 3 to 0, so p2's C #52 Final Gambit reveals on p1's
+                // turn and draws p2 3: the first draw happens, the other two are past the limit.
                 let mut s = scenario(json!({
                     "p1": {
-                        "hand": [RECYCLE, RECYCLE, RECYCLE, RECYCLE, RECYCLE, TIMMY],
+                        "hand": [FLAME, TIMMY],
                         "backrow": [{ "def": PALANTIR, "faceUp": true, "lane": 1 }],
                         "library": [VANILLA],
                     },
                     "p2": {
                         "hand": [VANILLA],
-                        "backrow": [{ "def": AUCTIONEER, "faceUp": false, "lane": 2 }],
+                        "backrow": [{ "def": GAMBIT, "faceUp": false, "lane": 2 }],
                         "library": [VANILLA, VANILLA, VANILLA],
+                        "health": 3,
                     },
                 }));
-                let recycles = |s: &Scenario| -> Vec<String> {
-                    s.hand(P1).into_iter().filter(|card| card.def_id == RECYCLE).map(|card| card.id).collect()
-                };
 
-                for id in recycles(&s).into_iter().take(4) {
-                    s.play(&id, json!({}));
-                }
+                s.play(FLAME, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+
+                assert_eq!(s.state().active, P1);
                 assert_eq!(draws_by(s.events(), P2), 1);
-
-                let next = recycles(&s).into_iter().next().unwrap_or_else(|| RECYCLE.to_string());
-                s.play(&next, json!({}));
-
-                assert_eq!(draws_by(s.events(), P2), 1);
-                assert_eq!(count(s.last_events(), "drawLimited"), 1);
+                assert_eq!(count(s.last_events(), "drawLimited"), 2);
                 assert_eq!(s.pile(P2, "library").len(), 2);
             }
 
@@ -240,7 +237,7 @@ mod tests {
                         { "def": PALANTIR, "faceUp": true, "lane": 1 },
                         { "def": PALANTIR, "faceUp": true, "lane": 2 },
                     ] }),
-                    json!({}),
+                    json!({ "hand": [dear_stockpile(), VANILLA] }),
                     false,
                 );
                 // A Degrade moves a limit toward more draws: this one allows 2, the other still 1.
@@ -257,7 +254,7 @@ mod tests {
             #[test]
             fn r386_a_degrade_of_the_limit_lets_the_opponent_draw_2_a_turn() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
                 step_param(s.card_mut(PALANTIR), "drawLimit", 1);
 
                 s.play(STOCKPILE, json!({}));
@@ -268,7 +265,7 @@ mod tests {
             #[test]
             fn r386_an_upgrade_never_takes_the_limit_below_1() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
                 step_param(s.card_mut(PALANTIR), "drawLimit", -1);
 
                 s.play(STOCKPILE, json!({}));

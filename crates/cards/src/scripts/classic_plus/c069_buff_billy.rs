@@ -90,7 +90,7 @@ mod tests {
     }
 
     #[test]
-    fn prints_an_x_unit_human_3x_3x_and_radiant_7x_7x() {
+    fn prints_an_x_unit_human_3x_3x_and_radiant_6x_6x() {
         crate::register_all();
         let def = crate::card_def(ID);
         let json = js(&def);
@@ -231,12 +231,12 @@ mod tests {
         use super::*;
 
         #[test]
-        fn played_for_x_2_it_is_a_14_14_and_its_cry_upgrades_it_2x_4_times() {
+        fn played_for_x_2_it_is_a_12_12_and_its_cry_upgrades_it_2x_4_times() {
             crate::register_all();
             let (mut s, unit) = billy(2, true, None);
             assert_eq!(upgrades(s.events()).len(), 4);
             let (attack, health) = stats_added(s.events());
-            s.expect_stats(&unit.id, json!({ "attack": 14 + attack, "maxHealth": 14 + health }));
+            s.expect_stats(&unit.id, json!({ "attack": 12 + attack, "maxHealth": 12 + health }));
         }
 
         #[test]

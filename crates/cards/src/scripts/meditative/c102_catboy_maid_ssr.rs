@@ -113,7 +113,7 @@ mod tests {
             drawn_seen.sort();
             jade_seen.sort();
             assert_eq!(drawn_seen, vec![1, 2]);
-            assert_eq!(jade_seen, vec![1, 2, 3, 4]);
+            assert_eq!(jade_seen, vec![1, 2, 3]);
         }
 
         #[test]

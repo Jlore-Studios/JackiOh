@@ -33,16 +33,17 @@ mod tests {
     const SIPHON_SQUAD: &str = "classic-088"; // Field Trap that Tributes itself while the opponent has no Units (R403).
 
     /// The base face's pool, by catalog id: the Cost (1) traps of every set (R380) — Core #18, #41, #60,
-    /// #71, #96, Classic #10, Classic+ #22 Blood Moon, the one new Cost (1) Trap (docs/classic-sets.md
-    /// B2.6), and Meditative #64 Traitorous Blood and #68 Catnip (a Field Trap). Re-pinned for v0.3.5:
-    /// the Meditative set joins the pool.
+    /// #71, #96, Classic #63 Crop Dusting, Classic+ #22 Blood Moon, the one new Cost (1) Trap
+    /// (docs/classic-sets.md B2.6), and Meditative #64 Traitorous Blood and #68 Catnip (a Field Trap).
+    /// Re-pinned for v0.3.5: the Meditative set joins the pool; and for v0.3.9, where Classic #10 Exile
+    /// went to (2) and #63 Crop Dusting to (1).
     const TRAP_POOL: [&str; 9] = [
         "core-018",
         "core-041",
         "core-060",
         "core-071",
         "core-096",
-        "classic-010",
+        "classic-063",
         "classicplus-022",
         "meditative-064",
         "meditative-068",

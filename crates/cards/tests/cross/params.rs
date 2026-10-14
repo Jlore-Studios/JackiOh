@@ -110,11 +110,14 @@ mod b3_4_params_the_numbers_a_card_declares {
     #[test]
     fn fills_an_instance_s_current_values_when_given_and_leaves_a_text_without_params_alone() {
         let flame = card_def("classic-016");
-        assert_eq!(filled_with(&flame, FaceKind::Base, "damage", 5), "Deal 5 damage.");
+        assert_eq!(
+            filled_with(&flame, FaceKind::Base, "damage", 5),
+            "Trample\nDeal 5 damage."
+        );
         let none: IndexMap<String, i32> = IndexMap::new();
         assert_eq!(
             fill_params(&flame, FaceKind::Radiant, Some(&none)),
-            "Deal 8 damage."
+            "Trample\nDeal 8 damage."
         );
         let vanilla = card_def("core-008");
         assert!(vanilla.params.is_none());
@@ -446,14 +449,16 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             }
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
-        // before (C #46's and C #54's among them, R749); and the Meditative set's twenty-three.
+        // before (C #46's and C #54's among them, R749), less C #59's tokens, which both faces print
+        // since patch v0.3.9; and the Meditative set's twenty-three, less M #1's draw, printed on both
+        // faces since then too.
         let meditative = radiant_only
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
         assert_eq!(
             (radiant_only.len() - meditative, meditative),
-            (44, 23),
+            (43, 22),
             "{radiant_only:#?}"
         );
     }

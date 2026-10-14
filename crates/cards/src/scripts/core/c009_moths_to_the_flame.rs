@@ -82,7 +82,7 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-base",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // Lane order: 1/1, then 3/4, then 6/1 (§4.2, R53).
+                // Lane order: 1/1, then 3/4, then 4/1 (§4.2, R53).
                 "p2": { "field": ["core-007", "core-012", "core-002"] }
             }));
             let scarab = s.card("core-007").clone();
@@ -104,8 +104,8 @@ mod tests {
                 vec![moths.clone(), moths.clone(), moths.clone()]
             );
 
-            // 1 + 3 + 6 landed on a 1/14.
-            s.expect_stats("core-009", json!({ "attack": 1, "health": 4, "maxHealth": 14 }));
+            // 1 + 3 + 4 landed on a 1/14.
+            s.expect_stats("core-009", json!({ "attack": 1, "health": 6, "maxHealth": 14 }));
             // The target still strikes back: its 1 attack killed the 1-health attackers and damaged the
             // rest.
             s.expect_in_zone(&scarab, "graveyard");
@@ -120,7 +120,7 @@ mod tests {
                 "seed": "core-009-exertion",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // A Defense Position unit cannot legally attack at all (§4.2 step 1), and its position
-                // gives it Armor 1, which absorbs Moths' whole strike-back.
+                // gives it Armor 1, which Moths' Pierce (patch v0.3.9) goes through.
                 "p2": { "field": [{ "def": "core-012", "position": "DEF" }] }
             }));
             let felinors = s.card("core-012").clone();
@@ -132,8 +132,8 @@ mod tests {
                 vec![felinors.id.clone()]
             );
             s.expect_stats("core-009", json!({ "health": 11, "maxHealth": 14 }));
-            // Position Armor 1 reduced the 1 strike-back to nothing (§4.4 step 2, R63).
-            s.expect_stats(&felinors, json!({ "health": 4, "maxHealth": 4 }));
+            // Pierce ignores the position's Armor 1, so the 1 strike-back lands (§4.4 step 2, R63).
+            s.expect_stats(&felinors, json!({ "health": 3, "maxHealth": 4 }));
             // R53: no exertion was spent, so the unit is untouched for its own controller's turn.
             assert_eq!(s.card(&felinors).exertion, Exertion::default());
             assert_eq!(s.card(&felinors).position, Some(Position::Def));
@@ -145,8 +145,9 @@ mod tests {
             let mut s = scenario(json!({
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
-                // 6 then 8 is lethal to a 1/14 after two combats; lane 3 never gets to attack.
-                "p2": { "field": ["core-002", "core-013", "core-007"] }
+                // 6 then 8 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
+                // set to its old 6/1 (it prints 4/1 since patch v0.3.9).
+                "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 6, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();
             let bigot = s.card("core-002").clone();
@@ -183,8 +184,8 @@ mod tests {
 
             s.start_turn();
 
-            // 3 and 6 attack, each reduced by 1: 2 + 5 = 7, not 9 - 1 (§4.4 step 2).
-            s.expect_stats("core-009", json!({ "attack": 2, "health": 21, "maxHealth": 28 }));
+            // 3 and 4 attack, each reduced by 1: 2 + 3 = 5, not 7 - 1 (§4.4 step 2).
+            s.expect_stats("core-009", json!({ "attack": 2, "health": 23, "maxHealth": 28 }));
             // The radiant face strikes back with 2.
             s.expect_stats(&felinors, json!({ "health": 2, "maxHealth": 4 }));
             s.expect_in_zone(&bigot, "graveyard");

@@ -293,8 +293,8 @@ mod tests {
         fn r76_base_it_fizzles_when_the_target_is_already_under_your_control() {
             crate::register_all();
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 1 and Snom Bunny Mind Control 4.
-                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 5 },
+                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
+                "p1": { "hand": [KPOP, "core-049"], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = unit_at(&g, P2, 2, "setup: p2 should hold the 7/7 in lane 2");
@@ -405,7 +405,7 @@ mod tests {
             let CardScripts { base, radiant } = faces();
             assert_eq!(def.id, KPOP);
             assert_eq!(def.type_, CardType::Unit);
-            assert_eq!(def.cost, CardCost::Fixed(1));
+            assert_eq!(def.cost, CardCost::Fixed(2));
             assert_eq!((def.base.attack, def.base.health), (Some(1), Some(1)));
             assert_eq!((def.radiant.attack, def.radiant.health), (Some(2), Some(2)));
             // "Divine Shield" without "Plus" is the radiant form's whole keyword list (§8 Conventions).
@@ -576,8 +576,8 @@ mod tests {
         fn r282_a_target_already_this_player_s_is_not_made_radiant_the_delayed_steal_took_nothing_r76() {
             crate::register_all();
             let mut g = scenario(json!({
-                // K-Pop Fanatic costs 1 and Snom Bunny Mind Control 4.
-                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 5 },
+                // K-Pop Fanatic costs 2 and Snom Bunny Mind Control 4.
+                "p1": { "hand": [radiant_kpop(), MIND_CONTROL], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = unit_at(&g, P2, 2, "setup: p2 should hold the 7/7 in lane 2");
@@ -738,7 +738,7 @@ mod tests {
         fn r437_r76_a_steal_that_fizzles_on_a_card_already_this_player_s_takes_the_mark_away_too() {
             crate::register_all();
             let mut g = scenario(json!({
-                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 5 },
+                "p1": { "hand": [KPOP, MIND_CONTROL], "library": LIBRARY, "mana": 6 },
                 "p2": { "hand": [FILLER], "field": [{ "def": SEVEN_SEVEN, "lane": 2 }], "library": LIBRARY },
             }));
             let prey = unit_at(&g, P2, 2, "setup: p2 should hold the 7/7 in lane 2");
@@ -869,7 +869,11 @@ mod tests {
                 let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
                 state = act(&mut log, &state, json!({ "type": "mulligan", "keep": keep, "playerId": player }));
             }
-            state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
+            // With K-Pop Fanatic at (2) (patch v0.3.9), p1's 1 mana of turn 1 may pay for nothing, and the
+            // turn has then ended by itself (R82).
+            if state.active == P1 {
+                state = act(&mut log, &state, json!({ "type": "endTurn", "playerId": "p1" }));
+            }
             let token = state
                 .players
                 .p2

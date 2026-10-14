@@ -225,9 +225,11 @@ mod tests {
             fn b5_e3_with_c_4_palantirs_limit_the_lowest_holds_whichever_card_sets_it() {
                 crate::register_all();
                 // Palantir (p1's) limits p2 to 1; a Radiant Machine tuned to 2 beside it still lets only 1 through.
+                // The Stockpile is at (2), so Palantir lets it resolve rather than steal it.
+                let dear = json!({ "def": STOCKPILE, "costMod": 1 });
                 let mut palantir_lower = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [{ "def": MACHINE, "radiant": true }], "backrow": [PALANTIR] },
-                    "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [dear, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
                 step_param(palantir_lower.card_mut(MACHINE), "limit", 1);
@@ -237,7 +239,7 @@ mod tests {
                 // A Palantir tuned to 2 beside a base Machine: the Machine's 1 holds.
                 let mut machine_lower = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [MACHINE], "backrow": [PALANTIR] },
-                    "p2": { "hand": [STOCKPILE, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
+                    "p2": { "hand": [dear, FILLER], "library": [VANILLA, VANILLA, VANILLA] },
                     "active": "p2",
                 }));
                 step_param(machine_lower.card_mut(PALANTIR), "drawLimit", 1);

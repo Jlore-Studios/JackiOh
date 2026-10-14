@@ -1160,7 +1160,11 @@ mod spec_11_rulings_r1_r42_m3_gate {
         };
         assert!(locked_result.bounced.is_empty());
         assert_eq!(
-            must(card_at(&locked, slot(P1, UNITS, 3)), "the card in the Locked zone").id,
+            must(
+                card_at(&locked, slot(P1, UNITS, 3)),
+                "the card in the Locked zone"
+            )
+            .id,
             entering.id
         );
 

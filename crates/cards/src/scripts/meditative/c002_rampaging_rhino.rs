@@ -10,16 +10,17 @@
 //! whoever controls the Rhino as the hit lands (R212); an empty hand discards nothing and draws no random
 //! number (R129); on the opponent's turn the discard is a forced one, which M #1 Disruptive Disruptor's
 //! guard stops (R800). A hit that kills it discards nothing: the state check removes it before its trigger
-//! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Trample is
-//! catalog data, so the Radiant face's script is the base's.
+//! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Its keywords are
+//! catalog data, so the Radiant face's script is the base's. Patch v0.3.9 (#831) gave both faces Rush
+//! and Windfury and the Radiant face First Strike in place of its Trample, at 10/18 (11/20 before).
 
 pub const ID: &str = "meditative-002";
 
 // M #2 Rampaging Rhino — SPEC §8.8 row 2, BUILD M10 row M 2: "A trigger on `damage` aimed at it, one random
 // discard per damage instance from the hand of whoever controls it as the hit lands (R212, R682); a sweep
 // hits each Rhino once (R59); a hit Armor takes whole discards nothing (R63); an empty hand discards nothing
-// and draws no random number (R129); a hit that kills it discards nothing (R174, R780); Trample on the
-// Radiant face; discards reads through param() (R386)".
+// and draws no random number (R129); a hit that kills it discards nothing (R174, R780); Rush and
+// Windfury on both faces, First Strike on the Radiant one; discards reads through param() (R386)".
 //
 // Fixtures: #61 Prejudiced Postdoc (2/4, its Cry never fires when it is placed, R1) hits for 2 and dies to the
 // Rhino's 5; #4 Gary the Gambler is a 1/1 striker and #8 Mr. Vanilla a 4/4; #13 Shredder-10 deals 2 to each
@@ -92,8 +93,11 @@ mod tests {
         assert!(def.tags.is_empty());
         assert_eq!(
             [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
-            [Some(5), Some(9), Some(11), Some(20)]
+            [Some(5), Some(9), Some(10), Some(18)]
         );
+        let kinds = |keywords: &[Keyword]| keywords.iter().map(|keyword| keyword.kind().to_string()).collect::<Vec<_>>();
+        assert_eq!(kinds(&def.base.keywords), ["Rush", "Windfury"]);
+        assert_eq!(kinds(&def.radiant.keywords), ["First Strike", "Rush", "Windfury"]);
         assert_eq!(
             crate::js(&def.params),
             json!([{ "key": "discards", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
@@ -267,23 +271,36 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_11_20_with_trample_its_excess_reaching_the_hero() {
+        fn is_10_18_with_first_strike_rush_and_windfury_so_it_strikes_twice_and_takes_nothing_back() {
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "radiant": true }], "hand": [FILLER, FILLER, FILLER], "library": [VANILLA, VANILLA] },
-                "p2": { "field": [GARY], "hand": [FILLER], "library": [VANILLA, VANILLA] },
+                "p2": { "field": [VANILLA, GARY], "hand": [FILLER], "library": [VANILLA, VANILLA] },
             }));
-            s.expect_stats(ID, json!({ "attack": 11, "health": 20, "maxHealth": 20 }));
-            assert_eq!(kinds_of_p1_lane_1(&s), vec!["Trample".to_string()]);
-            s.attack(ID, GARY);
-            // 11 into a 1/1: 1 to the Gary and the 10 left over to its hero.
-            s.expect_health(P2, 20);
+            s.expect_stats(ID, json!({ "attack": 10, "health": 18, "maxHealth": 18 }));
+            assert_eq!(kinds_of_p1_lane_1(&s), ["First Strike", "Rush", "Windfury"]);
+            let (Some(vanilla), Some(gary)) = (s.unit(P2, 1), s.unit(P2, 2)) else {
+                panic!("p2's two Units");
+            };
+            s.attack(ID, &vanilla);
+            s.attack(ID, &gary);
+            // First Strike kills each before it strikes back: no hit lands on it, so nothing is discarded.
+            s.expect_in_zone(&vanilla, "graveyard");
+            s.expect_in_zone(&gary, "graveyard");
+            s.expect_stats(ID, json!({ "health": 18 }));
+            assert_eq!(discarded(&s, P1), 0);
         }
 
         #[test]
         fn still_discards_one_per_hit() {
-            let mut s = board(true, 3, &[POSTDOC]);
-            s.attack(POSTDOC, ID);
-            s.expect_stats(ID, json!({ "attack": 11, "health": 18, "maxHealth": 20 }));
+            // A Spell's hit: its First Strike kills an attacker like the Postdoc before it lands one.
+            let mut s = crate::scenario(json!({
+                "active": "p2",
+                "p1": { "field": [{ "def": ID, "radiant": true }], "hand": [FILLER, FILLER, FILLER], "library": [VANILLA, VANILLA] },
+                "p2": { "hand": [ECLIPSE, FILLER], "library": [VANILLA, VANILLA], "mana": 8 },
+            }));
+            let rhino = s.card(ID).clone();
+            s.play(ECLIPSE, at(&rhino));
+            s.expect_stats(ID, json!({ "attack": 10, "health": 15, "maxHealth": 18 }));
             assert_eq!(discarded(&s, P1), 1);
             assert_eq!(s.hand(P1).len(), 2);
         }

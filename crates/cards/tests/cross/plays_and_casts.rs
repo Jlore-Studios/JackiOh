@@ -425,12 +425,8 @@ mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {
                 .iter()
                 .any(|event| matches!(event, GameEvent::ShuffledIn { .. }))
         );
-        // The draws past the empty library are §2.4's fatigue, which Going Long's Armor 2 cannot hold.
-        assert!(
-            s.events()
-                .iter()
-                .any(|event| matches!(event, GameEvent::Fatigue { .. }))
-        );
+        // Each virus's 1 damage pierces Going Long's Armor 2 (Pierce since patch v0.3.9), as §2.4's
+        // fatigue past an empty library would: p1's hero falls.
         assert_eq!(
             s.state().result,
             Some(GameResult {

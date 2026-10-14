@@ -547,23 +547,28 @@ mod c_n42_transmutable_toxins {
 mod c_n74_corpse_plantation {
     use super::*;
 
-    fn plants(radiant: bool, tokens: i32) {
+    /// The Activate arms one play from the graveyard this turn (patch v0.3.9; its Cry places the
+    /// counters now), remembering the turn it was armed on.
+    fn arms(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(CORPSE_PLANTATION, radiant)], "hand": [STOCKPILE] },
             "p2": { "hand": [FILLER] },
         }));
         activate_listed(&mut s, CORPSE_PLANTATION, any);
-        assert_eq!(s.card(CORPSE_PLANTATION).counters.plague, Some(tokens));
+        let turn = s.state().turn;
+        assert_eq!(s.card(CORPSE_PLANTATION).memory.get("armed"), Some(&json!(turn)));
+        let id = s.card(CORPSE_PLANTATION).id.clone();
+        assert!(listed(&s, &id).is_empty(), "once per turn");
     }
 
     #[test]
-    fn r384_base_places_2_plague_counters_on_itself() {
-        plants(false, 2);
+    fn r384_base_arms_a_graveyard_play_once_a_turn() {
+        arms(false);
     }
 
     #[test]
-    fn r384_radiant_places_4_plague_counters_on_itself() {
-        plants(true, 4);
+    fn r384_radiant_arms_a_graveyard_play_once_a_turn() {
+        arms(true);
     }
 }
 
@@ -594,18 +599,25 @@ mod c_n78_mutate_spell {
         activate_listed(&mut s, MUTATE_SPELL, at(well.clone()));
         assert_eq!(s.hand(P1).len(), hand + 2);
         assert_eq!(s.card(&well).counters.plague.unwrap_or(0), 0);
-        // Activate ♾️: listed again while a permanent has a counter.
+        // Activate, once a turn (patch v0.3.9): not listed again, though the enemy has a counter.
+        let id = s.card(MUTATE_SPELL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "once per turn");
+        let mut s = mutate(false);
         activate_listed(&mut s, MUTATE_SPELL, at(enemy.clone()));
         s.expect_in_zone(&enemy, "exile");
     }
 
     #[test]
-    fn r384_radiant_a_counter_off_your_backrow_card_draws_4() {
+    fn r384_radiant_a_counter_off_your_backrow_card_draws_4_then_off_an_enemy_unit_exiles_it() {
         let mut s = mutate(true);
         let well = s.card(MANA_WELL).id.clone();
+        let enemy = s.card(VANILLA).id.clone();
         let hand = s.hand(P1).len();
         activate_listed(&mut s, MUTATE_SPELL, at(well));
         assert_eq!(s.hand(P1).len(), hand + 4);
+        // Activate ♾️: listed again while a permanent has a counter.
+        activate_listed(&mut s, MUTATE_SPELL, at(enemy.clone()));
+        s.expect_in_zone(&enemy, "exile");
     }
 }
 
@@ -1174,6 +1186,27 @@ mod m_n75_ever_growing_tree {
         (s, id)
     }
 
+    /// Activates the Tree as `legalActions` lists it and takes the first of the two Field Spells it
+    /// offers (patch v0.3.9); the events of the pick.
+    fn grow(s: &mut Scenario) -> Vec<GameEvent> {
+        activate_listed(s, EVER_GROWING_TREE, any);
+        let offered: Vec<String> = s
+            .state()
+            .pending
+            .as_ref()
+            .expect("the Tree's choice")
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Mode { option } => Some(option.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(offered.len(), 2);
+        s.answer(json!(offered[0]));
+        s.last_events().to_vec()
+    }
+
     /// The Tree's def id now: a fusion of a picked Field Spell and the Tree.
     fn grown(s: &Scenario, id: &str) -> String {
         find_instance(s.state(), id)
@@ -1183,9 +1216,9 @@ mod m_n75_ever_growing_tree {
     }
 
     #[test]
-    fn r384_base_activate_fuses_a_random_field_spell_into_it_once_a_turn() {
+    fn r384_base_activate_fuses_a_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(false);
-        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        let events = grow(&mut s);
         assert!(
             events
                 .iter()
@@ -1197,9 +1230,9 @@ mod m_n75_ever_growing_tree {
     }
 
     #[test]
-    fn r384_radiant_activate_fuses_a_radiant_field_spell_into_it_once_a_turn() {
+    fn r384_radiant_activate_fuses_a_radiant_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(true);
-        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        let events = grow(&mut s);
         assert!(
             events
                 .iter()

@@ -179,7 +179,8 @@ mod r174_50_k_pop_fanatics_delayed_steal_and_a_target_that_left_the_field {
     fn r174_the_steal_fizzles_on_a_target_that_died_and_came_back_through_reborn_r76_r83() {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
-            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY },
+            // K-Pop Fanatic (2) and Hit Job (3).
+            "p1": { "hand": [KPOP, HIT_JOB, VANILLA], "field": [{ "def": VANILLA, "lane": 1 }], "library": LIBRARY, "mana": 5 },
             "p2": {
                 "hand": [VANILLA],
                 "field": [{ "def": RIGHT_HOUSE, "lane": 2 }, { "def": VANILLA, "lane": 4 }],
@@ -740,7 +741,11 @@ mod r174_a_later_part_of_one_cry_meets_the_stay_the_play_chose {
         // as a dying Reborn unit's is (§3.2, R64).
         jackioh_engine::zones::reserve_zone(
             g.state_mut(),
-            ZoneRef { player: PlayerId::P1, row: Row::Backrow, lane: 2 },
+            ZoneRef {
+                player: PlayerId::P1,
+                row: Row::Backrow,
+                lane: 2,
+            },
         );
         g.play(
             fused.id.as_str(),

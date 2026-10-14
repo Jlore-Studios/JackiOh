@@ -65,11 +65,11 @@ mod tests {
     }
 
     #[test]
-    fn is_a_3_field_spell_naming_core_n3_and_c_n6_each_face_has_a_cry_and_a_start_of_turn_hook() {
+    fn is_a_4_field_spell_naming_core_n3_and_c_n6_each_face_has_a_cry_and_a_start_of_turn_hook() {
         crate::register_all();
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.cost, CardCost::Fixed(3));
+        assert_eq!(def.cost, CardCost::Fixed(4));
         assert_eq!(def.refs, Some(vec![RIGHT.to_string(), WRONG.to_string()]));
         let scripts = crate::scripts_of()[ID].clone();
         for face in [&scripts.base, &scripts.radiant] {

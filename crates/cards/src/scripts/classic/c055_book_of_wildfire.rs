@@ -14,7 +14,7 @@
 pub const ID: &str = "classic-055";
 
 // C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: targeted hit on any unit or hero
-// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a Book;
+// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a (1) Cost Spell;
 // tuned damage reads through `param()` (R386). At the end of its owner's turn in hand, it swaps to a
 // random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
@@ -33,7 +33,7 @@ mod tests {
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const FILLER: &str = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
-    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
+    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself.
     const BOOK_OF_FLAME: &str = "classic-016";
 
     use crate::js;
@@ -252,18 +252,19 @@ mod tests {
             }
 
             #[test]
-            fn c_4_palantirs_base_face_answers_it_as_a_book_tributed_at_once_with_no_prompt_and_steals_this() {
+            fn r831001_c_4_palantirs_base_face_steals_this_with_no_prompt_and_casts_it_at_your_hero() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "backrow": [PALANTIR], "hand": [FILLER] } }));
                 let wildfire = s.card(WILDFIRE).clone();
                 s.play(&wildfire, json!({ "targets": [hero("p2")] }));
                 assert!(s.state().pending.is_none());
                 s.expect_in_zone(PALANTIR, "graveyard");
+                // Cast by p2, its random hit is aimed at p2's opponent (R656): p1 has no Unit, so p1's hero.
                 assert!(matches_object(
                     &js(s.card(&wildfire.id)),
-                    &json!({ "owner": "p2", "zone": { "z": "hand", "player": "p2" } }),
+                    &json!({ "owner": "p2", "zone": { "z": "graveyard", "player": "p2" } }),
                 ));
-                s.expect_health(P2, 30);
+                s.expect_health(P2, 30).expect_health(P1, 26);
             }
 
             #[test]

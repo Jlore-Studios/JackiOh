@@ -25,7 +25,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const EATER: &str = "core-089"; // 2/2 → 6/6, cost 4
+    const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.9), cost 4
 
     // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
     // never fires a Cry.
@@ -226,7 +226,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn gains_double_the_radiant_6_6_takes_twice_the_dying_unit_s_attack_and_max_health() {
+        fn gains_double_the_radiant_4_4_takes_twice_the_dying_unit_s_attack_and_max_health() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": SEED,
@@ -235,11 +235,11 @@ mod tests {
                 "p2": { "hand": [FILLER], "field": [{ "def": FELINORS, "lane": 1 }] },
             }));
 
-            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
+            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
             s.attack(FELINORS, GARY);
 
-            // 6/6 + 2 × 1/1.
-            s.expect_stats(EATER, json!({ "attack": 8, "maxHealth": 8 }));
+            // 4/4 + 2 × 1/1.
+            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
         }
 
         #[test]
@@ -257,8 +257,8 @@ mod tests {
 
             s.attack(STRAAZA, RENO);
 
-            // 6/6 + 2 × 4/6.
-            s.expect_stats(EATER, json!({ "attack": 14, "maxHealth": 18 }));
+            // 4/4 + 2 × 4/6.
+            s.expect_stats(EATER, json!({ "attack": 12, "maxHealth": 16 }));
         }
 
         #[test]
@@ -278,7 +278,7 @@ mod tests {
             s.attack(FELINORS, &token);
 
             s.expect_in_zone(&token, "gone");
-            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
+            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
         }
 
         #[test]
@@ -299,7 +299,7 @@ mod tests {
 
             s.attack(STRAAZA, GARY);
 
-            s.expect_stats(EATER, json!({ "attack": 6, "maxHealth": 6 }));
+            s.expect_stats(EATER, json!({ "attack": 4, "maxHealth": 4 }));
         }
     }
 

@@ -504,7 +504,8 @@ mod r68_4_5_a_delayed_effect_s_check_is_answered_before_the_next_delayed_effect 
         // Timmy (3/3 with 1 damage) stolen onto p1's side is at 0 health there and dies in the check
         // after the first steal. p2's fixture trap answers one of p2's own units dying by returning p2's units to hand.
         let mut s = scenario(json!({
-            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 5, "library": [RENO, RENO, RENO] },
+            // Two K-Pop Fanatics at (2) each (patch v0.3.9) and Reno's (3).
+            "p1": { "hand": [KPOP_FANATIC, KPOP_FANATIC, RENO], "mana": 7, "library": [RENO, RENO, RENO] },
             "p2": {
                 "field": [{ "def": TEMPO_TIMMY, "damage": 1 }, VANILLA],
                 "backrow": [{ "def": SUPPRESSIVE_AURA, "radiant": true }],
