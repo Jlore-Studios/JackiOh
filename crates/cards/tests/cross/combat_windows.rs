@@ -78,6 +78,7 @@ mod r42_and_r89_the_unit_whose_damage_instance_was_lethal {
     fn r42_a_unit_prem_panther_damaged_earlier_and_a_hit_job_later_destroyed_was_not_destroyed_by_the_panther()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-panther-stale",
             "p1": { "field": [PANTHER], "hand": [HIT_JOB, STOCKPILE], "library": [TIMMY, TIMMY, TIMMY] },
             "p2": { "field": [BIG_D] },
@@ -117,6 +118,7 @@ mod r176_my_pawns_projection_follows_the_combat {
         // p1's Twisted Sorcerer (5/5) with Trample swings at p2's Pointmaster (7/1, First Strike) with
         // p2 at 3. Pointmaster strikes first for 7 and the Sorcerer deals nothing.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-first-strike",
             "p1": { "field": [SORCERER], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": { "health": 3, "field": [POINTMASTER], "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -140,6 +142,7 @@ mod r176_my_pawns_projection_follows_the_combat {
         // (Taunt, Divine Shield) between two 1/1s. The shield stops the hit on the defender, but Cleave
         // hits each 1/1 for 10 and Trample sends 9 + 9 = 18 to p2's hero at 18: My Pawn cancels it.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-cleave",
             "p1": { "field": [{ "def": PANTHER, "radiant": true }], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": {
@@ -168,6 +171,7 @@ mod r176_my_pawns_projection_follows_the_combat {
     fn r176_one_hit_short_of_lethal_through_cleave_is_not_lethal_so_the_attack_goes_through() {
         // The same board with p2 at 19: 18 through Trample is not enough, so My Pawn stays armed.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-cleave",
             "p1": { "field": [{ "def": PANTHER, "radiant": true }], "hand": [STOCKPILE], "library": [TIMMY, TIMMY] },
             "p2": {
@@ -199,6 +203,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         // has already switched, can still attack the hero for 4, which is lethal at 4 — and a Trap that
         // has fired is spent (§5.1), so nothing cancels it.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-twice-a",
             "p1": { "field": [SORCERER, DUELIST], "library": [GIGA, GIGA] },
             "p2": { "health": 4, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -230,6 +235,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         // My Pawn cancels p1's lethal swing on turn 9 and the AI ends p1's turn. p2 has nothing it can
         // do, so R82 auto-ends turn 10 inside that same reduction and p1's turn 11 begins — p1's own.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-pawn-next-turn",
             "p1": { "field": [SORCERER], "library": [GIGA, GIGA, GIGA] },
             "p2": { "health": 5, "backrow": [{ "def": MY_PAWN, "faceUp": false }], "library": [GIGA, GIGA] },
@@ -297,6 +303,7 @@ mod s5_1_r44_r152_my_pawn_and_the_ai_turn_it_hands_over {
         // p1 swings lethal; p2's My Pawn cancels and the AI plays out p1's turn, playing its one hand
         // card, Mr. Vanilla, with p1's Unstable Clone Machine out.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "pawn-dispatch",
             "p1": {
                 "hand": [VANILLA],
@@ -572,6 +579,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r174_r83_an_attacker_a_trap_in_the_window_destroyed_does_not_attack_with_the_reborn_body_that_came_back()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-vaporize-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -598,6 +606,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r174_r83_an_attack_whose_target_a_trap_in_the_window_destroyed_does_not_land_on_the_targets_reborn_body()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-shatter-reborn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": RIGHT_HOUSE, "lane": 2 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -625,6 +634,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r173_r171_an_attacker_a_trap_in_the_window_stole_does_not_go_on_to_hit_its_new_controllers_hero_s4_2_step_2()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-turncoat",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "health": 20, "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -650,6 +660,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r173_r171_an_attack_whose_target_a_trap_in_the_window_moved_to_the_attackers_side_does_not_hit_it_s4_2_step_2()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-defector",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -683,6 +694,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
     fn r220_r73_r171_a_board_swap_in_the_window_leaves_the_declaring_players_attacker_on_the_other_side_no_combat()
      {
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-swapper",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "field": [{ "def": VANILLA, "lane": 3 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -767,6 +779,7 @@ mod r220_s4_2_step_5_resolves_the_attack_only_as_it_was_declared {
         // is offered the declaration (R68). The attacker is in its graveyard: no attack is left to be
         // lethal, so My Pawn stays armed and p1 keeps its turn.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-vaporize-pawn",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -805,6 +818,7 @@ mod r176_the_hero_my_pawn_projects_is_the_one_the_combat_leaves {
         // Shield spent) with p2 at 3. Trample sends 3 through, and Jilliax's strike back heals p2 for 3
         // in the same combat, so the check after it finds p2 at 3: the attack would not be lethal.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r6-pawn-lifesteal",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": [GIGA, GIGA, GIGA] },
             "p2": {
@@ -939,6 +953,7 @@ mod r212_a_declaration_is_answered_as_the_board_stood_when_it_was_declared {
         // p1's Sorcerer attacks p2's hero. p2's trap in the window summons a Watcher for p2. The
         // Watcher was not on the field when the attack was declared, so it draws nothing for it.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r7-watcher-arrives",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -981,6 +996,7 @@ mod r176_a_lifesteal_strike_back_that_tramples_heals_what_it_really_deals {
         // Jilliax's 3 into a 1-health Bigot lands 1 (heals p2 for 1); the 2 that tramples on is stopped
         // by Armor 2 (the zero rule) and heals nothing. p2 ends at 3 - 4 + 1 = 0: lethal, so My Pawn cancels.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-pawn-trample-strikeback",
             "p1": {
                 "field": [{ "def": BIGOT, "lane": 1 }],
@@ -1108,6 +1124,7 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
         // responses that fire immediately (§10.3), and both resolve inside step 4's window, before any
         // damage of the attack (§4.2 step 4), so the attacker is gone when step 5 comes.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-window-chain",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
@@ -1131,6 +1148,7 @@ mod r220_s10_3_a_trap_answers_what_a_trap_in_the_attacks_window_did_before_the_c
         // the window pauses and step 5 is owed to the answer (R113). The answer finishes the window: the
         // second trap is a response to the hit and resolves before the combat the declaration still owes.
         let mut s = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "cw8-window-chain-asked",
             "p1": { "field": [{ "def": SORCERER, "lane": 1 }], "hand": [STOCKPILE], "library": WINDOW_LIBRARY },
             "p2": { "hand": [STOCKPILE], "library": WINDOW_LIBRARY },

@@ -47,6 +47,7 @@ fn craft(s: &mut Scenario, ingredients: [CardInstance; 2]) -> CardInstance {
 /// p1 sets `Counterspell + (Final Gambit + Income Tax)` face-down at 4 health; p2 attacks its hero for 4.
 fn lethal_against_nested() -> Scenario {
     let mut s = scenario(json!({
+        // Arbitrary seed: no pool or random roll decides this test (audited under #848).
         "seed": "fused-nested-resume",
         "p1": { "hand": [GAMBIT, INCOME_TAX, COUNTERSPELL, FILLER], "library": [FILLER, FILLER, FILLER, FILLER, FILLER], "health": 4, "mana": 10 },
         "p2": { "hand": [FILLER], "field": [ATTACKER], "library": [FILLER, FILLER, FILLER, FILLER, FILLER] },

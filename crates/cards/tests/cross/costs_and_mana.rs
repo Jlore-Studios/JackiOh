@@ -156,6 +156,7 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
      {
         // Efficiency Dividend, X = 4, mana mode: floor(4/2) = 2 more at p1's next refresh.
         let mut dividend = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-l8-dividend-max",
             "p1": { "hand": [DIVIDEND, HIT_JOB], "field": [TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TIMMY] },
@@ -172,6 +173,7 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
 
         // Hinder, drawn and cast at p1's start of turn: p2's next refresh is 1 lower.
         let mut hinder = setup(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-l8-hinder-max",
             "p1": { "hand": [HIT_JOB], "field": [TIMMY], "library": [HINDER, TIMMY, TIMMY, TIMMY] },
             "p2": { "hand": [STOCKPILE], "field": [TIMMY], "library": [STOCKPILE, STOCKPILE, STOCKPILE] },

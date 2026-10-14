@@ -373,23 +373,19 @@ mod r217_a_draw_a_cast_makes_continues_its_chain {
 const CHAOS: &str = "core-095"; // #95 Call to Chaos (Core Edition), Spell, 4
 const MENACE: &str = "core-019"; // #19 Midrange Menace, a spare 3-cost Unit, so the turn never auto-ends
 
-/// #95's roll is the first rng draw of its play, so the cursor picks the effect. The seed and the
-/// search are `c095_call_to_chaos.rs`'s.
+/// #95's roll is the first rng draw of its play, so the cursor picks the effect. The seed is arbitrary,
+/// since `chaos_cursor_for` finds the cursor where the roll is the effect the test needs.
 const CHAOS_SEED: &str = "chaos-card";
 fn chaos_cursor_for(effect: &str) -> u32 {
-    for cursor in 0..500 {
-        let rolled = subsystems::roll_chaos_effects(
+    cursor_where(CHAOS_SEED, |cursor| {
+        subsystems::roll_chaos_effects(
             &mut Rng::new(CHAOS_SEED, cursor),
             false,
             Some(subsystems::CHAOS_EFFECTS),
         )
         .first()
-        .map(|rolled| rolled.name.to_string());
-        if rolled.as_deref() == Some(effect) {
-            return cursor;
-        }
-    }
-    panic!("no cursor below 500 rolls \"{effect}\" from \"{CHAOS_SEED}\"");
+        .is_some_and(|rolled| rolled.name == effect)
+    })
 }
 
 mod r58_10_3_the_resolution_loop_runs_until_the_rules_say_it_is_done {

@@ -117,17 +117,13 @@ fn labels_of<D: std::borrow::Borrow<ChaosEffectDef>>(effects: &[D]) -> Vec<Strin
 }
 
 fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> String {
-    for i in 0..4000 {
-        let seed = format!("{tag}-{i}");
-        if accept(&names_of(&roll_chaos_effects(
-            &mut Rng::new(&seed, 0),
+    jackioh_engine::testkit::seed_where(tag, |seed| {
+        accept(&names_of(&roll_chaos_effects(
+            &mut Rng::new(seed, 0),
             radiant,
             Some(CHAOS_PLUS_EFFECTS),
-        ))) {
-            return seed;
-        }
-    }
-    panic!("no seed for {tag}");
+        )))
+    })
 }
 
 fn json_of<T: serde::Serialize>(value: T) -> Value {
