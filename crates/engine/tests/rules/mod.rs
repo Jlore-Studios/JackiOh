@@ -50,6 +50,7 @@ pub mod draw;
 pub mod draw_complete;
 pub mod draw_limit;
 pub mod draw_pause;
+pub mod duos;
 pub mod echo;
 pub mod effects_after_check;
 pub mod effects_allure;
