@@ -81,6 +81,7 @@ export const RELEASES: readonly Release[] = [
       "Every Legendary and Mythic opens its play with a few bars of music of its own, and every Unit has a line to speak as it attacks.",
       "The music no longer switches to a theme when a Legendary or Mythic is played: its own few bars play, then the station carries on.",
       "Replays: watch your finished games again, step by step, and share a turn as a GIF.",
+      "Play together: friends, chat, challenges, watching and shared replays, and Duos co-op against an AI team.",
     ],
   },
 ];
