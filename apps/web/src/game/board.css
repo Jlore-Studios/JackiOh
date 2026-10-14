@@ -1471,6 +1471,21 @@
   text-align: center;
 }
 
+/* R849000: why a click on your own unit offered no attack. Information rather than a refusal, so it
+   wears the neutral frame, not the opponent's amber. */
+.board .attack-reason {
+  max-width: none;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--line-bright);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: 0.82em;
+  font-weight: 650;
+  text-align: center;
+}
+
 .control {
   max-width: 100%;
 }

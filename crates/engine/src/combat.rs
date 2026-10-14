@@ -33,7 +33,7 @@ use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
     find_instance, find_instance_mut,
 };
-use crate::wire::{GameEvent, KeywordKind, PLAYER_IDS, PlayerId, Row, has_keyword, opponent_of};
+use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, has_keyword, opponent_of};
 use crate::work::{PausedStep, WorkPlan, owe, paused as is_paused, paused_of};
 
 /// What an attack can be declared on (§4.2 step 2): an enemy unit or the enemy hero. It is the
@@ -176,6 +176,14 @@ pub fn is_sick(state: &GameState, unit: &CardInstance) -> bool {
     unit.summoned_turn == Some(state.turn)
 }
 
+/// §4.1, §6.1: summoning sick with neither Rush nor Charge — §4.2 step 1's sickness refusal, and
+/// `UnitView.sick` (R849000). `keywords` are the unit's viewed keywords (`layers::unit_view`).
+pub fn is_asleep(state: &GameState, unit: &CardInstance, keywords: &[Keyword]) -> bool {
+    is_sick(state, unit)
+        && !has_keyword(keywords, KeywordKind::Rush)
+        && !has_keyword(keywords, KeywordKind::Charge)
+}
+
 /// R171: a card whose controller changes has entered its new controller's side on this turn — §4.1's
 /// "entered the field" for `is_sick`, and a fresh exertion for its new controller. Every path that
 /// changes control on the field calls this at the moment it emits `controlChanged`, for every card
@@ -271,7 +279,7 @@ pub fn switch_position(
 /// unspent, Attack Position, not sick unless Rush or Charge, attack above 0, no "Can't attack" —
 /// with §3.2's "is it even on the field" first. The order is what decides which reason a unit that
 /// fails several ways reports, so R6's spent exertion is read before its position.
-fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<(), EngineError> {
+pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<(), EngineError> {
     if !is_active_on_field(state, attacker) {
         return Err(EngineError::new("that unit is not on the field"));
     }
@@ -286,10 +294,7 @@ fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<(), 
     if view.position != Position::Atk {
         return Err(EngineError::new("only Attack-Position units may attack"));
     }
-    if is_sick(state, attacker)
-        && !has_keyword(&view.keywords, KeywordKind::Rush)
-        && !has_keyword(&view.keywords, KeywordKind::Charge)
-    {
+    if is_asleep(state, attacker, &view.keywords) {
         return Err(EngineError::new("that unit is summoning sick"));
     }
     // R7: a 0-attack unit cannot declare an attack, printed (Big D-fender) or dragged there (§10.4).
