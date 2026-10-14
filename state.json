@@ -6800,20 +6800,20 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/11-rulings.md"
+            "crates/engine/tests/golden/games.jsonl"
           ],
-          "from": "3d6ba6700c1b6946ce75787f8f93b1f858a6a20a",
-          "main": "d5567b171352500699ddf6c8b6f9ec9d3d9035ac"
+          "from": "07a6702eb6002f100cd2c935c049d61aabf2de4a",
+          "main": "e41fc723a465051e82f29c13521d51458bcf9ba5"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "muse",
-            "run": "38516970672",
+            "run": "38518692924",
             "tier": "medium"
           }
         ],
-        "sha": "07a6702eb6002f100cd2c935c049d61aabf2de4a",
+        "sha": "905afc85c76a7f44dd59fd099dfc44be11206bba",
         "tiers": {
           "muse": "medium"
         }
