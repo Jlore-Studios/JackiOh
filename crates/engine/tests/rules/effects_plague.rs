@@ -420,13 +420,19 @@ mod r471_r689_e19_place_n_plague_counters_one_prompt_naming_the_single_target {
         assert_eq!(hidden["player"], json!("p2"));
         assert_eq!(hidden["row"], json!("backrow"));
         assert_eq!(hidden["lane"], json!(3));
-        assert!(hidden.get("defId").is_none(), "a hidden option must not name its card");
+        assert!(
+            hidden.get("defId").is_none(),
+            "a hidden option must not name its card"
+        );
         assert!(!mine.to_string().contains(&trap.def_id));
         // A card the placer may read is offered as before: its id and definition, no coordinates.
         let readable = option_of(&theirs.id);
         assert_eq!(readable["defId"], json!(theirs.def_id));
         for field in ["player", "row", "lane"] {
-            assert!(readable.get(field).is_none(), "a readable option names no zone ({field})");
+            assert!(
+                readable.get(field).is_none(),
+                "a readable option names no zone ({field})"
+            );
         }
     }
 }
