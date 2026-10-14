@@ -9233,13 +9233,13 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-14T07:40:00Z",
-          "utilization": 0.4
+          "resets_at": "2026-10-14T18:40:00Z",
+          "utilization": 0.16
         },
-        "observed_at": "2026-10-14T03:13:36Z",
+        "observed_at": "2026-10-14T14:14:08Z",
         "seven_day": {
           "resets_at": "2026-10-19T09:00:00Z",
-          "utilization": 0.51
+          "utilization": 0.61
         },
         "status": "allowed_warning"
       }
