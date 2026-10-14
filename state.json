@@ -5574,6 +5574,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
+      "question": "a person must edit `.github/workflows/ci.yml` (exact lines in Steps 7\u20138): split the `ai` test group into three and remove the `deploy rehearsal` suite from the `db` job. The bot may not change `.github/`. Everything else below the bot builds.",
       "run_id": "38563242790",
       "started_at": "2026-10-14T12:22:40Z",
       "stop_requested": false,
