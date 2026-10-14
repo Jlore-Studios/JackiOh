@@ -233,8 +233,15 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   // §6.2's ruling, not its Rule column, and short (R500; see the header).
   Cry: trigger("Cry", SHORT_REMINDERS.Cry),
   Death: trigger("Death", "When sent from the field to the GY"),
-  "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw"),
-  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup"),
+  // Issue #814: the lowercase second half of a compound trigger ("Cry and start of turn",
+  // "Start of turn and end of turn") is the same term, and bolds as one. R366 keeps the catalog's
+  // spelling, so the aliases live here, not there.
+  "Start of turn": trigger("Start of turn", "Controller's turn start, before the draw", {
+    aliases: ["start of turn"],
+  }),
+  "End of turn": trigger("End of turn", "Controller's turn end, before cleanup", {
+    aliases: ["end of turn"],
+  }),
   "Start of game": trigger("Start of game", "After mulligan, before turn 1", { row: "Start of Game" }),
   "Once per turn": trigger("Once per turn", "Activated ability limit", { row: "Once per Turn" }),
   Aura: trigger("Aura", "Effect while in play"),

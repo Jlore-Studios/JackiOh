@@ -57,6 +57,7 @@ fn phantom_ingredient(ctx: &mut EffectContext<'_>, def_id: &str, owner: Option<P
 
 /// `fuseCards`' `pick`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum FuseCardsPick {
     Random,
@@ -65,6 +66,7 @@ pub enum FuseCardsPick {
 
 /// `fuseCards`' argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseCardsArgs {
     /// Ingredients that are definitions only: #99's Discover picks.
@@ -377,6 +379,7 @@ fn keepable(state: &GameState, card: &CardInstance) -> bool {
 
 /// `FuseInto`'s pile: a hand or a library.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum FuseIntoPile {
     Hand,
@@ -385,6 +388,7 @@ pub enum FuseIntoPile {
 
 /// Where a random ingredient is fused: one named card, or every card of a hand or a library.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum FuseInto {
     Target {
@@ -413,6 +417,7 @@ fn kept_cards(ctx: &EffectContext<'_>, into: &FuseInto) -> Vec<CardInstance> {
 
 /// `fuseRandomInto`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseRandomIntoArgs {
     pub into: FuseInto,
@@ -495,6 +500,7 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
 
 /// `fuseGenerated`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseGeneratedArgs {
     pub count: i32,
@@ -581,6 +587,7 @@ pub fn fuse_generated(args: FuseGeneratedArgs) -> Effect {
 
 /// The piles `fuseOntoYourCard` may offer the controller's cards from.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum FuseOntoPile {
     Field,
@@ -670,6 +677,7 @@ fn fuse_onto_data(data: &IndexMap<String, Value>) -> Option<FuseOntoData> {
 
 /// `fuseOntoYourCard`'s `otherwise`: exile the ingredient, or leave it alone.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum FuseOntoOtherwise {
     Exile,
@@ -678,6 +686,7 @@ pub enum FuseOntoOtherwise {
 
 /// `fuseOntoYourCard`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct FuseOntoYourCardArgs {
     pub target: TargetSpec,

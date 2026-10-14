@@ -227,6 +227,7 @@ fn chosen_what(ctx: &EffectContext<'_>) -> Option<SwapWhat> {
 
 /// `swap`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SwapArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

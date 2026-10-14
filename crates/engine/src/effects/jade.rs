@@ -21,6 +21,7 @@ use crate::zones::{card_at, slots_of};
 /// `addJade`'s argument: how much the counter rises by, and whose (default the controller's own,
 /// which is what a resolving Jade or Red Jade adds to, MD-C2).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AddJadeArgs {
     pub amount: i32,

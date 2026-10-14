@@ -56,24 +56,41 @@ const RUST = [
 const ENGINE = "crates/engine/src/reduce.rs";
 
 let repo = "";
+/** The first commit's sha. */
+let baseSha = "";
+
+const GIT_CONFIG = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"];
 
 function git(...args: string[]): string {
-  return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], {
-    cwd: repo,
-    encoding: "utf8",
-  }).trim();
+  return execFileSync("git", [...GIT_CONFIG, ...args], { cwd: repo, encoding: "utf8" }).trim();
 }
 
 /** A commit on top of the first one that writes each file with its content; returns the first commit's sha and the new one's. */
 function changeFiles(contents: Record<string, string>): { base: string; head: string } {
-  git("checkout", "-q", "-B", "work", "base");
+  // The files go in a directory of their own, staged over the first commit's tree in an index of
+  // their own, so the commit takes one process and no checkout: a case makes dozens of these, and
+  // a process is what costs a case its time.
+  const files = mkdtempSync(join(tmpdir(), "ci-scope-change-"));
   for (const [file, content] of Object.entries(contents)) {
-    mkdirSync(dirname(join(repo, file)), { recursive: true });
-    writeFileSync(join(repo, file), content);
+    mkdirSync(dirname(join(files, file)), { recursive: true });
+    writeFileSync(join(files, file), content);
   }
-  git("add", "-A");
-  git("commit", "-q", "-m", "change");
-  return { base: git("rev-parse", "base"), head: git("rev-parse", "HEAD") };
+  const head = execFileSync(
+    "sh",
+    [
+      "-c",
+      'dir=$1; shift; git read-tree base && (cd "$dir" && git add --ignore-removal .) && git "$@" commit-tree "$(git write-tree)" -p base -m change',
+      "sh",
+      files,
+    ].concat(GIT_CONFIG),
+    {
+      cwd: repo,
+      encoding: "utf8",
+      env: { ...process.env, GIT_DIR: join(repo, ".git"), GIT_INDEX_FILE: join(repo, ".git", "change-index") },
+    },
+  ).trim();
+  rmSync(files, { recursive: true, force: true });
+  return { base: baseSha, head };
 }
 
 /** A commit on top of the first one that adds `files`, each holding its own path. */
@@ -116,6 +133,7 @@ beforeAll(() => {
   git("add", "-A");
   git("commit", "-q", "-m", "start");
   git("tag", "base");
+  baseSha = git("rev-parse", "base");
 });
 
 afterAll(() => {
@@ -346,6 +364,7 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         "crates/luau/Cargo.toml",
+        "crates/luau/src/lib.rs",
         "crates/server/src/env.rs",
         "crates/server/Dockerfile",
         "crates/server/tests/deploy/rehearse.sh",
@@ -358,7 +377,7 @@ describe("scripts/ci-scope.sh", () => {
       off: [
         "crates/server/src/api/queue.rs",
         "crates/tools/src/fuzz.rs",
-        "crates/luau/src/lib.rs",
+        "crates/luau/tests/api.rs",
         "crates/engine/tests/rules/after_attack.rs",
         "crates/cards/tests/cross/catalog.rs",
         "crates/ai/tests/ai/shadow_ban.rs",
@@ -434,7 +453,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
-    ["crates/luau/src/lib.rs", ["rust_tools_wasm"]],
+    ["crates/luau/src/lib.rs", [...RUST]],
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
     ["docs/radiant-audit.md", ["rust_cards"]],

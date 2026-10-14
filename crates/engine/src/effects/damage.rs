@@ -12,6 +12,7 @@ use crate::wire::TargetAim;
 
 /// The §4.4 modifiers an effect may put on its own damage; shared by `damage` and `damageAll`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DamageFlagArgs {
     /// True Strike ignores Armor (§4.4 step 2).
@@ -31,6 +32,7 @@ pub struct DamageFlagArgs {
 
 /// `damage`'s argument: `{ to; amount } & DamageFlagArgs`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DamageEffectArgs {
     pub to: TargetSpec,
@@ -75,6 +77,7 @@ pub fn damage(args: DamageEffectArgs) -> Effect {
 
 /// `damageAll`'s argument: `{ amount; heroes? } & DamageFlagArgs & BoardScope`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DamageAllArgs {
     pub amount: i32,

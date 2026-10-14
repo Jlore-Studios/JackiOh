@@ -122,6 +122,7 @@ pub fn take_into_hand(sink: &mut EngineSink<'_>, card: &CardInstance, thief: Pla
 
 /// Which end of a library a draw from it takes: `library[0]` is the top (`effects/library.rs`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum LibraryEnd {
     #[serde(rename = "top")]
     Top,

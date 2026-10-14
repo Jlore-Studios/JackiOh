@@ -15,6 +15,7 @@ use super::targets::{PlayerSpec, TargetSpec, player_of, resolve_target};
 
 /// `switchPositionOf`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SwitchPositionOfArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -40,6 +41,7 @@ pub fn switch_position_of(args: SwitchPositionOfArgs) -> Effect {
 
 /// `switchAllPositions`' `side`: `PlayerSpec | "both"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub enum SwitchAllPositionsSide {
     #[serde(rename = "self")]
     SelfSide,
@@ -51,6 +53,7 @@ pub enum SwitchAllPositionsSide {
 
 /// `switchAllPositions`' argument; TS's default is `{ side: "both" }`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct SwitchAllPositionsArgs {
     pub side: SwitchAllPositionsSide,

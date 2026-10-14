@@ -26,6 +26,7 @@ use crate::zones::{card_at, slots_of};
 
 /// `drawWhileCheap`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawWhileCheapArgs {
     pub max_cost: i32,
@@ -68,6 +69,7 @@ pub fn draw_while_cheap(args: DrawWhileCheapArgs) -> Effect {
 
 /// Whose Field Spells a sweep takes, relative to the card running it.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum FieldSpellSide {
     Any,
@@ -163,6 +165,7 @@ pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec
 
 /// `destroyFieldSpellsAndHit`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyFieldSpellsAndHitArgs {
     pub side: FieldSpellSide,

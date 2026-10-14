@@ -13,6 +13,7 @@ use crate::wire::{Tag, ZoneName};
 
 /// Which card gains the tag: one named card (a spec or an id a script captured), like `translate`'s.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GrantTagArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]

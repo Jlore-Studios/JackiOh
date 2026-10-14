@@ -1,5 +1,6 @@
 //! `cargo jackioh luau diff` and `cargo jackioh luau bench` (#442's L13 and L15; groundwork for its
-//! part 7, #559).
+//! part 7, #559), and `cargo jackioh luau surface` (groundwork for its part 6, #560), which is
+//! `surface.rs`'s.
 //!
 //! Both hold this build to a parent: `jackioh` built from the base commit, whatever the cards are
 //! written in. Nothing in either is specific to Luau.
@@ -37,6 +38,8 @@ use serde_json::Value;
 use crate::gate::MS_PER_SECOND;
 use crate::golden::{GAMES_PATH, record_seeds};
 
+mod surface;
+
 /// L15: the games `diff` plays when `--games` is not given.
 const DIFF_GAMES: u32 = 200;
 
@@ -60,7 +63,7 @@ pub(crate) const BENCH_BUDGETS: BenchBudgets = BenchBudgets {
     step_ratio: 2.0,
 };
 
-/// `luau diff`, `luau bench`.
+/// `luau diff`, `luau bench`, `luau surface`.
 #[derive(clap::Args)]
 pub struct Args {
     #[command(subcommand)]
@@ -73,6 +76,8 @@ enum Command {
     Diff(DiffArgs),
     /// Time this build against a parent build; exit 1 when it is over budget.
     Bench(BenchArgs),
+    /// Print the engine API every card script calls, card by card (v0.4.0's groundwork, #560).
+    Surface(surface::SurfaceArgs),
 }
 
 #[derive(clap::Args)]
@@ -115,6 +120,7 @@ pub fn run(args: Args) -> Result<()> {
     match args.command {
         Command::Diff(diff) => run_diff(&diff),
         Command::Bench(bench) => run_bench(&bench),
+        Command::Surface(surface) => surface::run(&surface),
     }
 }
 

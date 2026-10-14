@@ -19,6 +19,7 @@ use super::targets::{TargetSpec, instance_of};
 
 /// `goBerserk`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GoBerserkArgs {
     pub target: TargetSpec,
@@ -50,6 +51,7 @@ pub fn go_berserk(args: GoBerserkArgs) -> Effect {
 
 /// `mayAttackAgain`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct MayAttackAgainArgs {
     pub target: TargetSpec,

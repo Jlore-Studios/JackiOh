@@ -6,9 +6,12 @@
 
 pub mod api;
 pub mod config;
+pub mod hooks;
 pub mod lint;
 pub mod numbers;
+pub mod reads;
 pub mod sandbox;
+pub mod script;
 pub mod vm;
 
 pub use api::EffectCall;
@@ -16,7 +19,7 @@ pub use lint::{Finding, Rule, lint};
 
 use std::fmt;
 
-use jackioh_engine::{CardScripts, Effect, EffectContext, Hook, Script, hook};
+use jackioh_engine::{CardScripts, Effect, EffectContext};
 use mlua::chunk::Compiler;
 
 /// A card's face: the module's `base` or `radiant` table.
@@ -114,46 +117,26 @@ pub fn compiler() -> Compiler {
 /// any thread's VM can run it. A hook that fails panics with its error, which names its card, face and
 /// hook (an engine hook has no error to return).
 pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScripts, LuauError> {
-    let mut scripts = CardScripts::default();
-    for (face, name) in vm::declared_hooks(card, bytecode)? {
-        let site = Site {
-            card,
-            face,
-            hook: name,
-        };
-        let script = match face {
-            Face::Base => &mut scripts.base,
-            Face::Radiant => &mut scripts.radiant,
-        };
-        *hook_slot(script, name) = Some(hook(move |ctx| match run_hook(site, bytecode, ctx) {
-            Ok(effects) => effects,
-            Err(error) => panic!("{error}"),
-        }));
-    }
-    Ok(scripts)
+    script::load_card(card, bytecode)
 }
 
 /// One hook's effects, built with the engine's verbs (CLAUDE.md rule 5).
-pub fn run_hook(site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> Result<Vec<Effect>, LuauError> {
+pub fn run_hook(
+    site: Site,
+    bytecode: &'static [u8],
+    ctx: &mut EffectContext<'_>,
+) -> Result<Vec<Effect>, LuauError> {
     vm::call_hook(site, bytecode, ctx)?
         .iter()
-        .map(|call| api::effect_of(call, site))
+        .map(|call| api::effect_of(call, site, bytecode))
         .collect()
 }
 
-/// The field of `script` a hook name fills: the names `Script::hook_named` answers, which are
-/// `vm::HOOKS`.
-fn hook_slot<'s>(script: &'s mut Script, name: &str) -> &'s mut Option<Hook> {
-    match name {
-        "cry" => &mut script.cry,
-        "death" => &mut script.death,
-        "startOfGame" => &mut script.start_of_game,
-        "delayed" => &mut script.delayed,
-        "startOfTurn" => &mut script.start_of_turn,
-        "endOfTurn" => &mut script.end_of_turn,
-        "onPlayHook" => &mut script.on_play_hook,
-        "afterAttack" => &mut script.after_attack,
-        "startOfOpponentTurn" => &mut script.start_of_opponent_turn,
-        _ => unreachable!("{name} is not one of vm::HOOKS"),
-    }
+/// One aura hook's entries.
+pub fn run_aura_hook<'a>(
+    site: Site,
+    bytecode: &'static [u8],
+    args: jackioh_engine::script::HookArgs<'a>,
+) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
+    vm::call_aura_hook(site, bytecode, args)
 }

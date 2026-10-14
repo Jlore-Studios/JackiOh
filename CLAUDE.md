@@ -16,8 +16,10 @@ trap backrow. This file binds every agent, not only Claude.
   change that code. Also: `docs/ADDING_CARDS.md`, `docs/issues-and-patches.md` (titles, labels, patch and
   ruling numbers), `docs/architecture.md` and `docs/deploy-cloudflare.md` (deployment: the web on Cloudflare
   with Vercel as staging, the server on Render, Postgres and Auth on Supabase), `bot/README.md`,
-  `training/README.md`, `docs/polish/` (design notes) and `docs/v0.3.0/` (the Rust rewrite, #306; `SURFACE.md`
-  is every boundary between the crates and the client).
+  `training/README.md`, `docs/polish/` (design notes), `docs/v0.3.0/` (the Rust rewrite, #306; `SURFACE.md`
+  is every boundary between the crates and the client) and `docs/v0.4.0/` (the Luau card scripts, #442:
+  `README.md` the run's record and the cards kept in Rust, `PORTING.md` the porting guide, `api-gaps.md` what
+  the Luau API does not bind yet).
 - The designer's source notes (`JackiOh_*.md`, `ARCHITECTURE-CCG.md`, with the design briefs
   `docs/classic-sets.md` and `docs/meditative-set.md`) are what REVIEW Part A checks the spec against; read
   them only when the task is about them.
@@ -37,20 +39,30 @@ trap backrow. This file binds every agent, not only Claude.
    a word. List its file in `proven_in` and run `cargo jackioh spec index`; `cargo jackioh spec check` fails
    on any mismatch between the notes, their tests, the index and the R-ids cited in `crates/`, `apps/web/src/`
    or `e2e/`, comments included.
-4. `crates/engine`, `crates/cards` and `crates/ai` are pure: no clock, I/O, environment, threads, async, OS
-   randomness, hash-ordered collection or mutable static (`crates/luau` too, with `mlua`, by its README).
-   Every random draw goes through the `Rng` rebuilt from the state's seed and cursor; every player choice is a
-   `PendingChoice` in state. Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the
-   others of the three and (behind the engine's `ts` feature) `ts-rs`, and its `clippy.toml` bans what would
-   break purity, tests included. The only statics are the catalog and the script registry, `OnceLock`s set
-   once by `jackioh_cards::register_all()`. Data reaches a pure crate only at compile time (`include_str!`,
-   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
-5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
-   reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
-   `EffectContext` and the engine's read helpers and returns effects.
-6. Every card has one script file, `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID` and
-   `pub fn script()`), with its tests in the same file (`#[cfg(test)] mod tests`) covering base and Radiant
-   behaviour per the BUILD M4-T4 table (M9's for Classic and Classic+).
+4. `crates/engine`, `crates/cards`, `crates/ai` and `crates/luau` are pure: no clock, I/O, environment,
+   threads, async, OS randomness, hash-ordered collection or mutable static. Every random draw goes through
+   the `Rng` rebuilt from the state's seed and cursor; every player choice is a `PendingChoice` in state.
+   Each crate's `Cargo.toml` takes only `serde`, `serde_json`, `indexmap`, the others of the four (the cards
+   take `jackioh-luau`, the AI does not), `mlua` (`jackioh-luau`'s) and, behind a `ts` feature (the
+   engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans what would break
+   purity, tests included. The only statics are the catalog and the script registry, `OnceLock`s set once
+   by `jackioh_cards::register_all()`, and `jackioh-luau`'s thread-local VM, which holds compiled chunks and
+   no game state (#442 L8). A Luau script is kept pure by its host: the sandbox (L5), the integer boundary
+   every value crosses (L6) and the build-time lint (L6, L7), all in `crates/luau/README.md`. Data reaches a
+   pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or
+   a clock goes in `crates/tools`.
+5. Card scripts return effects and never mutate state. A `.luau` script calls `J`
+   (`local J = require("@jackioh")`, typed by `crates/cards/luau/jackioh.luau`): one function per verb of
+   the engine's effects module, under the same name, each returning its effect as data that the host builds
+   with the engine's own verb; it reads state only through `ctx`'s readers, the engine's read helpers under
+   their names. A card kept in Rust builds `Vec<Effect>` from `jackioh_engine::effects` (in reach through
+   `jackioh_engine::prelude`). Either way a hook reads its `EffectContext` and the read helpers and returns
+   effects.
+6. Every card has `crates/cards/src/scripts/<set>/<file>.rs` (its `pub const ID`, its header comment and its
+   tests, `#[cfg(test)] mod tests`, covering base and Radiant behaviour per the BUILD M4-T4 table, M9's for
+   Classic and Classic+) and one script: `<file>.luau` beside it, or `pub fn script()` in the `.rs` for a
+   card kept in Rust (`docs/v0.4.0/README.md` names each with its reason). The tests stay Rust whichever the
+   script is (#442 L16).
 7. The client sends intent and renders `viewFor` (the engine's `view_for`); it never enforces rules and never
    sees hidden information.
 8. Before claiming a milestone is done, run the paste-in prompt at the end of REVIEW.md as a separate session
@@ -73,7 +85,9 @@ Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules 
 
 ## Commands
 
-Rust 1.97.0 for `crates/` (`rust-toolchain.toml`); Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only.
+Rust 1.97.0 for `crates/` (`rust-toolchain.toml`, with the `wasm32-unknown-emscripten` target) and a C++
+compiler, since `mlua` builds Luau from source; Node ≥ 22.13 and pnpm 11 for `apps/web` and `e2e` only. The
+web's WebAssembly module also needs emsdk, which `scripts/build-wasm.sh` installs, pinned, into `.cache/emsdk`.
 `cargo jackioh <command>` is `cargo run --release -p jackioh-tools --` (`crates/tools/README.md` lists every
 command).
 
@@ -91,6 +105,11 @@ cargo jackioh sweep                # the shadow-ban sweep (R186); copy its SHADO
 cargo jackioh stats                # an AI development run for the card statistics (R378); --out writes it
 cargo jackioh catalog-version      # the catalog version this checkout compiles in
 cargo jackioh patches <version> <date> "<title>"   # a branch's catalog change as a pending fragment (R388, R646); `patches ship` promotes it after merge
+cargo test -p jackioh-luau --features ts --test export_api   # regenerates crates/cards/luau/jackioh.luau, the scripts' typed `J` (commit any diff)
+luau-analyze --mode=strict crates/cards/src/scripts/*/*.luau  # Luau 0.740's strict checker over the scripts, where it is installed (`.luaurc` aliases @jackioh)
+cargo jackioh luau surface         # the engine API each Rust card script calls (hooks, verbs, readers, pools); --json, --card <id>
+cargo jackioh luau diff --parent-bin <path> --cards <ids>   # 200 games with the cards forced, replayed by a parent build: any divergence fails (docs/v0.4.0/PORTING.md)
+cargo jackioh luau bench --parent-bin <path>   # the performance gate against a parent build (#442 L13); --record <path> writes the numbers
 sh scripts/build-wasm.sh           # the engine as WebAssembly into apps/web/src/wasm/pkg (the web's dev, build, build:e2e and test run it first)
 pnpm install
 pnpm --dir apps/web dev            # http://localhost:5173: hotseat at /dev/hotseat, the AI at /practice
@@ -164,16 +183,26 @@ README of each is its contract.
   mulligan, both seats at once, is the one exception, so code that plays both seats asks `seat_to_act`). Any
   sequence that can pause parks its remainder on `state.work` as plain-data `Resume` records, never closures,
   so a paused state survives JSON and replays exactly: read `work.rs`'s header before touching anything that
-  can open a prompt. `replay.rs` folds a log and hashes a state. The engine does not depend on `crates/cards`;
-  its tests use fixture scripts and the `testkit` feature (`scenario()` and its verbs).
-- `crates/cards`: `catalog.json` and one script per card. `build.rs` generates the registry and fails on a
-  missing, extra or doubled file. A script writes through the effects module and reads state only through the
-  prelude's read helpers, never `state.players[…]`; a missing verb or board fact goes into the engine (board
-  facts in `src/query.rs`) with its test. `patches/` is the card patch history.
+  can open a prompt. `replay.rs` folds a log and hashes a state. The engine depends on neither `crates/cards`
+  nor `crates/luau`; its tests use fixture scripts and the `testkit` feature (`scenario()` and its verbs).
+- `crates/cards`: `catalog.json` and one script per card, `src/scripts/<set>/<file>.luau` beside the `.rs`
+  that holds its `ID` and its Rust tests (or the `.rs`'s `pub fn script()` for a card kept in Rust).
+  `build.rs` generates the registry, linting each `.luau` and compiling it to bytecode it embeds, and fails on
+  a missing, extra or doubled file, a card with two scripts or none, or a script the lint or Luau's compiler
+  refuses. A script writes through the effects module (`J`'s verbs) and reads state only through the read
+  helpers (`ctx`'s readers), never `state.players[…]`; a missing verb or board fact goes into the engine
+  (board facts in `src/query.rs`) with its test, then is bound in `crates/luau`. It depends on
+  `jackioh-luau`. `patches/` is the card patch history.
 - `crates/ai`: the practice opponent, pure and seeded like the engine. Hidden cards never change a decision
-  (`redact`, `determinize`); its difficulty tiers are engine handicaps, not AI behaviour.
-- `crates/luau`: the host that will run card scripts written in Luau (#442); nothing depends on it yet.
-- `crates/wasm`: the engine, cards, AI and validator for the browser, JSON in and out.
+  (`redact`, `determinize`); its difficulty tiers are engine handicaps, not AI behaviour. It does not depend
+  on `jackioh-luau`.
+- `crates/luau`: the host that runs the Luau card scripts (#442) through `mlua`: the sandbox, the integer
+  boundary, the lint, one VM per thread, the `J` bindings (`src/api/`, `reads.rs`, `hooks.rs`) and
+  `load_card`, which turns a compiled script into the engine's `CardScripts`. `crates/cards` depends on it;
+  Luau is compiled from source (`luau0-src`), so every build of the workspace needs a C++ compiler.
+- `crates/wasm`: the engine, cards, AI and validator for the browser, JSON in and out: a binary for
+  `wasm32-unknown-emscripten` (the only WebAssembly target `mlua` builds Luau for) whose bindings are C
+  functions over strings, built by `scripts/build-wasm.sh`.
 - `crates/server`: one binary, the HTTP API (`src/api`) and one in-memory match actor per match (`src/actor`)
   pushing `view_for` over a WebSocket. The store is the `Db` and `Tx` enums over Postgres or an in-memory
   fake; `cargo test` runs the fake, so RLS and triggers are checked only by the Docker suites, and a store

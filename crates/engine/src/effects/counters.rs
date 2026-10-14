@@ -21,6 +21,7 @@ fn instance_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardInstanc
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct PlagueArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -48,6 +49,7 @@ pub fn plague(args: PlagueArgs) -> Effect {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct ClearPlagueArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -70,6 +72,7 @@ pub fn clear_plague(args: ClearPlagueArgs) -> Effect {
 /// Jammed locks its target's zone, so the lock effect runs before the destroy that empties it), or
 /// a lane by index (§3.1 "this lane").
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(tag = "of", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ZoneSpec {
     #[serde(rename = "self")]
@@ -108,6 +111,7 @@ fn zone_for(ctx: &EffectContext<'_>, spec: &ZoneSpec) -> Option<ZoneSlot> {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct LockArgs {
     pub zone: ZoneSpec,
@@ -134,6 +138,7 @@ pub fn lock(args: LockArgs) -> Effect {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct UnlockArgs {
     pub zone: ZoneSpec,

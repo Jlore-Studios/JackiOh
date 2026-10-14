@@ -24,6 +24,7 @@ fn standing(state: &GameState, unit: &CardInstance) -> bool {
 
 /// `damageSplit`'s `among`: every enemy (the hero included), or the enemy Units only.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum SplitAmong {
     Enemies,
@@ -32,6 +33,7 @@ pub enum SplitAmong {
 
 /// `damageSplit`'s arguments: `among` defaults to "enemies", `perHit` to 1.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DamageSplitArgs {
     pub amount: i32,

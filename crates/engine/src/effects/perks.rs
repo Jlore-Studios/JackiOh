@@ -15,6 +15,7 @@ use crate::state::CardInstance;
 
 /// `gainHeroArmor`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct GainHeroArmorArgs {
     pub amount: i32,
@@ -38,6 +39,7 @@ pub fn gain_hero_armor(args: GainHeroArmorArgs) -> Effect {
 
 /// `discountRandomInHand`'s arguments.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DiscountRandomInHandArgs {
     pub amount: i32,

@@ -10,6 +10,7 @@ use super::targets::{PlayerSpec, player_of};
 
 /// `loseHealth`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct LoseHealthArgs {
     pub player: PlayerSpec,
