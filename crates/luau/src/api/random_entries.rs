@@ -3,7 +3,7 @@ use crate::api::EffectCall;
 use crate::{LuauError, Site};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RandomEntryLuau {
     pub label: String,
@@ -11,7 +11,7 @@ pub struct RandomEntryLuau {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DoRandomEntriesArgs {
     pub count: i32,

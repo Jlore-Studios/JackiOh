@@ -1,11 +1,10 @@
 --!strict
 local J = require("@jackioh")
 
--- ME-ALTPLAY: "You may play your Units face-down as Animated Field Traps that reveal at the start
--- of your next turn".
-local function face_down_units(ctx: J.HookArgs)
+-- "Aura: Your Units have Cloaked." (R1043): Knowledge Breaker's Aura.
+local function cloak_units(ctx: J.HookArgs)
 	return {
-		{ units = true },
+		J.cloak_hand_aura({ type = "Unit" }),
 	}
 end
 
@@ -38,7 +37,7 @@ local function prime(radiant: boolean)
 			end
 			return effects
 		end,
-		faceDownPlay = face_down_units,
+		aura = cloak_units,
 	}
 end
 

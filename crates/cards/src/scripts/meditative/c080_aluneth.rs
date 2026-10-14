@@ -37,6 +37,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-016";
     const JAMMED: &str = "core-036"; // destroy target backrow card, Lock its zone
+    const NETHER: &str = "core-088"; // Twisting Nether: destroy all permanents
 
     /// Aluneth in p1's backrow, both sides with hands and libraries to draw into.
     fn fielded(seed: &str, radiant: bool) -> Scenario {
@@ -111,18 +112,23 @@ mod tests {
             }
 
             #[test]
-            fn a_destroy_leaves_it() {
+            fn r781001_a_spell_cannot_target_it_and_a_destroy_of_every_permanent_leaves_it() {
                 let mut s = crate::scenario(json!({
                     "seed": "aluneth-stays",
                     "active": "p2",
                     "p1": { "backrow": [ID], "hand": [FILLER], "library": [VANILLA, VANILLA] },
-                    "p2": { "hand": [JAMMED, FILLER], "library": [VANILLA, VANILLA], "mana": 10 },
+                    "p2": { "hand": [JAMMED, NETHER, FILLER], "library": [VANILLA, VANILLA], "mana": 10 },
                 }));
                 let aluneth = s.card(ID).id.clone();
-                s.play(
-                    JAMMED,
-                    json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
-                );
+                // Immutable: a Spell can't target it in play (R781001)…
+                s.expect_refused(|s| {
+                    s.play(
+                        JAMMED,
+                        json!({ "targets": [{ "pick": "instance", "instanceId": aluneth }] }),
+                    )
+                });
+                // …and an effect on every permanent reaches it, which Indestructible survives.
+                s.play(NETHER, json!({}));
                 s.expect_in_zone(ID, "field");
             }
 

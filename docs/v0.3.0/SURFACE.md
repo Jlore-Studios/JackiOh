@@ -7,8 +7,8 @@ what you like. At an edge, this file is law. It does not change during Waves 1â€
 contact part (part 31) records the hole in `.fullsend/notes/spec-gaps.md` and the orchestrator
 patches this file between waves, never a builder in the middle of one.
 
-The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: [A-engine](research/A-engine.md), [B-ai](research/B-ai.md), [C-server](research/C-server.md), [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
-[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are in [parts/](parts/).
+The plan that uses it is [README.md](README.md). "Research A" to "D" are the inventories written for this plan at `91cc43c`: A-engine, B-ai and C-server (removed in #832, in git history) and [D-ci-spec](research/D-ci-spec.md); they give file:line facts the rules below lean on. Every TypeScript file's fate is in
+[PORT-MAP.md](PORT-MAP.md). The briefs of the parts are #306's sub-issues.
 
 Contents:
 
@@ -782,8 +782,9 @@ wasm32-unknown-unknown` and downloads `wasm-bindgen-cli` 0.2.129's release tarba
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
 `lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
 `dealEmoteHand`, â€¦).
-`apps/web/src/main.tsx` awaits `loadWasm()` before the first render (the deck builder calls the
-validator synchronously); `practice.worker.ts` awaits it before handling a message.
+`apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
+calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
+`practice.worker.ts` awaits it before handling a message.
 
 ### 10.4 `apps/web/src/wire/` and the aliases
 
@@ -1083,7 +1084,9 @@ cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh>
 
 `arena` writes one `GameRecord` JSONL line per game (`packages/shared/src/stats.ts`'s format, R376;
 `source: "dev"`, `mode: "random"`, `pilots` naming the two agents) to `--out` (default
-`$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout).
+`$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout). A tally closes its duel lines: `a`, `b`, `games`,
+`aWins`, `bWins`, `draws`, `aborted`, and `aShare` (`aWins` over `games`) with its 95% Wilson interval
+`aLow` and `aHigh`, each rounded to three decimals.
 
 `promote` plays `TRAINING_GAMES` (100) games against the parent, seats alternating (candidate `p1`
 on odd games), seeds `"<lane>:<tree>:<k>"` where `<tree>` is `git rev-parse HEAD:crates/ai/src` (so
@@ -1111,6 +1114,12 @@ A draw is not a win. `TRAINING_GAMES`, `TRAINING_IMPROVE` and `TRAINING_UNBAN` a
 
 `--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
 a failed gate.
+
+Every run that plays its games, in any mode and whether or not it passes, rewrites
+`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
+candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
+all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
+request.
 
 ### 14.3 `crates/ai/generation.json`
 

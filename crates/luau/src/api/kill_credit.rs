@@ -21,7 +21,7 @@ use crate::{LuauError, Site};
 /// `with_kill_credit`'s arguments. `pairs` and `then` name face functions; `data` reaches both as
 /// their second argument.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct WithKillCreditArgs {
     pub killer: TargetSpec,

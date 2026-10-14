@@ -3,11 +3,12 @@
 //! filter the host evaluates in Rust — no Luau call per stat read — while
 //! `applies = "my_filter"` names a face predicate called per candidate unit, for the shapes data
 //! cannot say. Either way the aura hook answers a list of these, like `defense_armor_aura`.
+//! `J.cloak_hand_aura({ type = "Unit" })` is the engine's own `alt_play::cloak_hand_aura` (R1040).
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DefenseArmorArgs {
     #[serde(default)]
@@ -19,7 +20,7 @@ pub struct DefenseArmorArgs {
 /// Which units a data-declared aura touches, read off the instance alone (an aura's `applies`
 /// reads instance data only, or the layers recurse).
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AuraFilter {
     /// Whose units, relative to the aura source's controller. Default the source's own.
@@ -38,7 +39,7 @@ pub struct AuraFilter {
 
 /// A generic aura's filter: data, or the name of a face predicate over the candidate unit.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(untagged)]
 pub enum AuraApplies {
     Filter(AuraFilter),
@@ -47,7 +48,7 @@ pub enum AuraApplies {
 
 /// A generic aura entry, as data.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AuraArgs {
     #[serde(rename = "mod")]
@@ -55,8 +56,19 @@ pub struct AuraArgs {
     pub applies: AuraApplies,
 }
 
+/// `cloak_hand_aura`'s argument (R1040, R783007): the printed type whose cards in the source's
+/// controller's hand have Cloaked (`jackioh_engine::alt_play::cloak_hand_aura`).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct CloakHandAuraArgs {
+    #[serde(rename = "type")]
+    pub type_: jackioh_engine::CardType,
+}
+
 verbs! {
     verb!(defense_armor_aura, DefenseArmorArgs);
     verb!(defense_armor, DefenseArmorArgs);
     verb!(aura, AuraArgs);
+    verb!(cloak_hand_aura, CloakHandAuraArgs);
 }

@@ -14,7 +14,7 @@ from harness.runner import ping_usage
 from harness.state import item as state_item
 
 from tests.fakes import FakeGitHub
-from tests.support import DAY, NIGHT, make_config, make_ctx
+from tests.support import DAY, NIGHT, idle_for, make_config, make_ctx
 
 T0 = datetime(2026, 9, 30, 3, 0, tzinfo=timezone.utc)
 SETTINGS = Quiet(enabled=True, interval_minutes=10, max_wait_minutes=40, ping_model="haiku",
@@ -236,13 +236,20 @@ class PeekTests(unittest.TestCase):
                           "`claude-1` (claude, `opus`, strong); build on `claude-1` (claude, "
                           "`sonnet`, medium); review on `claude-1` (claude, `opus`, strong)",
                           True, ""))
-        look = plan_mod.peek(make_ctx(FakeGitHub(), at=DAY), force=True)
+        idle = make_ctx(FakeGitHub(), at=DAY)
+        idle_for(idle)
+        look = plan_mod.peek(idle, force=True)
         self.assertEqual((look.work, look.forced), (True, True))
 
     def test_a_survey_when_idle(self):
-        work, reason, _ = self.agree(FakeGitHub())
-        self.assertTrue(work)
-        self.assertIn("survey", reason)
+        gh = FakeGitHub()
+        self.assertFalse(plan_mod.peek(make_ctx(gh)).work)  # idle, but not for 30 minutes yet
+        self.assertTrue(plan_mod.peek(make_ctx(gh)).idle)
+        ctx = make_ctx(gh)
+        idle_for(ctx)
+        look = plan_mod.peek(ctx)
+        self.assertTrue(look.work)
+        self.assertIn("survey", look.reason)
 
     def test_a_dead_runs_item_counts_as_work(self):
         gh = FakeGitHub()

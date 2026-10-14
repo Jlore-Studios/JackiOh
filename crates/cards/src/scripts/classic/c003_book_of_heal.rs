@@ -26,6 +26,8 @@ mod tests {
 
     const BOOK: &str = "classic-003";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
+    // Classic+ #26 Tommy Tempo, Radiant 18/18 Taunt: a big body no Immutable keeps a Spell off (R781001).
+    const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005"; // a card that keeps a hand from auto-ending the turn (§2.5).
 
     use crate::js;
@@ -91,13 +93,13 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK, FILLER] },
-                    "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true, "damage": 12 }] },
+                    "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "damage": 12 }] },
                 }));
 
                 let targets = at(&s, P2, 1);
                 s.play(BOOK, json!({ "targets": targets }));
 
-                s.expect_stats(MENACE, json!({ "health": 15, "maxHealth": 18 }));
+                s.expect_stats(TEMPO, json!({ "health": 15, "maxHealth": 18 }));
                 assert_eq!(healed_amounts(&s), vec![9]);
             }
 
@@ -179,7 +181,7 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": BOOK, "radiant": true }, FILLER],
-                        "field": [{ "def": MENACE, "radiant": true, "damage": 17 }, { "def": MENACE, "damage": 8 }],
+                        "field": [{ "def": TEMPO, "radiant": true, "damage": 17 }, { "def": MENACE, "damage": 8 }],
                     },
                     "p2": { "hand": [FILLER] },
                 }));
@@ -188,7 +190,7 @@ mod tests {
                 s.play(BOOK, json!({ "targets": targets }));
                 match s.unit(P1, 1) {
                     Some(unit) => s.expect_stats(&unit, json!({ "health": 18, "maxHealth": 18 })),
-                    None => s.expect_stats(MENACE, json!({ "health": 18, "maxHealth": 18 })),
+                    None => s.expect_stats(TEMPO, json!({ "health": 18, "maxHealth": 18 })),
                 };
                 assert_eq!(healed_amounts(&s), vec![17]);
             }

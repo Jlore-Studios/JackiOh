@@ -57,9 +57,9 @@ use jackioh_server::actor::match_actor::MatchActor;
 use jackioh_server::actor::ws_server::{Socket, WS_CLOSE, WS_PATH};
 use jackioh_server::app::{App, router};
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS,
-    PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START, REMATCH_OFFER_TTL_MS,
-    TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MINUTES,
+    MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS, RATING_DEVIATION_START, RATING_VOLATILITY_START,
+    REJECTION_ALERT_THRESHOLD, REMATCH_OFFER_TTL_MS, TURN_CLOCK_SECONDS,
 };
 use jackioh_server::db::store::{Db, MatchRow, StartMatchInput};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
@@ -243,6 +243,11 @@ impl Client {
 
     fn is_open(&self) -> bool {
         self.0.is_open()
+    }
+
+    /// The server's close code for this socket, if it closed it.
+    fn close_code(&self) -> Option<u16> {
+        self.0.close_code()
     }
 }
 
@@ -1011,6 +1016,45 @@ mod m6_t4_the_match_actor {
         assert_eq!(match_row(&h.app, MATCH_ID).await["status"], json!("finished"));
     }
 
+    /// R768: the actor hands the final state's hash to the result, which writes it on the match;
+    /// a replay's fold of the row's seed, decks, boards and log ends on exactly that state.
+    #[tokio::test(start_paused = true)]
+    async fn r768_records_the_final_states_hash_with_the_result() {
+        use jackioh_server::actor::engine::{fold, fold_args, hash_state};
+        use jackioh_server::actor::match_actor::last_boards_of;
+
+        let h = harness(Options::default()).await;
+        assert!(match_row(&h.app, MATCH_ID).await.get("finalHash").is_none());
+        send(&h, &h.p1, "n1", json!({ "type": "endTurn" })).await;
+        send(
+            &h,
+            &h.p2,
+            "n2",
+            json!({ "type": "play", "instanceId": in_hand(&h.p2, "test-lethal") }),
+        )
+        .await;
+        assert!(result_row(&h.app, MATCH_ID).await.is_some(), "the match ended");
+
+        let row: MatchRow = serde_json::from_value(match_row(&h.app, MATCH_ID).await).expect("a MatchRow");
+        let log: Vec<Action> = match_actions(&h.app, MATCH_ID)
+            .await
+            .into_iter()
+            .map(|entry| serde_json::from_value(entry["action"].clone()).expect("an Action"))
+            .collect();
+        let (last_boards, glitch_boards) = last_boards_of(&row);
+        let folded = fold(&fold_args(
+            &row.seed,
+            &row.decks,
+            log,
+            last_boards,
+            glitch_boards,
+            None,
+        ));
+        assert!(folded.errors.is_empty(), "{:?}", folded.errors);
+        assert!(folded.state.result.is_some());
+        assert_eq!(row.final_hash, Some(hash_state(&folded.state)));
+    }
+
     // -------------------------------------------------------------------------
     // M6-T4 acceptance 3
     // -------------------------------------------------------------------------
@@ -1238,6 +1282,103 @@ mod m6_t4_the_match_actor {
             acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
             Some(json!("after-window"))
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835000_alerts_once_when_one_seats_refusals_cross_the_threshold() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        // p1 holds the turn, so every `endTurn` from p2 is refused: the first budget's worth by
+        // the reducer, the rest past it by the flood limit — and both count toward R835000.
+        let refusals = REJECTION_ALERT_THRESHOLD + 1;
+        for i in 0..refusals {
+            send(&h, &h.p2, &format!("refuse-{i}"), json!({ "type": "endTurn" })).await;
+        }
+        assert_eq!(
+            h.log
+                .events()
+                .iter()
+                .filter(|event| *event == "match.rejections.unusual")
+                .count(),
+            1,
+            "one alert for {refusals} refusals from one seat"
+        );
+
+        // The opponent's legal actions are unaffected, and every refusal was answered.
+        send(&h, &h.p1, "still-legal", filler()).await;
+        assert_eq!(
+            acks(&h.p1).last().map(|ack| ack["nonce"].clone()),
+            Some(json!("still-legal"))
+        );
+        assert_eq!(errors(&h.p2).len(), refusals);
+        assert!(h.p1.is_open() && h.p2.is_open());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835001_coalesces_queued_hellos_but_never_across_a_reattach() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+
+        // A small burst with nothing awaited between the frames is drained without yielding, so
+        // every hello but the first is absorbed by the one still queued: one view push answers
+        // ten hellos. (A larger burst can span the runtime's yield point, letting a queued Hello
+        // run and a later hello enqueue afresh — still at most one outstanding at a time.)
+        for _ in 0..10 {
+            h.p1.receive_json(json!({ "type": "hello" }));
+        }
+        h.idle().await;
+        assert_eq!(h.p1.of_type("view").len(), 1);
+
+        // And a hello flood stays far below one view push per hello: 200 frames enqueue a
+        // handful of Hellos at most, never 200 `view_for` + `legal_actions` replies.
+        h.p1.clear();
+        for _ in 0..200 {
+            h.p1.receive_json(json!({ "type": "hello" }));
+        }
+        h.idle().await;
+        assert!(h.p1.of_type("view").len() <= 10);
+
+        // A hello on a newer socket generation is never absorbed. Stage a Hello that is queued
+        // but unrun: deliver it synchronously through the server-side `Socket`, so `on_frame`
+        // enqueues it with no task running between this and the reattach below. (A hello sent the
+        // usual way would still sit in the old transport's channel, and a replaced socket drops
+        // what it never forwarded.)
+        let older = Client::new();
+        let older_server = older.socket();
+        h.actor.attach(P1, older_server.clone());
+        h.idle().await;
+        older_server.receive(r#"{"type":"hello"}"#.to_string());
+        // Reattach, then hello on the new socket: the newer generation always enqueues, so both
+        // Hellos run, beside the attach's own fresh view.
+        let revived = Client::new();
+        h.actor.attach(P1, revived.socket());
+        revived.receive_json(json!({ "type": "hello" }));
+        h.idle().await;
+        assert_eq!(revived.of_type("view").len(), 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835002_closes_the_socket_past_the_malformed_budget() {
+        let h = harness(Options::default()).await;
+        h.p1.clear();
+        h.p2.clear();
+
+        for _ in 0..=MALFORMED_FRAMES_PER_WINDOW {
+            h.p1.receive("not json");
+        }
+        h.idle().await;
+
+        // Every bad frame was answered as before — and then the socket was closed.
+        let malformed = errors(&h.p1);
+        assert_eq!(malformed.len(), MALFORMED_FRAMES_PER_WINDOW + 1);
+        assert!(malformed.iter().all(|error| error["code"] == json!("malformed")));
+        assert!(!h.p1.is_open());
+        assert_eq!(h.p1.close_code(), Some(1008));
+        // The opponent is untouched.
+        assert!(h.p2.is_open());
+        assert_eq!(errors(&h.p2), Vec::<Value>::new());
     }
 
     // -------------------------------------------------------------------------
@@ -1728,7 +1869,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                 }),
                 x: Some(3),
                 embiggen: Some(true),
-                magnetic: Some(true),
+                equip: Some(true),
                 tributes: Some(vec!["c3".to_string()]),
                 targets: Some(selections.clone()),
                 modes: Some(vec!["draw".to_string()]),
@@ -1792,7 +1933,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                     zone: None,
                     x: None,
                     embiggen: None,
-                    magnetic: None,
+                    equip: None,
                     tributes: None,
                     targets: None,
                     modes: None,
@@ -4247,7 +4388,7 @@ mod r1044_face_down_play_over_the_socket {
     use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
 
     #[test]
-    fn r1044_parses_a_face_down_play_and_refuses_a_bad_timing() {
+    fn r1044_parses_a_cloaked_face_down_play_and_refuses_a_bad_timing() {
         let parsed = parse_client_message(
             &json!({
                 "type": "action",
@@ -4255,7 +4396,7 @@ mod r1044_face_down_play_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "backrow", "lane": 2 },
-                    "faceDown": "startOfNextTurn",
+                    "faceDown": "cloaked",
                     "nonce": "set-1",
                 },
             })
@@ -4269,7 +4410,7 @@ mod r1044_face_down_play_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "backrow", "lane": 2 },
-                    "faceDown": "startOfNextTurn",
+                    "faceDown": "cloaked",
                 }))
                 .expect("a play body"),
             }))
@@ -4290,12 +4431,12 @@ mod r1044_face_down_play_over_the_socket {
     }
 }
 
-mod r1086_magnetic_over_the_socket {
+mod r1086_equip_over_the_socket {
     use super::*;
     use jackioh_server::actor::protocol::{ActionMessage, ClientMessage, parse_client_message};
 
     #[test]
-    fn r1086_parses_a_play_s_magnetic_flag() {
+    fn r1086_parses_a_play_s_equip_flag() {
         let parsed = parse_client_message(
             &json!({
                 "type": "action",
@@ -4303,9 +4444,9 @@ mod r1086_magnetic_over_the_socket {
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "units", "lane": 1 },
-                    "magnetic": true,
+                    "equip": true,
                     "playerId": "p1",
-                    "nonce": "mag-1",
+                    "nonce": "eq-1",
                 },
             })
             .to_string(),
@@ -4313,28 +4454,54 @@ mod r1086_magnetic_over_the_socket {
         assert_eq!(
             parsed,
             Ok(ClientMessage::Action(ActionMessage {
-                nonce: "mag-1".to_string(),
+                nonce: "eq-1".to_string(),
                 body: serde_json::from_value(json!({
                     "type": "play",
                     "instanceId": "c7",
                     "zone": { "row": "units", "lane": 1 },
-                    "magnetic": true,
+                    "equip": true,
                 }))
                 .expect("a play body"),
             }))
         );
 
-        // Absent reads as no Magnetic play, and a non-boolean is malformed, never passed on.
+        // Absent reads as no Equip play, and a non-boolean is malformed, never passed on.
         let bare = parse_client_message(
-            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "mag-2" } })
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "nonce": "eq-2" } })
                 .to_string(),
         );
         assert!(matches!(bare, Ok(ClientMessage::Action(_))), "{bare:?}");
         let wrong = parse_client_message(
-            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "magnetic": "yes", "nonce": "bad" } })
+            &json!({ "type": "action", "action": { "type": "play", "instanceId": "c7", "equip": "yes", "nonce": "bad" } })
                 .to_string(),
         );
         assert!(wrong.is_err(), "{wrong:?}");
+    }
+
+    #[test]
+    fn r781000_a_client_that_still_sends_the_old_magnetic_flag_is_read_as_equip() {
+        let old = parse_client_message(
+            &json!({
+                "type": "action",
+                "action": {
+                    "type": "play",
+                    "instanceId": "c7",
+                    "zone": { "row": "units", "lane": 1 },
+                    "magnetic": true,
+                    "nonce": "eq-3",
+                },
+            })
+            .to_string(),
+        );
+        let Ok(ClientMessage::Action(ActionMessage { body, .. })) = old else {
+            panic!("the old flag parses: {old:?}");
+        };
+        let written = serde_json::to_value(&body).expect("a play body serialises");
+        assert_eq!(written["equip"], json!(true));
+        assert!(
+            written.get("magnetic").is_none(),
+            "written under the new name only: {written}"
+        );
     }
 }
 

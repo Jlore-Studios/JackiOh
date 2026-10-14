@@ -396,6 +396,10 @@ export type ClearPlagueArgs = {
 target: TargetSpec?,
 }
 
+export type CloakHandAuraArgs = {
+type: CardType,
+}
+
 export type ConditionZone = "hand" | "field"
 
 export type ConsumePlagueArgs = {
@@ -649,6 +653,11 @@ count: number,
 player: PlayerSpec?,
 }
 
+export type DrawCombatKeywordsArgs = {
+count: number,
+key: string?,
+}
+
 export type DrawFromLibraryArgs = {
 instanceId: string?,
 defId: string?,
@@ -771,12 +780,6 @@ player: PlayerSpec?,
 export type ExileRandomZone = "field" | "hand" | "library" | "graveyard"
 
 export type ExileZone = "library" | "hand" | "graveyard"
-
-export type FaceDownPlayPermission = {
-units: boolean?,
-spells: boolean?,
-echo: number?,
-}
 
 export type FaceKind = "base" | "radiant"
 
@@ -1549,10 +1552,20 @@ n: number,
 } | {
 ["kind"]: "Untributable",
 } | {
-["kind"]: "Magnetic",
+["kind"]: "Equip",
+} | {
+["kind"]: "Ranged",
+} | {
+["kind"]: "Flying",
+} | {
+["kind"]: "Cloaked",
+} | {
+["kind"]: "Crater",
+} | {
+["kind"]: "Flashback",
 }
 
-export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Immune to tribal tag based hate" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Magnetic"
+export type KeywordKind = "Taunt" | "Rush" | "Charge" | "First Strike" | "Poisonous" | "Lifesteal" | "Reborn" | "Divine Shield" | "Trample" | "Cleave" | "Pierce" | "Indestructible" | "Immutable" | "Stack" | "Can't attack" | "Armor" | "Lucky" | "Animated" | "Animated on your turn" | "Brittle" | "Spell Damage" | "Immune to Spells" | "Immune to tribal tag based hate" | "Windfury" | "Temporary" | "Deft" | "Untributable" | "Equip" | "Ranged" | "Flying" | "Cloaked" | "Crater" | "Flashback"
 
 export type LaneSpec = number | TargetSpec
 
@@ -2512,6 +2525,7 @@ export type EffectContext = {
 	cards_in_scope_aimed: (self: EffectContext, scope: BoardScope, aim: TargetAim) -> {any},
 	adjacent_to: (self: EffectContext, spec: TargetSpec, scope: BoardScope) -> {any},
 	unreadable_by: (self: EffectContext, id: string) -> {PlayerId},
+	immutable_bars: (self: EffectContext, source: string?, id: string) -> boolean,
 	rng_roll: (self: EffectContext, sides: number) -> number,
 	rng_next_int: (self: EffectContext, min: number, max: number) -> number,
 	rng_chance: (self: EffectContext, num: number, den: number) -> boolean,
@@ -2856,6 +2870,10 @@ function J.clear_radiant(args: RadiantTarget): EffectCall
 	return { verb = "clear_radiant", args = args :: any }
 end
 
+function J.cloak_hand_aura(args: CloakHandAuraArgs): EffectCall
+	return { verb = "cloak_hand_aura", args = args :: any }
+end
+
 function J.consume_plague(args: ConsumePlagueArgs): EffectCall
 	return { verb = "consume_plague", args = args :: any }
 end
@@ -2978,6 +2996,10 @@ end
 
 function J.draw(args: DrawArgs): EffectCall
 	return { verb = "draw", args = args :: any }
+end
+
+function J.draw_combat_keywords(args: DrawCombatKeywordsArgs): EffectCall
+	return { verb = "draw_combat_keywords", args = args :: any }
 end
 
 function J.draw_from_library(args: DrawFromLibraryArgs): EffectCall
@@ -3585,6 +3607,10 @@ function J.rem(a: number, b: number): number
 end
 
 function J.sort_by<T>(list: {T}, key_fn: (item: T) -> any): {T}
+	return list
+end
+
+function J.list<T>(list: {T}): {T}
 	return list
 end
 

@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- The printed thresholds: "1 or less", and "2 or less" on the radiant face. The card declares them as
 -- `giftLimit` (R386), and the engine reads the flag through `params::declared_or`, so a Degrade or an

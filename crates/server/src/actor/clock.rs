@@ -233,11 +233,17 @@ impl ClockState {
     }
 
     fn arm_prompt(&mut self, player: PlayerId) {
+        self.arm_prompt_in(player, self.prompt_ms);
+    }
+
+    /// The prompt clock for `player`, running out `ms` from now: `prompt_ms` for a fresh window, and
+    /// R776000's retry delay for one that ran out and whose action the store failed to write.
+    fn arm_prompt_in(&mut self, player: PlayerId, ms: i64) {
         self.prompt.cancel();
         self.holder = Some(player);
-        self.prompt.deadline = Some(now_ms() + self.prompt_ms);
+        self.prompt.deadline = Some(now_ms() + ms);
         let me = self.me.clone();
-        self.prompt.timer = Some(after(self.prompt_ms, move |id| {
+        self.prompt.timer = Some(after(ms, move |id| {
             fire(&me, |clock| {
                 if !clock.prompt.armed_by(id) {
                     return None;
@@ -297,8 +303,14 @@ impl ClockState {
     }
 
     fn arm_ceiling(&mut self) {
+        self.arm_ceiling_in(self.ceiling_at - now_ms());
+    }
+
+    /// The ceiling's timer, running out `ms` from now: what is left of the match's hour, and R776000's
+    /// retry delay for a ceiling whose action the store failed to write.
+    fn arm_ceiling_in(&mut self, ms: i64) {
         let me = self.me.clone();
-        self.ceiling = Some(after((self.ceiling_at - now_ms()).max(0), move |id| {
+        self.ceiling = Some(after(ms.max(0), move |id| {
             fire(&me, |clock| {
                 if clock.ceiling.as_ref().map(Timer::id) != Some(id) {
                     return None;
@@ -407,6 +419,50 @@ impl ClockState {
         self.grace[player].cancel();
     }
 
+    /// R776000: the clock that ran out runs out once more `ms` from now, because the action its expiry
+    /// became was never logged. It re-arms only what a `sync` would still leave expired and waiting,
+    /// so whatever would cancel that clock (a new turn, the prompt answered, the mulligans closed, the
+    /// player back inside the grace, the game over) cancels the retry too, and each countdown holds
+    /// one timer, so an expiry is never reported twice at once.
+    fn retry(&mut self, expiry: ClockExpiry, ms: i64) {
+        if self.stopped {
+            return;
+        }
+        match expiry {
+            ClockExpiry::Turn { player } => {
+                // A turn clock paused for the other seat's prompt runs out by itself once that prompt is
+                // answered.
+                if self.owner == Some(player)
+                    && self.holder.is_none()
+                    && self.turn.timer.is_none()
+                    && self.remaining == 0
+                {
+                    self.remaining = ms;
+                    self.arm_turn();
+                }
+            }
+            ClockExpiry::Prompt { player } => {
+                if self.holder == Some(player) && self.prompt.timer.is_none() {
+                    self.arm_prompt_in(player, ms);
+                }
+            }
+            ClockExpiry::Mulligan => {
+                if self.mulligan_open && self.mulligan_expired && self.mulligan.timer.is_none() {
+                    self.mulligan_expired = false;
+                    self.mulligan.deadline = Some(now_ms() + ms);
+                    self.open_mulligan();
+                }
+            }
+            // R147: `start_grace` keeps a countdown already running, so only an expired one re-arms.
+            ClockExpiry::Grace { player } => self.start_grace(player, Some(now_ms() + ms)),
+            ClockExpiry::Ceiling => {
+                if self.ceiling.is_none() {
+                    self.arm_ceiling_in(ms);
+                }
+            }
+        }
+    }
+
     fn snapshot(&self) -> MatchClocks {
         MatchClocks {
             turn_deadline: self.turn.deadline,
@@ -482,6 +538,11 @@ impl MatchClock {
 
     pub fn clear_grace(&self, player: PlayerId) {
         lock(&self.state).clear_grace(player);
+    }
+
+    /// R776000: the clock that ran out runs out once more `ms` from now (see `ClockState::retry`).
+    pub fn retry(&self, expiry: ClockExpiry, ms: i64) {
+        lock(&self.state).retry(expiry, ms);
     }
 
     /// Deadlines for `matches.clocks` and the protocol's `clock` message.

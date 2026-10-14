@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- On the Radiant face, the Unit is Buffed (Upgraded) once as it lands.
 local BUFFS = 1

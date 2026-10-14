@@ -10,7 +10,7 @@ use crate::{LuauError, Site};
 
 /// `radiant_chance`'s arguments in Luau: the engine's shape with `chancePercent` for `chance`.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct RadiantChanceLuauArgs {
     pub zone: jackioh_engine::OneOrMany<jackioh_engine::effects::RadiantZone>,

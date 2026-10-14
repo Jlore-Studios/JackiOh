@@ -43,6 +43,11 @@
   --kw-period-anchor: 2.8s;
   --kw-period-tribal: 2.4s;
   --kw-period-magnet: 2s;
+  --kw-period-aim: 1.8s;
+  --kw-period-hover: 2.4s;
+  --kw-period-cloak: 3.6s;
+  --kw-period-quake: 2.6s;
+  --kw-period-rewind: 3s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -382,8 +387,28 @@
   animation: kw-tribal var(--kw-period-tribal) ease-in-out infinite alternate;
 }
 
-.cf .kw-fx[data-keyword-fx="Magnetic"][data-kw-motion="on"] .kw-anim {
+.cf .kw-fx[data-keyword-fx="Equip"][data-kw-motion="on"] .kw-anim {
   animation: kw-magnet-pull var(--kw-period-magnet) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Ranged"][data-kw-motion="on"] .kw-anim {
+  animation: kw-ranged-aim var(--kw-period-aim) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Flying"][data-kw-motion="on"] .kw-anim {
+  animation: kw-flying-hover var(--kw-period-hover) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Cloaked"][data-kw-motion="on"] .kw-anim {
+  animation: kw-cloaked-fade var(--kw-period-cloak) ease-in-out infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Crater"][data-kw-motion="on"] .kw-anim {
+  animation: kw-crater-quake var(--kw-period-quake) ease-in-out infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Flashback"][data-kw-motion="on"] .kw-anim {
+  animation: kw-flashback-rewind var(--kw-period-rewind) ease-in-out infinite;
 }
 
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
@@ -629,6 +654,60 @@
   to {
     transform: scale(1.12);
     opacity: 0.82;
+  }
+}
+
+@keyframes kw-ranged-aim {
+  from {
+    transform: translateX(-4%);
+  }
+  to {
+    transform: translateX(6%);
+  }
+}
+
+@keyframes kw-flying-hover {
+  from {
+    transform: translateY(5%);
+  }
+  to {
+    transform: translateY(-5%);
+  }
+}
+
+@keyframes kw-cloaked-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes kw-crater-quake {
+  0%,
+  60%,
+  100% {
+    transform: translate(0, 0);
+  }
+  70% {
+    transform: translate(-3%, 1%);
+  }
+  80% {
+    transform: translate(3%, -1%);
+  }
+  90% {
+    transform: translate(-2%, 0);
+  }
+}
+
+@keyframes kw-flashback-rewind {
+  0%,
+  20% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-360deg);
   }
 }
 

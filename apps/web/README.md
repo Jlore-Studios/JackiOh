@@ -24,10 +24,6 @@ enforces rules and never sees hidden information.** In practice:
   resolution is a `PendingChoice` answered with an `answer` action. `game/Prompt.tsx` renders
   both with the same pickers.
 
-## Layout
-
-Moved to docs/history/web-readme.md.
-
 The web fonts (`src/fonts.css`, imported first by `index.css`): Alegreya for display
 (`--font-display`, which `--tavern-serif` names) and Inter for text (`--font-text`), both OFL,
 variable over weight, Latin subset, self-hosted in `public/fonts` with their licences. Each is
@@ -142,6 +138,32 @@ so run one of them (or the script) once first.
 The dev hotseat route is `/dev/hotseat?seed=42&a=first20&b=first20`. It runs `reduce` in the
 browser and exposes `window.__jackioh = { state, dispatch, seed, … }` whenever
 `import.meta.env.MODE !== "production"`, which is what the Cypress specs drive (BUILD M5-T3).
+
+To look at the client rather than test it (a layout, a card face, the phone view, a board mid-game),
+an agent drives a headless browser with `sh scripts/browse.sh` (#811): Microsoft's Playwright CLI,
+installed on first use into `.cache/` and named in no manifest, so no one else pays for it.
+`.claude/skills/ui-walkthrough/SKILL.md` is the walkthrough: serving the client, the routes, setting a
+board up through `window.__jackioh`, waiting for animations, the viewports and the screenshots. It is
+for work on what a player sees, and nothing else.
+
+The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
+device and, signed in, the account's online replays (first page), and opens one in the replay player.
+Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
+production build serves a 404 there and ships neither, and a test keeps every import of `src/replay/`
+inside it and the dev routes (the real entry points come with the result screens, #430).
+
+```
+src/replay/
+  source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
+  sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
+  steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
+  gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
+                  function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
+                  OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
+  config.ts replay.css
+```
 
 ## Decks, the lobby and the series
 
@@ -347,9 +369,8 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
   sample-exact even for a decoder that keeps AAC's 48 ms of encoder priming.
 - `node apps/web/scripts/gen-music.mjs --check` needs no renderer, runs anywhere, and is what
   `music-assets.test.ts` calls.
-- Record a new track's source in `assets/music/LICENSES.md`. A Mythic's theme, a Legendary's shared entrance
-  theme, a station switch or a card's intro is an entry in `src/audio/music-cards.json`, and the music system needs
-  no change for it.
+- Record a new track's source in `assets/music/LICENSES.md`. A station switch or a card's intro is an entry in
+  `src/audio/music-cards.json`, and the music system needs no change for it. No card plays a theme (R822000).
 - A card's intro (R1352) is a score in `tracks.mjs`'s `INTRO_CARDS`: the card's facts as the catalog printed them and
   its `tune`, from which `introSpec` derives the rest (key, tempo, meter, motif and answer from the id; instruments,
   accompaniment and modes from the family; the set's glint; a Mythic's shimmer). It renders as a sting of a few bars
@@ -401,9 +422,10 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `wasm32-unknown-unknown` target and downloads the pinned `wasm-bindgen` CLI only when they are
   missing, and cargo rebuilds only what changed. The package's `pre` scripts run it, so `dev`,
   `build`, `build:e2e` and `test` always load a fresh module.
-- `src/wasm/index.ts` is the module's only caller. `main.tsx` awaits `loadWasm()` before the first
-  render (the deck builder calls the validator synchronously), the practice worker before its first
-  message, and `test/setup.ts` loads it synchronously for jsdom.
+- `src/wasm/index.ts` is the module's only caller. `main.tsx` starts `loadWasm()` at boot, and its
+  `EngineGate` holds every screen that calls the engine until it resolves (#778; the deck builder
+  calls the validator synchronously), the practice worker awaits it before its first message, and
+  `test/setup.ts` loads it synchronously for jsdom.
 - `src/wire/` keeps every import the client had when these packages were TypeScript working
   unchanged: `@jackioh/shared` is the generated wire types plus hand-kept helpers, `@jackioh/engine`
   and `@jackioh/ai` are typed functions over the module, `@jackioh/engine/config` and
@@ -421,7 +443,3 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 ## Internationalisation
 
 The client supports multiple reader languages (`src/i18n/`). Adding another language means adding one dictionary file (`src/i18n/<tag>.json`), its card table pair beside the catalog (`crates/cards/`), and one line in `LOCALES` (`src/i18n/i18n.ts`). The English strings remain inline wrapped in `t()`, and missing translations fall back cleanly to English.
-
-## `PlayerView` gaps found while building M5 (SPEC §10.8)
-
-Moved to docs/history/web-readme.md.

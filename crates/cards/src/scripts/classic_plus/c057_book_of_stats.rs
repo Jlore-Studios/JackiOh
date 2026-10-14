@@ -108,15 +108,16 @@ mod tests {
         }
 
         #[test]
-        fn r23_an_immutable_unit_still_takes_the_buff_a_buff_is_no_change_to_its_text() {
+        fn r781001_its_own_controllers_immutable_unit_in_play_is_no_target() {
             let mut s = scenario(json!({
                 "p1": { "hand": [BOOK, FILLER], "field": [{ "def": "core-019", "radiant": true }] },
                 "p2": { "hand": [FILLER] },
             }));
-            let targets = at(&s, PlayerId::P1);
-            s.play(BOOK, json!({ "targets": targets }));
             let unit = unit_id(&s, PlayerId::P1, 1);
-            s.expect_stats(&unit, json!({ "attack": 23, "health": 23 }));
+            assert!(!offered(&s).contains(&unit));
+            let targets = at(&s, PlayerId::P1);
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": targets })));
+            s.expect_stats(&unit, json!({ "attack": 18, "health": 18 }));
         }
 
         #[test]

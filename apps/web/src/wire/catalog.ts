@@ -123,8 +123,18 @@ export type Keyword =
   | { kind: "Deft" }
   /** R1220: no Tribute cost may take this card, and every Sacrifice of it does nothing. */
   | { kind: "Untributable" }
-  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-MAGNETIC). */
-  | { kind: "Magnetic" };
+  /** R1086: a Unit may be played onto one of its controller's Units, resolving on top of it before fusing into it (ME-EQUIP). */
+  | { kind: "Equip" }
+  /** #783, R783000: an attacker that takes no strike back, unless the defender is Ranged too. */
+  | { kind: "Ranged" }
+  /** #783, R783002: only Flying or Ranged attackers may attack it, unless it is in Defense Position. */
+  | { kind: "Flying" }
+  /** #783, R783004: may be set face-down as a Trap (`faceDown: "cloaked"`), revealed by its Activate. */
+  | { kind: "Cloaked" }
+  /** #783, R783010: Locks its zone as it arrives as a Unit, or as it is revealed as a Trap. */
+  | { kind: "Crater" }
+  /** #783, R783012: may be played from its owner's graveyard once, at its cost. */
+  | { kind: "Flashback" };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -157,7 +167,12 @@ export const KEYWORD_KINDS = [
   "Temporary",
   "Deft",
   "Untributable",
-  "Magnetic",
+  "Equip",
+  "Ranged",
+  "Flying",
+  "Cloaked",
+  "Crater",
+  "Flashback",
 ] as const;
 
 export function keywordKey(keyword: Keyword): string {

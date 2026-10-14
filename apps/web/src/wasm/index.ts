@@ -21,8 +21,9 @@
 // LOADING. Nothing here works until the module is instantiated:
 //   - `loadWasm()` fetches its bytes (as an asset beside the glue, in the page's bundle and in the
 //     practice worker's alike) and instantiates it (idempotent; one fetch however many callers).
-//     The page awaits it in `main.tsx` before the first render, because the deck builder calls the
-//     validator synchronously; the practice worker awaits it before it handles a message.
+//     The page starts it at boot, and `main.tsx`'s `EngineGate` holds every screen that calls the
+//     engine until it resolves (#778), because the deck builder calls the validator synchronously;
+//     the practice worker awaits it before it handles a message.
 //   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a
 //     file URL, so `test/setup.ts` reads `pkg/jackioh_wasm.wasm` from disk and hands it over.
 // Both call the module's own `init()` once, which registers the catalog and the card scripts with the
@@ -450,6 +451,8 @@ export type AiDeckConstants = {
   leanMinShare: number;
   /** R1370: weight for a card of the leaned set while the deck is short of it. */
   leanBoost: number;
+  /** R817000: a random deck holds at most this many Quickdraw cards. */
+  maxQuickdraw: number;
 };
 
 export type AiConstants = {

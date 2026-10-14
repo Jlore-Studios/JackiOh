@@ -31,6 +31,10 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
         // shared function reads `param` off the running face, so one adapter serves both.
         // The cache lives here, not in `build_script`, so both faces draw from it.
         let mut hook_cache: Vec<(*const std::ffi::c_void, Hook)> = Vec::new();
+        // The functions both faces hold: only an adapter shared across the faces picks the face it
+        // runs by `ctx.radiant`; any other runs its own face's function, as a Rust face runs its own
+        // closure whatever the context says (a Radiant ingredient fused into a base host, #765).
+        let shared = shared_functions(&module);
 
         for pair in module.pairs::<String, Value>() {
             let (key, value) = pair.map_err(|error| refused(error.to_string()))?;
@@ -42,7 +46,14 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                             value.type_name()
                         )));
                     };
-                    base_script = Some(build_script(card, Face::Base, &table, bytecode, &mut hook_cache)?);
+                    base_script = Some(build_script(
+                        card,
+                        Face::Base,
+                        &table,
+                        bytecode,
+                        &mut hook_cache,
+                        &shared,
+                    )?);
                 }
                 "radiant" => match value {
                     Value::String(s) => {
@@ -62,6 +73,7 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                             &table,
                             bytecode,
                             &mut hook_cache,
+                            &shared,
                         )?);
                     }
                     _ => {
@@ -86,14 +98,37 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     })
 }
 
+/// The function values both faces of a module hold, by pointer: none when the Radiant face is
+/// `"base"` or either face is missing.
+fn shared_functions(module: &Table) -> Vec<*const std::ffi::c_void> {
+    let functions = |key: &str| -> Vec<*const std::ffi::c_void> {
+        let Ok(Value::Table(face)) = module.raw_get::<Value>(key) else {
+            return Vec::new();
+        };
+        face.pairs::<Value, Value>()
+            .filter_map(|pair| match pair {
+                Ok((_, Value::Function(func))) => Some(func.to_pointer()),
+                _ => None,
+            })
+            .collect()
+    };
+    let radiant = functions(Face::Radiant.key());
+    functions(Face::Base.key())
+        .into_iter()
+        .filter(|ptr| radiant.contains(ptr))
+        .collect()
+}
+
 /// Builds one `Script` for a face from its table. `hook_cache` is `load_card`'s, shared by both
-/// faces, so one function value held by two hook keys gets one adapter (#464 gaps 10 and 14).
+/// faces, so one function value held by two hook keys gets one adapter (#464 gaps 10 and 14);
+/// `shared` names the function values both faces hold (`shared_functions`).
 pub fn build_script(
     card: &'static str,
     face: Face,
     table: &Table,
     bytecode: &'static [u8],
     hook_cache: &mut Vec<(*const std::ffi::c_void, Hook)>,
+    shared: &[*const std::ffi::c_void],
 ) -> Result<Script, LuauError> {
     let refused = |message: String| LuauError::Load {
         card: card.to_string(),
@@ -386,7 +421,7 @@ pub fn build_script(
             face,
             hook: key,
         };
-        let adapter = hooks::adapt_hook(site, bytecode);
+        let adapter = hooks::adapt_hook(site, bytecode, shared.contains(&ptr));
         hook_cache.push((ptr, adapter.clone()));
         Some(adapter)
     };
@@ -436,8 +471,8 @@ pub fn build_script(
     if has_fn("graveyardPlay") {
         script.graveyard_play = Some(hooks::adapt_graveyard_play_hook(site("graveyardPlay"), bytecode));
     }
-    if has_fn("faceDownPlay") {
-        script.face_down_play = Some(hooks::adapt_face_down_play_hook(site("faceDownPlay"), bytecode));
+    if has_fn("revealEcho") {
+        script.reveal_echo = Some(hooks::adapt_reveal_echo_hook(site("revealEcho"), bytecode));
     }
     if has_fn("targetingDiscards") {
         script.targeting_discards = Some(hooks::adapt_targeting_discards_hook(

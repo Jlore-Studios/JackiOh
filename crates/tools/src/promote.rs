@@ -31,6 +31,12 @@
 //! `generation.json`. The report (Markdown, the lane's pull request body) goes to stdout. Exit 0 on a
 //! pass, 1 on a failed gate.
 //!
+//! Every run that plays its games, whatever its mode and whether it passes, also rewrites
+//! `$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set (the training box sets it; CI does
+//! not): the latest pass, in Markdown, which `training/loop.sh` puts at the top of the lane's draft
+//! pull request. It counts the games the candidate won against the parent, the AI on `main`, as p1,
+//! as p2 and in all, and shows each game as a square of a grid (`last_pass`).
+//!
 //! The unban lane has nothing to do while the parent keeps no card out of its decks (generation 8
 //! lifted the last shadow ban, #668, and generation 9's sweep of the Meditative set banned cards
 //! again, #732): no candidate has strictly fewer bans than none, so the gate cannot pass, and against
@@ -44,18 +50,35 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, bail};
-use jackioh_engine::{GameResult, PlayerId, TRAINING_GAMES, TRAINING_IMPROVE, TRAINING_UNBAN, TrainingGate};
+use jackioh_engine::{
+    GameResult, PlayerId, TRAINING_GAMES, TRAINING_IMPROVE, TRAINING_UNBAN, TrainingGate, Winner,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::arena::{self, AgentSpec, ArenaOutcome, Entrant};
-use crate::patches::{git, repo_root};
+use crate::patches::{git, repo_root, utc_date_of};
+
+/// A share as a percentage, for the report.
+const PERCENT: f64 = 100.0;
 
 /// The AI's source, whose git tree names the seeds.
 pub(crate) const AI_SOURCE: &str = "crates/ai/src";
 
 /// The main AI's generation record (SURFACE §14.3), relative to the repository root.
 pub(crate) const GENERATION_PATH: &str = "crates/ai/generation.json";
+
+/// The file in `$JACKIOH_TRAINING_OUT` that every run of the gate rewrites with its pass: the top of
+/// the lane's draft pull request (training/loop.sh).
+pub(crate) const LAST_PASS_FILE: &str = "last-pass.md";
+
+/// Games per row of the latest pass's grid.
+const PASS_GRID_ROW: usize = 10;
+
+/// Seconds in a day, an hour and a minute, for the time of a pass.
+const SECONDS_PER_DAY: i64 = 86_400;
+const SECONDS_PER_HOUR: i64 = 3_600;
+const SECONDS_PER_MINUTE: i64 = 60;
 
 /// The fields `--verify` holds a branch's `generation.json` to. The date is when the lane ran, and
 /// the parent commit is the `main` it ran against, which may have moved on since without its AI
@@ -273,6 +296,230 @@ fn draws_and_aborted(outcomes: &[ArenaOutcome]) -> (usize, usize) {
     )
 }
 
+/// A win-rate interval as whole percentages, `55–74%`.
+fn interval_text(low: f64, high: f64) -> String {
+    format!("{:.0}–{:.0}%", low * PERCENT, high * PERCENT)
+}
+
+/// The parent as the report names it: its generation and lane, and the `main` commit it was built from.
+fn parent_name(parent: &Entrant, record: &GenerationRecord) -> String {
+    match (&parent.lane, &record.parent) {
+        (Some(parent_lane), Some(commit)) => format!(
+            "gen {} ({parent_lane}), `main` at `{commit}`",
+            parent.generation.unwrap_or_default()
+        ),
+        (Some(parent_lane), None) => format!("gen {} ({parent_lane})", parent.generation.unwrap_or_default()),
+        _ => parent.label.clone(),
+    }
+}
+
+/// How one game of a pass went for the candidate. A draw is not a win, and neither is a game
+/// without a result.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Mark {
+    Won,
+    Lost,
+    Drawn,
+    NoResult,
+}
+
+impl Mark {
+    fn of(result: Option<GameResult>, seat: PlayerId) -> Mark {
+        match result {
+            None => Mark::NoResult,
+            Some(ended) if ended.winner == Winner::Draw => Mark::Drawn,
+            Some(_) if arena::won_by(result, seat) => Mark::Won,
+            Some(_) => Mark::Lost,
+        }
+    }
+
+    /// The game's square in the pass's grid.
+    fn square(self) -> &'static str {
+        match self {
+            Mark::Won => "🟩",
+            Mark::Lost => "🟥",
+            Mark::Drawn => "⬜",
+            Mark::NoResult => "⬛",
+        }
+    }
+}
+
+/// The games of a pass counted by how they went for the candidate.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct Tally {
+    won: usize,
+    lost: usize,
+    drawn: usize,
+    no_result: usize,
+}
+
+impl Tally {
+    fn of(marks: impl IntoIterator<Item = Mark>) -> Tally {
+        let mut tally = Tally::default();
+        for mark in marks {
+            match mark {
+                Mark::Won => tally.won += 1,
+                Mark::Lost => tally.lost += 1,
+                Mark::Drawn => tally.drawn += 1,
+                Mark::NoResult => tally.no_result += 1,
+            }
+        }
+        tally
+    }
+
+    fn games(&self) -> usize {
+        self.won + self.lost + self.drawn + self.no_result
+    }
+}
+
+/// `2026-10-14 03:12 UTC` for a Unix time.
+fn utc_minute_of(unix_seconds: i64) -> String {
+    let of_day = unix_seconds.rem_euclid(SECONDS_PER_DAY);
+    format!(
+        "{} {:02}:{:02} UTC",
+        utc_date_of(unix_seconds),
+        of_day / SECONDS_PER_HOUR,
+        of_day % SECONDS_PER_HOUR / SECONDS_PER_MINUTE
+    )
+}
+
+/// The latest pass, in Markdown, for the top of the lane's draft pull request (training/loop.sh): how
+/// many games the candidate beat the parent in, a table of them as p1, as p2 and in all, and a grid
+/// with one square per game. `games` are (result, the candidate's seat) in game order; `at` is when
+/// the run ended; `dirty` says a dry run measured uncommitted changes on HEAD's seeds.
+#[allow(clippy::too_many_arguments)]
+fn last_pass(
+    lane: Lane,
+    mode: &str,
+    at: &str,
+    dirty: bool,
+    record: &GenerationRecord,
+    parent: &str,
+    games: &[(Option<GameResult>, PlayerId)],
+    failures: &[String],
+) -> String {
+    let gate = lane.gate();
+    let marks: Vec<Mark> = games
+        .iter()
+        .map(|(result, seat)| Mark::of(*result, *seat))
+        .collect();
+    let as_seat = |seat: PlayerId| {
+        Tally::of(
+            games
+                .iter()
+                .zip(&marks)
+                .filter(|((_, candidate), _)| *candidate == seat)
+                .map(|(_, mark)| *mark),
+        )
+    };
+    let all = Tally::of(marks.iter().copied());
+    let run = match mode {
+        "dry run" => "A dry run",
+        "verify" => "A re-check (`--verify`)",
+        _ => "The promotion run",
+    };
+    let measured = if dirty {
+        ", measuring uncommitted changes on HEAD's seeds,"
+    } else {
+        ""
+    };
+    let verdict = match (failures.is_empty(), mode) {
+        (true, "promotion") => "clears the gate and is promoted",
+        (true, _) => "clears the gate",
+        (false, _) => "falls short of the gate",
+    };
+    let first = game_seed(lane, &record.tree, 1);
+    let last = game_seed(lane, &record.tree, all.games() as i32);
+    let (low, high) = arena::wilson_interval(all.won, all.games());
+
+    let mut out = format!(
+        "## Latest pass: beat the AI on `main` {} times in {}, {} needed\n\n",
+        all.won,
+        all.games(),
+        gate.vs_parent
+    );
+    out.push_str(&format!(
+        "{run} of the `{}` lane's gate at {at}{measured} against the parent, {parent}: it {verdict}. \
+         Seeds `{first}` to `{last}`; the candidate sits p1 on odd games. Every run of the gate on \
+         the training box rewrites this section.\n\n",
+        lane.as_str()
+    ));
+    out.push_str("| The candidate | Beat the bot | Lost | Drawn | No result |\n|---|---|---|---|---|\n");
+    for (label, tally) in [
+        ("as p1 (odd games)", as_seat(PlayerId::P1)),
+        ("as p2 (even games)", as_seat(PlayerId::P2)),
+    ] {
+        out.push_str(&format!(
+            "| {label} | {} | {} | {} | {} |\n",
+            tally.won, tally.lost, tally.drawn, tally.no_result
+        ));
+    }
+    out.push_str(&format!(
+        "| **all {} games** | **{}** | **{}** | **{}** | **{}** |\n\n",
+        all.games(),
+        all.won,
+        all.lost,
+        all.drawn,
+        all.no_result
+    ));
+    let ban_rule = match lane {
+        Lane::Unban => ", and the unban lane needs strictly fewer than the parent's",
+        Lane::Improve => "",
+    };
+    out.push_str(&format!(
+        "{} wins put its true win rate at {} (95% interval); the gate needs {}. Shadow bans: {} \
+         (the parent's {}){ban_rule}.\n\n",
+        all.won,
+        interval_text(low, high),
+        gate.vs_parent,
+        record.shadow_ban,
+        record.parent_shadow_ban
+    ));
+    if !failures.is_empty() {
+        out.push_str("Short of the gate:\n\n");
+        for failure in failures {
+            out.push_str(&format!("- {failure}\n"));
+        }
+        out.push('\n');
+    }
+    out.push_str(&format!(
+        "Game by game ({} beat the bot, {} lost, {} drawn, {} no result):\n\n```text\n",
+        Mark::Won.square(),
+        Mark::Lost.square(),
+        Mark::Drawn.square(),
+        Mark::NoResult.square()
+    ));
+    let rows: Vec<(String, String)> = marks
+        .chunks(PASS_GRID_ROW)
+        .enumerate()
+        .map(|(row, chunk)| {
+            let from = row * PASS_GRID_ROW + 1;
+            let label = format!("{from}–{}", from + chunk.len() - 1);
+            (label, chunk.iter().map(|mark| mark.square()).collect())
+        })
+        .collect();
+    let width = rows
+        .iter()
+        .map(|(label, _)| label.chars().count())
+        .max()
+        .unwrap_or(0);
+    for (label, squares) in &rows {
+        out.push_str(&format!("{label:>width$}  {squares}\n"));
+    }
+    out.push_str("```\n");
+    out
+}
+
+/// Rewrites `<dir>/last-pass.md` with the pass, through a temporary file, so the loop never reads
+/// half of one.
+fn write_last_pass(dir: &Path, text: &str) -> anyhow::Result<()> {
+    std::fs::create_dir_all(dir).with_context(|| format!("promote: cannot create {}", dir.display()))?;
+    let path = dir.join(LAST_PASS_FILE);
+    let next = dir.join(format!("{LAST_PASS_FILE}.new"));
+    std::fs::write(&next, text).with_context(|| format!("promote: cannot write {}", next.display()))?;
+    std::fs::rename(&next, &path).with_context(|| format!("promote: cannot write {}", path.display()))
+}
+
 /// The run's report, in Markdown: the lane's pull request body (training/loop.sh).
 #[allow(clippy::too_many_arguments)]
 fn report(
@@ -291,14 +538,7 @@ fn report(
         (false, _) => "does not pass",
     };
     let (parent_draws, parent_aborted) = draws_and_aborted(vs_parent);
-    let parent_name = match (&parent.lane, &record.parent) {
-        (Some(parent_lane), Some(commit)) => format!(
-            "gen {} ({parent_lane}), `main` at `{commit}`",
-            parent.generation.unwrap_or_default()
-        ),
-        (Some(parent_lane), None) => format!("gen {} ({parent_lane})", parent.generation.unwrap_or_default()),
-        _ => parent.label.clone(),
-    };
+    let parent_name = parent_name(parent, record);
     let first = game_seed(lane, &record.tree, 1);
     let last = game_seed(lane, &record.tree, counts.games);
     let mut out = String::new();
@@ -307,10 +547,15 @@ fn report(
         record.generation,
         lane.as_str()
     ));
-    out.push_str("| Opponent | Wins | Needs | Draws | No result |\n|---|---|---|---|---|\n");
+    let (low, high) = arena::wilson_interval(counts.vs_parent.max(0) as usize, counts.games.max(0) as usize);
+    out.push_str(
+        "| Opponent | Wins | Needs | 95% interval | Draws | No result |\n|---|---|---|---|---|---|\n",
+    );
     out.push_str(&format!(
-        "| parent: {parent_name} | {} | {} | {parent_draws} | {parent_aborted} |\n\n",
-        record.vs_parent, gate.vs_parent
+        "| parent: {parent_name} | {} | {} | {} | {parent_draws} | {parent_aborted} |\n\n",
+        record.vs_parent,
+        gate.vs_parent,
+        interval_text(low, high)
     ));
     let ban_rule = match lane {
         Lane::Unban => "; the unban lane needs strictly fewer than the parent's",
@@ -352,7 +597,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         bail!("{done}");
     }
 
-    if ai_source_dirty(&repo)? {
+    let dirty = ai_source_dirty(&repo)?;
+    if dirty {
         if mode != "dry run" {
             bail!(
                 "promote: {AI_SOURCE} has uncommitted changes. The gate's seeds come from `git rev-parse \
@@ -407,6 +653,22 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         "{}",
         report(args.lane, mode, &record, &counts, &parent, vs_parent, &failures)?
     );
+    if let Some(dir) = arena::training_out(None) {
+        let pass = last_pass(
+            args.lane,
+            mode,
+            &utc_minute_of(arena::unix_now()),
+            dirty,
+            &record,
+            &parent_name(&parent, &record),
+            &results_of(vs_parent),
+            &failures,
+        );
+        // The pass is for people watching the lane: a file the box cannot write never fails the gate.
+        if let Err(error) = write_last_pass(&dir, &pass) {
+            eprintln!("{error:#}");
+        }
+    }
 
     if args.verify {
         let path = repo.join(GENERATION_PATH);
@@ -513,6 +775,7 @@ mod tests {
             generation: Some(8),
             lane: Some("unban".to_string()),
             shadow_ban: shadow_ban.iter().map(|id| id.to_string()).collect(),
+            skill: jackioh_ai::AI_SKILL_MAX,
         }
     }
 
@@ -558,6 +821,185 @@ mod tests {
         let measured = counts(wins_of(&series), 11, 11);
         assert_eq!(measured.vs_parent, 64);
         assert_eq!(gate_failures(Lane::Improve, &measured).len(), 1);
+    }
+
+    #[test]
+    fn the_report_reads_the_gates_bar_as_an_interval() {
+        // 65 of 100, the improve lane's bar, is a true win rate anywhere from about 55% to 74%.
+        let (low, high) = arena::wilson_interval(65, 100);
+        assert_eq!(interval_text(low, high), "55–74%");
+    }
+
+    /// Games as the gate seats them (the candidate p1 on odd games), each ended as `winners` says:
+    /// `Some(winner)`, or `None` for a game without a result.
+    fn seated(winners: &[Option<Winner>]) -> Vec<(Option<GameResult>, PlayerId)> {
+        winners
+            .iter()
+            .enumerate()
+            .map(|(k, winner)| {
+                let result = winner.map(|winner| GameResult {
+                    winner,
+                    reason: match winner {
+                        Winner::Draw => GameOverReason::TurnCap,
+                        _ => GameOverReason::HeroDeath,
+                    },
+                });
+                let seat = if k % 2 == 0 { PlayerId::P1 } else { PlayerId::P2 };
+                (result, seat)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_latest_pass_counts_the_games_the_candidate_beat_the_bot_in_by_seat_and_game_by_game() {
+        let (p1, p2, draw) = (Some(Winner::P1), Some(Winner::P2), Some(Winner::Draw));
+        // Games 1 to 12: won as p1 and as p2, lost as each, a draw, a game without a result, and so on.
+        let games = seated(&[p1, p2, p2, p1, draw, None, p1, p2, p1, p1, p2, p2]);
+        let measured = GateCounts {
+            games: 12,
+            vs_parent: wins_of(&games),
+            shadow_ban: 11,
+            parent_shadow_ban: 11,
+        };
+        assert_eq!(measured.vs_parent, 6);
+        let failures = gate_failures(Lane::Improve, &measured);
+        let pass = last_pass(
+            Lane::Improve,
+            "dry run",
+            "2026-10-14 03:12 UTC",
+            false,
+            &sample_record(),
+            "gen 8 (improve), `main` at `0123abc`",
+            &games,
+            &failures,
+        );
+        assert!(
+            pass.starts_with("## Latest pass: beat the AI on `main` 6 times in 12, 65 needed\n"),
+            "{pass}"
+        );
+        assert!(pass.contains("A dry run of the `improve` lane's gate at 2026-10-14 03:12 UTC against the parent, gen 8 (improve), `main` at `0123abc`: it falls short of the gate."), "{pass}");
+        assert!(
+            pass.contains("Seeds `improve:4b825dc:1` to `improve:4b825dc:12`"),
+            "{pass}"
+        );
+        // A draw and a game without a result are counted, but neither is a win.
+        assert!(pass.contains("| as p1 (odd games) | 3 | 2 | 1 | 0 |\n"), "{pass}");
+        assert!(
+            pass.contains("| as p2 (even games) | 3 | 2 | 0 | 1 |\n"),
+            "{pass}"
+        );
+        assert!(
+            pass.contains("| **all 12 games** | **6** | **4** | **1** | **1** |\n"),
+            "{pass}"
+        );
+        assert!(
+            pass.contains("Short of the gate:\n\n- vs parent: 6/12 wins, 65 needed\n"),
+            "{pass}"
+        );
+        // One square per game, ten to a row, each row labelled with its games.
+        assert!(
+            pass.contains("```text\n 1–10  🟩🟩🟥🟥⬜⬛🟩🟩🟩🟥\n11–12  🟥🟩\n```\n"),
+            "{pass}"
+        );
+    }
+
+    #[test]
+    fn the_latest_pass_names_its_run_and_what_the_unban_lane_needs() {
+        // A full gate of 100: ten rows, their labels right-aligned.
+        let won_all = seated(
+            &(0..TRAINING_GAMES)
+                .map(|k| Some(if k % 2 == 0 { Winner::P1 } else { Winner::P2 }))
+                .collect::<Vec<_>>(),
+        );
+        let mut record = sample_record();
+        record.lane = "unban".to_string();
+        record.shadow_ban = 10;
+        let promoted = last_pass(
+            Lane::Unban,
+            "promotion",
+            "2026-10-14 03:12 UTC",
+            false,
+            &record,
+            "gen 8 (unban)",
+            &won_all,
+            &[],
+        );
+        assert!(promoted.starts_with("## Latest pass: beat the AI on `main` 100 times in 100, 60 needed\n"));
+        assert!(
+            promoted.contains("The promotion run of the `unban` lane's gate"),
+            "{promoted}"
+        );
+        assert!(
+            promoted.contains("it clears the gate and is promoted."),
+            "{promoted}"
+        );
+        assert!(
+            promoted.contains("Shadow bans: 10 (the parent's 11), and the unban lane needs strictly fewer than the parent's."),
+            "{promoted}"
+        );
+        assert!(!promoted.contains("Short of the gate"), "{promoted}");
+        assert!(
+            promoted.contains("\n  1–10  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n"),
+            "{promoted}"
+        );
+        assert!(
+            promoted.contains("\n91–100  🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n```\n"),
+            "{promoted}"
+        );
+
+        // A dry run on uncommitted changes says it measured them on HEAD's seeds; a re-check names itself.
+        let dirty = last_pass(
+            Lane::Unban,
+            "dry run",
+            "at",
+            true,
+            &record,
+            "gen 8",
+            &won_all,
+            &[],
+        );
+        assert!(
+            dirty.contains("measuring uncommitted changes on HEAD's seeds,"),
+            "{dirty}"
+        );
+        assert!(dirty.contains("it clears the gate."), "{dirty}");
+        let verify = last_pass(
+            Lane::Unban,
+            "verify",
+            "at",
+            false,
+            &record,
+            "gen 8",
+            &won_all,
+            &[],
+        );
+        assert!(
+            verify.contains("A re-check (`--verify`) of the `unban` lane's gate"),
+            "{verify}"
+        );
+    }
+
+    #[test]
+    fn a_pass_is_timed_to_the_minute_in_utc() {
+        assert_eq!(utc_minute_of(0), "1970-01-01 00:00 UTC");
+        assert_eq!(utc_minute_of(1_791_947_579), "2026-10-14 03:12 UTC");
+    }
+
+    #[test]
+    fn the_latest_pass_replaces_the_one_before_it() {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|elapsed| elapsed.as_nanos())
+            .unwrap_or(0);
+        let dir = std::env::temp_dir().join(format!("jackioh-pass-{}-{stamp}", std::process::id()));
+        write_last_pass(&dir, "first\n").unwrap();
+        write_last_pass(&dir, "second\n").unwrap();
+        assert_eq!(
+            std::fs::read_to_string(dir.join(LAST_PASS_FILE)).unwrap(),
+            "second\n"
+        );
+        assert!(!dir.join(format!("{LAST_PASS_FILE}.new")).exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

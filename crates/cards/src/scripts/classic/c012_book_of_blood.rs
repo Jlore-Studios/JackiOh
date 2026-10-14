@@ -34,6 +34,8 @@ mod tests {
     const SHIELDED: &str = "core-003"; // Right-house defender 1/1 Taunt, Divine Shield, Reborn.
     const POINTMASTER: &str = "core-020"; // (2) Unit 7/1 First Strike.
     const ROCK: &str = "core-066"; // The Rock 10/10 Indestructible.
+    // Classic+ #26 Tommy Tempo, Radiant 18/18 Taunt: a big body no Immutable keeps a Spell off (R781001).
+    const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 
     fn at(s: &Scenario, player: PlayerId, lane: i32) -> Value {
@@ -197,13 +199,13 @@ mod tests {
         fn deals_10_in_one_hit_and_heals_your_hero_10() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 20 },
-                "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
+                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true }] },
             }));
 
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 8, "maxHealth": 18 }));
+            s.expect_stats(TEMPO, json!({ "health": 8, "maxHealth": 18 }));
             assert_eq!(hits(&s), vec![10]);
             s.expect_health(P1, 30);
         }
@@ -225,14 +227,14 @@ mod tests {
         fn r386_an_upgrade_steps_the_radiant_10_to_11() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
-                "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] },
+                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true }] },
             }));
             step_param(s.card_mut(BOOK), "damage", 1);
 
             let targets = at(&s, P2, 1);
             s.play(BOOK, json!({ "targets": targets }));
 
-            s.expect_stats(MENACE, json!({ "health": 7 })).expect_health(P1, 21);
+            s.expect_stats(TEMPO, json!({ "health": 7 })).expect_health(P1, 21);
         }
     }
 }

@@ -79,8 +79,8 @@ local base = {
 	graveyardPlay = function(args)
 		return {}
 	end,
-	faceDownPlay = function(args)
-		return {}
+	revealEcho = function(args)
+		return 0
 	end,
 	targetingDiscards = function(args)
 		return 0

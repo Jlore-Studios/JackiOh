@@ -14,11 +14,14 @@
 #      lane stops here while the parent shadow-bans no card: nothing could promote, so the cycle
 #      waits TRAIN_IDLE_SECONDS and looks again. Otherwise push ai/<lane> as main plus an empty
 #      `[skip ci]` commit naming the session, and make the lane's pull request this session's
-#      draft (opening one when none is open);
+#      draft (opening one when none is open). The draft's description opens with the gate's latest
+#      pass, which `promote` rewrites in ~/training-out/<lane>/last-pass.md every time it runs: how
+#      many games the candidate beat the AI on main in, by seat and game by game;
 #   3. run one Devin session on the lane's standing prompt (training/<lane>.md). Every
 #      TRAIN_PROGRESS_SECONDS, push the checkout as it is to ai/<lane> as one `[skip ci]` commit
-#      when it changed, and rewrite the session's comment on the draft: how long it has run, the
-#      diff against main and what attempts.md gained;
+#      when it changed, rewrite the session's comment on the draft (how long it has run, the diff
+#      against main and what attempts.md gained), and rewrite the draft's description when a new
+#      pass of the gate changed it;
 #   4. when the session ends with a promotion commit, land it on main (`land`), run the web's tests
 #      that play the AI when the box has pnpm, push ai/<lane>, retitle the pull request with the
 #      promotion's subject (`AI gen <N> (<lane>): …`), give it the gate's report as its body, mark
@@ -29,21 +32,30 @@
 # Postgres with `jackioh-server stats-import`, once per file, when the box has DATABASE_URL.
 # Everything goes to ~/logs/<lane>.log.
 #
+# The gather lane (`loop.sh gather`, training/gather.md) improves nothing and opens no pull request,
+# so it needs neither Devin nor gh: each cycle checks out main, builds jackioh from it, loads the
+# finished days as above, and plays the next TRAIN_GATHER_GAMES games of its own seed series with
+# `jackioh stats` (R378: the AI on main against itself on All Random decks), up to
+# TRAIN_GATHER_PATCH_GAMES a patch. It appends them to ~/training-out/gather/<date>.jsonl and
+# rewrites the patch's card figures, cards-<patch>.txt and .json, from every game it holds.
+#
 # Stop a lane with `sudo systemctl stop jackioh-train@<lane>` (and `disable` to keep it stopped).
 #
-# Environment: DEVIN_MODEL (required), GH_TOKEN (the lane user's own, for gh), DATABASE_URL
-# (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS (default 16200: the standing
-# prompt's four hours, plus half an hour for the last gate run to finish), TRAIN_PROGRESS_SECONDS
-# (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane waits between looks).
+# Environment: DEVIN_MODEL (required, but by the gather lane), GH_TOKEN (the lane user's own, for
+# gh), DATABASE_URL (optional), TRAIN_PAUSE_SECONDS (default 60), TRAIN_SESSION_SECONDS (default
+# 16200: the standing prompt's four hours, plus half an hour for the last gate run to finish),
+# TRAIN_PROGRESS_SECONDS (default 900), TRAIN_IDLE_SECONDS (default 900: how long an idle unban lane
+# waits between looks), TRAIN_GATHER_GAMES (default 100: the gather lane's games a cycle),
+# TRAIN_GATHER_PATCH_GAMES (default 5000: its games a patch).
 
 # shellcheck disable=SC2016 # the backticks in printf's formats are Markdown's, for GitHub
 set -u
 
 lane="${1:-}"
 case "$lane" in
-  improve | unban) ;;
+  improve | unban | gather) ;;
   *)
-    echo "usage: training/loop.sh improve|unban" >&2
+    echo "usage: training/loop.sh improve|unban|gather" >&2
     exit 2
     ;;
 esac
@@ -72,6 +84,8 @@ pause="${TRAIN_PAUSE_SECONDS:-60}"
 session_limit="${TRAIN_SESSION_SECONDS:-16200}"
 progress_every="${TRAIN_PROGRESS_SECONDS:-900}"
 idle_pause="${TRAIN_IDLE_SECONDS:-900}"
+gather_games="${TRAIN_GATHER_GAMES:-100}"
+gather_cap="${TRAIN_GATHER_PATCH_GAMES:-5000}"
 
 mkdir -p "$logs" "$out" "$work" || exit 1
 exec >>"$logs/$lane.log" 2>&1
@@ -84,7 +98,7 @@ log() {
   printf '%s %s: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$lane" "$*"
 }
 
-if [ -z "${DEVIN_MODEL:-}" ]; then
+if [ "$lane" != gather ] && [ -z "${DEVIN_MODEL:-}" ]; then
   log "DEVIN_MODEL is not set; the lane cannot run"
   exit 2
 fi
@@ -97,6 +111,8 @@ report=""
 # The pause after this cycle (idle sets it longer), and the generation the lane last went idle on.
 sleep_for="$pause"
 idle_generation=""
+# The patch the gather lane has all its games of, once it has said so.
+gathered=""
 
 # Loads every finished day's record file not loaded yet (today's is still being written).
 import_records() {
@@ -117,6 +133,71 @@ import_records() {
       log "stats-import failed on $name; it is tried again next cycle"
     fi
   done
+}
+
+# The gather lane's cycle (training/gather.md): the AI on main against itself on All Random decks,
+# the next TRAIN_GATHER_GAMES games of the lane's own seed series, filed as development records
+# under the patch main compiles in (R378). Game n's seed is gather:<n>, and cursor-<patch> holds the
+# next n, so no game is played twice for a patch and a new patch starts again at 1. A patch's games
+# stop at TRAIN_GATHER_PATCH_GAMES, and the lane idles until main ships another. The cursor moves
+# before the batch's games join the day's file: a batch the loop never finished is played again,
+# and none is appended twice. Then the patch's card figures are rewritten from every game it holds.
+gather() {
+  clean_checkout || return 1
+  git fetch --quiet origin main || {
+    log "git fetch failed"
+    return 1
+  }
+  git checkout --quiet --detach origin/main || {
+    log "cannot check out origin/main"
+    return 1
+  }
+  if ! cmp -s training/loop.sh "$copy"; then
+    log "training/loop.sh changed on main; restarting on the new one"
+    exit 0
+  fi
+  at=$(git rev-parse --short HEAD)
+  if ! cargo build --release --quiet -p jackioh-tools; then
+    log "jackioh does not build on main at $at"
+    return 1
+  fi
+  import_records
+  jackioh="$repo/target/release/jackioh"
+  patch=$("$jackioh" catalog-version) || {
+    log "jackioh names no catalog version on main at $at"
+    return 1
+  }
+  cursor="$out/cursor-$patch"
+  from=1
+  [ ! -f "$cursor" ] || from=$(cat "$cursor")
+  games=$((gather_cap - from + 1))
+  if [ "$games" -le 0 ]; then
+    sleep_for="$idle_pause"
+    [ "$patch" != "$gathered" ] || return 0
+    gathered="$patch"
+    log "$patch has its $gather_cap games; the lane waits for main to ship another patch"
+    return 0
+  fi
+  [ "$games" -le "$gather_games" ] || games="$gather_games"
+  batch="$work/batch.jsonl"
+  rm -f "$batch"
+  log "games $from to $((from + games - 1)) of $patch: the AI on main at $at against itself"
+  nice -n 19 "$jackioh" stats --series gather --patch "$patch" --from "$from" --games "$games" \
+    --out "$batch" >/dev/null 2>"$work/batch.log"
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    log "jackioh stats ended with status $status; the games it finished are kept, and the next cycle starts after this batch: $(tail -n 3 "$work/batch.log" | joined)"
+  fi
+  echo "$((from + games))" >"$cursor"
+  [ ! -f "$batch" ] || cat "$batch" >>"$out/$(date -u +%Y-%m-%d).jsonl"
+  cards="$out/cards-$patch"
+  if "$jackioh" stats report --source=dev --patch "$patch" "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$cards.txt.new" &&
+    "$jackioh" stats report --source=dev --patch "$patch" --json "$out"/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].jsonl >"$cards.json.new"; then
+    mv "$cards.txt.new" "$cards.txt" && mv "$cards.json.new" "$cards.json"
+    log "$(jq -r .games "$cards.json") games of $patch so far; their card figures are in $cards.txt"
+  else
+    log "the card figures of $patch could not be written"
+  fi
 }
 
 # Whatever a run left in the checkout goes: a rebase, a cherry-pick, changes and untracked files.
@@ -274,6 +355,34 @@ comment() {
     return 1
   }
   printf '%s\n' "${url##*issuecomment-}"
+}
+
+# The draft's description into $work/body.md: the gate's latest pass on top, as `promote` last wrote
+# it (last-pass.md: the games the candidate beat the AI on main in, by seat and game by game), then
+# the lane's own text, $work/draft.md.
+body() {
+  {
+    if [ -f "$out/last-pass.md" ]; then
+      cat "$out/last-pass.md"
+      printf '\n---\n\n'
+    fi
+    cat "$work/draft.md"
+  } >"$work/body.md"
+}
+
+# Rewrites the draft's description when it changed since the loop last wrote it: a new pass of the
+# gate. $work/body.sent is what the loop last wrote.
+describe() {
+  [ -n "$pr" ] || return 0
+  body
+  if cmp -s "$work/body.md" "$work/body.sent"; then
+    return 0
+  fi
+  if gh pr edit "$pr" --body-file "$work/body.md" >/dev/null; then
+    cp "$work/body.md" "$work/body.sent"
+  else
+    log "cannot rewrite the description of #$pr"
+  fi
 }
 
 # Rewrites the comment with id $1 to the file $2.
@@ -434,6 +543,7 @@ progress() {
     fi
   } >"$work/session.md"
   rewrite "$session_comment" "$work/session.md"
+  describe
 }
 
 # One Devin session on the standing prompt, its comment kept current; sets $devin_status.
@@ -468,6 +578,10 @@ cycle() {
   cd "$repo" || return 1
   stamp=$(date -u +%Y%m%dT%H%M%SZ)
   sleep_for="$pause"
+  if [ "$lane" = gather ]; then
+    gather
+    return
+  fi
   if [ -z "$slug" ]; then
     slug=$(gh repo view --json nameWithOwner --jq .nameWithOwner) || {
       log "gh repo view failed; waiting"
@@ -537,6 +651,7 @@ cycle() {
   cat >"$work/draft.md" <<EOF
 The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md)). Devin runs on the training box one session after another, and this draft follows it:
 
+- the top of this description is the gate's latest pass (\`cargo jackioh promote\`: a dry run, a promotion or a re-check), rewritten within $((progress_every / 60)) minutes of each one: how many of its games the candidate beat the AI on \`main\` in, as p1, as p2 and in all, and each game as a square;
 - each session gets a comment, rewritten every $((progress_every / 60)) minutes while it runs: how long it has run, the checkout's diff against \`main\`, and what \`~/training-out/$lane/attempts.md\` gained (each attempt, its dry run's numbers and whether it was kept);
 - the checkout is pushed here as one commit whenever it changes, so **Files changed** is the session's work in progress (its message tells CI to skip it);
 - once a promotion passes its gate on the box, the loop lands it on \`main\`, retitles this pull request \`AI gen <N> ($lane): …\`, puts the gate's report here, marks it ready and turns on auto-merge. CI then runs every check, the training gate included;
@@ -544,10 +659,16 @@ The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com
 
 Stop the lane with \`sudo systemctl stop jackioh-train@$lane\` on the box. Closing this pull request refuses whatever is in it; the lane opens a new draft with its next session.
 EOF
+  body
   if [ -n "$pr" ]; then
-    gh pr edit "$pr" --title "$title" --body-file "$work/draft.md" >/dev/null || log "cannot retitle #$pr"
-  elif url=$(gh pr create --draft --base main --head "$branch" --title "$title" --body-file "$work/draft.md"); then
+    if gh pr edit "$pr" --title "$title" --body-file "$work/body.md" >/dev/null; then
+      cp "$work/body.md" "$work/body.sent"
+    else
+      log "cannot retitle #$pr"
+    fi
+  elif url=$(gh pr create --draft --base main --head "$branch" --title "$title" --body-file "$work/body.md"); then
     pr=${url##*/}
+    cp "$work/body.md" "$work/body.sent"
     log "opened the draft $url"
   else
     log "cannot open the draft pull request; the session runs without one"

@@ -1,6 +1,8 @@
 //! Generates `crates/cards/luau/jackioh.luau` from ts-rs definitions and the verb binding table.
-//! Run with: `cargo test -p jackioh-luau --test export_api` (#464 gap 11: it runs under the
-//! workspace's ordinary test features, no extra feature needed).
+//! Run with: `cargo test -p jackioh-luau --features ts --test export_api`. The feature is off by
+//! default, as the engine's `ts` is, so no build of the cards (the server's, the browser's) turns
+//! the engine's on; `tests/api.rs` holds the committed module to the verbs and readers meanwhile.
+#![cfg(feature = "ts")]
 #![allow(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the committed typed module, as build.rs writes the registry"
@@ -19,7 +21,7 @@ mod generator {
     };
     use jackioh_luau::api::after_check::AfterStateCheckArgs;
     use jackioh_luau::api::all_specs;
-    use jackioh_luau::api::aura::{AuraApplies, AuraArgs, AuraFilter, DefenseArmorArgs};
+    use jackioh_luau::api::aura::{AuraApplies, AuraArgs, AuraFilter, CloakHandAuraArgs, DefenseArmorArgs};
     use jackioh_luau::api::cast::CastEachArgs;
     use jackioh_luau::api::draw_while::DrawWhileArgs;
     use jackioh_luau::api::each::{CardsSource, ForEachCardArgs};
@@ -537,7 +539,6 @@ mod generator {
             CostAura,
             CostRule,
             GraveyardPlayPermission,
-            FaceDownPlayPermission,
             HeroGuard,
             DrawLimitPlayer,
             DrawLimit,
@@ -557,6 +558,7 @@ mod generator {
             AuraArgs,
             AuraFilter,
             DefenseArmorArgs,
+            CloakHandAuraArgs,
             CastEachArgs,
             DrawWhileArgs,
             CardsSource,
@@ -680,6 +682,7 @@ mod generator {
             SetCostOverrideArgs,
             SetCostModArgs,
             GrantKeywordCardsArgs,
+            DrawCombatKeywordsArgs,
             GrantKeywordArgs,
             GrantKeywordsRandomUnitArgs,
             GrantRandomKeywordsArgs,
@@ -939,6 +942,7 @@ mod generator {
             "\tcards_in_scope_aimed: (self: EffectContext, scope: BoardScope, aim: TargetAim) -> {any},",
             "\tadjacent_to: (self: EffectContext, spec: TargetSpec, scope: BoardScope) -> {any},",
             "\tunreadable_by: (self: EffectContext, id: string) -> {PlayerId},",
+            "\timmutable_bars: (self: EffectContext, source: string?, id: string) -> boolean,",
             "\trng_roll: (self: EffectContext, sides: number) -> number,",
             "\trng_next_int: (self: EffectContext, min: number, max: number) -> number,",
             "\trng_chance: (self: EffectContext, num: number, den: number) -> boolean,",
@@ -1153,6 +1157,7 @@ mod generator {
         out.push_str(
             "function J.sort_by<T>(list: {T}, key_fn: (item: T) -> any): {T}\n\treturn list\nend\n\n",
         );
+        out.push_str("function J.list<T>(list: {T}): {T}\n\treturn list\nend\n\n");
         out.push_str("function J.query(args: any): {string}\n\treturn {}\nend\n\n");
         out.push_str("function J.pool(name: string): {string}\n\treturn {}\nend\n\n");
         out.push_str("function J.cost(defId: string): number\n\treturn 0\nend\n\n");

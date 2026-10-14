@@ -544,7 +544,7 @@ describe("R1350 a card's intro on top of the music", () => {
     expect(targets.map((t) => t.value)).toEqual([MUSIC_INTRO_DUCK_GAIN, 1]);
     expect(targets[0]?.time).toBeCloseTo(start, 9);
     expect(targets[1]?.time).toBeCloseTo(start + 4, 9);
-    // A track that comes in meanwhile (a theme) comes in ducked: it plays into the same bed.
+    // A track that comes in meanwhile comes in ducked: it plays into the same bed.
     r.player.request({ track: "tavern-danger" });
     await settle();
     const danger = voices(r.audio)[1];

@@ -50,7 +50,7 @@ use jackioh_server::db::store::{
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
     PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
     Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, Ticket,
+    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, TermsSource, Ticket,
     TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
@@ -2658,6 +2658,64 @@ mod player_stats {
     );
 }
 
+/// R757000, R757001: the age check and the terms each account agreed to (migration 0034).
+mod consent {
+    use super::*;
+
+    async fn r757000_keeps_the_first_age_check(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let empty = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(
+            j(&empty),
+            json!({ "profileId": profile.id, "ageCheckedAt": null, "ageMin": null, "terms": [] })
+        );
+
+        let now = harness.now();
+        q!(harness, t => t.consent_record_age(&profile.id, 13, now));
+        // A second record changes nothing: the first check stands, with its minimum and time.
+        q!(harness, t => t.consent_record_age(&profile.id, 16, now + 1000));
+        let consent = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(consent.age_checked_at, Some(now));
+        assert_eq!(consent.age_min, Some(13));
+        assert!(consent.terms.is_empty());
+    }
+
+    async fn r757001_records_each_version_once_oldest_first(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Signup, now));
+        q!(harness, t => t.consent_record_terms(&profile.id, "2027-01-02/2026-12-30", TermsSource::Reaccept, now + 2000));
+        // The same version again keeps its first record.
+        q!(harness, t => t.consent_record_terms(&profile.id, "2026-10-13/2026-10-13", TermsSource::Reaccept, now + 3000));
+        let consent = q!(harness, t => t.consent_get(&profile.id));
+        assert_eq!(
+            j(&consent.terms),
+            json!([
+                { "version": "2026-10-13/2026-10-13", "source": "signup", "acceptedAt": now },
+                { "version": "2027-01-02/2026-12-30", "source": "reaccept", "acceptedAt": now + 2000 },
+            ])
+        );
+        assert_eq!(consent.age_checked_at, None);
+    }
+
+    async fn r757001_consent_is_per_account(harness: &StoreHarness) {
+        let one = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.consent_record_age(&one.id, 13, now));
+        q!(harness, t => t.consent_record_terms(&one.id, "v1", TermsSource::Signup, now));
+        let theirs = q!(harness, t => t.consent_get(&other.id));
+        assert_eq!((theirs.age_checked_at, theirs.terms.len()), (None, 0));
+        assert_eq!(q!(harness, t => t.consent_get(&one.id)).terms.len(), 1);
+    }
+
+    both_stores!(
+        r757000_keeps_the_first_age_check,
+        r757001_records_each_version_once_oldest_first,
+        r757001_consent_is_per_account,
+    );
+}
+
 mod series {
     use super::*;
 
@@ -2906,6 +2964,37 @@ mod matches {
         assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
     }
 
+    /// R776000: the log answers a nonce it already holds at the row's own seq with that row and writes
+    /// nothing (a write that committed and whose answer was lost can be sent again), and raises
+    /// `StoreError::SeqClash` for a new nonce at a taken seq and for a held nonce at another seq.
+    async fn r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise(
+        harness: &StoreHarness,
+    ) {
+        let row = live_match(harness).await;
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "n1", harness.now())]));
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
+
+        let taken = call!(harness, t => t.matches_append_actions(&[action_row(&row.id, 1, "p1", "other", harness.now())]))
+            .expect_err("a new nonce at a taken seq");
+        assert!(
+            matches!(taken, StoreError::SeqClash(_)),
+            "{}: {taken}",
+            harness.name
+        );
+        let moved = call!(harness, t => t.matches_append_actions(&[action_row(&row.id, 2, "p1", "n1", harness.now())]))
+            .expect_err("a held nonce at another seq");
+        assert!(
+            matches!(moved, StoreError::SeqClash(_)),
+            "{}: {moved}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 1);
+
+        q!(harness, t => t.matches_append_actions(&[action_row(&row.id, 2, "p1", "n2", harness.now())]));
+        assert_eq!(q!(harness, t => t.matches_actions(&row.id)).len(), 2);
+    }
+
     async fn stores_the_clocks_the_clients_render(harness: &StoreHarness) {
         let row = live_match(harness).await;
         let now = harness.now();
@@ -3060,6 +3149,29 @@ mod matches {
         assert!(!live_ids(&q!(harness, t => t.matches_live())).contains(&row.id));
     }
 
+    /// R768 (migration 0035): no hash until the result writes one, `matches_create` never writes
+    /// one, and only the first written is kept.
+    async fn r768_records_a_final_hash_once(harness: &StoreHarness) {
+        let row = live_match(harness).await;
+        let hash_of = |row: Option<MatchRow>| j(&must(row, "the match"))["finalHash"].clone();
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&row.id))), Value::Null);
+        q!(harness, t => t.matches_finish(&row.id, harness.now()));
+        q!(harness, t => t.matches_record_final_hash(&row.id, "hash-1"));
+        q!(harness, t => t.matches_record_final_hash(&row.id, "hash-2"));
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&row.id))), json!("hash-1"));
+        // An unknown id is a no-op.
+        q!(harness, t => t.matches_record_final_hash(&id(), "hash-3"));
+
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let forged: MatchRow = from(spread(
+            j(&match_row(&id(), &a.id, &b.id, harness, harness.now())),
+            json!({ "finalHash": "forged" }),
+        ));
+        q!(harness, t => t.matches_create(&forged));
+        assert_eq!(hash_of(q!(harness, t => t.matches_get(&forged.id))), Value::Null);
+    }
+
     async fn r1450_never_reaps_a_live_or_a_finished_match(harness: &StoreHarness) {
         let now = harness.now();
         let p1 = active_profile(harness, None).await;
@@ -3080,10 +3192,12 @@ mod matches {
     }
 
     both_stores!(
+        r768_records_a_final_hash_once,
         round_trips_a_match_row_clocks_included,
         refuses_a_second_match_with_the_same_id,
         appends_actions_in_order_and_reads_them_back,
         refuses_a_seq_that_already_exists,
+        r776000_answers_a_repeated_nonce_at_its_seq_and_raises_a_seq_clash_otherwise,
         stores_the_clocks_the_clients_render,
         r604_round_trips_the_ranked_flag,
         round_trips_the_rematch_mode_and_stake,
@@ -3258,6 +3372,28 @@ mod rooms {
         );
     }
 
+    /// R768: a match's phase and seats, read whatever its status: a claimed room is `open`, the
+    /// match the registry writes for it `live`, then `over`; an unknown id is none.
+    async fn r768_reads_a_match_s_seats_in_every_status_an_open_one_included(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        q!(harness, t => t.rooms_create(&room(harness, "ABC234", &host.id, json!({}))));
+        let match_id = id();
+        must(
+            q!(harness, t => t.rooms_claim("ABC234", &guest.id, &match_id, harness.now())),
+            "the claim",
+        );
+        let seats = |phase: &str| json!({ "phase": phase, "players": [host.id, guest.id] });
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("open"));
+
+        let row = match_row(&match_id, &host.id, &guest.id, harness, harness.now());
+        q!(harness, t => t.matches_create(&row));
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("live"));
+        q!(harness, t => t.matches_finish(&match_id, harness.now()));
+        assert_eq!(j(&q!(harness, t => t.matches_seats(&match_id))), seats("over"));
+        assert!(q!(harness, t => t.matches_seats(&id())).is_none());
+    }
+
     async fn r1450_reaps_an_expired_unjoined_room_and_frees_its_code(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let other = active_profile(harness, None).await;
@@ -3314,6 +3450,7 @@ mod rooms {
     }
 
     both_stores!(
+        r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
         r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
@@ -4240,6 +4377,70 @@ mod ranked {
         assert_eq!(q!(harness, t => t.ranked_game(&row.id)), Some(row));
     }
 
+    async fn r748000_lists_rated_games_with_a_bot_side_since(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.ranked_create_season(&season("v0.1", now)));
+        let person = json!({
+            "profileId": a.id,
+            "botId": null,
+            "pilot": "human",
+            "before": j(&glicko(1000.0)),
+            "after": j(&glicko(984.0)),
+            "rankBefore": null,
+            "rankAfter": null,
+        });
+        let bot = json!({
+            "profileId": null,
+            "botId": "calibrated-bot",
+            "pilot": "ai",
+            "before": j(&glicko(1050.0)),
+            "after": j(&glicko(1062.0)),
+            "rankBefore": null,
+            "rankAfter": null,
+        });
+        let people = rated_game(harness, &id(), "v0.1", &a, &b, json!({ "endedAt": now - 3_000 }));
+        let old = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 7_200_000, "sides": [person.clone(), bot.clone()] }),
+        );
+        let recent = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 2_000, "sides": [person.clone(), bot.clone()] }),
+        );
+        let latest = rated_game(
+            harness,
+            &id(),
+            "v0.1",
+            &a,
+            &a,
+            json!({ "endedAt": now - 1_000, "sides": [bot, person], "winnerSide": 1 }),
+        );
+        for row in [&people, &old, &recent, &latest] {
+            q!(harness, t => t.ranked_record_game(row));
+        }
+
+        // Only the games with a bot side, ended at or after `since`, oldest first.
+        assert_eq!(
+            q!(harness, t => t.ranked_bot_games_since(now - 3_600_000)),
+            vec![recent.clone(), latest.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.ranked_bot_games_since(0)),
+            vec![old, recent, latest]
+        );
+        assert!(q!(harness, t => t.ranked_bot_games_since(now)).is_empty());
+    }
+
     async fn r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it(
         harness: &StoreHarness,
     ) {
@@ -4292,6 +4493,7 @@ mod ranked {
         r610_keeps_each_bot_s_own_rating_upserted,
         r611_records_a_rated_game_once_and_answers_it_back_whole,
         r611_records_a_bot_side_with_no_profile_and_no_rank,
+        r748000_lists_rated_games_with_a_bot_side_since,
         r609_reset_input_is_everyone_a_rated_game_touched_and_reset_ratings_writes_it,
     );
 }
@@ -4332,6 +4534,10 @@ mod profiles_remove {
         q!(harness, t => t.tickets_insert(&ticket));
         let stats: IndexMap<String, Value> = from(json!({ "games": 1 }));
         q!(harness, t => t.player_stats_put(&gone.id, &stats, false, now));
+        // R757000, R757001: its age check and terms acceptance (migration 0034).
+        q!(harness, t => t.consent_record_age(&gone.id, 13, now));
+        q!(harness, t => t.consent_record_terms(&gone.id, "v1", TermsSource::Signup, now));
+        q!(harness, t => t.consent_record_terms(&other.id, "v1", TermsSource::Signup, now));
         let room: Room = from(json!({
             "code": "QWERTZ",
             "hostProfileId": gone.id,
@@ -4398,6 +4604,9 @@ mod profiles_remove {
         assert!(q!(harness, t => t.tutorial_get(&gone.id)).is_none());
         assert!(q!(harness, t => t.player_settings_get(&gone.id)).is_none());
         assert!(q!(harness, t => t.player_stats_get(&gone.id)).is_none());
+        let consent = q!(harness, t => t.consent_get(&gone.id));
+        assert_eq!((consent.age_checked_at, consent.terms.len()), (None, 0));
+        assert_eq!(q!(harness, t => t.consent_get(&other.id)).terms.len(), 1);
         assert!(q!(harness, t => t.collection_get(&gone.id)).is_empty());
         assert!(q!(harness, t => t.tickets_open_for_profile(&gone.id)).is_none());
         assert!(q!(harness, t => t.rooms_get("QWERTZ")).is_none());
@@ -4463,6 +4672,121 @@ mod profiles_remove {
         removes_the_profile_and_its_own_rows_and_keeps_the_other_player_s_finished_match,
         r1412_a_won_by_effect_loss_to_a_deleted_winner_stays_a_loss,
     );
+}
+
+// ---------------------------------------------------------------------------
+// Online replays (SPEC §9.3, R768)
+// ---------------------------------------------------------------------------
+
+mod replays {
+    use super::*;
+
+    /// A match between `p1` and `p2`, `actions` long, finished at `ended_at` with a result unless
+    /// `result` is false (`ended_at` none leaves it live).
+    async fn a_match(
+        harness: &StoreHarness,
+        (p1, p2): (&str, &str),
+        actions: i64,
+        ended_at: Option<i64>,
+        result: bool,
+    ) -> String {
+        let match_id = id();
+        let now = harness.now();
+        q!(harness, t => t.matches_create(&match_row(&match_id, p1, p2, harness, now)));
+        let rows: Vec<MatchActionRow> = (1..=actions)
+            .map(|seq| action_row(&match_id, seq, "p1", &format!("n{seq}"), now))
+            .collect();
+        if !rows.is_empty() {
+            q!(harness, t => t.matches_append_actions(&rows));
+        }
+        if result {
+            let row: ResultRow = from(json!({
+                "matchId": match_id,
+                "players": [p1, p2],
+                "winnerProfileId": p1,
+                "reason": "concede",
+                "turns": 3,
+                "endedAt": ended_at.unwrap_or(now),
+                "ratingBefore": [1000, 1000],
+                "ratingAfter": [1000, 1000],
+            }));
+            q!(harness, t => t.results_insert(&row));
+        }
+        if let Some(at) = ended_at {
+            q!(harness, t => t.matches_finish(&match_id, at));
+        }
+        match_id
+    }
+
+    /// R768: the finished matches a profile held a seat in that have a result and a kept log,
+    /// newest ended first and paged, each with its row, its result and its log's length; and one
+    /// finished match with a result read by id, whatever is left of its log.
+    async fn r768_lists_finished_matches_with_a_kept_log_newest_first(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let gone = active_profile(harness, None).await;
+        let now = harness.now();
+        let older = a_match(harness, (&a.id, &b.id), 2, Some(now - 4_000), true).await;
+        let as_p2 = a_match(harness, (&b.id, &a.id), 1, Some(now - 3_000), true).await;
+        let newer = a_match(harness, (&a.id, &b.id), 3, Some(now - 1_000), true).await;
+        let deleted = a_match(harness, (&a.id, &gone.id), 1, Some(now - 2_000), true).await;
+        let no_result = a_match(harness, (&a.id, &b.id), 1, Some(now), false).await;
+        let no_log = a_match(harness, (&a.id, &b.id), 0, Some(now), true).await;
+        let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
+        let others = a_match(harness, (&b.id, &c.id), 1, Some(now), true).await;
+        // A deleted opponent's seat empties in Postgres and keeps its id in memory (KNOWN
+        // DIVERGENCES, deleted accounts); either way the player keeps the replay.
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+
+        let listed = q!(harness, t => t.replays_list(&a.id, 10, 0));
+        let ids: Vec<&str> = listed.iter().map(|replay| replay.row.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]
+        );
+        let actions: Vec<i64> = listed.iter().map(|replay| replay.actions).collect();
+        assert_eq!(actions, vec![3, 1, 1, 2]);
+        for replay in listed.iter().filter(|replay| replay.row.id != deleted) {
+            assert_eq!(
+                Some(&replay.row),
+                q!(harness, t => t.matches_get(&replay.row.id)).as_ref()
+            );
+            assert_eq!(
+                Some(&replay.result),
+                q!(harness, t => t.results_get_by_match(&replay.row.id)).as_ref()
+            );
+        }
+        assert_eq!(listed[1].row.players.0, a.id);
+        assert_eq!(listed[1].result.players.0, a.id);
+
+        // Paged by limit and offset.
+        for (offset, expected) in [
+            (0, vec![newer.clone(), deleted.clone()]),
+            (2, vec![as_p2.clone(), older.clone()]),
+            (4, Vec::new()),
+        ] {
+            let page = q!(harness, t => t.replays_list(&a.id, 2, offset));
+            let ids: Vec<String> = page.iter().map(|replay| replay.row.id.clone()).collect();
+            assert_eq!(ids, expected, "offset {offset}");
+        }
+        let for_c = q!(harness, t => t.replays_list(&c.id, 10, 0));
+        assert_eq!(
+            ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()),
+            vec![others]
+        );
+
+        // By id: a purged log reads as none of it; no result, live or unknown is none.
+        let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");
+        assert_eq!(read, listed[0]);
+        let purged = must(q!(harness, t => t.replays_get(&no_log)), "the purged replay");
+        assert_eq!(purged.actions, 0);
+        for missing in [no_result, live, id()] {
+            assert!(q!(harness, t => t.replays_get(&missing)).is_none(), "{missing}");
+        }
+    }
+
+    both_stores!(r768_lists_finished_matches_with_a_kept_log_newest_first);
 }
 
 mod purge_expired {

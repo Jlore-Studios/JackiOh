@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- ME-LETHALGUARD (R1204): §4.4 step 4a opens for Units too, so a fatal hit on a friendly ally goes
 -- to Unan through Unan's own Armor, each Unan catching a given hit once.

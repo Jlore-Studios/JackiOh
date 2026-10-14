@@ -1,6 +1,6 @@
 [package]
 name = "jackioh-luau"
-description = "The Luau host for card scripts (#442 L3–L8): the sandbox, the integer boundary, the lint and one VM per thread. Nothing depends on it yet."
+description = "The Luau host for card scripts (#442 L3–L8): the sandbox, the integer boundary, the lint and one VM per thread."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,18 +8,16 @@ publish.workspace = true
 
 [dependencies]
 # Pure (CLAUDE.md rule 4), as the engine is, plus mlua (#442 L3), which compiles Luau's C++ (`g++`).
-# ts-rs is a compile-time-only derive, as on the engine: the typed module's generator
-# (`tests/export_api.rs`) runs under the workspace's ordinary test features (#464 gap 11).
 jackioh-engine = { workspace = true }
 mlua = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-ts-rs = { workspace = true }
+# Off by default, as the engine's `ts` is: the typed module's generator (`tests/export_api.rs`) runs
+# with `cargo test -p jackioh-luau --features ts --test export_api`, and nothing else derives types.
+ts-rs = { workspace = true, optional = true }
 
 [features]
-default = ["ts"]
-ts = ["jackioh-engine/ts"]
+ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }
-ts-rs = { workspace = true }

@@ -9,9 +9,9 @@ use std::sync::Arc;
 use jackioh_engine::prelude::*;
 use jackioh_engine::script::{
     AttackModArgs, AttackModHook, AuraHook, ConditionContext, ConditionHook, CostArgs, CostAuraArgs,
-    CostAuraHook, CostHook, DiscardGuardHook, DrawLimitHook, EchoXHook, FaceDownPlayHook, GraveyardPlayHook,
-    HasHook, HeroGuardHook, Hook, HookArgs, PlagueMultiplierHook, PreviewHook, ReplacementContext,
-    ReplacementWhen, SetStatHook, TargetCheck, TargetCheckArgs, TargetingDiscardsHook, TributeWhenHook,
+    CostAuraHook, CostHook, DiscardGuardHook, DrawLimitHook, EchoXHook, GraveyardPlayHook, HasHook,
+    HeroGuardHook, Hook, HookArgs, PlagueMultiplierHook, PreviewHook, ReplacementContext, ReplacementWhen,
+    RevealEchoHook, SetStatHook, TargetCheck, TargetCheckArgs, TargetingDiscardsHook, TributeWhenHook,
     TriggerExtraHook, TriggerRun, TriggerWhen, WouldCounterArgs, WouldCounterHook,
 };
 use mlua::{Function, LuaSerdeExt, Table, Value};
@@ -148,8 +148,7 @@ pub fn call_named_effects(
 ) -> Result<Vec<Effect>, LuauError> {
     let calls = vm::with_vm(site, bytecode, |lua, face| {
         let func = face_function(&face, name)?;
-        lua.scope(|scope| {
-            let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+        crate::reads::scoped(lua, ctx, |ud| {
             let arg = lua.to_value(data)?;
             let returned: Value = func.call((ud, arg))?;
             to_calls(&returned, site)
@@ -173,8 +172,7 @@ pub fn call_named_kill_pairs(
 ) -> Result<Vec<jackioh_engine::KillCredit>, LuauError> {
     vm::with_vm(site, bytecode, |lua, face| {
         let func = face_function(&face, name)?;
-        lua.scope(|scope| {
-            let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+        crate::reads::scoped(lua, ctx, |ud| {
             let arg = lua.to_value(data)?;
             let returned: Value = func.call((ud, arg))?;
             let json = numbers::to_json(&returned, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
@@ -238,12 +236,16 @@ pub fn call_named_each(
 }
 
 /// Adapts a direct effect-list hook (`cry`, `death`, `start_of_turn`, etc.). One function value
-/// held by two hook keys — or by both faces (#464 gaps 10 and 14) — shares this one adapter:
-/// the run reads its function from the RUNNING face's table, so a named sub-hook resolves where
-/// the run runs, while `param` reads off `ctx` either way.
-pub fn adapt_hook(site: Site, bytecode: &'static [u8]) -> Hook {
+/// held by two hook keys — or by both faces (#464 gaps 10 and 14) — shares this one adapter.
+/// An adapter both faces share (`across_faces`) reads its function from the RUNNING face's table,
+/// by `ctx.radiant`, so a named sub-hook resolves where the run runs, while `param` reads off
+/// `ctx` either way. Any other runs its own face's function, as a Rust face runs its own closure:
+/// a Radiant ingredient's text fused into a base host runs Radiant with `ctx.radiant` false.
+pub fn adapt_hook(site: Site, bytecode: &'static [u8], across_faces: bool) -> Hook {
     Arc::new(move |ctx: &mut EffectContext<'_>| {
-        let running = if ctx.radiant {
+        let running = if !across_faces {
+            site.face
+        } else if ctx.radiant {
             crate::Face::Radiant
         } else {
             crate::Face::Base
@@ -257,8 +259,7 @@ pub fn adapt_hook(site: Site, bytecode: &'static [u8]) -> Hook {
         };
         match vm::with_vm(runtime, bytecode, |lua, face| {
             let func = get_fn(&face, runtime.hook)?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let returned: Value = func.call(ud)?;
                 to_calls(&returned, runtime)
             })
@@ -284,8 +285,7 @@ pub fn adapt_cost_hook(site: Site, bytecode: &'static [u8]) -> CostHook {
     Arc::new(move |args: CostArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "cost")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_cost_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
@@ -301,8 +301,7 @@ pub fn adapt_condition_hook(site: Site, bytecode: &'static [u8]) -> ConditionHoo
     Arc::new(move |ctx: ConditionContext<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, site.hook)?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_condition_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -318,8 +317,7 @@ pub fn adapt_preview_hook(site: Site, bytecode: &'static [u8]) -> PreviewHook {
     Arc::new(move |ctx: ConditionContext<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "preview")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_condition_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -336,8 +334,7 @@ pub fn adapt_set_stat_hook(site: Site, bytecode: &'static [u8]) -> SetStatHook {
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "setStat")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
@@ -354,8 +351,7 @@ pub fn adapt_cost_aura_hook(site: Site, bytecode: &'static [u8]) -> CostAuraHook
     Arc::new(move |args: CostAuraArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "costAura")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -372,8 +368,7 @@ pub fn adapt_graveyard_play_hook(site: Site, bytecode: &'static [u8]) -> Graveya
     Arc::new(move |args: CostAuraArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "graveyardPlay")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -385,19 +380,17 @@ pub fn adapt_graveyard_play_hook(site: Site, bytecode: &'static [u8]) -> Graveya
     })
 }
 
-/// Adapts a faceDownPlay hook.
-pub fn adapt_face_down_play_hook(site: Site, bytecode: &'static [u8]) -> FaceDownPlayHook {
-    Arc::new(move |args: CostAuraArgs<'_>| {
+/// Adapts a revealEcho hook (R1045): the Echo this card adds to each Spell its controller reveals.
+pub fn adapt_reveal_echo_hook(site: Site, bytecode: &'static [u8]) -> RevealEchoHook {
+    Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
-            let func = get_fn(&face, "faceDownPlay")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            let func = get_fn(&face, "revealEcho")?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
-                let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
-                vec_answer(json)
+                numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
         }) {
-            Ok(perms) => perms,
+            Ok(n) => n,
             Err(err) => panic!("{err}"),
         }
     })
@@ -408,8 +401,7 @@ pub fn adapt_targeting_discards_hook(site: Site, bytecode: &'static [u8]) -> Tar
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "targetingDiscards")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
@@ -425,8 +417,7 @@ pub fn adapt_draw_limit_hook(site: Site, bytecode: &'static [u8]) -> DrawLimitHo
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "drawLimit")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -443,8 +434,7 @@ pub fn adapt_discard_guard_hook(site: Site, bytecode: &'static [u8]) -> DiscardG
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "discardGuard")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -461,8 +451,7 @@ pub fn adapt_hero_guard_hook(site: Site, bytecode: &'static [u8]) -> HeroGuardHo
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "heroGuard")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -479,8 +468,7 @@ pub fn adapt_attack_mod_hook(site: Site, bytecode: &'static [u8]) -> AttackModHo
     Arc::new(move |args: AttackModArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "attackMods")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_attack_mod_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 serde_json::from_value(json).map_err(|e| mlua::Error::runtime(e.to_string()))
@@ -497,8 +485,7 @@ pub fn adapt_conditional_keywords_hook(site: Site, bytecode: &'static [u8]) -> C
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "conditionalKeywords")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 let json = numbers::to_json(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))?;
                 vec_answer(json)
@@ -515,8 +502,7 @@ pub fn adapt_plague_multiplier_hook(site: Site, bytecode: &'static [u8]) -> Plag
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "plagueMultiplier")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
@@ -532,8 +518,7 @@ pub fn adapt_echo_x_hook(site: Site, bytecode: &'static [u8]) -> EchoXHook {
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "echoX")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
@@ -549,8 +534,7 @@ pub fn adapt_trigger_extra_hook(site: Site, bytecode: &'static [u8], name: &'sta
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, name)?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 numbers::to_i32(&val, site).map_err(|e| mlua::Error::runtime(e.to_string()))
             })
@@ -566,8 +550,7 @@ pub fn adapt_tribute_when_hook(site: Site, bytecode: &'static [u8]) -> TributeWh
     Arc::new(move |args: HookArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "tributeWhen")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -583,8 +566,7 @@ pub fn adapt_would_counter_hook(site: Site, bytecode: &'static [u8]) -> WouldCou
     Arc::new(move |args: WouldCounterArgs<'_>| {
         match vm::with_vm(site, bytecode, |lua, face| {
             let func = get_fn(&face, "wouldCounter")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_would_counter_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -602,8 +584,7 @@ pub fn adapt_target_check(site: Site, bytecode: &'static [u8], name: &'static st
             let tc_tbl = get_table(&face, "targetChecks")?
                 .ok_or_else(|| mlua::Error::runtime("no targetChecks table"))?;
             let func: Function = tc_tbl.raw_get(name)?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_target_check_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -626,8 +607,7 @@ pub fn adapt_trigger_when(
             let trigs: Table = face.raw_get(key)?;
             let trig: Table = trigs.raw_get(index + 1)?;
             let func = get_fn(&trig, "when")?;
-            lua.scope(|scope| {
-                let ctx_ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ctx_ud| {
                 let event_val = lua.to_value(event)?;
                 let val: Value = func.call((ctx_ud, event_val))?;
                 Ok(val.as_boolean().unwrap_or(false))
@@ -646,8 +626,7 @@ pub fn adapt_trigger_run(site: Site, bytecode: &'static [u8], key: &'static str,
             let trigs: Table = face.raw_get(key)?;
             let trig: Table = trigs.raw_get(index + 1)?;
             let func = get_fn(&trig, "run")?;
-            lua.scope(|scope| {
-                let ctx_ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ctx_ud| {
                 let event_val = lua.to_value(event)?;
                 let returned: Value = func.call((ctx_ud, event_val))?;
                 to_calls(&returned, site)
@@ -666,8 +645,7 @@ pub fn adapt_replacement_when(site: Site, bytecode: &'static [u8], index: usize)
             let reps: Table = face.raw_get("replacements")?;
             let rep: Table = reps.raw_get(index + 1)?;
             let func = get_fn(&rep, "when")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_replacement_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -685,8 +663,7 @@ pub fn adapt_activation_run(site: Site, bytecode: &'static [u8], index: usize) -
             let acts: Table = face.raw_get("activations")?;
             let act: Table = acts.raw_get(index + 1)?;
             let func = get_fn(&act, "run")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let returned: Value = func.call(ud)?;
                 to_calls(&returned, site)
             })
@@ -704,8 +681,7 @@ pub fn adapt_activation_can_activate(site: Site, bytecode: &'static [u8], index:
             let acts: Table = face.raw_get("activations")?;
             let act: Table = acts.raw_get(index + 1)?;
             let func = get_fn(&act, "canActivate")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_condition_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -723,8 +699,7 @@ pub fn adapt_activation_has(site: Site, bytecode: &'static [u8], index: usize) -
             let acts: Table = face.raw_get("activations")?;
             let act: Table = acts.raw_get(index + 1)?;
             let func = get_fn(&act, "has")?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
+            crate::reads::scoped(lua, args, |ud| {
                 let val: Value = func.call(ud)?;
                 Ok(val.as_boolean().unwrap_or(false))
             })
@@ -746,8 +721,7 @@ pub fn adapt_sub_hook(
         match vm::with_vm(site, bytecode, |lua, face| {
             let tbl: Table = face.raw_get(table_name)?;
             let func: Function = tbl.raw_get(key)?;
-            lua.scope(|scope| {
-                let ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ud| {
                 let returned: Value = func.call(ud)?;
                 to_calls(&returned, site)
             })

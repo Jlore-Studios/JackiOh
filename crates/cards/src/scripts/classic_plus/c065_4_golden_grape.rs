@@ -117,16 +117,25 @@ mod tests {
         }
 
         #[test]
-        fn s6_1_immutable_never_blocks_it_radiant_is_the_card_s_own_text() {
+        fn r781001_an_immutable_card_in_play_is_no_target_and_in_hand_radiant_is_still_its_own_text() {
             crate::register_all();
-            let mut s = scenario(json!({ "p1": { "hand": [GOLDEN, FILLER], "field": [FELINORS] }, "p2": { "hand": [FILLER] } }));
-            let id = s.card(FELINORS).id.clone();
-            find_instance_mut(s.state_mut(), &id).expect("Felinors is on the field").granted_keywords =
-                vec![json_as(json!({ "kind": "Immutable" }))];
-            let targets = pick(&s, FELINORS);
-            s.play(GOLDEN, json!({ "targets": targets }));
-            assert!(s.card(FELINORS).radiant);
-            s.expect_stats(FELINORS, json!({ "attack": 6, "maxHealth": 9 }));
+            let mut s = scenario(json!({
+                "p1": { "hand": [GOLDEN, TIMMY, FILLER], "field": [FELINORS] },
+                "p2": { "hand": [FILLER] },
+            }));
+            for card in [FELINORS, TIMMY] {
+                let id = s.card(card).id.clone();
+                find_instance_mut(s.state_mut(), &id).expect("the card is in the game").granted_keywords =
+                    vec![json_as(json!({ "kind": "Immutable" }))];
+            }
+            // A Spell can't target an Immutable card in play (R781001)…
+            let on_field = pick(&s, FELINORS);
+            s.expect_refused(|s| s.play(GOLDEN, json!({ "targets": on_field })));
+            // …but in a hand it may, and Immutable never blocks Radiant, the card's own text (§6.1).
+            let held = pick(&s, TIMMY);
+            s.play(GOLDEN, json!({ "targets": held }));
+            assert!(s.card(TIMMY).radiant);
+            assert!(!s.card(FELINORS).radiant);
         }
 
         #[test]

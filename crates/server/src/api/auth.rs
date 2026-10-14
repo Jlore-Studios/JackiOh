@@ -9,7 +9,8 @@
 //! Routes (SURFACE §11.3): `POST /api/auth/signin` (it answers only under `E2E=1`, where the
 //! fixture provider knows passwords; Supabase answers 503 as TS did), `POST
 //! /api/auth/username-signin` (R1443: a sign-in by username, on any provider), `GET /api/profile`,
-//! `DELETE /api/account`, `GET /api/auth/me`. `POST /api/auth/signup` is not ported.
+//! `DELETE /api/account`, `GET /api/auth/me`. The age screen and the terms (R757000, R757001) are
+//! `consent.rs`'s. `POST /api/auth/signup` is not ported.
 
 use std::future::Future;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ use axum::body::Body;
 use axum::response::Response;
 use serde_json::{Value, json};
 
+use crate::api::consent::{age_check_owed, terms_owed};
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, json, now_ms, rate_limited,
 };
@@ -242,6 +244,21 @@ pub async fn get_profile(app: &Arc<App>, req: Req) -> ApiResult {
 /// tries the provider again.
 pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     let caller = caller_of(&req)?;
+    remove_account(app, caller).await?;
+    // No id in the line: the account is gone, and so is the reason to name it.
+    tracing::info!(event = "account.deleted");
+    let mut response = Response::new(Body::empty());
+    *response.status_mut() = axum::http::StatusCode::NO_CONTENT;
+    response
+        .headers_mut()
+        .insert("cache-control", axum::http::HeaderValue::from_static("no-store"));
+    Ok(response)
+}
+
+/// `DELETE /api/account`'s work, shared with the age screen's refusal (R757000, `consent.rs`),
+/// which deletes an account found to be under the minimum age the same way: the refusals in a live
+/// match or series, then the profile, then the sign-in.
+pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), ApiError> {
     let profile = &caller.profile;
     if !app.auth.can_delete_users() {
         return Err(ApiError::new(
@@ -269,20 +286,10 @@ pub async fn delete_account(app: &Arc<App>, req: Req) -> ApiResult {
     tx.profiles_remove(&profile.id).await?;
     tx.commit().await?;
     match app.auth.delete_user(&caller.user.user_id).await {
-        Ok(()) => {}
-        Err(AuthError::Unavailable(message)) => {
-            return Err(ApiError::new(ApiErrorCode::Unavailable, message));
-        }
-        Err(error) => return Err(ApiError::new(ApiErrorCode::Unavailable, error.to_string())),
+        Ok(()) => Ok(()),
+        Err(AuthError::Unavailable(message)) => Err(ApiError::new(ApiErrorCode::Unavailable, message)),
+        Err(error) => Err(ApiError::new(ApiErrorCode::Unavailable, error.to_string())),
     }
-    // No id in the line: the account is gone, and so is the reason to name it.
-    tracing::info!(event = "account.deleted");
-    let mut response = Response::new(Body::empty());
-    *response.status_mut() = axum::http::StatusCode::NO_CONTENT;
-    response
-        .headers_mut()
-        .insert("cache-control", axum::http::HeaderValue::from_static("no-store"));
-    Ok(response)
 }
 
 /// `GET /api/auth/me` (`AuthLevel::User`). §9.4: declared `user`, not `active`, because this *is* the
@@ -296,6 +303,7 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
     // or the room's host — learns there is a deck to pick. Its own series only, like the match.
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let series = tx.series_active_for(&profile.id).await?;
+    let consent = tx.consent_get(&profile.id).await?;
     tx.commit().await?;
     let needs_invite_code = matches!(profile.status, crate::db::store::ProfileStatus::Pending);
     Ok(json(
@@ -326,6 +334,11 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // prompt after activation is still owed. Their own only: no read about another player
             // carries the last two (R1436).
             "username": own_username(profile, now_ms()),
+            // R757000: a pending account that has not answered the age screen; R757001: an account
+            // that has not agreed to the terms in force. The client shows the consent screen for
+            // either, and redemption refuses until both are false.
+            "ageCheckOwed": age_check_owed(profile, &consent),
+            "termsOwed": terms_owed(&consent),
         }),
     ))
 }

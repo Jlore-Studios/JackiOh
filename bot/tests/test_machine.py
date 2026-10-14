@@ -115,6 +115,14 @@ class SetupTests(unittest.TestCase):
             self.assertIn(night_only, self.night, night_only)
         self.assertIn("systemctl disable --now night-vm-idle-stop.timer", self.training)
 
+    def test_the_night_box_has_a_chrome_for_the_ui_walkthroughs(self):
+        """#816: scripts/browse.sh finds google-chrome-stable on PATH; the training box needs none."""
+        self.assertIn("google-chrome-stable_current_amd64.deb", self.night)
+        self.assertIn("apt-get install -y -qq --only-upgrade google-chrome-stable", self.night)
+        self.assertNotIn("google-chrome", self.training)
+        browse = (REPO_ROOT / "scripts" / "browse.sh").read_text(encoding="utf-8")
+        self.assertIn("google-chrome-stable", browse)
+
 
 if __name__ == "__main__":
     unittest.main()

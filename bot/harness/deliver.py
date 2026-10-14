@@ -26,8 +26,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-from harness import asks, disk, failures, issueplan, memory, review_rule
+from harness import asks, declined, disk, failures, issueplan, memory, review_rule
 from harness import easy as easy_mod
+from harness import human as human_mod
 from harness import journal as journal_mod
 from harness import stepup, triage
 from harness import split as split_mod
@@ -37,15 +38,16 @@ from harness import providers as providers_mod
 from harness import vault
 from harness.clock import iso, parse_iso
 from harness.config import (COMMIT_PREFIX, DIFFICULTIES, DIFFICULTY_LABELS, LABEL_BLOCKED,
-                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_NEEDS_PLAN, LABEL_PLANNED,
+                            LABEL_BUILD, LABEL_CROSS, LABEL_HUMAN, LABEL_HUMAN_REQUIRED,
+                            LABEL_NEEDS_PLAN, LABEL_PERSON_MERGES, LABEL_PLANNED,
                             LABEL_PR, LABEL_PR_OPEN, LABEL_READY, LABEL_REVISE, LABEL_STUCK,
-                            LABEL_SUGGESTION, LABEL_TREE, OTHERS, PLAN_FLOOR, SLASH, STATE_BRANCH,
-                            TITLE)
+                            LABEL_SUGGESTION, LABEL_TREE, LABELS, OTHERS, PLAN_FLOOR, SLASH,
+                            STATE_BRANCH, TITLE)
 from harness.context import Context
 from harness.errors import GitError, GitHubError
 from harness.git import Git, Identity, matches
-from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, label_names,
-                           set_mode,
+from harness.queue import (PRIORITY_TIERS, branch_for_issue, cleared, difficulty_of, is_human,
+                           label_names, set_mode,
                            labelled_difficulty, open_pull_for_branch, rating_source,
                            set_state_label, wip_branch)
 from harness.state import item as state_item
@@ -447,6 +449,20 @@ class Deliverer:
         if status == "stopped":
             set_state_label(self.ctx, number, self._labels(number), None)
             self.gh.create_comment(number, "Stopped, as asked, before any plan was written.")
+            return
+        if status == "blocked" and self.result.get("human_required"):
+            # Its plan leaves nothing the bot may build (#793): it goes into the description
+            # for the person who builds it, and the item to them.
+            who, tier = self._planner()
+            self._remember(number, planned_at=iso(self.ctx.now()), planned_by=who,
+                           planned_by_id=self.provider.id, planned_tier=tier)
+            placed = self._plan_into_issue(number, who)
+            rated = getattr(self, "rating_note", "")
+            kept = (f" Planned on {who} ({self._link()})"
+                    + (", and the plan is in this issue's description, under **Plan**."
+                       if placed else "."))
+            self._needs_person(number, str(self.result.get("question") or ""),
+                               kept=f" {rated}{kept}" if rated else kept)
             return
         if status != "planned":
             if status == "interrupted":
@@ -979,6 +995,7 @@ class Deliverer:
         if failures >= self.cfg.max_failures:
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._remember(number, forced=False)
+            self._came_to_nothing(number, f"it failed {failures} times in a row: {reason}")
             self.gh.create_comment(number, f"This failed {failures} times in a row "
                                    f"({self._link()}), so I stopped trying. Last error: {reason}"
                                    f"\n\nFix the cause, then `{SLASH} build` (or `revise`) "
@@ -990,6 +1007,40 @@ class Deliverer:
             self.gh.create_comment(number, f"This run failed ({self._link()}): {reason}\n\nIt "
                                    f"is back in the queue (attempt {failures} of "
                                    f"{self.cfg.max_failures}).")
+
+    def _needs_person(self, number: int, question: str, *, what: str = "build this",
+                      kept: str = "", again: str = "") -> None:
+        """Only a person can do it (#793, `human.py`): the bot hands the thread over, as a
+        person's `human` would (`triage.hand_to_people`). Its own labels come off
+        (`human.LETS_GO`), it unassigns itself and assigns the people, `human required` goes on,
+        and a comment names them and says what they must do. The queue leaves it alone from then
+        on (`queue.is_human`)."""
+        thread = self.gh.get_issue(number)
+        handover = triage.Plan()
+        triage.hand_to_people(handover, thread, self.cfg.bot_login)
+        handover.remove = sorted(label_names(thread) & human_mod.LETS_GO)
+        for done in triage.apply(self.gh, number, handover):
+            self.log.append(f"#{number}: {done}")
+        # Its colour and description first: a label GitHub makes as it is put on is grey and
+        # bare (#796's was), and the sweep only creates missing ones (`sweep._labels`).
+        self._try(lambda: self.gh.sync_label(LABEL_HUMAN_REQUIRED, *LABELS[LABEL_HUMAN_REQUIRED]))
+        if LABEL_HUMAN_REQUIRED not in label_names(thread):
+            self.gh.add_labels(number, [LABEL_HUMAN_REQUIRED])
+        self.gh.create_comment(number, human_mod.ask(question, self.cfg.bot_login, what=what,
+                                                     kept=kept, again=again))
+        # The next run reads it with the thread, once a person has queued the item again.
+        self._remember(number, question=question)
+        self._came_to_nothing(number, f"the bot could not build it: {question}")
+        self.log.append(f"#{number} needs a person: handed to people, {LABEL_HUMAN_REQUIRED}")
+
+    def _came_to_nothing(self, number: int, why: str) -> None:
+        """One of my suggestions, approved, that I could not finish (#797): logged, so no survey
+        offers it again (`declined`). A thread that was never a suggestion is left out."""
+        if not self._record(number).get("suggestion"):
+            return
+        title = str(self.gh.get_issue(number).get("title") or "")
+        self.ctx.store.update(lambda s: declined.note(s, number, title, why, iso(self.ctx.now())),
+                              f"suggestion #{number} came to nothing")
 
     def _settle(self, number: int) -> None:
         """After a finished run: clear the one-run flags, and go round again for a comment that
@@ -1009,6 +1060,8 @@ class Deliverer:
         # `/harness stop` clears any earlier pending request, so one still set came after it.
         if not record.get("pending_request"):
             return
+        if is_human(self._labels(number)):
+            return  # people's now (`human`, or `human required`, #793): a person queues it again
         target = number
         pr = int(record.get("pr") or 0) if status == "approved" else 0
         if self.plan["action"] == "build" and pr:
@@ -1067,9 +1120,13 @@ class Deliverer:
             return
         started = self._record(number).get("started_at")
         if status == "blocked":
-            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             question = str(self.result.get("question") or self.result.get("reason") or "")
             kept = f" What I had is on `{branch}`." if pushed else ""
+            if self.result.get("human_required"):
+                self._needs_person(number, question, kept=kept)
+                self._remember(number, last_findings=[])
+                return
+            set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self.gh.create_comment(number, f"I need a decision before I can build this.{kept}\n\n"
                                    f"{question}\n\nAnswer here, then `{SLASH} build` (or "
                                    f"`@{self.cfg.bot_login} <your answer>`) queues it again.")
@@ -1481,9 +1538,15 @@ class Deliverer:
             self.gh.create_comment(number, "Stopped, as asked. I pushed nothing.")
             return
         if status == "blocked":
+            question = self.result.get("question") or self.result.get("reason")
+            if self.result.get("human_required"):
+                self._hold_auto_merge()
+                self._needs_person(number, str(question or ""), what="revise this", again=(
+                    f"`{SLASH} revise <notes>` (or `@{self.cfg.bot_login} <notes>`) queues the "
+                    "rest"))
+                return
             set_state_label(self.ctx, number, self._labels(number), LABEL_BLOCKED)
             self._hold_auto_merge()
-            question = self.result.get("question") or self.result.get("reason")
             self.gh.create_comment(number, f"I need a decision before I can revise this.\n\n"
                                    f"{question}")
             self._remember(number, question=str(question or ""))
@@ -1779,9 +1842,10 @@ class Deliverer:
 
     def _carried(self, issue: int) -> list[str]:
         """The issue's labels its pull request starts with, approved or a draft: its difficulty,
-        so the same models revise and review it, and its priority tier (#90)."""
+        so the same models revise and review it, its priority tier (#90), and `person merges`
+        (#839)."""
         return sorted(name for name in self._labels(issue)
-                      if name.lower() in {*DIFFICULTY_LABELS, *PRIORITY_TIERS})
+                      if name.lower() in {*DIFFICULTY_LABELS, *PRIORITY_TIERS, LABEL_PERSON_MERGES})
 
     def _second_review(self, number: int, status: str) -> None:
         """Act on a review run's verdict on a bot pull request."""
@@ -1912,6 +1976,8 @@ class Deliverer:
         if not pull.get("node_id"):
             return ""
         branch = str((pull.get("head") or {}).get("ref") or self.plan.get("branch") or "")
+        if pull.get("number") and LABEL_PERSON_MERGES in self._labels(int(pull["number"])):
+            return self._hand_to_a_person(pull, f"it is labelled `{LABEL_PERSON_MERGES}`")
         review = [p for p in self._changed(branch) if matches(p, self.cfg.review_paths)]
         if review:
             shown = ", ".join(f"`{p}`" for p in review[:8])
@@ -2020,7 +2086,8 @@ class Deliverer:
         if self.result.get("status") != "suggested":
             # A survey that did not finish gives its slot back: it is due again as before.
             before = {"last_run": self.plan.get("previous_last_run"),
-                      "requested": bool(self.plan.get("was_requested"))}
+                      "requested": bool(self.plan.get("was_requested")),
+                      "idle_since": self.plan.get("previous_idle_since")}
 
             def unfinished(s: dict[str, Any]) -> None:
                 s["suggest"].update(before, provider=None, run_id=None)
@@ -2040,14 +2107,24 @@ class Deliverer:
         open_now = [i for i in self.gh.list_issues(labels=LABEL_SUGGESTION) if "pull_request" not in i]
         room = max(0, self.cfg.suggestions_max_open - len(open_now))
         made = []
-        for entry in found[:room]:
+        state = self.ctx.store.load()
+        fresh = []
+        for entry in found:
+            if declined.known(state, str(entry.get("title") or "")):
+                # It came to nothing before (#797): the survey was told, and it is not opened.
+                self.log.append(f"dropped a suggestion that came to nothing before: "
+                                f"{entry.get('title')}")
+                continue
+            fresh.append(entry)
+        for entry in fresh[:room]:
             title = str(entry.get("title") or "").strip()
             body = str(entry.get("body") or "").strip()
             if not title or not body:
                 continue
             footer = (f"\n\n---\nSuggested by @{self.cfg.bot_login} while the queue was empty. "
-                      f"Add the `{LABEL_BUILD}` label to have it built, and the bot rates its "
-                      "difficulty when it plans it. Close it to say no.")
+                      "Comment `approve` to have it built (the "
+                      f"`{LABEL_BUILD}` label works too), and the bot rates its difficulty when "
+                      "it plans it. Comment `reject` to close it without building it.")
             issue = self.gh.create_issue(title, body + footer, [LABEL_SUGGESTION])
             made.append(issue.get("number"))
         self.log.append(f"opened suggestions: {made}")

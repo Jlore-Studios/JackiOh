@@ -14,7 +14,7 @@ use crate::{LuauError, Site};
 /// `after_state_check`'s arguments: the face function to call back, and the data it
 /// reads — Classic #43's mana count and plagued ids, computed before the destroys.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct AfterStateCheckArgs {
     pub hook: String,

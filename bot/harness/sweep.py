@@ -403,6 +403,8 @@ def _night_run(ctx: Context, since: datetime) -> list[str]:
     that is going but holds no lane yet (still in its gate or plan, or delivering) is on its way,
     so the sweep waits for it rather than piling more runs behind it."""
     look = plan_mod.peek(ctx)
+    # The clock a survey waits on (#797): a free lane with nothing to start, tick after tick.
+    plan_mod.note_idle(ctx, look.idle)
     if not look.work:
         return []
     live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=20) if r.get("status") in LIVE_RUN]

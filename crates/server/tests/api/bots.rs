@@ -45,8 +45,8 @@ use jackioh_server::bots::pick::{pick_due_at, pick_slot};
 use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
-    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, JLORIOUS_SIZE, MAX_FAIR_GAP, RANK_PLACEMENT_GAMES,
-    RATING_WINDOW_FULL_AFTER_SECONDS,
+    BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, JLORIOUS_SIZE, MAX_FAIR_GAP,
+    RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
@@ -892,6 +892,43 @@ async fn r1453_above_the_strongest_bot_gets_none() {
     assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
 }
 
+/// R748000: a pool holding one fresh bot at each seed rating, as the pool seeds it; answers the
+/// profile ids in `BOT_SEED_RATINGS`' order.
+async fn seeded_pool(app: &App) -> Vec<String> {
+    let mut ids = Vec::new();
+    for seed in BOT_SEED_RATINGS {
+        ids.push(new_bot(app, BotSpec::rated(seed)).await);
+    }
+    ids
+}
+
+/// R748000, R1453: the ceiling gate. With a pool seeded from `BOT_SEED_RATINGS` the strongest bot
+/// is the highest seed: a person rated above it is never given a bot, and one rated at it is given
+/// that one.
+#[tokio::test(start_paused = true)]
+async fn r748000_the_strongest_seed_is_the_ceiling() {
+    let top = BOT_SEED_RATINGS.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let strongest = BOT_SEED_RATINGS
+        .iter()
+        .position(|seed| *seed == top)
+        .expect("a highest seed");
+
+    let app = app_with_bots(true).await;
+    seeded_pool(&app).await;
+    let (above, _) = new_person(&app, top + 1.0).await;
+    ticket(&app, &above, top + 1.0, 10 * past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 0);
+    assert!(matches(&app).await.is_empty(), "no match started");
+
+    let app = app_with_bots(true).await;
+    let pool = seeded_pool(&app).await;
+    let (level, _) = new_person(&app, top).await;
+    ticket(&app, &level, top, 10 * past_any_fallback(), "bo1").await;
+    assert_eq!(try_pair(&app).await.expect("a sweep"), 1);
+    let ids: Vec<&str> = pool.iter().map(String::as_str).collect();
+    assert_eq!(seated(&app, &ids).await, vec![pool[strongest].clone()]);
+}
+
 #[test]
 fn r1453_ladder_bots_takes_on_or_off() {
     let env_of = |value: Option<&str>| {
@@ -957,7 +994,7 @@ async fn r1451_the_bot_side_is_ai_and_the_human_side_counts() {
 }
 
 #[tokio::test]
-async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
+async fn r807000_public_stats_split_human_bot_and_merged_and_display_merged() {
     let app = app_with_bots(true).await;
     let patch = jackioh_cards::catalog_version().to_string();
     let seat = |deck: &[&str]| json!({ "deck": deck, "opening": [], "drawn": deck, "played": deck, "playedTurns": [1, 2] });
@@ -980,28 +1017,50 @@ async fn r1451_public_stats_skip_the_bot_side_and_the_gate_counts_the_game() {
     }));
     q!(app, game_records_insert(&record));
 
-    let (status, _, data) = call(&app, "GET", "/api/stats/cards", None, Value::Null).await;
-    assert_eq!(status, 200);
-    // The gate counts the game, the person's cards count it, the bot's do not.
-    assert_eq!(data["gate"]["liveGames"], json!(1));
-    let games_of = |id: &str| {
+    let games_of = |data: &Value, id: &str| {
         data["cards"]
             .as_array()
             .and_then(|cards| cards.iter().find(|card| card["id"] == id))
             .map_or(json!(0), |card| card["games"].clone())
     };
-    assert_eq!(games_of("core-001"), json!(1));
-    assert_eq!(games_of("core-003"), json!(0));
+    // The gate counts the game, and the display counts every counted seat, human and bot alike.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["gate"]["liveGames"], json!(1));
+    assert_eq!(data["pilot"], json!("merged"));
+    assert_eq!(games_of(&data, "core-001"), json!(1));
+    assert_eq!(games_of(&data, "core-003"), json!(1));
+
+    // `?pilot=human` reads the people's sides only.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards?pilot=human", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["pilot"], json!("human"));
+    assert_eq!(games_of(&data, "core-001"), json!(1));
+    assert_eq!(games_of(&data, "core-003"), json!(0));
+
+    // `?pilot=ai` reads the bots' sides only.
+    let (status, _, data) = call(&app, "GET", "/api/stats/cards?pilot=ai", None, Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(data["pilot"], json!("ai"));
+    assert_eq!(games_of(&data, "core-001"), json!(0));
+    assert_eq!(games_of(&data, "core-003"), json!(1));
 
     let (status, _, card) = call(&app, "GET", "/api/stats/cards/core-003", None, Value::Null).await;
     assert_eq!(status, 200);
+    assert!(card.to_string().contains("\"games\":1"), "{card}");
+    let (status, _, card) = call(
+        &app,
+        "GET",
+        "/api/stats/cards/core-003?pilot=human",
+        None,
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200);
     assert!(
         !card.to_string().contains("\"games\":1"),
-        "the bot's card drew a game: {card}"
+        "the bot's card drew a human-side game: {card}"
     );
-    let (status, _, card) = call(&app, "GET", "/api/stats/cards/core-001", None, Value::Null).await;
-    assert_eq!(status, 200);
-    assert!(card.to_string().contains("\"games\":1"), "{card}");
 }
 
 #[tokio::test(start_paused = true)]
@@ -1057,7 +1116,16 @@ async fn r1452_no_read_tells_a_bot_seat() {
     }
     for body in bodies {
         let text = body.to_string();
-        for tell in ["\"kind\"", "\"pilot", "srv-bot", "\"bot\"", "ladderBot"] {
+        // R807000: the stats reads name their merged split, which is the same whatever the seat
+        // is; a split value here would be the tell, so those stay banned.
+        for tell in [
+            "\"kind\"",
+            "\"pilot\":\"ai\"",
+            "\"pilot\":\"human\"",
+            "srv-bot",
+            "\"bot\"",
+            "ladderBot",
+        ] {
             assert!(!text.contains(tell), "{tell} in {text}");
         }
     }

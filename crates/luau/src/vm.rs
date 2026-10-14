@@ -35,7 +35,7 @@ pub const HOOKS: [&str; 30] = [
     "preview",
     "costAura",
     "graveyardPlay",
-    "faceDownPlay",
+    "revealEcho",
     "targetingDiscards",
     "drawLimit",
     "discardGuard",
@@ -138,6 +138,7 @@ thread_local! {
 impl Vm {
     fn new() -> Vm {
         let sandbox = new_sandbox().expect("the Luau sandbox builds");
+        crate::reads::register_types(&sandbox.lua).expect("the readers register");
         let chunks = sandbox.lua.create_table().expect("the chunk cache builds");
         Vm { chunks, sandbox }
     }
@@ -445,10 +446,7 @@ fn run(vm: &Vm, site: Site, bytecode: &[u8], ctx: &mut EffectContext<'_>) -> mlu
     let module = vm.module(site.card, bytecode)?;
     let face: Table = module.raw_get(site.face.key())?;
     let hook: Function = face.raw_get(site.hook)?;
-    vm.sandbox.lua.scope(|scope| {
-        let ctx = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
-        hook.call::<Value>(ctx)
-    })
+    crate::reads::scoped(&vm.sandbox.lua, ctx, |ctx| hook.call::<Value>(ctx))
 }
 
 /// Calls an `aura` hook on `args` and returns the aura entries it specifies.
@@ -480,8 +478,5 @@ fn run_aura(
     let module = vm.module(site.card, bytecode)?;
     let face: Table = module.raw_get(site.face.key())?;
     let hook: Function = face.raw_get(site.hook)?;
-    vm.sandbox.lua.scope(|scope| {
-        let ctx = scope.create_any_userdata(args, crate::reads::register_hook_args)?;
-        hook.call::<Value>(ctx)
-    })
+    crate::reads::scoped(&vm.sandbox.lua, args, |ctx| hook.call::<Value>(ctx))
 }

@@ -382,7 +382,9 @@ function Pile({
             : undefined
         }
       >
-        <span className="pile-label">{label}</span>
+        {/* WCAG 2.5.3 (#757): the shown words read "Deck 17", not "Deck17", so the name holds them;
+            a flex box draws no space between its items, so the layout is unchanged. */}
+        <span className="pile-label">{label}</span>{" "}
         <span className="pile-n" data-testid={testId}>
           {count}
         </span>

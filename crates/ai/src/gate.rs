@@ -77,8 +77,8 @@ pub struct AiGate {
     ///
     /// `gate:v3` is a re-roll of the deals, not tuning and not a lower floor: R635 (a card that casts
     /// on draw is set aside and shuffled in after the mulligan) re-dealt every game whose deck holds
-    /// one, and a gate on its floor goes red on any neutral reshuffle (reviews/2026-09-23-polish-part-b.md
-    /// B-3). If it fails with the AI untouched, look at the deals first.
+    /// one, and a gate on its floor goes red on any neutral reshuffle (the 2026-09-23 polish Part B review,
+    /// B-3, in git history since #832). If it fails with the AI untouched, look at the deals first.
     pub seed_series: &'static str,
     /// What `pnpm test` runs per matchup (seeds 1..20), under the same rule as the full run
     /// (`gate_needed`: 17, 10 and 16 wins). At four games no count could tell a working AI from a broken
@@ -204,7 +204,10 @@ fn opponent_controller(matchup: Matchup, budget: SearchBudget) -> SeatController
     match matchup {
         Matchup::AiVsRandom => SeatController::Random,
         Matchup::AiVsGreedy => SeatController::Greedy,
-        Matchup::HardVsEasy => SeatController::Ai { budget: Some(budget) },
+        Matchup::HardVsEasy => SeatController::Ai {
+            budget: Some(budget),
+            skill: None,
+        },
     }
 }
 
@@ -238,7 +241,10 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     let subject_deck = deck_for(subject_seat, &subject_handicap);
     let other_deck = deck_for(other_seat, &other_handicap);
 
-    let subject_controller = SeatController::Ai { budget: Some(budget) };
+    let subject_controller = SeatController::Ai {
+        budget: Some(budget),
+        skill: None,
+    };
     let subject_first = subject_seat == PlayerId::P1;
     let controllers = if subject_first {
         PerPlayer {

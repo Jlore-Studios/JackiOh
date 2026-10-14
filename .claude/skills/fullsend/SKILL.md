@@ -11,6 +11,7 @@ description: |
   careful steps. Do not use on production code or an existing repo without an
   isolated worktree.
 license: MIT
+disable-model-invocation: true
 metadata:
   version: "2.2.0"
 ---

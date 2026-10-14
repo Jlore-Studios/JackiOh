@@ -3,7 +3,7 @@
 //! Base:    "Transform a Unit into a Sheep Token."
 //! Radiant: "Transform a Unit and the Units next to it into Sheep Tokens."
 //! Engine: a declared target, any Unit on either side (R81), then `transform` of it into a Sheep Token
-//! (Core #41 Sheepish's verb): in place, no Cry (R691), an Immutable target left alone (R23). The Radiant
+//! (Core #41 Sheepish's verb): in place, no Cry (R691); an Immutable Unit in play is no target (R781001), and one beside the target is left alone (R23). The Radiant
 //! face first lists the Units next to the target, on the target's side and row (§3.1), and transforms
 //! each into a base Sheep, as Core #34 Collateral Damage reaches its neighbours before its target. The
 //! neighbours change whether or not the target does. A Spell's unlabelled one-time text is its Cry.
@@ -111,10 +111,12 @@ mod tests {
         }
 
         #[test]
-        fn r23_an_immutable_target_is_left_alone() {
+        fn r781001_an_immutable_unit_in_play_is_no_target() {
             let mut s = board(false, json!([]), json!([{ "def": ROCK, "radiant": true }]));
             let rock = s.card(ROCK).clone();
-            s.play(ID, at(&rock));
+            s.expect_refused(|s| s.play(ID, at(&rock)));
+            // With no other Unit it is played with no pick and fizzles (R90).
+            s.play(ID, json!({}));
             assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
             s.expect_in_zone(ID, "graveyard");
         }
@@ -161,13 +163,18 @@ mod tests {
         }
 
         #[test]
-        fn an_immutable_target_stays_and_its_neighbours_still_change() {
-            let theirs = json!([VANILLA, { "def": ROCK, "radiant": true }, VANILLA]);
+        fn r781001_r23_an_immutable_neighbour_is_reached_but_no_target_and_its_text_leaves_it_as_it_is() {
+            let theirs = json!([{ "def": ROCK, "radiant": true }, VANILLA, VANILLA]);
             let mut s = board(true, json!([]), theirs);
             let rock = s.card(ROCK).clone();
-            s.play(ID, at(&rock));
-            assert_eq!(s.unit(P2, 2).map(|unit| unit.id), Some(rock.id));
-            assert_base_sheep(&mut s, P2, 1);
+            s.expect_refused(|s| s.play(ID, at(&rock)));
+            // A neighbour is no target (R450), so Polymorph reaches the Rock beside its target, and
+            // Immutable's text half leaves it as it is (R23).
+            let middle = s.unit(P2, 2).map(|unit| unit.id).unwrap_or_default();
+            let middle = s.card(middle.as_str()).clone();
+            s.play(ID, at(&middle));
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(rock.id));
+            assert_base_sheep(&mut s, P2, 2);
             assert_base_sheep(&mut s, P2, 3);
         }
     }

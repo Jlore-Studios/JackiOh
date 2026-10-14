@@ -106,11 +106,11 @@ mod stats_cards_options {
     }
 
     #[test]
-    fn r378_r1451_reads_the_people_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
+    fn r378_r807000_reads_the_merged_seats_of_live_games_of_every_mode_and_patch_when_it_names_nothing() {
         let options = parse_card_stats_args(&args(&[])).expect("no arguments parse");
         assert_eq!(
             filter_json(&options),
-            json!({ "source": "live", "mode": null, "patch": null, "pilot": "human" })
+            json!({ "source": "live", "mode": null, "patch": null, "pilot": "unified" })
         );
         assert_eq!(options.card, None);
         assert!(!options.json);
@@ -138,6 +138,17 @@ mod stats_cards_options {
         assert_eq!(filter_json(&human)["pilot"], json!("human"));
         let dev = parse_card_stats_args(&args(&["--source=dev"])).expect("--source=dev parses");
         assert_eq!(filter_json(&dev)["source"], json!("dev"));
+    }
+
+    #[test]
+    fn r807000_counts_every_seat_merged_unless_a_pilot_is_named() {
+        for source in ["live", "dev", "all"] {
+            let flag = format!("--source={source}");
+            let options = parse_card_stats_args(&args(&[flag.as_str()])).expect("the source parses");
+            assert_eq!(filter_json(&options)["pilot"], json!("unified"), "{flag}");
+        }
+        let named = parse_card_stats_args(&args(&["--source=dev", "--pilot=ai"])).expect("both parse");
+        assert_eq!(filter_json(&named)["pilot"], json!("ai"));
     }
 
     fn refusal(argv: &[&str]) -> String {
@@ -238,6 +249,43 @@ mod stats_cards_report {
         );
     }
 
+    /// The cards a report has rows for, by id.
+    fn cards_of(report: &jackioh_engine::wire::CardStatsReport) -> Vec<&str> {
+        report.cards.iter().map(|stats| stats.card.as_str()).collect()
+    }
+
+    #[tokio::test]
+    async fn r807000_reads_a_live_game_merged_and_splits_its_sides_when_asked() {
+        // A live game as `api::game_records` files one against a ladder bot (tests/api/bots.rs):
+        // p1 a person holding core-001, p2 the bot holding core-002.
+        let db = Db::fake();
+        let record = game_record("live-bot", json!({ "pilots": { "p1": "human", "p2": "ai" } }));
+        let mut tx = db.begin(None).await.expect("a transaction");
+        tx.game_records_insert(&record)
+            .await
+            .expect("the record is written");
+        tx.commit().await.expect("the record commits");
+
+        let merged = card_stats_report(&db, &options(&[])).await.expect("a report");
+        assert_eq!((merged.games, merged.decks), (1, 2));
+        assert_eq!(cards_of(&merged), ["core-001", "core-002"]);
+        let people = card_stats_report(&db, &options(&["--pilot=human"]))
+            .await
+            .expect("a report");
+        assert_eq!((people.games, people.decks), (1, 1));
+        assert_eq!(cards_of(&people), ["core-001"]);
+        let bots = card_stats_report(&db, &options(&["--pilot=ai"]))
+            .await
+            .expect("a report");
+        assert_eq!((bots.games, bots.decks), (1, 1));
+        assert_eq!(cards_of(&bots), ["core-002"]);
+        // A development query reads no live game, whoever piloted it.
+        let dev = card_stats_report(&db, &options(&["--source=dev"]))
+            .await
+            .expect("a report");
+        assert_eq!(dev.games, 0);
+    }
+
     /// JS `line.split(/\s{2,}/)`: the line cut at every run of two or more whitespace characters.
     fn split_wide(line: &str) -> Vec<String> {
         let mut parts = Vec::new();
@@ -282,7 +330,9 @@ mod stats_cards_report {
 
         let names = |card: &str| (card == "core-001").then(|| "Big D Fender".to_owned());
         let text = render_card_stats(&report, &one, &names);
-        assert!(text.contains("Card win rates: live games, every mode, patch v0.2.5, human pilots."));
+        assert!(text.contains(
+            "Card win rates: live games, every mode, patch v0.2.5, human and AI pilots (unified)."
+        ));
         let row = text
             .split('\n')
             .find(|line| line.starts_with("core-001 Big D Fender"))

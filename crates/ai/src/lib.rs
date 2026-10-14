@@ -23,6 +23,7 @@ pub mod reply;
 pub mod search;
 pub mod shadow_ban;
 pub mod simulate;
+pub mod skill;
 pub mod sweep;
 pub mod types;
 
@@ -43,5 +44,6 @@ pub use reply::*;
 pub use search::*;
 pub use shadow_ban::*;
 pub use simulate::*;
+pub use skill::*;
 pub use sweep::*;
 pub use types::*;

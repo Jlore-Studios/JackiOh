@@ -34,9 +34,10 @@ mod tests {
 
     /// The keywords a token gained beyond its printed Rush: all from R21's pool, all different, never Rush.
     fn gained(s: &Scenario, token: &str) -> Vec<String> {
+        // Read off the card's grants, since an Indestructible one shows no Taunt (R347, R781004).
         let keys: Vec<String> = s
-            .stats(token)
-            .keywords
+            .card(token)
+            .granted_keywords
             .iter()
             .map(keyword_key)
             .filter(|key| key != "Rush")

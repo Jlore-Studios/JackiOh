@@ -12,7 +12,10 @@
 //! constant in `config.rs`; a name the client stops importing can leave it. `ROOM_CODE_FORMAT` joined
 //! them for the lobby's room links (R767), the four `USERNAME_*` hints for the username field
 //! (R1432, R1435), the three `WS_*` heartbeat numbers for the match client's wake probe and the
-//! tests that read them (R1441), and `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442).
+//! tests that read them (R1441), `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442),
+//! `MIN_ACCOUNT_AGE_YEARS`, `BIRTH_YEAR_EARLIEST` and `TERMS_VERSION` for the age screen, the terms
+//! box and the legal pages (R757000, R757001), and `REPLAY_LIST_PAGE` and
+//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768).
 
 use serde_json::{Value, json};
 
@@ -57,6 +60,7 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::AUTH_SESSION_RENEWAL_FLOOR_SECONDS),
         ),
         ("AUTH_SIGN_OUT_WAIT_SECONDS", json!(c::AUTH_SIGN_OUT_WAIT_SECONDS)),
+        ("BIRTH_YEAR_EARLIEST", json!(c::BIRTH_YEAR_EARLIEST)),
         (
             "CATALOG_NUMBER_SET_OFFSETS",
             json!({
@@ -123,6 +127,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("MATCH_FOUND_NAV_DELAY_MS", json!(c::MATCH_FOUND_NAV_DELAY_MS)),
         ("MAX_SAVED_DECKS", json!(c::MAX_SAVED_DECKS)),
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
+        ("MIN_ACCOUNT_AGE_YEARS", json!(c::MIN_ACCOUNT_AGE_YEARS)),
         ("MULLIGAN_CLOCK_MS", json!(c::MULLIGAN_CLOCK_MS)),
         (
             "PLAY_TELEMETRY_RETENTION_DAYS",
@@ -139,6 +144,8 @@ fn constants() -> Vec<(&'static str, Value)> {
             "REDEMPTION_RESPONSE_FLOOR_MS",
             json!(c::REDEMPTION_RESPONSE_FLOOR_MS),
         ),
+        ("REPLAY_LIST_PAGE", json!(c::REPLAY_LIST_PAGE)),
+        ("REPLAY_REQUESTS_PER_MINUTE", json!(c::REPLAY_REQUESTS_PER_MINUTE)),
         (
             "ROOM_CODE_FORMAT",
             json!({
@@ -154,6 +161,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SERIES_PICK_SECONDS", json!(c::SERIES_PICK_SECONDS)),
         ("SERIES_POLL_SECONDS", json!(c::SERIES_POLL_SECONDS)),
         ("SERIES_WINS_NEEDED", json!(c::SERIES_WINS_NEEDED)),
+        ("TERMS_VERSION", json!(c::TERMS_VERSION)),
         (
             "TRIO_CODE_CORE_ONLY_VERSION",
             json!(c::TRIO_CODE_CORE_ONLY_VERSION),
@@ -196,11 +204,13 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 59,
+        listed, 64,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
-         four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441) and the play \
-         telemetry's retention for the privacy policy (R1442), with RATING_WINDOW_FULL_AFTER_SECONDS in place \
-         of the uncapped window's RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
+         four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
+         telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
+         (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
+         RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
     );
 }
 

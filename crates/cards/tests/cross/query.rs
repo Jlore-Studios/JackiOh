@@ -895,9 +895,9 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         register();
         // The query a card script writes: `query::luck_based()`, which names no set (R1420). Since
         // the release (v0.3.5) it holds §8.8's Meditative #36 CN Peptides (Lucky 1 on its Radiant
-        // face), #65 Keymaster Keenus (Lucky 1 among its every keyword, on both faces) and #86 Mayor
-        // Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight, and #102 Catboy
-        // Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands.
+        // face) and #86 Mayor Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight,
+        // and #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65
+        // Keymaster Keenus printed Lucky 1 among its every keyword until patch v0.3.7 (R1084, R781004).
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
         let mut pool = strings(&[
             "core-004",
@@ -909,7 +909,6 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             "classicplus-065",
             "classicplus-066",
             "meditative-036",
-            "meditative-065",
             "meditative-086",
         ]);
         pool.extend(landed(&[CATBOY_MAID]));

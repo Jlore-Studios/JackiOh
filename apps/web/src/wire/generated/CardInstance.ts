@@ -108,6 +108,13 @@ berserk?: true,
  */
 timesPlayed?: number, 
 /**
+ * R783013: the card has used its Flashback, played from its graveyard by it, so it has no
+ * Flashback any more, printed or given (`layers`). Kept in every zone and through R78's and
+ * R766's resets, so the card is never offered from a graveyard by it again; a copy or a
+ * Transform is a new card without it. Only ever `Some(true)`.
+ */
+flashbackSpent?: true, 
+/**
  * ME-CN, R1300: the card is shown in Chinese (`effects::translate`). Presentation only: no rule
  * reads it. Kept in every zone and through R78's and R766's resets; a copy keeps it, a
  * Transform's new card is without it. Only ever `Some(true)`.
@@ -121,10 +128,10 @@ chinese?: true,
  */
 created?: true, 
 /**
- * ME-ALTPLAY, R1040, R1044: the card was played face-down into the backrow as a Trap (a Unit
- * under Knowledge Breaker's Aura, a Spell under Paranoia's) and has not finished revealing.
- * Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes it off
- * with the card leaving the field (R1045). Absent on every other card.
+ * R783004, R1040, R1044: the card was played face-down into the backrow as a Trap by its Cloaked
+ * (printed, or lent by an aura such as Knowledge Breaker's or Paranoia's) and has not finished
+ * revealing. Its controller's alone to read while it is face-down (R33, R1046); R78's reset takes
+ * it off with the card leaving the field (R1045). Absent on every other card.
  */
 setAs?: SetAs, 
 /**

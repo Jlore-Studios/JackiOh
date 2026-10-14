@@ -10,7 +10,7 @@ use crate::{LuauError, Site};
 
 /// `draw_while`'s arguments: the face function answering whether to draw again.
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[derive(ts_rs::TS)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawWhileArgs {
     pub hook: String,
@@ -29,8 +29,7 @@ pub fn build_draw_while(
     let more = std::sync::Arc::new(move |ctx: &mut jackioh_engine::script::EffectContext<'_>| -> bool {
         match crate::vm::with_vm(site, bytecode, |lua, face| {
             let func = crate::hooks::face_function(&face, name.as_str())?;
-            lua.scope(|scope| {
-                let ctx_ud = scope.create_any_userdata(ctx, crate::reads::register_ctx)?;
+            crate::reads::scoped(lua, ctx, |ctx_ud| {
                 let answered: mlua::Value = func.call(ctx_ud)?;
                 Ok(answered.as_boolean().unwrap_or(false))
             })

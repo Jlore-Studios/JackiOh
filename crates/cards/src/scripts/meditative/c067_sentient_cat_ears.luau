@@ -5,7 +5,7 @@ local J = require("@jackioh")
 local BOMB = "meditative-030-1"
 
 -- End of turn: `bombs` fresh Love Bombs into your deck (R80's cap turning a full library away).
--- Magnetic (R1086) is the engine's, off the printed keyword. Both faces share the one script: only
+-- Equip (R1086) is the engine's, off the printed keyword. Both faces share the one script: only
 -- the declared `bombs` differs (1, radiant 2).
 local base = {
 	endOfTurn = function(ctx: J.EffectContext)

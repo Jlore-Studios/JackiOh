@@ -174,7 +174,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
      {
         // On this seed Plastic Surgery's random keyword for the Fiender is Reborn (§6.1's pool, R21).
         let mut g = scenario(json!({
-            "seed": "r4-fiender-reborn-33", // R346's Pierce moved the roll off "-7", R49's Deft off "-8"
+            "seed": "r4-fiender-reborn-53", // R346's Pierce moved the roll off "-7", R49's Deft off "-8", R781005's pool off "-33"
             "active": "p2",
             "turn": 10,
             "p1": { "field": [{ "def": MOTHS, "lane": 1 }], "hand": [STOCKPILE], "library": LIBRARY },

@@ -1,12 +1,12 @@
 // The music director (SPEC §10.11, R631; musicPlan.ts) follows one board and only the viewer's own
-// screen (R203). It applies after the board settles and starts themes at readable cards' R204 moments.
-// A Mythic theme holds until hit, replacement or game end; Classic+ #74 starts on its first firing.
-// R1350's readable-card intro precedes its theme; R1351 stops it on result, hand-over, dynamic off or exit.
+// screen (R203). It applies after the board settles and switches stations at readable cards' R204
+// moments; a Trap counts at its first firing. No card plays a theme (R822000): a readable Legendary's
+// or Mythic's intro (R1350) is its music, and R1351 stops it on result, hand-over, dynamic off or exit.
 
 import type { GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 import { HERO_HEALTH } from "@jackioh/engine/config";
 
-import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION, MUSIC_MYTHIC_PLAYS } from "./constants.ts";
+import { HIDDEN_DEF_ID, MUSIC_LOW_HEALTH_FRACTION } from "./constants.ts";
 import type { MusicRequest } from "./music.ts";
 import { MUSIC_CARDS, MUSIC_MANIFEST, RESULT_TRACKS, dangerTrack, nextRotation, startTrack } from "./musicData.ts";
 import { chooseMusic, type MusicMoment } from "./musicPlan.ts";
@@ -46,8 +46,6 @@ export type MusicDirectorOptions = {
   subscribeSettings?: (listener: (s: AudioSettings) => void) => () => void;
   /** The rotation the match whose first view this is uses (default: `rotationFor`). */
   rotation?: (first: PlayerView) => number;
-  /** A timer, returning its cancel: a Mythic theme's end away from low health. */
-  later?: (ms: number, fn: () => void) => () => void;
 };
 
 /** The viewer's hero at or under this is at low health. */
@@ -66,11 +64,6 @@ export function rotationFor(first: PlayerView): number {
   const n = nextRotation();
   rotations.set(first, n);
   return n;
-}
-
-function defaultLater(ms: number, fn: () => void): () => void {
-  const id = setTimeout(fn, ms);
-  return () => clearTimeout(id);
 }
 
 /**
@@ -100,12 +93,6 @@ function arrivalOf(event: GameEvent, playedUnits: ReadonlySet<string>): string |
   return playedUnits.has(event.instanceId) ? null : event.defId;
 }
 
-function heroHit(event: GameEvent, viewer: PlayerId): boolean {
-  if (event.type === "damage") return event.amount > 0 && event.targetId === `hero-${viewer}`;
-  if (event.type === "healthLost") return event.amount > 0 && event.player === viewer;
-  return false;
-}
-
 export function createMusicDirector(options: MusicDirectorOptions): MusicDirector {
   const { sink } = options;
   const manifest = options.manifest ?? MUSIC_MANIFEST;
@@ -114,7 +101,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
   const rotationOf = options.rotation ?? rotationFor;
-  const later = options.later ?? defaultLater;
 
   let viewer: PlayerId | null = null;
   let latest: PlayerView | null = null;
@@ -128,8 +114,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   let lowHealth = false;
   let opponentTurn = false;
   let result: MusicMoment["result"] = null;
-  /** The Mythic theme holding the music; `spent` once it has played its MUSIC_MYTHIC_PLAYS times. */
-  let theme: { defId: string; track: string; spent: boolean; cancel: () => void } | null = null;
   let intro: string | null = null;
   let disposed = false;
 
@@ -139,24 +123,11 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
     return stations.get(viewer) ?? own;
   }
 
-  function endTheme(): void {
-    theme?.cancel();
-    theme = null;
-  }
-
   function push(): void {
     if (disposed || viewer === null) return;
     const dynamic = settings().dynamicMusic;
-    if (!dynamic) {
-      endTheme();
-      sink.stopIntro();
-    }
-    // A spent theme lets go as soon as the viewer is away from low health.
-    if (theme?.spent === true && !lowHealth) endTheme();
-    const choice = chooseMusic(
-      { station: station(), rotation, dynamic, result, theme: theme?.track ?? null, lowHealth, opponentTurn },
-      manifest,
-    );
+    if (!dynamic) sink.stopIntro();
+    const choice = chooseMusic({ station: station(), rotation, dynamic, result, lowHealth, opponentTurn }, manifest);
     sink.request({ track: choice.track, intro, opponentTurn: choice.opponentTurn });
     intro = null;
   }
@@ -167,10 +138,7 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
     const inPlay = view.phase === "start" || view.phase === "main" || view.phase === "end";
     opponentTurn = inPlay && view.active !== view.viewer;
     result = view.result === null ? null : view.result.winner === "draw" ? "draw" : view.result.winner === view.viewer ? "victory" : "defeat";
-    if (result !== null) {
-      endTheme();
-      sink.stopIntro();
-    }
+    if (result !== null) sink.stopIntro();
   }
 
   /** R1350: the intros of the cards in the viewer's own hand (every one readable), fetched ahead once each. */
@@ -184,21 +152,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       ids.push(id);
     }
     if (ids.length > 0) sink.preloadIntros(ids);
-  }
-
-  function startTheme(defId: string, track: string): void {
-    endTheme();
-    const entry = manifest.files[track];
-    const { loopStart, loopEnd } = entry ?? { loopStart: null, loopEnd: null };
-    // Its first pass runs to the loop's end; each further play is one more loop.
-    const seconds = loopStart === null || loopEnd === null ? 0 : loopEnd + (MUSIC_MYTHIC_PLAYS - 1) * (loopEnd - loopStart);
-    const mine = { defId, track, spent: false, cancel: () => {} };
-    mine.cancel = later(seconds * 1000, () => {
-      if (theme !== mine) return;
-      mine.spent = true;
-      push();
-    });
-    theme = mine;
   }
 
   const unsubscribe = subscribeSettings(() => push());
@@ -221,7 +174,6 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       }
       if (view.viewer !== viewer) {
         // A hotseat hand-over: the arriving seat's own music, at once, and nothing of the last seat's.
-        endTheme();
         sink.stopIntro();
         playedUnits.clear();
         read(view);
@@ -238,36 +190,23 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
 
     onEvent(event, view) {
       if (disposed || viewer === null || view.viewer !== viewer) return;
-      if (heroHit(event, viewer)) {
-        if (theme !== null) {
-          endTheme();
-          push();
-        }
-        return;
-      }
       const cast = castOf(event, lines, fired);
       if (cast !== null && event.type === "cardPlayed" && entryFor(lines, cast.defId)?.kind === "unit") playedUnits.add(event.instanceId);
       if (!settings().dynamicMusic) return;
-      // R1350: the card's intro first, so the theme it may start comes in under it.
+      // R1350: the card's intro first, so the station it may switch to comes in under it.
       const opens = cast?.defId ?? arrivalOf(event, playedUnits);
       const intro = opens === null ? undefined : cards[opens]?.intro;
       if (intro !== undefined) sink.playIntro(intro);
-      if (cast === null) return;
-      const entry = cards[cast.defId];
-      if (entry === undefined) return;
-      if (entry.station !== undefined) {
-        stations.set(cast.player, entry.station);
-        if (cast.player === viewer) sink.preload([dangerTrack(entry.station)]);
-      }
-      // The same Mythic again while its theme plays changes nothing.
-      if (entry.theme !== undefined && theme?.defId !== cast.defId) startTheme(cast.defId, entry.theme);
+      const switched = cast === null ? undefined : cards[cast.defId]?.station;
+      if (cast === null || switched === undefined) return;
+      stations.set(cast.player, switched);
+      if (cast.player === viewer) sink.preload([dangerTrack(switched)]);
       push();
     },
 
     dispose() {
       if (disposed) return;
       disposed = true;
-      endTheme();
       sink.stopIntro();
       unsubscribe();
     },

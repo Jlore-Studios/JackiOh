@@ -146,11 +146,11 @@ mod tests {
         }
 
         #[test]
-        fn r386_an_immutable_target_is_unchanged_with_no_draw() {
+        fn r781001_r386_an_immutable_unit_in_play_is_no_target_and_stays_unchanged() {
             crate::register_all();
             let mut s = scenario(json!({ "p1": { "hand": [BOOK, FILLER] }, "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }] } }));
             let menace = s.unit(P2, 1).expect("Midrange Menace");
-            s.play(BOOK, json!({ "targets": pick(&menace.id) }));
+            s.expect_refused(|s| s.play(BOOK, json!({ "targets": pick(&menace.id) })));
             assert!(upgrades(s.events()).is_empty());
             assert!(s.card(&menace.id).tuning.is_none());
             s.expect_stats(&menace.id, json!({ "attack": 18, "maxHealth": 18 }));

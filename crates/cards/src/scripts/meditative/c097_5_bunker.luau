@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- §8.8: "Tribute 2".
 local TRIBUTE_COST = 2

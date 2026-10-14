@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- "Echo +1", radiant "Echo +2": how many extra resolutions the next spell gets.
 local BASE_ECHO = 1

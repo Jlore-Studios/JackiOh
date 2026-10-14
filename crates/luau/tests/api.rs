@@ -1101,10 +1101,7 @@ fn gap8_generic_aura_entries() {
         (entries[0].applies)(me),
         "the data filter keeps the source's side"
     );
-    assert!(
-        !(entries[0].applies)(foe),
-        "the data filter turns the enemy away"
-    );
+    assert!(!(entries[0].applies)(foe), "the data filter turns the enemy away");
     assert_eq!(entries[1].mod_.max_health, Some(1));
     assert!((entries[1].applies)(me), "the predicate keeps the source");
     assert!(!(entries[1].applies)(foe), "the predicate turns lx-fx-002 away");

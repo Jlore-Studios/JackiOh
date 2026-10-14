@@ -114,8 +114,11 @@ class IdentityCases(unittest.TestCase):
         self.assertIn("`oneshot [notes]`", text)
         self.assertIn("`split [bot] [notes]`", text)
         self.assertIn("`fullsend [notes]`", text)
+        self.assertIn("hand it back, then `/squishy build`", text)  # #802: its own slash
         self.assertIn("`build`, `oneshot`, `split`, `fullsend` or `revise`", text)
         self.assertNotIn("`suggest`", text)
+        self.assertNotIn("`approve`", text)  # it makes no suggestions to vote on (#796)
+        self.assertIn("I do not know `approve`", commands.help_text(bot, "approve"))
         self.assertIn("`/squishy help`", commands.pointer(bot))
 
 

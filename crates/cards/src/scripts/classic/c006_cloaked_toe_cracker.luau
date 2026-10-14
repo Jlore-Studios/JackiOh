@@ -26,7 +26,8 @@ local after_you_play_a_trap = {
 		if event.player ~= ctx:controller() then
 			return {}
 		end
-		local played = ctx:def_of(event.defId).type
+		-- R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.
+		local played = ctx:card_type_of(event.instanceId) or ctx:def_of(event.defId).type
 		local is_trap = false
 		for _, kind in ipairs(TRAP_TYPES) do
 			if kind == played then

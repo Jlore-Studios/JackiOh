@@ -4,8 +4,9 @@
 //! The engine is pure and server-agnostic: it never reads a clock, opens a socket or touches
 //! Postgres. These functions are how the actor reaches it — `create_game` / `begin_game` / `reduce`
 //! to advance the match, `legal_actions` for the client's greying-out, `view_for` for the only thing
-//! a socket is allowed to carry (§10.8), and `fold` to rebuild a crashed actor from
-//! `(seed, decks, log)` (§9.5).
+//! a socket is allowed to carry (§10.8), `fold` to rebuild a crashed actor from
+//! `(seed, decks, log)` (§9.5), and `replay_open` / `replay_page` to serve a finished match's
+//! replay a seat's `view_for` at a time (R768, `api/replays.rs`).
 //!
 //! `EngineState` holds both hands and both libraries, so nothing outside the actor inspects it.
 //! Everything the rest of the server needs about the state comes back through `view_for` (per
@@ -39,7 +40,8 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    Phase, PlayerId, PlayerView, Rng, SetName, newest_shipped_set,
+    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng, SetName,
+    newest_shipped_set,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -156,6 +158,24 @@ pub fn hash_state(state: &EngineState) -> String {
     jackioh_engine::hash_state(state)
 }
 
+/// R768: a finished match's log folded once, checked against this build's catalog version and the
+/// match's recorded hash. Panics, as `fold` does, on a setup `create_game` refuses.
+pub fn replay_open(args: &FoldArgs, record: &ReplayRecord) -> ReplayOpen {
+    registered();
+    jackioh_engine::replay_open(args, record, jackioh_cards::catalog_version())
+}
+
+/// R768: steps `[from, from + count)` of an opened replay, each `view_for(state_k, seat)`.
+pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
+    registered();
+    jackioh_engine::replay_page(checkpoints, seat, from, count)
+}
+
+/// R677: the seat the account that began the match in `home` plays in `state`.
+pub fn seat_played_by(state: &EngineState, home: PlayerId) -> PlayerId {
+    jackioh_engine::seat_played_by(state, home)
+}
+
 /// TS `snapshot`: the public bookkeeping, read off the state's own fields and the engine's own
 /// answers to the two questions that are not a field.
 pub fn snapshot(state: &EngineState) -> MatchSnapshot {
@@ -181,6 +201,13 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// (R1370); `None` deals the deck R258 always dealt for that seed. A player's deck is dealt from every
 /// set, the AI's soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
+    deal_random_deck_with_strength(seed, lean, 0.0)
+}
+
+/// #750 (R1454): `deal_random_deck` leaning on the cards that win, as far as `strength` (0 to 1) says
+/// (`AiDeckOptions::strength`): how the bot pool deals a ladder bot's random decks. At 0.0 it is
+/// `deal_random_deck`'s deal exactly, which is what every player's deal stays.
+pub fn deal_random_deck_with_strength(seed: &str, lean: Option<SetName>, strength: f64) -> Vec<String> {
     registered();
     // R258: `banned: []` is practice's "random deck for a human" (no shadow-ban: R186's list shapes
     // the AI's own decks, not a player's), and `DECK_SIZE` is the size L2 asks of every deck.
@@ -191,6 +218,7 @@ pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
             banned: Some(vec![]),
             lean_set: lean,
             gated_sets: Some(vec![]),
+            strength: Some(strength),
             ..AiDeckOptions::default()
         },
     )
@@ -199,6 +227,16 @@ pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
 /// R641000: `deal_random_deck`'s deal with no lean and none of `excluded`'s cards in it: how the bot
 /// pool deals a ladder bot's trio a deck that shares no card with the decks it holds already (R253).
 pub fn deal_random_deck_excluding(seed: &str, excluded: &[String]) -> Vec<String> {
+    deal_random_deck_excluding_with_strength(seed, excluded, 0.0)
+}
+
+/// #750: `deal_random_deck_excluding` leaning on the cards that win, as `deal_random_deck_with_strength`
+/// does: a ladder bot's trio decks.
+pub fn deal_random_deck_excluding_with_strength(
+    seed: &str,
+    excluded: &[String],
+    strength: f64,
+) -> Vec<String> {
     registered();
     build_ai_deck(
         &mut Rng::new(seed, 0),
@@ -207,6 +245,7 @@ pub fn deal_random_deck_excluding(seed: &str, excluded: &[String]) -> Vec<String
             banned: Some(excluded.to_vec()),
             lean_set: None,
             gated_sets: Some(vec![]),
+            strength: Some(strength),
             ..AiDeckOptions::default()
         },
     )

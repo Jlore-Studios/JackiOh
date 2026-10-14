@@ -78,6 +78,12 @@ macro_rules! verbs {
             message: "aura is an aura verb, not an effect verb".to_string(),
         })
     };
+    (@build $call:ident, $site:ident, $bytecode:ident, cloak_hand_aura, $arg:ty) => {
+        Err($crate::LuauError::Hook {
+            site: $site,
+            message: "cloak_hand_aura is an aura verb, not an effect verb".to_string(),
+        })
+    };
     (@build $call:ident, $site:ident, $bytecode:ident, $name:ident, $arg:ty) => {{
         let _ = $bytecode;
         $crate::api::typed::<$arg>($call, $site).map(jackioh_engine::effects::$name)
@@ -227,6 +233,7 @@ pub fn module(lua: &Lua) -> mlua::Result<Table> {
     module.raw_set("div", integer_function(lua, "div", numbers::div)?)?;
     module.raw_set("rem", integer_function(lua, "rem", numbers::rem)?)?;
     module.raw_set("sort_by", lua.create_function(sort_by)?)?;
+    module.raw_set("list", lua.create_function(list)?)?;
     module.raw_set("query", lua.create_function(query_catalog)?)?;
     module.raw_set("pool", lua.create_function(pool_catalog)?)?;
     module.raw_set("cost", lua.create_function(cost_catalog)?)?;
@@ -257,6 +264,14 @@ fn integer_function(lua: &Lua, name: &'static str, f: fn(i32, i32) -> Option<i32
         let (a, b) = (arg::<i32>(a)?, arg::<i32>(b)?);
         f(a, b).ok_or_else(|| Error::runtime(format!("J.{name}({a}, {b}) has no i32 answer")))
     })
+}
+
+/// `J.list(t)`: `t`, marked as a list with mlua's array metatable, so that empty it crosses as `[]`
+/// rather than `{}` where the Rust value is untyped (a prompt's or a memory's `data`), as an empty
+/// sequence mlua serialized from Rust does (`numbers::walk_table`).
+fn list(lua: &Lua, table: Table) -> mlua::Result<Table> {
+    table.set_metatable(Some(lua.array_metatable()))?;
+    Ok(table)
 }
 
 /// `J.sort_by(array, key_fn)`: a stable sort done in Rust (L7).
@@ -424,6 +439,14 @@ pub fn aura_entries<'a>(
                         message: format!("aura: {err}"),
                     })?;
                 entries.push(generic_aura_entry(site, bytecode, args, aura)?);
+            }
+            "cloak_hand_aura" => {
+                let cloak: crate::api::aura::CloakHandAuraArgs = serde_json::from_value(call.args.clone())
+                    .map_err(|err| LuauError::Hook {
+                        site,
+                        message: format!("cloak_hand_aura: {err}"),
+                    })?;
+                entries.extend(jackioh_engine::alt_play::cloak_hand_aura(cloak.type_)(args));
             }
             verb => {
                 return Err(LuauError::Hook {

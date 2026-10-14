@@ -11,7 +11,8 @@
 // Every response shape below is the one `crates/server/src/api/*.rs` actually returns; every error
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
-import type { CardDefs, GameOverReason } from "@jackioh/shared";
+import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
+import type { CardDefs, GameOverReason, PlayerId, PortraitId } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -193,6 +194,13 @@ export type MeResponse = {
    * activation is still owed. Optional because a server from before R1435 (or a test stub) omits it.
    */
   username?: OwnUsername;
+  /**
+   * R757000: a pending account that has not answered the age screen. Optional because a server from
+   * before R757000 (or a test stub) omits it; missing means nothing is owed.
+   */
+  ageCheckOwed?: boolean;
+  /** R757001: the account has not agreed to the terms in force (`TERMS_VERSION`). Missing: not owed. */
+  termsOwed?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
@@ -281,6 +289,23 @@ export function usernamePreviewOf(error: unknown): UsernamePreview | null {
   if (typeof reason !== "string" || typeof message !== "string") return null;
   if (reason === "cooldown" && typeof (details as { nextChangeAt?: unknown }).nextChangeAt !== "number") return null;
   return details as UsernamePreview;
+}
+
+/**
+ * `POST /api/account/consent` (R757000, R757001): agreement to `termsVersion` and, while the age
+ * check is owed, the month and year of birth, which the server counts and does not keep. Refusals:
+ * 403 `under_age` (the account is deleted), 409 `update_required` (the terms changed since this
+ * client loaded), 400 `bad_request` (the birth is missing or cannot be right).
+ */
+export function postConsent(
+  token: string,
+  body: { termsVersion: string; birthYear?: number; birthMonth?: number },
+): Promise<{ ageCheckOwed: boolean; termsOwed: boolean }> {
+  return apiRequest<{ ageCheckOwed: boolean; termsOwed: boolean }>("/api/account/consent", {
+    method: "POST",
+    token,
+    body,
+  });
 }
 
 /**
@@ -774,6 +799,47 @@ export function getMatchRanks(token: string, matchId: string): Promise<MatchRank
 }
 
 // ---------------------------------------------------------------------------------------------
+// Online replays (SPEC §9.3, R768, #510): the shapes of `crates/server/src/api/replays.rs`. A step is
+// the view the caller's seat held; no seed, log, state or deck crosses (CLAUDE.md rule 7).
+// ---------------------------------------------------------------------------------------------
+
+/** One finished match in `GET /api/replays`; `unavailable` is part 1's reason this build cannot show it. */
+export type OnlineReplayListing = {
+  matchId: string;
+  /** Null for a match nothing records the mode of. */
+  mode: QueueMode | null;
+  endedAt: number;
+  /** The seat the caller began in, whose view is step 0. */
+  seat: PlayerId;
+  result: "win" | "loss" | "draw";
+  turns: number;
+  /** Step 0 and one per logged action. */
+  steps: number;
+  portraits: { p1: PortraitId; p2: PortraitId };
+  /** Both empty for a seat a deleted account left. */
+  opponent: { profileId: string; username: string };
+  unavailable?: ReplayRefusal;
+};
+
+/** `GET /api/replays`: one page, newest first, and where the next starts (null on the last). */
+export type OnlineReplayList = { replays: OnlineReplayListing[]; nextOffset: number | null };
+
+/** `GET /api/replays/:matchId`: steps `[from, from + steps.length)` of `total`. */
+export type OnlineReplaySteps = { matchId: string; from: number; steps: ReplayStep[]; total: number };
+
+export function getReplays(token: string, offset = 0): Promise<OnlineReplayList> {
+  return apiRequest<OnlineReplayList>(`/api/replays?offset=${String(offset)}`, { token });
+}
+
+/** A page of a replay: 410 `gone` once its log is purged, 422 `replay_unavailable` (with `details.reason`) when this build cannot show it. */
+export function getReplaySteps(token: string, matchId: string, from: number, count: number): Promise<OnlineReplaySteps> {
+  return apiRequest<OnlineReplaySteps>(
+    `/api/replays/${encodeURIComponent(matchId)}?from=${String(from)}&count=${String(count)}`,
+    { token },
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
 // Rematch offers after a finished non-series match (SPEC §9.5, R672). Only offer stakes,
 // presence booleans and ids cross here — never decks, hands or ratings (CLAUDE.md rule 7).
 // ---------------------------------------------------------------------------------------------
@@ -870,6 +936,8 @@ export type PublicStatsCardsResponse = {
   };
   source: "provisional" | "live" | "dev";
   sourceLabel: string;
+  pilot: "merged" | "human" | "ai";
+  pilotLabel: string;
   minSample: number;
   totalGames: number;
   cards: PublicCardStat[];
@@ -878,6 +946,7 @@ export type PublicStatsCardsResponse = {
     liveGames: number;
     activePatch: string;
     source: "provisional" | "live" | "dev";
+    pilot: "merged" | "human" | "ai";
     bestCard: { id: string; name: string; winRate: number; games: number } | null;
     worstCard: { id: string; name: string; winRate: number; games: number } | null;
   };
@@ -897,6 +966,7 @@ export type CardDrillDownResponse = {
 
 export type CardStatsOptions = {
   source?: string;
+  pilot?: string;
   patch?: string;
   set?: string;
   rarity?: string;
@@ -908,6 +978,7 @@ export type CardStatsOptions = {
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
+  if (options.pilot) params.set("pilot", options.pilot);
   if (options.patch) params.set("patch", options.patch);
   if (options.set) params.set("set", options.set);
   if (options.rarity) params.set("rarity", options.rarity);

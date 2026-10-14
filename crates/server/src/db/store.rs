@@ -61,6 +61,12 @@ pub enum StoreError {
     /// `results_pkey`. The field is the match id.
     #[error("result for match {0} is already recorded")]
     Duplicate(String),
+    /// R776000: `matches.appendActions` was handed a seq the log already holds under another nonce, or
+    /// a nonce it already holds at another seq, so the log has moved past the actor that wrote it (a
+    /// write that committed and whose answer was lost, or a second writer). A nonce at its own seq is
+    /// no clash: the log answers it with that row. The field is the message.
+    #[error("{0}")]
+    SeqClash(String),
     /// The driver's own failure: a lost connection, a constraint, a function's `raise`.
     #[error(transparent)]
     Db(#[from] sqlx::Error),
@@ -563,6 +569,43 @@ pub struct MatchRow {
     /// portraits existed; both seats then read as `vanilla`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub portraits: Option<(PortraitId, PortraitId)>,
+    /// R768: `hash_state` of the final state, written with the result (`matches_record_final_hash`,
+    /// migration 0035) and never by `matches_create`. Absent on a match that ended before it, on one
+    /// the reaper resolved (R112) and on one not over yet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub final_hash: Option<String>,
+}
+
+store_union! {
+    /// R768: where a match stands, whatever its row's status: `open` while a claimed room or a queue
+    /// pair holds its id and no actor plays it yet, `live` while one does, `over` once it ended.
+    pub enum MatchPhase {
+        Open = "open",
+        Live = "live",
+        Over = "over",
+    }
+}
+
+/// R768: a match's phase and who holds a seat in it, an `open` one included (`matches_get` reads
+/// only live and finished matches).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MatchSeats {
+    pub phase: MatchPhase,
+    /// The profiles seated so far, seat order; a seat not filled yet and a deleted account's are
+    /// left out.
+    pub players: Vec<String>,
+}
+
+/// R768: a finished match with a result, as its replay reads it: the row, the result and how many
+/// actions its log still holds (none once the retention purge has taken it).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayRow {
+    #[serde(rename = "match")]
+    pub row: MatchRow,
+    pub result: ResultRow,
+    pub actions: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -1072,6 +1115,42 @@ pub struct PlayerStatsRow {
     pub updated_at: i64,
 }
 
+// Consent on the account (SPEC §9.4, R757000, R757001, migration 0034).
+
+store_union! {
+    /// R757001: how an account came to agree to a version of the terms.
+    pub enum TermsSource {
+        /// While setting up the account: the sign-up box, or the consent screen of a pending one.
+        Signup = "signup",
+        /// Again, after the terms changed.
+        Reaccept = "reaccept",
+        /// Migration 0034's row for an account that existed before the box did.
+        Baseline = "baseline",
+    }
+}
+
+/// One version of the terms an account agreed to (`public.terms_acceptances`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct TermsAcceptanceRow {
+    pub version: String,
+    pub source: TermsSource,
+    pub accepted_at: i64,
+}
+
+/// What an account has agreed to: its age check (R757000) and every version of the terms
+/// (R757001), oldest first. Never a birth date: none is stored.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsentRow {
+    pub profile_id: String,
+    /// When the age check passed, or `None` when the account never answered it.
+    pub age_checked_at: Option<i64>,
+    /// The minimum age it was checked against, beside `age_checked_at`.
+    pub age_min: Option<i32>,
+    pub terms: Vec<TermsAcceptanceRow>,
+}
+
 /// One of `PublicPlayerSummary.favourite_cards`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1457,8 +1536,8 @@ impl Tx<'_> {
     }
 
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
-    /// trios, tutorial progress, queue tickets, rooms it opened that nobody joined, and its
-    /// invite-code attempts' link to it. Finished matches, results and series stay for the other
+    /// trios, tutorial progress, its age check and terms acceptances (R757000, R757001), queue
+    /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
     /// player, with this profile's seat left empty (migration 0012). False when there was no such
     /// profile. The caller refuses a profile in a live match or series first.
     pub async fn profiles_remove(&mut self, profile_id: &str) -> StoreResult<bool> {
@@ -1661,6 +1740,37 @@ impl Tx<'_> {
     /// went.
     pub async fn matches_reap_open(&mut self, before: i64) -> StoreResult<u64> {
         dispatch!(self, matches_reap_open(before))
+    }
+
+    /// R768: the final state's hash, written with the result and only once: a no-op on a match
+    /// that has one already, and on an unknown id.
+    pub async fn matches_record_final_hash(&mut self, match_id: &str, final_hash: &str) -> StoreResult<()> {
+        dispatch!(self, matches_record_final_hash(match_id, final_hash))
+    }
+
+    /// R768: the match's phase and its seated profiles, in every status, an `open` reservation
+    /// included; `None` for an id no match, room or queue pair holds.
+    pub async fn matches_seats(&mut self, match_id: &str) -> StoreResult<Option<MatchSeats>> {
+        dispatch!(self, matches_seats(match_id))
+    }
+
+    // replays (R768)
+
+    /// The finished matches `profile_id` held a seat in that have a result and a log the retention
+    /// purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
+    /// `offset`.
+    pub async fn replays_list(
+        &mut self,
+        profile_id: &str,
+        limit: i64,
+        offset: i64,
+    ) -> StoreResult<Vec<ReplayRow>> {
+        dispatch!(self, replays_list(profile_id, limit, offset))
+    }
+
+    /// One finished match with a result, whatever is left of its log; `None` for any other id.
+    pub async fn replays_get(&mut self, match_id: &str) -> StoreResult<Option<ReplayRow>> {
+        dispatch!(self, replays_get(match_id))
     }
 
     // rooms
@@ -1996,6 +2106,12 @@ impl Tx<'_> {
         dispatch!(self, ranked_game(id))
     }
 
+    /// R748000: every rated game with a bot side that ended at or after `since` (epoch ms), oldest
+    /// first, ties on id.
+    pub async fn ranked_bot_games_since(&mut self, since: i64) -> StoreResult<Vec<RatedGameRow>> {
+        dispatch!(self, ranked_bot_games_since(since))
+    }
+
     // tutorial (R320: tutorial progress kept on the account)
 
     /// The profile's row, or `None` before its first write.
@@ -2099,6 +2215,31 @@ impl Tx<'_> {
         options: &PlayerStatsListOptions,
     ) -> StoreResult<Vec<PublicPlayerSummary>> {
         dispatch!(self, player_stats_list_public(options))
+    }
+
+    // consent (R757000, R757001: the age check and the terms agreed to, migration 0034)
+
+    /// The account's age check and terms acceptances; a row with neither when nothing is stored.
+    pub async fn consent_get(&mut self, profile_id: &str) -> StoreResult<ConsentRow> {
+        dispatch!(self, consent_get(profile_id))
+    }
+
+    /// R757000: records that the account passed the age check against `min_age`. The first record
+    /// stands: a second call changes nothing.
+    pub async fn consent_record_age(&mut self, profile_id: &str, min_age: i32, at: i64) -> StoreResult<()> {
+        dispatch!(self, consent_record_age(profile_id, min_age, at))
+    }
+
+    /// R757001: records that the account agreed to `version`. Each version is recorded once; a
+    /// second call for it changes nothing.
+    pub async fn consent_record_terms(
+        &mut self,
+        profile_id: &str,
+        version: &str,
+        source: TermsSource,
+        at: i64,
+    ) -> StoreResult<()> {
+        dispatch!(self, consent_record_terms(profile_id, version, source, at))
     }
 
     // playTelemetry (R1442: how each seat played a match, migration 0029)

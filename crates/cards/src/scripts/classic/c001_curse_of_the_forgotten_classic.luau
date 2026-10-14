@@ -66,7 +66,8 @@ local radiant = {
 		effects[#effects + 1] = J.recruit({ from = "exile", whose = "enemy" })
 		-- Only a Unit of the recruited definition attacks, not one a card cast on the draw summoned (C+ #26).
 		if recruited ~= nil and ctx:def_of(recruited.defId).type == "Unit" then
-			local target: J.ForcedTarget = { spec = { of = "enemyHero" } }
+			local enemy_hero: J.TargetSpec = { of = "enemyHero" }
+			local target: J.ForcedTarget = { spec = enemy_hero }
 			effects[#effects + 1] = J.forced_attacks({
 				attackers = { side = "self", defId = recruited.defId, summonedThisScript = true },
 				target = target,

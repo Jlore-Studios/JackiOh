@@ -63,7 +63,7 @@ use crate::wire::{
     has_keyword,
 };
 
-use super::buff::random_pool_keywords;
+use super::buff::candidates_beside;
 use super::card_scope::{CardScope, CardScopeOptions, cards_in_card_scope, unreadable_by};
 use super::targets::{TargetSpec, instance_on_its_stay, resolve_target};
 use crate::damage::DamageTarget;
@@ -287,11 +287,9 @@ fn keyword_row(
     if card_type_of(state, card) != CardType::Unit || card.vanilla {
         return None;
     }
+    // R21, R781004: a keyword it lacks from the combat keyword pool, never Taunt beside Indestructible.
     let held = keywords_now(state, card);
-    let candidates: Vec<Keyword> = random_pool_keywords()
-        .into_iter()
-        .filter(|keyword| !has_keyword(&held, keyword.kind()))
-        .collect();
+    let candidates: Vec<Keyword> = candidates_beside(&held);
     if candidates.is_empty() {
         return None;
     }

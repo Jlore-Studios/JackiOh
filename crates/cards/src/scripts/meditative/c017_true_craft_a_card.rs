@@ -363,7 +363,7 @@ mod tests {
                     zone: None,
                     x: None,
                     embiggen: None,
-                    magnetic: None,
+                    equip: None,
                     tributes: None,
                     targets: None,
                     modes: None,

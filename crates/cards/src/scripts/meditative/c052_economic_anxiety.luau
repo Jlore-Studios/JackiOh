@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- No bonus: what the hook answers when the attack does not qualify.
 local NONE = { attack = 0, poisonous = false }

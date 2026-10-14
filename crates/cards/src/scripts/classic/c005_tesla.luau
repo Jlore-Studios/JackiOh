@@ -40,11 +40,17 @@ local zap = {
 		if target == nil then
 			return {}
 		end
-		local hit: J.TargetSpec = { of = "instance", instanceId = target }
-		return {
-			J.damage({ to = hit, amount = ctx:param("damage") }),
-			J.animate({ position = "DEF" }),
-		}
+		-- R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
+		-- animates but deals it nothing.
+		local me = ctx:live_self()
+		local shielded = me ~= nil and ctx:immutable_bars(me.id, target)
+		local effects: { J.EffectCall } = {}
+		if not shielded then
+			local hit: J.TargetSpec = { of = "instance", instanceId = target }
+			effects[#effects + 1] = J.damage({ to = hit, amount = ctx:param("damage") })
+		end
+		effects[#effects + 1] = J.animate({ position = "DEF" })
+		return effects
 	end,
 }
 

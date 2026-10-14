@@ -116,6 +116,25 @@ mod tests {
             }
 
             #[test]
+            fn r1200_r781001_the_drawn_target_is_never_an_immutable_unit_a_spell_cannot_target() {
+                crate::register_all();
+                for n in 0..8 {
+                    let mut s = scenario(json!({
+                        "seed": format!("mayor-immutable-{n}"),
+                        "p1": { "hand": ["core-016", FILLER], "field": [MAYOR], "mana": 10 },
+                        "p2": { "hand": [FILLER], "field": [{ "def": "core-019", "radiant": true }] },
+                    }));
+                    let menace = s.card("core-019").id.clone();
+                    let mayor = s.card(MAYOR).id.clone();
+                    // Hit Job's target is drawn from the legal ones (R1200), and a Spell can't target the
+                    // Radiant Midrange Menace in play (R781001): only the Mayor is left to draw.
+                    s.play("core-016", json!({}));
+                    s.expect_in_zone(&menace, "field");
+                    s.expect_in_zone(&mayor, "graveyard");
+                }
+            }
+
+            #[test]
             fn r1200_choices_return_once_the_mayor_leaves() {
                 crate::register_all();
                 let mut s = scenario(json!({

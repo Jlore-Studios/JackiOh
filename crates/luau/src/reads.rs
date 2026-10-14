@@ -5,7 +5,11 @@
 //! maps/hash tables.
 
 use jackioh_engine::prelude::*;
-use mlua::{Error, Lua, LuaSerdeExt, Table, UserDataMethods, UserDataRegistry, Value};
+use jackioh_engine::script::{AttackModArgs, ReplacementContext, TargetCheckArgs};
+use mlua::{
+    AnyUserData, Error, FromLuaMulti, IntoLuaMulti, Lua, LuaSerdeExt, Table, UserDataMethods,
+    UserDataRegistry, Value,
+};
 
 use crate::numbers::arg;
 
@@ -22,7 +26,8 @@ fn to_lua<T: serde::Serialize + ?Sized>(lua: &Lua, val: &T) -> mlua::Result<Valu
 }
 
 /// The turn as a script reads it (#464 gap 4): the turn number and the active player.
-#[derive(serde::Serialize, Clone, Copy, Debug, ts_rs::TS)]
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub struct TurnView {
     pub number: i32,
@@ -35,8 +40,114 @@ fn from_lua<T: serde::de::DeserializeOwned>(val: Value) -> mlua::Result<T> {
     arg(val)
 }
 
+/// A hook call's context behind a userdata whose readers are registered once per VM
+/// (`register_types`). mlua builds a fresh metatable, one closure per reader, for every scoped
+/// userdata of a non-`'static` type, which cost a hook call more than the hook itself did (a
+/// data-only aura took about 110 µs a call, #462's notes), so the context crosses erased to
+/// `'static` behind this pointer instead, for the one call `scoped` lends it to.
+pub(crate) struct Live<T: 'static>(*mut T);
+
+impl<T: 'static> Live<T> {
+    fn get(&mut self) -> &mut T {
+        // SAFETY: `scoped` builds a `Live` from a `&mut` borrow it holds across one `Lua::scope`,
+        // and Luau reaches it only through that scope's userdata, which mlua invalidates as the
+        // scope ends. Every reader borrows the userdata exclusively (`Readers` registers each with
+        // `add_method_mut`), so no other reference to `*self.0` exists while one runs, and the
+        // erased lifetime never leaves a reader: each answers with values Luau owns.
+        unsafe { &mut *self.0 }
+    }
+}
+
+/// The readers of one kind of context, written as against mlua's own registry for it (`&T` to
+/// `add_method`, `&mut T` to `add_method_mut`) and registered over the erased `Live<T>`.
+pub struct Readers<'r, T: 'static>(&'r mut UserDataRegistry<Live<T>>);
+
+impl<T: 'static> Readers<'_, T> {
+    pub fn add_method<M, A, R>(&mut self, name: &str, method: M)
+    where
+        M: Fn(&Lua, &T, A) -> mlua::Result<R> + 'static,
+        A: FromLuaMulti,
+        R: IntoLuaMulti,
+    {
+        self.0
+            .add_method_mut(name, move |lua, live, args| method(lua, live.get(), args));
+    }
+
+    pub fn add_method_mut<M, A, R>(&mut self, name: &str, mut method: M)
+    where
+        M: FnMut(&Lua, &mut T, A) -> mlua::Result<R> + 'static,
+        A: FromLuaMulti,
+        R: IntoLuaMulti,
+    {
+        self.0
+            .add_method_mut(name, move |lua, live, args| method(lua, live.get(), args));
+    }
+}
+
+/// A context a hook hands Luau, and the `'static` form its readers are registered for.
+pub(crate) trait HookCtx {
+    type Static: 'static;
+}
+
+impl HookCtx for &mut EffectContext<'_> {
+    type Static = &'static mut EffectContext<'static>;
+}
+
+macro_rules! hook_ctx {
+    ($($ctx:ident),* $(,)?) => {
+        $(impl HookCtx for $ctx<'_> {
+            type Static = $ctx<'static>;
+        })*
+    };
+}
+
+hook_ctx!(
+    HookArgs,
+    ConditionContext,
+    CostArgs,
+    WouldCounterArgs,
+    TargetCheckArgs,
+    AttackModArgs,
+    ReplacementContext,
+);
+
+/// Runs `f` with `ctx` as the userdata Luau reads it through, for this call alone.
+pub(crate) fn scoped<C: HookCtx, R>(
+    lua: &Lua,
+    mut ctx: C,
+    f: impl FnOnce(AnyUserData) -> mlua::Result<R>,
+) -> mlua::Result<R> {
+    let mut live = Live(std::ptr::from_mut(&mut ctx).cast::<C::Static>());
+    lua.scope(|scope| f(scope.create_any_userdata_ref_mut(&mut live)?))
+}
+
+/// Registers every context's readers on a VM's `lua`, once, as it is built.
+pub(crate) fn register_types(lua: &Lua) -> mlua::Result<()> {
+    lua.register_userdata_type::<Live<&'static mut EffectContext<'static>>>(|r| {
+        register_ctx(&mut Readers(r))
+    })?;
+    lua.register_userdata_type::<Live<HookArgs<'static>>>(|r| register_hook_args(&mut Readers(r)))?;
+    lua.register_userdata_type::<Live<ConditionContext<'static>>>(|r| {
+        register_condition_ctx(&mut Readers(r))
+    })?;
+    lua.register_userdata_type::<Live<CostArgs<'static>>>(|r| register_cost_args(&mut Readers(r)))?;
+    lua.register_userdata_type::<Live<WouldCounterArgs<'static>>>(|r| {
+        register_would_counter_args(&mut Readers(r))
+    })?;
+    lua.register_userdata_type::<Live<TargetCheckArgs<'static>>>(|r| {
+        register_target_check_args(&mut Readers(r))
+    })?;
+    lua.register_userdata_type::<Live<AttackModArgs<'static>>>(|r| {
+        register_attack_mod_args(&mut Readers(r))
+    })?;
+    lua.register_userdata_type::<Live<ReplacementContext<'static>>>(|r| {
+        register_replacement_ctx(&mut Readers(r))
+    })?;
+    Ok(())
+}
+
 /// Registers all read methods on `&mut EffectContext<'_>`.
-pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
+pub fn register_ctx(registry: &mut Readers<'_, &'static mut EffectContext<'static>>) {
     // ---- Context properties ----
     registry.add_method("controller", |lua, ctx, ()| to_lua(lua, &ctx.controller));
     registry.add_method("radiant", |_, ctx, ()| Ok(ctx.radiant));
@@ -605,6 +716,16 @@ pub fn register_ctx(registry: &mut UserDataRegistry<&mut EffectContext<'_>>) {
             Ok(false)
         }
     });
+    // R781001: whether `source` (an instance id, or nil for no source) may not target `id`.
+    registry.add_method(
+        "immutable_bars",
+        |_, ctx, (source, id): (Option<String>, String)| {
+            let source = source
+                .as_deref()
+                .and_then(|source| find_instance(ctx.state, source));
+            Ok(find_instance(ctx.state, &id).is_some_and(|card| immutable_bars(ctx.state, source, card)))
+        },
+    );
     registry.add_method("is_cast_on_draw", |_, ctx, id: String| {
         if let Some(card) = find_instance(ctx.state, &id) {
             Ok(is_cast_on_draw(ctx.state, card))
@@ -1492,6 +1613,15 @@ macro_rules! shared_readers {
                 Ok(false)
             }
         });
+        $registry.add_method(
+            "immutable_bars",
+            |_, ctx, (source, id): (Option<String>, String)| {
+                let state: &GameState = ctx.shared_state();
+                let _ = ctx;
+                let source = source.as_deref().and_then(|source| find_instance(state, source));
+                Ok(find_instance(state, &id).is_some_and(|card| immutable_bars(state, source, card)))
+            },
+        );
         $registry.add_method("is_cast_on_draw", |_, ctx, id: String| {
             let state: &GameState = ctx.shared_state();
             let _ = ctx;
@@ -1597,7 +1727,7 @@ macro_rules! shared_readers {
 }
 
 /// Registers methods on `HookArgs<'_>`.
-pub fn register_hook_args(registry: &mut UserDataRegistry<HookArgs<'_>>) {
+pub fn register_hook_args(registry: &mut Readers<'_, HookArgs<'static>>) {
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.self_.controller));
     registry.add_method("radiant", |_, args, ()| Ok(args.radiant));
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.self_));
@@ -1605,7 +1735,7 @@ pub fn register_hook_args(registry: &mut UserDataRegistry<HookArgs<'_>>) {
 }
 
 /// Registers methods on `ConditionContext<'_>`.
-pub fn register_condition_ctx(registry: &mut UserDataRegistry<ConditionContext<'_>>) {
+pub fn register_condition_ctx(registry: &mut Readers<'_, ConditionContext<'static>>) {
     registry.add_method("controller", |lua, ctx, ()| to_lua(lua, &ctx.controller));
     registry.add_method("radiant", |_, ctx, ()| Ok(ctx.radiant));
     registry.add_method("your_turn", |_, ctx, ()| Ok(ctx.your_turn));
@@ -1615,7 +1745,7 @@ pub fn register_condition_ctx(registry: &mut UserDataRegistry<ConditionContext<'
 }
 
 /// Registers methods on `CostArgs<'_>`.
-pub fn register_cost_args(registry: &mut UserDataRegistry<CostArgs<'_>>) {
+pub fn register_cost_args(registry: &mut Readers<'_, CostArgs<'static>>) {
     registry.add_method("instance", |lua, args, ()| to_lua(lua, &args.instance));
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.instance));
     registry.add_method("controller", |lua, args, ()| {
@@ -1625,7 +1755,7 @@ pub fn register_cost_args(registry: &mut UserDataRegistry<CostArgs<'_>>) {
 }
 
 /// Registers methods on `WouldCounterArgs<'_>`.
-pub fn register_would_counter_args(registry: &mut UserDataRegistry<WouldCounterArgs<'_>>) {
+pub fn register_would_counter_args(registry: &mut Readers<'_, WouldCounterArgs<'static>>) {
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.self_));
     registry.add_method("controller", |lua, args, ()| to_lua(lua, &args.controller));
     registry.add_method("player", |lua, args, ()| to_lua(lua, &args.player));
@@ -1634,9 +1764,7 @@ pub fn register_would_counter_args(registry: &mut UserDataRegistry<WouldCounterA
 }
 
 /// Registers methods on `TargetCheckArgs<'_>`.
-pub fn register_target_check_args(
-    registry: &mut UserDataRegistry<jackioh_engine::script::TargetCheckArgs<'_>>,
-) {
+pub fn register_target_check_args(registry: &mut Readers<'_, TargetCheckArgs<'static>>) {
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.self_));
     registry.add_method("candidate", |lua, args, ()| to_lua(lua, &args.candidate));
     registry.add_method("player", |lua, args, ()| to_lua(lua, &args.player));
@@ -1646,7 +1774,7 @@ pub fn register_target_check_args(
 }
 
 /// Registers methods on `AttackModArgs<'_>`.
-pub fn register_attack_mod_args(registry: &mut UserDataRegistry<jackioh_engine::script::AttackModArgs<'_>>) {
+pub fn register_attack_mod_args(registry: &mut Readers<'_, AttackModArgs<'static>>) {
     registry.add_method("self_", |lua, args, ()| to_lua(lua, &args.self_));
     registry.add_method("attacker", |lua, args, ()| to_lua(lua, &args.attacker));
     registry.add_method("defender", |lua, args, ()| to_lua(lua, &args.defender));
@@ -1656,9 +1784,7 @@ pub fn register_attack_mod_args(registry: &mut UserDataRegistry<jackioh_engine::
 }
 
 /// Registers methods on `ReplacementContext<'_>`.
-pub fn register_replacement_ctx(
-    registry: &mut UserDataRegistry<jackioh_engine::script::ReplacementContext<'_>>,
-) {
+pub fn register_replacement_ctx(registry: &mut Readers<'_, ReplacementContext<'static>>) {
     registry.add_method("self_", |lua, ctx, ()| to_lua(lua, &ctx.self_));
     registry.add_method("controller", |lua, ctx, ()| to_lua(lua, &ctx.controller));
     registry.add_method("radiant", |_, ctx, ()| Ok(ctx.radiant));

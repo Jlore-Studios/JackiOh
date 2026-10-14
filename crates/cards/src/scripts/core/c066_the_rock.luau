@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- §6.3 "Tribute 1": one of your units, or one Sheep Token, which is worth 2 of it (§3.2).
 local TRIBUTE_COST = 1

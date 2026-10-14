@@ -597,6 +597,14 @@ fn strike_back(sink: &mut EngineSink<'_>, defender: &CardInstance, attacker: &Ca
     );
 }
 
+/// R783000: whether `attacker` takes the defender's strike back — always, unless it is Ranged and the
+/// defender is not. Read once per combat, beside R94's reads, by the combat and by the lethal
+/// projection alike (`subsystems::lethal`).
+pub fn takes_strike_back(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> bool {
+    !crate::layers::unit_has(state, attacker, KeywordKind::Ranged)
+        || crate::layers::unit_has(state, defender, KeywordKind::Ranged)
+}
+
 /// The exchange of §4.3, with no validation, no exertion and no state check: the First Strike step,
 /// then the simultaneous step. Both attacks are read before either lands, which is what makes the
 /// simultaneous step simultaneous; a hero never strikes back, and a defender in Defense Position
@@ -642,6 +650,13 @@ pub fn resolve_combat(sink: &mut EngineSink<'_>, attacker: &CardInstance, target
 
     let hit = attack * lane_multiplier_for(sink.state, &attacker, &defender);
     let strike_back_attack = strike_back_attack * lane_multiplier_for(sink.state, &defender, &attacker);
+
+    // R783000: a Ranged attacker's strike lands alone — no strike back, a First Strike one included —
+    // unless the defender is Ranged too. Its Cleave splashes as ever (R783001).
+    if !takes_strike_back(sink.state, &attacker, &defender) {
+        strike(sink, &attacker, target, hit, attack, bonus.poisonous);
+        return;
+    }
 
     let attacker_first = has_keyword(
         &crate::layers::unit_view(sink.state, &attacker).keywords,

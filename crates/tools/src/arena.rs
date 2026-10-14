@@ -7,6 +7,10 @@
 //! - `bin:<path>`: another build's AI, spawned as `<path> agent` and spoken to in JSON lines
 //!   (SURFACE §14.1), which is how a promotion plays the AI on `main`.
 //!
+//! Either agent may be skilled (R747000, `--a-skill`/`--b-skill`): at skill `s` an AI decision follows
+//! the agent with chance `s` and is a random legal action otherwise, rolled on the seat's own stream, so
+//! the skill-to-Elo curve is measured with the arena's own games. `random` has no skill to set.
+//!
 //! Game `n`'s seed is `<base>:<n>`; agent `a` sits p1 on odd games. Each seat's deck is
 //! `build_ai_deck` over every set that ships minus its own agent's shadow ban (R186), with no handicap
 //! (Easy both, R180). A refused action is replaced by endTurn or the first legal answer; a
@@ -16,7 +20,10 @@
 //! Every finished game leaves one `GameRecord` (R376; `source: "dev"`, `mode: "random"`, R378) on a
 //! JSONL line: in `<--out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else on stdout.
 //! The duel lines go to stdout when the records went to a file and to stderr when they took stdout;
-//! a tally closes them.
+//! a tally closes them: the wins, draws and games without a result, and agent `a`'s share of the
+//! games won with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`), so a series says how far its
+//! result can be trusted. Draws and games without a result count as games `a` did not win, as the
+//! gate counts them.
 
 use std::io::{BufRead, BufReader, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -25,7 +32,10 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow, bail};
-use jackioh_ai::{AiDeckOptions, RejectedAction, build_ai_deck, random_action, redact};
+use jackioh_ai::{
+    AI_SKILL_MAX, AI_SKILL_MIN, AiDeckOptions, RejectedAction, build_ai_deck, plays_best, random_action,
+    redact,
+};
 use jackioh_engine::{
     AI_DIFFICULTY, Action, ActionBody, CreateGameOptions, DEV_RECORD_ID_PREFIX, FoldArgs, GameRecord,
     GameResult, GameState, PerPlayer, PlayerId, Rng, Winner, begin_game, create_game, fold, hash_state,
@@ -47,6 +57,12 @@ pub(crate) const TRAINING_OUT_ENV: &str = "JACKIOH_TRAINING_OUT";
 
 const DUEL_PERCENTILE: f64 = 0.95;
 
+/// The normal quantile of a two-sided 95% interval, for the tally's Wilson interval.
+pub(crate) const WILSON_Z: f64 = 1.96;
+
+/// The tally's shares are rounded to this many parts of one (three decimals).
+const SHARE_PRECISION: f64 = 1000.0;
+
 #[derive(clap::Args)]
 pub struct Args {
     /// Agent a: self | random | bin:<path>. It sits p1 on odd games and p2 on even ones.
@@ -65,6 +81,13 @@ pub struct Args {
     /// else stdout.
     #[arg(long)]
     pub out: Option<PathBuf>,
+    /// R747000: agent a's skill in [0, 1], the chance each decision follows its AI, the rest a random
+    /// legal action. 1 plays the AI as it is. Not for `random`.
+    #[arg(long, default_value_t = AI_SKILL_MAX)]
+    pub a_skill: f64,
+    /// R747000: agent b's skill, as `--a-skill`.
+    #[arg(long, default_value_t = AI_SKILL_MAX)]
+    pub b_skill: f64,
 }
 
 /// Who plays a seat (SURFACE §14.2).
@@ -107,6 +130,32 @@ pub(crate) struct Entrant {
     pub generation: Option<i64>,
     pub lane: Option<String>,
     pub shadow_ban: Vec<String>,
+    /// R747000: the chance each decision follows the agent's AI; `AI_SKILL_MAX` for `random`, which
+    /// has none.
+    pub skill: f64,
+}
+
+/// R747000: a skill is in `AI_SKILL_MIN..=AI_SKILL_MAX`; a NaN is outside it.
+fn check_skill(skill: f64) -> anyhow::Result<()> {
+    if !(AI_SKILL_MIN..=AI_SKILL_MAX).contains(&skill) {
+        bail!("arena: a skill is between {AI_SKILL_MIN} and {AI_SKILL_MAX}, not {skill}");
+    }
+    Ok(())
+}
+
+/// R747000: `entrant` at `skill`. A skill short of full is part of the label (`self-s0.5`), so the
+/// records of games at different skills, which share seeds, are separate records (R378).
+pub(crate) fn entrant_at(spec: &AgentSpec, skill: f64) -> anyhow::Result<Entrant> {
+    check_skill(skill)?;
+    let mut ready = entrant(spec)?;
+    if skill < AI_SKILL_MAX {
+        if *spec == AgentSpec::Random {
+            bail!("arena: random plays no AI decision, so it has no skill to set");
+        }
+        ready.skill = skill;
+        ready.label = format!("{}-s{skill}", ready.label);
+    }
+    Ok(ready)
 }
 
 /// Readies an agent: `self` reads this build, `bin:` asks the binary (`info`), and `random` is dealt this
@@ -121,6 +170,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
                 generation: Some(info.generation),
                 lane: Some(info.lane),
                 shadow_ban: info.shadow_ban,
+                skill: AI_SKILL_MAX,
             })
         }
         AgentSpec::Random => Ok(Entrant {
@@ -129,6 +179,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
             generation: None,
             lane: None,
             shadow_ban: agent::own_info().shadow_ban,
+            skill: AI_SKILL_MAX,
         }),
         AgentSpec::Bin(path) => {
             let info = query_info(path)?;
@@ -138,6 +189,7 @@ pub(crate) fn entrant(spec: &AgentSpec) -> anyhow::Result<Entrant> {
                 generation: Some(info.generation),
                 lane: Some(info.lane),
                 shadow_ban: info.shadow_ban,
+                skill: AI_SKILL_MAX,
             })
         }
     }
@@ -161,6 +213,8 @@ pub(crate) struct ArenaGame {
     pub seed: String,
     pub decks: (Vec<String>, Vec<String>),
     pub seats: PerPlayer<AgentSpec>,
+    /// R747000: each seat's skill, from its agent's.
+    pub skills: PerPlayer<f64>,
     /// Where agent `a` sits.
     pub a_seat: PlayerId,
     /// The agents' labels, a's then b's, for the records.
@@ -228,6 +282,7 @@ pub(crate) fn game_setup(seed: String, n: i32, a: &Entrant, b: &Entrant) -> anyh
         seed,
         decks,
         seats: PerPlayer::new(p1.spec.clone(), p2.spec.clone()),
+        skills: PerPlayer::new(p1.skill, p2.skill),
         a_seat,
         labels: (a.label.clone(), b.label.clone()),
     })
@@ -400,14 +455,22 @@ impl BinAgent {
 }
 
 /// One controller call (match.ts's `chooseFor`): the agent's action, `None` for "no move", or what it
-/// threw. `self` decides on `redact(state, seat)`; `random` plays on the referee's state.
+/// threw. `self` decides on `redact(state, seat)`; `random` plays on the referee's state. R747000: a
+/// skilled agent's decision that the seat's roll does not give to the AI is the random policy's, on
+/// the referee's state as `random`'s is, drawn on the same stream; a `bin:` agent is asked only when
+/// the roll keeps it, so the protocol is the same.
 fn choose_for(
     live: &mut Live,
+    skill: f64,
     state: &GameState,
     seat: PlayerId,
     rng_seed: &str,
     rng: &mut Rng,
 ) -> Result<Option<ActionBody>, String> {
+    if !matches!(live, Live::Random) && !plays_best(skill, rng) {
+        return catch_unwind(AssertUnwindSafe(|| random_action(state, seat, rng)))
+            .map_err(|panic| agent::panic_message(&*panic));
+    }
     match live {
         Live::SelfAi => {
             let view = redact(state, seat);
@@ -514,7 +577,14 @@ pub(crate) fn play_game(game: &ArenaGame) -> anyhow::Result<ArenaOutcome> {
         };
 
         let started = Instant::now();
-        let choice = choose_for(&mut live[seat], &state, seat, &ctl[seat], &mut rngs[seat]);
+        let choice = choose_for(
+            &mut live[seat],
+            game.skills[seat],
+            &state,
+            seat,
+            &ctl[seat],
+            &mut rngs[seat],
+        );
         times[seat].push(started.elapsed().as_secs_f64() * MS_PER_SECOND);
         let chosen = match choice {
             Ok(chosen) => chosen,
@@ -640,16 +710,20 @@ pub(crate) fn game_record(outcome: &ArenaOutcome) -> anyhow::Result<Option<GameR
     )?))
 }
 
+/// The directory a run's output goes to: `out`, else `$JACKIOH_TRAINING_OUT`, else `None`.
+pub(crate) fn training_out(out: Option<&Path>) -> Option<PathBuf> {
+    match out {
+        Some(dir) => Some(dir.to_path_buf()),
+        None => match std::env::var_os(TRAINING_OUT_ENV) {
+            Some(dir) if !dir.is_empty() => Some(PathBuf::from(dir)),
+            _ => None,
+        },
+    }
+}
+
 /// Where the records go: `<out>/<date>.jsonl`, else `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else `None`.
 pub(crate) fn records_path(out: Option<&Path>) -> Option<PathBuf> {
-    let dir = match out {
-        Some(dir) => dir.to_path_buf(),
-        None => match std::env::var_os(TRAINING_OUT_ENV) {
-            Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-            _ => return None,
-        },
-    };
-    Some(dir.join(format!("{}.jsonl", utc_date())))
+    training_out(out).map(|dir| dir.join(format!("{}.jsonl", utc_date())))
 }
 
 pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Result<()> {
@@ -671,12 +745,17 @@ pub(crate) fn append_records(path: &Path, records: &[GameRecord]) -> anyhow::Res
     Ok(())
 }
 
-pub(crate) fn utc_date() -> String {
+/// The Unix time now, in whole seconds.
+pub(crate) fn unix_now() -> i64 {
     let seconds = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|elapsed| elapsed.as_secs())
         .unwrap_or(0);
-    utc_date_of(i64::try_from(seconds).unwrap_or(i64::MAX))
+    i64::try_from(seconds).unwrap_or(i64::MAX)
+}
+
+pub(crate) fn utc_date() -> String {
+    utc_date_of(unix_now())
 }
 
 /// One game's duel line from agent `a`'s side, in key order.
@@ -739,7 +818,7 @@ fn duel_line(outcome: &ArenaOutcome, replay_ok: bool) -> anyhow::Result<String> 
     Ok(serde_json::to_string(&line)?)
 }
 
-#[derive(Serialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Tally {
     pub a: String,
@@ -749,20 +828,54 @@ pub(crate) struct Tally {
     pub b_wins: usize,
     pub draws: usize,
     pub aborted: usize,
+    /// `a_wins` over `games`, and its 95% Wilson interval.
+    pub a_share: f64,
+    pub a_low: f64,
+    pub a_high: f64,
+}
+
+/// The 95% Wilson score interval of `wins` in `games`: the range a true win rate can sit in and still
+/// give this result. It stays inside [0, 1] and is sound at 0 or every win, where the normal
+/// approximation is not. No games is no information: [0, 1].
+pub(crate) fn wilson_interval(wins: usize, games: usize) -> (f64, f64) {
+    if games == 0 {
+        return (0.0, 1.0);
+    }
+    let n = games as f64;
+    let p = wins as f64 / n;
+    let z2 = WILSON_Z * WILSON_Z;
+    let denominator = 1.0 + z2 / n;
+    let centre = (p + z2 / (2.0 * n)) / denominator;
+    let half = WILSON_Z * (p * (1.0 - p) / n + z2 / (4.0 * n * n)).sqrt() / denominator;
+    ((centre - half).max(0.0), (centre + half).min(1.0))
+}
+
+fn round_share(share: f64) -> f64 {
+    (share * SHARE_PRECISION).round() / SHARE_PRECISION
 }
 
 pub(crate) fn tally(a: &str, b: &str, outcomes: &[ArenaOutcome]) -> Tally {
+    let games = outcomes.len();
+    let a_wins = outcomes.iter().filter(|outcome| outcome.a_won()).count();
+    let (low, high) = wilson_interval(a_wins, games);
     Tally {
         a: a.to_string(),
         b: b.to_string(),
-        games: outcomes.len(),
-        a_wins: outcomes.iter().filter(|outcome| outcome.a_won()).count(),
+        games,
+        a_wins,
         b_wins: outcomes
             .iter()
             .filter(|outcome| won_by(outcome.result, outcome.game.a_seat.opponent()))
             .count(),
         draws: outcomes.iter().filter(|outcome| outcome.drawn()).count(),
         aborted: outcomes.iter().filter(|outcome| outcome.result.is_none()).count(),
+        a_share: round_share(if games == 0 {
+            0.0
+        } else {
+            a_wins as f64 / games as f64
+        }),
+        a_low: round_share(low),
+        a_high: round_share(high),
     }
 }
 
@@ -781,8 +894,8 @@ pub fn run(args: Args) -> anyhow::Result<()> {
     if args.games < 1 {
         bail!("arena: --games must be at least 1, not {}", args.games);
     }
-    let a = entrant(&args.a)?;
-    let b = entrant(&args.b)?;
+    let a = entrant_at(&args.a, args.a_skill)?;
+    let b = entrant_at(&args.b, args.b_skill)?;
     let base = args.seed.clone();
     let games = setups(&a, &b, args.games, |n| format!("{base}:{n}"))?;
     let outcomes = play_games(&games)?;
@@ -910,12 +1023,32 @@ mod tests {
     }
 
     #[test]
+    fn the_wilson_interval_brackets_the_share_and_narrows_with_games() {
+        // 65 of 100: the improve gate's bar reads as anything from about 55% to 74%.
+        let (low, high) = wilson_interval(65, 100);
+        assert_eq!((round_share(low), round_share(high)), (0.553, 0.736));
+        // Four times the games halves the width, near enough.
+        let (low_400, high_400) = wilson_interval(260, 400);
+        assert!(high_400 - low_400 < (high - low) * 0.55);
+        assert!(low_400 < 0.65 && 0.65 < high_400);
+        // It stays in [0, 1] at the ends, and no games says nothing.
+        let (none_low, none_high) = wilson_interval(0, 60);
+        assert_eq!(none_low, 0.0);
+        assert!(none_high > 0.0);
+        let (all_low, all_high) = wilson_interval(60, 60);
+        assert!(all_low < 1.0);
+        assert_eq!(round_share(all_high), 1.0);
+        assert_eq!(wilson_interval(0, 0), (0.0, 1.0));
+    }
+
+    #[test]
     fn record_ids_name_the_agents_and_the_seed() {
         let game = ArenaGame {
             n: 1,
             seed: "improve:abc:1".to_string(),
             decks: (Vec::new(), Vec::new()),
             seats: PerPlayer::new(AgentSpec::SelfAi, AgentSpec::Random),
+            skills: PerPlayer::new(AI_SKILL_MAX, AI_SKILL_MAX),
             a_seat: PlayerId::P1,
             labels: ("self".to_string(), "random".to_string()),
         };
@@ -923,6 +1056,101 @@ mod tests {
             record_id("0.2.0", &game),
             "dev:0.2.0:arena:self-vs-random:improve:abc:1"
         );
+    }
+
+    #[test]
+    fn r747000_arena_rejects_skill_outside_unit_range() {
+        jackioh_cards::register_all();
+        for skill in [-0.1, 1.1, f64::NAN, f64::INFINITY] {
+            assert!(
+                entrant_at(&AgentSpec::SelfAi, skill).is_err(),
+                "{skill} is outside [0, 1]"
+            );
+        }
+        for skill in [0.0, 0.5, 1.0] {
+            assert!(entrant_at(&AgentSpec::SelfAi, skill).is_ok(), "{skill}");
+        }
+        // Random takes no AI decision, so a skill short of full is a mistake, not a setting.
+        assert!(entrant_at(&AgentSpec::Random, 0.5).is_err());
+        assert!(entrant_at(&AgentSpec::Random, 1.0).is_ok());
+    }
+
+    #[test]
+    fn r747000_entrant_label_names_nonfull_skill() {
+        jackioh_cards::register_all();
+        let skilled = entrant_at(&AgentSpec::SelfAi, 0.5).unwrap();
+        assert_eq!(skilled.label, "self-s0.5");
+        assert_eq!(skilled.skill, 0.5);
+        assert_eq!(entrant_at(&AgentSpec::SelfAi, 0.25).unwrap().label, "self-s0.25");
+        assert_eq!(entrant_at(&AgentSpec::SelfAi, 0.0).unwrap().label, "self-s0");
+        let full = entrant_at(&AgentSpec::SelfAi, 1.0).unwrap();
+        assert_eq!(full.label, "self");
+        assert_eq!(full.skill, AI_SKILL_MAX);
+        assert_eq!(entrant_at(&AgentSpec::Random, 1.0).unwrap().label, "random");
+
+        // The label is in the record's id, so a skilled run's records are not the full-skill run's.
+        let games = setups(&skilled, &full, 1, |n| format!("r747000-label:{n}")).unwrap();
+        assert_eq!(
+            record_id("0.2.0", &games[0]),
+            "dev:0.2.0:arena:self-s0.5-vs-self:r747000-label:1"
+        );
+    }
+
+    #[test]
+    fn r747000_game_setup_carries_skills_to_seats() {
+        jackioh_cards::register_all();
+        let a = entrant_at(&AgentSpec::SelfAi, 0.25).unwrap();
+        let b = entrant_at(&AgentSpec::SelfAi, 0.75).unwrap();
+        let games = setups(&a, &b, 4, |n| format!("r747000-seats:{n}")).unwrap();
+        for game in &games {
+            assert_eq!(game.skills[game.a_seat], 0.25, "game {}", game.n);
+            assert_eq!(game.skills[game.a_seat.opponent()], 0.75, "game {}", game.n);
+        }
+        // Odd games seat a on p1, even games on p2.
+        assert_eq!(games[0].skills, PerPlayer::new(0.25, 0.75));
+        assert_eq!(games[1].skills, PerPlayer::new(0.75, 0.25));
+
+        // random keeps full skill whichever seat it sits.
+        let random = entrant(&AgentSpec::Random).unwrap();
+        let games = setups(&a, &random, 2, |n| format!("r747000-seats:{n}")).unwrap();
+        assert_eq!(games[0].skills, PerPlayer::new(0.25, AI_SKILL_MAX));
+        assert_eq!(games[1].skills, PerPlayer::new(AI_SKILL_MAX, 0.25));
+    }
+
+    #[test]
+    fn r747000_a_zero_skill_agent_plays_as_random_does() {
+        jackioh_cards::register_all();
+        let zero = entrant_at(&AgentSpec::SelfAi, 0.0).unwrap();
+        let random = entrant(&AgentSpec::Random).unwrap();
+        // The same shadow ban, so the same decks: only who decides differs.
+        let skilled = setups(&zero, &random, 2, |n| format!("r747000-zero:{n}")).unwrap();
+        let plain = setups(&random, &random, 2, |n| format!("r747000-zero:{n}")).unwrap();
+        let skilled = play_games(&skilled).unwrap();
+        let plain = play_games(&plain).unwrap();
+        for (skilled, plain) in skilled.iter().zip(&plain) {
+            assert_eq!(skilled.game.decks, plain.game.decks);
+            assert_eq!(skilled.log, plain.log, "game {}", skilled.game.n);
+            assert_eq!(skilled.hash, plain.hash, "game {}", skilled.game.n);
+            assert!(skilled.result.is_some());
+            assert_eq!(skilled.thrown, Vec::<String>::new());
+        }
+    }
+
+    #[test]
+    fn r747000_a_mid_skill_game_reproduces_and_replays() {
+        jackioh_cards::register_all();
+        let a = entrant_at(&AgentSpec::SelfAi, 0.5).unwrap();
+        let b = entrant(&AgentSpec::Random).unwrap();
+        let games = setups(&a, &b, 2, |n| format!("r747000-mid:{n}")).unwrap();
+        let first = play_games(&games).unwrap();
+        let second = play_games(&games).unwrap();
+        for (first, second) in first.iter().zip(&second) {
+            assert_eq!(first.hash, second.hash, "game {}", first.game.n);
+            assert_eq!(first.log, second.log, "game {}", first.game.n);
+            assert!(replays(first).unwrap(), "game {}", first.game.n);
+            assert!(first.result.is_some());
+            assert_eq!(first.thrown, Vec::<String>::new());
+        }
     }
 
     #[test]

@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- The whole card is one replacement, declared as data (B5 E5): at "targeted", from its
 -- controller's hand, answering only a Spell's targeting (R651), the engine summons it into the

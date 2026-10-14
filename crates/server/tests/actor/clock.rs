@@ -13,8 +13,8 @@ use jackioh_server::actor::clock::{create_match_clock, initial_clocks, match_cei
 use jackioh_server::actor::contracts::{ClockExpiry, ClockView, CreateMatchClockInput, MatchClock};
 use jackioh_server::app::now_ms;
 use jackioh_server::config::{
-    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MULLIGAN_CLOCK_SECONDS, PROMPT_CLOCK_SECONDS,
-    TURN_CLOCK_SECONDS,
+    DISCONNECT_GRACE_SECONDS, MATCH_CEILING_MINUTES, MATCH_SERVER_ACTION_RETRY_MS, MULLIGAN_CLOCK_SECONDS,
+    PROMPT_CLOCK_SECONDS, TURN_CLOCK_SECONDS,
 };
 use serde_json::{Value, json};
 
@@ -577,6 +577,99 @@ mod match_clock {
                 "ceilingAt": h.started_at + h.ceiling_ms,
             })
         );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_a_retry_runs_an_expired_turn_clock_out_once_more_and_a_new_turn_cancels_it() {
+        let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
+        let h = harness(0);
+        h.clock.sync(&view());
+        advance(h.turn_ms).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }]);
+
+        // One countdown, one timer: a second retry while the first runs changes nothing.
+        h.clock.retry(ClockExpiry::Turn { player: P1 }, retry_ms);
+        h.clock.retry(ClockExpiry::Turn { player: P1 }, retry_ms);
+        assert_eq!(h.deadline("turnDeadline"), Some(now() + retry_ms));
+        advance(retry_ms).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Turn { player: P1 }; 2]);
+
+        // Nothing re-arms a clock that ran out and was not retried.
+        advance(h.turn_ms).await;
+        assert_eq!(h.expiries().len(), 2);
+
+        // The turn passing to p2 cancels a retry that was waiting.
+        h.clock.retry(ClockExpiry::Turn { player: P1 }, retry_ms);
+        h.clock.sync(&ClockView {
+            turn: 2,
+            active: P2,
+            ..view()
+        });
+        advance(retry_ms).await;
+        assert_eq!(h.expiries().len(), 2);
+        assert_eq!(h.deadline("turnDeadline"), Some(now() + h.turn_ms - retry_ms));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_a_retry_runs_an_expired_grace_out_once_more_and_the_player_returning_cancels_it() {
+        let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
+        let h = harness(0);
+        h.clock.start_grace(P1, None);
+        advance(h.grace_ms).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }]);
+
+        h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms);
+        assert_eq!(h.grace(P1), Some(now() + retry_ms));
+        // R147: a countdown already running is kept, not moved.
+        h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms * 2);
+        assert_eq!(h.grace(P1), Some(now() + retry_ms));
+        advance(retry_ms).await;
+        assert_eq!(h.expiries(), vec![ClockExpiry::Grace { player: P1 }; 2]);
+
+        h.clock.retry(ClockExpiry::Grace { player: P1 }, retry_ms);
+        h.clock.clear_grace(P1);
+        assert_eq!(h.grace(P1), None);
+        advance(retry_ms).await;
+        assert_eq!(h.expiries().len(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r776000_a_retried_prompt_mulligan_or_ceiling_clock_runs_out_once_more() {
+        let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
+
+        let prompt = harness(0);
+        prompt.clock.sync(&ClockView {
+            pending_for: Some(P2),
+            ..view()
+        });
+        advance(prompt.prompt_ms).await;
+        assert_eq!(prompt.expiries(), vec![ClockExpiry::Prompt { player: P2 }]);
+        prompt.clock.retry(ClockExpiry::Prompt { player: P2 }, retry_ms);
+        advance(retry_ms).await;
+        assert_eq!(prompt.expiries(), vec![ClockExpiry::Prompt { player: P2 }; 2]);
+        prompt.clock.stop();
+
+        let mulligan = harness(0);
+        mulligan.clock.sync(&mulligan_window(&[P1, P2]));
+        advance(mulligan.mulligan_ms).await;
+        assert_eq!(mulligan.expiries(), vec![ClockExpiry::Mulligan]);
+        mulligan.clock.retry(ClockExpiry::Mulligan, retry_ms);
+        advance(retry_ms).await;
+        assert_eq!(mulligan.expiries(), vec![ClockExpiry::Mulligan; 2]);
+        // The window closing cancels a retry that was waiting.
+        mulligan.clock.retry(ClockExpiry::Mulligan, retry_ms);
+        mulligan.clock.sync(&view());
+        advance(retry_ms).await;
+        assert_eq!(mulligan.expiries().len(), 2);
+        mulligan.clock.stop();
+
+        let ceiling = harness(int(MATCH_CEILING_MINUTES) * MINUTE - SECOND);
+        advance(SECOND).await;
+        assert_eq!(ceiling.expiries(), vec![ClockExpiry::Ceiling]);
+        ceiling.clock.retry(ClockExpiry::Ceiling, retry_ms);
+        advance(retry_ms).await;
+        assert_eq!(ceiling.expiries(), vec![ClockExpiry::Ceiling; 2]);
+        ceiling.clock.stop();
     }
 }
 

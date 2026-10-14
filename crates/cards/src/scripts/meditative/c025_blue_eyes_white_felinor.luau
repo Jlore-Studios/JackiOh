@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- Tribute 2 on both faces; the keywords come from the catalog.
 local TRIBUTE_COST = 2

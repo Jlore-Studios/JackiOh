@@ -3,20 +3,20 @@
 //!
 //! Base:    "Rush
 //!           Cry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.
-//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
-//!           start of your next turn."
+//!           Aura: Your Units have Cloaked."
 //! Radiant: "Rush, Poisonous
 //!           Cry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY
 //!           permanent.
-//!           Aura: You may play your Units face-down as Animated Field Traps that reveal at the
-//!           start of your next turn."
-//! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), then the Aura.
+//!           Aura: Your Units have Cloaked."
+//! Engine: five `summon_random` Traps then `destroy_all` (Radiant: `exile_all`), then the Aura:
+//! Knowledge Breaker's, Cloaked for the Units in its controller's hand (`cloak_hand_aura`, R1043).
 
 pub const ID: &str = "meditative-045-1";
 
 // M #45.1 Knowledge Breaker Prime — SPEC §8.8 row 45.1, BUILD M10 row M 45.1.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::prelude::keywords_of;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -107,10 +107,10 @@ mod tests {
                     "library": [VANILLA],
                 },
             }));
-            // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, under
-            // the Breaker's permission.
+            // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, Cloaked by
+            // the Breaker's Aura.
             let spare = s.hand(P1).iter().find(|card| card.def_id == CN_UNIT).cloned().unwrap();
-            s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "startOfNextTurn" }));
+            s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
             let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
             s.play(&prime.id, json!({ "zone": 4 }));
             // Every other CN or KY permanent on both fields is gone: the CN and the KY Unit, the
@@ -127,7 +127,7 @@ mod tests {
         }
 
         #[test]
-        fn r1043_its_aura_grants_the_same_play() {
+        fn r1043_its_aura_cloaks_the_units_in_your_hand_as_the_breakers_does() {
             let s = scenario(json!({
                 "seed": "prime-aura",
                 "p1": {
@@ -139,6 +139,11 @@ mod tests {
                 "p2": { "hand": [VANILLA], "library": [VANILLA] },
             }));
             let unit = s.hand(P1).iter().find(|card| card.def_id == VANILLA).cloned().unwrap();
+            assert!(
+                keywords_of(s.state(), s.card(&unit.id))
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Cloaked)
+            );
             let set_plays: Vec<_> = legal_actions(s.state(), P1)
                 .into_iter()
                 .filter(|action| {
@@ -147,13 +152,18 @@ mod tests {
                 .collect();
             assert!(!set_plays.is_empty());
             assert!(
-                set_plays.iter().all(|action| {
-                    matches!(
-                        action,
-                        ActionBody::Play { face_down: Some(RevealAt::StartOfNextTurn), .. }
-                    )
-                })
+                set_plays
+                    .iter()
+                    .all(|action| matches!(action, ActionBody::Play { face_down: Some(RevealAt::Cloaked), .. }))
             );
+        }
+
+        #[test]
+        fn r1043_both_faces_print_the_cloaked_aura() {
+            let def = crate::card_def(PRIME);
+            for face in [&def.base, &def.radiant] {
+                assert!(face.text.ends_with("\nAura: Your Units have Cloaked."), "{}", face.text);
+            }
         }
     }
 

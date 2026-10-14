@@ -171,6 +171,18 @@ class CommandTests(unittest.TestCase):
         body = "> /harness halt\n```\n/harness halt\n```\n~~~\n@jgoetzmann-bot build\n~~~\n"
         self.assertEqual(self.verbs(body), [])
 
+    def test_a_vote_is_the_word_alone_on_its_line(self):
+        # #760: `approve` and `reject` answer a suggestion, bare or after either prefix.
+        self.assertEqual(commands.vote("approve", self.bot), ("approve", "approve"))
+        self.assertEqual(commands.vote("Thanks!\n- **Reject.**", self.bot)[0], "reject")
+        self.assertEqual(commands.vote("@jgoetzmann-bot: reject", self.bot)[0], "reject")
+        self.assertEqual(commands.vote("/harness approve", self.bot)[0], "approve")
+        for prose in ("I approve of this", "reject it if the tests fail", "> approve",
+                      "```\napprove\n```", "@someone approve"):
+            self.assertEqual(commands.vote(prose, self.bot), ("", ""), prose)
+        self.assertEqual(commands.parse("@jgoetzmann-bot reject", self.bot)[0].line,
+                         commands.vote("@jgoetzmann-bot reject", self.bot)[1])
+
     def test_several_commands_in_order_and_capped(self):
         body = "\n".join(["/harness status", "/harness build"] * 8)
         found = commands.parse(body, self.bot)
@@ -231,6 +243,23 @@ class CommandTests(unittest.TestCase):
                 self.assertIn(f"`{verb}", text)
         self.assertNotIn("`oneshot", text)
         self.assertNotIn("`split", text)
+
+    def test_help_says_whose_an_issue_is(self):
+        # #802: an issue is the bot's or people's (`human`, or the bot's `human required`).
+        text = commands.help_text(self.bot)
+        self.assertIn("`human` keeps me off it", text)
+        self.assertIn("`human required` is my hand-over when I find I cannot do it", text)
+        self.assertIn("Take either label off to hand it back, then `/harness build`.", text)
+
+    def test_help_lists_the_votes_on_a_suggestion(self):
+        # #796: `approve` and `reject` (#760) are not verbs, but `help` names them.
+        text = commands.help_text(self.bot)
+        self.assertIn("| `approve`, `reject` |", text)
+        for word in ("approve", "Reject"):
+            one = commands.help_text(self.bot, word)
+            self.assertIn("**`approve`** or **`reject`**", one)
+            self.assertIn("`bot:suggestion`", one)
+            self.assertNotIn("I do not know", one)
 
 
 class TrustTests(unittest.TestCase):
@@ -394,3 +423,20 @@ class PathTests(unittest.TestCase):
                      "SPEC.md", "bots/x", "docs/scripts.md", "crates/engine/tests/rules/combat.rs"):
             self.assertFalse(matches(path, forbidden), path)
             self.assertFalse(matches(path, review), path)
+
+    def test_an_exception_takes_a_path_back_out(self):
+        import json
+        from harness.git import matches
+        self.assertFalse(matches(".claude/skills/x/SKILL.md", [".claude/", "!.claude/skills/"]))
+        self.assertTrue(matches(".claude/settings.json", [".claude/", "!.claude/skills/"]))
+        self.assertTrue(matches(".claude/skillset.json", [".claude/", "!.claude/skills/"]))
+        self.assertFalse(matches("x.md", ["!x.md"]))
+        # Squishy may change the skills (the weekly hygiene issue, #839); the night bot may not,
+        # and neither may change the rest of .claude/.
+        for home, skills_forbidden in ((".harness", True), (".squishy", False)):
+            raw = json.loads((config.REPO_ROOT / home / "config.json").read_text())
+            forbidden = raw["forbidden_paths"]
+            self.assertEqual(matches(".claude/skills/maxi-tail/SKILL.md", forbidden), skills_forbidden,
+                             home)
+            for path in (".claude/settings.json", ".claude/settings.local.json", ".claude/hooks/x.sh"):
+                self.assertTrue(matches(path, forbidden), (home, path))

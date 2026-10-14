@@ -8,27 +8,25 @@ local function cry(ctx: J.EffectContext)
 	}
 end
 
--- ME-ALTPLAY: "You may play your Spells face-down as Traps".
-local base = {
-	cry = cry,
-	faceDownPlay = function(ctx: J.HookArgs)
-		return {
-			{ spells = true },
-		}
-	end,
-}
+-- "Aura: Your Spells have Cloaked." (R1044): Cloaked for the Spells in its controller's hand while
+-- it acts (the engine's `cloak_hand_aura`).
+local function cloak_spells(ctx: J.HookArgs)
+	return {
+		J.cloak_hand_aura({ type = "Spell" }),
+	}
+end
 
--- The same permission, each Spell set this way gaining Echo +`echo` (R386).
-local radiant = {
-	cry = cry,
-	faceDownPlay = function(ctx: J.HookArgs)
-		return {
-			{ spells = true, echo = ctx:param("echo") },
-		}
-	end,
-}
-
+-- The Radiant face's "Spells you reveal have Echo +{echo}" (R1045), read as the Spell reveals.
 return {
-	base = base,
-	radiant = radiant,
+	base = {
+		cry = cry,
+		aura = cloak_spells,
+	},
+	radiant = {
+		cry = cry,
+		aura = cloak_spells,
+		revealEcho = function(ctx: J.HookArgs)
+			return ctx:param("echo")
+		end,
+	},
 }

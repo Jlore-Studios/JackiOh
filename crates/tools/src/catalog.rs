@@ -1569,6 +1569,122 @@ pub fn count_loc(source: &str) -> usize {
     count
 }
 
+/// A Luau long bracket's opening at `i` (`[[`, `[=[`, …): its length and its level, the `=`s.
+fn long_bracket_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
+    if chars.get(i) != Some(&'[') {
+        return None;
+    }
+    let level = chars[i + 1..].iter().take_while(|c| **c == '=').count();
+    (chars.get(i + 1 + level) == Some(&'[')).then_some((level + 2, level))
+}
+
+/// Whether a long bracket of `level` closes at `i` (`]]`, `]=]`, …).
+fn long_bracket_closes(chars: &[char], i: usize, level: usize) -> bool {
+    chars.get(i) == Some(&']')
+        && chars.len() > i + level + 1
+        && chars[i + 1..=i + level].iter().all(|c| *c == '=')
+        && chars[i + 1 + level] == ']'
+}
+
+/// A module import, the Luau `use`: `local J = require("@jackioh")`.
+fn is_require(code: &str) -> bool {
+    code.strip_prefix("local ")
+        .and_then(|rest| rest.split_once('='))
+        .is_some_and(|(_, value)| value.trim_start().starts_with("require("))
+}
+
+/// SURFACE §7.5 for a Luau card script (#442): the lines that hold code once comments are removed
+/// (`--` to the line's end, `--[[ … ]]` blocks of any level, the `--!strict` directive among them),
+/// except its `require` imports, as `count_loc` leaves out `use` declarations. Strings (quoted,
+/// interpolated and long) are read as such, so a `--` inside one is code. The file is the script
+/// alone: its tests are in the `.rs` beside it.
+pub fn count_luau_loc(source: &str) -> usize {
+    #[derive(Clone, Copy)]
+    enum In {
+        Code,
+        Comment(usize),
+        LongString(usize),
+        Quoted(char),
+    }
+    let mut state = In::Code;
+    let mut count = 0;
+    for line in source.split('\n') {
+        let chars: Vec<char> = line.chars().collect();
+        let mut code = String::new();
+        let mut i = 0;
+        while i < chars.len() {
+            let ch = chars[i];
+            match state {
+                In::Comment(level) => {
+                    if long_bracket_closes(&chars, i, level) {
+                        state = In::Code;
+                        i += level + 2;
+                    } else {
+                        i += 1;
+                    }
+                    continue;
+                }
+                In::LongString(level) => {
+                    code.push(ch);
+                    if long_bracket_closes(&chars, i, level) {
+                        state = In::Code;
+                        i += level + 2;
+                    } else {
+                        i += 1;
+                    }
+                    continue;
+                }
+                In::Quoted(quote) => {
+                    code.push(ch);
+                    if ch == '\\' {
+                        if let Some(next) = chars.get(i + 1) {
+                            code.push(*next);
+                        }
+                        i += 2;
+                        continue;
+                    }
+                    if ch == quote {
+                        state = In::Code;
+                    }
+                    i += 1;
+                    continue;
+                }
+                In::Code => {}
+            }
+            if ch == '-' && chars.get(i + 1) == Some(&'-') {
+                match long_bracket_open(&chars, i + 2) {
+                    Some((length, level)) => {
+                        state = In::Comment(level);
+                        i += 2 + length;
+                        continue;
+                    }
+                    None => break,
+                }
+            }
+            if let Some((length, level)) = long_bracket_open(&chars, i) {
+                code.extend(&chars[i..i + length]);
+                state = In::LongString(level);
+                i += length;
+                continue;
+            }
+            if matches!(ch, '"' | '\'' | '`') {
+                state = In::Quoted(ch);
+            }
+            code.push(ch);
+            i += 1;
+        }
+        // A quoted string ends with its line (a `\z` continuation aside, which no script uses).
+        if matches!(state, In::Quoted(_)) {
+            state = In::Code;
+        }
+        let code = code.trim();
+        if !code.is_empty() && !is_require(code) {
+            count += 1;
+        }
+    }
+    count
+}
+
 /* -------------------------------------------------------------------------------- catalog-version */
 
 /// The newest version `patches.json` at `path` names: its last entry's `version`. The list's
@@ -1614,7 +1730,7 @@ pub enum CatalogCommand {
     Check,
     /// Print a card script's lines of code (SURFACE §7.5), for a card added after v0.3.0.
     Loc {
-        /// The card's `.rs` script file.
+        /// The card's script: its `.luau`, or the `.rs` of a card that stays in Rust.
         path: PathBuf,
     },
 }
@@ -1631,7 +1747,12 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         CatalogCommand::Check => run_check(),
         CatalogCommand::Loc { path } => {
             let source = fs::read_to_string(&path).map_err(|error| anyhow!("{}: {error}", path.display()))?;
-            println!("{}", count_loc(&source));
+            let loc = if path.extension().is_some_and(|ext| ext == "luau") {
+                count_luau_loc(&source)
+            } else {
+                count_loc(&source)
+            };
+            println!("{loc}");
             Ok(())
         }
     }
@@ -1962,6 +2083,34 @@ mod tests {
 }
 "##;
         assert_eq!(count_loc(source), 7);
+    }
+
+    #[test]
+    fn count_luau_loc_counts_code_without_comments_blank_lines_or_the_require() {
+        let source = r##"--!strict
+local J = require("@jackioh")
+
+--[[ A block comment,
+     two lines long. ]]
+local function cry(ctx: J.EffectContext) -- a trailing comment
+	return { J.draw({ count = ctx:param("draw") }) }
+end
+--[==[ a level-2 block ]] still the comment ]==]
+local TEXT = "a -- inside a string"
+local LONG = [[
+-- a long string's line is code
+]]
+
+return { base = { cry = cry }, radiant = "base" }
+"##;
+        assert_eq!(count_luau_loc(source), 8);
+    }
+
+    #[test]
+    fn catalog_loc_of_a_ported_card_counts_its_luau() {
+        let path = repo_root().join("crates/cards/src/scripts/core/c002_bigot.luau");
+        let source = std::fs::read_to_string(path).unwrap();
+        assert!(count_luau_loc(&source) > 0);
     }
 
     #[test]

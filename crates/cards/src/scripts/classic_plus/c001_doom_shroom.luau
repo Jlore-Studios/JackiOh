@@ -26,9 +26,9 @@ local function doom_shroom(side: J.ScopeSide)
 				on = { "attackDeclared" },
 				when = attacks_your_hero,
 				run = function(ctx: J.EffectContext, event: J.GameEvent)
+					-- Its Crater Locks this zone as it is revealed (R783011), before this runs.
 					return {
 						J.exile_all({ side = side }),
-						J.lock_own_zone(),
 					}
 				end,
 			},

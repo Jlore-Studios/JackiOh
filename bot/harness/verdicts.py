@@ -63,6 +63,9 @@ class BuildReport:
     #: The model the builder asks this run's next pass to run on (`"next_model"`), lowercased:
     #: a lane with two models switches to it (`work.Worker._switch`). "" stays.
     next_model: str = ""
+    #: A blocked builder says only a person can do it (`"human_required": true`, #793): a change
+    #: to a path the bot may not touch, a secret, a dashboard or an account (`human.py`).
+    human_required: bool = False
 
 
 def build_report(text: str) -> BuildReport:
@@ -75,7 +78,8 @@ def build_report(text: str) -> BuildReport:
     title = " ".join(str(value.get("title", "")).split())[:200]
     question = str(value.get("question", "")).strip()[:4000]
     next_model = str(value.get("next_model") or "").strip().strip("`").lower()[:40]
-    return BuildReport(status, title, question, rest, next_model)
+    human = status == "blocked" and value.get("human_required") is True
+    return BuildReport(status, title, question, rest, next_model, human)
 
 
 @dataclass

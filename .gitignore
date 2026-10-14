@@ -5,8 +5,6 @@ ai-gate-shards/
 .vite/
 *.log
 .DS_Store
-e2e/cypress/screenshots/
-e2e/cypress/videos/
 
 # Secrets. `crates/server/.env` holds SUPABASE_SECRET_KEY (bypasses every RLS policy) and
 # CODE_PEPPER (the invite-code HMAC pepper), so it must never be committed. The example file
@@ -18,8 +16,7 @@ e2e/cypress/videos/
 # (apps/web/src/net/env-production.test.ts holds it to that).
 !apps/web/.env.production
 
-# Test-runner caches and local scratch.
-.vitest/
+# Local scratch.
 *.tmp.*
 __pycache__/
 
@@ -35,7 +32,6 @@ __pycache__/
 # --frozen-lockfile. An npm lockfile arrived once via a PR; ignored so it cannot drift back in and
 # be mistaken for the real one.
 package-lock.json
-.polish-website/
 .wrangler/
 
 # The v0.3.0 Rust workspace (docs/v0.3.0/SURFACE.md §1): cargo's build output, the downloaded

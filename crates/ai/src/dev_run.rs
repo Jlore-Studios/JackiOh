@@ -77,8 +77,14 @@ pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> Ma
         decks,
         handicaps: None,
         controllers: PerPlayer {
-            p1: SeatController::Ai { budget: Some(budget) },
-            p2: SeatController::Ai { budget: Some(budget) },
+            p1: SeatController::Ai {
+                budget: Some(budget),
+                skill: None,
+            },
+            p2: SeatController::Ai {
+                budget: Some(budget),
+                skill: None,
+            },
         },
         max_actions: None,
     }

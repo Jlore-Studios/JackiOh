@@ -7,4 +7,5 @@ verbs! {
     verb!(grant_random_keywords, GrantRandomKeywordsArgs);
     verb!(buff_cards, BuffCardsArgs);
     verb!(grant_keyword_cards, GrantKeywordCardsArgs);
+    verb!(draw_combat_keywords, DrawCombatKeywordsArgs);
 }

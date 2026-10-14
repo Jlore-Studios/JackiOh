@@ -1,5 +1,4 @@
 --!strict
-local J = require("@jackioh")
 
 -- Both restrictions are static flags the engine reads everywhere: can't be attacked (§6.1, §4.2
 -- step 2) and #65.1's `neverDefense`. The same script on both faces: the Radiant face differs only
