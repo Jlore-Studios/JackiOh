@@ -5926,6 +5926,7 @@
     "882": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T17:57:54Z",
         "difficulty": "medium",
@@ -5934,6 +5935,7 @@
         "why": "Easy-rule line 7 is the closest call: correctness is unit-checked, but the 5-minute goal itself can only be proven by CI timing, and line 6 (scripts/) plus the required person edit to .github/ fail easy outright."
       },
       "failures": 0,
+      "forced": false,
       "handoff": {
         "at": "2026-10-14T17:57:27Z",
         "family": "muse",
@@ -5943,6 +5945,7 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- # shards below run the same binary with a module-path filter, one set each\n- # (crates/cards/README.md \u00a75); each compiles the binary (~2-3 min) and runs its\n- # ~1,200-1,650 tests. One cache: the four compile the same crates. lib.rs's own two\n- # tests ride in the core shard; a new set directory needs a shard here and a\n- # `rust_cards_lib_*` line in scripts/ci-scope.sh. Filters are substrings of the full\n- # test path: `scripts::classic::` does not match `scripts::classic_plus::`.\n- - group: cards lib core\n- cache: cards-lib\n- test: -p jackioh-cards --lib -- scripts::core:: tests::the_catalog_round_trips_through_card_defs tests::the_catalog_version_is_the_newest_patch\n- - group: cards lib classic\n- cache: cards-lib\n- test: -p jackioh-cards --lib -- scripts::classic::\n- - group: cards lib classic_plus\n- cache: cards-lib\n- test: -p jackioh-cards --lib -- scripts::classic_plus::\n- - group: cards lib meditative\n- cache: cards-lib\n- test: -p jackioh-cards --lib -- scripts::meditative::\n- ```\n- Also update the matrix header comment's sentence \"The engine and the cards each split further, by test binary\" to end \": the engine by test binary; the cards' unit tests by set filter (#882), the cross-card tests staying in `--test cards`\". The `rust` summary job and `binaries:` guard need no chang\u2026\n- ## Tests\n- - Filter coverage: step 5's `--list` counts (no test file; the counts are the assertion).\n- - `cargo test -p jackioh-tools --test acceptance ci_scope`: the scope tests covering the new `RUST_GROUPS` lines.\n- - `pnpm --dir apps/web test src/net/ci-scope.test.ts`: the scope test covering the new `NAMES`/`RUST` entries.\n- - Shard timing: step 6's timed run; CI must then show all four `rust (test cards lib *)` jobs under 5 minutes.\n- ## Done when\n- - [ ] The four shard filters select every `--lib` test exactly once (step 5 counts match).\n- - [ ] Scope tests pass (`acceptance ci_scope`, `ci-scope.test.ts`), plus `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n- - [ ] A person has applied the `ci.yml` block above on this branch, and CI shows each `rust (test cards lib *)` job under 5 minutes.\n- - [ ] No ruling, catalog, or card-script change; e2e `WEIGHTS` untouched (smoke list unaffected).\n- ## Risks\n- - Substring-filter collision: a future set whose name extends another's (like `classic`/`classic_plus`) could double-run tests. Mitigated by the fully-qualified `scripts::<set>::` form (verified disjoint in step 5) and the comment in the person's block.\n- - Headroom comes from splitting run time only; every shard still compiles the full binary (~2\u20133 min) plus checkout/setup. If CI overhead eats the margin, use the step 6 fallback rather than weakening anything.\n- - The `acceptance.rs` assertion compares script lines to `RUST_GROUPS`, not to `ci.yml`; both land in one PR, so landing the person's block together with steps 1\u20133 keeps every gate consistent.\n- ## Open questions\n- - Person-only part: the `.github/workflows/ci.yml` replacement in step 7 (bot may not change `.github/`). Nothing else needs a person; no secrets, dashboards, or accounts are involved.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-882 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-882/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "pending_request": false,
