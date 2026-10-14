@@ -11,7 +11,36 @@
 //! that draw put in the hand (`card_this_draw_put_in_hand`, R596): a cast-on-draw card ends it, the card
 //! its cast's own repeat brings included, so the only prompt a draw can open ends the chain where it stands.
 
+use jackioh_engine::effects::draw_while_cheap;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-04";
+
+/// TS's `{ base, radiant } as const`: one number per face.
+#[derive(Clone, Copy)]
+struct ByFaceCost {
+    base: i32,
+    radiant: i32,
+}
+
+/// §8.7: "If it costs (1) or less", Radiant "(2) or less". An AI card declares no params (B8).
+const MAX_COST: ByFaceCost = ByFaceCost { base: 1, radiant: 2 };
+
+fn chain(max_cost: i32) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![draw_while_cheap(json_as(json!({ "maxCost": max_cost, "repeats": CHAIN_OF_THOUGHT_REPEATS })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: chain(MAX_COST.base),
+        radiant: chain(MAX_COST.radiant),
+    }
+}
 
 // T-AI-4 Chain of Thought — SPEC §8.7 row T-AI-4, BUILD M9 Classic+ row T-AI-4: "Draws 1; if the card
 // that draw put in your hand costs (1) or less (its current cost; an X-cost card counts 0, R65) it draws
@@ -72,7 +101,7 @@ mod tests {
             assert_eq!(def.type_, CardType::Spell);
             assert_eq!(js(&def.tags), json!(["AI", "Token"]));
             assert_eq!(CHAIN_OF_THOUGHT_REPEATS, 4);
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

@@ -8,7 +8,49 @@
 //!            graveyard when it dies: its aura left the field with it (R398). Unit tokens still cease to
 //!            exist (R11).
 
+use jackioh_engine::effects::exile_matching;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-050";
+
+/// `{ id: "voidwalker", on: "toGraveyard", instead: { to: "exile" } }`, with the face's `when`.
+fn voidwalker(when: Option<ReplacementWhen>) -> ReplacementDef {
+    ReplacementDef {
+        id: "voidwalker".to_string(),
+        on: ReplacementMoment::ToGraveyard,
+        where_: None,
+        when,
+        instead: ReplacementInstead {
+            to: Some(InsteadTo::Exile),
+            ..ReplacementInstead::default()
+        },
+        then: None,
+        by: None,
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                exile_matching(json_as(json!({ "zones": ["graveyard"], "player": "self" }))),
+                exile_matching(json_as(json!({ "zones": ["graveyard"], "player": "enemy" }))),
+            ]
+        })),
+        replacements: vec![voidwalker(None)],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|_ctx| vec![exile_matching(json_as(json!({ "zones": ["graveyard"], "player": "enemy" })))])),
+        replacements: vec![voidwalker(Some(replacement_when(|ctx| {
+            matches!(ctx.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner != ctx.controller)
+        })))],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #50 Voidwalker (SPEC §8.6 row 50, BUILD M9 Classic row C 50): the aura takes a death, a discard, a
 // resolved Spell, a fired trap and a burn; unit tokens still cease to exist (R11); its own card reaches
@@ -18,7 +60,7 @@ pub const ID: &str = "classic-050";
 // already on the field would exile them as they were laid; the Cry's cases play it from hand instead.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -69,7 +111,7 @@ mod tests {
             let def = registered_catalog()[ID].clone();
             assert_eq!(def.id, VOID);
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.replacements.len(), 1);
             let only = &scripts.base.replacements[0];
             assert_eq!(only.id, "voidwalker");

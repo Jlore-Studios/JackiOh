@@ -11,13 +11,28 @@
 //!
 //! Targeting cost (B5): §10.5 step 2 pays random discards (R682, §6.3). Tuned via param() (R386).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-089";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targeting_discards: Some(read_hook(|args| param(&args, "discard"))),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in what the engine reads off the catalog (its doubled
+    // stats and Reborn).
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.6: targeting costs 2 random discards (R682); legalActions and prompts require enough cards;
 // attacks and random picks cost nothing. Tuned via param() (R386). Echo repeat tests fresh picks (R81).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -128,7 +143,7 @@ mod tests {
                 json!(def.params),
                 json!([{ "key": "discard", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targeting_discards.is_some());
             // The Radiant face is the same script, so the same hook.
             assert!(std::sync::Arc::ptr_eq(

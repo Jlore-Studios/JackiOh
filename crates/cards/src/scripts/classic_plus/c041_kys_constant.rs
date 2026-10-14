@@ -10,7 +10,67 @@
 //! is the engine's `setNumber`: `tuning` (the cost through `costMod`), kept in every zone and by a copy,
 //! reported by a `numberChanged` hidden as the card is.
 
+use jackioh_engine::effects::{chosen_tuning_number, discover_number, set_number};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-041";
+
+/// "change … to 3".
+const CONSTANT: i32 = 3;
+/// §6.3 Discover: up to 3 options.
+const OFFERED: i32 = 3;
+
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::hand(1, 1, json!({ "of": ["hand"], "excludeSelf": true, "check": "number" }))]
+}
+
+fn target_checks() -> IndexMap<&'static str, TargetCheck> {
+    IndexMap::from([(
+        "number",
+        target_check(|a| {
+            a.candidate
+                .is_some_and(|candidate| numbers_on(a.state, candidate).iter().any(|entry| entry.value != CONSTANT))
+        }),
+    )])
+}
+
+/// The Radiant face's continuation: the number picked off the Discover becomes 3.
+fn picked(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    match chosen_tuning_number(ctx) {
+        None => vec![],
+        Some(pick) => vec![set_number(json_as(json!({
+            "instanceId": pick.instance_id,
+            "which": pick.which,
+            "value": CONSTANT,
+        })))],
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        target_checks: target_checks(),
+        cry: Some(hook(|_ctx| {
+            vec![set_number(json_as(json!({ "target": { "of": "chosen" }, "which": "random", "value": CONSTANT })))]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        targets: targets(),
+        target_checks: target_checks(),
+        cry: Some(hook(|_ctx| {
+            vec![discover_number(json_as(json!({
+                "target": { "of": "chosen" },
+                "value": CONSTANT,
+                "count": OFFERED,
+                "step": "picked",
+            })))]
+        })),
+        resume: IndexMap::from([("picked", hook(picked))]),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #41 KY's Constant — SPEC §8.7 row 41, B3.4, R60, R81, R97, R129, R386, BUILD M9 row C+ 41.
 // The setting itself is the engine's `setNumber` / `discoverNumber` (packages/engine/test/effects-tune.test.ts).
@@ -93,7 +153,7 @@ mod tests {
     #[test]
     fn r81_both_faces_declare_one_hand_pick_never_itself() {
         assert_eq!(crate::card_def(CONSTANT).id, CONSTANT);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert_eq!(scripts.base.targets, scripts.radiant.targets);
         assert_eq!(
             serde_json::to_value(&scripts.base.targets).expect("declarations are JSON"),

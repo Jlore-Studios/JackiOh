@@ -19,7 +19,45 @@
 //! `add_random_from_catalog` picks with `ctx.rng` (a hook may not roll dice itself: that advances
 //! `rng_cursor`, which is state) and creates each card through the `add_to_hand` pipeline (§2.4, R4).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-054";
+
+/// §8: two cards, both Units in the 3-4 bracket.
+const COUNT: i32 = 2;
+
+/// §5.1's pool: Units costing 3 or 4, no tokens (automatic), never Straaza herself. `ID` is the
+/// card's own catalog id, so the exclusion cannot drift (R387).
+fn unit_pool() -> Value {
+    json!({
+        "type": "Unit",
+        "costRange": { "min": 3, "max": 4 },
+        "excludeDefId": ID,
+    })
+}
+
+/// The two faces differ in what the generated cards cost — "they cost 1", "they cost 0": the declared
+/// number `setCost` (R386), less being better — and whether they are Radiant.
+fn straaza(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": unit_pool(),
+                "count": COUNT,
+                "costOverride": param(&*ctx, "setCost"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: straaza(false),
+        radiant: straaza(true),
+    }
+}
 
 // #54 Straaza (SPEC §8.3, §5.1, §6.3 Add to hand; R4, R60, R65, R78, R215, R275).
 // BUILD M4-T4 row 54: "2 random units of cost 3 or 4, no tokens, not #54, cost override 1; radiant

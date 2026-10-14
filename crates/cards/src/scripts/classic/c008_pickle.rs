@@ -27,8 +27,204 @@
 //! THE CLOCK is not the card's: the engine runs a non-active player's prompt on its own clock, and a
 //! timeout answers it with the AI policy (R79).
 
+use jackioh_engine::effects::{choose_mode, chosen_options, discard_random, draw, exile_bottom_of_library};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-008";
+
+const DISCARD: &str = "discard";
+const EXILE: &str = "exile";
+const DRAW: &str = "draw";
+
+/// The card's numbers, read once as it resolves and carried through every question (§10.6).
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Numbers {
+    choices: i32,
+    discard: i32,
+    exile: i32,
+    draw: i32,
+}
+
+/// The chain's data: the numbers, and which question is being asked (1-based). (TS `Numbers & { n }`.)
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct ChainData {
+    numbers: Numbers,
+    n: i32,
+}
+
+fn read_numbers(ctx: &EffectContext<'_>) -> Numbers {
+    Numbers {
+        choices: param(ctx, "choices"),
+        discard: param(ctx, "discard"),
+        exile: param(ctx, "exile"),
+        draw: param(ctx, "draw"),
+    }
+}
+
+/// TS `numberIn(data, key)`: `typeof value === "number" && Number.isInteger(value)`, else None.
+fn number_in(data: &IndexMap<String, Value>, key: &str) -> Option<i32> {
+    let value = data.get(key)?.as_f64()?;
+    if value.is_finite() && value.fract() == 0.0 {
+        Some(value as i32)
+    } else {
+        None
+    }
+}
+
+/// §10.6's data is JSON, so what comes back is narrowed, never cast.
+fn chain_of(ctx: &EffectContext<'_>) -> Option<ChainData> {
+    let n = number_in(&ctx.data, "n")?;
+    let choices = number_in(&ctx.data, "choices")?;
+    let discard_count = number_in(&ctx.data, "discard")?;
+    let exile_count = number_in(&ctx.data, "exile")?;
+    let draw_count = number_in(&ctx.data, "draw")?;
+    Some(ChainData {
+        numbers: Numbers {
+            choices,
+            discard: discard_count,
+            exile: exile_count,
+            draw: draw_count,
+        },
+        n,
+    })
+}
+
+/// TS `{ ...chain }`: the chain as the prompt's data carries it.
+fn chain_data(chain: &ChainData) -> Value {
+    json!({
+        "choices": chain.numbers.choices,
+        "discard": chain.numbers.discard,
+        "exile": chain.numbers.exile,
+        "draw": chain.numbers.draw,
+        "n": chain.n,
+    })
+}
+
+fn cards(count: i32) -> String {
+    if count == 1 {
+        "1 card".to_string()
+    } else {
+        format!("{count} cards")
+    }
+}
+
+/// The captions the opponent reads: from their seat, and naming no card.
+fn labels_for(numbers: &Numbers) -> IndexMap<String, String> {
+    IndexMap::from([
+        (DISCARD.to_string(), format!("Discard {}", cards(numbers.discard))),
+        (EXILE.to_string(), format!("Exile the bottom {} of your deck", cards(numbers.exile))),
+        (DRAW.to_string(), format!("Your opponent draws {}", cards(numbers.draw))),
+    ])
+}
+
+/// What an effect built in the same list as the next question will have taken from their piles by
+/// the time that question opens: a question's options are read as its list is built, before the
+/// discards or the exile ahead of it in that list apply, so the count they take is subtracted here.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct Pending {
+    hand_loss: Option<i32>,
+    deck_loss: Option<i32>,
+}
+
+/// Question `chain.n`, offering only what would do something; nothing once every question is asked.
+fn ask(ctx: &EffectContext<'_>, chain: &ChainData, pending: Pending) -> Vec<Effect> {
+    if chain.n > chain.numbers.choices {
+        return vec![];
+    }
+    let enemy = opponent_of(ctx.controller);
+    let state: &GameState = &*ctx.state;
+    let mut options: Vec<&str> = Vec::new();
+    if zone_count(state, enemy, OffFieldZone::Hand) - pending.hand_loss.unwrap_or(0) > 0
+        && !jackioh_engine::draw::discard_guarded(state, enemy)
+    {
+        options.push(DISCARD);
+    }
+    if zone_count(state, enemy, OffFieldZone::Library) - pending.deck_loss.unwrap_or(0) > 0 {
+        options.push(EXILE);
+    }
+    options.push(DRAW);
+    vec![choose_mode(json_as(json!({
+        "by": "enemy",
+        "options": options,
+        "labels": labels_for(&chain.numbers),
+        "step": "chosen",
+        "prompt": format!("Pickle: your choice ({} of {})", chain.n, chain.numbers.choices),
+        "data": chain_data(chain),
+    })))]
+}
+
+/// The `chosen` step: the opponent's answer to question `n`, then question `n + 1`.
+fn chosen(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let Some(chain) = chain_of(ctx) else {
+        return vec![];
+    };
+    let next = ChainData { n: chain.n + 1, ..chain };
+    let enemy = opponent_of(ctx.controller);
+    match chosen_options(ctx).first().map(String::as_str) {
+        Some(DISCARD) => {
+            // A hand emptied since the question was asked has nothing to discard: on to the next one.
+            // The random discard lands first in the list, so the next question subtracts it (Pending).
+            let hand_loss = chain.numbers.discard.min(zone_count(&*ctx.state, enemy, OffFieldZone::Hand));
+            if hand_loss == 0 {
+                return ask(ctx, &next, Pending::default());
+            }
+            let mut effects = vec![discard_random(json_as(json!({ "count": chain.numbers.discard, "player": "enemy" })))];
+            effects.extend(ask(
+                ctx,
+                &next,
+                Pending {
+                    hand_loss: Some(hand_loss),
+                    ..Pending::default()
+                },
+            ));
+            effects
+        }
+        Some(EXILE) => {
+            let deck_loss = chain.numbers.exile.min(zone_count(&*ctx.state, enemy, OffFieldZone::Library));
+            let mut effects = vec![exile_bottom_of_library(json_as(json!({ "player": "enemy", "count": chain.numbers.exile })))];
+            effects.extend(ask(
+                ctx,
+                &next,
+                Pending {
+                    deck_loss: Some(deck_loss),
+                    ..Pending::default()
+                },
+            ));
+            effects
+        }
+        Some(DRAW) => {
+            let mut effects = vec![draw(json_as(json!({ "count": chain.numbers.draw })))];
+            effects.extend(ask(ctx, &next, Pending::default()));
+            effects
+        }
+        _ => vec![],
+    }
+}
+
+/// TS `const pickle: Script`.
+fn pickle() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            let chain = ChainData {
+                numbers: read_numbers(ctx),
+                n: 1,
+            };
+            ask(ctx, &chain, Pending::default())
+        })),
+        resume: IndexMap::from([("chosen", hook(|ctx| chosen(ctx)))]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = pickle();
+
+    // The same script: the Radiant face differs only in its declared numbers (discard, exile and draw 2),
+    // which `param` reads off the running face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #8 Pickle — SPEC §8.6 row 8, BUILD M9 Classic row C 8: "Three mode prompts held by the opponent
 // during your turn, one after another, repeats allowed: they discard a card at random (R682),
@@ -39,7 +235,6 @@ pub const ID: &str = "classic-008";
 // options name no card; the paused prompts survive a JSON round trip; radiant: discard 2, exile the
 // bottom 2, or draw 2; its tuned numbers (choices, discard, exile, draw) read through `param()`
 // (R386)".
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -119,7 +314,6 @@ mod tests {
 
     mod c_n8_pickle {
         use super::*;
-        use std::sync::Arc;
 
         #[test]
         fn declares_its_four_numbers_r386_choices_3_discard_exile_draw_1_radiant_2() {
@@ -134,7 +328,7 @@ mod tests {
                 ])
             );
             // The same script on both faces: only the numbers differ.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

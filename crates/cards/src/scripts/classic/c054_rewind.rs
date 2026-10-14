@@ -9,14 +9,41 @@
 //! `triggerCry` is the engine's whole sequence; this card only declares the pick (a `check` on
 //! `hasTriggerableCry`) and runs it `param(ctx, "repeats")` times on the chosen Unit.
 
+use jackioh_engine::effects::{has_triggerable_cry, trigger_cry};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-054";
+
+fn rewind(side: FilterSide) -> Script {
+    Script {
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": side, "of": ["unit", "graveyard"], "check": "hasCry" }),
+        )],
+        target_checks: IndexMap::from([(
+            "hasCry",
+            target_check(|args| args.candidate.is_some_and(|candidate| has_triggerable_cry(args.state, candidate))),
+        )]),
+        cry: Some(hook(|ctx| (0..param(ctx, "repeats")).map(|_| trigger_cry(Default::default())).collect())),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = rewind(FilterSide::Ally);
+
+    let radiant = rewind(FilterSide::Any);
+
+    CardScripts { base, radiant }
+}
 
 // C #54 — SPEC §8.6 row 54, BUILD M9 Classic row C 54: the chosen Unit's Cry runs with it as `self`
 // under your control, choices yours as prompts (R70). No Unit with a Cry still plays and fizzles (§8
 // conventions, R90). Radiant runs twice; repeats tuned on Radiant face only (R749; `param()`, R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::effects::{TuneDirection, applicable_changes};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
@@ -97,7 +124,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "repeats", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "ally", "of": ["unit", "graveyard"], "check": "hasCry" } }]),

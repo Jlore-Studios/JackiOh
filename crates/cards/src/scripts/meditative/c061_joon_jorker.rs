@@ -4,7 +4,38 @@
 //! Engine: at its controller's end of turn, separate Buffs (Upgrade, R386) on the acting Unit in the
 //!   next lane on its own side (MD-D16, R1060); none or Immutable neighbour: nothing (R129).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-061";
+
+fn joon() -> Script {
+    Script {
+        end_of_turn: Some(hook(|ctx| {
+            let Some(me) = ctx.live_self() else {
+                return vec![];
+            };
+            let Some(at) = slot_of(&*ctx.state, me) else {
+                return vec![];
+            };
+            if at.row != Row::Units || at.lane >= UNIT_ZONES {
+                return vec![];
+            }
+            let next = ZoneSlot { player: at.player, row: Row::Units, lane: at.lane + 1 };
+            let Some(id) = card_at(&*ctx.state, next).map(|card| card.id.clone()) else {
+                return vec![];
+            };
+            vec![upgrade(json_as(json!({ "instanceId": id, "times": param(&*ctx, "times") })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = joon();
+    // The Radiant face differs only in stats and its `times` value, both catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #61 Joon Jorker — SPEC §8.8 row 61, BUILD M10 row M 61.
 #[cfg(test)]

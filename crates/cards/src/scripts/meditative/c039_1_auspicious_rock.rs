@@ -14,7 +14,34 @@
 //! not here. "When played" on a Spell is its resolution.
 //! Tunes: life 2 ↓; Lucky 2 ↑, on the Radiant face only.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039-1";
+
+/// The table the Rock rolls on (R960): Dud < Jade < Red Jade, worst to best.
+pub const ROCK_TABLE: &str = "auspiciousRock";
+
+fn rock_cry() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                lose_health(json_as(
+                    json!({ "player": "self", "amount": param(&*ctx, "life") }),
+                )),
+                add_rolled(json_as(json!({ "table": ROCK_TABLE }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces run this one script: the Radiant face's Lucky 2 is its printed Lucky, which
+    // `add_rolled` reads off the running face, and `life` is 2 on both.
+    let base = rock_cry();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #39.1 Auspicious Rock — SPEC §8.8 row 39.1, BUILD M10 row M 39.1: "Your hero loses 2
 // health (R18: Armor and a hero immunity do not stop it), then one roll by `AUSPICIOUS_ROCK_ODDS`

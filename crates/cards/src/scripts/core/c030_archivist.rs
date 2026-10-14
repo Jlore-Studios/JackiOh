@@ -11,7 +11,83 @@
 //! The draw is §6.3's `drawFromLibrary` (#94 Genn's Greed too): the card itself leaves as a draw — a
 //! `drawn` event, R55's counter, the hand cap (R4), the cast-on-draw path (§2.4, R58).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-030";
+
+/// §8.2's two modes, as the play action spells them (R81).
+const HIGHEST: &str = "highest";
+const LOWEST: &str = "lowest";
+
+/// R24: the library card with the extreme current cost, ties going to the card nearest the top.
+/// Costs are R65's out-of-play numbers: X counts 0, embiggen its base price, the instance's `costMod`
+/// persists (R78), and player discounts never price a library card. `effective_cost` is the one
+/// calculation; `queryCost` reads a DEFINITION, blind to #7's `costMod` and #95's library discount.
+/// Reads through `zoneCards` and writes nothing (CLAUDE.md rule 5, BUILD M3-T1).
+fn extreme(ctx: &EffectContext<'_>, want: &str) -> Option<CardInstance> {
+    let mut best: Option<CardInstance> = None;
+    let mut best_cost = 0;
+    for card in zone_cards(ctx.state, ctx.controller, OffFieldZone::Library) {
+        let cost = effective_cost(ctx.state, &card, Default::default());
+        let better = if want == HIGHEST { cost > best_cost } else { cost < best_cost };
+        // Strict, and top down, so a tie keeps the card already held — the one nearer the top (R24).
+        if best.is_none() || better {
+            best = Some(card.clone());
+            best_cost = cost;
+        }
+    }
+    best
+}
+
+/// §6.3 Draw of one named library card (R24), or nothing for an empty library.
+fn draw_named(card: Option<CardInstance>) -> Vec<Effect> {
+    match card {
+        None => vec![],
+        Some(card) => vec![draw_from_library(json_as(json!({ "instanceId": card.id })))],
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: vec![HIGHEST.to_string(), LOWEST.to_string()],
+        }],
+        cry: Some(hook(|ctx| {
+            // R81: the mode arrived with the play, so there is nothing to wait for. R90 validates the
+            // declaration, so anything else means no mode was carried at all — fizzle rather than guess.
+            let mode = chosen_options(ctx).into_iter().next();
+            match mode.as_deref() {
+                Some(want) if want == HIGHEST || want == LOWEST => draw_named(extreme(ctx, want)),
+                _ => vec![],
+            }
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            // A one-card library is its own highest and lowest, so "draw both" draws it once.
+            // The two are read once, as the Cry begins: a highest card that is cast on draw and asks has left
+            // the library by the answer, and a rebuilt pair would name other cards (R113, `forEachCard`).
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(|at: &mut EffectContext<'_>| {
+                    let high = extreme(at, HIGHEST);
+                    let low = extreme(at, LOWEST);
+                    let both = match (&high, &low) {
+                        (Some(high), Some(low)) if high.id == low.id => vec![Some(high.clone())],
+                        _ => vec![high.clone(), low.clone()],
+                    };
+                    both.into_iter().flatten().map(|card| card.id).collect()
+                }),
+                each: Arc::new(|instance_id: &str| draw_from_library(json_as(json!({ "instanceId": instance_id })))),
+            })]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // #30 Archivist (SPEC §8.2, BUILD M4-T4 row 30): "Mode chosen with the play (R81); highest/lowest
 // by current cost, ties nearest top, X counts 0 (R24); radiant draws both".

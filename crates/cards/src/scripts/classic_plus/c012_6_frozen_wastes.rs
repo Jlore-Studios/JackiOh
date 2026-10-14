@@ -7,7 +7,64 @@
 //! before the state check, R59): an Indestructible one isn't, a Reborn one is. A short deck exiles
 //! what it has, with no fatigue. The preview (R280) is how many cards it would exile now.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-6";
+
+/// The Units a destroy of all Units dooms now: every acting Unit but the Indestructible ones (R46).
+fn doomed(state: &GameState) -> i32 {
+    [PlayerId::P1, PlayerId::P2]
+        .iter()
+        .flat_map(|&player| active_units_of(state, player))
+        .filter(|unit| !has_keyword(&unit_view(state, unit).keywords, KeywordKind::Indestructible))
+        .count() as i32
+}
+
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn frozen_wastes(deck_of: impl Fn(PlayerId) -> PlayerId + Copy + Send + Sync + 'static) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let count = doomed(ctx.state);
+            let deck = deck_of(ctx.controller);
+            vec![
+                destroy_all(json_as(json!({ "side": "any" }))),
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |at| {
+                        zone_cards(at.state, deck, OffFieldZone::Library)
+                            .into_iter()
+                            .take(count.max(0) as usize)
+                            .map(|card| card.id)
+                            .collect()
+                    }),
+                    each: each_of(|instance_id| {
+                        exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                    }),
+                }),
+            ]
+        })),
+        preview: Some(condition_hook(move |c| {
+            let value = doomed(c.state).min(zone_count(c.state, deck_of(c.controller), OffFieldZone::Library));
+            vec![json_as::<PreviewValue>(json!({ "label": "for each one destroyed", "value": value }))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: frozen_wastes(|controller| controller),
+        radiant: frozen_wastes(opponent_of),
+    }
+}
 
 // C+ #12.6 Frozen Wastes — SPEC §8.7 row 12.6, R408, BUILD M9 Classic+ row C+ 12.6: "Spell (a Field
 // Spell until balance patch 1): destroys every Unit on both sides, then exiles the top card of

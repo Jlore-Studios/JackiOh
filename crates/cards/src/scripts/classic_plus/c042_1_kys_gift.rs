@@ -10,7 +10,38 @@
 //! 0; the hand cap burns. The numbers are the declared `mana`, `discards` and `heal` (R386); one script
 //! runs both faces.
 
+use jackioh_engine::effects::{add_random_from_catalog, discard_random, gain_mana, heal};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-042-1";
+
+/// A Book, a KY card, a Legendary card and a (4) Cost card, in the order the text names them.
+fn pools() -> [Value; 4] {
+    [json!({ "tags": ["Book"] }), json!({ "tags": ["KY"] }), json!({ "rarity": "Legendary" }), json!({ "cost": 4 })]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        start_of_turn: Some(hook(|ctx| {
+            let mut effects = vec![
+                gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))),
+                discard_random(json_as(json!({ "count": param(&*ctx, "discards"), "player": "enemy" }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }))),
+            ];
+            let radiant = ctx.radiant;
+            // "They cost (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
+            effects.extend(pools().into_iter().map(|query| {
+                add_random_from_catalog(json_as(json!({ "query": query, "costOverride": cost, "radiant": radiant })))
+            }));
+            effects
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 2, 2 and 10 are its declared numbers, and `ctx.radiant` makes the cards Radiant.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R682, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
 // p2 is active in each scenario, so its `endTurn()` starts p1's turn, where the Gift fires.
@@ -84,7 +115,7 @@ mod tests {
         assert_eq!(def.id, GIFT);
         assert!(def.token);
         assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         let (base, radiant) = (
             scripts.base.start_of_turn.as_ref().expect("a start-of-turn script"),
             scripts.radiant.start_of_turn.as_ref().expect("a start-of-turn script"),

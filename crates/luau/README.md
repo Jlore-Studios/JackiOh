@@ -1,12 +1,16 @@
 # `jackioh-luau`
 
-The host that runs card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
-runs in, the integer boundary every value crosses, the lint that refuses what the sandbox cannot
-stop, one VM per thread, and `load_card`, which turns a compiled script into the engine's
-`CardScripts`. `crates/cards` depends on it: its `build.rs` calls `compile` on every card's
-`.luau`, and its registry calls `load_card` on the bytecode, so every build that takes the cards
-(the server's, the browser's, the tools') compiles it. The engine and the AI do not depend on it.
-The decisions it follows are #442's L3–L8. This file is the contract.
+The host that runs card scripts written in Luau (#442, v0.4.0), kept as the scripting host for
+custom cards (#902, #915). It holds the sandbox a script runs in, the integer boundary every value
+crosses, the lint that refuses what the sandbox cannot stop, one VM per thread, and `load_card`,
+which turns a compiled script into the engine's `CardScripts`.
+
+No official card uses it: v0.4.0 ported 409 card scripts to Luau, and v0.5.0 (#902) brought them
+all back to Rust, since a VM made every game slower and the browser's module bigger for nothing an
+official card needs (`docs/v0.4.0/README.md` §8). No crate the game builds depends on it (#902 V4):
+not the cards, the engine, the AI, the server or the tools. It stays a workspace member, built and
+tested by CI, for code that is not compiled into the game. The decisions it follows are #442's
+L3–L8. This file is the contract.
 
 ## Pinned versions
 
@@ -185,10 +189,9 @@ A table's fields are invariant, so a value going into an optional field takes th
 and CI's `rust` check holds it so (#872). Each pure-read context's type (`J.ConditionContext`,
 `J.HookArgs`, `J.CostArgs`, …) declares every reader `shared_readers!` registers on it, typed as on
 `J.EffectContext`: `tests/export_api.rs` reads the macro, so a reader the host adds is typed at once.
-The checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
-`@jackioh` at the committed module, which the CLI resolves (the mapping drops the `.luau`
-extension, which luau-analyze 0.740 refuses as `Unknown require`, #464 gap 15), so local
-strict runs check the files in place.
+A `.luaurc` beside the scripts aliases `@jackioh` at the committed module, which the CLI resolves
+(the mapping drops the `.luau` extension, which luau-analyze 0.740 refuses as `Unknown require`,
+#464 gap 15), so local strict runs check the files in place.
 
 - `load_card(id, bytecode)` runs the module once to read which hooks each face declares, and
   fills those slots of `CardScripts` with closures that capture only the hook's `Site` (card, face
@@ -214,7 +217,8 @@ strict runs check the files in place.
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
 `load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
-`crates/cards/build.rs` calls it on every card's `.luau`, and the tests on their fixtures. Its
+v0.4.0's `crates/cards/build.rs` called it on every card's `.luau`; the tests call it on their
+fixtures. Its
 errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
 `"<file>:<line>: <Luau's message>"`.
 
@@ -239,8 +243,8 @@ method or a type and is never refused. It refuses:
 
 ## What is bound
 
-Everything a ported card can say in Rust (#448; `docs/v0.4.0/api-gaps.md` lists what is left and
-which cards wait on it):
+Everything a ported card could say in Rust (#448; `docs/v0.4.0/api-gaps.md` lists what was left
+and which cards waited on it):
 
 - **Effects.** One Luau function per effect verb in `crates/engine/src/effects/` (`api/`, one
   file per module, each line a `verb!` call), same name, its argument struct's fields as table

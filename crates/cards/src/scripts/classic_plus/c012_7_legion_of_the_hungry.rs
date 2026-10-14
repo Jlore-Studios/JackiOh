@@ -5,7 +5,64 @@
 //! summoned out of exile in the order they were exiled (no Cry, R1), per R64, until the board is full,
 //! the rest staying exiled; a unit-token card exiled from a deck has ceased to exist (R11).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-7";
+
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn legion(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // maxi-tail: the picks are drawn as the Cry resolves; nothing in this list can pause between
+            // them.
+            let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
+            let shuffled = ctx.rng.shuffle(&library);
+            let count = param(&*ctx, "cards").max(0) as usize;
+            let picks: Vec<CardInstance> = shuffled.into_iter().take(count).collect();
+            let units: Vec<String> = picks
+                .iter()
+                .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
+                .map(|card| card.id.clone())
+                .collect();
+            let pick_ids: Vec<String> = picks.iter().map(|card| card.id.clone()).collect();
+            vec![
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |_| pick_ids.clone()),
+                    each: each_of(|instance_id| {
+                        exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                    }),
+                }),
+                // A summon that finds no zone leaves the card in exile, and on its old face.
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |_| units.clone()),
+                    each: each_of(move |instance_id| {
+                        summon(json_as(json!({
+                            "instance": { "of": "instance", "instanceId": instance_id },
+                            "radiant": radiant,
+                        })))
+                    }),
+                }),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: legion(false),
+        radiant: legion(true),
+    }
+}
 
 // C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Field Spell
 // whose unlabelled text is its Cry (R408): exiles 5 different random cards of your deck (all if fewer,

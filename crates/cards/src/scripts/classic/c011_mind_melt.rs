@@ -13,14 +13,57 @@
 //! `chooseCostInHand` groups the hand by it into the options of a `number` prompt, and `exileMatching`
 //! reads the same cost when it sweeps the hand, so the group chosen is the group exiled.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-011";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![choose_from_hand(json_as(json!({
+                "of": "enemy",
+                "count": param(&*ctx, "cards"),
+                "step": "exile",
+                "prompt": "Look at your opponent's hand: exile a card from it",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            "exile",
+            hook(|ctx| {
+                ctx.targets
+                    .iter()
+                    .enumerate()
+                    .map(|(index, _)| exile(json_as(json!({ "target": { "of": "chosen", "index": index } }))))
+                    .collect()
+            }),
+        )]),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![choose_cost_in_hand(json_as(json!({
+                "of": "enemy",
+                "step": "cost",
+                "prompt": "Look at your opponent's hand: choose a cost",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            "cost",
+            hook(|ctx| match chosen_number(&*ctx) {
+                None => vec![],
+                Some(cost) => vec![exile_matching(json_as(json!({ "zones": ["hand"], "player": "enemy", "cost": cost })))],
+            }),
+        )]),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C #11 Mind Melt — SPEC §8.6 row 11, BUILD M9 Classic row C 11: the prompt's options are the
 // opponent's hand cards, readable by you alone (§10.8); their view shows a prompt open and names none
 // of its options (R177); radiant: the options are their hand grouped by cost (R65); its tuned number
 // (cards exiled) reads through `param()` (R386).
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,7 +137,7 @@ mod tests {
             js(&crate::card_def(MELT).params),
             json!([{ "key": "cards", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.targets.is_empty());
         assert!(radiant.targets.is_empty());
     }

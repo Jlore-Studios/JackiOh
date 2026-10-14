@@ -14,7 +14,28 @@
 //! remove it. Immutable (R23) blocks Vanilla, Transform and Fuse-onto; Radiant is still allowed and
 //! #41 Sheepish still fires, consumed for nothing (R17).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-066";
+
+/// §6.3 "Tribute 1": one of your units, or one Sheep Token, which is worth 2 of it (§3.2).
+const TRIBUTE_COST: i32 = 1;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    // The radiant cell adds a keyword and nothing else, and §8's Conventions keep every base clause a
+    // radiant cell does not restate — so the Tribute cost is kept and the script is the same object.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // #66 The Rock — SPEC §8.3, BUILD M4-T4: "Play refused without a tribute; Indestructible; radiant
 // Immutable".
@@ -75,7 +96,7 @@ mod tests {
         fn s8_3_the_script_carries_only_the_tribute_cost_both_keywords_are_catalog_data_s10_4_layer_1() {
             crate::register_all();
             // Granting Indestructible or Immutable here would be a second source of truth (see #25).
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             let def = crate::card_def(super::super::ID);
             assert_eq!(serde_json::to_value(&scripts.base.static_flags).unwrap(), json!({ "tribute": 1 }));
             assert_eq!(
@@ -93,7 +114,7 @@ mod tests {
         #[test]
         fn r81_r90_the_tribute_travels_in_the_play_actions_own_list_so_the_card_declares_no_targets() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.base.modes.is_empty());
         }
@@ -101,7 +122,7 @@ mod tests {
         #[test]
         fn s8_conventions_the_radiant_cell_adds_a_keyword_only_so_the_radiant_script_keeps_tribute_1() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             // The radiant face is the base script, so every part of it matches.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert!(scripts.radiant.cry.is_none() && scripts.radiant.aura.is_none());

@@ -22,7 +22,75 @@
 //! not copied: a `costOverride` of the cast copy's base cost less GIFT_DISCOUNT (R742), kept in every
 //! zone (R78), so a gift cast in turn prices the next one down until (0) ends the chain.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-087";
+
+/// R742: the gift's base cost is this much less than the cast copy's.
+const GIFT_DISCOUNT: i32 = 1;
+
+/// The three things #87 swaps. The names are the engine's `SwapWhat` values, which lets `swap()` with
+/// no argument read the play's answer itself (§6.3 Choose one).
+fn swap_mode() -> ModeDecl {
+    ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec!["health".to_string(), "board".to_string(), "library".to_string()],
+    }
+}
+
+/// The radiant face's second choice: hand the copy over, or keep it out of the opponent's hand.
+const GIFT: &str = "gift";
+const SKIP: &str = "skip";
+
+fn gift_mode() -> ModeDecl {
+    ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec![GIFT.to_string(), SKIP.to_string()],
+    }
+}
+
+/// R742: the gift with its base cost. The copy's base cost (R65's start: its `costOverride`, else
+/// its printed cost) is GIFT_DISCOUNT less than the cast copy's, so the gifts chain down
+/// (4) → (3) → (2) → (1); a copy whose base cost would be (0) is never added.
+fn gift(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let Some(this) = ctx.self_.as_ref() else {
+        return vec![];
+    };
+    let cost = this.cost_override.unwrap_or_else(|| printed_cost(ctx.state, this)) - GIFT_DISCOUNT;
+    if cost <= 0 {
+        return vec![];
+    }
+    vec![add_to_hand(json_as(json!({ "defId": ID, "player": "enemy", "costOverride": cost })))]
+}
+
+/// `radiant_face` is the whole of the radiant text: an optional gift.
+fn chaos(radiant_face: bool) -> Script {
+    Script {
+        modes: if radiant_face {
+            vec![swap_mode(), gift_mode()]
+        } else {
+            vec![swap_mode()]
+        },
+        cry: Some(hook(move |ctx| {
+            // Only an explicit SKIP skips: the base clause is to add it, and the radiant cell makes that
+            // optional rather than reversing it, so an unanswered gift mode still hands the copy over.
+            let skipped = radiant_face && chosen_options(ctx).iter().any(|option| option == SKIP);
+            let mut effects = vec![swap(json_as(json!({})))];
+            if !skipped {
+                effects.extend(gift(ctx));
+            }
+            effects.push(exile(json_as(json!({ "target": { "of": "self" } }))));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = chaos(false);
+    let radiant = chaos(true);
+    CardScripts { base, radiant }
+}
 
 // #87 Pocket Chaos (SPEC §8.5, BUILD M4-T4 row 87): "Health swap, lane-preserving board swap
 // including face-down traps with locks staying put, library swap that transfers ownership of the
@@ -83,7 +151,7 @@ mod tests {
         #[test]
         fn r81_declares_the_choose_one_as_a_play_time_mode_not_a_prompt() {
             crate::register_all();
-            let base = crate::scripts_of()[ID].clone().base;
+            let base = script().base;
             assert_eq!(
                 js(&base.modes),
                 json!([{ "kind": "mode", "options": ["health", "board", "library"] }])
@@ -95,7 +163,7 @@ mod tests {
         fn r81_the_radiant_face_declares_a_second_mode_for_the_optional_gift() {
             crate::register_all();
             assert_eq!(
-                js(&crate::scripts_of()[ID].clone().radiant.modes),
+                js(&script().radiant.modes),
                 json!([
                     { "kind": "mode", "options": ["health", "board", "library"] },
                     { "kind": "mode", "options": ["gift", "skip"] },

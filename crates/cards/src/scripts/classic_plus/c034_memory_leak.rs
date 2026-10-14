@@ -6,8 +6,72 @@
 //! zone" is one of the opponent's ten not Locked yet (`lockRandomZone`, nothing when all are); "its
 //! zone" is where the played card landed, Locked once it resolves (a cast counts, R70).
 
+use jackioh_engine::effects::{chosen_options, lock_played_zone, lock_random_zone, remember};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-034";
+
+const MODE: &str = "mode";
+const END_OF_TURN: &str = "endOfTurn";
+const AFTER_PLAY: &str = "afterPlay";
+
+/// TS's `ctx & { event }` is the context and the event, two arguments here.
+fn opponent_played_unit_or_field_spell(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    let GameEvent::CardResolved { player, def_id, .. } = event else {
+        return false;
+    };
+    if *player == ctx.controller {
+        return false;
+    }
+    let type_ = def_of(Some(&*ctx.state), def_id).type_;
+    type_ == CardType::Unit || type_ == CardType::FieldSpell
+}
+
+fn memory_leak<F>(has: F) -> Script
+where
+    F: Fn(&EffectContext<'_>, &str) -> bool + Clone + Send + Sync + 'static,
+{
+    let at_end = has.clone();
+    Script {
+        end_of_turn: Some(hook(move |ctx| {
+            if at_end(&*ctx, END_OF_TURN) {
+                vec![lock_random_zone(json_as(json!({ "side": "enemy" })))]
+            } else {
+                vec![]
+            }
+        })),
+        triggers: vec![TriggerDef::new("memory-leak", &[GameEventType::CardResolved], move |ctx, event| {
+            // A trigger that is no trap reads its condition in `run` (only traps consult `when`, R99).
+            if has(&*ctx, AFTER_PLAY) && opponent_played_unit_or_field_spell(&*ctx, event) {
+                vec![lock_played_zone(json_as(json!({ "event": event })))]
+            } else {
+                vec![]
+            }
+        })],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: vec![END_OF_TURN.to_string(), AFTER_PLAY.to_string()],
+        }],
+        cry: Some(hook(|ctx| {
+            let mode = chosen_options(ctx).into_iter().next();
+            match mode.as_deref() {
+                Some(mode) if mode == END_OF_TURN || mode == AFTER_PLAY => {
+                    vec![remember(json_as(json!({ "key": MODE, "value": mode })))]
+                }
+                _ => vec![],
+            }
+        })),
+        ..memory_leak(|ctx, mode| recalled(ctx, MODE).is_some_and(|value| value.as_str() == Some(mode)))
+    };
+    let radiant = memory_leak(|_ctx, _mode| true);
+    CardScripts { base, radiant }
+}
 
 // C+ #34 Memory Leak — SPEC §8.7 row 34, BUILD M9 Classic+ row C+ 34: "Field Spell; the mode is chosen
 // with the play (R81) and kept in `memory.mode`: "End of turn" Locks one random zone of the opponent's
@@ -15,7 +79,6 @@ pub const ID: &str = "classicplus-034";
 // ten Locked, nothing and no random draw, R129); "After your opponent plays a Unit or Field Spell" Locks
 // the zone that card went into (a cast counts, R70; a Spell, Trap or Field Trap doesn't; the card
 // stays); a Locked unit zone takes a Reborn return there (R175, R688); radiant both at once, no choice".
-
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

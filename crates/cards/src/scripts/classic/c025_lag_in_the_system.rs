@@ -12,7 +12,82 @@
 //! none of them, so it is spared. Cost is `costNow` (R396), R65's at resolution: an X card costs its X
 //! on the field and 0 anywhere else.
 
+use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-025";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Whose {
+    Any,
+    Enemy,
+}
+
+impl Whose {
+    /// The `BoardScope.side` literal.
+    fn side(self) -> &'static str {
+        match self {
+            Whose::Any => "any",
+            Whose::Enemy => "enemy",
+        }
+    }
+}
+
+/// Every card on the field and in the hands and decks of `whose` sides, in the order the header
+/// gives — or the field alone (the whole board) when `field_only`, which is the base face's scope
+/// (balance patch 1).
+fn reachable(ctx: &EffectContext<'_>, whose: Whose, field_only: bool) -> Vec<CardInstance> {
+    let scope: BoardScope = json_as(json!({ "side": whose.side(), "rows": ["units", "backrow"] }));
+    let field = cards_in_scope(ctx, &scope);
+    if field_only {
+        return field;
+    }
+    let players: Vec<PlayerId> = match whose {
+        Whose::Enemy => sides_of(ctx, Some(ScopeSide::Enemy)),
+        Whose::Any => {
+            let mut players = vec![ctx.controller];
+            players.extend(sides_of(ctx, Some(ScopeSide::Enemy)));
+            players
+        }
+    };
+    let piles: Vec<CardInstance> = players
+        .iter()
+        .flat_map(|&player| {
+            let mut cards = zone_cards(&*ctx.state, player, OffFieldZone::Hand);
+            cards.extend(zone_cards(&*ctx.state, player, OffFieldZone::Library));
+            cards
+        })
+        .collect();
+    field.into_iter().chain(piles).collect()
+}
+
+fn lag(whose: Whose, field_only: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let threshold = param(&*ctx, "threshold");
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(move |read: &mut EffectContext<'_>| -> Vec<String> {
+                    reachable(read, whose, field_only)
+                        .into_iter()
+                        .filter(|card| cost_now(&*read.state, card) <= threshold)
+                        .map(|card| card.id)
+                        .collect()
+                }),
+                each: Arc::new(|instance_id: &str| {
+                    exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: lag(Whose::Any, true),
+        radiant: lag(Whose::Enemy, false),
+    }
+}
 
 // C #25 Lag in the System — SPEC §8.6 row 25, BUILD M9 Classic row C 25: face-down and Indestructible
 // cards (C #90 In Too Deep) are exiled too; its tuned number (threshold) reads through `param()` (R386).
@@ -89,7 +164,7 @@ mod tests {
         #[test]
         fn declares_its_one_number_threshold_r386() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 serde_json::to_value(&crate::card_def(ID).params).unwrap(),
                 json!([{ "key": "threshold", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }])

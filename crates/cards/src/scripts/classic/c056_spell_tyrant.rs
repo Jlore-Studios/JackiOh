@@ -7,17 +7,71 @@
 //!            Radiant face casts the Spells there as the Cry begins, oldest first, so a Spell a cast puts
 //!            in the graveyard is not cast. "Spell" is the Spell type.
 
+use jackioh_engine::effects::{CastEachArgs, cast_each, choose_pick};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-056";
+
+/// R453: `castEach` with "then exile them" (`afterward: "exile"`), each cast's choices its caster's (R70).
+/// `cards` answers the instance ids to cast, read once as the list reaches it.
+fn cast_each_then_exile(cards: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> Effect {
+    cast_each(CastEachArgs {
+        cards: Arc::new(cards),
+        how: json_as(json!({ "afterward": "exile" })),
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![choose_pick(json_as(json!({
+                "step": "cast",
+                "from": [{ "zone": "graveyard" }],
+                "filter": { "type": "Spell" },
+                "max": param(ctx, "spells"),
+                "prompt": "Choose Spells in your graveyard to cast",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            "cast",
+            hook(|ctx| {
+                let picked: Vec<String> = ctx
+                    .targets
+                    .iter()
+                    .filter_map(|selection| match selection {
+                        Selection::Instance { instance_id } => Some(instance_id.clone()),
+                        _ => None,
+                    })
+                    .collect();
+                vec![cast_each_then_exile(move |_ctx| picked.clone())]
+            }),
+        )]),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![cast_each_then_exile(|ctx| {
+                zone_cards(ctx.state, ctx.controller, OffFieldZone::Graveyard)
+                    .into_iter()
+                    .filter(|card| card_type_of(ctx.state, card) == CardType::Spell)
+                    .map(|card| card.id.clone())
+                    .collect()
+            })]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #56 Spell Tyrant, SPEC §8.6 row 56: the Cry casts up to 3 Spells (`spells`, R386) from your
 // graveyard, free, counted as played, your choices (R70), each exiled after it resolves. Radiant: every
 // Spell there as the Cry begins, oldest first, no choice; a Spell a cast puts in the graveyard is not cast.
 // Mana Well is a Field Spell and Mr. Vanilla a Unit, neither of them a Spell.
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -73,7 +127,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "spells", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.resume.contains_key("cast"));
             assert!(scripts.radiant.resume.is_empty());
         }

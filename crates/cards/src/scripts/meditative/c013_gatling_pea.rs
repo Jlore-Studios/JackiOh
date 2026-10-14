@@ -11,7 +11,32 @@
 //! Armor took whole, and every extra run grows it (R825). Armor is catalog data. Both faces run one
 //! script; `param` reads the face's numbers.
 
+use jackioh_engine::effects::{damage, set_number};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-013";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| {
+            let hit = param(&*ctx, "damage");
+            let growth = param(&*ctx, "growth");
+            vec![
+                damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": hit }))),
+                set_number(json_as(json!({
+                    "target": { "of": "self" },
+                    "which": "param:damage",
+                    "value": hit + growth,
+                }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // Meditative #13 Gatling Pea — SPEC §8.8 row 13, BUILD M10 row M 13: "Armor 2; at your end of turn
 // only, one hit of 1 on the enemy hero (their Armor applies), then its damage becomes 2, 3 and so
@@ -83,7 +108,7 @@ mod tests {
                 { "key": "growth", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 },
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.end_of_turn.is_some());
         assert!(scripts.radiant.end_of_turn.is_some());
     }

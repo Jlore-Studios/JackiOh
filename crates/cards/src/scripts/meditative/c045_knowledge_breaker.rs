@@ -14,7 +14,45 @@
 //! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040);
 //!   until patch v0.3.7 it was ME-ALTPLAY's face-down play permission.
 
+use jackioh_engine::alt_play::cloak_hand_aura;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-045";
+
+const PRIME: &str = "meditative-045-1";
+
+fn breaker(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let times = param(&*ctx, "times");
+            vec![degrade(json_as(json!({
+                "scope": {
+                    "side": "any",
+                    "zones": ["field", "hand", "library"],
+                    "tags": ["CN", "KY"],
+                    "excludeSelf": true,
+                },
+                "times": times,
+            })))]
+        })),
+        death: Some(hook(move |_ctx| {
+            vec![shuffle_into(json_as(json!({
+                "defId": PRIME,
+                "count": 1,
+                "radiant": radiant,
+            })))]
+        })),
+        aura: Some(cloak_hand_aura(CardType::Unit)),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: breaker(false),
+        radiant: breaker(true),
+    }
+}
 
 // M #45 Knowledge Breaker — SPEC §8.8 row 45, BUILD M10 row M 45.
 #[cfg(test)]

@@ -7,14 +7,32 @@
 //! The engine's hero guard (`Script.heroGuard`): the pipeline, R44's lethal projection and the lethal
 //! window all read the same divided amount. Both faces run one script; `param` reads the face's divisor.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-075";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        hero_guard: Some(read_hook(|args| {
+            vec![HeroGuard {
+                divisor: Some(param(&args, "divisor")),
+                ..HeroGuard::default()
+            }]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the Radiant face's 4 is its declared `divisor`, which `param` reads off the running face.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 /// `describe("C #75 Argusland")`.
 #[cfg(test)]
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -77,7 +95,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "divisor", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 2 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         // The Radiant face is the base face, its guard the same one.
         let guard = scripts.base.hero_guard.as_ref().expect("a hero guard");
         assert!(Arc::ptr_eq(guard, scripts.radiant.hero_guard.as_ref().expect("a hero guard")));

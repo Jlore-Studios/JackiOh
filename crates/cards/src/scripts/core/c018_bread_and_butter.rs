@@ -11,7 +11,101 @@
 //! The R280 preview and the R195/R662 glow read `unspent_mana_of`, which is public (§10.8); R33 hides
 //! a face-down trap's preview from the opponent.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-018";
+
+/// §7: the Bread Token definition; its X/X comes from `statsOverride`, never from the def.
+const BREAD_TOKEN: &str = "core-t-bread";
+
+/// The ending player's unspent mana, straight off the event. Any other event type is not this
+/// trigger's (`on` already guarantees `turnEnded`), and a negative pool cannot happen, so both read
+/// as "nothing unspent".
+fn unspent_on(event: &GameEvent) -> i32 {
+    match event {
+        GameEvent::TurnEnded { unspent_mana, .. } => (*unspent_mana).max(0),
+        _ => 0,
+    }
+}
+
+/// The same on both faces: `multiplier` is §8's X (base) or 3X (radiant), a declared number (R386)
+/// tuned on the Radiant face only (R749: the base face prints no number, always 1). The condition is
+/// written twice: `traps.rs` filters on `when`, `run_queued_trigger` ignores it and takes an empty
+/// effect list as "not met", so either way 0 unspent summons nothing and the trap stays armed.
+fn bread_trigger() -> TriggerDef {
+    TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], |ctx, event| {
+        let x = unspent_on(event) * param(&*ctx, "multiplier");
+        if x <= 0 {
+            return vec![];
+        }
+        vec![summon(json_as(json!({
+            "defId": BREAD_TOKEN,
+            // R52: the trap's controller, whoever ended the turn.
+            "player": "self",
+            // §7, R37: X/X on a card printed 0/0.
+            "statsOverride": { "attack": x, "health": x },
+            // §7: the radiant face prints "Armor X", the same X; carried now because nothing later knows X.
+            "armorOverride": x
+        })))]
+    })
+    .with_when(|_ctx, event| unspent_on(event) > 0)
+}
+
+/// R280: the formula as the face prints it, which the preview labels its number with — X on the base
+/// face, `multiplier` × the unspent mana on the Radiant one, with the multiplier as it stands.
+fn formula(radiant: bool, multiplier: i32) -> String {
+    if radiant {
+        format!("X = {multiplier} \u{00d7} that player's unspent mana")
+    } else {
+        "X = that player's unspent mana".to_string()
+    }
+}
+
+/// R280: the Bread Token's X if the active player ended the turn now. `your_turn` names the active
+/// player without the card reading `state.active` (README §1).
+fn preview() -> PreviewHook {
+    condition_hook(|ctx: ConditionContext<'_>| {
+        let active = if ctx.your_turn {
+            ctx.controller
+        } else {
+            opponent_of(ctx.controller)
+        };
+        let multiplier = param(&ctx, "multiplier");
+        vec![PreviewValue {
+            label: formula(ctx.radiant, multiplier),
+            value: unspent_mana_of(ctx.state, active) * multiplier,
+            display: None,
+            ids: None,
+        }]
+    })
+}
+
+/// R662: "ends a turn with unspent mana", asked of the turn as it stands; the same on both faces.
+fn condition_met() -> ConditionHook {
+    condition_hook(|ctx: ConditionContext<'_>| {
+        if ctx.zone != ConditionZone::Field {
+            return false;
+        }
+        let active = if ctx.your_turn {
+            ctx.controller
+        } else {
+            opponent_of(ctx.controller)
+        };
+        unspent_mana_of(ctx.state, active) > 0
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![bread_trigger()],
+        preview: Some(preview()),
+        condition_met: Some(condition_met()),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #18 Bread and Butter — SPEC §8.1 row 18, BUILD M4-T4 row 18.
 //

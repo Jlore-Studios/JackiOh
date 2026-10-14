@@ -6,7 +6,31 @@
 //! is the end-of-turn shuffle of a fresh Love Bomb (M #30.1), `param("bombs")` copies (1, radiant
 //! 2), R80's cap turning a full library away.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-067";
+
+/// M #30.1 Love Bomb, the token this card shuffles (§7).
+const BOMB: &str = "meditative-030-1";
+
+fn ears() -> Script {
+    Script {
+        end_of_turn: Some(hook(|ctx| {
+            vec![shuffle_into(json_as(json!({
+                "defId": BOMB,
+                "count": param(&*ctx, "bombs"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: only the declared `bombs` differs (1, radiant 2).
+    let base = ears();
+    let radiant = ears();
+    CardScripts { base, radiant }
+}
 
 // M #67 Sentient Cat Ears — SPEC §8.8 row 67, BUILD M10 row M 67: "Played into an empty zone it is
 // a plain Unit; played as Equip onto your acting non-Immutable Unit it resolves on top (its Cry
@@ -16,6 +40,7 @@ pub const ID: &str = "meditative-067";
 // (R80's cap); bombs reads through `param()`; radiant 2/2 and two Love Bombs".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -26,8 +51,6 @@ mod tests {
     /// (1) Spell, deals 3 to a target.
     const ECLIPSE: &str = "core-035";
     const FILLER: &str = "core-005";
-    /// M #30.1 Love Bomb, the token this card shuffles (§7).
-    const BOMB: &str = "meditative-030-1";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])

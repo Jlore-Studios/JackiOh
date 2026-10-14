@@ -9,7 +9,48 @@
 //! (Cry fires, counts as played; not R70 cast); spent tokens are removed; other cards' tokens pay;
 //! R78 clears them on leave.
 
+use jackioh_engine::effects::place_plague;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-074";
+
+fn plant() -> ActivationDecl {
+    ActivationDecl {
+        id: "plant".to_string(),
+        label: "Place Plague Counters on this".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| {
+            vec![place_plague(json_as(json!({
+                "target": { "of": "self" },
+                "amount": param(&*ctx, "tokens"),
+            })))]
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![plant()],
+        graveyard_play: Some(read_hook(|_args| {
+            vec![GraveyardPlayPermission {
+                units: Some(true),
+                plague: Some(true),
+                ..GraveyardPlayPermission::default()
+            }]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the Radiant face's 4 tokens are its declared `tokens`.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // The harness's `play` takes a card from a hand, so a graveyard play is sent to `reduce` as
 // `legalActions` offers it and read back off its result (as C #28 Second Wind's test does).
@@ -19,7 +60,6 @@ pub const ID: &str = "classic-074";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -136,7 +176,7 @@ mod tests {
             json!([{ "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }])
         );
         let s = standing(0, &GRAVEYARD, None);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let grant = scripts.base.graveyard_play.as_ref().expect("a graveyard permission");
         let answer = grant(HookArgs {
             state: s.state(),

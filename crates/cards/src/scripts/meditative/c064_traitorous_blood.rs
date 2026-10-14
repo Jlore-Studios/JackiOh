@@ -7,7 +7,74 @@
 //! window (M10) — and a neighbour the attacker may attack then (Taunt is no wall, M10). Two
 //! neighbours are picked at random (M10); a later trap in the window skips the re-aimed attack (M10).
 
+use jackioh_engine::prelude::*;
+use serde_json::json;
+use std::sync::Arc;
+
 pub const ID: &str = "meditative-064";
+
+/// A declared, unforced attack by one of the controller's enemies that has somewhere to go.
+fn enemy_declared_with_neighbour(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let GameEvent::AttackDeclared {
+        attacker_id, forced, ..
+    } = event
+    else {
+        return false;
+    };
+    if *forced {
+        return false;
+    }
+    let Some(attacker) = find_instance(ctx.state, attacker_id) else {
+        return false;
+    };
+    if attacker.controller != opponent_of(ctx.controller) {
+        return false;
+    }
+    !redirect_neighbours(ctx.state, attacker).is_empty()
+}
+
+fn traitorous_blood(copy_destroyed: bool) -> Script {
+    let when: TriggerWhen = Arc::new(enemy_declared_with_neighbour);
+    Script {
+        triggers: vec![TriggerDef {
+            id: "traitorousBlood".to_string(),
+            on: vec![GameEventType::AttackDeclared],
+            when: Some(when),
+            run: Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| {
+                let GameEvent::AttackDeclared { attacker_id, .. } = event else {
+                    return Vec::new();
+                };
+                let Some(attacker) = find_instance(ctx.state, attacker_id) else {
+                    return Vec::new();
+                };
+                let neighbours = redirect_neighbours(ctx.state, attacker);
+                let Some(to) = ctx.rng.pick(&neighbours) else {
+                    return Vec::new();
+                };
+                vec![redirect_attack(json_as(json!({
+                    "to": to.id,
+                    "copyDestroyed": copy_destroyed,
+                })))]
+            }),
+        }],
+        ..Script::default()
+    }
+}
+
+pub fn base() -> Script {
+    traitorous_blood(false)
+}
+
+pub fn radiant() -> Script {
+    traitorous_blood(true)
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: traitorous_blood(false),
+        radiant: traitorous_blood(true),
+    }
+}
 
 #[cfg(test)]
 mod tests {

@@ -8,7 +8,28 @@
 //! cost (R33, R351). With no open zone nothing is summoned and no random number is drawn (R129). The
 //! Radiant's two picks may repeat (R60).
 
+use crate::query::TRAP_TYPES;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-016";
+
+fn trenful_trickster() -> Script {
+    Script {
+        end_of_turn: Some(hook(|ctx| {
+            (0..param(&*ctx, "traps").max(0))
+                .map(|_| summon_random(json_as(json!({ "query": { "type": TRAP_TYPES }, "player": "self" }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: trenful_trickster(),
+        radiant: trenful_trickster(),
+    }
+}
 
 // M #16 Trenful Trickster — SPEC §8.8 row 16, BUILD M10 row M 16: "At your end of turn, summons one random
 // Trap or Field Trap (a shipped non-token card of any set, R380) face-down into your leftmost open backrow
@@ -103,7 +124,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "traps", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.end_of_turn.is_some());
         assert!(scripts.radiant.end_of_turn.is_some());
     }

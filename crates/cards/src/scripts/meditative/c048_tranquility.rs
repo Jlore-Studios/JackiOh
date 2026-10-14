@@ -8,7 +8,25 @@
 //! 3, expiring at the cleanup that ends the opponent's next turn (R757's Armor Up expiry), so it is
 //! gone as your next turn begins.
 
+use jackioh_engine::effects::{end_turn, make_hero_immune};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-048";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| {
+                vec![end_turn(json_as(json!({}))), make_hero_immune(json_as(json!({})))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| vec![make_hero_immune(json_as(json!({})))])),
+            ..Script::default()
+        },
+    }
+}
 
 // M #48 Tranquility — SPEC §8.8 row 48, BUILD M10 row M 48: "Ends your turn after the rest of its
 // list, every end-of-turn step running (R456); until your next turn begins every damage instance to

@@ -3,7 +3,49 @@
 //! 2 in 3, else a Wrong-House Attacker (C+ #6); Radiant: one of each. Fresh base-face cards, yours, no
 //! Cry (R1), R64's placement; a full board summons nothing and rolls nothing (R129).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-007";
+
+/// R406: "Right-House Protector" is Core #3, the Wrong-House Attacker's twin.
+const RIGHT_HOUSE: &str = "core-003";
+const WRONG_HOUSE: &str = "classicplus-006";
+/// R406: "(2 in 3)" — the odds of the Right-house defender.
+const RIGHT_HOUSE_ODDS: f64 = 2.0 / 3.0;
+
+fn summon_one() -> Hook {
+    hook(|ctx| {
+        if first_free_zone(ctx.state, ctx.controller, Row::Units).is_none() {
+            vec![]
+        } else {
+            let def_id = if ctx.rng.chance(RIGHT_HOUSE_ODDS) { RIGHT_HOUSE } else { WRONG_HOUSE };
+            vec![summon(json_as(json!({ "defId": def_id })))]
+        }
+    })
+}
+
+fn summon_both() -> Hook {
+    hook(|_ctx| {
+        vec![summon(json_as(json!({ "defId": RIGHT_HOUSE }))), summon(json_as(json!({ "defId": WRONG_HOUSE })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let one = summon_one();
+    let both = summon_both();
+    CardScripts {
+        base: Script {
+            cry: Some(one.clone()),
+            start_of_turn: Some(one),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(both.clone()),
+            start_of_turn: Some(both),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #7 The House — SPEC §8.7 row 7, BUILD M9 Classic+ row C+ 7: "Field Spell: its Cry and each start of
 // your turn summon a Right-house defender (Core #3) with chance 2 in 3, else a Wrong-House Attacker (C+
@@ -13,7 +55,7 @@ pub const ID: &str = "classicplus-007";
 // radiant summons one of each, the second skipped when only one zone is open".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -71,7 +113,7 @@ mod tests {
         assert_eq!(def.type_, CardType::FieldSpell);
         assert_eq!(def.cost, CardCost::Fixed(3));
         assert_eq!(def.refs, Some(vec![RIGHT.to_string(), WRONG.to_string()]));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             assert!(face.cry.is_some());
             assert!(face.start_of_turn.is_some());

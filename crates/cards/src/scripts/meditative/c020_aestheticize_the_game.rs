@@ -9,7 +9,51 @@
 //! expiring, R458), public on the view with its progress. The designer's Radiant face was only 10%
 //! easier; its draw is R275's Spell rider.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-020";
+
+const HEALTH_MODE: &str = "health";
+const GRAVEYARD_MODE: &str = "graveyard";
+const BOARD_MODE: &str = "board";
+
+fn modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec![
+            HEALTH_MODE.to_string(),
+            GRAVEYARD_MODE.to_string(),
+            BOARD_MODE.to_string(),
+        ],
+    }]
+}
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(mode) = chosen_options(ctx).into_iter().next() else {
+        return vec![];
+    };
+    let threshold = param(&*ctx, mode.as_str());
+    let mut effects = vec![alt_win(json_as(json!({ "condition": mode, "threshold": threshold })))];
+    if ctx.radiant {
+        effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+    }
+    effects
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        modes: modes(),
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+    // The Radiant face's 90s and draw are its declared numbers; the modes are both faces'.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #20 Aestheticize the Game — SPEC §8.8 row 20, BUILD M10 row M 20: Quickdraw; the
 // declared mode installs a public rest-of-game condition shown with its progress, and reaching it
@@ -24,10 +68,6 @@ mod tests {
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-
-    const HEALTH_MODE: &str = "health";
-    const GRAVEYARD_MODE: &str = "graveyard";
-    const BOARD_MODE: &str = "board";
 
     const GAME: &str = "meditative-020";
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
@@ -162,7 +202,7 @@ mod tests {
         #[test]
         fn r640_it_is_quickdraw_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
             }

@@ -9,7 +9,37 @@
 //! animated cards included (R383), reading the set of units once (R113); Spikey Pillow (`neverDefense`, §4.1)
 //! is refused and stays in Attack. The Radiant face runs the same script.
 
+use jackioh_engine::effects::{ForEachCardArgs, for_each_card, switch_position_of};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-067";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
+                    active_units_of(&*ctx.state, opponent_of(ctx.controller))
+                        .iter()
+                        .map(|card| card.id.clone())
+                        .collect()
+                }),
+                each: Arc::new(|instance_id: &str| {
+                    switch_position_of(json_as(json!({
+                        "to": "DEF",
+                        "target": { "of": "instance", "instanceId": instance_id },
+                    })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 4/8 and its added Rush are catalog data.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #67 Felinor Feeler (SPEC §8.6 row 67; BUILD M9 row C 67). (1) Unit, Human, Common, 2/4 → 4/8:
 // Pierce; Cry: switch every enemy Unit to Defense Position. Radiant: Pierce, Rush; the same Cry.

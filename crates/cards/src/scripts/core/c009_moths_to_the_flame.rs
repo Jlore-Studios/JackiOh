@@ -19,7 +19,26 @@
 //! `EffectContext` derefs to an `EngineSink`, so the wrapper names the enemy's units in lane order
 //! and hands the rest to `force_attacks_on`, and R53 stays in one place.
 
+use jackioh_engine::effects::forced_attacks_on;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-009";
+
+/// Both faces: every enemy unit, in enemy lane order, is forced to attack this card (R53).
+fn moths() -> Script {
+    Script {
+        start_of_turn: Some(hook(|_ctx| {
+            vec![forced_attacks_on(json_as(json!({ "target": { "of": "self" }, "attackers": "enemy" })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = moths();
+    let radiant = moths();
+    CardScripts { base, radiant }
+}
 
 // #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass: "Each enemy unit attacks it in
 // lane order at controller's start of turn, no exertion spent, sick units included, each attack is

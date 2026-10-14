@@ -12,8 +12,150 @@
 //! The rider (R282) lands only on a card the steal took: `takeable` before it, `held_now` after.
 //! THE MARK (R437): the pending steal's target carries a purple `steal` mark until it resolves.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-050";
+
+/// The step `state.delayed` re-enters at the start of this player's next turn (§10.6, R62).
+const STEAL_STEP: &str = "steal";
+
+/// The one thing the continuation captures: which permanent was chosen (§8.2 Engine cell).
+const TARGET_KEY: &str = "targetId";
+
+/// R437: the pending steal, as the mark its target carries while it waits — purple.
+const STEAL_MARK: StealMark = StealMark {
+    mark: "steal",
+    color: "purple",
+};
+
+/// The mark's two strings, written into the `delay` literal.
+struct StealMark {
+    mark: &'static str,
+    color: &'static str,
+}
+
+impl StealMark {
+    /// The `CardMark` literal `delay` takes.
+    fn to_json(&self) -> Value {
+        json!({ "mark": self.mark, "color": self.color })
+    }
+}
+
+/// The play-time pick (R81), read straight off the context — reading state is not mutating it.
+fn chosen_instance_id(ctx: &EffectContext<'_>) -> Option<String> {
+    match ctx.targets.first() {
+        Some(Selection::Instance { instance_id }) => Some(instance_id.clone()),
+        _ => None,
+    }
+}
+
+/// The captured id, narrowed rather than cast: `data` is JSON that crossed a turn boundary.
+fn captured_target_id(ctx: &EffectContext<'_>) -> Option<String> {
+    ctx.data.get(TARGET_KEY).and_then(Value::as_str).map(str::to_string)
+}
+
+/// R13: a card on the field on top of its pile — the only card a steal can take. A backrow zone holds
+/// one card, so for a Field Spell or a Trap this is "on the field"; in a unit zone it leaves out a
+/// card dormant under a Stack pile (§3.2).
+fn on_top_of_its_pile(state: &GameState, card: &CardInstance) -> bool {
+    match slot_of(state, card) {
+        Some(at) => card_at(state, at).map(|top| top.id == card.id).unwrap_or(false),
+        None => false,
+    }
+}
+
+/// R282, before the steal: the card stands on the field under the other player, so it can be taken.
+fn takeable(ctx: &EffectContext<'_>, id: &str) -> bool {
+    let state: &GameState = &*ctx.state;
+    match find_instance(state, id) {
+        Some(card) => on_top_of_its_pile(state, card) && card.controller != ctx.controller,
+        None => false,
+    }
+}
+
+/// R282, after the steal: the card stands on the field under this player.
+fn held_now(ctx: &EffectContext<'_>, id: &str) -> bool {
+    let state: &GameState = &*ctx.state;
+    match find_instance(state, id) {
+        Some(card) => on_top_of_its_pile(state, card) && card.controller == ctx.controller,
+        None => false,
+    }
+}
+
+/// R62's continuation, registered once in the `resume` table (R126). R76's fizzles are steal's own
+/// no-ops: a target gone from the field, or one already yours.
+fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(target_id) = captured_target_id(ctx) else {
+        return vec![];
+    };
+    vec![steal(json_as(json!({ "instanceId": target_id })))]
+}
+
+/// The radiant face's step: the same steal, then R282's rider for the card the steal took and nothing
+/// else. `takeable` is read as the list is built, before the steal; `for_each_card` reads its set when
+/// the list reaches it, after, so the set is the stolen card or nothing. The face the Cry ran is the
+/// one stored with the delay, whatever the Fanatic shows when it fires.
+fn radiant_steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(target_id) = captured_target_id(ctx) else {
+        return vec![];
+    };
+    let mut effects: Vec<Effect> = vec![steal(json_as(json!({ "instanceId": target_id })))];
+    if !takeable(ctx, &target_id) {
+        return effects;
+    }
+    let rider_id = target_id.clone();
+    effects.push(for_each_card(ForEachCardArgs {
+        cards: Arc::new(move |now: &mut EffectContext<'_>| -> Vec<String> {
+            if held_now(now, &rider_id) {
+                vec![rider_id.clone()]
+            } else {
+                vec![]
+            }
+        }),
+        each: Arc::new(|instance_id: &str| -> Effect {
+            set_radiant(json_as(json!({ "instanceId": instance_id })))
+        }),
+    }));
+    effects
+}
+
+/// The Cry both faces share: choose the enemy permanent and arm the steal (§8.2 Engine cell).
+fn kpop_fanatic(step: Hook) -> Script {
+    Script {
+        // §6.3: a permanent is a Unit, Field Spell, Trap or Field Trap, so both enemy rows are offered.
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit", "backrow"] }),
+        )],
+        cry: Some(hook(|ctx| {
+            let Some(target_id) = chosen_instance_id(ctx) else {
+                return vec![];
+            };
+            vec![delay(json_as(json!({
+                "at": { "phase": "start", "player": "self" },
+                "step": STEAL_STEP,
+                "hook": RESUME_HOOK,
+                "data": { TARGET_KEY: target_id },
+                // R174: a target that leaves the field before the steal fires is gone for good, even if the
+                // same card is back by then (bounced and replayed, or a Reborn body) — R76's fizzle.
+                "watch": target_id,
+                // R437: and it carries the steal's mark in both views while it waits.
+                "mark": STEAL_MARK.to_json(),
+            })))]
+        })),
+        resume: IndexMap::from([(STEAL_STEP, step)]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: kpop_fanatic(hook(steal_step)),
+        // "Divine Shield" is printed in the catalog; the step adds R282's rider.
+        radiant: kpop_fanatic(hook(radiant_steal_step)),
+    }
+}
 
 // #50 K-Pop Fanatic — SPEC §8.2, BUILD M4-T4: "Steal fires at your next start of turn even if it
 // died (R76); fizzles if the target left; radiant Divine Shield". R437: the pending steal marks its
@@ -28,7 +170,6 @@ pub const ID: &str = "core-050";
 // the engine auto-ends a turn with nothing left (R82) and an empty library adds fatigue. Two
 // `end_turn()`s return to this player's own start of turn, where `turn::run_delayed` resolves the
 // entry before any start-of-turn trigger fires (R62).
-
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -46,7 +187,7 @@ mod tests {
 
     /// The card's two faces.
     fn faces() -> CardScripts {
-        crate::scripts_of()[super::ID].clone()
+        super::script()
     }
 
     /// A `{ pick: "instance", instanceId }` target list, the play action's declared pick (R81).

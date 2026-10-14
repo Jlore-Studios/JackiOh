@@ -10,7 +10,39 @@
 //! through Reborn draws for its last stay's kill, a defending one draws nothing). The hook acts for
 //! the player who controlled it in that combat, though a Death in the check (#86 Mrow's) took it since.
 
+use jackioh_engine::combat::after_attack_of;
+use jackioh_engine::effects::draw;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-032";
+
+/// §8 row 32: "draw 2 for each Unit that attack destroyed", the 2 the declared number `draw` (R386).
+fn after_attack() -> Hook {
+    hook(|ctx| {
+        let Some(facts) = after_attack_of(ctx) else {
+            return vec![];
+        };
+        if facts.destroyed_ids.is_empty() {
+            return vec![];
+        }
+        vec![draw(json_as(json!({ "count": param(&*ctx, "draw") * facts.destroyed_ids.len() as i32 })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let after_attack = after_attack();
+    CardScripts {
+        base: Script {
+            after_attack: Some(after_attack.clone()),
+            ..Script::default()
+        },
+        // "Rush, Cleave / the same": the keyword list is the radiant face's, the text is unchanged.
+        radiant: Script {
+            after_attack: Some(after_attack),
+            ..Script::default()
+        },
+    }
+}
 
 // #32 Prem Panther — SPEC §8.2 row 32, BUILD M4-T4 must-pass row 32 (R426): "Rush / After this
 // attacks, draw 2 for each Unit that attack destroyed"; radiant "Rush, Cleave / the same".

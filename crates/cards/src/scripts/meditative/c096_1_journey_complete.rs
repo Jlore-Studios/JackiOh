@@ -13,7 +13,53 @@
 //! by any other card, a copy, or one that reached a graveyard or an exile pile (R766) — does nothing
 //! (R1248).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-096-1";
+
+/// What M #96 Meditative Journey writes (R1246).
+const JOURNEY_KEY: &str = "journey";
+
+fn journey_complete(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(move |ctx| {
+            let went: Vec<String> = ctx
+                .live_self()
+                .and_then(|me| me.memory.get(JOURNEY_KEY))
+                .and_then(Value::as_array)
+                .map(|ids| ids.iter().filter_map(Value::as_str).map(str::to_string).collect())
+                .unwrap_or_default();
+            let discount = param(&*ctx, "discount");
+            went.into_iter()
+                .filter(|id| {
+                    find_instance(ctx.state, id).is_some_and(|card| card.zone.z() == ZoneName::Exile)
+                })
+                .map(|id| {
+                    let mut args = json!({
+                        "instance": { "of": "instance", "instanceId": id },
+                        "radiant": true,
+                    });
+                    if radiant {
+                        args["costMod"] = json!(-discount);
+                    }
+                    add_to_hand(json_as(args))
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: journey_complete(false),
+        radiant: journey_complete(true),
+    }
+}
 
 // M #96.1 Journey Complete — SPEC §8.8 row 96.1, R1248: "cast on draw, it returns every card its
 // `memory.journey` names that is still in an exile pile, in that order, to its owner's hand, Radiant;
@@ -23,9 +69,6 @@ pub const ID: &str = "meditative-096-1";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-
-    /// What M #96 Meditative Journey writes (R1246).
-    const JOURNEY_KEY: &str = "journey";
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -83,7 +126,7 @@ mod tests {
 
         #[test]
         fn is_cast_on_draw() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
                     face.static_flags.as_ref().and_then(|flags| flags.cast_on_draw),

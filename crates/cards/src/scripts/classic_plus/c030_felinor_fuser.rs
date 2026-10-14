@@ -11,15 +11,89 @@
 //! sums stats, unions keywords, joins texts, costs min(sum, 4), and names the three (R179); fused
 //! Cries never run. Radiant ingredients lend their Radiant face to both forms (§6.3, R77).
 
+use jackioh_engine::effects::{chosen_options, discover_from_catalog, fuse_cards};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-030";
+
+/// R352's two Discovers: "Discover a Felinor Unit, then another".
+const PICKS: usize = 2;
+
+/// The resume step each Discover's answer re-enters (§10.6).
+const PICKED: &str = "picked";
+
+/// The data key the picks so far travel in, from the first prompt to the second.
+const PICKS_KEY: &str = "picks";
+
+/// R405, R380: a Felinor-tagged Unit of any set; `query` leaves tokens out (§5.1).
+fn felinor_units() -> Value {
+    json!({ "tags": ["Felinor"], "type": "Unit" })
+}
+
+/// The picks a paused Cry has made so far, read back out of the prompt's data.
+fn picks_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
+    match ctx.data.get(PICKS_KEY).and_then(Value::as_array) {
+        Some(stored) => stored.iter().filter_map(|pick| pick.as_str().map(str::to_string)).collect(),
+        None => Vec::new(),
+    }
+}
+
+/// One Discover of a Felinor Unit, the picks so far in its data.
+fn discover(radiant: bool, picks: &[String]) -> Effect {
+    let mut args = json!({
+        "step": PICKED,
+        "query": felinor_units(),
+        "prompt": if radiant { "Discover a Radiant Felinor Unit" } else { "Discover a Felinor Unit" },
+        "data": {},
+    });
+    args["data"][PICKS_KEY] = json!(picks);
+    discover_from_catalog(json_as(args))
+}
+
+fn felinor_fuser(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| vec![discover(radiant, &[])])),
+        resume: IndexMap::from([(
+            PICKED,
+            hook(move |ctx| {
+                let picked = chosen_options(ctx).into_iter().next();
+                // A Discover is answered with one of its options (§10.6); an answer naming none adds nothing.
+                let Some(picked) = picked else {
+                    return vec![];
+                };
+                let mut picks = picks_so_far(ctx);
+                picks.push(picked);
+                if picks.len() < PICKS {
+                    return vec![discover(radiant, &picks)];
+                }
+                // The unit fused onto is this one, while it still stands on the field (R77).
+                let Some(self_) = ctx.self_.as_ref() else {
+                    return vec![];
+                };
+                let mut args = json!({ "defIds": picks, "targetInstanceId": self_.id });
+                if radiant {
+                    args["radiantIngredients"] = json!(true);
+                }
+                vec![fuse_cards(json_as(args))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: felinor_fuser(false),
+        radiant: felinor_fuser(true),
+    }
+}
 
 // C+ #30 Felinor Fuser — SPEC §8.7 row 30: two chained Discovers of Felinor Units of any set
 // but Felinor Fuser (R387, R405), first answer in second prompt; then both fused into this unit (R77,
 // R102, R179); options reach only chooser (R177); radiant Discovers Radiant Felinor Units.
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -99,7 +173,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, FUSER);
             assert_eq!(crate::card_def(ID).id, FUSER);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // Each face is its own script, built by its own call.
             assert!(!std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),

@@ -12,7 +12,49 @@
 //! R195, the yellow glow: in hand the card glows exactly when its Cry would deal the high number;
 //! `hero_is_low` is the one predicate the Cry and `condition_met` both read.
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-068";
+
+/// §8 Conventions: every legal unit and hero on either side (R90: a bare `target` is units only).
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// "If your hero is below 10", strictly: at exactly the threshold the small number is dealt. The 10 is
+/// the declared number `threshold` (R386), more being better (the high number comes sooner). §10.9: a
+/// hook may read state to compute an effect's arguments; it never writes, and R195's `condition_met`
+/// reads the same thing through this function.
+fn hero_is_low(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
+    hero_of(state, controller).health < threshold
+}
+
+/// The read goes through `hero_of`, so no card file spells out `PlayerState` (BUILD M3-T1).
+///
+/// The declared number `damage` is dealt normally, `lowDamage` when the controller's hero is below the
+/// threshold at resolution (R386): base "4 …, 8 if …", Radiant "8 …, 16" (R275), read off the running face.
+fn sorcerer() -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let low = hero_is_low(ctx.state, ctx.controller, param(&*ctx, "threshold"));
+            let amount = if low { param(&*ctx, "lowDamage") } else { param(&*ctx, "damage") };
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+        })),
+        // R195: hand only — the glow says playing it now deals `lowDamage`.
+        condition_met: Some(condition_hook(|ctx| {
+            ctx.zone == ConditionZone::Hand && hero_is_low(ctx.state, ctx.controller, param(&ctx, "threshold"))
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = sorcerer();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #68 Twisted Sorcerer — SPEC §8.3, BUILD M4-T4: "4 damage, 8 when hero < 10 at resolution;
 // radiant 8 / 16" (R275 doubled the radiant numbers from 6 / 12). R75 and §5.3: "Spell, Unit" is
@@ -69,7 +111,7 @@ mod tests {
         #[test]
         fn s8_conventions_declares_one_target_over_all_units_and_heroes_on_either_side_r90() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             // R90: a bare `target` declaration means a unit only, so the heroes have to be named.
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]);
             assert_eq!(serde_json::to_value(&scripts.base.targets).unwrap(), decl);

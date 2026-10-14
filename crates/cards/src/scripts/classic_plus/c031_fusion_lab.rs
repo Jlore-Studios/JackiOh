@@ -11,7 +11,59 @@
 //! On Radiant, the ingredient lends its Radiant face to both forms (R561). Opponent's view hides
 //! hand card, ingredient and fused id (R97, R179).
 
+use jackioh_engine::effects::fuse_random_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-031";
+
+/// The `targetChecks` predicate the ability's declared pick names: a card a Fuse may keep (R23).
+const FUSABLE: &str = "fusable";
+
+/// R23: a card a Fuse may keep is not Immutable.
+fn fusable(state: &GameState, card: &CardInstance) -> bool {
+    !unit_has(state, card, KeywordKind::Immutable)
+}
+
+/// R81: one card of the controller's own hand, declared with the activation.
+fn hand_pick() -> Vec<TargetDecl> {
+    vec![TargetDecl::hand(1, 1, json!({ "check": FUSABLE }))]
+}
+
+fn fusion_lab(radiant: bool) -> Script {
+    // B5 E23: a random card of every set but this one into the chosen hand card, keeping its cost.
+    let fuse = ActivationDecl {
+        id: "fuse".to_string(),
+        label: "Choose a card in your hand. Fuse a random card into it".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: hand_pick(),
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            vec![fuse_random_into(json_as(json!({
+                "into": { "target": { "of": "chosen" } },
+                "radiant": radiant,
+                "keepCost": true,
+            })))]
+        }),
+    };
+    Script {
+        target_checks: IndexMap::from([(
+            FUSABLE,
+            target_check(|args| args.candidate.is_some_and(|candidate| fusable(args.state, candidate))),
+        )]),
+        activations: vec![fuse],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fusion_lab(false),
+        radiant: fusion_lab(true),
+    }
+}
 
 // C+ #31 Fusion Lab — SPEC §8.7 row 31: Activate fuses a random non-token card of any set but
 // Fusion Lab (R387) into a hand card chosen with activation (R81); hand card is kept instance,
@@ -19,7 +71,7 @@ pub const ID: &str = "classicplus-031";
 // (R97, R179); radiant ingredient lends its Radiant face to both forms (R561).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -75,7 +127,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, LAB);
             assert_eq!(crate::card_def(ID).id, LAB);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.activations.len(), 1);
             assert_eq!(
                 js(&scripts.base.activations[0].targets),

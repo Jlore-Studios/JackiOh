@@ -1,10 +1,57 @@
 //! C+ #23 Dropshipping (SPEC §8.7 row 23): add {cards} random cards from every card and token but this
 //! (R382, R387), each given Brittle {brittle} (R385); Radiant: each costs (1).
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-023";
 
 // "Each costs (1)" on the Radiant face: the declared number `setCost` (R386), less being better.
+
+/// The cards this list put in its controller's hand (R136: its own events, from `eventsFrom`).
+fn added_by_this_list(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    let (from, controller) = (ctx.events_from, ctx.controller);
+    ctx.events
+        .get(from..)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|event| match event {
+            GameEvent::AddedToHand { player, instance_id, .. } if *player == controller => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn dropship(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let n = param(&*ctx, "brittle");
+            let mut add = json!({
+                "query": { "withTokens": true, "excludeDefId": ID },
+                "count": param(&*ctx, "cards"),
+            });
+            if radiant {
+                add["costOverride"] = json!(param(&*ctx, "setCost"));
+            }
+            vec![
+                add_random_from_catalog(json_as(add)),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(added_by_this_list),
+                    each: Arc::new(move |instance_id: &str| {
+                        give_brittle(json_as(json!({ "instanceId": instance_id, "n": n })))
+                    }),
+                }),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: dropship(false),
+        radiant: dropship(true),
+    }
+}
 
 // C+ #23 Dropshipping — SPEC §8.7 row 23, BUILD M9 Classic+ row C+ 23: "Adds 3 random cards drawn from
 // every card and token of every set but Dropshipping (R382, R387; repeats allowed, R60), so a Grape, a
@@ -14,7 +61,6 @@ pub const ID: &str = "classicplus-023";
 // destroy that Indestructible ignores, the count staying 0); the count rides the card from hand to
 // field; the owner sees the counts, the opponent sees three cards added under the sentinel (R97); a full hand burns
 // the rest; card count and Brittle read through `param()`; radiant they cost (1) (`costOverride` 1)".
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,7 +133,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert!(def.tags.contains(&Tag::Cn));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

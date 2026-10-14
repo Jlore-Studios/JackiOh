@@ -12,7 +12,120 @@
 //! arrival and thins a zone. Picks draw from `ctx.rng` while the list is built (CLAUDE.md rule 4,
 //! §9.3): deterministic, since the hook runs once and opens no prompt.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-083";
+
+/// R35's "other zones", in the order this card walks them; the hand is one of them (R365).
+const OFF_FIELD_ZONES: [OffFieldZone; 4] = [
+    OffFieldZone::Hand,
+    OffFieldZone::Library,
+    OffFieldZone::Graveyard,
+    OffFieldZone::Exile,
+];
+
+/// R35's pool: every non-token Legendary but this card (R387), of every set (R380); in Core #52, #85,
+/// #87, #92, #93, #95, never listed here.
+fn legendaries(type_: Option<Value>) -> Vec<&'static CardDef> {
+    let mut args = json!({ "rarity": "Legendary" });
+    if let Some(type_) = type_ {
+        args["type"] = type_;
+    }
+    crate::query::pool(ID, &json_as(args))
+}
+
+/// R35 on the board: same type, with Field Trap counting as Trap in both directions.
+fn same_type_legendaries(type_: CardType) -> Vec<&'static CardDef> {
+    legendaries(Some(if type_ == CardType::Trap || type_ == CardType::FieldTrap {
+        json!(crate::query::TRAP_TYPES)
+    } else {
+        json!(type_)
+    }))
+}
+
+/// §3.2 and R13: "your board" is the card acting in each zone — the top of a pile, not the pile.
+/// R35 and R23: an Immutable board card stays, since on the field a Replace is a Transform, so it is
+/// left out here rather than handed to `transform` to refuse: R129 has an effect that finds nothing
+/// to do draw no random number, and a pick rolled for a card that stays would be exactly that.
+fn board_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    [Row::Units, Row::Backrow]
+        .into_iter()
+        .flat_map(|row| {
+            slots_of(ctx.controller, row)
+                .into_iter()
+                .filter_map(|slot| {
+                    let card = card_at(ctx.state, slot)?;
+                    if unit_has(ctx.state, card, KeywordKind::Immutable) {
+                        None
+                    } else {
+                        Some(card.clone())
+                    }
+                })
+                .collect::<Vec<CardInstance>>()
+        })
+        .collect()
+}
+
+/// One off-field pile of the controller's, read only (CLAUDE.md rule 5). `zone_cards` hands back a
+/// copy, which matters: the `transform`s built replace every card in the pile being walked, so
+/// iterating the live array would be iterating a list the effects are rewriting.
+fn pile_cards(ctx: &EffectContext<'_>, zone: OffFieldZone) -> Vec<CardInstance> {
+    let cards: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, zone).to_vec();
+    // R223: each replacement takes a new id, and walked top down the library's would be one run of
+    // numbers in library order, so any of them the owner is later shown (#51's reveal, a Recruit)
+    // would say where it lies. The library is walked in an order of the seed's own instead; each
+    // replacement still takes its card's place (R35).
+    if zone == OffFieldZone::Library {
+        numbering_order(ctx.state, &cards)
+    } else {
+        cards
+    }
+}
+
+/// §6.3 Replace: one card, one random Legendary from its pool, named by instance (R81 does not apply).
+fn replace(ctx: &mut EffectContext<'_>, card: &CardInstance, pool: &[&'static CardDef], radiant_result: bool) -> Vec<Effect> {
+    let Some(pick) = ctx.rng.pick(pool) else {
+        return vec![];
+    };
+    vec![transform(json_as(json!({
+        "instanceId": card.id,
+        "defId": pick.id,
+        "radiant": radiant_result,
+    })))]
+}
+
+/// The faces differ only in whether the cards that arrive are Radiant (§5.2, R74).
+fn transmogulate(radiant_result: bool) -> Script {
+    Script {
+        // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
+        cry: Some(hook(move |ctx| {
+            let mut effects: Vec<Effect> = Vec::new();
+            // The board first, each card by its own type (R35); lane order, so the rng draws are fixed.
+            for card in board_cards(ctx) {
+                let type_ = def_of(Some(&*ctx.state), &card.def_id).type_;
+                let pool = same_type_legendaries(type_);
+                effects.extend(replace(ctx, &card, &pool, radiant_result));
+            }
+            // Then hand (R365), library (in `pile_cards` order, R223), graveyard and exile: "any card
+            // from the pool, same counts".
+            for zone in OFF_FIELD_ZONES {
+                for card in pile_cards(ctx, zone) {
+                    let pool = legendaries(None);
+                    effects.extend(replace(ctx, &card, &pool, radiant_result));
+                }
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = transmogulate(false);
+    // "Random Radiant Legendaries": the same five zones, every replacement Radiant.
+    let radiant = transmogulate(true);
+    CardScripts { base, radiant }
+}
 
 // #83 Transmogulate (SPEC §8.4 row 83; R11, R23, R35, R365, R380). BUILD M4-T4's row: zone counts kept,
 // same-type Legendaries in place, a Field Trap becoming Unlicensed Experimentation (R35), the hand
@@ -20,6 +133,7 @@ pub const ID: &str = "core-083";
 // but #83 (R380). A Spell reaches the graveyard after its script (§10.5), so that zone ends one larger.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

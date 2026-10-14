@@ -7,7 +7,34 @@
 //! scaled: still one application and one draw, with the change N times as large. "Twice" and
 //! "three times" are kept out of `params`, so a Buff can never raise its own multiplier.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-084";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            static_flags: Some(StaticFlags {
+                tune_multiplier: Some(TuneMultiplier {
+                    upgrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                    degrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                }),
+                ..StaticFlags::default()
+            }),
+            ..Script::default()
+        },
+        radiant: Script {
+            static_flags: Some(StaticFlags {
+                tune_multiplier: Some(TuneMultiplier {
+                    upgrade: Some(VOLATILITY_RADIANT_BUFF_MULTIPLIER),
+                    degrade: None,
+                }),
+                ..StaticFlags::default()
+            }),
+            ..Script::default()
+        },
+    }
+}
 
 // M #84 Volatility — SPEC §8.8 row 84, BUILD M10 row M 84: "One Buff on it is one draw whose change
 // is doubled (MD-E7): a cost row of two steps (never below (0)), a stat split of twice the total,
@@ -190,7 +217,7 @@ mod tests {
 
         #[test]
         fn r1160_both_faces_carry_their_multipliers() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.tune_multiplier),
                 Some(TuneMultiplier {

@@ -20,13 +20,70 @@
 //! The return is §6.3 Bounce: R78's reset, and the hand cap burns a card to the graveyard (§2.4). Rush on
 //! the Radiant face is printed (§10.4 layer 1).
 
+use jackioh_engine::effects::{bounce, summon_this};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-066";
+
+/// R548: a play of this card's controller's that has resolved, other than this card's own (R119).
+fn your_other_play<'e>(ctx: &EffectContext<'_>, event: &'e GameEvent) -> Option<&'e GameEvent> {
+    let GameEvent::CardResolved { player, instance_id, .. } = event else {
+        return None;
+    };
+    if *player != ctx.controller {
+        return None;
+    }
+    if ctx.self_.as_ref().is_some_and(|me| me.id == *instance_id) {
+        return None;
+    }
+    Some(event)
+}
+
+/// While this is in your hand: after you play a Unit, summon this (B5 E26).
+fn arrive() -> TriggerDef {
+    TriggerDef::new("eu-striker-arrive", &[GameEventType::CardResolved], |ctx, event| {
+        let played = your_other_play(ctx, event);
+        match played {
+            Some(GameEvent::CardResolved { def_id, .. })
+                if def_of(Some(&*ctx.state), def_id).type_ == CardType::Unit =>
+            {
+                vec![summon_this()]
+            }
+            _ => vec![],
+        }
+    })
+}
+
+/// On the field: after you play a card, return this to your hand (§6.3 Bounce, R78).
+fn leave() -> TriggerDef {
+    TriggerDef::new("eu-striker-leave", &[GameEventType::CardResolved], |ctx, event| {
+        if your_other_play(ctx, event).is_none() {
+            vec![]
+        } else {
+            vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        hand_triggers: vec![arrive()],
+        triggers: vec![leave()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in what the engine reads off the catalog (its doubled
+    // stats and Rush).
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #66 EU Striker (SPEC §8.6 row 66). R548: both triggers answer a play of yours once it has
 // resolved (§10.5); neither answers the play that moved it (R401, R119; R78 reset; R70 cast).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -81,7 +138,7 @@ mod tests {
             assert_eq!(def["base"]["keywords"], json!([]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }]));
             assert!(def["params"].is_null());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.hand_triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),
                 vec![json!(["cardResolved"])],

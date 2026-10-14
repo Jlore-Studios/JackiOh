@@ -7,11 +7,44 @@
 //! draw, no fatigue, no draw limit), and the hand cap burns it; an empty deck offers nothing. The
 //! Radiant discount is a `costMod`, so it stacks with every other (R65). AI cards declare no params.
 
+use jackioh_engine::effects::{add_to_hand, discover_from_library};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-01";
 
-// T-AI-1 Helpful Assistant — SPEC §8.7 row T-AI-1, §10.8, R60, R97, R177, BUILD M9 row T-AI-1.
+/// Radiant: "It costs (1) less."
+const DISCOUNT: i32 = 1;
 
+fn assistant(cost_mod: i32) -> Script {
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![discover_from_library(json_as(json!({
+                "step": "picked",
+                "prompt": "Discover a card from your deck",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            "picked",
+            hook(move |_ctx| {
+                let mut args = json!({ "instance": { "of": "chosen" } });
+                if cost_mod != 0 {
+                    args["costMod"] = json!(cost_mod);
+                }
+                vec![add_to_hand(json_as(args))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: assistant(0),
+        radiant: assistant(-DISCOUNT),
+    }
+}
+
+// T-AI-1 Helpful Assistant — SPEC §8.7 row T-AI-1, §10.8, R60, R97, R177, BUILD M9 row T-AI-1.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;

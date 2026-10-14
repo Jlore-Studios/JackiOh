@@ -16,13 +16,40 @@
 //! its new controller's side this turn (R171), and a killer already on Mrow's side is left where it is.
 //! `ctx.controller` is the side Mrow was on as it died.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-086";
+
+/// "Death: Steal the Unit that destroyed this" — identical on both faces.
+fn death() -> Hook {
+    hook(|ctx| {
+        let killer = killer_of(ctx.state, ctx.self_.as_ref()).map(|killer| killer.id.clone());
+        match killer {
+            None => vec![],
+            Some(instance_id) => vec![steal(json_as(json!({ "instanceId": instance_id })))],
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    let death = death();
+    let base = Script {
+        death: Some(death.clone()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        death: Some(death),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #86 "Miss" Mrow (SPEC §8.4, BUILD M4-T4 row 86): "Cannot attack; Death takes control of the Unit
 // that destroyed it (R42's killer, R361), placed per R15, and nothing when no Unit on the field
 // destroyed it; radiant has Rush instead".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

@@ -13,7 +13,52 @@
 //! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price
 //! lands only on a card that reached the hand (§2.4, R4).
 
+use jackioh_engine::effects::{add_random_from_catalog, for_rest_of_game};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-052";
+
+/// §10.6's data is JSON: a number carried in the entry, or the printed value when it is missing.
+fn carried(ctx: &EffectContext<'_>, key: &str) -> i32 {
+    match ctx.data.get(key).and_then(Value::as_i64) {
+        Some(value) => value as i32,
+        None => param(ctx, key),
+    }
+}
+
+fn contract(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let cards = param(&*ctx, "cards");
+            let discount = param(&*ctx, "discount");
+            let numbers: IndexMap<String, i32> =
+                IndexMap::from([("cards".to_string(), cards), ("discount".to_string(), discount)]);
+            let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
+            let label = fill_params(&crate::card_def(ID), face, Some(&numbers));
+            vec![for_rest_of_game(json_as(json!({
+                "step": "contract",
+                "label": label,
+                "data": { "cards": cards, "discount": discount },
+            })))]
+        })),
+        delayed: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "tags": ["Jlockeed"] }, "count": carried(ctx, "cards") });
+            if radiant {
+                args["radiant"] = json!(true);
+                args["costMod"] = json!(-carried(ctx, "discount"));
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: contract(false),
+        radiant: contract(true),
+    }
+}
 
 // C+ #52 — SPEC §8.7 row 52, BUILD M9 Classic+ row C+ 52: a rest-of-game player modifier (nothing on the
 // field to remove) adds a random non-token Jlockeed card each start of your turn, never this card (R387);

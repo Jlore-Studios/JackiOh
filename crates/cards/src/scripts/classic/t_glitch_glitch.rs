@@ -11,7 +11,19 @@
 //! When it resolves it does one of four things, drawn by the match rng (`glitch`, R676–R679): reset
 //! the match, swap the seats, lay two other games' boards on the field, or void the match.
 
+use jackioh_engine::effects::glitch;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-t-glitch";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![glitch()])),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // T-glitch Glitch (SPEC §7, issue #170; R673–R679). BUILD M9's row: "hidden Spell token, cost 0, blank;
 // only R673's roll makes one, after a … in the System play, at n/10000 per generated card; always
@@ -21,7 +33,7 @@ pub const ID: &str = "classic-t-glitch";
 // outcome on a fixture; this file proves them again on the real catalog, through `scenario()`.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -72,7 +84,7 @@ mod tests {
                 json!([def.cost, def.type_, def.token, def.rarity, def.base.text, def.radiant.text]),
                 json!([0, "Spell", true, "Token", "", ""])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.cry.is_some());
             // TS `expect(radiant).toBe(base)`: the Radiant face is the same script, so the same hook.
             assert!(std::sync::Arc::ptr_eq(

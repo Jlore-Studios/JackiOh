@@ -11,7 +11,25 @@
 //! and `end_turn` runs `state_check` after each end-of-turn hook. The scan for `endOfTurn` hooks is
 //! narrowed to the player whose turn is ending, so this card needs no check of its own.
 
+use jackioh_engine::effects::damage_all;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-013";
+
+/// R51: every enemy unit and the enemy hero, one instance each, in one effect (R59).
+fn shred(amount: i32) -> Effect {
+    damage_all(json_as(json!({ "side": "enemy", "amount": amount, "heroes": true })))
+}
+
+/// The amount is the declared number `damage` (R386): 2, 5 on the Radiant face.
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| vec![shred(param(&*ctx, "damage"))])),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #13 Jlockeed Shredder-10 (SPEC §8.1, BUILD M4-T4 row 13): "Controller's end of turn: 2 to every
 // enemy unit and hero as separate instances; units it kills die after all hits land (R59); not on

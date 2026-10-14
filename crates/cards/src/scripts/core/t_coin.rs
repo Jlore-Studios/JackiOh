@@ -14,7 +14,25 @@
 //! deck (§2.6, §9.4 L3, R184), every random pool and Discover (§5.1); `isUnitToken` is false for a
 //! Spell, so it goes to the graveyard when it resolves (R11).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-t-coin";
+
+/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `runHook`. §7: base gains
+/// 1, radiant 2 — the declared number `mana` (R386), read off the face that is running.
+fn coin() -> Script {
+    Script {
+        cry: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: coin(),
+        radiant: coin(),
+    }
+}
 
 // T-coin The Coin (SPEC §7, §2.1, §2.3; R244, R245). BUILD M4-T4's row: "0-cost Spell token dealt to
 // the seat going second after the mulligan; gain 1 mana this turn (radiant 2), may exceed the cap;
@@ -25,7 +43,6 @@ pub const ID: &str = "core-t-coin";
 mod tests {
     use super::*;
     use jackioh_engine::catalog::query;
-    use jackioh_engine::prelude::*;
     use jackioh_engine::reduce::{begin_game, legal_actions, reduce};
     use jackioh_engine::replay::{FoldArgs, fold, hash_state};
     use jackioh_engine::setup::{deal_coins, mulligan_prompt_for};
@@ -142,7 +159,7 @@ mod tests {
             // As printed: its declared `mana` filled in (R386, R482).
             assert_eq!(fill_params(&def, FaceKind::Base, None), "Gain 1 mana this turn.");
             assert_eq!(fill_params(&def, FaceKind::Radiant, None), "Gain 2 mana this turn.");
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(!Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),
                 scripts.radiant.cry.as_ref().unwrap()

@@ -12,7 +12,170 @@
 //! meal's radiant flag and §7 stats (R41). Nothing to tribute: the Cry fizzles; nothing eaten: Death
 //! does nothing. It can never eat itself: the declared target excludes it and the hook re-checks.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-022";
+
+/// `memory.eaten`, plain JSON so the state survives a replay round-trip (§9.3, §10.1).
+#[derive(Clone, Debug)]
+struct Eaten {
+    def_id: String,
+    /// R41, R57: a copy of a Radiant meal is Radiant.
+    radiant: bool,
+    /// R41, R57: a token eaten with §7 stats copies with those stats.
+    stats_override: Option<AttackHealth>,
+    /// §7: a Bread Token's "Armor X" is the other half of its X/X, so a copy keeps it beside them.
+    armor_override: Option<i32>,
+}
+
+impl Eaten {
+    /// The meal as `memory.eaten` stores it: `{ defId, radiant, statsOverride?, armorOverride? }`.
+    fn to_json(&self) -> Value {
+        let mut value = json!({ "defId": self.def_id, "radiant": self.radiant });
+        if let Some(stats) = self.stats_override {
+            value["statsOverride"] = json!({ "attack": stats.attack, "health": stats.health });
+        }
+        if let Some(armor) = self.armor_override {
+            value["armorOverride"] = json!(armor);
+        }
+        value
+    }
+}
+
+const EATEN: &str = "eaten";
+
+/// R81: the meal travels in the `play` action, as a `tribute` pick the client shows as one. R428: one
+/// of your other Units — the unit row only.
+///
+/// `min: 1` is R41's "must eat if able", and R90 supplies the "if able": a board that cannot satisfy
+/// it does not refuse the play, the effect fizzles ("nothing to tribute → Cry fizzles").
+///
+/// Deliberately no `amount`: `playChoices.tributeCostOf` would read it as §6.3's Tribute *cost*, paid
+/// from the play's `tributes` list, with Sheep Tokens as 2, refusing a play the board cannot pay. This
+/// card's meal is a declared target its script sacrifices itself, so the play carries no Tribute cost.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::tribute(
+        1,
+        1,
+        json!({ "side": "ally", "of": ["unit"], "excludeSelf": true }),
+    )]
+}
+
+/// Read the named permanent off the play's selection; null when there was nothing legal to eat. The
+/// pick is read as the engine aims every chosen target (`instanceOf`): on the stay the play chose it
+/// on (R174) and acting on the field (§3.2, R13). A crafted Cube + Cube naming one Reborn unit eats it
+/// once, and a meal a Stack play buried under the crafted card is no meal (R41).
+fn meal_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
+    let selection = ctx.targets.first()?;
+    if !matches!(selection, Selection::Instance { .. }) {
+        return None;
+    }
+
+    let card = instance_of(ctx, &TargetSpec::Chosen { index: None })?;
+    // R428: a Unit, acting in a unit zone — never a backrow card.
+    if !matches!(card.zone, Zone::Field { row: Row::Units, .. }) {
+        return None;
+    }
+    // "One of your other Units": ally only, and R41's "cannot eat itself".
+    if card.controller != ctx.controller {
+        return None;
+    }
+    if ctx.self_.as_ref().is_some_and(|self_| card.id == self_.id) {
+        return None;
+    }
+
+    Some(Eaten {
+        def_id: card.def_id.clone(),
+        radiant: card.radiant,
+        stats_override: card.stats_override,
+        armor_override: card.armor_override,
+    })
+}
+
+fn eaten_of(ctx: &EffectContext<'_>) -> Option<Eaten> {
+    // `recalled` reads what this Cube remembered — on a fused card, this ingredient's own meal (R102).
+    let stored = recalled(ctx, EATEN)?;
+    let value = stored.as_object()?;
+    let def_id = value.get("defId").and_then(Value::as_str)?.to_string();
+    Some(Eaten {
+        def_id,
+        radiant: value.get("radiant").and_then(Value::as_bool) == Some(true),
+        stats_override: value
+            .get("statsOverride")
+            .and_then(|stats| serde_json::from_value::<AttackHealth>(stats.clone()).ok()),
+        armor_override: value
+            .get("armorOverride")
+            .and_then(Value::as_i64)
+            .map(|armor| armor as i32),
+    })
+}
+
+/// The `summon`/`fillBoard` arguments that copy the meal: R57's flags, its §7 stats and Armor.
+fn copy_args(eaten: &Eaten) -> Value {
+    let mut args = json!({ "defId": eaten.def_id, "radiant": eaten.radiant });
+    if let Some(stats) = eaten.stats_override {
+        args["statsOverride"] = json!({ "attack": stats.attack, "health": stats.health });
+    }
+    if let Some(armor) = eaten.armor_override {
+        args["armorOverride"] = json!(armor);
+    }
+    args
+}
+
+/// One copy of the meal: R57's flags, and R64 puts it in the leftmost free zone of its own row.
+fn copy_of(eaten: &Eaten) -> Effect {
+    summon(json_as(copy_args(eaten)))
+}
+
+/// Remember the meal, then eat it — the effects apply in this order, so the read happens first.
+fn cry() -> Hook {
+    hook(|ctx| {
+        let Some(meal) = meal_of(ctx) else {
+            return vec![]; // R41: nothing to tribute → the Cry fizzles.
+        };
+        vec![
+            remember(json_as(json!({ "key": EATEN, "value": meal.to_json() }))),
+            sacrifice(json_as(json!({ "target": { "of": "chosen" } }))),
+        ]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(cry()),
+        death: Some(hook(|ctx| {
+            let Some(eaten) = eaten_of(ctx) else {
+                return vec![]; // R41: nothing eaten → Death does nothing.
+            };
+            // "Summon 2 copies of it": the declared number `copies` (R386).
+            (0..param(&*ctx, "copies")).map(|_| copy_of(&eaten)).collect()
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        targets: targets(),
+        cry: Some(cry()),
+        death: Some(hook(|ctx| {
+            let Some(eaten) = eaten_of(ctx) else {
+                return vec![];
+            };
+            // R64: "fill your board" summons into every empty, unlocked unit zone left to right.
+            if def_of(Some(&*ctx.state), &eaten.def_id).type_ == CardType::Unit {
+                return vec![fill_board(json_as(copy_args(&eaten)))];
+            }
+            // A meal that stood in a unit zone without being a Unit card — a Field Spell or Trap standing
+            // there animated (B3.1, R383) — is copied as its own card: `fillBoard` makes Units only, so the
+            // board is filled with one laneless `summon` per unit zone, each placed where its own type goes
+            // (R64), and the ones with no zone left fizzle.
+            (0..UNIT_ZONES).map(|_| copy_of(&eaten)).collect()
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // #22 Carnivorous Cube — SPEC §8.2, BUILD M4-T4 row 22 as R428 rewrites it: the Tribute choice travels
 // in the play action (R81), one of your other Units only, never itself; the chosen Unit is sacrificed
@@ -21,7 +184,7 @@ pub const ID: &str = "core-022";
 // HARNESS GAP: `FieldSetup` has no `statsOverride`, so the one fixture that needs it sets it itself.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -65,7 +228,7 @@ mod tests {
 
         #[test]
         fn r81_the_meal_is_a_declared_play_time_choice_that_excludes_the_cube_itself() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let base = &scripts.base;
             assert_eq!(base.targets.len(), 1);
             let decl = &base.targets[0];
@@ -302,7 +465,7 @@ mod tests {
 
                 let well = s.card(MANA_WELL).id.clone();
                 s.expect_refused(|s| s.play(CUBE, json!({ "targets": [{ "pick": "instance", "instanceId": well }] })));
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert_eq!(
                     scripts.radiant.targets.first().and_then(|decl| decl.filter.as_ref()).and_then(|filter| filter.of.clone()),
                     Some(vec![FilterOf::Unit])

@@ -6,13 +6,39 @@
 //! no cap. C+ #22 Blood Moon's would-be-healed replacement applies when that card's controller's
 //! enemy casts it (R413). M #30 and Meditative #67 make this card.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-030-1";
+
+fn bomb() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![heal(json_as(json!({
+                "target": { "of": "selfHero" },
+                "amount": param(&*ctx, "heal"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: only the declared `heal` differs (7, radiant 14).
+    let base = bomb();
+    let radiant = bomb();
+    CardScripts { base, radiant }
+}
 
 // M #30.1 Love Bomb — SPEC §8.8 row 30.1, BUILD M10 row M 30.1: "Cast on draw: heals its caster's
 // hero 7 with no cap, then the draw repeats (§2.4); an enemy C+ 22 Blood Moon turns it into 7 Pierce
 // damage; uncast in a hand it may be played for (1); heal reads through `param()`; radiant 14".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

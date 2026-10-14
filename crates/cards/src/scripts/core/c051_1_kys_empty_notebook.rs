@@ -11,7 +11,24 @@
 //! unless the card names the pool itself; the tests prove it against `crates/cards/src/query.rs`.
 //! R11: a SPELL token goes to the GY like any spell (§3.2), so Discover can find it (R50, #72 Reminisce).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-051-1";
+
+/// A spell's script is its `cry` hook (§10.9): the on-resolve hook, fired by `run_hook`. §8: base
+/// draws 1, radiant draws 2 — the declared number `draw` (R386), read off the face that is running.
+fn notebook() -> Script {
+    Script {
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = notebook();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #51.1 KY's Empty Notebook (SPEC §8.3, §7, §5.1, §6.3 Draw; R4, R11, R50, R60).
 // BUILD M4-T4 row 51.1: "Draw 1; radiant 2; absent from every random pool".

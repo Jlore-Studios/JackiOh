@@ -13,11 +13,41 @@
 //!   side first (R68), each owned and controlled by the player whose zone it is (MD-B3, R942). The
 //!   Radiant face passes `radiantFor: self`. Summoned, so no Cry (R1).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-026";
+
+/// Core #6 Mana Well, summoned into every empty backrow zone.
+const WELL: &str = "core-006";
+
+fn fate(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            no_natural_mana: Some(true),
+            ..StaticFlags::default()
+        }),
+        end_of_turn: Some(hook(move |_ctx| {
+            let mut fill = json!({ "defId": WELL, "row": "backrow", "side": "any" });
+            if radiant {
+                fill["radiantFor"] = json!("self");
+            }
+            vec![fill_board(json_as(fill))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fate(false),
+        radiant: fate(true),
+    }
+}
 
 // M #26 Alternate Fate — SPEC §8.8 row 26, BUILD M10 row M 26.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

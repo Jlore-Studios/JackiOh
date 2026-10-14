@@ -13,10 +13,67 @@
 //! clause reads its set once (the draw's R113, the exile's R135); reading is no mutation
 //! (CLAUDE.md rule 5); see §6.3 Draw, Exile.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-094";
+
+/// §8 #94: the one cost the draw clause names.
+const DRAWN_COST: i32 = 2;
+
+/// R66: every card in your library that costs 2 RIGHT NOW, X-cost cards exempt, in library order
+/// (top down), which is the order they are drawn in. By instance id, which is what `forEachCard`
+/// keeps.
+fn drawn_cards(ctx: &EffectContext<'_>) -> Vec<String> {
+    zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
+        .iter()
+        .filter(|card| {
+            !is_x_cost(ctx.state, card) && effective_cost(ctx.state, card, Default::default()) == DRAWN_COST
+        })
+        .map(|card| card.id.clone())
+        .collect()
+}
+
+/// §8: base "gain 2 mana"; radiant "Gain 6" — the declared number `mana` (R386).
+fn greed() -> Hook {
+    hook(|ctx| {
+        let mana = param(&*ctx, "mana");
+        vec![
+            // §8 "Draw every 2-cost card from your library": one draw per card, so each counts on the draw
+            // counter, emits its own `drawn` event and meets the hand cap on its own (§2.4, R4, R55). The
+            // set is read once, as the clause begins (R66), so a drawn card that is cast and asks does not
+            // reshape the draws still owed after the answer (R113, `forEachCard`).
+            for_each_card(ForEachCardArgs {
+                cards: Arc::new(|ctx: &mut EffectContext<'_>| drawn_cards(ctx)),
+                each: Arc::new(|instance_id: &str| {
+                    draw_from_library(json_as(json!({ "instanceId": instance_id })))
+                }),
+            }),
+            // §8 "exile every odd-cost card in your library, hand and GY (X-cost cards exempt)". R135's
+            // order is `exileMatching`'s default — library, then hand, then graveyard — and it runs after
+            // the draws, so a card this play just drew is in hand, even, and spared.
+            exile_matching(json_as(json!({ "parity": "odd", "exemptXCost": true }))),
+            // §2.3: temporary mana, which may take current above max.
+            gain_mana(json_as(json!({ "amount": mana }))),
+        ]
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(greed()),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(greed()),
+            ..Script::default()
+        },
+    }
+}
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

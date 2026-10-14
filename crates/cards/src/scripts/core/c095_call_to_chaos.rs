@@ -1036,7 +1036,7 @@ mod tests {
 
             // The difference is data on the catalog's two faces; there is no script on either (§10.4
             // layer 1 reads the stats and keywords straight off the face the flag picks).
-            let golem_scripts = crate::scripts_of()[crate::scripts::core::c095_1_chaos_golem::ID].clone();
+            let golem_scripts = crate::scripts::core::c095_1_chaos_golem::script();
             assert_eq!(members(&golem_scripts.radiant), members(&golem_scripts.base));
             assert!(members(&golem_scripts.base).is_empty());
             let def = js(&crate::card_def(GOLEM));

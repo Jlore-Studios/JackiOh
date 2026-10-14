@@ -7,7 +7,32 @@
 //! stats are read), a fused card carrying the tag once; the count outlives the cards. AI cards declare
 //! no numbers (B8), so the per-card bonus is this file's.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-02";
+
+/// "+1/+1" (Radiant "+2/+2") for each AI generated card played.
+const PER_AI_CARD: i32 = 1;
+const RADIANT_PER_AI_CARD: i32 = 2;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        set_stat: Some(read_hook(|args: HookArgs<'_>| {
+            let per = if args.radiant { RADIANT_PER_AI_CARD } else { PER_AI_CARD };
+            let bonus = per * played_this_game_with_tag(args.state, args.self_.controller, Tag::Ai);
+            SetStat {
+                attack: Some(bonus),
+                max_health: Some(bonus),
+            }
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the hook reads the running face.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // T-AI-2 Scaling Law — SPEC §8.7 row T-AI-2, BUILD M9 row T-AI-2: a 2/2 with +1/+1 for each AI generated
 // card its controller has played this game — a layer-2 set-stat over the per-game count of AI-tagged
@@ -62,7 +87,7 @@ mod tests {
             assert_eq!(def["base"]["health"], json!(2));
             assert_eq!(def["radiant"]["attack"], json!(4));
             assert_eq!(def["radiant"]["health"], json!(4));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             let (Some(base), Some(radiant)) = (scripts.base.set_stat.as_ref(), scripts.radiant.set_stat.as_ref()) else {
                 panic!("both faces carry the set-stat hook");
             };

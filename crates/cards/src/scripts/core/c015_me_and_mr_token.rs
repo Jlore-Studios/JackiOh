@@ -10,9 +10,32 @@
 //! nothing, which is exactly what the row asks for. Nothing about the Cry is conditional, so no hook
 //! reads state at all.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-015";
 
+/// §7: the Rush Token def.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+/// One Rush Token into the leftmost free unit zone of the controller's row (R64).
+fn rush_token() -> Effect {
+    summon(json_as(json!({ "defId": RUSH_TOKEN, "player": "self" })))
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![rush_token()])),
+        ..Script::default()
+    };
+    // "Summon 3 Rush Tokens": the declared number `tokens` (R386), tuned on the Radiant face only — the
+    // base face's "a Rush Token" is 1 and never moves (R749).
+    let radiant = Script {
+        cry: Some(hook(|ctx| (0..param(&*ctx, "tokens")).map(|_| rush_token()).collect())),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #15 Me and Mr Token (SPEC §8.1, BUILD M4-T4 row 15): "1 Rush Token; radiant 3; fewer when the
 // board is nearly full". The "fewer" clause is R64: a laneless summon takes the leftmost empty,

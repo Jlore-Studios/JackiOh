@@ -2,7 +2,40 @@
 //! A target Unit on either side gains Reborn as a granted keyword (§10.4, R78). Radiant: then the same
 //! Unit is made Radiant (§5.2: its face swaps at once, damage and buffs kept, no Cry).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-010";
+
+// R656: Reborn helps, so a random cast that targets enemies aims this at friends.
+fn a_unit() -> Vec<TargetDecl> {
+    vec![TargetDecl {
+        aim: Some(TargetAim::Help),
+        ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))
+    }]
+}
+
+fn give_reborn() -> Effect {
+    grant_keyword(json_as(json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Reborn" } })))
+}
+
+pub fn script() -> CardScripts {
+    // One effect, as TS's module constant `giveReborn`, shared by both faces' Cries.
+    let give = give_reborn();
+    let on_base = give.clone();
+    let on_radiant = give;
+    CardScripts {
+        base: Script {
+            targets: a_unit(),
+            cry: Some(hook(move |_ctx| vec![on_base.clone()])),
+            ..Script::default()
+        },
+        radiant: Script {
+            targets: a_unit(),
+            cry: Some(hook(move |_ctx| vec![on_radiant.clone(), set_radiant(Default::default())])),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #10 New Wraps — SPEC §8.7 row 10, BUILD M9 Classic+ row C+ 10: "A target Unit gains Reborn as a
 // granted keyword (kept by a Vanilla, lost on leaving the field, R78), so its next death returns it at
@@ -10,7 +43,7 @@ pub const ID: &str = "classicplus-010";
 // Radiant face applying at once with damage and buffs kept and no Cry (§5.2)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
@@ -53,7 +86,7 @@ mod tests {
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::Spell);
         assert_eq!(def.cost, CardCost::Fixed(0));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
                 serde_json::to_value(&face.targets).unwrap(),

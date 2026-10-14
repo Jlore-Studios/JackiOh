@@ -11,7 +11,60 @@
 //! A graveyard trigger's `when` is not consulted outside the trap window, so "one of your Traps" is
 //! checked in `run`, which answers anything else with no effects.
 
+use jackioh_engine::effects::{CastDef, CastHow, CastNewArgs, CastNewDef, add_to_hand, cast_new};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-047";
+
+const ANCIENT_ACQUISITION: &str = "classic-034";
+
+/// The cost the returned card takes, read as the trigger runs.
+type ReturnCost = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
+
+fn recur(cost_override: Option<ReturnCost>) -> TriggerDef {
+    TriggerDef::new("recurring-felinor", &[GameEventType::TrapFired], move |ctx, event| {
+        let GameEvent::TrapFired { controller, .. } = event else {
+            return vec![];
+        };
+        if *controller != ctx.controller {
+            return vec![];
+        }
+        let mut args = json!({ "instance": { "of": "self" } });
+        if let Some(cost) = &cost_override {
+            args["costOverride"] = json!(cost(&*ctx));
+        }
+        vec![add_to_hand(json_as(args))]
+    })
+}
+
+fn cry(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![cast_new(CastNewArgs {
+        def: CastNewDef::Def(CastDef {
+            def_id: ANCIENT_ACQUISITION.to_string(),
+            radiant: Some(false),
+        }),
+        radiant: None,
+        how: CastHow::default(),
+    })]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        graveyard_triggers: vec![recur(None)],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(cry)),
+        graveyard_triggers: vec![recur(Some(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+            param(ctx, "returnCost")
+        })))],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // BUILD M9 Classic row C 47 (SPEC §8.6 row 47): the Cry casts a free generated C #34 (R70, R684, R87);
 // the graveyard return answers your own Traps and Field Traps only (R68) and follows R97 in the
@@ -19,7 +72,7 @@ pub const ID: &str = "classic-047";
 // fire are Core's Sheepish and Bread and Butter, and C #52 Final Gambit.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -65,7 +118,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "returnCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0, "tunedOn": "radiant" }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 let on: Vec<Vec<GameEventType>> = face.graveyard_triggers.iter().map(|trigger| trigger.on.clone()).collect();
                 assert_eq!(js(&on), json!([["trapFired"]]));

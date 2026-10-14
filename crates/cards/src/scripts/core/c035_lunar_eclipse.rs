@@ -14,7 +14,47 @@
 //! if (mod.expiry.until !== "used" && mod.oncePerTurn !== true) continue;
 //! ```
 
+use jackioh_engine::effects::{add_player_modifier, damage};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-035";
+
+/// R81: "target" is any unit or hero (§8 Conventions), chosen with the play.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// 3 damage and −1, or 6 and −2: the declared numbers `damage` and `discount` (R386), read off the
+/// face that is running, so one hook serves both faces.
+fn eclipse() -> Hook {
+    hook(|ctx| {
+        vec![
+            damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") }))),
+            add_player_modifier(json_as(json!({
+                "player": "self",
+                "mod": {
+                    "kind": "costDiscount",
+                    "amount": param(&*ctx, "discount"),
+                    // "the next Spell you play": Spells only, and only the next one.
+                    "onlyType": "Spell",
+                    "oncePerTurn": true,
+                    // §2.2: cleanup takes it if no Spell used it.
+                    "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+                },
+            }))),
+        ]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(eclipse()),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #35 Lunar Eclipse — SPEC §8.2 row 35, BUILD M4-T4 must-pass row 35:
 // "3 damage; next spell this turn −1; a unit play does not consume it; expires at cleanup;

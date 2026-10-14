@@ -10,7 +10,55 @@
 //! Played from a hand it does the same (§6.2: Cast on draw is a cast, R70, and the card stays playable).
 //! `conditionMet` (R195) is the same `fewer` the Cry branches on, so the glow and the branch agree.
 
+use jackioh_engine::effects::buff_all_units;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-050";
+
+/// "If you control fewer Units than your opponent": the tops of their piles, read now.
+fn fewer(state: &GameState, player: PlayerId) -> bool {
+    active_units_of(state, player).len() < active_units_of(state, opponent_of(player)).len()
+}
+
+pub fn script() -> CardScripts {
+    let condition_met: ConditionHook =
+        condition_hook(|c| c.zone == ConditionZone::Hand && fewer(c.state, c.controller));
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            let amount = if fewer(&*ctx.state, ctx.controller) {
+                -param(&*ctx, "debuff")
+            } else {
+                param(&*ctx, "buff")
+            };
+            vec![buff_all_units(json_as(json!({ "side": "both", "attack": amount, "health": amount })))]
+        })),
+        condition_met: Some(condition_met.clone()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            if fewer(&*ctx.state, ctx.controller) {
+                let amount = -param(&*ctx, "debuff");
+                return vec![buff_all_units(json_as(
+                    json!({ "side": "enemy", "attack": amount, "health": amount }),
+                ))];
+            }
+            let amount = param(&*ctx, "buff");
+            vec![buff_all_units(json_as(json!({ "side": "self", "attack": amount, "health": amount })))]
+        })),
+        condition_met: base.condition_met.clone(),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #50, BUILD M9 row C+ 50: equal counts take the second branch; −2/−2 on both sides kills a unit at
 // 0 max health, an Indestructible one too (R69); played from a hand it does the same; `conditionMet` in
@@ -54,7 +102,7 @@ mod tests {
     fn is_a_1_spell_that_casts_itself_on_draw_on_both_faces() {
         crate::register_all();
         assert_eq!(crate::card_def(super::ID).type_, CardType::Spell);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
         assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
     }

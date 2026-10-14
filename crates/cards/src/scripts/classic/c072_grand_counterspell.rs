@@ -25,7 +25,44 @@
 //!
 //! No tuned numbers.
 
+use jackioh_engine::effects::counter_play;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-072";
+
+/// The opponent's announce of anything but a Unit (§6.3 Counter, B5 E1).
+fn answers(to: &'static str) -> TriggerDef {
+    TriggerDef::new("grand-counter", &[GameEventType::CardAnnounced], move |_ctx, event| {
+        match event {
+            GameEvent::CardAnnounced { instance_id, .. } => vec![counter_play(json_as(json!({
+                "to": to,
+                "target": { "of": "instance", "instanceId": instance_id },
+            })))],
+            _ => Vec::new(),
+        }
+    })
+    .with_when(|ctx, event| {
+        matches!(
+            event,
+            GameEvent::CardAnnounced { player, card_type, .. }
+                if *player != ctx.controller && *card_type != CardType::Unit
+        )
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![answers("graveyard")],
+            ..Script::default()
+        },
+        // E2, R12: countered and taken into this trap's controller's hand, as theirs.
+        radiant: Script {
+            triggers: vec![answers("thief")],
+            ..Script::default()
+        },
+    }
+}
 
 /// `describe("C #72 Grand Counterspell")`.
 #[cfg(test)]
@@ -85,7 +122,7 @@ mod tests {
         assert_eq!(def.type_, CardType::Trap);
         assert_eq!(js(&def.cost), json!(2));
         assert!(def.refs.is_none());
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert_eq!(
             scripts.base.triggers.first().map(|trigger| trigger.on.clone()),
             Some(vec![GameEventType::CardAnnounced])

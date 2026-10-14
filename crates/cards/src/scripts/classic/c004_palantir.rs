@@ -23,7 +23,102 @@
 //!     R396) is added to `memory.stolenCost`, and once that total reaches ({threshold}) Palantir
 //!     Tributes itself — never before.
 
+use jackioh_engine::effects::{counter_play, remember, sacrifice};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-004";
+
+/// Where the Radiant face keeps the cost it has stolen so far.
+const STOLEN_COST: &str = "stolenCost";
+
+/// The opponent's announced Spell (a Book only, on the base face), or None. TS handed back the
+/// `cardAnnounced` event itself (`type Announced`); its one use is the announced card's instance id,
+/// which is what this answers.
+fn answered(ctx: &EffectContext<'_>, event: &GameEvent, books_only: bool) -> Option<String> {
+    let GameEvent::CardAnnounced { player, instance_id, def_id, card_type, .. } = event else {
+        return None;
+    };
+    if *player == ctx.controller || *card_type != CardType::Spell {
+        return None;
+    }
+    // MD-B15, R923: a granted Book tag counts — read the announced card itself when it still
+    // exists, else its definition's tags.
+    if books_only {
+        let is_book = match find_instance(&*ctx.state, instance_id) {
+            Some(card) => tags_of(&*ctx.state, card).contains(&Tag::Book),
+            None => def_of(Some(&*ctx.state), def_id).tags.contains(&Tag::Book),
+        };
+        if !is_book {
+            return None;
+        }
+    }
+    Some(instance_id.clone())
+}
+
+/// TS `const drawLimit: Script["drawLimit"]`: the opponent may draw `drawLimit` cards a turn.
+fn draw_limit() -> DrawLimitHook {
+    read_hook(|args| {
+        vec![DrawLimit {
+            player: DrawLimitPlayer::Enemy,
+            count: param(&args, "drawLimit"),
+        }]
+    })
+}
+
+/// Base: "Tribute this to steal it" — no question, the price is paid to steal.
+fn steal_book() -> TriggerDef {
+    TriggerDef::new("palantir-book", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(book) = answered(ctx, event, true) else {
+            return vec![];
+        };
+        vec![
+            sacrifice(json_as(json!({ "target": { "of": "self" } }))),
+            counter_play(json_as(json!({ "to": "thief", "target": { "of": "instance", "instanceId": book } }))),
+        ]
+    })
+    .with_when(|ctx, event| answered(ctx, event, true).is_some())
+}
+
+/// Radiant: steal every Spell, count what it cost, and Tribute this at the threshold.
+fn steal_spells() -> TriggerDef {
+    TriggerDef::new("palantir-spell", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(spell) = answered(ctx, event, false) else {
+            return vec![];
+        };
+        let cost = match find_instance(&*ctx.state, &spell) {
+            None => 0,
+            Some(card) => own_cost(&*ctx.state, card).unwrap_or(0),
+        };
+        let before = recalled(ctx, STOLEN_COST);
+        // TS `typeof before === "number" ? before : 0`.
+        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + cost.max(0);
+        let steal = counter_play(json_as(json!({ "to": "thief", "target": { "of": "instance", "instanceId": spell } })));
+        let kept = remember(json_as(json!({ "key": STOLEN_COST, "value": total })));
+        if total >= param(&*ctx, "threshold") {
+            vec![steal, kept, sacrifice(json_as(json!({ "target": { "of": "self" } })))]
+        } else {
+            vec![steal, kept]
+        }
+    })
+    .with_when(|ctx, event| answered(ctx, event, false).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let limit = draw_limit();
+    let base = Script {
+        draw_limit: Some(limit.clone()),
+        triggers: vec![steal_book()],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        draw_limit: Some(limit),
+        triggers: vec![steal_spells()],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4: "Aura: the opponent's draws beyond 1 in a
 // turn, on either player's turn and the start-of-turn draw included, do not happen at all: no card
@@ -109,7 +204,7 @@ mod tests {
         fn both_faces_set_a_draw_limit_on_the_opponent() {
             crate::register_all();
             assert_eq!(ID, PALANTIR);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.draw_limit.is_some());
             assert!(scripts.radiant.draw_limit.is_some());
         }

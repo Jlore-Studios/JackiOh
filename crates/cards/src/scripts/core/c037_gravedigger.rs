@@ -11,13 +11,56 @@
 //! pick in `ctx.targets`; `bounce` moves it to its owner's hand (R747, §6.3), then `setCostMod -1` is
 //! R65's "costs 1 less", kept in every zone (R78); a pick a full hand burns gets none (§2.4, R4).
 
+use jackioh_engine::effects::{add_random_from_graveyard, bounce, discover_from_graveyard, set_cost_mod};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-037";
+
+/// The step name the Discover's continuation carries (`script.resume[step]`).
+const PICKED: &str = "picked";
+
+// R65: "costs 1 less" is a −1 `costMod` on the chosen instance, permanent and zone-proof (R78); the 1
+// is the declared number `discount` (R386).
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            start_of_turn: Some(hook(|_ctx| {
+                vec![add_random_from_graveyard(json_as(json!({ "player": "self" })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            start_of_turn: Some(hook(|_ctx| {
+                vec![discover_from_graveyard(json_as(json!({
+                    "step": PICKED,
+                    "prompt": "Discover a card from your graveyard",
+                })))]
+            })),
+            resume: IndexMap::from([(
+                PICKED,
+                hook(|ctx| {
+                    vec![
+                        bounce(json_as(json!({ "target": { "of": "chosen" } }))),
+                        // R4: "it costs 1 less" is its price in the hand, so a pick a full hand burns keeps its cost.
+                        set_cost_mod(json_as(json!({
+                            "target": { "of": "chosen" },
+                            "amount": -param(&*ctx, "discount"),
+                            "inHandOnly": true,
+                        }))),
+                    ]
+                }),
+            )]),
+            ..Script::default()
+        },
+    }
+}
 
 // #37 Gravedigger (SPEC §8.2, BUILD M4-T4): "Random GY card to hand at start of turn before the
 // draw; empty GY nothing; radiant Discover at −1."
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const GRAVEDIGGER: &str = "core-037";
@@ -67,7 +110,7 @@ mod tests {
 
         #[test]
         fn base_hangs_its_clause_on_start_of_turn_and_radiant_answers_through_a_resume_step_sec10_6() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.start_of_turn.is_some());
             assert!(scripts.base.resume.is_empty());
             assert!(scripts.radiant.start_of_turn.is_some());

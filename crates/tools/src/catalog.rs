@@ -1740,7 +1740,7 @@ pub enum CatalogCommand {
     Check,
     /// Print a card script's lines of code (SURFACE §7.5), for a card added after v0.3.0.
     Loc {
-        /// The card's script: its `.luau`, or the `.rs` of a card that stays in Rust.
+        /// The card's `.rs` script file (a `.luau` script counts by Luau's comment rules).
         path: PathBuf,
     },
 }
@@ -2138,13 +2138,6 @@ local LONG = [[
 return { base = { cry = cry }, radiant = "base" }
 "##;
         assert_eq!(count_luau_loc(source), 8);
-    }
-
-    #[test]
-    fn catalog_loc_of_a_ported_card_counts_its_luau() {
-        let path = repo_root().join("crates/cards/src/scripts/core/c002_bigot.luau");
-        let source = std::fs::read_to_string(path).unwrap();
-        assert!(count_luau_loc(&source) > 0);
     }
 
     #[test]

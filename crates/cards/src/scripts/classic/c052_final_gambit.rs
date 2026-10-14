@@ -15,7 +15,59 @@
 //! less and does nothing: that stops a Final Gambit fused into a Field Trap that stays (C+ #74) from
 //! re-aiming its own fatigue for ever.
 
+use jackioh_engine::effects::{draw, heal};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-052";
+
+/// How many cards the follow-up draws: the declared number, or the deck as the step begins (R58).
+type DrawCount = Arc<dyn Fn(&EffectContext<'_>) -> i32 + Send + Sync>;
+
+fn final_gambit(draw_count: DrawCount) -> Script {
+    Script {
+        replacements: vec![ReplacementDef {
+            id: "final-gambit".to_string(),
+            on: ReplacementMoment::LethalHit,
+            where_: None,
+            when: None,
+            instead: ReplacementInstead {
+                redirect: Some(InsteadRedirect::EnemyHero),
+                ..ReplacementInstead::default()
+            },
+            then: Some("afterRedirect".to_string()),
+            by: None,
+        }],
+        resume: IndexMap::from([(
+            "afterRedirect",
+            hook(move |ctx| {
+                // R216: the re-aimed hit left the enemy hero at 0 or less, so the game is over.
+                let to = replacement_of(ctx).and_then(|record| record.redirected_to);
+                if let Some(to) = to
+                    && hero_of(ctx.state, to).health <= 0
+                {
+                    return vec![];
+                }
+                let amount = param(&*ctx, "heal");
+                let count = draw_count(&*ctx);
+                vec![
+                    heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount }))),
+                    draw(json_as(json!({ "count": count }))),
+                ]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 { param(ctx, "draw") }));
+
+    let radiant = final_gambit(Arc::new(|ctx: &EffectContext<'_>| -> i32 {
+        zone_count(ctx.state, ctx.controller, OffFieldZone::Library)
+    }));
+
+    CardScripts { base, radiant }
+}
 
 // C #52 Final Gambit — SPEC §8.6 row 52, BUILD M9 Classic row C 52: face-down (R33); fires at §4.4
 // step 4a when one hit alone would leave your hero at 0 or less, judged after Armor, multipliers and
@@ -32,7 +84,7 @@ pub const ID: &str = "classic-052";
 // whose second then lands on you.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const GAMBIT: &str = "classic-052";
@@ -118,7 +170,7 @@ mod tests {
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], GAMBIT);
             assert_eq!(def["type"], "Trap");
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 // A `ReplacementDef` holds a hook, so it is compared field by field, the absent ones absent.
                 assert_eq!(face.replacements.len(), 1);

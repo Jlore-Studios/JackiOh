@@ -12,7 +12,32 @@
 //!
 //! The amount is the declared number `damage` (R386), read through `param`; both faces run this script.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-012";
+
+/// "a Unit": units only, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({
+                "to": { "of": "chosen" },
+                "amount": param(&*ctx, "damage"),
+                "lifesteal": true,
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    // Same script: `param` reads the Radiant face's 10 off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #12 Book of Blood — SPEC §8.6 row 12, BUILD M9 Classic row C 12: "Targets a Unit only, either
 // side (no hero offered); one hit of 5; its own Lifesteal heals your hero the amount dealt (R85), so
@@ -22,7 +47,6 @@ pub const ID: &str = "classic-012";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     use crate::scenario;
 
@@ -69,7 +93,7 @@ mod tests {
     #[test]
     fn declares_one_unit_target_on_either_side_and_runs_one_script_on_both_faces() {
         assert_eq!(crate::card_def(ID).id, BOOK);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert_eq!(
             serde_json::to_value(&base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])

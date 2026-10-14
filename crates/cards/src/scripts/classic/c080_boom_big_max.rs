@@ -16,7 +16,27 @@
 //!   Indestructible  — §4.4 step 4 (it takes no damage), §4.5 and R46 (a destroy knocks it into Attack
 //!                     Position), R347 (never Taunt), R69 (it still dies if its max health reaches 0).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-080";
+
+/// §6.3 "Tribute 3": three of your Units, or one Sheep Token plus one more, worth 3 (§3.2).
+const TRIBUTE_COST: i32 = 3;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 16 health and Charge are catalog data, and it keeps Tribute 3.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #80 BOOM! Big Max (SPEC §8.6 row 80; BUILD M9 row C 80). (4) Unit, Legendary, 13/8 → 26/16:
 // Tribute 3, Rush, Trample, Indestructible; Radiant: Tribute 3, Charge, Trample, Indestructible. Balance

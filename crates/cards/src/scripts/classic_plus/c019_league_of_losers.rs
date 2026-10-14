@@ -3,7 +3,65 @@
 //! An occupied or Locked zone is skipped: occupancy fizzles in the engine, and the Lock is this
 //! card's own override of R688, so the script skips a Locked lane itself.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019";
+
+/// The five-stack, in the order they are summoned; each goes to the unit zone of its lane (index + 1).
+const FIVE_STACK: [&str; 5] = [
+    "classicplus-019-1", // Top Loser
+    "classicplus-019-2", // Jungle Loser
+    "classicplus-019-3", // Mid Loser
+    "classicplus-019-4", // Support Loser
+    "classicplus-019-5", // Bot Loser
+];
+
+const MID_LOSER: &str = "classicplus-019-3";
+
+/// R411: the Mid Loser this list summoned into `lane`, if it is there, has its Cry triggered.
+fn mid_loser_cry(lane: i32) -> Effect {
+    for_each_card(ForEachCardArgs {
+        cards: Arc::new(move |ctx: &mut EffectContext<'_>| {
+            let unit = card_at(&*ctx.state, ZoneRef { player: ctx.controller, row: Row::Units, lane }).cloned();
+            match unit {
+                Some(unit) if unit.def_id == MID_LOSER && summoned_so_far(ctx).contains(&unit.id) => vec![unit.id],
+                _ => Vec::new(),
+            }
+        }),
+        each: Arc::new(|instance_id: &str| trigger_cry(json_as(json!({ "instanceId": instance_id })))),
+    })
+}
+
+fn league(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            FIVE_STACK
+                .iter()
+                .zip(1..)
+                .flat_map(|(&def_id, lane): (&&str, i32)| {
+                    // R688's card-specific override: a Locked lane is skipped (§8.7 row 19).
+                    if is_locked(&*ctx.state, ZoneRef { player: ctx.controller, row: Row::Units, lane }) {
+                        return Vec::new();
+                    }
+                    let summoned = summon(json_as(json!({ "defId": def_id, "lane": lane, "radiant": radiant })));
+                    if def_id == MID_LOSER {
+                        vec![summoned, mid_loser_cry(lane)]
+                    } else {
+                        vec![summoned]
+                    }
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: league(false),
+        radiant: league(true),
+    }
+}
 
 // C+ #19 League of Losers — SPEC §8.7 row 19, BUILD M9 Classic+ row C+ 19: "Summons Top, Jungle, Mid,
 // Support and Bot Loser (C+ #19.1–#19.5) into your unit zones 1 to 5 in that order, each aimed at its
@@ -104,7 +162,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(4));
             assert_eq!(def.rarity, Rarity::Legendary);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());
             assert_eq!(def.refs, Some(FIVE.iter().map(|id| id.to_string()).collect::<Vec<String>>()));

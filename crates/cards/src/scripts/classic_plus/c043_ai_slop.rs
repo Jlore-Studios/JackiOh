@@ -8,7 +8,36 @@
 //! `costOverride` 0 (the hand cap burns it). Radiant picks go in on their Radiant face (R469).
 //! R582: tuned down to 1, "fuse 1 card" is no fusion (R77), so that one card is added as it is, at (0).
 
+use jackioh_engine::effects::{add_random_from_catalog, fuse_generated};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-043";
+
+fn ai_cards() -> Value {
+    json!({ "tags": ["AI"], "token": true })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            let count = param(&*ctx, "cards");
+            if count < 2 {
+                vec![add_random_from_catalog(json_as(json!({
+                    "query": ai_cards(),
+                    "count": count,
+                    "costOverride": 0,
+                    "radiant": ctx.radiant,
+                })))]
+            } else {
+                vec![fuse_generated(json_as(json!({ "count": count, "query": ai_cards(), "radiant": ctx.radiant })))]
+            }
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's picks are Radiant through `ctx.radiant`.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #43 AI Slop — SPEC §8.7 row 43, R11, R60, R77, R97, R102, R179, R386, R469, R582, BUILD M9 row
 // C+ 43. The fusion is the engine's `fuseGenerated` (packages/engine/test/fuse-variants.test.ts).
@@ -63,7 +92,7 @@ mod tests {
     fn runs_one_script_on_both_faces_its_card_count_is_the_declared_cards() {
         let def = crate::card_def(SLOP);
         assert_eq!(def.id, SLOP);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert!(Arc::ptr_eq(
             scripts.base.cry.as_ref().expect("a Cry"),
             scripts.radiant.cry.as_ref().expect("a Cry")

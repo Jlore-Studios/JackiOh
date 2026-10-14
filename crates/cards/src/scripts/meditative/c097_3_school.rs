@@ -5,7 +5,44 @@
 //!            (R380, R60), placed per R64 (a Locked zone only when no open one is left, R688), with no Cry
 //!            (R1); no zone to land in draws nothing (R129). Tunes: cost 1 ↑."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-3";
+
+/// §8.8: "Activate" is once a turn.
+const USES: i32 = 1;
+
+fn class(radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "class".to_string(),
+        label: "Summon a Unit".to_string(),
+        uses: ActivationUses::Count(USES),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |ctx| {
+            vec![summon_random(json_as(json!({
+                "query": { "type": "Unit", "cost": param(&*ctx, "cost") },
+                "radiant": radiant,
+            })))]
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            activations: vec![class(false)],
+            ..Script::default()
+        },
+        radiant: Script {
+            activations: vec![class(true)],
+            ..Script::default()
+        },
+    }
+}
 
 // M 97.3 School — SPEC §8.8 row 97.3, BUILD M10 row M 97.3: "Can't attack; Activate, once a turn: a random
 // non-token (1) Cost Unit of any set summoned with no Cry; a full board draws nothing (R129); cost reads
@@ -16,7 +53,7 @@ pub const ID: &str = "meditative-097-3";
 // so R82 does not end the turn after the Activate.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -88,7 +125,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "cost", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let uses = |script: &Script| {
             script
                 .activations

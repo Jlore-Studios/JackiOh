@@ -15,7 +15,73 @@
 //! One trigger carries both texts, so one event is never answered by both the reveal and the "whenever" (R395);
 //! the conditions live in `when` (R99). A Field Trap is never consumed.
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::{animate, damage, draw, remember};
+
 pub const ID: &str = "classic-038";
+
+/// What the Auctioneer keeps once it has revealed.
+const ACTIVATED: &str = "activated";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Answer {
+    Activate,
+    Sale,
+}
+
+fn has_activated(ctx: &EffectContext) -> bool {
+    recalled(ctx, ACTIVATED).and_then(|value| value.as_bool()) == Some(true)
+}
+
+/// The answer this play gets: "activate" (the {plays}th play of a turn), "sale" (once activated), or none.
+fn answer(ctx: &EffectContext, event: &GameEvent) -> Option<Answer> {
+    let GameEvent::CardPlayed { player, .. } = event else {
+        return None;
+    };
+    let reached = cards_played_this_turn(ctx.state, *player) == param(ctx, "plays");
+    if has_activated(ctx) {
+        return Some(Answer::Sale);
+    }
+    if reached { Some(Answer::Activate) } else { None }
+}
+
+fn run(ctx: &mut EffectContext, event: &GameEvent) -> Vec<Effect> {
+    let kind = answer(ctx, event);
+    if kind == Some(Answer::Activate) {
+        return vec![
+            remember(json_as(json!({ "key": ACTIVATED, "value": true }))),
+            animate(Default::default()),
+        ];
+    }
+    if kind == Some(Answer::Sale) {
+        // B3.1 rule 4: every firing of an Animated trap ends with its animating, so one stuck in the
+        // backrow for want of a zone steps into a unit zone as soon as one is open; a Unit stays put.
+        return vec![
+            draw(json_as(json!({ "count": param(ctx, "draw") }))),
+            damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": param(ctx, "damage") }))),
+            animate(Default::default()),
+        ];
+    }
+    vec![]
+}
+
+fn auction() -> TriggerDef {
+    TriggerDef::new("auctioneer", &[GameEventType::CardPlayed], run).with_when(|ctx, event| answer(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![auction()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 2nd play and 4 damage are its declared numbers, which `param`
+    // reads off the face; its 8/8 body is printed on the catalog face.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #38 Jackiestan Auctioneer — SPEC §8.6 row 38, BUILD M9 Classic row C 38: face-down only its reveal
 // condition is live (R395); animated it is a Unit for every rule and keeps its trigger; the opponent's view
@@ -23,7 +89,7 @@ pub const ID: &str = "classic-038";
 // play, never below 2; draw; damage) read through `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const AUCTION: &str = "classic-038";
@@ -110,7 +176,7 @@ mod tests {
             assert_eq!(def.type_, CardType::FieldTrap);
             let kinds: Vec<Value> = def.base.keywords.iter().map(|keyword| js(keyword)["kind"].clone()).collect();
             assert_eq!(kinds, vec![json!("Animated")]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(face.triggers.len(), 1);
                 assert_eq!(face.triggers[0].id, "auctioneer");

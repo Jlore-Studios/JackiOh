@@ -6,7 +6,34 @@
 //! `StaticFlags.exiles_on_damage`; the Radiant face's Cleave is catalog data. A hit the pipeline
 //! stopped (Divine Shield, Indestructible, the zero rule) dealt no damage, so it exiles nothing.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-072";
+
+fn the_banisher() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            exiles_on_damage: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn base() -> Script {
+    the_banisher()
+}
+
+pub fn radiant() -> Script {
+    the_banisher()
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: the_banisher(),
+        radiant: the_banisher(),
+    }
+}
 
 #[cfg(test)]
 mod tests {

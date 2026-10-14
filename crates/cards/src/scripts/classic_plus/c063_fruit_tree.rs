@@ -11,7 +11,36 @@
 //! its def id (R387). Repeats are allowed (R60); a full hand burns what doesn't fit (§2.4, R4), and the
 //! cost rider lands only on a card that reached the hand.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-063";
+
+/// The printed "a random Fruit": one card per start of turn.
+const FRUITS: i32 = 1;
+
+/// The two faces differ only in whether the Fruit is Radiant (R276: the Radiant face's proposal).
+fn fruit_tree(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |ctx| {
+            // "It costs (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
+            let mut args = json!({ "query": { "tags": ["Fruit"] }, "count": FRUITS, "costOverride": cost });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fruit_tree(false),
+        radiant: fruit_tree(true),
+    }
+}
 
 // C+ #63 Fruit Tree — SPEC §8.7 row 63, BUILD M9 Classic+ row C+ 63: "Field Spell: at each start of
 // your turn adds a random card of the Fruit pool (R382) that costs (0), never Fruit Tree (R387); nothing
@@ -81,7 +110,7 @@ mod tests {
         let def = crate::card_def(super::ID);
         assert_eq!(def.id, TREE);
         assert_eq!(def.type_, CardType::FieldSpell);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.start_of_turn.is_some());
         assert!(scripts.radiant.start_of_turn.is_some());
     }

@@ -12,7 +12,17 @@
 //! Radiant form: §7 prints 2/2 with Rush (R275), catalog data on `def.radiant`, so the radiant Script
 //! is the base Script itself; Rush is §4.1's.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-t-felinor";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // T-felinor Felinor Token (SPEC §7; §3.2, §4.1, §5.1, §6.1, R11, R64, R74, R275). BUILD M4-T4's
 // token row: "Vanish on leaving the field; … none in random pools; radiant … Felinor Token 2/2 Rush".
@@ -169,7 +179,7 @@ mod tests {
             #[test]
             fn s7_needs_no_script_for_either_face_and_the_radiant_script_is_the_base_script_r74() {
                 crate::register_all();
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert!(set_fields(&scripts.base).is_empty());
                 assert!(set_fields(&scripts.radiant).is_empty());
             }

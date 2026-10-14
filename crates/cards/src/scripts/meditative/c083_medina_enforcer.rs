@@ -5,7 +5,28 @@
 //! Engine: M #82's effect at its controller's end of turn (R62's end-of-turn triggers). The
 //! designer's Radiant face kept 4/4; R275's stat half makes it 8/8 (⚠ designer).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-083";
+
+fn enforcer() -> Script {
+    Script {
+        end_of_turn: Some(hook(|ctx| {
+            vec![upgrade(json_as(json!({
+                "scope": { "side": "self", "zones": ["hand"] },
+                "times": param(&*ctx, "times"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face Buffs each card three times; the count reads through `param()`.
+    let base = enforcer();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #83 Medina Enforcer — SPEC §8.8 row 83, BUILD M10 row M 83: "At your end of turn only, one Buff
 // on each card in your hand (R386), cued per R440; nothing at the opponent's end; radiant 8/8 and

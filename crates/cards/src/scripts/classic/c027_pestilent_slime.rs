@@ -10,7 +10,19 @@
 //! Plague Counters are placed on this" answers once. A Vanilla Slime multiplies by 1; R78 clears its tokens.
 //! The multiplier is the declared `multiplier` (R386), read through `param`; both faces run this script.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-027";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        plague_multiplier: Some(read_hook(|args| param(&args, "multiplier"))),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's ×3 is its declared `multiplier`, which `param` reads off the face it wears.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #27 Pestilent Slime — SPEC §8.6 row 27, BUILD M9 Classic row C 27: "Every placement onto it is
 // doubled (tripled radiant), still one placement for "whenever Plague Counters are placed" triggers;
@@ -20,7 +32,6 @@ pub const ID: &str = "classic-027";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -75,7 +86,7 @@ mod tests {
         #[test]
         fn declares_its_multiplier_as_a_placement_hook_one_script_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, SLIME);
             assert!(scripts.base.plague_multiplier.is_some());
             // The Radiant face is the base script itself.

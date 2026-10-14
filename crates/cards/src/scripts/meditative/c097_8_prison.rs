@@ -13,7 +13,91 @@
 //!            Prison's controller (MD-F16). Tunes: chance 50 ↑; Tribute 2 ↓ (never below 1); Lucky 1 ↑,
 //!            on the Radiant face only."
 
+use jackioh_engine::catalog::def_of;
+use jackioh_engine::effects::steal::{CaptureArgs, capture};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-8";
+
+/// §8.8: "Tribute 2".
+const TRIBUTE_COST: i32 = 2;
+
+/// Declared `chance` is a percentage.
+const PERCENT: i32 = 100;
+
+/// The face's Lucky X keyword.
+fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
+    let Some(own) = ctx.self_.as_ref() else {
+        return 0;
+    };
+    numbered_keywords_on(ctx.sink.state, own)
+        .into_iter()
+        .find(|keyword| keyword.key == NumberedKey::Lucky)
+        .map(|keyword| keyword.value)
+        .unwrap_or(0)
+}
+
+fn prison_trigger() -> TriggerDef {
+    TriggerDef::new(
+        "prison-capture",
+        &[GameEventType::CardResolved],
+        |ctx, event| {
+            let GameEvent::CardResolved {
+                instance_id,
+                permanent,
+                ..
+            } = event
+            else {
+                return vec![];
+            };
+            if !*permanent {
+                return vec![];
+            }
+            let chance = f64::from(param(&*ctx, "chance")) / f64::from(PERCENT);
+            let lucky = lucky_of(ctx);
+            if ctx.rng.lucky(lucky, |rng| rng.chance(chance), |a, b| a || b) {
+                vec![capture(CaptureArgs {
+                    instance_id: instance_id.clone(),
+                })]
+            } else {
+                vec![]
+            }
+        },
+    )
+    .with_when(|ctx, event| {
+        let GameEvent::CardResolved {
+            player,
+            def_id,
+            permanent,
+            ..
+        } = event
+        else {
+            return false;
+        };
+        // §8: "your opponent".
+        if *player == ctx.controller {
+            return false;
+        }
+        // §5.1: a Unit.
+        if def_of(Some(&*ctx.state), def_id).type_ != CardType::Unit {
+            return false;
+        }
+        *permanent
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        triggers: vec![prison_trigger()],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M 97.8 Prison — SPEC §8.8 row 97.8, BUILD M10 row M 97.8: "Tribute 2; after each Unit the opponent plays
 // or casts has resolved, its Cry included, a 50% roll moves it, still on the field, beneath Prison under your
@@ -22,7 +106,7 @@ pub const ID: &str = "meditative-097-8";
 // newest captive resumes under your control; chance reads through `param()`; radiant 0/32 and Lucky 1: 75%".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -65,7 +149,7 @@ mod tests {
             js(&def.radiant.keywords),
             json!([{ "kind": "Lucky", "n": 1 }])
         );
-        let s = crate::scripts_of()[ID].clone();
+        let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(2));
     }
 

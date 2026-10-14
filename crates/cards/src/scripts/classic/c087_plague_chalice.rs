@@ -11,14 +11,67 @@
 //! R667: `wouldCounter` uses the same match ahead of a play to mark hand cards (`counteredOnPlay`). Both
 //! halves call `counters`, so the warning and the counter cannot disagree.
 
+use jackioh_engine::effects::{counter_play, place_plague};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-087";
+
+/// The match: a play `player` makes paying `cost_paid`, against this Chalice's count and its face's reach.
+fn counters(self_: &CardInstance, controller: PlayerId, player: PlayerId, cost_paid: i32, opponent_only: bool) -> bool {
+    if opponent_only && player == controller {
+        return false;
+    }
+    cost_paid == plague_on(self_)
+}
+
+/// The announced play's instance id when the Chalice, as it stands now, counters it (`live_self`).
+fn matches(ctx: &EffectContext<'_>, event: &GameEvent, opponent_only: bool) -> Option<String> {
+    let GameEvent::CardAnnounced { player, instance_id, cost_paid, .. } = event else {
+        return None;
+    };
+    let me = ctx.live_self()?;
+    if counters(me, ctx.controller, *player, *cost_paid, opponent_only) {
+        Some(instance_id.clone())
+    } else {
+        None
+    }
+}
+
+fn chalice(opponent_only: bool) -> Script {
+    let aura = TriggerDef::new("plague-chalice", &[GameEventType::CardAnnounced], move |ctx, event| {
+        match matches(ctx, event, opponent_only) {
+            None => vec![],
+            Some(instance_id) => vec![counter_play(json_as(json!({
+                "target": { "of": "instance", "instanceId": instance_id }
+            })))],
+        }
+    })
+    .with_when(move |ctx, event| matches(ctx, event, opponent_only).is_some());
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![place_plague(json_as(json!({ "target": { "of": "self" }, "amount": ctx.x })))]
+        })),
+        triggers: vec![aura],
+        would_counter: Some(would_counter_hook(move |args| {
+            counters(args.self_, args.controller, args.player, args.cost_paid, opponent_only)
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: chalice(false),
+        radiant: chalice(true),
+    }
+}
 
 // C #87 Plague Chalice (SPEC §8.6 row 87). Field Spell: enters with X Plague Counters (R348);
 // Aura counters plays in §10.5's announce window matching the token count; free casts countered
 // only at count 0 (R70); set trap cost is public (R351). Radiant: opponent's plays only.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -98,7 +151,7 @@ mod tests {
         assert_eq!(def().id, CHALICE);
         assert_eq!(js(&def().cost), json!("X"));
         assert!(def().params.is_none());
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             let on: Vec<Vec<&str>> =
                 face.triggers.iter().map(|trigger| trigger.on.iter().map(|kind| kind.as_str()).collect()).collect();
@@ -490,7 +543,7 @@ mod tests {
         fn r667_wouldcounter_is_the_trigger_s_own_match_on_both_faces() {
             let s = standing(3, false, P1);
             let self_card = s.card(CHALICE).clone();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let ask = |face: &Script, player: PlayerId, cost_paid: i32| -> Option<bool> {
                 face.would_counter.as_ref().map(|would_counter| {
                     would_counter(WouldCounterArgs {

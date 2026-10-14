@@ -16,7 +16,35 @@
 //!   wherever a rule reads it out of play (R65), and a cast of it resolves with no effect. A full
 //!   hand burns the card before it enters (§2.4, R4), so it reaches the graveyard unreplaced.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-037";
+
+fn bottle(radiant: bool) -> Script {
+    Script {
+        enters_hand: Some(hook(move |_ctx| {
+            let mut args = json!({
+                "target": { "of": "self" },
+                "radiant": true,
+                "chinese": true,
+                "arrives": true,
+            });
+            if radiant {
+                args["costOverride"] = json!(0);
+            }
+            vec![transform_random(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // No cry on either face: a cast resolves with no effect (MD-B19, R926). The Radiant face's new
+    // card costs (0).
+    let base = bottle(false);
+    let radiant = bottle(true);
+    CardScripts { base, radiant }
+}
 
 // M #37 CN in a bottle — SPEC §8.8 row 37, BUILD M10 row M 37: "On every arrival in a hand (a draw,
 // an add, a Discover, a bounce, a steal, the opening deal, a mulligan replacement; MD-B18) it is
@@ -27,7 +55,6 @@ pub const ID: &str = "meditative-037";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -36,11 +63,6 @@ mod tests {
     const BOTTLE: &str = "meditative-037";
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2.
     const FILLER: &str = "core-005";
-
-    /// The card's two faces as the registry builds them from its Luau source.
-    fn script() -> CardScripts {
-        crate::scripts_of()[ID].clone()
-    }
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])

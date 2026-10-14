@@ -13,7 +13,35 @@
 //! on this" (C #53). The prompt parks the rest of the Cry on `state.work` (R113), so the draw comes after.
 //! Both numbers are `tokens` and `draw` (R386).
 
+use jackioh_engine::effects::{draw, place_plague_tokens};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-061";
+
+/// §6.3 "Tribute 1": one of your Units, as #66 The Rock's.
+const TRIBUTE_COST: i32 = 1;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![
+                place_plague_tokens(json_as(json!({ "count": param(ctx, "tokens") }))),
+                draw(json_as(json!({ "count": param(ctx, "draw") }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's draw 3 is its declared `draw`, which `param` reads off the running
+    // face; its stats are the catalog's.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #61 Plague Bringer Goliath — SPEC §8.6 row 61, BUILD M9 Classic row C 61. Tribute: can't be played without
 // a Unit to tribute, may take its zone on a full board (R391). Cry: three placements on the one permanent a
@@ -21,7 +49,7 @@ pub const ID: &str = "classic-061";
 // radiant draws 3; tuned numbers read through `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -103,7 +131,7 @@ mod tests {
             crate::register_all();
             let def = js(&crate::card_def(ID));
             assert_eq!(def["id"], GOLIATH);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(js(&scripts.base.static_flags), json!({ "tribute": 1 }));
             assert_eq!(
                 def["params"],

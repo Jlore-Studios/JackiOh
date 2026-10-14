@@ -7,12 +7,28 @@
 //! after that combat's state check unless it is now its controller's turn. It relies on #531's R383
 //! revision for the second-turn attack (M10).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-071-1";
+
+pub fn base() -> Script {
+    Script::default()
+}
+
+pub fn radiant() -> Script {
+    Script::default()
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: base(),
+        radiant: radiant(),
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::effects::destroy;
     use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
     use jackioh_engine::rng::Rng;
     use jackioh_engine::script::EngineSink;

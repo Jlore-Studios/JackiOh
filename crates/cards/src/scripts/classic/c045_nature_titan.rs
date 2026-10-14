@@ -12,7 +12,57 @@
 //! Flame) and an attack on it names it the target, so defending does nothing. "Heal your hero" is §6.3
 //! Heal on a hero: no cap (§3); `draw` and `heal` are declared numbers read through `param` (R386).
 
+use jackioh_engine::effects::{draw, heal};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-045";
+
+/// "Tribute 1" (§6.3): one of your units, or one Sheep Token.
+const TRIBUTE_COST: i32 = 1;
+
+/// "Draw {draw} and heal your hero {heal}", the text the Cry and the attack trigger share.
+fn titan(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let count = param(&*ctx, "draw");
+    let amount = param(&*ctx, "heal");
+    vec![
+        draw(json_as(json!({ "count": count }))),
+        heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount }))),
+    ]
+}
+
+/// "Whenever this attacks": every `attackDeclared` whose attacker is this card, forced ones included.
+/// The test is in `run`: a `when` is read for traps only (R99), and an ordinary trigger's `run` is
+/// its whole condition, as #32 Prem Panther's is.
+fn on_attack() -> TriggerDef {
+    TriggerDef::new("45-whenever-this-attacks", &[GameEventType::AttackDeclared], |ctx, event| {
+        let GameEvent::AttackDeclared { attacker_id, .. } = event else {
+            return vec![];
+        };
+        let mine = ctx.self_.as_ref().is_some_and(|me| me.id == *attacker_id);
+        if !mine {
+            return vec![];
+        }
+        titan(ctx)
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(titan)),
+        triggers: vec![on_attack()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's draw 2 and heal 6 are its declared numbers, which `param` reads off the running face.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #45 Nature Titan — SPEC §8.6 row 45, BUILD M9 Classic row C 45: Tribute 1 (§6.3, R101), refused
 // with no Unit to Tribute; on a full board it takes the tributed Unit's zone unless Reborn, Locked or
@@ -20,7 +70,7 @@ pub const ID: &str = "classic-045";
 // no cap (§6.3); radiant 12/12: draw 2, heal 6; tuned numbers (draw, heal) via `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -54,7 +104,7 @@ mod tests {
         fn declares_tribute_1_and_runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(registered_catalog()[ID].id, TITAN);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.tribute), Some(1));
             // The Radiant face is the same script.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);

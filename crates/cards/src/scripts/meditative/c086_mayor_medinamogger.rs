@@ -6,7 +6,22 @@
 //! `random_targets` (ME-RANDOMTARGETS, R1200). The Radiant face's Lucky 1 rolls its controller's
 //! random targets again (R1201). Keywords and the aura are catalog data; there is nothing to run.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-086";
+
+pub fn script() -> CardScripts {
+    // Both faces carry the aura; the Radiant face's Lucky 1 is catalog data beside it.
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            random_targets: Some(true),
+            ..Default::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #86 Mayor Medinamogger — SPEC §8.8 row 86, BUILD M10 row M 86: "While it acts on either side,
 // both players' declared targets are drawn by the engine at §10.5 step 1 (MD-E9), `legalActions`

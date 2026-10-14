@@ -10,7 +10,32 @@
 //! Nerf that removes the keyword is respected. After the cast the draw repeats (§2.4) under R58's
 //! chain cap. Setup never deals it (R635, R748).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-028-1";
+
+fn curse() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({
+                "to": { "of": "selfHero" },
+                "amount": param(&*ctx, "damage"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face's Pierce is catalog data the damage pipeline reads (R346).
+    let base = curse();
+    let radiant = curse();
+    CardScripts { base, radiant }
+}
 
 // M #28.1 Ancient Curse — SPEC §8.8 row 28.1, BUILD M10 row M 28.1: "Cast on draw when its holder
 // draws it (R40), out of either deck (R549): one hit of 7 on its caster's own hero, Armor reducing
@@ -131,7 +156,7 @@ mod tests {
             fn has_the_cast_on_draw_flag_on_both_faces() {
                 // R635's guarantee that setup never deals it rests on this flag; a token is in no
                 // deck anyway, so the flag is what makes a shuffled-in curse cast on draw.
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 for face in [&scripts.base, &scripts.radiant] {
                     assert_eq!(
                         face.static_flags.as_ref().and_then(|flags| flags.cast_on_draw),

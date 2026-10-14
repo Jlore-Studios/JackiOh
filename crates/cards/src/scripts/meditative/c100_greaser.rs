@@ -1,22 +1,25 @@
 //! M #100 Greaser (SPEC §8.8 row 100): a 2-cost 7/7 → 21/21 Unit with no tags and no text on either
 //! face. A card with no text has no hooks, so both Scripts are empty, as Core #8 Mr. Vanilla's are.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-100";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    let radiant = Script::default();
+    CardScripts { base, radiant }
+}
 
 // M #100 Greaser — SPEC §8.8 row 100, BUILD M10 row M 100: "A 2-cost 7/7 with no tags and no text: it
 // enters with no keywords and its play is the play alone; radiant a 21/21 with no text, three times
 // the base face's stats (R275)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const FILLER: &str = "core-016";
-
-    /// The card's scripts as the registry builds them: its Luau source.
-    fn script() -> CardScripts {
-        crate::scripts_of()[ID].clone()
-    }
 
     /// p1 plays Greaser (Radiant on `radiant`), with a filler behind it so no turn auto-ends.
     fn played(seed: &str, radiant: bool) -> Scenario {

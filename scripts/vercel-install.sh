@@ -15,13 +15,5 @@ if ! command -v rustup >/dev/null 2>&1; then
   . "$HOME/.cargo/env"
 fi
 rustup toolchain install || rustup show
-rustup target add wasm32-unknown-emscripten
-# The module links through emscripten (v0.4.0 part 5): scripts/build-wasm.sh clones and installs
-# the pinned emsdk into .cache/emsdk itself when it is missing, so the install step only needs the
-# tools that clone builds on. Part 8 (#450) caches the toolchain; until it lands, every Vercel
-# build downloads it in build-wasm.sh.
-if ! command -v git >/dev/null 2>&1 || ! command -v python3 >/dev/null 2>&1; then
-  echo "vercel-install: the WASM build needs git and python3 for the emsdk" >&2
-  exit 1
-fi
+rustup target add wasm32-unknown-unknown
 pnpm install --frozen-lockfile

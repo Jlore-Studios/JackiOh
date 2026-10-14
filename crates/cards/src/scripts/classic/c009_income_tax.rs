@@ -13,14 +13,85 @@
 //! nothing (R61). The Radiant `costMod` (R78) is read at firing and carried to the answer: the trap is
 //! in the graveyard by then.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-009";
+
+/// Where the Radiant face's discount travels from the firing to the answer (§10.6).
+const DISCOUNT: &str = "discount";
+
+fn taxes(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::Drawn { player, turn_draw, .. }
+            if *player == opponent_of(ctx.controller) && *turn_draw == Some(param(ctx, "draws"))
+    )
+}
+
+fn tax(radiant: bool) -> TriggerDef {
+    TriggerDef::new("income-tax", &[GameEventType::Drawn], move |ctx, _event| {
+        if zone_count(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) <= 1 {
+            return vec![];
+        }
+        let mut data = json!({});
+        if radiant {
+            data[DISCOUNT] = json!(param(&*ctx, "discount"));
+        }
+        vec![choose_from_hand(json_as(json!({
+            "of": "enemy",
+            "by": "enemy",
+            "count": 1,
+            "step": "keep",
+            "prompt": "Income Tax: keep one card; your opponent takes the rest",
+            "data": data,
+        })))]
+    })
+    .with_when(taxes)
+}
+
+fn discount_of(ctx: &EffectContext<'_>) -> i32 {
+    // Only an integer counts, else 0 (SURFACE §4.4.10).
+    match ctx.data.get(DISCOUNT) {
+        Some(Value::Number(n)) => n
+            .as_i64()
+            .map(|value| value as i32)
+            .or_else(|| n.as_f64().filter(|value| value.fract() == 0.0).map(|value| value as i32))
+            .unwrap_or(0),
+        _ => 0,
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![tax(false)],
+        resume: IndexMap::from([(
+            "keep",
+            hook(|_ctx| vec![give_from_hand(json_as(json!({ "from": "enemy", "cards": "unchosen" })))]),
+        )]),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        triggers: vec![tax(true)],
+        resume: IndexMap::from([(
+            "keep",
+            hook(|ctx| {
+                vec![give_from_hand(json_as(json!({
+                    "from": "enemy",
+                    "cards": "unchosen",
+                    "costMod": -discount_of(ctx),
+                })))]
+            }),
+        )]),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C #9 Income Tax — SPEC §8.6 row 9, BUILD M9 Classic row C 9: fires on the opponent's second draw of a
 // turn, on either turn, after a cast-on-draw card is cast (R58); a draw a limit stops does not count
 // (§2.4); the rest of their hand becomes yours (R12), overflow burned (R317); radiant: (1) less, kept in
 // every zone (R78); tuned numbers read through `param()` (R386). Here p2 sets the trap, p1 draws.
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,7 +181,7 @@ mod tests {
                 { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" },
             ])
         );
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         let ons = |face: &Script| face.triggers.iter().map(|trigger| trigger.on.clone()).collect::<Vec<_>>();
         assert_eq!(ons(&base), vec![vec![GameEventType::Drawn]]);
         assert_eq!(ons(&radiant), vec![vec![GameEventType::Drawn]]);

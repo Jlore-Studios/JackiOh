@@ -11,7 +11,41 @@
 //! each draw, so it lifts the moment the Machine leaves; Rush is printed on both faces (§10.4 layer 1).
 //! The base face's 1 is printed; the Radiant limit reads `param(…, "limit")` (R386, `min` 1).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-049";
+
+/// "Players can't draw more than 1 card each turn": the base face's printed limit, on both players.
+const PLAYERS_LIMIT: i32 = 1;
+
+fn base_limit(_args: HookArgs<'_>) -> Vec<DrawLimit> {
+    vec![DrawLimit {
+        player: DrawLimitPlayer::Both,
+        count: PLAYERS_LIMIT,
+    }]
+}
+
+/// "Your opponent can't draw more than {limit} …": the declared, tunable number.
+fn radiant_limit(args: HookArgs<'_>) -> Vec<DrawLimit> {
+    vec![DrawLimit {
+        player: DrawLimitPlayer::Enemy,
+        count: param(&args, "limit"),
+    }]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        draw_limit: Some(read_hook(base_limit)),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        draw_limit: Some(read_hook(radiant_limit)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // BUILD M9 Classic row C 49 (SPEC §8.6 row 49): draws beyond 1 a turn do not happen at all, no card
 // moves, no fatigue, nothing cast on draw (§2.4); the lowest limit holds, shown with C #4 Palantir and
@@ -19,7 +53,7 @@ pub const ID: &str = "classic-049";
 // The aura is B5 E3's draw limit. Stockpile (core-005, "Draw 2. Heal your hero 2.") makes the draws.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -67,7 +101,7 @@ mod tests {
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Rush" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Rush" }]));
             assert_eq!(def["params"], json!([{ "key": "limit", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1, "tunedOn": "radiant" }]));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.draw_limit.is_some());
             assert!(scripts.radiant.draw_limit.is_some());
         }

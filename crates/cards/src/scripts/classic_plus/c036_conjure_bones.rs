@@ -4,7 +4,33 @@
 //! The embiggen price is a play-time choice that lands on the instance (R81, `ctx.embiggened`);
 //! `shuffleInto` puts each fresh token at a random position and R80's cap turns the rest away.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-036";
+
+const BONE_STORM: &str = "classicplus-036-1";
+
+fn conjure_bones(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let key = if ctx.embiggened { "paidCount" } else { "count" };
+            vec![shuffle_into(json_as(json!({
+                "defId": BONE_STORM,
+                "count": param(&*ctx, key),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: conjure_bones(false),
+        radiant: conjure_bones(true),
+    }
+}
 
 // C+ #36 Conjure Bones — SPEC §8.7 row 36, BUILD M9 Classic+ row C+ 36: "Shuffles 7 Bone Storms
 // (C+ #36.1) into your deck, each at a uniformly random position; the embiggen price (4) chosen with

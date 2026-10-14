@@ -11,7 +11,26 @@
 //! §6.3's Heal with `toFull`: it takes ALL damage off and raises nothing. §4 says damage stays between
 //! turns, which is why the card needs this at all.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-019";
+
+/// The one clause both faces share; a fresh Script per face so neither can be mutated into the other.
+fn menace() -> Script {
+    Script {
+        end_of_turn: Some(hook(|_ctx| {
+            vec![heal(json_as(json!({ "target": { "of": "self" }, "toFull": true })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: menace(),
+        radiant: menace(),
+    }
+}
 
 // #19 Midrange Menace — SPEC §8.1 row 19, BUILD M4-T4 row 19.
 //

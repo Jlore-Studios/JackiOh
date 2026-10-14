@@ -4,7 +4,36 @@
 //! Cast on draw is §6.2's static flag (R58, R70); "each enemy" is one hit on every enemy unit and
 //! the enemy hero, all landing before the state check (R59). Echo is the `echo` flag (R51's repeat).
 
+use jackioh_engine::effects::damage_all;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-036-1";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![damage_all(json_as(json!({
+                "amount": param(&*ctx, "damage"),
+                "side": "enemy",
+                "heroes": true,
+            })))]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            echo: Some(1),
+            ..StaticFlags::default()
+        }),
+        ..base.clone()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #36.1 Bone Storm — SPEC §8.7 row 36.1, BUILD M9 Classic+ row C+ 36.1: "Cast on draw (R70: free,
 // counts as played): 1 damage to the enemy hero and to each enemy Unit, separate instances all

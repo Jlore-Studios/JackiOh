@@ -15,7 +15,57 @@
 //! a given Unit that dies goes to its owner's graveyard. The number is declared and read through
 //! `param` (R386); the base face prints none (R749).
 
+use jackioh_engine::effects::{ForEachCardArgs, for_each_card, gain_mana, give_control, instance_of};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-006";
+
+/// "Give one of your Units to your opponent."
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "ally", "of": ["unit"] }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let Some(unit) = instance_of(ctx, &TargetSpec::Chosen { index: None }) else {
+                return vec![];
+            };
+            // The gift's price, read before it moves (R803, R65, R396).
+            let gain = cost_now(&*ctx.state, &unit) * param(&*ctx, "multiple");
+            let id = unit.id.clone();
+            let moved = id.clone();
+            vec![
+                give_control(json_as(json!({ "instanceId": id }))),
+                for_each_card(ForEachCardArgs {
+                    // "If you do": only a Unit that now stands on the opponent's side pays out.
+                    cards: Arc::new(move |now: &mut EffectContext<'_>| {
+                        let enemy = opponent_of(now.controller);
+                        let changed_sides = active_units_of(&*now.state, enemy)
+                            .iter()
+                            .any(|card| card.id == moved);
+                        if gain > 0 && changed_sides {
+                            vec![moved.clone()]
+                        } else {
+                            vec![]
+                        }
+                    }),
+                    each: Arc::new(move |_instance_id: &str| {
+                        gain_mana(json_as(json!({ "amount": gain })))
+                    }),
+                }),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared `multiple` (2), read through
+    // `param`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // M #6 Me no Likey — SPEC §8.8 row 6, BUILD M10 row M 6: "Give one of your Units to their lane (R15,
 // R171, R1423) and gain its cost on the field (R65, R396, R803); with their row full it stays and gains
@@ -24,6 +74,7 @@ pub const ID: &str = "meditative-006";
 // (R386)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

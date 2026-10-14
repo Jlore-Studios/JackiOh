@@ -9,7 +9,36 @@
 //! Fruits; anywhere else (a deck, a graveyard, the field, a pool) it costs its printed (10) (R65).
 //! The keywords are the faces' printed ones, so both faces run this one script.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-064";
+
+pub fn script() -> CardScripts {
+    // TS `const PRINTED_COST = queryCost(def)`, read once as the module loads.
+    let printed_cost = query_cost(&crate::card_def(ID));
+    let base = Script {
+        cost: Some(cost_hook(move |CostArgs { state, instance }| {
+            let at = &instance.zone;
+            let for_play = matches!(at, Zone::Hand { .. })
+                || (matches!(at, Zone::Graveyard { .. }) && playable_from_graveyard(state, instance));
+            if !for_play {
+                return printed_cost;
+            }
+            let discount = param(
+                &HookArgs {
+                    state,
+                    self_: instance,
+                    radiant: instance.radiant,
+                },
+                "discount",
+            );
+            (printed_cost - discount * played_this_game_with_tag(state, at.player(), Tag::Fruit)).max(0)
+        })),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #64 Mulch Muncher — SPEC §8.7 row 64, BUILD M9 row C+ 64: Rush, Trample; a `cost` hook (R55's
 // pattern) that costs (1) less for each Fruit-tagged card its controller has played this game (casts
@@ -80,7 +109,7 @@ mod tests {
         assert_eq!(def.radiant.health, Some(18));
         assert_eq!(def.radiant.keywords, vec![Keyword::Rush, Keyword::Trample, Keyword::DivineShield]);
         assert!(!def.tags.contains(&Tag::Fruit));
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         // TS `expect(radiant).toBe(base)`: the one cost hook.
         assert!(std::sync::Arc::ptr_eq(
             scripts.radiant.cost.as_ref().expect("a cost hook"),

@@ -33,7 +33,65 @@
 //! returns, flooring each component at 0 (R116). So this hook returns the sum alone — adding the
 //! printed face here would count it twice — and R115 skips the hook entirely on a Vanilla'd card.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-092";
+
+/// §5, §8: the tag that makes a unit one of "your Felinors".
+const FELINOR: Tag = Tag::Felinor;
+
+/// "All your Felinors, including ones under a Stack": every Felinor this card's controller has on
+/// the field, dormant ones included (R13, §3.2). Reading state to find them is not mutation; nothing
+/// here writes (CLAUDE.md rule 5).
+fn felinors_of(state: &GameState, self_: &CardInstance) -> Vec<CardInstance> {
+    let mut mine: Vec<CardInstance> = active_units_of(state, self_.controller).into_iter().cloned().collect();
+    mine.extend(dormant_units_of(state, self_.controller).into_iter().cloned());
+    mine.into_iter()
+        // MD-B15, R923: a granted Felinor tag counts.
+        .filter(|unit| unit.id != self_.id && tags_of(state, unit).contains(&FELINOR))
+        .collect()
+}
+
+/// §10.4 layer 2, which ADDS this result to layer 1's printed face — so this returns only the sum,
+/// never printed plus the sum (R116). Each Felinor contributes its layer-4 stats (`statsWithBuffs`):
+/// printed plus permanent buffs, before auras, which is also what stops the layers recursing.
+fn set_stat_times(multiple: i32) -> SetStatHook {
+    read_hook(move |args| {
+        let mut attack = 0;
+        let mut max_health = 0;
+        for felinor in felinors_of(args.state, args.self_) {
+            let stats = stats_with_buffs(args.state, &felinor);
+            attack += stats.attack;
+            max_health += stats.max_health;
+        }
+
+        // R116: the hook returns the DELTA layer 2 adds to the printed face, not an absolute total, so
+        // the printed stats must not be added here — layer 2 does that. R39's "never below printed" is
+        // the floor at 0: a Felinor carrying a negative buff can pull the sum toward 0 but not past it.
+        SetStat {
+            attack: Some(attack.max(0) * multiple),
+            max_health: Some(max_health.max(0) * multiple),
+        }
+    })
+}
+
+/// "Has the stats of all your Felinors": the sum once (R39).
+const BASE_MULTIPLE: i32 = 1;
+/// "Has twice the stats of all your Felinors": the sum twice (R362).
+const RADIANT_MULTIPLE: i32 = 2;
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            set_stat: Some(set_stat_times(BASE_MULTIPLE)),
+            ..Script::default()
+        },
+        radiant: Script {
+            set_stat: Some(set_stat_times(RADIANT_MULTIPLE)),
+            ..Script::default()
+        },
+    }
+}
 
 // #92 Felinor Fiender (SPEC §8 row 92, §3.2, §10.4 layer 2; R13, R39, R92, R362).
 //
@@ -60,6 +118,7 @@ pub const ID: &str = "core-092";
 // nothing, because neither is one of "your Felinors".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

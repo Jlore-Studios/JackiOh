@@ -9,7 +9,33 @@
 //! §4.5 step 3 fires a collected backrow card's Death as it does a Unit's (the engine's, proved in
 //! `packages/engine/test/backrow-death.test.ts`), so the card is one Death hook.
 
+use jackioh_engine::effects::add_to_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-061";
+
+/// TS `cardDef("core-005").id`.
+const STOCKPILE: &str = "core-005";
+
+fn bauble_bubble(radiant: bool) -> Script {
+    Script {
+        death: Some(hook(move |ctx| {
+            // "Each costs (0)": the declared number `setCost` (R386).
+            let cost = param(&*ctx, "setCost");
+            (0..param(&*ctx, "cards"))
+                .map(|_| add_to_hand(json_as(json!({ "defId": STOCKPILE, "costOverride": cost, "radiant": radiant }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: bauble_bubble(false),
+        radiant: bauble_bubble(true),
+    }
+}
 
 // C+ #61 Bauble Bubble — SPEC §8.7 row 61, BUILD M9 Classic+ row C+ 61: "Field Spell with no effect
 // while it sits; its Death fires as it goes from its backrow zone to your graveyard (§4.5: destroyed by

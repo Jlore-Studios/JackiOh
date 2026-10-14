@@ -7,13 +7,70 @@
 //! Locks the zones (§6.3; both sides on base, enemy on radiant) before that check, so destroyed Reborn cannot
 //! return (R47). Lock evicts nothing; zone stays locked after leave; later summons and plays refused (§3.2).
 
+use jackioh_engine::effects::{destroy, lock_lane};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-071";
+
+/// The zones of this lane the face destroys in: the base face's three others, the Radiant's two enemy ones.
+fn lane_zones(me: PlayerId, enemy_only: bool) -> Vec<(PlayerId, Row)> {
+    let enemy = opponent_of(me);
+    let theirs = vec![(enemy, Row::Units), (enemy, Row::Backrow)];
+    if enemy_only {
+        theirs
+    } else {
+        let mut zones = vec![(me, Row::Backrow)];
+        zones.extend(theirs);
+        zones
+    }
+}
+
+/// Destroy the card acting in each of those zones of Lane Eater's lane, as the Cry resolves.
+fn destroy_in_lane(ctx: &EffectContext, enemy_only: bool) -> Vec<Effect> {
+    let at = ctx.live_self().and_then(|me| slot_of(&*ctx.state, me));
+    let Some(at) = at else {
+        return Vec::new();
+    };
+    if at.row != Row::Units {
+        return Vec::new();
+    }
+    lane_zones(ctx.controller, enemy_only)
+        .into_iter()
+        .filter_map(|(player, row)| {
+            card_at(&*ctx.state, ZoneSlot { player, row, lane: at.lane }).map(|card| {
+                destroy(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } })))
+            })
+        })
+        .collect()
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|ctx| {
+                let mut effects = destroy_in_lane(ctx, false);
+                effects.push(lock_lane(json_as(json!({}))));
+                effects
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|ctx| {
+                let mut effects = destroy_in_lane(ctx, true);
+                effects.push(lock_lane(json_as(json!({ "side": "enemy" }))));
+                effects
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // C #71 Lane Eater (SPEC §8.6 row 71; BUILD M9 row C 71). (3) Unit, Common, 4/4 → 8/8: Cry: destroy
 // every other card in this lane, then Lock this lane. Radiant: the enemy cards and the enemy side only.
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

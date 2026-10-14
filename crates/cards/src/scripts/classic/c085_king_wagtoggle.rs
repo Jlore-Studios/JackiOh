@@ -9,7 +9,29 @@
 //!
 //! Rulings: R12, R33, R64, R73, R311, R386.
 
+use jackioh_engine::effects::{recruit, swap_library};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-085";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![swap_library()])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                swap_library(),
+                recruit(json_as(json!({ "count": param(&*ctx, "recruits") }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #85 King Wagtoggle (SPEC §8.6 row 85; BUILD M9 row C 85). (4) Unit, Legendary, 5/5 → 10/10: Cry:
 // swap decks with your opponent. Radiant: then Recruit {recruits} (1, ↑).

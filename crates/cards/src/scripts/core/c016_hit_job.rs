@@ -12,9 +12,37 @@
 //! `{ of: "chosen" }`. `destroy_adjacent_to` (engine/src/effects/destroy.rs) only marks, like
 //! `destroy`, and fizzles silently when the target is off the field or has no neighbour.
 
+use jackioh_engine::effects::{destroy, destroy_adjacent_to};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-016";
 
+/// R81: "target" with no narrowing is any unit on either side (§8 Conventions), picked as part of the
+/// `play` action and never as a prompt. `min: 1` with an empty board is R90's "a declaration the
+/// board cannot satisfy asks for what the board has": the play stays legal and the spell fizzles,
+/// which is §8's "a spell whose target set is empty fizzles: the spell still counts as played".
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+        ..Script::default()
+    };
+    let radiant = Script {
+        targets: targets(),
+        cry: Some(hook(|_ctx| {
+            vec![
+                destroy(json_as(json!({ "target": { "of": "chosen" } }))),
+                destroy_adjacent_to(json_as(json!({ "target": { "of": "chosen" } }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #16 Hit Job — SPEC §8.1 row 16, BUILD M4-T4 row 16. Must-pass: "Target destroyed; Indestructible
 // survives; radiant also kills same-side neighbours, never across" (R46, §3.1). The target travels

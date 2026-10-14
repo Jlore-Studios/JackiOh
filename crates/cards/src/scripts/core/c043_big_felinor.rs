@@ -11,9 +11,27 @@
 //! Indestructible is §4.5's business, not the filter's (R46, R69). Big Felinor is Felinor-tagged, so
 //! `notTags: ["Felinor"]` already spares it; the tests prove that.
 
+use jackioh_engine::effects::destroy_all;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-043";
 
+/// The faces differ only in which sides the destroy reaches (`"any"` or `"enemy"`).
+fn big_felinor(side: &'static str) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![destroy_all(json_as(json!({ "side": side, "notTags": ["Felinor"] })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: big_felinor("any"),
+        radiant: big_felinor("enemy"),
+    }
+}
 
 // #43 Big Felinor (SPEC §8.2, §4.5, §6.3 Destroy; R11, R46, R59, R69).
 // Must-pass row (BUILD M4-T4 #43): "Non-Felinors on both sides destroyed, Felinors and itself

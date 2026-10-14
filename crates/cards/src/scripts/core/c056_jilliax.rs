@@ -13,7 +13,16 @@
 //! Indestructible unit goes to Attack Position and loses Taunt for the turn instead of dying, and is
 //! still collected at 0 max health; Sacrifice and Exile go around it (§6.3).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-056";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script::default(),
+        radiant: Script::default(),
+    }
+}
 
 // #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
 // A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword

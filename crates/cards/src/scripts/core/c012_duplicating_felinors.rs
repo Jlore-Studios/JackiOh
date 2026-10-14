@@ -11,9 +11,28 @@
 //! The clone is the engine's `summon_copy` (engine/src/effects/summon.rs). A card file may not
 //! rebuild buffs, keywords and Vanilla state off the instance (CLAUDE.md rule 5), hence a verb.
 
+use jackioh_engine::effects::summon_copy;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-012";
 
+/// "A copy of this unit": the Cry's own instance is the source, so `{ of: "self" }` names it without
+/// the card ever touching state. Both faces run this — the radiant cell is "Same".
+fn cry() -> Hook {
+    hook(|_ctx| vec![summon_copy(json_as(json!({ "of": { "of": "self" }, "player": "self" })))])
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(cry()),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(cry()),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #12 Duplicating Felinors (SPEC §8.1, BUILD M4-T4 row 12): "Copy lands in the leftmost free zone
 // (R64), its Cry does not fire, buffs copied, damage not (R57); board full → no copy".

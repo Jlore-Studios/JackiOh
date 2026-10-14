@@ -7,7 +7,29 @@
 //! then `gain_mana` (§2.3 temporary mana; can go above 4).
 //! Tunes: jade 1 ↑; mana 1 ↑.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039-2";
+
+fn jade() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                add_jade(json_as(json!({ "amount": param(&*ctx, "jade") }))),
+                gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The same script: the Radiant face's 2s are its declared `jade` and `mana`, which `param`
+    // reads off the running face.
+    let base = jade();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #39.2 Jade — SPEC §8.8 row 39.2, BUILD M10 row M 39.2: "Raises its caster's Jade
 // Counter by 1 (`jadeChanged`, public on both views, never lowered; MD-C2) and gains 1 temporary

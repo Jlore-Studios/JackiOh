@@ -28,7 +28,52 @@
 //!
 //! `CRAFT_MAX_COST` lives in `config.rs` (CLAUDE.md rule 9).
 
+use jackioh_engine::effects::{choose_craft, choose_number, chosen_number, chosen_recipe, craft_card};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-017";
+
+/// The `data`-less resume steps: the cost answer opens the editor, the craft answer mints.
+const COST: &str = "cost";
+const CRAFT: &str = "craft";
+
+/// The two faces differ only in `radiant`, as Core #99's differ only in their Discover count.
+fn true_craft_a_card(radiant: bool) -> Script {
+    let open_editor: Hook = hook(move |ctx| match chosen_number(ctx) {
+        Some(cost) => vec![choose_craft(json_as(json!({
+            "step": CRAFT,
+            "cost": cost,
+            "radiant": radiant,
+        })))],
+        None => vec![],
+    });
+    let mint: Hook = hook(move |ctx| match chosen_recipe(ctx) {
+        Some(recipe) => vec![craft_card(json_as(json!({
+            "recipe": recipe,
+            "radiant": radiant,
+        })))],
+        None => vec![],
+    });
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![choose_number(json_as(json!({
+                "step": COST,
+                "from": 0,
+                "to": CRAFT_MAX_COST,
+                "prompt": "Choose the crafted card's Cost",
+            })))]
+        })),
+        resume: IndexMap::from([(COST, open_editor), (CRAFT, mint)]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: true_craft_a_card(false),
+        radiant: true_craft_a_card(true),
+    }
+}
 
 // Meditative #17 True Craft a Card — SPEC §8.8, ME-CRAFT, §10.6, R79, R97, R420, R739, R880–R883.
 //

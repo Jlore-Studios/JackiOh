@@ -11,7 +11,18 @@
 //! copy and R78 clears it on leaving the field, both engine-side.
 //! Radiant (§7): the catalog face carries the Armor and the X rides on the instance as `armorOverride`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-t-bread";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    CardScripts {
+        // §7's radiant X/X, Armor X is the catalog face plus the instance's overrides; there is no script.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // T-bread Bread Token (SPEC §7, R37; §4.5, §5.1, §10.4, R11, R52, R74). BUILD M4-T4's token row:
 // "Vanish on leaving the field; … Bread is X/X with no text; none in random pools". R37 and §7's
@@ -151,7 +162,7 @@ mod tests {
             #[test]
             fn s7_needs_no_script_for_either_face_and_the_radiant_script_is_the_base_script_r74() {
                 crate::register_all();
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert!(set_fields(&scripts.base).is_empty());
                 assert!(set_fields(&scripts.radiant).is_empty());
             }

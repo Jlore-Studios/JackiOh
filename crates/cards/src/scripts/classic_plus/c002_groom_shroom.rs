@@ -3,8 +3,82 @@
 //! of yours with a random non-token Felinor Unit of any set (R64, R380, R60), each summoned with no Cry
 //! (R1) and granted Taunt; Radiant, on their Radiant faces. The attack still hits your hero (R405).
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-002";
+
+/// R405: "Felinors" are Felinor-tagged Units; a pool names no set, so every set (R380).
+fn felinor_units() -> Value {
+    json!({ "type": "Unit", "tags": ["Felinor"] })
+}
+
+/// A declared attack (a forced one opens no window, R121) by an enemy Unit on this trap's controller's hero.
+fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let GameEvent::AttackDeclared { attacker_id, target_id, forced, .. } = event else {
+        return false;
+    };
+    if *forced {
+        return false;
+    }
+    let target = attack_target_of(ctx.state, target_id);
+    find_instance(ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
+        && matches!(target, Some(AttackTarget::Hero { player }) if player == ctx.controller)
+}
+
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn groom_shroom(radiant: bool) -> Script {
+    Script {
+        triggers: vec![
+            TriggerDef::new("groom-shroom", &[GameEventType::AttackDeclared], move |ctx, _event| {
+                let lanes: Vec<i32> =
+                    fill_board_zones(ctx.state, ctx.controller).iter().map(|zone| zone.lane).collect();
+                let mut effects: Vec<Effect> = lanes
+                    .iter()
+                    .map(|&lane| {
+                        summon_random(json_as(json!({ "query": felinor_units(), "lane": lane, "radiant": radiant })))
+                    })
+                    .collect();
+                // "Give them Taunt": the Units now standing in the zones the fill took.
+                effects.push(for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |now| {
+                        let player = now.controller;
+                        lanes
+                            .iter()
+                            .filter_map(|&lane| {
+                                card_at(now.state, ZoneSlot { player, row: Row::Units, lane }).map(|card| card.id.clone())
+                            })
+                            .collect()
+                    }),
+                    each: each_of(|instance_id| {
+                        grant_keyword(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "keyword": { "kind": "Taunt" },
+                        })))
+                    }),
+                }));
+                effects
+            })
+            .with_when(attacks_your_hero),
+        ],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: groom_shroom(false),
+        radiant: groom_shroom(true),
+    }
+}
 
 // C+ #2 Groom Shroom — SPEC §8.7 row 2, BUILD M9 Classic+ row C+ 2: "Same window as C+ #1; fills
 // every empty, unlocked, unreserved unit zone of yours with a random non-token Felinor Unit of any set
@@ -16,10 +90,9 @@ pub const ID: &str = "classicplus-002";
 // Groom Shroom sits face-down in p1's backrow lane 1; p2 is active and attacks with a 3/3 Tempo Timmy.
 // The two engine setups below (`lockZone`, `reserveZone`) put a Lock and a Reborn reservation on a
 // zone, which no Core card can do to a unit zone.
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -93,7 +166,7 @@ mod tests {
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::Trap);
         assert_eq!(def.tags, vec![Tag::Felinor]);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let ons = |s: &Script| s.triggers.iter().map(|t| t.on.clone()).collect::<Vec<_>>();
         assert_eq!(ons(&scripts.base), vec![vec![GameEventType::AttackDeclared]]);
         assert_eq!(ons(&scripts.radiant), vec![vec![GameEventType::AttackDeclared]]);

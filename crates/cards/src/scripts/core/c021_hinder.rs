@@ -11,9 +11,45 @@
 //! nothing as it begins (R70), so no prompt pauses the draw. It comes second, after the mana clause;
 //! with an empty hand there is nothing to discard and the mana clause still lands.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-021";
 
+/// One Hinder face: whether the caster discards 1. How much lower the opponent's refresh is, is the
+/// declared number `mana` (R386): 1, 2 on the Radiant face.
+fn hinder(discards: bool) -> Script {
+    let static_flags = Some(StaticFlags {
+        cast_on_draw: Some(true),
+        ..StaticFlags::default()
+    });
+    if !discards {
+        return Script {
+            static_flags,
+            cry: Some(hook(|ctx| {
+                vec![next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana"), "player": "enemy" })))]
+            })),
+            ..Script::default()
+        };
+    }
+    Script {
+        static_flags,
+        // R682: "Discard 1" — one random card of the caster's own hand.
+        cry: Some(hook(|ctx| {
+            vec![
+                next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana"), "player": "enemy" }))),
+                discard_random(json_as(json!({ "count": 1 }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: hinder(true),
+        radiant: hinder(false),
+    }
+}
 
 // #21 Hinder — SPEC §8.2, BUILD M4-T4 row 21: auto-casts on draw and draws again; the opponent's next
 // refresh −1 floored at 0; counts as played (R40, R70); radiant −2. The base face's caster discards 1
@@ -26,6 +62,7 @@ pub const ID: &str = "core-021";
 // Both sides keep a unit on the board and a card in hand, or the engine would auto-end the turns.
 #[cfg(test)]
 mod tests {
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -263,7 +300,7 @@ mod tests {
 
         #[test]
         fn r431_both_faces_are_cast_on_draw_neither_declares_a_discard_pick_r682_random() {
-            let scripts = crate::scripts_of()[HINDER].clone();
+            let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
             assert!(scripts.base.targets.is_empty());

@@ -12,7 +12,17 @@
 //!                    R347 (§10.4 drops Taunt whenever it holds Indestructible, even in Defense).
 //!   Lifesteal      — §4.4 step 8 heals its controller's hero the amount it actually deals.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-041";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+
+    // The same empty script: the Radiant face differs only in what the engine reads off the catalog
+    // (its doubled stats and the added Lifesteal).
+    CardScripts { radiant: base.clone(), base }
+}
 
 // C #41 State of the Game — SPEC §8.6 row 41, BUILD M9 Classic row C 41: damage and destroy effects
 // don't remove it (a destroy knocks it into Attack Position, R46), while exile, bounce and a Tribute do;
@@ -21,7 +31,7 @@ pub const ID: &str = "classic-041";
 // Collateral Damage (core-034), Flood (core-017) and Carnivorous Cube (core-022, whose Cry Tributes, R428).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const STATE: &str = "classic-041";
@@ -91,7 +101,7 @@ mod tests {
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["base"]["keywords"], json!([{ "kind": "Indestructible" }]));
             assert_eq!(def["radiant"]["keywords"], json!([{ "kind": "Indestructible" }, { "kind": "Lifesteal" }]));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(is_empty_script(&scripts.base));
             assert!(is_empty_script(&scripts.radiant));
         }

@@ -10,14 +10,29 @@
 //! has no cap (R19). The amount is the declared number `heal` (R386), read off the dying card's own
 //! face and tuning through `param`, so both faces run one script.
 
+use jackioh_engine::effects::heal;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-028";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        death: Some(hook(|ctx| {
+            vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") })))]
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 8 is its declared `heal`, and its Divine Shield is catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #28 Nuestro hogar, nuestras tumbas — SPEC §8.7 row 28, BUILD M9 Classic+ row C+ 28: "Taunt,
 // Reborn; Death heals your hero 3 on both deaths (R8), past 30 allowed; exile or a bounce heals
 // nothing; the heal reads through `param()`; radiant Divine Shield too, heal 8".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -77,7 +92,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, HOGAR);
             assert_eq!(crate::card_def(ID).id, HOGAR);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // The Radiant face is the base script itself.
             assert!(std::sync::Arc::ptr_eq(
                 scripts.base.death.as_ref().unwrap(),

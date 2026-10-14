@@ -11,7 +11,37 @@
 //! link of its chain (R28, R593). The Radiant Echo is §6.1's printed `Echo X` (R30), a repeat that
 //! runs the Cry again with fresh picks.
 
+use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-047";
+
+fn cast_spells(count: i32) -> Effect {
+    cast_random(CastRandomArgs {
+        query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
+        count: Some(CastRandomCount::Fixed(count)),
+        radiant: None,
+        target_enemies: None,
+        afterward: None,
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| vec![cast_spells(param(&*ctx, "casts"))])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            echo: Some(1),
+            ..StaticFlags::default()
+        }),
+        ..base.clone()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #47 Jogg's Box — SPEC §8.7 row 47, BUILD M9 Classic+ row C+ 47: casts 10 random non-token Spells
 // of any set but Jogg's Box (R380, R387), every choice random with X the current mana (at least 1), so
@@ -21,7 +51,6 @@ pub const ID: &str = "classicplus-047";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -196,7 +225,7 @@ mod tests {
         let def = crate::card_def(super::ID);
         assert_eq!(js(&def.cost), json!(4));
         assert_eq!(def.rarity, Rarity::Legendary);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(scripts.base.static_flags.is_none());
         assert_eq!(js(&scripts.radiant.static_flags), json!({ "echo": 1 }));
         assert!(Arc::ptr_eq(scripts.radiant.cry.as_ref().unwrap(), scripts.base.cry.as_ref().unwrap()));

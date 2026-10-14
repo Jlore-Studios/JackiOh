@@ -8,7 +8,24 @@
 //! "End of turn" is its controller's (§6.2), so the opponent's turn end does nothing. The pick and the
 //! R129 rule that an empty choice draws nothing are `discountRandomInHand`'s (effects/perks.ts).
 
+use jackioh_engine::effects::discount_random_in_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-049";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| {
+            vec![discount_random_in_hand(json_as(json!({ "amount": param(&*ctx, "discount") })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 20 is its declared `discount`, which `param` reads.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #49 Jay Fungus — SPEC §8.7 row 49, BUILD M9 Classic+ row C+ 49: "Taunt; at the end of your turn
 // one random hand card whose cost is above 0 and not X gets `costMod` −2 (R65), the cost flooring at
@@ -16,8 +33,8 @@ pub const ID: &str = "classicplus-049";
 // and −1 (R177); the discount reads through `param()`; radiant −20, taking any such card to (0)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -85,7 +102,7 @@ mod tests {
         assert!(s.stats(FUNGUS).keywords.contains(&Keyword::Taunt));
         s.expect_stats(FUNGUS, json!({ "attack": 3, "health": 6 }));
         // TS `expect(radiant).toBe(base)`: both faces hold the very same hook.
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.radiant.end_of_turn.as_ref().unwrap(),
             scripts.base.end_of_turn.as_ref().unwrap()

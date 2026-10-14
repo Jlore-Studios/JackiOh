@@ -15,7 +15,34 @@
 //! - **A token:** a unit token vanishes when it leaves the field and still fires its Death (R11). The
 //!   designer's base face summoned a Sr, itself; R1180 reads it as a copy slip, since that chain never ends.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-093-1";
+
+/// The next size up the chain, which this card's Death summons (R1180).
+const NEXT: &str = "meditative-093-2";
+
+fn growing(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        death: Some(hook(move |_ctx| {
+            vec![summon(json_as(
+                json!({ "defId": NEXT, "player": "self", "radiant": radiant }),
+            ))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: growing(false),
+        radiant: growing(true),
+    }
+}
 
 // M #93.1 Growing Felinor Sr — SPEC §8.8 row 93.1, BUILD M10 row M 93.1: "It can't switch to
 // Defense; its Death summons a base Growing Felinor Sr Sr (M 93.2), not another Sr (MD-E19); a
@@ -23,12 +50,9 @@ pub const ID: &str = "meditative-093-1";
 // the Sr Sr is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, NEXT, script};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
-
-    /// The next size up the chain, which this card's Death summons (R1180).
-    const NEXT: &str = "meditative-093-2";
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -74,7 +98,7 @@ mod tests {
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(4), Some(4)]);
             assert!(def.base.keywords.is_empty());
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)

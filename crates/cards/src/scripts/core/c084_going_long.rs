@@ -11,7 +11,31 @@
 //! scorer and §10.8's hero block all read that one function. Nothing is stored, so the Armor stops when
 //! the Field Spell leaves, and "Ignores armor" skips step 2 whole.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-084";
+
+/// Both faces are the same script: §6.2's Quickdraw flag and the `heroArmor` flag. The four values
+/// live in `config.HERO_ARMOR`, selected by the instance's `radiant` and `embiggened`. The card
+/// declares them as `armor` and `paidArmor` (R386), which `damage::hero_armor_of` reads through
+/// `params::declared_or`, so a Degrade or an Upgrade moves the Armor the price selects.
+fn going_long() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            hero_armor: Some(FlagOrCount::Flag(true)),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = going_long();
+    // "Armor 4 (paid 4: 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    let radiant = going_long();
+    CardScripts { base, radiant }
+}
 
 // #84 Going Long (SPEC §8.4 row 84). BUILD M4-T4: "In opening hand; embiggen 2 → Armor 2, 4 → Armor 4
 // on the hero; radiant 4 / 8" (patch v0.1.1: the paid-4 numbers were 5 and 10). The four numbers:
@@ -20,6 +44,7 @@ pub const ID: &str = "core-084";
 // "paid 2"; "paid 4" is PLAYED with `embiggen: true`. R63: a hit that is 0 after Armor emits no `damage`.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

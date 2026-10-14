@@ -8,7 +8,36 @@
 //! is, so a card the hand cap burns is Chinese in its graveyard too. The pool never holds this card
 //! (R387), and R673 applies. As the designer asked, the printed text never says Chinese.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-033";
+
+fn first_day(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let cards = param(&*ctx, "cards");
+            let discount = param(&*ctx, "discount");
+            let mut args = json!({
+                "query": { "tags": ["CN"] },
+                "count": cards,
+                "costMod": -discount,
+                "chinese": true,
+            });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces add the same count at the same discount; the Radiant face's cards are Radiant.
+    let base = first_day(false);
+    let radiant = first_day(true);
+    CardScripts { base, radiant }
+}
 
 // M #33 First Day of 学校 — SPEC §8.8 row 33, BUILD M10 row M 33: "Adds two random non-token CN
 // cards of any set (R380), never itself (R387), each costing (1) less (an X card untouched, R65)
@@ -17,6 +46,7 @@ pub const ID: &str = "meditative-033";
 // discount read through `param()`; radiant the two cards are Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

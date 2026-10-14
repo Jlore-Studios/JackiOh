@@ -12,13 +12,44 @@
 //! Damage apply round by round.
 //! Radiant face hits enemy Units only; a death on either side still stops it (refs Whirlwind, R279).
 
+use jackioh_engine::effects::{cast_rounds_until_death, damage_rounds_until_death};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-032-3";
+
+/// Whirlwind (C+ #21), which the base face casts round after round.
+const WHIRLWIND: &str = "classicplus-021";
+
+/// The Radiant face's hit of each round, "Deal 1 damage", is the declared number `damage` (R386);
+/// the base face's rounds cast Whirlwind, whose own 1 is Whirlwind's number.
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![cast_rounds_until_death(json_as(json!({
+                "def": WHIRLWIND,
+                "rounds": param(&*ctx, "rounds"),
+            })))]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            vec![damage_rounds_until_death(json_as(json!({
+                "amount": param(&*ctx, "damage"),
+                "rounds": param(&*ctx, "rounds"),
+                "side": "enemy",
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #32.3 Blade Storm (SPEC §8.7, R59, R70, R283, R652): base face casts Whirlwind round after
 // round (C+ #21, Pierce, so Armor does not stop it) until a Unit dies, no Unit is left, or round cap is reached. Radiant hits enemy Units only.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -120,7 +151,7 @@ mod tests {
             assert_eq!(ID, STORM);
             let def = crate::card_def(ID);
             assert_eq!(def.id, STORM);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // The two faces are two scripts.
             assert!(!std::sync::Arc::ptr_eq(
                 scripts.base.cry.as_ref().unwrap(),

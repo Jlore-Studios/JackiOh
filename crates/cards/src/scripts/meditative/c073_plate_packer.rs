@@ -3,7 +3,23 @@
 //! Engine: reads NEW helper `armor_on_field` (R1064, MD-D32) as the Cry resolves, then a permanent
 //!   buff of +X/+X on itself.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-073";
+
+pub fn script() -> CardScripts {
+    let cry = hook(|ctx| {
+        let gain = armor_on_field(&*ctx.state) * param(&*ctx, "per");
+        if gain == 0 {
+            return vec![];
+        }
+        vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": gain, "health": gain })))]
+    });
+    CardScripts {
+        base: Script { cry: Some(cry.clone()), ..Script::default() },
+        radiant: Script { cry: Some(cry), ..Script::default() },
+    }
+}
 
 // M #73 Plate Packer — SPEC §8.8 row 73, BUILD M10 row M 73.
 #[cfg(test)]

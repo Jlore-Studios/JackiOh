@@ -10,7 +10,33 @@
 //! One tag pool; `addRandomFromCatalog` leaves out the card running the script by its def id (R387) and
 //! prices only a card that reached the hand (§2.4, R4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-054";
+
+fn book_of_books(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Book"] },
+                "count": param(&*ctx, "books"),
+                // "Each costs (0)": the declared number `setCost` (R386).
+                "costOverride": param(&*ctx, "setCost"),
+                "radiant": radiant,
+                "temporary": true,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: book_of_books(false),
+        radiant: book_of_books(true),
+    }
+}
 
 // C+ #54 Book of Books — SPEC §8.7 row 54, BUILD M9 Classic+ row C+ 54: "Adds 2 random non-token Books
 // of any set, never Book of Books (R387), which cost (0) (`costOverride` 0); repeats allowed; a full

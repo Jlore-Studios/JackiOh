@@ -8,7 +8,28 @@
 //! a card that stays on the field, as R402 reasoned for C #78.
 //! Tunes: none.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-044";
+
+/// The Rock this adds each turn (M #39.1).
+pub const ROCK: &str = "meditative-039-1";
+
+fn well(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |_ctx| {
+            vec![add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: well(false),
+        radiant: well(true),
+    }
+}
 
 // Meditative #44 CN Jade Well — SPEC §8.8 row 44, BUILD M10 row M 44: "A Field Spell (MD-C15): at
 // your start of turn only, adds a base Auspicious Rock to your hand, nothing at the opponent's
@@ -22,8 +43,6 @@ mod tests {
 
     const FILLER: &str = "core-008";
     const LIBRARY: [&str; 3] = ["core-025", "core-008", "core-020"];
-    /// The Rock this adds each turn (M #39.1).
-    const ROCK: &str = "meditative-039-1";
 
     fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player).iter().map(|card| card.def_id.clone()).collect()

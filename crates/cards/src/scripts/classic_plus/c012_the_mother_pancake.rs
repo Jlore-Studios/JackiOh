@@ -4,7 +4,28 @@
 //! The pool is the eight Pancake tokens, C+ #12.1–#12.8, which the text names (§5.1), on their base
 //! faces, repeats allowed (R60); a full hand burns what doesn't fit (§2.4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        // The eight Pancake tokens: Pancake- and Token-tagged (Mother Pancake and Mommy Barker are no tokens).
+        end_of_turn: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Pancake", "Token"] },
+                "count": param(&*ctx, "tokens"),
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The Radiant face differs only in its stats and its `tokens` value, both catalog data.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C+ #12 The Mother Pancake (SPEC §8.7 row 12): at controller's end of turn adds 1 random
 // card of eight Pancake tokens C+ #12.1–#12.8 (repeats allowed, R60); not at opponent's
@@ -13,6 +34,7 @@ pub const ID: &str = "classicplus-012";
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

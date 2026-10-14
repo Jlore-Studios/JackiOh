@@ -10,7 +10,27 @@
 //! permanent every placement lands on (R689; a face-down card the chooser may not read offered by its
 //! id alone, R177) and parks the draw behind it (R113). Both numbers are declared (R386).
 
+use jackioh_engine::effects::{draw, place_plague_tokens};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-076";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                place_plague_tokens(json_as(json!({ "count": param(&*ctx, "tokens") }))),
+                draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 4 tokens and draw 2 are its declared numbers.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #76 Plague Bringer — SPEC §8.6 row 76, BUILD M9 Classic row C 76: "Rush; Cry: two placements of one
 // Plague Counter, both on the one permanent a single prompt names (R689), on any permanent either side
@@ -18,7 +38,7 @@ pub const ID: &str = "classic-076";
 // its tuned numbers (tokens, draw) read through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
     use std::sync::Arc;
@@ -103,7 +123,7 @@ mod tests {
         );
         assert_eq!(js(&def().base.keywords), json!([{ "kind": "Rush" }]));
         assert_eq!(js(&def().radiant.keywords), json!([{ "kind": "Rush" }]));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.base.cry.as_ref().expect("a Cry"),
             scripts.radiant.cry.as_ref().expect("a Cry")

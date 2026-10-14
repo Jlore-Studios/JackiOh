@@ -10,7 +10,24 @@
 //!
 //! The gain lands on the controller because `gain_mana` defaults its `player` to "self" (§6.3).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-006";
+
+/// The only difference between the two faces is how much mana the start of the turn gives: the
+/// declared number `mana` (R386), 1 and 2 on the Radiant face, read off the face that is up.
+fn mana_well() -> Script {
+    Script {
+        start_of_turn: Some(hook(|ctx| vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = mana_well();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #6 Mana Well — SPEC §8.1 row 6, BUILD M4-T4 must-pass: "Turn-4 player has 5 mana; leaves → back
 // to 4; radiant 6".

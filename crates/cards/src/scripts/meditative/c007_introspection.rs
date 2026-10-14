@@ -11,7 +11,62 @@
 //! (R78: kept until a graveyard takes it off, R766), and it never reaches an X card (R65). One script
 //! serves both faces: every number but the draw is declared per face and read through `param` (R386).
 
+use jackioh_engine::effects::{
+    ForEachCardArgs, damage_all, draw, for_each_card, heal, set_cost_mod,
+};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-007";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| {
+            let heal_amount = param(&*ctx, "heal");
+            let draws = param(&*ctx, "draw");
+            let discount = param(&*ctx, "discount");
+            let damage = param(&*ctx, "damage");
+            vec![
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": heal_amount }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|each: &mut EffectContext<'_>| {
+                        cards_in_scope(each, &json_as(json!({ "side": "self" })))
+                            .into_iter()
+                            .map(|card| card.id)
+                            .collect()
+                    }),
+                    each: Arc::new(move |instance_id: &str| {
+                        heal(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "amount": heal_amount,
+                        })))
+                    }),
+                }),
+                draw(json_as(json!({ "count": draws }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|each: &mut EffectContext<'_>| {
+                        zone_cards(&*each.state, each.controller, OffFieldZone::Hand)
+                            .iter()
+                            .map(|card| card.id.clone())
+                            .collect()
+                    }),
+                    each: Arc::new(move |instance_id: &str| {
+                        set_cost_mod(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "amount": -discount,
+                        })))
+                    }),
+                }),
+                damage_all(json_as(json!({ "amount": damage, "side": "enemy", "heroes": true }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared numbers, read through `param`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // M #7 Introspection — SPEC §8.8 row 7, BUILD M10 row M 7: "At your end of turn: heal your hero and
 // each of your Units, draw, discount the whole hand (the drawn card included), then hit every enemy
@@ -19,6 +74,7 @@ pub const ID: &str = "meditative-007";
 // 8, discounts 2, hits 4 and still draws 1; its tuned numbers read through `param()` (R386)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

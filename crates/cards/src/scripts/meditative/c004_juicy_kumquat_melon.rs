@@ -15,7 +15,97 @@
 //! takes no discount. The number is declared and read through `param` (R386); the base face prints
 //! none (R749).
 
+use jackioh_engine::effects::{ForEachCardArgs, draw_from_library, for_each_card, remember, set_cost_mod};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-004";
+
+/// The six costs the card draws, in order.
+const COSTS: [i32; 6] = [0, 1, 2, 3, 4, 5];
+
+/// Where the resolving card notes its six picks as the effect begins.
+const PICKED_KEY: &str = "kumquatPicked";
+
+/// The topmost library card of `cost`, Meditative and costing it (R65, R801), or None.
+fn topmost_of_cost(state: &GameState, controller: PlayerId, cost: i32) -> Option<String> {
+    zone_cards(state, controller, OffFieldZone::Library)
+        .iter()
+        .find(|card| {
+            def_of(Some(state), &card.def_id).set == SetName::Meditative
+                && effective_cost(state, card, Default::default()) == cost
+        })
+        .map(|card| card.id.clone())
+}
+
+/// The picks the resolving card noted as the effect began.
+fn picked(ctx: &EffectContext<'_>) -> Vec<String> {
+    recalled(ctx, PICKED_KEY)
+        .as_ref()
+        .and_then(|value| value.as_array())
+        .map(|ids| ids.iter().filter_map(|id| id.as_str().map(String::from)).collect())
+        .unwrap_or_default()
+}
+
+/// "They": the picked cards that reached the controller's hand (a cast-on-draw card never gets there,
+/// R58; a burned one isn't there either).
+fn picked_in_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let picked: std::collections::BTreeSet<String> = picked(ctx).into_iter().collect();
+    zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Hand)
+        .iter()
+        .filter(|card| picked.contains(&card.id))
+        .map(CardInstance::clone)
+        .collect()
+}
+
+fn draw_picked(instance_id: &str) -> Effect {
+    draw_from_library(json_as(json!({ "instanceId": instance_id })))
+}
+
+/// The six picks, chosen as the effect begins, then one `draw_from_library` each.
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let state: &GameState = ctx.state;
+    let choices: Vec<Value> =
+        COSTS.iter().filter_map(|cost| topmost_of_cost(state, ctx.controller, *cost)).map(Value::from).collect();
+    vec![
+        remember(json_as(json!({ "key": PICKED_KEY, "value": choices }))),
+        for_each_card(ForEachCardArgs {
+            cards: Arc::new(|now: &mut EffectContext<'_>| picked(now)),
+            each: Arc::new(draw_picked),
+        }),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            // "They cost (2) less": the declared number `discount` (R386), on each picked card that
+            // reached the hand (R4).
+            let discount = param(&*ctx, "discount");
+            let mut effects = cry(ctx);
+            effects.push(for_each_card(ForEachCardArgs {
+                cards: Arc::new(|now: &mut EffectContext<'_>| {
+                    picked_in_hand(now).into_iter().map(|card| card.id).collect()
+                }),
+                each: Arc::new(move |instance_id: &str| {
+                    set_cost_mod(json_as(json!({
+                        "target": { "of": "instance", "instanceId": instance_id },
+                        "amount": -discount,
+                        "inHandOnly": true,
+                    })))
+                }),
+            }));
+            effects
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // M #4 Juicy Kumquat Melon — SPEC §8.8 row 4, BUILD M10 row M 4: "Draw the topmost Meditative card of
 // each cost 0 to 5, in cost order (R801); a non-Meditative card of that cost is passed over; a cost
@@ -24,6 +114,7 @@ pub const ID: &str = "meditative-004";
 // less, a card that never gets there none; the tuned discount reads through `param()` (R386)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

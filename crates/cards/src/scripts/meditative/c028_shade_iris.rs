@@ -5,7 +5,32 @@
 //! (§6.3 Shuffle into, R80's library cap, a public `shuffledIn`), the same shape as Core #90
 //! CN-Viral Injection. The curses belong to the deck's owner and are Created cards (ME-CREATED).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-028";
+
+/// M #28.1 Ancient Curse, the token this card shuffles (§7).
+const CURSE: &str = "meditative-028-1";
+
+fn iris() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![shuffle_into(json_as(json!({
+                "defId": CURSE,
+                "count": param(&*ctx, "curses"),
+                "player": "enemy",
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: only the declared `curses` differs (1, radiant 2).
+    let base = iris();
+    let radiant = iris();
+    CardScripts { base, radiant }
+}
 
 // M #28 Shade-iris — SPEC §8.8 row 28, BUILD M10 row M 28: "Cry (played or cast): one Ancient Curse
 // (M 28.1) shuffled into the opponent's deck at a random position, theirs, recorded in their list
@@ -13,14 +38,13 @@ pub const ID: &str = "meditative-028";
 // Curses".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const IRIS: &str = "meditative-028";
-    /// M #28.1 Ancient Curse, the token this card shuffles (§7).
-    const CURSE: &str = "meditative-028-1";
     const FILLER: &str = "core-005";
 
     /// R80's cap, restated from `engine/src/config.rs` so a change to it fails here by name.

@@ -14,7 +14,41 @@
 //!   never overlap. Tags are read with the tags effects have granted (#35, `tags_of`, MD-B15).
 //! - On the Radiant face the destroy is `side: enemy` and the Buffs `side: self`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-034";
+
+fn gaokao(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let times = param(&*ctx, "times");
+            let (destroy_side, buff_side) = if radiant {
+                ("enemy", "self")
+            } else {
+                ("any", "any")
+            };
+            vec![
+                destroy_all(json_as(json!({
+                    "side": destroy_side,
+                    "rows": ["units", "backrow"],
+                    "notTags": ["CN", "KY"],
+                }))),
+                upgrade(json_as(json!({
+                    "scope": { "side": buff_side, "zones": ["field"], "tags": ["CN", "KY"] },
+                    "times": times,
+                }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face destroys enemy permanents only and Buffs only yours, three times.
+    let base = gaokao(false);
+    let radiant = gaokao(true);
+    CardScripts { base, radiant }
+}
 
 // M #34 高考 — SPEC §8.8 row 34, BUILD M10 row M 34: "Destroys every permanent on both sides and
 // rows that has neither CN nor KY (face-down ones included), Indestructible cards, cards Immune to
@@ -24,6 +58,7 @@ pub const ID: &str = "meditative-034";
 // permanents only and Buffs only yours, three times".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

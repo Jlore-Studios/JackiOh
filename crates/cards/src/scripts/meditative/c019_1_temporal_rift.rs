@@ -9,7 +9,29 @@
 //! turn. The Radiant face's riders are temporary mana now, #24's next-turn rider (landing on the
 //! extra turn) and a draw.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-019-1";
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let mut effects = vec![take_extra_turn(json_as(json!({ "rift": true })))];
+    if ctx.radiant {
+        effects.push(gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))));
+        effects.push(next_turn_mana(json_as(json!({ "amount": param(&*ctx, "nextMana") }))));
+        effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+    }
+    effects
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+    // The Radiant face's riders are its declared numbers; the turn is both faces' one verb.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #19.1 Temporal Rift — SPEC §8.8 row 19.1, SPEC §7, BUILD M10 row M 19.1: after the
 // turn's cleanup the turn starts again — a whole turn, the turn count and max mana up, its refresh,
@@ -20,6 +42,7 @@ pub const ID: &str = "meditative-019-1";
 // turn (on the extra turn) and draw 2, read through `param()`.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

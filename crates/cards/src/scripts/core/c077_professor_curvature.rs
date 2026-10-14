@@ -14,7 +14,39 @@
 //!
 //! The modifier sits on the controller's own `mods`, so the opponent's cards are never costed by it.
 
+use jackioh_engine::effects::add_player_modifier;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-077";
+
+/// R363: the least current cost the discount reaches, checked after every other modifier (R65).
+const TARGET_COST: i32 = 4;
+
+/// The two faces differ only in how much the discount is worth: the declared number `discount`
+/// (R386), 1 and 2 on the Radiant face, read off the face that is running.
+fn professor_curvature() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![add_player_modifier(json_as(json!({
+                "player": "self",
+                "mod": {
+                    "kind": "costDiscount",
+                    "amount": param(&*ctx, "discount"),
+                    "minCurrentCost": TARGET_COST,
+                    // R48: it covers the controller's NEXT turn, so it survives the turn it was created on.
+                    "expiry": { "until": "nextTurnOf", "player": ctx.controller, "fromTurn": ctx.state.turn },
+                },
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = professor_curvature();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #77 Professor Curvature — SPEC §8.3, R48, R65, R363.
 //

@@ -12,7 +12,32 @@
 //! played on an empty library it draws three Rush Token cards, since §10.5 puts the card on the field
 //! at step 4, before the Cry fires at step 5.
 
+use jackioh_engine::effects::draw;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-075";
+
+/// The replacement both faces share; the radiant face adds the Cry on top of it ("same").
+fn infinite_reserves() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            infinite_reserves: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: infinite_reserves(),
+        radiant: Script {
+            // "Cry: Draw 3": the declared number `draw` (R386).
+            cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+            ..infinite_reserves()
+        },
+    }
+}
 
 // #75 Infinite Reserves — SPEC §8.3, BUILD M4-T4: "Empty-library draw yields a Rush Token card and
 // no fatigue damage; radiant Cry draws 3".

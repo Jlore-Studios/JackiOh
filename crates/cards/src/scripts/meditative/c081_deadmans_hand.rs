@@ -17,11 +17,52 @@
 //! - **Hidden information** (R311): the owner's library list names the copies on the faces they went
 //!   in with; the opponent reads how many went in.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-081";
 
-/// The declared `chance` is a percentage. The script (`c081_deadmans_hand.luau`) states it too; the
-/// tests read it here.
-pub const PERCENT: i32 = 100;
+/// The declared `chance` is a percentage.
+const PERCENT: i32 = 100;
+
+fn deadmans_hand(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let chance = param(&*ctx, "chance");
+            // (instance id, definition, whether that card is Radiant), the hand first, then this.
+            let mut sources: Vec<(String, String, bool)> = zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
+                .into_iter()
+                .map(|card| (card.id, card.def_id, card.radiant))
+                .collect();
+            if let Some(this) = ctx.self_.as_ref() {
+                sources.push((this.id.clone(), this.def_id.clone(), ctx.radiant));
+            }
+            let mut effects: Vec<Effect> = Vec::new();
+            for (id, def_id, already) in sources {
+                let radiant_copy =
+                    already || (ctx.embiggened && ctx.rng.chance(f64::from(chance) / f64::from(PERCENT)));
+                effects.push(shuffle_into(json_as(json!({
+                    "defId": def_id,
+                    "count": 1,
+                    "radiant": radiant_copy,
+                    "copyOf": id,
+                }))));
+            }
+            if radiant {
+                effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: deadmans_hand(false),
+        radiant: deadmans_hand(true),
+    }
+}
 
 // M #81 Deadman's Hand — SPEC §8.8 row 81, BUILD M10 row M 81: "Shuffles one copy of each hand card
 // and one of itself (with R57's riders) into your deck at random positions, the hand kept, R80's cap

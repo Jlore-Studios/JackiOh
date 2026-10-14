@@ -88,9 +88,6 @@ describe("scripts/vercel-ignore.sh", () => {
       "crates/wasm/src/lib.rs",
       // The card scripts are compiled in: a scripts/ directory at the root is tooling, src/scripts/ is not.
       "crates/cards/src/scripts/core/c001_big_d_fender.rs",
-      "crates/cards/src/scripts/core/c001_big_d_fender.luau",
-      "crates/luau/src/lib.rs",
-      "crates/luau/Cargo.toml",
       // The testkit is a feature of the engine's own src/, not a tests/ directory.
       "crates/engine/src/testkit/scenario.rs",
       // What cargo reads to build any member: the workspace, the lockfile, the toolchain, every manifest.
@@ -138,7 +135,7 @@ describe("scripts/vercel-ignore.sh", () => {
       // Tests and tooling inside the client and the crates are never imported by the bundle.
       ["apps/web/src/game/Board.test.tsx", "apps/web/src/net/x.test.ts", "apps/web/src/test/setup.ts"],
       ["crates/engine/tests/rules/combat.rs", "crates/engine/tests/golden/games.jsonl", "crates/engine/tests/fixtures/code-input-cases.json"],
-      ["crates/cards/tests/cross/catalog.rs", "crates/ai/tests/ai.rs", "crates/wasm/tests/x.rs", "crates/luau/tests/host.rs"],
+      ["crates/cards/tests/cross/catalog.rs", "crates/ai/tests/ai.rs", "crates/wasm/tests/x.rs"],
       ["apps/web/scripts/gen-voice.mjs", "apps/web/README.md"],
     ]) {
       commits(files);

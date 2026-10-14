@@ -7,7 +7,30 @@
 //! card (R387), repeats allowed (R60), each on its base face at its printed cost; the Radiant face's
 //! are Radiant (§5.2). The hand cap burns the rest (§2.4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-090";
+
+fn spell_basket(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "type": "Spell" },
+                "count": param(&*ctx, "cards"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: spell_basket(false),
+        radiant: spell_basket(true),
+    }
+}
 
 // M #90 Spell Basket — SPEC §8.8 row 90, BUILD M10 row M 90: "Adds three random non-token Spells (the
 // Spell type only, never a Field Spell) of any set, never itself, at their printed costs, hidden; the

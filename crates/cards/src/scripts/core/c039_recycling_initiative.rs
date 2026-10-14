@@ -49,7 +49,126 @@
 //! only on a copy that reaches one: a copy a full hand burns reaches the graveyard with its radiant
 //! flag and without the discount (§2.4, R4, R215).
 
+use indexmap::IndexSet;
+use jackioh_engine::effects::{add_to_hand, delay, exile};
+use jackioh_engine::prelude::*;
+use jackioh_engine::prompts::RESUME_HOOK;
+use jackioh_engine::query::played_ids_this_turn;
+use jackioh_engine::state::find_instance;
+
 pub const ID: &str = "core-039";
+
+/// What a face does to each copy: whether it is Radiant regardless and costs less. Base: a plain copy
+/// at its printed price, radiant flag kept (R57). Radiant: a Radiant copy that costs (1) less, the
+/// declared number `discount` (R386).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct CopyTerms {
+    radiant: bool,
+}
+
+const BASE_TERMS: CopyTerms = CopyTerms { radiant: false };
+
+const RADIANT_TERMS: CopyTerms = CopyTerms { radiant: true };
+
+/// The step the end-of-turn delayed effect re-enters (§10.6: `script.resume[step]`).
+const COPY_STEP: &str = "copies";
+
+/// The one thing the continuation captures: which play was this card's own (R71's "every other").
+const SELF_KEY: &str = "selfId";
+
+/// The copies' discount: none on the base face; on the Radiant face the card's `discount` as it stands
+/// in exile, where the continuation finds it (R386 keeps its tuning there), or the printed one when the
+/// card has ceased to exist (R127: the continuation still names its definition).
+fn discount_of(ctx: &EffectContext<'_>, terms: CopyTerms) -> i32 {
+    if terms.radiant { param(ctx, "discount") } else { 0 }
+}
+
+/// The captured id, narrowed rather than cast: `data` is JSON that crossed a phase boundary.
+fn excluded_id(ctx: &EffectContext<'_>) -> Option<String> {
+    if let Some(Value::String(captured)) = ctx.data.get(SELF_KEY) {
+        return Some(captured.clone());
+    }
+    ctx.self_.as_ref().map(|card| card.id.clone())
+}
+
+/// R71: the log is read here, when the delayed effect runs, so later plays are in it — through the
+/// engine's read-only `playedIdsThisTurn` (engine/src/query.ts), which gives the ids in play order.
+/// R86: an id whose instance no longer exists is skipped rather than fizzled on.
+/// R133: the log holds one entry per play, so a card played, bounced and replayed is two entries and
+/// one card. "Every other card you played this turn" is the set of cards, not the list of plays, so
+/// each id yields one copy; deduping by id leaves R86's skip untouched.
+fn copies_of_other_plays(ctx: &EffectContext<'_>, terms: CopyTerms) -> Vec<Effect> {
+    let self_id = excluded_id(ctx);
+    let discount = discount_of(ctx, terms);
+    let mut out: Vec<Effect> = Vec::new();
+    let mut seen: IndexSet<String> = IndexSet::new();
+
+    for id in played_ids_this_turn(&*ctx.state, ctx.controller) {
+        let id: String = id.to_string();
+        if self_id.as_deref() == Some(id.as_str()) {
+            continue;
+        }
+        if seen.contains(&id) {
+            continue;
+        }
+        seen.insert(id.clone());
+        let Some(card) = find_instance(&*ctx.state, &id) else {
+            continue;
+        };
+
+        let mut args = json!({
+            "defId": card.def_id,
+            "player": "self",
+            // R57: a fresh copy carries the radiant flag and nothing else; the radiant face sets it.
+            "radiant": terms.radiant || card.radiant,
+        });
+        if discount != 0 {
+            args["costMod"] = json!(-discount);
+        }
+        // R1300: a copy of a Chinese card is Chinese.
+        if card.chinese == Some(true) {
+            args["chinese"] = json!(true);
+        }
+        out.push(add_to_hand(json_as(args)));
+    }
+
+    out
+}
+
+/// The two faces differ only in what a copy is and costs.
+fn recycling_initiative(terms: CopyTerms) -> Script {
+    // R62's continuation, registered once: the `resume` step table the `delay` below names.
+    let copy_step: Hook = hook(move |ctx| copies_of_other_plays(ctx, terms));
+
+    Script {
+        cry: Some(hook(|ctx| {
+            let mut args = json!({
+                "at": { "phase": "end", "player": "self" },
+                "step": COPY_STEP,
+                "hook": RESUME_HOOK,
+            });
+            if let Some(self_) = ctx.self_.as_ref() {
+                args["data"] = json!({});
+                args["data"][SELF_KEY] = json!(self_.id);
+            }
+            vec![
+                // Armed before the exile, so the continuation records this instance while it still exists.
+                delay(json_as(args)),
+                // "Exile this on play."
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        resume: IndexMap::from([(COPY_STEP, copy_step)]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: recycling_initiative(BASE_TERMS),
+        radiant: recycling_initiative(RADIANT_TERMS),
+    }
+}
 
 // #39 Recycling Initiative — SPEC §8.2 row 39, BUILD M4-T4 row 39: "Exiled on play; end of turn
 // adds copies of every other card played this turn, including later ones (R71); radiant copies

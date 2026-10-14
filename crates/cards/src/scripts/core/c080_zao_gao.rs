@@ -11,7 +11,60 @@
 //! summoned Radiant and then rolls its keywords" (§8). R64: with no free zone a summon fizzles.
 //! `summon` rolls them (`randomKeywords`), after the discards and next to its own summon (§9.3).
 
+use jackioh_engine::effects::{discard_random, summon};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-080";
+
+/// §7: the token this card makes, taken from the catalog rather than restated.
+fn rush_token_id() -> String {
+    crate::card_def("core-t-rush").id
+}
+
+const TOKEN_COUNT: i32 = 2;
+
+/// What a face summons: whether the tokens are Radiant (R276, R354), and how many keywords each rolls
+/// (R21) — the declared number `keywords`, 2 and 3 on the Radiant face.
+#[derive(Clone, Copy)]
+struct Tokens {
+    radiant: bool,
+    keywords: i32,
+}
+
+/// One Rush Token with its rolled keywords (R21, R64).
+fn rush_token(def_id: &str, tokens: Tokens) -> Effect {
+    summon(json_as(json!({
+        "defId": def_id,
+        "radiant": tokens.radiant,
+        "randomKeywords": tokens.keywords
+    })))
+}
+
+/// The faces differ only in the tokens they summon. The discard is the declared number `discard`
+/// (R386), less being better.
+fn zao_gao(rush_token_def: String, radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let tokens = Tokens {
+                radiant,
+                keywords: param(&*ctx, "keywords"),
+            };
+            // R16, R354: "random" is stated, so the match rng picks and nobody is asked.
+            let mut effects = vec![discard_random(json_as(json!({ "count": param(&*ctx, "discard") })))];
+            effects.extend((0..TOKEN_COUNT).map(|_| rush_token(&rush_token_def, tokens)));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let rush = rush_token_id();
+    CardScripts {
+        base: zao_gao(rush.clone(), false),
+        radiant: zao_gao(rush, true),
+    }
+}
 
 // BUILD M4-T4's must-pass row: each Radiant token is summoned on its Radiant face (§7: 6/6, Rush,
 // Cleave) and then rolls three keywords that never repeat one it has (R21), so neither Rush nor
@@ -20,7 +73,6 @@ pub const ID: &str = "core-080";
 mod tests {
     use super::*;
     use indexmap::IndexSet;
-    use jackioh_engine::prelude::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -345,7 +397,7 @@ mod tests {
         #[test]
         fn r276_the_radiant_face_is_its_own_script_not_the_base_object() {
             // Identity of each face's Cry.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

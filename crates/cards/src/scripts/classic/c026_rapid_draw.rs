@@ -12,7 +12,42 @@
 //! hand order with no rng; with more it finds nothing and the random discard takes exactly that many.
 //! The numbers are the declared `draw` and `discard` (R386), read through `param`; both faces run this.
 
+use jackioh_engine::effects::{ForEachCardArgs, discard, discard_random, draw, for_each_card};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-026";
+
+/// The whole hand, when it holds no more cards than the discard asks for; otherwise nothing.
+fn whole_hand_if_no_choice(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    if zone_count(&*ctx.state, ctx.controller, OffFieldZone::Hand) > param(&*ctx, "discard") {
+        return vec![];
+    }
+    zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Hand)
+        .into_iter()
+        .map(|card| card.id)
+        .collect()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(whole_hand_if_no_choice),
+                    each: Arc::new(|instance_id: &str| {
+                        discard(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                    }),
+                }),
+                discard_random(json_as(json!({ "count": param(&*ctx, "discard") }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 5 draws are its declared `draw`, which `param` reads off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #26 Rapid Draw — SPEC §8.6 row 26, BUILD M9 Classic row C 26: "Draw 4 (§2.4: burns, fatigue, a
 // draw limit), then discard 4 cards at random (R682; 4 or fewer in hand → all of them), with no prompt;
@@ -66,12 +101,11 @@ mod tests {
 
     mod c_n26_rapid_draw {
         use super::*;
-        use std::sync::Arc;
 
         #[test]
         fn runs_one_script_on_both_faces_with_no_resume_step_r682_random_no_prompt() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, RAPID);
             // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(

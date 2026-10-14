@@ -11,7 +11,61 @@
 //! is a flag on a fresh instance. R65: `costOverride` 0 costs 0 in every zone (R78). R4: a full hand
 //! burns the card that arrives.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-082";
+
+/// §6.3 Discover offers three, and R54's roll is "1–100", which is the non-token Core set.
+const OPTIONS: i32 = 3;
+
+/// B2.6: KY's Trial names the Core set's numbers, so its pool stays Core whatever else ships.
+const TRIAL_SET: SetName = SetName::Core;
+
+/// The `resume` step the Discover answer re-enters (§10.6).
+const PICKED: &str = "picked";
+
+/// The faces differ only in whether the card that arrives carries a `costOverride` of 0 (R65).
+fn trial(costs_zero: bool) -> Script {
+    Script {
+        // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
+        cry: Some(hook(|_ctx| {
+            vec![discover_from_catalog(json_as(json!({
+                "step": PICKED,
+                "count": OPTIONS,
+                // §5.1's one pool source. Tokens and #82 itself are excluded for us — see the header.
+                "query": { "set": TRIAL_SET },
+                // R247: the options are the numbers, not the cards they index.
+                "offer": "index",
+                "prompt": "KY's Trial: Discover a number from 1 to 100",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            PICKED,
+            hook(move |ctx| {
+                let index = chosen_options(ctx).into_iter().next();
+                // §8 Conventions: an empty pick fizzles and the spell still counts as played.
+                let def_id = index.and_then(|index| def_by_index(TRIAL_SET, &index).map(|def| def.id.clone()));
+                let Some(def_id) = def_id else {
+                    return vec![];
+                };
+                let mut args = json!({ "defId": def_id, "radiant": true });
+                // "It costs (0)": the declared number `setCost` (R386).
+                if costs_zero {
+                    args["costOverride"] = json!(param(&*ctx, "setCost"));
+                }
+                vec![add_to_hand(json_as(args))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = trial(false);
+    // "It costs 0": the card the Discover adds, per the source note and BUILD M4-T4.
+    let radiant = trial(true);
+    CardScripts { base, radiant }
+}
 
 // #82 KY's Trial (SPEC §8.4 row 82; R54, R60, R65, R247). BUILD M4-T4's row: "Three distinct numbers
 // 1–100 never 82 or a token index (R54); chosen card is radiant; radiant costs 0". The options are
@@ -19,6 +73,7 @@ pub const ID: &str = "core-082";
 // the catalog, as a player does in the collection.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

@@ -7,7 +7,30 @@
 //!
 //! A `tags: ["Fruit"]` query is the Fruit pool, Grapes included (R382); the verb excludes this card (R387).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-058";
+
+fn fruit_basket(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Fruit"] },
+                "count": param(&*ctx, "fruits"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fruit_basket(false),
+        radiant: fruit_basket(true),
+    }
+}
 
 // C+ #58 Fruit Basket — SPEC §8.7 row 58, BUILD M9 Classic+ row C+ 58: "Adds 3 random cards of the
 // Fruit pool, the non-token Fruit cards of any set plus the five Grapes (R382), never Fruit Basket

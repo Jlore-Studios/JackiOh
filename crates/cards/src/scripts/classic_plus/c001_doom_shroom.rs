@@ -6,7 +6,41 @@
 //! (Radiant: every enemy Unit), tops of piles only, so the attacker is gone and no combat happens
 //! (R44, R220), and is consumed.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-001";
+
+/// A declared attack (a forced one opens no window, R121) by an enemy Unit on this trap's controller's hero.
+fn attacks_your_hero(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let GameEvent::AttackDeclared { attacker_id, target_id, forced, .. } = event else {
+        return false;
+    };
+    if *forced {
+        return false;
+    }
+    let target = attack_target_of(ctx.state, target_id);
+    find_instance(ctx.state, attacker_id).map(|attacker| attacker.controller) == Some(opponent_of(ctx.controller))
+        && matches!(target, Some(AttackTarget::Hero { player }) if player == ctx.controller)
+}
+
+fn doom_shroom(side: &'static str) -> Script {
+    Script {
+        triggers: vec![
+            TriggerDef::new("doom-shroom", &[GameEventType::AttackDeclared], move |_ctx, _event| {
+                vec![exile_all(json_as(json!({ "side": side })))]
+            })
+            .with_when(attacks_your_hero),
+        ],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: doom_shroom("any"),
+        radiant: doom_shroom("enemy"),
+    }
+}
 
 // C+ #1 Doom Shroom — SPEC §8.7 row 1, BUILD M9 Classic+ row C+ 1: "Face-down Trap that fires in §4.2
 // step 4's trap window when an enemy Unit declares an attack on your hero, never on an attack on a
@@ -19,7 +53,7 @@ pub const ID: &str = "classicplus-001";
 // Doom Shroom sits face-down in p1's backrow lane 2; p2 is active and attacks.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -77,7 +111,7 @@ mod tests {
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::Trap);
         assert_eq!(def.cost, CardCost::Fixed(3));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let ons = |s: &Script| s.triggers.iter().map(|t| t.on.clone()).collect::<Vec<_>>();
         assert_eq!(ons(&scripts.base), vec![vec![GameEventType::AttackDeclared]]);
         assert_eq!(ons(&scripts.radiant), vec![vec![GameEventType::AttackDeclared]]);

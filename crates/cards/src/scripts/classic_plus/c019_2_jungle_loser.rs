@@ -1,7 +1,93 @@
 //! C+ #19.2 Jungle Loser (SPEC §8.7 row 19.2): end of turn, {chance}%: a forced attack on a random enemy
 //! Unit; a kill across from your Bot Loser sends it Berserk (Radiant: credits it the kill, R412).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019-2";
+
+const BOT_LOSER: &str = "classicplus-019-5";
+
+/// The declared `chance` is a percentage.
+const PERCENT: i32 = 100;
+
+/// §3.1: lane N faces lane N. Each Bot Loser of yours with the enemy Unit across from it.
+fn across_from_bot_losers(state: &GameState, controller: PlayerId) -> Vec<KillCredit> {
+    let enemy = opponent_of(controller);
+    slots_of(controller, Row::Units)
+        .into_iter()
+        .flat_map(|slot| {
+            let bot = match card_at(state, slot) {
+                Some(bot) if bot.def_id == BOT_LOSER => bot,
+                _ => return Vec::new(),
+            };
+            match card_at(state, ZoneRef { player: enemy, row: Row::Units, lane: slot.lane }) {
+                None => Vec::new(),
+                Some(victim) => vec![KillCredit { victim_id: victim.id.clone(), to_id: bot.id.clone() }],
+            }
+        })
+        .collect()
+}
+
+/// "{chance}% chance": rolled only when an enemy Unit it may attack stands (R129).
+fn attacks(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    let me = match ctx.live_self() {
+        Some(me) => me.clone(),
+        None => return Vec::new(),
+    };
+    if me.zone.z() != ZoneName::Field {
+        return Vec::new();
+    }
+    if random_attack_targets(&*ctx.state, &me, AttackAmong::EnemyUnits).is_empty() {
+        return Vec::new();
+    }
+    let chance = param(&*ctx, "chance");
+    if ctx.rng.chance(f64::from(chance) / f64::from(PERCENT)) {
+        vec![me.id]
+    } else {
+        Vec::new()
+    }
+}
+
+fn jungle(transfer: bool) -> Script {
+    Script {
+        end_of_turn: Some(hook(move |_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(attacks),
+                each: Arc::new(move |instance_id: &str| {
+                    let mut args = WithKillCreditArgs {
+                        killer: json_as(json!({ "of": "instance", "instanceId": instance_id })),
+                        pairs: Arc::new(|ctx: &mut EffectContext<'_>, _killer: &CardInstance| {
+                            across_from_bot_losers(&*ctx.state, ctx.controller)
+                        }),
+                        transfer,
+                        during: forced_attack_random(json_as(json!({
+                            "attacker": { "of": "instance", "instanceId": instance_id },
+                            "among": "enemyUnits",
+                        }))),
+                        then: None,
+                    };
+                    // Base: the Bot Loser across from the kill goes Berserk. Radiant: the credit is the whole of it.
+                    if !transfer {
+                        args.then = Some(Arc::new(|pair: &KillCredit| {
+                            vec![go_berserk(json_as(json!({
+                                "target": { "of": "instance", "instanceId": pair.to_id },
+                            })))]
+                        }));
+                    }
+                    with_kill_credit(args)
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: jungle(false),
+        radiant: jungle(true),
+    }
+}
 
 // C+ #19.2 Jungle Loser — SPEC §8.7 row 19.2, BUILD M9 Classic+ row C+ 19.2: "At its controller's end of
 // turn a seeded 25% roll; on success a forced attack (R53: no exertion, sickness ignored, the target
@@ -110,7 +196,7 @@ mod tests {
                 &serde_json::to_value(first).expect("JSON"),
                 &json!({ "key": "chance", "base": 25, "radiant": 50, "step": 10, "max": 100 }),
             ));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.end_of_turn.is_some());
             assert!(scripts.radiant.end_of_turn.is_some());
         }

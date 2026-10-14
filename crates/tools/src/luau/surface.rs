@@ -1774,12 +1774,10 @@ mod tests {
         assert_eq!(report.summary.verbs["steal"].cards, 1);
         assert_eq!(report.summary.verbs["steal"].ids, ["classic-032"]);
         assert!(survey(&repo_root(), &["nope".into()]).is_err());
+        // Every card is Rust again since #902, Bigot (once the first card ported) among them.
         let bigot = survey(&repo_root(), &["core-002".into()]).unwrap();
-        assert!(bigot.cards.is_empty());
-        assert_eq!(
-            bigot.unreadable[0].reason,
-            "ported: its script is crates/cards/src/scripts/core/c002_bigot.luau"
-        );
+        assert_eq!(bigot.cards.len(), 1);
+        assert!(bigot.unreadable.is_empty());
     }
 
     #[test]

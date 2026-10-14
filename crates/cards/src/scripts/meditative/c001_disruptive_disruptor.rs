@@ -11,7 +11,35 @@
 //! The Radiant Cry is an ordinary `draw` then `gain_mana` (R1: fires when played or cast). Both numbers
 //! are declared and read through `param` (R386); the base face prints neither (R749).
 
+use jackioh_engine::effects::{draw, gain_mana};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-001";
+
+/// "You can't be forced to discard cards during your opponent's turn": the controller's own side,
+/// guarded on every turn but their own (`draw::discard_guarded`).
+fn disruptor() -> Script {
+    Script {
+        discard_guard: Some(read_hook(|_args| vec![DrawLimitPlayer::SelfSide])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: disruptor(),
+        radiant: Script {
+            // "Cry: Draw 1 and gain 2 mana": the declared numbers `draw` and `mana` (R386).
+            cry: Some(hook(|ctx| {
+                vec![
+                    draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                    gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))),
+                ]
+            })),
+            ..disruptor()
+        },
+    }
+}
 
 // M #1 Disruptive Disruptor — SPEC §8.8 row 1, BUILD M10 row M 1: "Aura: an effect's discard from
 // your hand while it is not your turn moves nothing, draws no rng and reports `discardPrevented`
@@ -59,7 +87,7 @@ mod tests {
             assert_eq!(def.cost, CardCost::Fixed(2));
             assert_eq!(def.rarity, Rarity::Common);
             assert_eq!(def.type_, CardType::FieldSpell);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.discard_guard.is_some());
             assert!(scripts.radiant.discard_guard.is_some());
             assert!(scripts.base.cry.is_none());

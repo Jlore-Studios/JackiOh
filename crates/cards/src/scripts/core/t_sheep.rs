@@ -11,7 +11,31 @@
 //! is worth 1 (R115), a Radiant one 3, and a Sheep #85 fused a unit onto keeps its worth (R102). The
 //! numbers are the engine's named constants (CLAUDE.md rule 9).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-t-sheep";
+
+pub fn script() -> CardScripts {
+    // §3.2: "worth 2 Tributes while on the field".
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute_worth: Some(SHEEP_TRIBUTE_VALUE),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+
+    // §7's radiant face: "2/2, worth 3 Tributes".
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            tribute_worth: Some(RADIANT_SHEEP_TRIBUTE_VALUE),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // T-sheep Sheep Token (SPEC §7; §3.2, §6.3, R11, R41, R74). BUILD M4-T4's token row: "Vanish on
 // leaving the field; Sheep counts 2 toward Tribute; … none in random pools". The `mod`s below prove
@@ -112,7 +136,7 @@ mod tests {
             #[test]
             fn s7_each_face_s_script_is_its_worth_toward_a_tribute_and_nothing_else_s3_2_r102() {
                 crate::register_all();
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert!(is_only_tribute_worth(&scripts.base, SHEEP_TRIBUTE_VALUE));
                 assert!(is_only_tribute_worth(&scripts.radiant, RADIANT_SHEEP_TRIBUTE_VALUE));
             }

@@ -13,7 +13,30 @@
 //! hooks are §6.2's start- and end-of-turn triggers: their controller's turn only, while the card acts on
 //! the field (R153), the start one before the turn's own draw (§2.2, R62).
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::draw_from_opponent;
+
 pub const ID: &str = "classic-058";
+
+/// "Draw {cards} from the bottom of your opponent's deck": that many separate draws (§2.4).
+fn draw_bottoms(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    (0..param(ctx, "cards")).map(|_| draw_from_opponent(json_as(json!({ "end": "bottom" })))).collect()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        start_of_turn: Some(hook(draw_bottoms)),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        start_of_turn: Some(hook(draw_bottoms)),
+        end_of_turn: Some(hook(draw_bottoms)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #58 Common Resources, SPEC §8.6 row 58: the opponent's view never names the card (R97) and no
 // event carries a deck position. The draw limit is C #49 Anti-Greed Machine's (B5 E3); the start-of-turn
@@ -21,7 +44,7 @@ pub const ID: &str = "classic-058";
 // draw is the one a limit of 1 stops.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const RESOURCES: &str = "classic-058";
@@ -75,7 +98,7 @@ mod tests {
             assert_eq!(def["type"], "Field Spell");
             assert_eq!(def["cost"], 2);
             assert_eq!(def["params"], json!([{ "key": "cards", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }]));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.start_of_turn.is_some());
             assert!(scripts.base.end_of_turn.is_none());
             assert!(scripts.radiant.start_of_turn.is_some());

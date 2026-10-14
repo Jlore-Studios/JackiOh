@@ -7,7 +7,70 @@
 //! padded to {cards} (or the deck's size) with cues on cards no change reaches, which the Degrade leaves
 //! alone with the change `none` — the same cue R440 gives every unchangeable card of the Radiant sweep.
 
+use indexmap::IndexSet;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-008";
+
+/// The deck cards the base face reaches, in deck order (R242); read once, so a pause resumes over them (R113).
+fn picks(ctx: &mut EffectContext<'_>) -> Vec<CardInstance> {
+    let deck = zone_cards(ctx.state, opponent_of(ctx.controller), OffFieldZone::Library);
+    let count = param(&*ctx, "cards").min(deck.len() as i32).max(0) as usize;
+    let changeable: Vec<CardInstance> = deck
+        .iter()
+        .filter(|card| !applicable_changes(ctx.state, card, TuneDirection::Degrade).is_empty())
+        .cloned()
+        .collect();
+    // R60, R129: N different cards, or all of them (and no draw) when there are no more than N.
+    let chosen: Vec<CardInstance> = if changeable.len() <= count {
+        changeable.clone()
+    } else {
+        ctx.rng.shuffle(&changeable).into_iter().take(count).collect()
+    };
+    let mut ids: IndexSet<String> = chosen.into_iter().map(|card| card.id).collect();
+    for card in &deck {
+        if ids.len() < count && !changeable.iter().any(|each| each.id == card.id) {
+            ids.insert(card.id.clone());
+        }
+    }
+    deck.into_iter().filter(|card| ids.contains(&card.id)).collect()
+}
+
+/// `forEachCard`'s `cards`, typed (ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed.
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|ctx| {
+                vec![
+                    for_each_card(ForEachCardArgs {
+                        cards: cards_of(|now| picks(now).into_iter().map(|card| card.id).collect()),
+                        each: each_of(|instance_id| degrade(json_as(json!({ "instanceId": instance_id })))),
+                    }),
+                    draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                ]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|ctx| {
+                vec![
+                    degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["library"] } }))),
+                    draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // SPEC §8.7 row 8: degrades {cards} different changeable cards in opponent's deck (R60,
 // R386), all of them when fewer, none when none and then no random number is drawn (R129);
@@ -15,7 +78,7 @@ pub const ID: &str = "classicplus-008";
 // Degraded events stay unread while in deck (R177, R311).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -84,7 +147,7 @@ mod tests {
             def.params.unwrap_or_default().iter().map(|p| (p.key.clone(), p.base, p.radiant)).collect::<Vec<_>>(),
             vec![("cards".to_string(), 4, 4), ("draw".to_string(), 1, 1)]
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
     }

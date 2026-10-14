@@ -12,7 +12,40 @@
 //! is made Radiant before it reaches the hand (R74), and the Radiant face's price lands only on a card that
 //! reached it (§2.4, R4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-075-1";
+
+// §8.7 row 75.1: "Each costs (0)" on the Radiant face: the declared number `setCost` (R386).
+
+fn pack(free: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({
+                "query": { "set": ["Classic", "Classic+"] },
+                "count": param(&*ctx, "cards"),
+                "radiant": true,
+            });
+            if free {
+                args["costOverride"] = json!(param(&*ctx, "setCost"));
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: pack(false),
+        radiant: pack(true),
+    }
+}
 
 // C+ #75.1 J-lease J-Jungle EX-plorer Pack — SPEC §8.7 row 75.1, BUILD M9 Classic+ row C+ 75.1: "Cast on
 // draw (R70, R58): adds 5 random Radiant non-token Classic or Classic+ cards (never Core) to your hand,
@@ -78,7 +111,7 @@ mod tests {
             assert_eq!(def.type_, CardType::Spell);
             assert_eq!(js(&def.cost), json!(2));
             assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
         }

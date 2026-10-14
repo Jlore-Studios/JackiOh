@@ -5,7 +5,55 @@
 //!   (MD-D33, R1065); at its controller's end of turn with a full hand the base face makes itself
 //!   Radiant (§5.2) and the Radiant face buffs +8/+8.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-074";
+
+fn giant_cost() -> CostHook {
+    cost_hook(move |CostArgs { state, instance }| {
+        let printed = query_cost(&crate::card_def(ID));
+        let at = &instance.zone;
+        let for_play = matches!(at, Zone::Hand { .. })
+            || (matches!(at, Zone::Graveyard { .. }) && playable_from_graveyard(state, instance));
+        if !for_play {
+            return printed;
+        }
+        let discount = param(
+            &HookArgs { state, self_: instance, radiant: instance.radiant },
+            "discount",
+        );
+        (printed - discount * zone_count(state, at.player(), OffFieldZone::Hand)).max(0)
+    })
+}
+
+fn giant_end(radiant_face: bool) -> Hook {
+    hook(move |ctx| {
+        if zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) < HAND_CAP {
+            return vec![];
+        }
+        if radiant_face {
+            let gain = param(&*ctx, "buff");
+            vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": gain, "health": gain })))]
+        } else {
+            vec![set_radiant(json_as(json!({ "target": { "of": "self" } })))]
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cost: Some(giant_cost()),
+            end_of_turn: Some(giant_end(false)),
+            ..Script::default()
+        },
+        radiant: Script {
+            cost: Some(giant_cost()),
+            end_of_turn: Some(giant_end(true)),
+            ..Script::default()
+        },
+    }
+}
 
 // M #74 Montaña Giant — SPEC §8.8 row 74, BUILD M10 row M 74.
 #[cfg(test)]

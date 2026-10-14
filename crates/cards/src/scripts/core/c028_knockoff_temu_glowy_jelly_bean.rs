@@ -12,9 +12,29 @@
 //! A field card converts in place (§5.2, R22): setting the flag is not an entry to the field, so
 //! damage, buffs and granted keywords stay and the Cry does not re-fire.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-028";
 
+/// The union the pick is uniform over, in the pool's canonical order (hand, then library top down,
+/// then lane order) so the draw depends only on (seed, cursor) and replays exactly (§9.3).
+const ZONES: [&str; 3] = ["hand", "library", "field"];
+
+/// The count is the declared number `cards` (R386): 2, 5 on the Radiant face.
+fn knockoff_temu() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![set_radiant_random(json_as(json!({ "zones": ZONES, "count": param(&*ctx, "cards") })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = knockoff_temu();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #28 Knockoff Temu Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 28): "2 different non-Radiant
 // cards across library+hand+field (R60); a field unit swaps base stats in place keeping damage

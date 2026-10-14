@@ -8,7 +8,31 @@
 //! "There IS a method to my madness!", "Good units are hard to find."), picked by the client's own
 //! rng when the runner starts the `summoned` entry this card caused (`sourceId`, R1088).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-063";
+
+fn skull(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |ctx| {
+            (0..param(&*ctx, "units"))
+                .map(|_| {
+                    summon_random_from_hand(json_as(json!({
+                        "radiant": radiant,
+                    })))
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: skull(false),
+        radiant: skull(true),
+    }
+}
 
 // M #63 Skull of J'Nari — SPEC §8.8 row 63, BUILD M10 row M 63: "At your start of turn only, one
 // random Unit card from your hand is summoned into your leftmost open unit zone with no Cry,
@@ -18,6 +42,7 @@ pub const ID: &str = "meditative-063";
 // Radiant on the field".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

@@ -4,7 +4,26 @@
 //! Engine: §7's fill with core-003 Right-house defender (R64), no Cry; radiant defenders are
 //!   Radiant and carry Death summoning a base defender.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-056";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| {
+                vec![fill_board(json_as(json!({ "defId": "core-003" })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| {
+                vec![fill_board(json_as(json!({ "defId": "core-003", "radiant": true })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // M #56 House Party — SPEC §8.8 row 56, BUILD M10 row M 56.
 #[cfg(test)]

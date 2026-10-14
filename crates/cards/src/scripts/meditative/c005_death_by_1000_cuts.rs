@@ -14,7 +14,35 @@
 //! as on Core #93.1 Combo-Fodder, and heals once per hit (§4.4 step 8). Both numbers are declared and
 //! read through `param` (R386).
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-005";
+
+/// One script serves both faces: the Radiant face's Lifesteal is its catalog keyword, and its larger
+/// `echo` is its declared number, both read through `param`.
+fn cuts() -> Script {
+    Script {
+        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
+        // R802: X is `echo` times the caster's max mana, fixed as the card is played.
+        echo_x: Some(read_hook(|args| param(&args, "echo") * max_mana_of(args.state, args.self_.controller))),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({
+                "to": { "of": "chosen" },
+                "amount": param(&*ctx, "damage"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let both = cuts();
+    CardScripts {
+        base: both.clone(),
+        radiant: both,
+    }
+}
 
 // M #5 Death by 1000 cuts — SPEC §8.8 row 5, BUILD M10 row M 5: "Echo X with X fixed at play from the
 // caster's max mana (R802): 3 hits at 1 max mana, 9 at 4 (17 Lifesteal hits on the Radiant face); a
@@ -84,7 +112,7 @@ mod tests {
             assert_eq!(def.cost, CardCost::Fixed(1));
             assert_eq!(def.rarity, Rarity::Rare);
             assert_eq!(def.type_, CardType::Spell);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.echo_x.is_some());
             assert!(scripts.radiant.echo_x.is_some());
             assert_eq!(scripts.base.targets.len(), 1);

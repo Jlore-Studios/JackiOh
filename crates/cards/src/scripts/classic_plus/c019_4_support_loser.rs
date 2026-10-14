@@ -1,7 +1,40 @@
 //! C+ #19.4 Support Loser (SPEC §8.7 row 19.4): end of turn, heal your hero, then each of your Units,
 //! {heal}.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019-4";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| {
+            let amount = param(&*ctx, "heal");
+            vec![
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": amount }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|each: &mut EffectContext<'_>| {
+                        cards_in_scope(each, &json_as(json!({ "side": "self" })))
+                            .into_iter()
+                            .map(|card| card.id)
+                            .collect()
+                    }),
+                    each: Arc::new(move |instance_id: &str| {
+                        heal(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "amount": amount,
+                        })))
+                    }),
+                }),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: Reborn and the Radiant heal 6 are catalog data.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #19.4 Support Loser — SPEC §8.7 row 19.4, BUILD M9 Classic+ row C+ 19.4: "Divine Shield, 0 attack,
 // so it never declares an attack and strikes back with no damage instance (R63); at its controller's
@@ -12,7 +45,6 @@ pub const ID: &str = "classicplus-019-4";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -74,7 +106,7 @@ mod tests {
             assert_eq!(def.base.attack, Some(0));
             assert_eq!(def.base.keywords, vec![Keyword::DivineShield]);
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Reborn]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(Arc::ptr_eq(
                 scripts.base.end_of_turn.as_ref().expect("base end of turn"),
                 scripts.radiant.end_of_turn.as_ref().expect("radiant end of turn"),

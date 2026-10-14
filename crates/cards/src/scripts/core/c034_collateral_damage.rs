@@ -11,9 +11,42 @@
 //! §3.1: adjacent is lane N−1 and N+1 on the SAME side and row, no wrap (`zones.adjacent`). Exile
 //! moves the card at once, so the neighbours go FIRST, while the target still stands in its lane.
 
+use jackioh_engine::effects::{exile, exile_adjacent_to, exile_random_from_library};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-034";
 
+/// R81: "target permanent" — a unit or a backrow card, either side (§8 Conventions, §5.1).
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            targets: targets(),
+            cry: Some(hook(|_ctx| {
+                vec![
+                    exile(json_as(json!({ "target": { "of": "chosen" } }))),
+                    exile_random_from_library(json_as(json!({ "count": 1, "player": "enemy" }))),
+                ]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            targets: targets(),
+            cry: Some(hook(|_ctx| {
+                vec![
+                    // First, while the target is still in its lane for `adjacent` to read (see the header).
+                    exile_adjacent_to(json_as(json!({ "target": { "of": "chosen" } }))),
+                    exile(json_as(json!({ "target": { "of": "chosen" } }))),
+                    exile_random_from_library(json_as(json!({ "count": 1, "player": "enemy" }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // #34 Collateral Damage — SPEC §8.2 row 34, BUILD M4-T4 must-pass row 34:
 // "Exiles an Indestructible permanent and a random opponent library card; radiant same-row

@@ -1,7 +1,47 @@
 //! C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt, cast on draw; that cast ends your turn (Radiant: after
 //! {actions} more action, R415). No open zone: to the hand uncast (R560). Played from hand: a plain Unit.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-026";
+
+fn cast_on_draw(ctx: &EffectContext<'_>) -> bool {
+    ctx.self_.as_ref().is_some_and(|me| is_cast_on_draw(&*ctx.state, me))
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            if cast_on_draw(ctx) {
+                vec![end_turn(json_as(json!({})))]
+            } else {
+                Vec::new()
+            }
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            if cast_on_draw(ctx) {
+                vec![end_turn_after_actions(json_as(json!({ "actions": param(&*ctx, "actions") })))]
+            } else {
+                Vec::new()
+            }
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
 // leftmost open unit zone, then your turn ends once the drawing effect's list resolves, as if you had
@@ -96,7 +136,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(3));
             assert_eq!(def.base.keywords, vec![Keyword::Taunt]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
         }

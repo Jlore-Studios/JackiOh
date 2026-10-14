@@ -9,7 +9,23 @@
 //! Both restrictions are static flags the engine reads everywhere (`restrictions.cannotBeAttacked`,
 //! #65.1's `neverDefense`); the keywords are the catalog's. Nothing else to do.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-051";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            cant_be_attacked: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    // The same script: the Radiant face differs only in its stats and Divine Shield, both catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #51 Jlockheed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "First Strike, Rush;
 // cannot be in Defense Position; can't be attacked: never the target of a declared or forced attack (a
@@ -58,7 +74,7 @@ mod tests {
         let def = crate::card_def(super::ID);
         assert_eq!(def.id, J15);
         assert_eq!(def.tags, vec![Tag::Jlockeed]);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert_eq!(
             serde_json::to_value(scripts.base.static_flags.as_ref().expect("static flags")).unwrap(),
             json!({ "neverDefense": true, "cantBeAttacked": true })

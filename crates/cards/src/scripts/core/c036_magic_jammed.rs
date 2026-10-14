@@ -10,16 +10,49 @@
 //! MOVES it (R15), so the lock runs FIRST. `destroy` only marks the card (§4.5), so the base order
 //! is not load-bearing. R33's visibility needs no line here: `viewFor` keys it on `controller`.
 
+use jackioh_engine::effects::{destroy, lock, steal};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-036";
 
+/// R81: one backrow card, picked with the play. Unnarrowed, so either side (§8 Conventions).
+fn backrow_target() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["backrow"] }))]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            targets: backrow_target(),
+            // Lock before Destroy: §6.3 Destroy only marks, but the two faces stay in one order.
+            cry: Some(hook(|_ctx| {
+                vec![
+                    lock(json_as(json!({ "zone": { "of": "chosen" } }))),
+                    destroy(json_as(json!({ "target": { "of": "chosen" } }))),
+                ]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            targets: backrow_target(),
+            // Lock strictly before Steal, so "its original zone" is the zone the card is still sitting in.
+            cry: Some(hook(|_ctx| {
+                vec![
+                    lock(json_as(json!({ "zone": { "of": "chosen" } }))),
+                    steal(json_as(json!({ "target": { "of": "chosen" } }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // #36 Magic Jammed (SPEC §8.2, BUILD M4-T4): "Destroy backrow and lock zone, locked zone rejects
 // play; radiant steals into same-lane zone else first free, original zone locked, trap identity
 // visible to thief (R33)."
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const MAGIC_JAMMED: &str = "core-036";
@@ -67,7 +100,7 @@ mod tests {
         #[test]
         fn r81_declares_its_backrow_target_as_a_play_time_choice_unnarrowed_by_side() {
             // §8 Conventions: "target" is either side unless the cell narrows it, and neither cell does.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
                     serde_json::to_value(&face.targets).expect("declarations are JSON"),

@@ -11,7 +11,43 @@
 //!   it does nothing ("Spend … to …" is a price).
 //! - Other Plague cards can refill it: C #53 Plague Crawler, C #61, C #76 and C #42's Activate.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-029";
+
+/// M #28.1 Ancient Curse, the token the end-of-turn clause shuffles (§7).
+const CURSE: &str = "meditative-028-1";
+
+fn factory() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![place_plague(json_as(json!({ "amount": param(&*ctx, "counters") })))]
+        })),
+        end_of_turn: Some(hook(|ctx| {
+            let stocked = ctx.live_self().is_some_and(|me| plague_on(me) >= 1);
+            if !stocked {
+                return vec![];
+            }
+            vec![
+                consume_plague(json_as(json!({ "amount": 1 }))),
+                shuffle_into(json_as(json!({
+                    "defId": CURSE,
+                    "count": param(&*ctx, "curses"),
+                    "player": "enemy",
+                }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: the declared `counters` (3 and 3) and `curses` (1,
+    // radiant 2) are what differ.
+    let base = factory();
+    let radiant = factory();
+    CardScripts { base, radiant }
+}
 
 // M #29 Forbiddenous Factory — SPEC §8.8 row 29, BUILD M10 row M 29: "Cry (played or cast): one
 // placement of 3 Plague Counters on itself (`counterChanged`), R471's multiplier applying; at your
@@ -21,14 +57,13 @@ pub const ID: &str = "meditative-029";
 // keeps the designer's spelling, "Forbiddenous".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P2: PlayerId = PlayerId::P2;
 
     const FACTORY: &str = "meditative-029";
     const FILLER: &str = "core-005";
-    /// M #28.1 Ancient Curse, the token the end-of-turn clause shuffles (§7).
-    const CURSE: &str = "meditative-028-1";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])

@@ -13,7 +13,33 @@
 //! Lifesteal is also passed as a flag: §8 states it as part of the EFFECT (R85, §4.4 step 8). The
 //! sources are ORed, so it heals once, by the amount dealt (R63's zero rule, Armor and the cap apply).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-093-1";
+
+/// R81: "a target" — any unit or hero on either side, picked with the play.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// §8: "Deal 2 damage", radiant "Deal 4 damage": the declared number `damage` (R386).
+fn combo_fodder() -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount, "lifesteal": true })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: combo_fodder(),
+        radiant: combo_fodder(),
+    }
+}
 
 // #93.1 Combo-Fodder (SPEC §8.4, §7; R11, R81, R85, R275, R276). BUILD M4-T4 row 93.1: "2 damage to
 // a target, Lifesteal; radiant 4". The token's own cases, on its own: how #93 Combo-Index hands it out

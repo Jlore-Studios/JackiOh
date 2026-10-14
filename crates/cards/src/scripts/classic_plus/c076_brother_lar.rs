@@ -9,7 +9,33 @@
 //! when it is exiled or bounced. By then its zone is empty, so R64's leftmost open zone may be its own,
 //! unless a granted Reborn has reserved that zone for Lar's return (R64), when Ping goes elsewhere.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-076";
+
+/// §7, §8.7: the token Brother Lar leaves behind (TS `cardDef("classicplus-076-1").id`, read off the
+/// catalog).
+fn ping_id() -> String {
+    crate::card_def("classicplus-076-1").id
+}
+
+pub fn script() -> CardScripts {
+    let ping = ping_id();
+    let radiant_ping = ping.clone();
+    CardScripts {
+        base: Script {
+            death: Some(hook(move |_ctx| vec![summon(json_as(json!({ "defId": ping.as_str() })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            death: Some(hook(move |_ctx| {
+                vec![summon(json_as(json!({ "defId": radiant_ping.as_str(), "radiant": true })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #76 Brother Lar — SPEC §8.7 row 76, BUILD M9 Classic+ row C+ 76: "Death summons a Brother Ping
 // (C+ #76.1) into your leftmost open unit zone, Lar's own zone included unless a granted Reborn reserves
@@ -66,7 +92,7 @@ mod tests {
             );
             assert_eq!(js(&def.tags), json!(["CN", "Human"]));
             assert_eq!(def.refs, Some(vec![PING.to_string()]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.death.is_some());
             assert!(scripts.radiant.death.is_some());
         }

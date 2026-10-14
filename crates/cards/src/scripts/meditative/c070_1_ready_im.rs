@@ -3,7 +3,16 @@
 //!   Radiant: "Poisonous, Divine Shield"
 //! Engine: keywords only; a unit token, gone when it leaves the field (R11).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-070-1";
+
+pub fn script() -> CardScripts {
+    // Keywords only: Poisonous (Radiant also Divine Shield) are catalog data.
+    let base = Script::default();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #70.1 Ready… I'm — SPEC §8.8 row 70.1, BUILD M10 row M 70.1.
 #[cfg(test)]

@@ -13,7 +13,75 @@
 //! cannot move them. The hand cap burns the overflow. The number is declared and read through `param`
 //! (R386); the Radiant face ignores it (`tunedOn: "base"`, R1431).
 
+use jackioh_engine::effects::{ForEachCardArgs, draw_from_library, for_each_card};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-014";
+
+/// The smallest prime: 0 and 1 are not prime.
+const SMALLEST_PRIME: u32 = 2;
+
+/// Trial division: the indices that can occur stay under a few thousand.
+fn is_prime(n: u32) -> bool {
+    if n < SMALLEST_PRIME {
+        return false;
+    }
+    let mut divisor = SMALLEST_PRIME;
+    while divisor * divisor <= n {
+        if n.is_multiple_of(divisor) {
+            return false;
+        }
+        divisor += 1;
+    }
+    true
+}
+
+/// R804: the card's catalog index is a prime number. A token's "N.k" or T-name, and a transient
+/// card's id, fail the parse and never match.
+fn prime_indexed(state: &GameState, card: &CardInstance) -> bool {
+    def_of(Some(state), &card.def_id).index.parse::<u32>().is_ok_and(is_prime)
+}
+
+/// The library's prime-indexed ids, top-down, at most `take` of them (`None` takes every match).
+fn prime_ids(ctx: &EffectContext<'_>, take: Option<i32>) -> Vec<String> {
+    let mut ids: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library)
+        .iter()
+        .filter(|card| prime_indexed(ctx.state, card))
+        .map(|card| card.id.clone())
+        .collect();
+    if let Some(take) = take {
+        ids.truncate(take.max(0) as usize);
+    }
+    ids
+}
+
+/// One memoized `for_each_card` over the prime-indexed ids: read once as the list reaches it, so a
+/// cast-on-draw pause resumes over the same set (R113).
+fn prime_time(take: Option<i32>) -> Vec<Effect> {
+    vec![for_each_card(ForEachCardArgs {
+        cards: Arc::new(move |now: &mut EffectContext<'_>| prime_ids(now, take)),
+        each: Arc::new(|instance_id: &str| {
+            draw_from_library(json_as(json!({ "instanceId": instance_id })))
+        }),
+    })]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            // "Draw 3 …": the declared number `draws` (R386, R1431).
+            cry: Some(hook(|ctx| {
+                let draws = param(&*ctx, "draws");
+                prime_time(Some(draws))
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| prime_time(None))),
+            ..Script::default()
+        },
+    }
+}
 
 // M #14 Prime Time — SPEC §8.8 row 14, BUILD M10 row M 14: "Draw the 3 topmost prime-indexed cards
 // of any set (R804); a token index never matches; fewer matches draw fewer without fatigue (R801);
@@ -21,6 +89,7 @@ pub const ID: &str = "meditative-014";
 // through `param()` (R386, R1431)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

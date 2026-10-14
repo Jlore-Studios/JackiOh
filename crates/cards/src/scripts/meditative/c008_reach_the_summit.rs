@@ -15,7 +15,145 @@
 //! the turn it was played (R153, R155), a `bounce` that a full hand burns back (§2.4). A `preview`
 //! (R280) labelled "Ascent level" shows the count in play.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-008";
+
+/// Ascent 1's resolution prompt, answered by the damage below.
+const ASCENT_DAMAGE_STEP: &str = "ascent-damage";
+
+/// The enemy permanents: tops of unit piles and backrow cards, face-down ones included (§3.2, R13).
+fn enemy_permanents() -> BoardScope {
+    json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
+}
+
+/// R840: the Ascent level while this play resolves — the counted plays less the current one.
+/// A counted play precedes every cry, and an Echo repeat is not counted, so repeats resolve the
+/// same level.
+fn resolving_level(self_: &CardInstance) -> i32 {
+    (times_played_of(self_) - 1).max(0)
+}
+
+/// R841, R60, R129: Ascent 4's picks — N distinct random enemy permanents. A pool holding N or
+/// fewer is used as is with no shuffle; otherwise N are drawn from a shuffle.
+fn exile_picks(ctx: &mut EffectContext<'_>, count: i32) -> Vec<String> {
+    let pool = cards_in_scope(&*ctx, &enemy_permanents());
+    if pool.len() as i32 <= count {
+        pool.into_iter().map(|card| card.id).collect()
+    } else {
+        ctx.rng
+            .shuffle(&pool)
+            .into_iter()
+            .take(count.max(0) as usize)
+            .map(|card| card.id)
+            .collect()
+    }
+}
+
+fn ascent_cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(self_) = ctx.live_self().cloned() else {
+        return vec![];
+    };
+    match resolving_level(&self_) {
+        0 => vec![heal(json_as(
+            json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }),
+        ))],
+        1 => vec![choose_target(json_as(json!({
+            "step": ASCENT_DAMAGE_STEP,
+            "scope": { "side": "any", "of": ["unit", "hero"] },
+            "prompt": "Deal damage",
+        })))],
+        2 => vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))],
+        3 => vec![discard_random(json_as(
+            json!({ "count": param(&*ctx, "discards"), "player": "enemy" }),
+        ))],
+        4 => {
+            let count = param(&*ctx, "exiles");
+            let ids = exile_picks(ctx, count);
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(move |_: &mut EffectContext<'_>| ids.clone()),
+                each: Arc::new(|instance_id: &str| {
+                    exile(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+                    ))
+                }),
+            })]
+        }
+        5 => vec![add_random_from_catalog(json_as(json!({
+            "query": {},
+            "count": param(&*ctx, "adds"),
+            "radiant": true,
+            "costOverride": 0,
+        })))],
+        6..=9 => vec![],
+        _ => vec![win_game(json_as(json!({})))],
+    }
+}
+
+/// Ascent 1's answer: the chosen Unit or hero takes the damage.
+fn ascent_damage(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![damage(json_as(
+        json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") }),
+    ))]
+}
+
+/// Core #31's return without the cost raise: from the graveyard, only on the turn it was played
+/// (R153, R155). A full hand burns the bounce back (§2.4).
+fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(self_) = ctx.live_self().cloned() else {
+        return vec![];
+    };
+    if self_.zone.z() != ZoneName::Graveyard {
+        return vec![];
+    }
+    if !was_played_this_turn(ctx.state, self_.owner, &self_) {
+        return vec![];
+    }
+    vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
+}
+
+/// R842: the computed cost — the level (base) or max(0, level − 1) (Radiant).
+fn cost_of(radiant: bool) -> CostHook {
+    cost_hook(move |CostArgs { instance, .. }| {
+        let level = times_played_of(instance);
+        if radiant { (level - 1).max(0) } else { level }
+    })
+}
+
+/// R280: the Ascent level as the card stands, labelled with the catalog text's own words.
+fn preview() -> PreviewHook {
+    condition_hook(move |ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        vec![PreviewValue {
+            label: "Ascent level".to_string(),
+            value: times_played_of(ctx.self_),
+            display: None,
+            ids: None,
+        }]
+    })
+}
+
+fn face(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            counts_plays: Some(true),
+            ..StaticFlags::default()
+        }),
+        cost: Some(cost_of(radiant)),
+        cry: Some(hook(ascent_cry)),
+        resume: IndexMap::from([(ASCENT_DAMAGE_STEP, hook(ascent_damage))]),
+        end_of_turn: Some(hook(return_to_hand)),
+        preview: Some(preview()),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
 
 // Meditative #8 Reach the Summit — SPEC §8.8 row 8, BUILD M10 row M 8: Quickdraw; played at level 0
 // it heals 2 and climbs; each play resolves only its own level's line and raises the level by one,
@@ -28,7 +166,7 @@ pub const ID: &str = "meditative-008";
 // level; radiant costs max(0, level − 1) and reads 3 of each.
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::effects::cast;
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

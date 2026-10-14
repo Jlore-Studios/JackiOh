@@ -12,7 +12,40 @@
 //! R195, the yellow glow: in hand, Reno glows exactly when its Cry would raise the hero. `below_floor`
 //! is that one predicate, read by the Cry and `condition_met`, so they cannot disagree.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-053";
+
+/// "If your hero is below `floor`": strictly below, read through the engine's `hero_of`.
+fn below_floor(state: &GameState, controller: PlayerId, floor: i32) -> bool {
+    hero_of(state, controller).health < floor
+}
+
+/// The two faces differ only in the number, so one script serves both (§8 Conventions): the floor the
+/// hero is raised to is the declared number `health` (R386), 30 and 60 on the Radiant face.
+fn reno() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            let floor = param(&*ctx, "health");
+            if below_floor(&*ctx.state, ctx.controller, floor) {
+                vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "upTo": floor })))]
+            } else {
+                vec![]
+            }
+        })),
+        // R195: hand only — the glow asks whether playing Reno now would set the hero to the floor.
+        condition_met: Some(condition_hook(|c| {
+            c.zone == ConditionZone::Hand && below_floor(c.state, c.controller, param(&c, "health"))
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = reno();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #53 Reno (SPEC §8.3, §6.3 Heal, §3, R19; BUILD M4-T4 row 53: "12 → 30; 35 stays 35; radiant 60").
 //

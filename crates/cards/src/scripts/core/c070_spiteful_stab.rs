@@ -12,7 +12,76 @@
 //! R81: the pick travels in the `play` action, so nothing pauses. §4.4: one damage instance, R63's
 //! zero rule applies. R662, the glow: in hand when a scaling term adds damage, built on `stab_amount`.
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-070";
+
+/// §8 Conventions: every legal unit and hero on either side (R90: a bare `target` is units only).
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// One face's numbers: the flat damage, the health step, and what each card in your exile adds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Stab {
+    base: i32,
+    step: i32,
+    per_exiled: i32,
+}
+
+/// §8: "Deal 2 …, +1 per full 5 health …, +1 per card …"; radiant "Deal 4 …, per full 3 …, +2 per
+/// card …": the declared numbers `damage`, `healthStep` and `perExile` (R386), as the card stands.
+fn numbers_of<C: ParamContext + ?Sized>(ctx: &C) -> Stab {
+    Stab {
+        base: param(ctx, "damage"),
+        step: param(ctx, "healthStep"),
+        per_exiled: param(ctx, "perExile"),
+    }
+}
+
+/// §10.9: a hook may read state to compute an effect's arguments; it never writes. Both reads go
+/// through the engine's read-only board surface (`hero_of`, `zone_count`, BUILD M3-T1).
+/// R72: missing health floors at 0, and the exile is the controller's OWN pile.
+fn stab_amount(state: &GameState, controller: PlayerId, face: Stab) -> i32 {
+    let missing = (HERO_HEALTH - hero_of(state, controller).health).max(0);
+    // `missing` is never negative and `step` positive, so `/` floors.
+    face.base + missing / face.step + face.per_exiled * zone_count(state, controller, OffFieldZone::Exile)
+}
+
+fn spiteful_stab(face: FaceKind) -> Script {
+    let def = crate::card_def(ID);
+    Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let amount = stab_amount(ctx.state, ctx.controller, numbers_of(&*ctx));
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+        })),
+        // R280: the label is the face's whole text as printed, with its declared numbers as the card
+        // stands (R386).
+        preview: Some(condition_hook(move |ctx| {
+            vec![PreviewValue {
+                label: fill_params(&def, face, params_view(ctx.state, ctx.self_).as_ref()),
+                value: stab_amount(ctx.state, ctx.controller, numbers_of(&ctx)),
+                display: None,
+                ids: None,
+            }]
+        })),
+        // R662: the scaling has kicked in.
+        condition_met: Some(condition_hook(|ctx| {
+            let numbers = numbers_of(&ctx);
+            ctx.zone == ConditionZone::Hand && stab_amount(ctx.state, ctx.controller, numbers) > numbers.base
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: spiteful_stab(FaceKind::Base),
+        radiant: spiteful_stab(FaceKind::Radiant),
+    }
+}
 
 // #70 Spiteful Stab — SPEC §8.3, BUILD M4-T4: "2 + floor(missing/5) + exile count"; radiant
 // 4 + floor(missing/3) + 2 × exile (R275 doubled the exile term).
@@ -72,7 +141,7 @@ mod tests {
         #[test]
         fn s8_conventions_declares_one_target_over_all_units_and_heroes_on_either_side_r90() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             let decl = json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]);
             assert_eq!(serde_json::to_value(&scripts.base.targets).unwrap(), decl);
             assert_eq!(serde_json::to_value(&scripts.radiant.targets).unwrap(), decl);

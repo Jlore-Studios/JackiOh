@@ -6,7 +6,30 @@
 //! played, a cast included (`enchantNextSpell`); the enchantment rides the card in every zone and its
 //! floor applies after every discount (R65). Installed as this resolves, so Forever& never stamps itself.
 
+use jackioh_engine::effects::enchant_next_spell;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-014";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![enchant_next_spell(json_as(json!({
+                "enchantment": { "kind": "returnAfterResolve", "floor": param(&*ctx, "floor") },
+            })))]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            vec![enchant_next_spell(json_as(json!({
+                "enchantment": { "kind": "returnAfterResolve", "floor": param(&*ctx, "floor") },
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #14 Forever& — SPEC §8.7 row 14, R410: leaves a waiting modifier that stamps the next
 // Spell (never Forever& itself) with "After this resolves, return it to hand. This can't cost
@@ -15,6 +38,7 @@ pub const ID: &str = "classicplus-014";
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

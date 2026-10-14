@@ -13,7 +13,84 @@
 //! view's (R33). No glow (R662): the trap waits on an event, and what a glow would tell, a Unit in the
 //! opponent's hand, is hidden (§9.1).
 
+use jackioh_engine::catalog::def_of;
+use jackioh_engine::effects::{add_to_hand, transform};
+use jackioh_engine::prelude::*;
+use jackioh_engine::query::left_field_since_resolved;
+
 pub const ID: &str = "core-041";
+
+/// §7: the Sheep Token, whose only generator is this card.
+const SHEEP_TOKEN: &str = "core-t-sheep";
+/// #55 Lava Golem, added by the radiant text at cost 0 (`costOverride`, R65): the declared number
+/// `setCost` (R386).
+const LAVA_GOLEM: &str = "core-055";
+
+/// The two faces differ only in whether the Lava Golem comes with the Sheep.
+fn sheepish(lava_golem: bool) -> TriggerDef {
+    TriggerDef::new(
+        if lava_golem { "sheepish-radiant" } else { "sheepish" },
+        &[GameEventType::CardResolved],
+        move |ctx, event| {
+            let GameEvent::CardResolved {
+                instance_id, permanent, ..
+            } = event
+            else {
+                return vec![];
+            };
+            // Named by the event, not by a TargetSpec: nobody chose this unit, the play produced it. R427:
+            // only a Unit still in play from that play is transformed; one that has left finds nothing.
+            let mut effects: Vec<Effect> = if *permanent {
+                vec![transform(json_as(json!({ "instanceId": instance_id, "defId": SHEEP_TOKEN })))]
+            } else {
+                vec![]
+            };
+            // R120: §8's conventions make an "Also" clause independent, so it still lands when an
+            // Immutable target refused the Transform (R17, R23) and the trap is still consumed (R61).
+            if lava_golem {
+                let cost = param(&*ctx, "setCost");
+                effects.push(add_to_hand(json_as(json!({ "defId": LAVA_GOLEM, "costOverride": cost }))));
+            }
+            effects
+        },
+    )
+    .with_when(|ctx, event| {
+        let GameEvent::CardResolved {
+            player,
+            def_id,
+            permanent,
+            ..
+        } = event
+        else {
+            return false;
+        };
+        // §8: "your opponent". A trap never answers its own controller's play.
+        if *player == ctx.controller {
+            return false;
+        }
+        // §5.1: a Unit, so a Spell or a backrow card leaves the trap armed (R61).
+        if def_of(Some(&*ctx.state), def_id).type_ != CardType::Unit {
+            return false;
+        }
+        // R174, R427: not a Unit an earlier answer to this play has already taken off the field.
+        *permanent || !left_field_since_resolved(&*ctx.state, event)
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base_trigger = sheepish(false);
+    let radiant_trigger = sheepish(true);
+    CardScripts {
+        base: Script {
+            triggers: vec![base_trigger],
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![radiant_trigger],
+            ..Script::default()
+        },
+    }
+}
 
 // #41 Sheepish (SPEC §8.2, §5.1, §10.3, §10.5 step 7; R17, R23, R33, R61, R70, R120, R174, R427).
 // Must-pass row (BUILD M4-T4 #41, as R427 rewrites it): "Opponent's Unit becomes a Sheep after its Cry
@@ -21,7 +98,7 @@ pub const ID: &str = "core-041";
 // "After its Cry" is proved with an observable Cry: #53 Reno heals a p1 hero left at 10 up to 30.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     /// Registers the catalog first: the engine's testkit cannot name the cards crate.
@@ -243,7 +320,7 @@ mod tests {
 
         #[test]
         fn r81_r427_the_trap_declares_no_play_time_choice_and_watches_card_resolved() {
-            let base = crate::scripts_of()[ID].clone().base;
+            let base = script().base;
             assert!(base.targets.is_empty());
             assert!(base.modes.is_empty());
             let watched: Vec<Vec<GameEventType>> = base.triggers.iter().map(|trigger| trigger.on.clone()).collect();
@@ -322,7 +399,7 @@ mod tests {
 
         #[test]
         fn r74_r427_both_faces_watch_the_same_event_so_the_radiant_text_changes_what_fires_not_when() {
-            let radiant = crate::scripts_of()[ID].clone().radiant;
+            let radiant = script().radiant;
             let watched: Vec<Vec<GameEventType>> =
                 radiant.triggers.iter().map(|trigger| trigger.on.clone()).collect();
             assert_eq!(watched, vec![vec![GameEventType::CardResolved]]);
@@ -334,7 +411,7 @@ mod tests {
 
         fn armed_on_either_turn_it_never_lights_up(radiant: bool) {
             let face = if radiant { "radiant" } else { "base" };
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.condition_met.is_none());
             assert!(scripts.radiant.condition_met.is_none());
             let mine = scn(json!({

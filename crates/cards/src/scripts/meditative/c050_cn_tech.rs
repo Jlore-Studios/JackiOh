@@ -8,7 +8,28 @@
 //! (R142). The table ships empty (provisional, no live figures offline), so the fallback is what a
 //! fresh patch plays until someone runs `cargo jackioh winrates`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-050";
+
+fn tech(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| match win_rate_leader(ID) {
+            Some(id) => vec![add_to_hand(json_as(json!({ "defId": id, "radiant": radiant })))],
+            None => vec![add_random_from_catalog(json_as(
+                json!({ "query": {}, "radiant": radiant }),
+            ))],
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: tech(false),
+        radiant: tech(true),
+    }
+}
 
 // M #50 CN Tech — SPEC §8.8 row 50, BUILD M10 row M 50: "Add the highest win rate card (the
 // compiled table's pick, R377's in-deck rate) to your hand (MD-D1), never itself (R387), the Radiant
@@ -16,6 +37,7 @@ pub const ID: &str = "meditative-050";
 // burned by a full hand".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const TECH: &str = "meditative-050";

@@ -11,7 +11,24 @@
 //! marked cards together (R59); indestructible ones keep their zones (R46); a carried Unit is no backrow
 //! card (R446). Radiant's `enemy` is the opponent of the controller it died under (R89).
 
+use jackioh_engine::effects::destroy_all;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-051";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        death: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "any", "rows": ["backrow"] })))])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        death: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "enemy", "rows": ["backrow"] })))])),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #51 Back Breaker (SPEC §8.6 row 51; BUILD M9 row C 51).
 #[cfg(test)]

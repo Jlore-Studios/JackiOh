@@ -9,7 +9,28 @@
 //!
 //! The shape is Classic #16 Book of Flame's, read at this card's numbers.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039-3";
+
+/// §8 Conventions: any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 5 is its declared `damage`, which `param` reads off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #39.3 Dud — SPEC §8.8 row 39.3, BUILD M10 row M 39.3: "One hit of 2 on a declared Unit
 // or hero on either side; damage reads through `param()`; radiant 5".
@@ -17,7 +38,6 @@ pub const ID: &str = "meditative-039-3";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     use crate::scenario;
 
@@ -43,7 +63,7 @@ mod tests {
         }));
         s.expect_refused(|s| s.play(ID, json!({})));
         // Both faces run the one script: the Radiant face's 5 is its declared `damage`.
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(Arc::ptr_eq(base.cry.as_ref().unwrap(), radiant.cry.as_ref().unwrap()));
         assert_eq!(radiant.targets, base.targets);
         assert_eq!(base.targets.len(), 1);

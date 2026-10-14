@@ -11,7 +11,98 @@
 //! (R81); the copy goes to your graveyard (R87). Leaving the field clears the memory (R78). R520: an
 //! X-cost copy is cast with the X its caster chooses, 1 to their mana (R348); the cast pays nothing.
 
+use jackioh_engine::effects::{cast_new, exile, instance_of, remember};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-007";
+
+/// Where the instance keeps the Spell it exiled.
+const SCEPTER: &str = "scepter";
+/// The name of the Cry's hand-pick rule in `targetChecks`.
+const WITHIN_LIMIT: &str = "spellWithinLimit";
+
+#[derive(Clone, Debug, PartialEq)]
+struct Held {
+    def_id: String,
+    radiant: bool,
+}
+
+/// What the instance remembers under `scepter`, read as `query::recalled` reads it (the running
+/// ingredient's own key on a fused card, R102). The memory is JSON, so it is narrowed, never cast.
+fn held_spell(self_: Option<&CardInstance>, data: &IndexMap<String, Value>) -> Option<Held> {
+    let held = self_?
+        .memory
+        .get(&jackioh_engine::work::part_memory_key(data, SCEPTER))?;
+    let held = held.as_object()?;
+    let def_id = held.get("defId")?.as_str()?;
+    Some(Held {
+        def_id: def_id.to_string(),
+        radiant: held.get("radiant") == Some(&Value::Bool(true)),
+    })
+}
+
+/// "A ({costLimit}) Cost or less Spell from your hand", at the cost it would be played for now (R65).
+fn within_limit(args: TargetCheckArgs<'_>) -> bool {
+    let Some(candidate) = args.candidate else {
+        return false;
+    };
+    let limit = HookArgs {
+        state: args.state,
+        self_: args.self_,
+        radiant: args.radiant,
+    };
+    matches!(candidate.zone, Zone::Hand { .. })
+        && def_of(Some(args.state), &candidate.def_id).type_ == CardType::Spell
+        && effective_cost(args.state, candidate, Default::default()) <= param(&limit, "costLimit")
+}
+
+fn cry(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let Some(picked) = instance_of(ctx, &json_as(json!({ "of": "chosen" }))) else {
+        return vec![];
+    };
+    vec![
+        remember(json_as(json!({ "key": SCEPTER, "value": { "defId": picked.def_id, "radiant": picked.radiant } }))),
+        exile(json_as(json!({ "target": { "of": "chosen" } }))),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: vec![TargetDecl::hand(
+            1,
+            1,
+            json!({ "of": ["hand"], "type": "Spell", "check": WITHIN_LIMIT }),
+        )],
+        target_checks: IndexMap::from([(WITHIN_LIMIT, target_check(within_limit))]),
+        cry: Some(hook(|ctx| cry(ctx))),
+        activations: vec![ActivationDecl {
+            id: "cast-copy".to_string(),
+            label: "Cast a copy of that Spell".to_string(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![],
+            can_activate: Some(condition_hook(|c| held_spell(Some(c.self_), &IndexMap::new()).is_some())),
+            has: None,
+            run: hook(|_ctx| {
+                vec![cast_new(CastNewArgs {
+                    def: CastNewDef::Read(Arc::new(|ctx: &mut EffectContext<'_>| -> Option<CastDef> {
+                        held_spell(ctx.live_self(), &ctx.data)
+                            .map(|held| json_as(json!({ "defId": held.def_id, "radiant": held.radiant })))
+                    })),
+                    radiant: None,
+                    how: CastHow::default(),
+                })]
+            }),
+        }],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's (2) is its declared costLimit, which `param` reads off the face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #7 InfiniScepter — SPEC §8.6 row 7, BUILD M9 Classic row C 7: the Cry's hand pick (R81); Activate,
 // once per turn (R384), casts a free copy counted as played (R70) that lands in your graveyard (R87);
@@ -83,13 +174,12 @@ mod tests {
 
     mod c_n7_infiniscepter {
         use super::*;
-        use std::sync::Arc;
 
         #[test]
         fn declares_its_hand_pick_one_activate_once_per_turn_and_the_same_script_on_both_faces() {
             crate::register_all();
             assert_eq!(ID, SCEPTER);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let (Some(base_cry), Some(radiant_cry)) = (&scripts.base.cry, &scripts.radiant.cry) else {
                 panic!("both faces have a Cry");
             };

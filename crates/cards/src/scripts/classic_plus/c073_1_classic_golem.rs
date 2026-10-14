@@ -11,7 +11,51 @@
 //! Unit is a random non-token Classic or Classic+ one (R380; no rng draw when none can land, R129),
 //! transformed in place (§6.3) with no Cry (R1), type kept (R35); killing the defender (R42) readies it.
 
+use jackioh_engine::effects::transform_random;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-073-1";
+
+/// §8.7: "a random Classic or Classic+ Unit" — non-token Units of the two sets the text names (R380).
+fn classic_units() -> Value {
+    json!({ "type": "Unit", "set": ["Classic", "Classic+"] })
+}
+
+/// A hero target is `hero-<player>` in the combat's facts.
+const HERO_TARGET: &str = "hero-";
+
+fn after_it_attacks(radiant: bool) -> Hook {
+    hook(move |ctx| {
+        let Some(combat) = after_attack_of(ctx) else {
+            return Vec::new();
+        };
+        if combat.forced || !combat.survived || combat.target_id.starts_with(HERO_TARGET) {
+            return Vec::new();
+        }
+        let destroyed = combat.destroyed_ids.contains(&combat.target_id);
+        let mut args = json!({ "target": { "of": "self" }, "query": classic_units() });
+        if radiant {
+            args["radiant"] = json!(true);
+        }
+        args["readyToAttack"] = json!(destroyed);
+        vec![transform_random(json_as(args))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        after_attack: Some(after_it_attacks(false)),
+        ..Script::default()
+    };
+
+    // The Radiant face transforms into a Radiant Unit; its 20/20 and keywords are its catalog face.
+    let radiant = Script {
+        after_attack: Some(after_it_attacks(true)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // BUILD M9 Classic+ row C+ 73.1: after the combat of an attack it declared on a Unit (R424), if it
 // survived, it is transformed (§6.3) into a random non-token Classic or Classic+ Unit (a Unit, R35)
@@ -21,7 +65,6 @@ pub const ID: &str = "classicplus-073-1";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -109,7 +152,7 @@ mod tests {
         assert_eq!(keyword_kinds(&def.base.keywords), vec![json!("Rush"), json!("First Strike"), json!("Trample")]);
         assert_eq!([def.radiant.attack, def.radiant.health], [Some(20), Some(20)]);
         assert_eq!(keyword_kinds(&def.radiant.keywords), vec![json!("Rush"), json!("Trample"), json!("Divine Shield")]);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.after_attack.is_some());
         assert!(radiant.after_attack.is_some());
         assert!(!Arc::ptr_eq(base.after_attack.as_ref().unwrap(), radiant.after_attack.as_ref().unwrap()));

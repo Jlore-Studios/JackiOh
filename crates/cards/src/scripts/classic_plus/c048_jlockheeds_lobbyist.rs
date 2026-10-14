@@ -12,7 +12,40 @@
 //! out the card running the hook by its def id (R387), and puts the (0) price on a card only once it is
 //! in the hand, so a burned one keeps none (§2.4, R4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-048";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        // "It costs (0)": the declared number `setCost` (R386), on both faces.
+        death: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Jlockeed"] },
+                "costOverride": param(&*ctx, "setCost"),
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        death: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Jlockeed"] },
+                "costOverride": param(&*ctx, "setCost"),
+                "radiant": true,
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #48 Jlockheed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense
 // Position (a switch is refused, a switch-all leaves it in Attack), never attacks with 0 attack; Death
@@ -20,6 +53,7 @@ pub const ID: &str = "classicplus-048";
 // (one tag, never itself, R387); a full hand burns it; hidden from the opponent (R97); radiant 0/6.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,7 +126,7 @@ mod tests {
             [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
             [Some(0), Some(3), Some(0), Some(6)]
         );
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = script();
         assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.never_defense), Some(true));
         assert!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.never_defense).is_none());
     }

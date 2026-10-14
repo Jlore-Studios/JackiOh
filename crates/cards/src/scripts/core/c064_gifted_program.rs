@@ -19,7 +19,32 @@
 //! THE GLOW (R662): `condition.rs` asks `query::gifted_would_make_radiant`, which is
 //! `gifted_makes_radiant` at the cost a play pays now (R56, R213), so glow and step 3 agree.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-064";
+
+/// The printed thresholds: "1 or less", and "2 or less" on the radiant face. The card declares them as
+/// `giftLimit` (R386), and the engine reads the flag through `params::declared_or`, so a Degrade or an
+/// Upgrade moves the threshold step 3 uses.
+const BASE_THRESHOLD: i32 = 1;
+const RADIANT_THRESHOLD: i32 = 2;
+
+fn gifted(threshold: i32) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            gifted_program: Some(threshold),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: gifted(BASE_THRESHOLD),
+        radiant: gifted(RADIANT_THRESHOLD),
+    }
+}
 
 // #64 Gifted Program — SPEC §8.3, §10.5 step 3, BUILD M4-T4 row 64.
 //
@@ -30,6 +55,7 @@ pub const ID: &str = "core-064";
 // it. R662's yellow glow is tested at the end of this file.
 #[cfg(test)]
 mod tests {
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -88,7 +114,7 @@ mod tests {
             // The card is its flag: it has no Cry, no trigger, no hook and no aura, so if step 3 did not read
             // `giftedProgram` the card would do nothing at all. The faces differ only in the threshold.
             crate::register_all();
-            let faces = crate::scripts_of()[super::super::ID].clone();
+            let faces = script();
             assert_eq!(
                 serde_json::to_value(&faces.base.static_flags).expect("flags serialise"),
                 json!({ "giftedProgram": 1 })

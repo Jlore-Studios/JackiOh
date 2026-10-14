@@ -15,7 +15,101 @@
 //! ENGINE GAP: `shuffleInto` has no `statsOverride`, so a Fused or Crafted body copies at printed stats,
 //! which R57 says it should keep.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+use jackioh_engine::state::find_instance;
+
 pub const ID: &str = "core-033";
+
+struct ResolvedEvent<'e> {
+    player: PlayerId,
+    instance_id: &'e str,
+    def_id: &'e str,
+    radiant: Option<bool>,
+}
+
+fn resolved_of(event: &GameEvent) -> Option<ResolvedEvent<'_>> {
+    match event {
+        GameEvent::CardResolved {
+            player,
+            instance_id,
+            def_id,
+            radiant,
+            ..
+        } => Some(ResolvedEvent {
+            player: *player,
+            instance_id,
+            def_id,
+            radiant: *radiant,
+        }),
+        _ => None,
+    }
+}
+
+/// The face the played card resolved with. The event says so (R34, R57); a card still somewhere the
+/// instance table can reach is read as a fallback for an event that does not.
+fn played_radiant_flag(ctx: &EffectContext<'_>, event: &ResolvedEvent<'_>) -> bool {
+    event
+        .radiant
+        .or_else(|| find_instance(&*ctx.state, event.instance_id).map(|card| card.radiant))
+        .unwrap_or(false)
+}
+
+/// Whether this play is one of the copier's: "you play a card" is the controller's own plays, and
+/// R33 lets a stolen Field Spell read "you" as its new controller, which is `ctx.controller`.
+/// Proposed R82 excludes the play that put this Clone Machine onto the field.
+fn answers(ctx: &EffectContext<'_>, event: &ResolvedEvent<'_>) -> bool {
+    let Some(self_) = ctx.self_.as_ref() else {
+        return false;
+    };
+    if event.player != ctx.controller {
+        return false;
+    }
+    event.instance_id != self_.id
+}
+
+/// `all_radiant` is the radiant face: every copy is Radiant; the base face keeps the played flag.
+/// Three copies per play, on both faces (§8.2 row 33): the declared number `copies` (R386).
+fn after_play(all_radiant: bool) -> TriggerDef {
+    TriggerDef::new(
+        if all_radiant {
+            "33r-after-you-play-a-card"
+        } else {
+            "33-after-you-play-a-card"
+        },
+        &[GameEventType::CardResolved],
+        move |ctx, event| {
+            let Some(event) = resolved_of(event) else {
+                return vec![];
+            };
+            if !answers(ctx, &event) {
+                return vec![];
+            }
+            let flag = all_radiant || played_radiant_flag(ctx, &event);
+            // R316: the copies copy the played card, so one a full library refuses is judged by it — a
+            // Trap set face-down stays unnamed to the other player.
+            vec![shuffle_into(json_as(json!({
+                "defId": event.def_id,
+                "count": param(&*ctx, "copies"),
+                "radiant": flag,
+                "copyOf": event.instance_id,
+            })))]
+        },
+    )
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![after_play(false)],
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![after_play(true)],
+            ..Script::default()
+        },
+    }
+}
 
 // #33 Unstable Clone Machine — SPEC §8.2 row 33, BUILD M4-T4 must-pass row 33: "After each play,
 // library +3 fresh copies with the radiant flag preserved; token spells copied (R34); nothing is

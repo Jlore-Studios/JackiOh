@@ -13,7 +13,61 @@
 //! makes `instance.embiggened` the price paid, so the aura reads it off `self`. R78: leaving the
 //! field resets it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-046";
+
+/// The penalty at the price this card was played for (R65): the declared number `debuff` at the base
+/// price and `paidDebuff` at the embiggen price (R386) — 1 and 2, 2 and 4 on the Radiant face.
+fn penalty(args: &HookArgs<'_>) -> i32 {
+    if args.self_.embiggened == Some(true) {
+        param(args, "paidDebuff")
+    } else {
+        param(args, "debuff")
+    }
+}
+
+/// `-penalty` on both stats.
+fn suppression(penalty: i32) -> StatMod {
+    StatMod {
+        attack: Some(-penalty),
+        max_health: Some(-penalty),
+        ..StatMod::default()
+    }
+}
+
+/// "All units": every unit on either side, the controller's own included, at one of the two prices.
+/// The mod is negative on both stats, so §10.4 subtracts it from attack (floored at 0 on read) and
+/// from max health (not floored, R69).
+fn all_units(args: HookArgs<'_>) -> Vec<AuraEntry<'_>> {
+    vec![AuraEntry {
+        applies: Box::new(|_unit: &CardInstance| true),
+        mod_: suppression(penalty(&args)),
+    }]
+}
+
+/// "Enemy units": enemy of this card's controller, which is control and not ownership (R12), so a
+/// stolen or rotated Suppressive Aura suppresses the other board from its new side.
+fn enemy_units(args: HookArgs<'_>) -> Vec<AuraEntry<'_>> {
+    let controller = args.self_.controller;
+    vec![AuraEntry {
+        applies: Box::new(move |unit: &CardInstance| unit.controller != controller),
+        mod_: suppression(penalty(&args)),
+    }]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            aura: Some(aura_hook(all_units)),
+            ..Script::default()
+        },
+        radiant: Script {
+            aura: Some(aura_hook(enemy_units)),
+            ..Script::default()
+        },
+    }
+}
 
 // #46 Suppressive Aura — SPEC §8.2, BUILD M4-T4: "Embiggen price chosen with the play (R81);
 // −1/−1 to all, 1-health units die, restored on leaving; paid 4 → −2/−2; radiant enemy only −2/−2,
@@ -27,7 +81,7 @@ pub const ID: &str = "core-046";
 // every paid-4 case plays from hand with `{ embiggen: true }`, which writes it (R65).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     // The harness has no verb for a permanent leaving the field, so that one step uses the engine's mover.
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{OffFieldZone, move_to_zone};
@@ -251,7 +305,7 @@ mod tests {
             assert_eq!(def.id, AURA);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Field Spell"));
             assert_eq!(serde_json::to_value(def.cost).unwrap(), json!({ "base": 2, "embiggen": 4 }));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.aura.is_some());
                 // The price is not a declared choice and not a prompt: it rides in the play action (R81).

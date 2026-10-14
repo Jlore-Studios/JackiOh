@@ -9,7 +9,39 @@
 //! extras, in that order.
 //! Tunes: none (the "an" and "a" are no printed numbers, as on C+ #78).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-041";
+
+/// The Rock this adds first (M #39.1).
+pub const ROCK: &str = "meditative-039-1";
+
+/// The CN pool both faces draw from: non-token CN cards of every set, never this card (R387 is
+/// the engine's — `add_random_from_catalog` already excludes the running card).
+fn cn_pool() -> Value {
+    json!({ "tags": ["CN"] })
+}
+
+fn smuggler(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |_ctx| {
+            vec![
+                add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant }))),
+                add_random_from_catalog(
+                    json_as(json!({ "query": cn_pool(), "radiant": radiant })),
+                ),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: smuggler(false),
+        radiant: smuggler(true),
+    }
+}
 
 // Meditative #41 CN Smuggler — SPEC §8.8 row 41, BUILD M10 row M 41: "At your start of turn only,
 // adds a base Auspicious Rock, then a random non-token CN card of any set (never itself, R387),
@@ -25,8 +57,6 @@ mod tests {
 
     const FILLER: &str = "core-008";
     const LIBRARY: [&str; 3] = ["core-025", "core-008", "core-020"];
-    /// The Rock this adds first (M #39.1).
-    const ROCK: &str = "meditative-039-1";
 
     fn hand_defs(s: &Scenario, player: PlayerId) -> Vec<String> {
         s.hand(player).iter().map(|card| card.def_id.clone()).collect()

@@ -12,7 +12,58 @@
 //! exactly while SPEC reads "Field Trap counts as Trap" (§8 #51, R35, R61). `summon_random` draws
 //! the def (§5 index order, §5.1, §9.3, R60); a card file never picks it (CLAUDE.md rules 4 and 5).
 
+use jackioh_engine::effects::summon_random;
+use jackioh_engine::prelude::*;
+
+use crate::query::{CardQuery, TRAP_TYPES};
+
 pub const ID: &str = "core-067";
+
+/// §8.3: the base text names 1-cost traps; §5.1's `cost` reads a def's cost out of play (R65).
+const TRAP_COST: i32 = 1;
+
+/// Both pools: the Cost (1) traps, and every trap.
+fn one_cost_traps() -> CardQuery {
+    json_as(json!({ "type": TRAP_TYPES, "cost": TRAP_COST }))
+}
+
+fn any_trap() -> CardQuery {
+    json_as(json!({ "type": TRAP_TYPES }))
+}
+
+/// The faces differ in the pool and in whether the trap comes Radiant, so one factory takes both.
+///
+/// §10.9 lets a hook read state to compute an effect's arguments; it never writes. The single read
+/// here is the engine's own `slot_of`, which turns the Cry's unit into `{ player, row, lane }`.
+fn oomen(pool: CardQuery, radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // The live `ctx.self`: its zone is what `slot_of` reads.
+            let Some(self_) = ctx.live_self() else {
+                return vec![];
+            };
+            let at = slot_of(ctx.state, self_);
+            // Off the field there is no "this lane" to summon into, so nothing happens (§3.1).
+            let Some(at) = at else {
+                return vec![];
+            };
+            vec![summon_random(json_as(json!({
+                "query": pool,
+                "player": "self",
+                "lane": at.lane,
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: oomen(one_cost_traps(), false),
+        radiant: oomen(any_trap(), true),
+    }
+}
 
 // #67 Zoomerbin Oomen — SPEC §8.3, BUILD M4-T4: "Random trap face-down and unpaid into own lane's
 // backrow; occupied or Locked → nothing (R47); pool = the five Cost (1) traps, radiant all six".
@@ -116,7 +167,7 @@ mod tests {
         #[test]
         fn r81_the_cry_asks_for_nothing_the_lane_is_the_units_own_not_a_declared_pick() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.base.modes.is_empty());
             assert!(scripts.radiant.targets.is_empty());

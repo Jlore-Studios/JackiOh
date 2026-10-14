@@ -1,7 +1,35 @@
 //! C+ #21 Whirlwind (SPEC §8.7 row 21): Pierce, {damage} damage to every Unit (R346); the Radiant face
 //! returns from the graveyard to hand at the end of the turn it was played (R68).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-021";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![damage_all(json_as(json!({
+                "amount": param(&*ctx, "damage"),
+                "side": "any",
+                "ignoreArmor": true,
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        end_of_turn: Some(hook(|ctx| {
+            if ctx.live_self().and_then(|me| me.return_to_hand_at_end_of_turn) == Some(true) {
+                vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
+            } else {
+                Vec::new()
+            }
+        })),
+        ..base.clone()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #21 Whirlwind — SPEC §8.7 row 21, BUILD M9 Classic+ row C+ 21: "Pierce: 1 damage to every Unit on
 // both sides through Armor (an Armor 7 unit takes 1), Divine Shield still popping, all hits before the
@@ -61,7 +89,7 @@ mod tests {
             assert_eq!(def.cost, CardCost::Fixed(0));
             assert_eq!(def.base.keywords, vec![Keyword::Pierce]);
             assert_eq!(def.radiant.keywords, vec![Keyword::Pierce]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.end_of_turn.is_none());
             assert!(scripts.radiant.end_of_turn.is_some());
         }

@@ -13,7 +13,50 @@
 //! (R77), and `costMod` is still added after it. R4: `add_to_hand` moves the pick (§6.3 "Creates OR
 //! MOVES"), so a card picked into a full hand is burned.
 
+use jackioh_engine::effects::{add_to_hand, discover_from_graveyard, exile, set_cost_mod, set_cost_override};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-072";
+
+/// The name the prompt's continuation is filed under, in `resume` and in `step` (§10.6).
+const STEP_CHOSEN: &str = "chosen";
+
+/// `price` is the whole of the radiant text: −1 on the base face, a flat 0 on it.
+fn reminisce(price: impl Fn(&EffectContext<'_>) -> Effect + Send + Sync + 'static) -> Script {
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                discover_from_graveyard(json_as(json!({
+                    "step": STEP_CHOSEN,
+                    "prompt": "Discover a card from your graveyard",
+                }))),
+                // Parked while the prompt is open; runs straight through on an empty graveyard.
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        resume: IndexMap::from([(
+            // The answered selection arrives in `ctx.targets`, which `{ of: "chosen" }` reads (§10.6).
+            STEP_CHOSEN,
+            hook(move |ctx| vec![add_to_hand(json_as(json!({ "instance": { "of": "chosen" } }))), price(ctx)]),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        // R4: the price is the card's in the hand it reached, so a pick a full hand burns keeps its cost.
+        // "It costs (1) less" and "It costs (0)" are the declared numbers `discount` and `setCost` (R386).
+        base: reminisce(|ctx| {
+            let amount = -param(ctx, "discount");
+            set_cost_mod(json_as(json!({ "target": { "of": "chosen" }, "amount": amount, "inHandOnly": true })))
+        }),
+        radiant: reminisce(|ctx| {
+            let cost = param(ctx, "setCost");
+            set_cost_override(json_as(json!({ "target": { "of": "chosen" }, "cost": cost, "inHandOnly": true })))
+        }),
+    }
+}
 
 // #72 Reminisce — SPEC §8.3, BUILD M4-T4: "Discover from the GY including spell tokens (R50);
 // chosen card −1 (radiant 0); exiled; empty GY → nothing".

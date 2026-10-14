@@ -11,7 +11,61 @@
 //! §3 gives a hero no maximum. The token is the Ghoul Token plus a §7 `statsOverride`, summoned on its
 //! base face on both faces (R349 would double the 3X); R64 places it in the leftmost empty unit zone.
 
+use jackioh_engine::effects::{damage, draw, heal, summon};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-074";
+
+/// §7, R353: the token is the catalog's Ghoul Token, named by id.
+const GHOUL_TOKEN: &str = "core-t-ghoul";
+
+/// R81: "a target" travels in the play action and never pauses resolution. §8's Conventions make it
+/// "all legal units and heroes on either side"; a hero is always on the board, so this declaration
+/// can never make a play illegal, and R90 fizzles it rather than refusing the play if it somehow has
+/// no answer.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This card's only
+/// read is the declared X off the context — negative and fractional values are impossible (the play
+/// validator refuses X < 0), and the clamp is belt and braces so no clause can go backwards.
+fn chosen_x(ctx: &EffectContext<'_>) -> i32 {
+    ctx.x.max(0)
+}
+
+/// The four multipliers are the whole of the radiant text: the declared numbers `damage`, `heal`,
+/// `draw` and `ghoul` (R386), 2, 3, 2 and 3 on the Radiant face and tuned there alone — the base face
+/// prints a bare X, which is always 1X (R749).
+fn adaptive_ui() -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let x = chosen_x(ctx);
+            // R348 keeps a play from choosing X = 0; a run with none makes nothing, and no 0/0 token.
+            if x == 0 {
+                return vec![];
+            }
+            let stats = param(&*ctx, "ghoul") * x;
+            let amount = param(&*ctx, "damage") * x;
+            let healed = param(&*ctx, "heal") * x;
+            let drawn = param(&*ctx, "draw") * x;
+            vec![
+                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": healed }))),
+                draw(json_as(json!({ "count": drawn }))),
+                summon(json_as(json!({ "defId": GHOUL_TOKEN, "statsOverride": { "attack": stats, "health": stats } }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = adaptive_ui();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #74 Adaptive UI — SPEC §8.3, BUILD M4-T4: "X=2: 2 damage, heal 2, draw 2, a 2/2 Ghoul Token;
 // radiant 4 / 6 / 4 / 6-6; X=0 refused (R348)".

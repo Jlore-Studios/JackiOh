@@ -12,7 +12,54 @@
 //! `preview` (R280, proved in `test/preview.test.ts`) is the draws it asks for now, from the two hands'
 //! public sizes, this card left out of "yours"; `param(ctx, "multiplier")` (R386).
 
+use jackioh_engine::effects::{DrawWhileArgs, draw_while};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-046";
+
+/// R280: the label the preview's value follows, an exact substring of both faces' text.
+const PREVIEW_LABEL: &str = "Draw";
+
+/// The cards still wanted: `multiplier ×` the opponent's hand less your own, never below 0. `leaving`
+/// counts the cards about to leave your hand before the draws begin (this card, asked in hand).
+fn draws_wanted(state: &GameState, player: PlayerId, multiplier: i32, leaving: i32) -> i32 {
+    let yours = zone_count(state, player, OffFieldZone::Hand) - leaving;
+    let mark = multiplier * zone_count(state, opponent_of(player), OffFieldZone::Hand);
+    (mark - yours).max(0)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| {
+            vec![draw_while(DrawWhileArgs {
+                more: Arc::new(|now: &mut EffectContext<'_>| -> bool {
+                    draws_wanted(now.state, now.controller, param(now, "multiplier"), 0) > 0
+                }),
+                player: None,
+            })]
+        })),
+        preview: Some(condition_hook(|ctx| {
+            let in_hand = if ctx.zone == ConditionZone::Hand && matches!(ctx.self_.zone, Zone::Hand { .. }) {
+                1
+            } else {
+                0
+            };
+            vec![PreviewValue {
+                label: PREVIEW_LABEL.to_string(),
+                value: draws_wanted(ctx.state, ctx.controller, param(&ctx, "multiplier"), in_hand),
+                display: None,
+                ids: None,
+            }]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared multiplier (2), read through `param`.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #46 Divine Favor — SPEC §8.6 row 46, BUILD M9 Classic row C 46: draws one at a time (this Spell
 // already out of your hand) until your hand holds as many cards as the opponent's; a draw that adds no
@@ -21,7 +68,7 @@ pub const ID: &str = "classic-046";
 // The preview's proofs are in `test/preview.test.ts` (its C #46 section).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
     use jackioh_engine::testkit::*;
 
@@ -56,7 +103,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "multiplier", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.preview.is_some());
             // The Radiant face is the same script, the same hooks present.
             assert_eq!(scripts.radiant.preview.is_some(), scripts.base.preview.is_some());

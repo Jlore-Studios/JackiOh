@@ -7,7 +7,28 @@
 //! alone; a hand is a pile the opponent cannot read, so every application is cued and none counted
 //! (R440).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-082";
+
+fn outfitter() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![upgrade(json_as(json!({
+                "scope": { "side": "self", "zones": ["hand"] },
+                "times": param(&*ctx, "times"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face Buffs each card three times; the count reads through `param()`.
+    let base = outfitter();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #82 Medina Outfitter — SPEC §8.8 row 82, BUILD M10 row M 82: "Cry (played or cast): one Buff on
 // each card in your hand, an Immutable one unchanged, each `upgraded` cued to the opponent with no

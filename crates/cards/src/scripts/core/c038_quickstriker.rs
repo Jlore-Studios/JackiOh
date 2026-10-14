@@ -11,14 +11,46 @@
 //! (`QUICKSTRIKER_COMBO_MULTIPLE`, 1 or 2); 2X is ONE hit, so Armor and the Anti-oneshot cap apply once.
 //! PREVIEW (R280) is the next play's X; GLOW (R662) lights its controller's hand, so no `conditionMet` here.
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::query::cards_played_this_turn;
+
 pub const ID: &str = "core-038";
+
+/// R280: the part of the text the value belongs to, on both faces.
+const X_LABEL: &str = "X = cards you played earlier this turn";
+
+fn preview() -> PreviewHook {
+    condition_hook(|ctx| {
+        vec![PreviewValue {
+            label: X_LABEL.to_string(),
+            value: cards_played_this_turn(ctx.state, ctx.controller),
+            display: None,
+            ids: None,
+        }]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            quickstriker: Some(FlagOrCount::Flag(true)),
+            ..StaticFlags::default()
+        }),
+        preview: Some(preview()),
+        ..Script::default()
+    };
+    // R281: the same grant and the same X, so the same script; the Radiant face's 2X is the multiple the
+    // engine reads off the instance's face (`QUICKSTRIKER_COMBO_MULTIPLE`), as it reads #84's Armor.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #38 Quickstriker (SPEC §8.2, BUILD M4-T4): "First play deals 0, second 1, third 2 to the enemy
 // hero; nothing when not on the field". The Radiant face (R275) deals 2X as one hit (R281). The R280
 // `preview` is proved in test/preview.test.ts; R662's yellow glow, both faces, is at the end of this file.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const QUICKSTRIKER: &str = "core-038";
@@ -69,7 +101,7 @@ mod tests {
         fn r281_both_faces_carry_the_one_grant_the_multiple_of_x_is_the_granting_faces_read_by_the_engine() {
             // §10.5 step 5 resolves it for every play and cast, off this flag (R70); the pipeline picks the
             // multiple, 1 or 2, off the Quickstriker's own face (`QUICKSTRIKER_COMBO_MULTIPLE`).
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // The same script, so the same flag and the same hook.
             assert_eq!(scripts.radiant.static_flags, scripts.base.static_flags);
             assert!(std::sync::Arc::ptr_eq(

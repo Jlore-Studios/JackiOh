@@ -9,14 +9,28 @@
 //!   and `legal_actions` leaves it out, and `combat.rs` checks a switch made as an effect (§6.1).
 //! - **No Death:** a unit token vanishes when it leaves the field (R11), and nothing follows it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-093-3";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #93.3 Growing Felinor Super Senior — SPEC §8.8 row 93.3, BUILD M10 row M 93.3: "It can't switch
 // to Defense; it summons nothing when it dies, ending the chain (MD-E19); radiant 8/8, Divine Shield,
 // Rush".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
 
@@ -63,7 +77,7 @@ mod tests {
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(8), Some(8)]);
             assert!(def.base.keywords.is_empty());
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)

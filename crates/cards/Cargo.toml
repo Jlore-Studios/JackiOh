@@ -9,9 +9,8 @@ publish.workspace = true
 build = "build.rs"
 
 [dependencies]
-# Pure (SURFACE §3): serde, serde_json, indexmap, the engine and the Luau host (#442 L4). Nothing else.
+# Pure (SURFACE §3): serde, serde_json, indexmap and the engine. Nothing else.
 jackioh-engine = { workspace = true }
-jackioh-luau = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }
@@ -22,14 +21,4 @@ jackioh-engine = { workspace = true, features = ["testkit"] }
 [build-dependencies]
 # build.rs reads catalog.json and patches/patches.json (§7.4). Build scripts are not the pure
 # crate: they run at compile time, which is where data reaches a pure crate (§3).
-#
-# build.rs calls only `jackioh_luau::compile`, but Cargo builds a crate that a build script and the
-# tests both use twice unless its features and profile match, and the test profile builds the engine
-# and the Luau host at opt-level 2 either way (the workspace's Cargo.toml). So the engine here has
-# the testkit every test build gives it, and in CI, whose test profile has no debuginfo, the build
-# script links the tests' own engine and host. Two copies of both were a third of the AI test
-# group's compile (4m55s against 3m14s on four cores, #873), and are in every group whose engine has
-# testkit alone: all but `engine`, whose ts the build script's copy does not take.
-jackioh-engine = { workspace = true, features = ["testkit"] }
-jackioh-luau = { workspace = true }
 serde_json = { workspace = true }

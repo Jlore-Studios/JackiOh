@@ -7,7 +7,22 @@
 //! No prompt opens (R682), so the caster never waits on the opponent. The discard lands as the Cry
 //! reaches it.
 
+use jackioh_engine::effects::discard_random;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-056";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![discard_random(json_as(json!({ "count": param(&*ctx, "discards"), "player": "enemy" })))]
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 4 is its declared `discards`, which `param` reads.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #56 Book of Pain — SPEC §8.7 row 56, BUILD M9 Classic+ row C+ 56: "The opponent discards 2 cards
 // at random (R682), with no prompt; the opponent's remaining hand stays hidden (§10.6) while the
@@ -43,7 +58,7 @@ mod tests {
     fn is_a_1_spell_book_both_faces_run_one_script() {
         crate::register_all();
         assert_eq!(crate::card_def(super::ID).id, BOOK);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         // TS `expect(radiant).toBe(base)`: the one Cry hook.
         assert!(std::sync::Arc::ptr_eq(
             scripts.radiant.cry.as_ref().expect("a Cry"),

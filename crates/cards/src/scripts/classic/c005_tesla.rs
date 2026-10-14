@@ -12,7 +12,73 @@
 //! unreserved zone (R64); with none open it stays face-up in its backrow zone. A Field Trap is never
 //! consumed. Face-down it is hidden until it first fires (R33). The condition lives in `when` (R99).
 
+use jackioh_engine::effects::{animate, damage};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-005";
+
+/// The instance id of the opponent's Unit this event summons (or resolves, for a play), or None.
+fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
+    match event {
+        GameEvent::Summoned { player, row, exits_from, instance_id, .. } => {
+            if *player == ctx.controller || *row != Row::Units {
+                return None;
+            }
+            // A play's own placement (§10.5 step 4) is answered when the play resolves, below.
+            if exits_from.is_some() {
+                return None;
+            }
+            Some(instance_id.clone())
+        }
+        GameEvent::CardResolved { permanent, def_id, instance_id, .. } => {
+            let state: &GameState = &*ctx.state;
+            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+                return None;
+            }
+            let unit = find_instance(state, instance_id)?;
+            if unit.zone.z() != ZoneName::Field || unit.controller == ctx.controller {
+                return None;
+            }
+            Some(instance_id.clone())
+        }
+        _ => None,
+    }
+}
+
+fn zap() -> TriggerDef {
+    TriggerDef::new("tesla-zap", &[GameEventType::Summoned, GameEventType::CardResolved], |ctx, event| {
+        let Some(target) = arrival(ctx, event) else {
+            return vec![];
+        };
+        // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
+        // animates but deals it nothing.
+        let state: &GameState = &*ctx.state;
+        let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
+        let mut effects = Vec::new();
+        if !shielded {
+            effects.push(damage(json_as(json!({
+                "to": { "of": "instance", "instanceId": target },
+                "amount": param(&*ctx, "damage"),
+            }))));
+        }
+        effects.push(animate(json_as(json!({ "position": "DEF" }))));
+        effects
+    })
+    .with_when(|ctx, event| arrival(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![zap()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 8 is its declared damage, which `param` reads off the face;
+    // its 2/8 body and keywords are printed on the catalog face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #5 Tesla — SPEC §8.6 row 5, BUILD M9 Classic row C 5: face-down, read by its controller only (R33);
 // fires on a Unit summoned on the opponent's side, not on a steal (R171) or an animating card (R383); a
@@ -24,7 +90,6 @@ pub const ID: &str = "classic-005";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -76,7 +141,7 @@ mod tests {
             let kinds: Vec<KeywordKind> = def.base.keywords.iter().map(Keyword::kind).collect();
             assert_eq!(kinds, vec![KeywordKind::Animated, KeywordKind::Lifesteal]);
             // The radiant face is the very same script.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.triggers.len(), scripts.radiant.triggers.len());
             for (base, radiant) in scripts.base.triggers.iter().zip(&scripts.radiant.triggers) {
                 assert!(Arc::ptr_eq(&base.run, &radiant.run));

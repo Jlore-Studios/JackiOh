@@ -4,7 +4,38 @@
 //! E2/E16 (`takeFromLibrary`): a random Unit card of their library becomes yours, in your hand, with
 //! `costOverride` 0; a full hand burns it into your graveyard, now its owner's; none, nothing (R129).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-3";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        // "It costs (0)": the declared number `setCost` (R386), on both faces.
+        base: Script {
+            cry: Some(hook(|ctx| {
+                vec![take_from_library(json_as(json!({
+                    "from": "enemy",
+                    "pick": "random",
+                    "filter": { "type": "Unit" },
+                    "costOverride": param(&*ctx, "setCost"),
+                })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|ctx| {
+                vec![take_from_library(json_as(json!({
+                    "from": "enemy",
+                    "pick": "random",
+                    "filter": { "type": "Unit" },
+                    "costOverride": param(&*ctx, "setCost"),
+                    "radiant": true,
+                })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #12.3 Fluffy Grip — SPEC §8.7 row 12.3, BUILD M9 Classic+ row C+ 12.3: "A random Unit card of the
 // opponent's deck (R60) moves to your hand and becomes yours (R12), `costOverride` 0; a deck with no

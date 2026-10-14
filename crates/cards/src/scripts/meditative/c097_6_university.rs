@@ -8,7 +8,40 @@
 //!
 //! One script serves both faces: only the declared `times` (2, Radiant 5) and the health differ.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-6";
+
+/// §8.8: "Activate" is once a turn.
+const USES: i32 = 1;
+
+fn study() -> ActivationDecl {
+    ActivationDecl {
+        id: "study".to_string(),
+        label: "Buff your permanents".to_string(),
+        uses: ActivationUses::Count(USES),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| {
+            vec![upgrade(json_as(json!({
+                "scope": { "side": "self", "zones": ["field"] },
+                "times": param(&*ctx, "times"),
+            })))]
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![study()],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6: "Can't attack; Activate, once a turn: two
 // Buffs on each permanent on your side, itself and face-down cards included (the latter cued per R440), an
@@ -19,7 +52,7 @@ pub const ID: &str = "meditative-097-6";
 // hand and spares in the libraries, so R82 does not end the turn after the Activate.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -95,7 +128,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let uses = |script: &Script| {
             script
                 .activations

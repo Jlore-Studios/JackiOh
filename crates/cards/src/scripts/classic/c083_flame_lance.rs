@@ -12,7 +12,34 @@
 //! (step 1) or an Indestructible target (step 4) stops the whole hit, and nothing tramples. The amount
 //! is the declared `damage` (R386), 10 or 20, read through `param`.
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-083";
+
+/// "a Unit": units only, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({
+                "to": { "of": "chosen" },
+                "amount": param(&*ctx, "damage"),
+                "trample": true
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 22 is its declared `damage`, which `param` reads off the face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #83 Flame Lance (SPEC §8.6 row 83; BUILD M9 row C 83). (3) Spell, Common: Trample; deal {damage}
 // damage to a Unit — damage 10, Radiant 20, step 2.

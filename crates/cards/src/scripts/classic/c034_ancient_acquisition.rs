@@ -12,7 +12,31 @@
 //!
 //! Cast by C #47 Recurring Felinor, the returns are still its caster's (R70).
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::add_random_from_graveyard;
+
 pub const ID: &str = "classic-034";
+
+fn acquire(exile: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "count": param(ctx, "cards") });
+            if exile {
+                args["exile"] = json!(true);
+            }
+            vec![add_random_from_graveyard(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = acquire(false);
+
+    let radiant = acquire(true);
+
+    CardScripts { base, radiant }
+}
 
 // C #34 Ancient Acquisition — SPEC §8.6 row 34, BUILD M9 Classic row C 34: "Return 2 random cards
 // from your graveyard to hand, with no prompt (R684; fewer if fewer; an empty graveyard: nothing);
@@ -24,7 +48,7 @@ pub const ID: &str = "classic-034";
 // The C #47 case casts this card from C #47 Recurring Felinor's Cry (B5 E12).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const ACQUIRE: &str = "classic-034";
@@ -70,7 +94,7 @@ mod tests {
                 js(&registered_catalog()[ID])["params"],
                 json!([{ "key": "cards", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());
         }

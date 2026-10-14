@@ -17,8 +17,64 @@
 //! Lucky (`lucky_on`: printed plus given, R1438) flips that many more coins, heads kept. It prints
 //! none, so with nothing given the flip is the one draw it always was.
 
+use jackioh_engine::effects::{recruit, remember, reveal};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-065";
+
+const HEADS: &str = "headsOnTurn";
+
+/// TS `const fire: TriggerDef` (a function here: a closure cannot be a `const`).
+fn fire() -> TriggerDef {
+    TriggerDef::new("ace-in-the-hole", &[GameEventType::TurnEnded], |ctx, _event| {
+        vec![recruit(json_as(json!({ "count": param(&*ctx, "recruits") })))]
+    })
+    .with_when(|ctx, event| {
+        matches!(event, GameEvent::TurnEnded { player, .. } if *player == ctx.controller)
+            && recalled(ctx, HEADS).and_then(|value| value.as_i64()) == Some(i64::from(ctx.state.turn))
+    })
+}
+
+fn flip(on_tails: bool) -> Hook {
+    hook(move |ctx| {
+        // R987: the controller's Luck flips extra times beside the card's own Lucky.
+        let lucky = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me)) + luck_of(&*ctx.state, ctx.controller);
+        if ctx.rng.lucky_coin(lucky) {
+            return vec![remember(json_as(
+                json!({ "key": HEADS, "value": ctx.state.turn }),
+            ))];
+        }
+        if on_tails {
+            vec![recruit(json_as(json!({})))]
+        } else {
+            vec![]
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(flip(false)),
+        triggers: vec![fire()],
+        ..Script::default()
+    };
+
+    // The Radiant face is Revealed regardless of the coin flip (balance patch 1, R686): the end of turn
+    // shows its face to both players first, then flips as usual. Revealed is not face-up, so a tails
+    // that recruits without firing leaves the trap armed and still answering.
+    let radiant = Script {
+        end_of_turn: Some(hook(|ctx| {
+            let tails = flip(true)(ctx);
+            let mut effects = vec![reveal(json_as(json!({})))];
+            effects.extend(tails);
+            effects
+        })),
+        triggers: vec![fire()],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #65 Ace in the Hole — SPEC §8.6 row 65, BUILD M9 Classic row C 65: "Face-down (R33); at the end of
 // its controller's turn, in the end-of-turn trap window (R62), flip a coin from the match rng: heads
@@ -33,10 +89,9 @@ pub const ID: &str = "classic-065";
 // face it needs (`withCoin`) and then checks the trap did what that coin says — which is what "one
 // seeded coin each time" means. The deck holds Core cards: Mr. Vanilla and Gary the Gambler (Units),
 // Sheepish (a Trap), Lunar Eclipse (a Spell, which a Recruit passes by).
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -144,7 +199,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "recruits", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1 }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.end_of_turn.is_some());
                 assert_eq!(

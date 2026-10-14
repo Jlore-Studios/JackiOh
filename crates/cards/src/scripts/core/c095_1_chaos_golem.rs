@@ -12,7 +12,19 @@
 //! step 1, First Strike §4.3. R11 and §7 are data too: `token: true` with `type: "Unit"` makes it
 //! cease to exist off the field, so it never feeds #89 Corpse Eater.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-095-1";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+
+    // The radiant face differs in data only — 20/20, Charge for Rush — which layer 1 reads off
+    // `def.radiant`; neither face has text a script would carry, so the radiant Script is the base one.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // #95.1 Chaos Golem (SPEC §8.4, §7, §6.1, §4.3, §4.4; R11, R275, R276). BUILD M4-T4 row 95.1: "10/10
 // Rush, Lifesteal, Divine Shield, First Strike; radiant 20/20 with Charge". The token's own cases, on
@@ -78,7 +90,7 @@ mod tests {
                 keywords_of(&s, &golem),
                 vec!["Divine Shield", "First Strike", "Lifesteal", "Rush"]
             );
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_none() && scripts.radiant.cry.is_none());
             assert!(scripts.base.targets.is_empty() && scripts.radiant.targets.is_empty());
         }

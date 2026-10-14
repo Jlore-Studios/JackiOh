@@ -8,7 +8,34 @@
 //! helps; X is the current mana, at least 1 (R348). Its own Spell Damage (the catalog keyword) raises
 //! their hits, since it is on the field during its Cry.
 
+use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-038-1";
+
+fn cast_random_spells(count: i32, radiant: bool) -> Effect {
+    cast_random(CastRandomArgs {
+        query: CastRandomQuery::Fixed(json_as(json!({ "type": "Spell" }))),
+        count: Some(CastRandomCount::Fixed(count)),
+        radiant: Some(radiant),
+        target_enemies: Some(true),
+        afterward: None,
+    })
+}
+
+fn solarius_prime(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| vec![cast_random_spells(param(&*ctx, "casts"), radiant)])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: solarius_prime(false),
+        radiant: solarius_prime(true),
+    }
+}
 
 // C+ #38.1 Solarius Prime (SPEC §8.7): Cry casts 5 random non-token Spells of any set (R380),
 // aimed by declaration (R656), each a play (R70) raised by Spell Damage, additions hidden (R97).

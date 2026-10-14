@@ -26,7 +26,93 @@
 //! flag OR this turn's play log, which is the same set of cards for a spell played normally: a copy
 //! that reached the graveyard by being discarded or milled is not in the log and stays there.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-023";
+
+const BASE_CHANCE: f64 = 0.3;
+const RADIANT_CHANCE: f64 = 0.4;
+
+/// R60: one random non-Radiant card in the caster's hand becomes Radiant.
+fn make_one_radiant() -> Vec<Effect> {
+    vec![set_radiant_random(json_as(
+        json!({ "zones": "hand", "count": 1 }),
+    ))]
+}
+
+/// R129: the roll is taken only when the pick has a hand to look in. The hand's size is public; which
+/// of its cards are Radiant is not (§9.1), so an all-Radiant hand is rolled too and its success is
+/// cued on a Radiant card (R177).
+fn any_to_make_radiant(ctx: &EffectContext<'_>) -> bool {
+    !zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand).is_empty()
+}
+
+/// §6.1: the Lucky the Radiant face prints, fixed (D14: tuning never reached this roll).
+const RADIANT_LUCKY: i32 = 1;
+
+/// §6.1, R1438: the Lucky the Dream rolls with: the face's printed number plus any Lucky given.
+fn lucky(ctx: &EffectContext<'_>, printed: i32) -> i32 {
+    printed + ctx.live_self().map_or(0, given_lucky_on)
+}
+
+/// §5.1 and R68: at the end of the turn it was played on, the spell goes from the graveyard back to
+/// its owner's hand, and a full hand burns it (§2.4, R4) — both of which `bounce` does.
+fn returns_to_hand(ctx: &EffectContext<'_>) -> bool {
+    // TS read the live `ctx.self`: the card as it stands now.
+    let Some(self_) = ctx.live_self() else {
+        return false;
+    };
+    if self_.return_to_hand_at_end_of_turn == Some(true) {
+        return true;
+    }
+    was_played_this_turn(ctx.state, self_.controller, self_)
+}
+
+fn end_of_turn() -> Hook {
+    hook(|ctx| {
+        if returns_to_hand(ctx) {
+            vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
+        } else {
+            vec![]
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            if !any_to_make_radiant(ctx) {
+                return vec![];
+            }
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438; with
+            // neither, `lucky(0)` draws once, as before).
+            let lucky = lucky(ctx, 0) + luck_of(&*ctx.state, ctx.controller);
+            let hit = ctx.rng.lucky(lucky, |rng| rng.chance(BASE_CHANCE), |a, b| a || b);
+            if hit { make_one_radiant() } else { vec![] }
+        })),
+        end_of_turn: Some(end_of_turn()),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        // Lucky 1: roll twice and keep the success (§6.1), each roll at 40%.
+        cry: Some(hook(|ctx| {
+            if !any_to_make_radiant(ctx) {
+                return vec![];
+            }
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky (R1438).
+            let lucky = lucky(ctx, RADIANT_LUCKY) + luck_of(&*ctx.state, ctx.controller);
+            let hit = ctx
+                .rng
+                .lucky(lucky, |rng| rng.chance(RADIANT_CHANCE), |a, b| a || b);
+            if hit { make_one_radiant() } else { vec![] }
+        })),
+        end_of_turn: Some(end_of_turn()),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // #23 Reoccurring Dream — SPEC §8.2, BUILD M4-T4 row 23: "Seeded 30% roll on a non-Radiant hand
 // card (R60); returns to hand at end of turn; hand full → burned; radiant two rolls at 40% keeping
@@ -41,7 +127,7 @@ pub const ID: &str = "core-023";
 // the card.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -296,7 +382,7 @@ mod tests {
 
         #[test]
         fn neither_face_declares_a_play_time_choice_r60_s_pick_is_random_not_chosen() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.base.modes.is_empty());
             assert!(scripts.radiant.targets.is_empty());

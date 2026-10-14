@@ -13,7 +13,42 @@
 //! R195, the yellow glow: `condition_met` asks `played_earlier` from the hand too (every play this
 //! turn is earlier), so the glow and the draw cannot disagree.
 
+use jackioh_engine::effects::draw;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-010";
+
+/// "Combo 3" (§6.2): three or more cards played earlier this turn — the declared number `combo`, a
+/// threshold, less being better (R386) — and the draw, the declared number `draw`: 3, 6 on the
+/// Radiant face. The only difference between the two faces is how many cards the met Combo draws.
+fn rapid_replenish() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            let combo = param(&*ctx, "combo");
+            let count = param(&*ctx, "draw");
+            // The plays before this one, at play time: not this spell, and not a card its step 5 cast.
+            let earlier = played_earlier(ctx.state, ctx.controller, ctx.live_self());
+            if earlier >= combo {
+                vec![draw(json_as(json!({ "count": count })))]
+            } else {
+                vec![]
+            }
+        })),
+        // R195: hand only. The condition is about a play; a Spell never sits on the field. In hand,
+        // `played_earlier` is every play this turn.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && played_earlier(ctx.state, ctx.controller, ctx.self_) >= param(&ctx, "combo")
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = rapid_replenish();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #10 Rapid Replenish — SPEC §8.1 row 10, BUILD M4-T4 must-pass: "2 prior plays → no draw; 3 →
 // draw 3; radiant 6; counts as played either way".

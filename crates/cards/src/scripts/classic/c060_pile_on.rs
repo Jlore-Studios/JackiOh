@@ -8,13 +8,44 @@
 //!            clause is a replacement on this card's own move to its graveyard — resolving, discarded,
 //!            burned — to the bottom of the deck; a full deck turns it away (R80).
 
+use jackioh_engine::effects::recruit_all;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-060";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![recruit_all(Default::default())])),
+        replacements: vec![ReplacementDef {
+            id: "pile-on".to_string(),
+            on: ReplacementMoment::ToGraveyard,
+            where_: Some(ReplacementWhere::SelfCard),
+            when: None,
+            instead: ReplacementInstead {
+                to: Some(InsteadTo::BottomOfLibrary),
+                ..ReplacementInstead::default()
+            },
+            then: None,
+            by: None,
+        }],
+        ..Script::default()
+    };
+
+    // The Radiant face drops the return (SPEC §8.6 row 60): the same Recruit, and this Spell goes to the
+    // graveyard as any Spell does.
+    let radiant = Script {
+        cry: base.cry.clone(),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // The deck holds Core cards with their own tests; Bigot's Cry would destroy an enemy Unit, which a
 // Recruit never fires (R1); a Rush Token card stands for a unit-token card a deck may hold (R11).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -59,7 +90,7 @@ mod tests {
             assert_eq!(def["id"], PILE_ON);
             assert_eq!(def["cost"], 5);
             assert!(def["params"].is_null());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // A declaration holds a hook slot (`when`), so it is compared field by field.
             assert_eq!(scripts.base.replacements.len(), 1);
             let replacement = &scripts.base.replacements[0];

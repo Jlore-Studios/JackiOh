@@ -12,14 +12,38 @@
 //! effects (§3.2, R13), and it is gone the moment it leaves. Stack is printed on both faces (§10.4 layer
 //! 1), so it may be played onto an occupied unit zone (§6.2).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-077";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cost_aura: Some(read_hook(|args| {
+            vec![CostAura {
+                rule: CostRule {
+                    types: Some(vec![CardType::Spell]),
+                    amount: Some(param(&args, "surcharge")),
+                    ..CostRule::default()
+                },
+                whose: CostAuraWhose::All,
+                ban: None,
+            }]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared surcharge (2) and its doubled stats.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.6 row 77: Spells cost (1) more (Radiant 2; R65, R70, R177, R386, B5).
 // Off while dormant under Stack, gone when leaving. Graveyard plays via C #28
 // Second Wind are sent to `reduce` since the harness's `play` takes a hand card.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -86,7 +110,7 @@ mod tests {
             js(&def().params),
             json!([{ "key": "surcharge", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.base.cost_aura.as_ref().expect("a cost aura"),
             scripts.radiant.cost_aura.as_ref().expect("a cost aura")

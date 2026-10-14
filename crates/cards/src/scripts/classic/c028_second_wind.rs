@@ -11,7 +11,76 @@
 //!            The Cry's own discard lands first, so the discarded hand is playable (R393). With no deck
 //!            left, every draw is fatigue (§2.4). Tunes: minimum price 1 ↓."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-028";
+
+/// The instance-memory mark the Cry holds while its own discard lands (R393).
+const CRY_RUNNING: &str = "secondWindCry";
+
+/// The card's own memory under `key`, for the replacement's `when`: a pure read with no `EffectContext`
+/// to hand `query::recalled`.
+fn recalled_on<'a>(card: &'a CardInstance, key: &str) -> Option<&'a Value> {
+    card.memory.get(key)
+}
+
+/// Both faces' Cry: exile the deck, each card its own exile (R135), then discard the hand (R16: a whole
+/// hand needs no choice). Its discard must land in the graveyard before the Aura starts exiling (R393),
+/// so the Cry marks itself as running (`remember`) around it.
+fn cry() -> Hook {
+    hook(|_ctx| {
+        vec![
+            remember(json_as(json!({ "key": CRY_RUNNING, "value": true }))),
+            exile_matching(json_as(json!({ "zones": ["library"] }))),
+            discard_hand(Default::default()),
+            remember(json_as(json!({ "key": CRY_RUNNING, "value": false }))),
+        ]
+    })
+}
+
+/// Both faces' Aura (`Script.graveyardPlay`, B5 E11): while this is on the field, any card of your own
+/// graveyard is played as from a hand (§10.5), at a price of at least the declared `minCost` as paid.
+fn graveyard_play() -> GraveyardPlayHook {
+    Arc::new(|args| {
+        vec![GraveyardPlayPermission {
+            min_price: Some(param(&args, "minCost")),
+            ..GraveyardPlayPermission::default()
+        }]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(cry()),
+        graveyard_play: Some(graveyard_play()),
+        // B5 E5: your cards that would go to a graveyard are exiled, but not while the Cry's mark is on
+        // (R393); a Second Wind that arrives without its Cry (a Recruit, a summon) has no mark.
+        replacements: vec![ReplacementDef {
+            id: "second-wind-exile".into(),
+            on: ReplacementMoment::ToGraveyard,
+            where_: None,
+            when: Some(replacement_when(|ctx| {
+                let owned = matches!(ctx.event, ReplacedEvent::ToGraveyard { owner, .. } if *owner == ctx.controller);
+                owned && recalled_on(ctx.self_, CRY_RUNNING) != Some(&Value::Bool(true))
+            })),
+            instead: ReplacementInstead {
+                to: Some(InsteadTo::Exile),
+                ..ReplacementInstead::default()
+            },
+            then: None,
+            by: None,
+        }],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(cry()),
+        graveyard_play: Some(graveyard_play()),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #28 Second Wind — SPEC §8.6 row 28, BUILD M9 Classic row C 28: "Cry: exile your deck, then discard
 // your hand (C #64 sees it), landing before the Aura starts (R393); Aura: any card in your graveyard is
@@ -138,7 +207,7 @@ mod tests {
                 serde_json::to_value(&def.params).expect("params serialise"),
                 json!([{ "key": "minCost", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let moments: Vec<ReplacementMoment> = scripts.base.replacements.iter().map(|entry| entry.on).collect();
             assert_eq!(moments, vec![ReplacementMoment::ToGraveyard]);
             assert!(scripts.radiant.replacements.is_empty());

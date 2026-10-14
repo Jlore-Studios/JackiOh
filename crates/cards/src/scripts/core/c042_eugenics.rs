@@ -33,7 +33,44 @@
 //! (Rust: the two verbs are `effects::exile_random_from_library` and `effects::radiant_chance`, each
 //! handed its TS object literal through `json_as`.)
 
+use jackioh_engine::effects::{exile_random_from_library, radiant_chance};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-042";
+
+/// §8.2: "Exile 7 random cards from your deck", on both faces (patch v0.1.1: 8 became 7).
+const EXILE_COUNT: i32 = 7;
+
+/// §8.2: "Lucky 1 at 40%", the Radiant face's printed Lucky.
+const RADIANT_LUCKY: i32 = 1;
+
+/// The faces differ only in the chance and in the Lucky they print (§6.1): the printed number as it
+/// always was (a Nerf or a Buff never reaches this roll, D14) plus any Lucky given (`given_lucky_on`,
+/// R1438), so a base face given Lucky 1 rolls twice a card too.
+fn eugenics(chance: f64, printed_lucky: i32) -> Script {
+    Script {
+        // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
+        cry: Some(hook(move |ctx| {
+            let lucky = printed_lucky + ctx.live_self().map_or(0, given_lucky_on);
+            let mut chance_args = json!({ "zone": "library", "chance": chance });
+            if lucky > 0 {
+                chance_args["lucky"] = json!(lucky);
+            }
+            vec![
+                exile_random_from_library(json_as(json!({ "count": EXILE_COUNT }))),
+                radiant_chance(json_as(chance_args)),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: eugenics(0.3, 0),
+        radiant: eugenics(0.4, RADIANT_LUCKY),
+    }
+}
 
 // #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R80).
 //
@@ -53,7 +90,7 @@ pub const ID: &str = "core-042";
 //     means (§6.1) and is a count, not a probability.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -177,7 +214,7 @@ mod tests {
         #[test]
         fn s10_9_the_base_face_is_one_exile_effect_followed_by_one_chance_effect_in_that_order() {
             assert_eq!(
-                effect_kinds(crate::scripts_of()[ID].clone().base.cry.as_ref()),
+                effect_kinds(script().base.cry.as_ref()),
                 vec!["exileRandomFromLibrary", "radiantChance"],
             );
         }
@@ -264,7 +301,7 @@ mod tests {
         #[test]
         fn s10_9_the_radiant_face_is_the_same_pair_of_effects_so_only_the_numbers_changed() {
             assert_eq!(
-                effect_kinds(crate::scripts_of()[ID].clone().radiant.cry.as_ref()),
+                effect_kinds(script().radiant.cry.as_ref()),
                 vec!["exileRandomFromLibrary", "radiantChance"],
             );
         }

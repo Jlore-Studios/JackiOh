@@ -12,7 +12,27 @@
 //!   Helpful tag-filtered effects still reach it. The Radiant face adds Immutable (R23, R386).
 //! - The keywords live in the catalog; there is nothing to run.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-025";
+
+/// Tribute 2 on both faces; the keywords come from the catalog.
+const TRIBUTE_COST: i32 = 2;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    // The Radiant face keeps the Tribute and adds Immutable in the catalog; the script is shared.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // M #25 Blue-Eyes White Felinor — SPEC §8.8 row 25, BUILD M10 row M 25.
 #[cfg(test)]
@@ -333,7 +353,7 @@ mod tests {
 
     #[test]
     fn tribute_2_is_a_fixed_static_flag_on_both_faces() {
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.tribute), Some(2));
         }

@@ -11,7 +11,53 @@
 //! The Death's count is the snapshot's own counters (`plagueOn(ctx.self)`), so a bounced worm keeps
 //! nothing (R78) and a worm that died with none adds none.
 
+use jackioh_engine::effects::{add_random_from_catalog, place_plague};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-039";
+
+/// The printed "a Plague Counter": one per start of turn.
+const PLAGUE_PER_TURN: i32 = 1;
+
+/// The tokens on itself as it died (R89), or none when it has no self.
+fn tokens_on_self(self_: Option<&CardInstance>) -> i32 {
+    match self_ {
+        None => 0,
+        Some(card) => plague_on(card),
+    }
+}
+
+fn book_worm(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(|_ctx| {
+            vec![place_plague(json_as(json!({ "target": { "of": "self" }, "amount": PLAGUE_PER_TURN })))]
+        })),
+        death: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "tags": ["Book"] }, "count": tokens_on_self(ctx.self_.as_ref()) });
+            if radiant {
+                args["radiant"] = json!(radiant);
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        // R280: the tokens stacked on itself are the Books its Death would add — the public count.
+        preview: Some(condition_hook(|c| {
+            vec![PreviewValue {
+                label: "Plague Counter".to_string(),
+                value: tokens_on_self(Some(c.self_)),
+                display: None,
+                ids: None,
+            }]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: book_worm(false),
+        radiant: book_worm(true),
+    }
+}
 
 // C+ #39 Book Worm — SPEC §8.7 row 39, BUILD M9 Classic+ row C+ 39: "It starts with no Plague Counters
 // (balance patch 1: no N counter — the tokens stacked on itself are the count); at each start of its

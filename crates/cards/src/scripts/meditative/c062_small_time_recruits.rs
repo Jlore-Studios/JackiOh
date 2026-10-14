@@ -4,11 +4,54 @@
 //! Engine: three different random Units costing (1) in the deck (R65/R66, X excluded, MD-D17, R1061),
 //!   each a named §2.4 draw (R113's set read once); radiant makes each still in hand Radiant.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-062";
+
+/// The one cost the card names.
+const RECRUIT_COST: i32 = 1;
+
+fn recruits(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    let count = param(&*ctx, "cards").max(0) as usize;
+    let matching: Vec<CardInstance> = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library)
+        .into_iter()
+        .filter(|card| {
+            card_type_of(ctx.state, card) == CardType::Unit
+                && !is_x_cost(ctx.state, card)
+                && effective_cost(ctx.state, card, Default::default()) == RECRUIT_COST
+        })
+        .collect();
+    if matching.len() <= count {
+        return matching.into_iter().map(|card| card.id).collect();
+    }
+    ctx.rng.shuffle(&matching).into_iter().take(count).map(|card| card.id).collect()
+}
+
+fn recruits_face(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(recruits),
+                each: Arc::new(move |id| {
+                    draw_from_library(json_as(json!({ "instanceId": id, "radiant": radiant })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: recruits_face(false),
+        radiant: recruits_face(true),
+    }
+}
 
 // M #62 Small Time Recruits — SPEC §8.8 row 62, BUILD M10 row M 62.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;

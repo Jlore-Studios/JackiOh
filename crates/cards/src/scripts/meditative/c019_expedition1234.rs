@@ -6,7 +6,33 @@
 //! Radiant on the Radiant face. A full hand burns it (§2.4). An extra turn from the Rift counts as
 //! one of the three, as Hearthstone's Overload lands on Time Warp's extra turn.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-019";
+
+/// M #19.1 Temporal Rift, made by this card.
+pub const RIFT_ID: &str = "meditative-019-1";
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![
+        lose_refreshes(json_as(json!({ "turns": param(&*ctx, "turns") }))),
+        add_to_hand(json_as(json!({ "defId": RIFT_ID, "radiant": ctx.radiant }))),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+    // The Rift's face is the running face; everything else is the same script.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #19 Expedition1234 — SPEC §8.8 row 19, BUILD M10 row M 19: Quickdraw; your next three
 // refreshes give 0 mana and spend their riders, the fourth is normal; an extra turn counts among the
@@ -14,11 +40,8 @@ pub const ID: &str = "meditative-019";
 // hand; turns reads through `param()`; radiant the Rift is Radiant.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::*;
     use jackioh_engine::testkit::*;
-
-    /// M #19.1 Temporal Rift, made by this card.
-    const RIFT_ID: &str = "meditative-019-1";
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -121,7 +144,7 @@ mod tests {
         #[test]
         fn r640_it_is_quickdraw_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
             }
