@@ -14,11 +14,14 @@
 #      lane stops here while the parent shadow-bans no card: nothing could promote, so the cycle
 #      waits TRAIN_IDLE_SECONDS and looks again. Otherwise push ai/<lane> as main plus an empty
 #      `[skip ci]` commit naming the session, and make the lane's pull request this session's
-#      draft (opening one when none is open);
+#      draft (opening one when none is open). The draft's description opens with the gate's latest
+#      pass, which `promote` rewrites in ~/training-out/<lane>/last-pass.md every time it runs: how
+#      many games the candidate beat the AI on main in, by seat and game by game;
 #   3. run one Devin session on the lane's standing prompt (training/<lane>.md). Every
 #      TRAIN_PROGRESS_SECONDS, push the checkout as it is to ai/<lane> as one `[skip ci]` commit
-#      when it changed, and rewrite the session's comment on the draft: how long it has run, the
-#      diff against main and what attempts.md gained;
+#      when it changed, rewrite the session's comment on the draft (how long it has run, the diff
+#      against main and what attempts.md gained), and rewrite the draft's description when a new
+#      pass of the gate changed it;
 #   4. when the session ends with a promotion commit, land it on main (`land`), run the web's tests
 #      that play the AI when the box has pnpm, push ai/<lane>, retitle the pull request with the
 #      promotion's subject (`AI gen <N> (<lane>): …`), give it the gate's report as its body, mark
@@ -354,6 +357,34 @@ comment() {
   printf '%s\n' "${url##*issuecomment-}"
 }
 
+# The draft's description into $work/body.md: the gate's latest pass on top, as `promote` last wrote
+# it (last-pass.md: the games the candidate beat the AI on main in, by seat and game by game), then
+# the lane's own text, $work/draft.md.
+body() {
+  {
+    if [ -f "$out/last-pass.md" ]; then
+      cat "$out/last-pass.md"
+      printf '\n---\n\n'
+    fi
+    cat "$work/draft.md"
+  } >"$work/body.md"
+}
+
+# Rewrites the draft's description when it changed since the loop last wrote it: a new pass of the
+# gate. $work/body.sent is what the loop last wrote.
+describe() {
+  [ -n "$pr" ] || return 0
+  body
+  if cmp -s "$work/body.md" "$work/body.sent"; then
+    return 0
+  fi
+  if gh pr edit "$pr" --body-file "$work/body.md" >/dev/null; then
+    cp "$work/body.md" "$work/body.sent"
+  else
+    log "cannot rewrite the description of #$pr"
+  fi
+}
+
 # Rewrites the comment with id $1 to the file $2.
 rewrite() {
   [ -n "$1" ] || return 0
@@ -512,6 +543,7 @@ progress() {
     fi
   } >"$work/session.md"
   rewrite "$session_comment" "$work/session.md"
+  describe
 }
 
 # One Devin session on the standing prompt, its comment kept current; sets $devin_status.
@@ -619,6 +651,7 @@ cycle() {
   cat >"$work/draft.md" <<EOF
 The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com/$slug/blob/main/training/README.md)). Devin runs on the training box one session after another, and this draft follows it:
 
+- the top of this description is the gate's latest pass (\`cargo jackioh promote\`: a dry run, a promotion or a re-check), rewritten within $((progress_every / 60)) minutes of each one: how many of its games the candidate beat the AI on \`main\` in, as p1, as p2 and in all, and each game as a square;
 - each session gets a comment, rewritten every $((progress_every / 60)) minutes while it runs: how long it has run, the checkout's diff against \`main\`, and what \`~/training-out/$lane/attempts.md\` gained (each attempt, its dry run's numbers and whether it was kept);
 - the checkout is pushed here as one commit whenever it changes, so **Files changed** is the session's work in progress (its message tells CI to skip it);
 - once a promotion passes its gate on the box, the loop lands it on \`main\`, retitles this pull request \`AI gen <N> ($lane): …\`, puts the gate's report here, marks it ready and turns on auto-merge. CI then runs every check, the training gate included;
@@ -626,10 +659,16 @@ The \`$lane\` training lane at work ([\`training/README.md\`](https://github.com
 
 Stop the lane with \`sudo systemctl stop jackioh-train@$lane\` on the box. Closing this pull request refuses whatever is in it; the lane opens a new draft with its next session.
 EOF
+  body
   if [ -n "$pr" ]; then
-    gh pr edit "$pr" --title "$title" --body-file "$work/draft.md" >/dev/null || log "cannot retitle #$pr"
-  elif url=$(gh pr create --draft --base main --head "$branch" --title "$title" --body-file "$work/draft.md"); then
+    if gh pr edit "$pr" --title "$title" --body-file "$work/body.md" >/dev/null; then
+      cp "$work/body.md" "$work/body.sent"
+    else
+      log "cannot retitle #$pr"
+    fi
+  elif url=$(gh pr create --draft --base main --head "$branch" --title "$title" --body-file "$work/body.md"); then
     pr=${url##*/}
+    cp "$work/body.md" "$work/body.sent"
     log "opened the draft $url"
   else
     log "cannot open the draft pull request; the session runs without one"
