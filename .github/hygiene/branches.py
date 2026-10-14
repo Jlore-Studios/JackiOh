@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""The weekly hygiene run's branch survey and its issue (.github/workflows/hygiene.yml). It reads
-and deletes nothing: a person reviews the branches it lists and deletes them.
+"""The weekly hygiene run's branch survey, its two issues, and the deletions a person ticks
+(.github/workflows/hygiene.yml, hygiene-delete.yml).
 
-  survey                        every branch, its pull requests and what its bot name points at
-  report SURVEY                 the branches safe to delete, and the stale ones a person must judge
-  issue TEMPLATE REPORT GUIDE   open the week's issue for Squishy, unless one is still open
+  survey                             every branch, its pull requests and what its bot name points at
+  report SURVEY                      the stale branches as checkboxes, for a person to tick
+  issue KIND TEMPLATE REPORT GUIDE   open the week's `files` or `instructions` issue for Squishy,
+                                     unless that kind's last one is still open
+  delete ISSUE                       delete the branches ticked in that issue, after surveying again
 
 A branch is safe to delete when nothing live uses it and deleting it loses nothing that cannot come
 back. Its last commit is at least STALE_DAYS old. It is not infrastructure. No open pull request has
 it as head, and the issue or pull request its bot name points at is closed. And either a closed or
 merged pull request had it as head (that page restores it), or the default branch holds every commit
 on it. Anything else that is stale is listed for a person. Standard library only; GitHub through the
-`gh` CLI, as `GH_TOKEN` and `REPO` say. `DRY_RUN=true` opens nothing.
+`gh` CLI, as `GH_TOKEN` and `REPO` say. `DRY_RUN=true` opens, deletes and edits nothing.
 """
 
 from __future__ import annotations
@@ -35,6 +37,10 @@ KEEP_PREFIXES = ("ai/",)
 NAMED = re.compile(r"(?:bot|squishy)/(?:issue-(?P<issue>\d+)|old/issue-(?P<old>\d+)-.+"
                    r"|oneshot-(?P<oneshot>\d+)/.+|wip/(?P<pr>\d+))")
 TITLE = "Architecture: weekly hygiene"
+#: The two issues a week opens, so each cleanup is a pull request of its own (#888).
+KINDS = {"files": "dead files and archives", "instructions": "agent instructions"}
+#: A ticked checkbox in the branch section, its branch the first code span; a struck one no longer matches.
+TICKED = re.compile(r"^\s*- \[[xX]\] `([^`]+)`", re.M)
 LABELS = ("architecture", "difficulty:hard", "squishy:build", "person merges")
 #: The issue body's limit is 65,536 characters; the report gives way first.
 REPORT_LIMIT = 30_000
@@ -147,41 +153,93 @@ def commit_cell(branch: dict[str, Any]) -> str:
 
 
 def report(data: dict[str, Any]) -> str:
-    """The branch section of the issue: for a person to review, never for the builder."""
+    """The branch section of the dead-files issue: suggestions for a person to tick, never the builder's."""
     safe = [b for b in data["branches"] if b["bucket"] == "candidate"]
     listed = [b for b in data["branches"] if b["bucket"] == "list"]
-    lines = [f"For a person, not the builder. {len(data['branches'])} branches surveyed on"
-             f" {data['at'][:10]} by the rule in `.github/hygiene/branches.py`. Nothing has been deleted.", ""]
+    lines = [f"For a person, not the builder. {len(data['branches'])} branches surveyed on {data['at'][:10]}"
+             " by the rule in `.github/hygiene/branches.py`; nothing has been deleted. Tick the ones to remove,"
+             " then comment `/delete-branches`: `hygiene-delete.yml` surveys again, deletes each ticked branch"
+             " the rule does not keep, strikes it here and replies with its sha.", ""]
     if safe:
-        lines += [f"**Safe to delete ({len(safe)}).** Each one's pull request page restores it, or main"
-                  " holds every commit on it. Strike any you want to keep, then delete the rest:", "",
-                  "```sh", "git push origin --delete " + " ".join(b["name"] for b in safe), "```", "",
-                  "| Branch | Last commit | Pull requests | Why it is safe | Full sha |", "|---|---|---|---|---|"]
-        lines += [f"| `{b['name']}` | {commit_cell(b)} | {pr_cell(b)} | {b['why']} | `{b['sha']}` |"
-                  for b in safe]
+        lines += [f"**Safe to delete ({len(safe)}).** Its pull request page restores it, or main holds every"
+                  " commit on it.", ""]
+        lines += [f"- [ ] `{b['name']}` · {commit_cell(b)} · {pr_cell(b)}" for b in safe]
         lines.append("")
     if listed:
-        lines += [f"**Stale, with commits main lacks ({len(listed)}).** No pull request: delete one only"
-                  " once nobody wants its work.", "", "| Branch | Last commit |", "|---|---|"]
-        lines += [f"| `{b['name']}` | {commit_cell(b)} |" for b in listed]
+        lines += [f"**Have commits main lacks ({len(listed)}).** No pull request: tick one only once nobody"
+                  " wants its work.", ""]
+        lines += [f"- [ ] `{b['name']}` · {commit_cell(b)}" for b in listed]
     text = "\n".join(lines)
     if len(text) > REPORT_LIMIT:
-        text = text[:REPORT_LIMIT] + "\n\n_The report was cut short; the run's survey artifact has all of it._"
+        text = text[:REPORT_LIMIT] + "\n\n_The list was cut short; the run's survey artifact has all of it._"
     return text
 
 
-def open_issue(repo: str, template: str, report: str, guidance: str, run_url: str, today: str, *,
-               dry_run: bool) -> str:
-    """Opens the week's issue, or says why not: one hygiene issue is open at a time, since its
-    builder reads only the issue body, never a workflow's comment."""
+def to_delete(ticked: list[str], data: dict[str, Any]) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
+    """The ticked branches a fresh survey still lets go, and why each other ticked one stays."""
+    found = {b["name"]: b for b in data["branches"]}
+    go, skipped = [], []
+    for name in dict.fromkeys(ticked):
+        branch = found.get(name)
+        if branch is None:
+            skipped.append((name, "it is already gone"))
+        elif branch["bucket"] == "keep":
+            skipped.append((name, f"the rule keeps it now: {branch['why']}"))
+        else:
+            go.append(branch)
+    return go, skipped
+
+
+def strike(body: str, names: list[str]) -> str:
+    """The issue body with each deleted branch's checkbox struck, so it is not ticked twice."""
+    for name in names:
+        body = re.sub(rf"^(\s*- \[[xX]\] )`{re.escape(name)}`(.*)$",
+                      lambda m: f"{m.group(1)}~~`{name}`~~ deleted{m.group(2)}", body, count=1, flags=re.M)
+    return body
+
+
+def delete_ticked(repo: str, number: int, now: datetime, *, dry_run: bool) -> str:
+    body = gh_json("issue", "view", str(number), "--repo", repo, "--json", "body")["body"]
+    ticked = TICKED.findall(body)
+    if not ticked:
+        return "No branch is ticked, so nothing was deleted."
+    go, skipped = to_delete(ticked, survey(repo, now))
+    deleted = []
+    for branch in go:
+        try:
+            if not dry_run:
+                gh("api", "-X", "DELETE", f"repos/{repo}/git/refs/heads/{quote(branch['name'], safe='/')}")
+            deleted.append(branch)
+        except subprocess.CalledProcessError as exc:
+            skipped.append((branch["name"], (exc.stderr or "").strip()[:120] or "the API refused"))
+    lines = [f"Deleted {len(deleted)} of the {len(dict.fromkeys(ticked))} ticked branches"
+             f"{' (a dry run: nothing was deleted)' if dry_run else ''}."]
+    if deleted:
+        lines += ["", "| Branch | Restore with |", "|---|---|"]
+        lines += [f"| `{b['name']}` | `git push origin {b['sha']}:refs/heads/{b['name']}` |" for b in deleted]
+    if skipped:
+        lines += ["", "Kept:"] + [f"- `{name}`: {why}" for name, why in skipped]
+    reply = "\n".join(lines) + "\n\n---\n_Posted by `.github/workflows/hygiene-delete.yml`._"
+    if not dry_run:
+        if deleted:
+            gh("issue", "edit", str(number), "--repo", repo, "--body", strike(body, [b["name"] for b in deleted]))
+        gh("issue", "comment", str(number), "--repo", repo, "--body", reply)
+    return reply
+
+
+def open_issue(repo: str, kind: str, template: str, report: str, guidance: str, run_url: str,
+               today: str, *, dry_run: bool) -> str:
+    """Opens the week's issue of `kind`, or says why not: one of each kind is open at a time, since
+    its builder reads only the issue body, never a workflow's comment."""
+    prefix = f"{TITLE}, {KINDS[kind]}"
     still_open = gh_json("issue", "list", "--repo", repo, "--state", "open", "--search",
-                         f'in:title "{TITLE}"', "--json", "number,title")
-    still_open = [i for i in still_open if i["title"].startswith(TITLE)]
+                         f'in:title "{prefix}"', "--json", "number,title")
+    still_open = [i for i in still_open if i["title"].startswith(prefix)]
     if still_open:
-        return f"#{still_open[0]['number']} is still open, so no new issue this week"
+        return f"#{still_open[0]['number']} is still open, so no new {kind} issue this week"
     body = (template.replace("<!-- run -->", run_url).replace("<!-- branches -->", report)
             .replace("<!-- guidance -->", guidance.strip() or "_The guidance step gave nothing this week._"))
-    title = f"{TITLE}, {today}"
+    title = f"{prefix}, {today}"
     if dry_run:
         return f"(dry run) would open {title!r}, labelled {', '.join(LABELS)}:\n\n{body}"
     args = ["issue", "create", "--repo", repo, "--title", title, "--body", body]
@@ -207,9 +265,11 @@ def main(argv: list[str]) -> int:
     elif command == "report":
         print(report(json.loads(read(rest[0]))))
     elif command == "issue":
-        print(open_issue(repo, read(rest[0]), read(rest[1]), read(rest[2]),
+        print(open_issue(repo, rest[0], read(rest[1]), read(rest[2]), read(rest[3]),
                          os.environ.get("RUN_URL", ""), datetime.now(timezone.utc).date().isoformat(),
                          dry_run=dry_run))
+    elif command == "delete":
+        print(delete_ticked(repo, int(rest[0]), datetime.now(timezone.utc), dry_run=dry_run))
     else:
         print(__doc__, file=sys.stderr)
         return 2
