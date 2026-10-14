@@ -6405,6 +6405,14 @@
           "claude": "strong"
         }
       }
+    },
+    "854": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-14T02:59:23Z",
+      "issue": 824,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
