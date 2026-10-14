@@ -882,6 +882,7 @@ mod r174_a_transformed_card_has_left_the_field {
     fn r174_a_second_sheepish_is_not_offered_the_play_the_first_one_already_turned_into_a_sheep_r17_r61() {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-sheepish",
             "p1": { "hand": [TIMMY, HINDER], "mana": 10 },
             "p2": {
@@ -927,6 +928,7 @@ mod r102_r212_a_card_a_fuse_kept_is_the_same_card_on_the_same_stay {
      {
         jackioh_cards::register_all();
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "edge-r8-fauci-fuse",
             "p1": { "hand": [SORCERER, HINDER], "mana": 10 },
             "p2": { "field": [{ "def": FAUCI, "lane": 1 }], "backrow": [{ "def": EXPERIMENTATION, "lane": 1 }] },
@@ -984,6 +986,7 @@ mod r174_r41_a_cubes_meal_is_read_on_the_stay_the_play_chose {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-cube-cube-reborn",
             "p1": {
                 "mana": 10,
@@ -1058,6 +1061,7 @@ mod c4_5_step_4_r89_the_reborn_bodies_of_one_check_return_together {
     /// through Reborn. Returns the Fiender body's health afterwards.
     fn fiender_after_reborn(fiender_lane: i32, mrow_lane: i32) -> i32 {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-reborn-order",
             "p1": {
                 "mana": 10,
@@ -1227,6 +1231,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-cube-kept-meal",
             "p1": {
                 "mana": 10,
@@ -1273,6 +1278,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
      {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r11-r77-kept-memory",
             "p1": {
                 "mana": 10,
@@ -1328,6 +1334,7 @@ mod r102_r77_r41_a_card_85_keeps_reads_its_meals_with_its_own_text {
     fn r102_a_crafted_cube_cube_that_85_fuses_a_played_cube_onto_still_copies_both_of_its_own_meals_r77() {
         jackioh_cards::register_all();
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r9-crafted-cube-kept",
             "p1": {
                 "mana": 10,

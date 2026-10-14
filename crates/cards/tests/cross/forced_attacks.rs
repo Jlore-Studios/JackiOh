@@ -73,6 +73,7 @@ mod r173_a_forced_attack_is_made_on_an_enemy {
     fn r173_once_moths_to_the_flame_is_stolen_by_the_attackers_side_mid_run_the_rest_of_the_run_does_not_attack_it_8_9_86()
      {
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-moths-mrow",
             "p1": { "hand": [VANILLA], "field": [{ "def": MOTHS, "lane": 3 }], "library": [TIMMY, TIMMY] },
             "p2": { "hand": [VANILLA], "field": [{ "def": MROW, "lane": 1 }, { "def": VANILLA, "lane": 2 }], "library": [TIMMY] },
@@ -145,6 +146,7 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
         // it; Reborn returns it at 1 health, and the other three tokens do not attack the body that
         // came back.
         let mut g = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw-reborn-run",
             "active": "p2",
             "p1": { "backrow": [{ "def": HONEYPOT, "radiant": true, "faceUp": false, "lane": 3 }] },

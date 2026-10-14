@@ -470,6 +470,7 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         // only Field Spell p1 controls (R61, R77). The fused card carries both Masks' text: "Start of
         // turn: choose one …" twice, so p1 is asked twice and each answer is one pick.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-card-mask-mask",
             "active": "p2",
             "p1": {
@@ -508,6 +509,7 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
     fn r102_r41_r77_a_crafted_carnivorous_cube_carnivorous_cube_remembers_both_meals_so_its_death_copies_each_8_22()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-cube-cube",
             "p1": {
                 "mana": 10,
@@ -591,6 +593,7 @@ mod r102_what_a_fused_cards_ingredients_leave_behind_is_each_their_own {
         // p2 plays a Twinspell; p1's Unlicensed Experimentation fuses it onto p1's own Twinspell (R61,
         // R77). The fused Field Spell prints "the next Spell you play gains Echo +1" twice.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r7-card-twin-twin",
             "active": "p2",
             "p1": { "backrow": [TWINSPELL, EXPERIMENTATION], "field": [MIDRANGE_MENACE], "hand": [STOCKPILE, RAPID], "library": library },

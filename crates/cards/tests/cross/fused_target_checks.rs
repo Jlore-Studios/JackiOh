@@ -58,6 +58,7 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
     fn r102_a_crafted_rewind_kys_constant_offers_plays_that_pick_for_both_declarations_instead_of_throwing_from_legalactions()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "fused-target-checks",
             "p1": { "hand": [REWIND, KYS_CONSTANT, HIT_JOB, ANCHOR], "field": [{ "def": SHRIMP, "lane": 1 }], "mana": 10 },
         }));
@@ -77,6 +78,7 @@ mod r102_a_fused_cards_declared_targets_keep_working_when_two_ingredients_define
     fn r102_ingredients_that_name_the_same_predicate_must_each_admit_the_candidate_a_crafted_kys_constant_kys_constant()
      {
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "fused-target-checks",
             "p1": { "hand": [KYS_CONSTANT, KYS_CONSTANT, HIT_JOB, ANCHOR], "mana": 10 },
         }));

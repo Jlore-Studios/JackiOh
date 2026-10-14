@@ -154,6 +154,7 @@ mod r42_the_killer_is_the_hit_that_took_the_unit_to_0 {
         // enemy units -2/-2: max health 5 under 5 damage, so it dies — to the aura, which is no damage
         // instance, not to a hit that left it standing.
         let mut s = scenario(json!({
+            // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "hunt-cw2-panther-aura",
             "p1": { "field": [PANTHER], "hand": [{ "def": SUPPRESSIVE, "radiant": true }, STOCKPILE], "library": [TIMMY, TIMMY, TIMMY] },
             "p2": { "field": [BIG_D], "hand": [STOCKPILE] },
