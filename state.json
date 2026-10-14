@@ -5830,14 +5830,19 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
+      "pr": 879,
       "provider": "claude-6",
+      "question": "",
       "queued_at": "2026-10-14T14:19:28Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "38580014076",
       "started_at": "2026-10-14T14:23:53Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 1
     },
     "879": {
       "cleared": {
