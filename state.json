@@ -6665,6 +6665,14 @@
       "started_at": "2026-10-14T21:29:26Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "951": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-14T23:21:06Z",
+      "issue": 861,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
