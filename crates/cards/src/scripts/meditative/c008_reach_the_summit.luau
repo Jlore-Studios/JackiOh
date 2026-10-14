@@ -61,15 +61,10 @@ local function ascent_cry(ctx: J.EffectContext)
 			J.discard_random({ count = ctx:param("discards"), player = "enemy" }),
 		}
 	elseif level == 4 then
-		local ids = exile_picks(ctx, ctx:param("exiles"))
-		-- The ids go outright, read here as the Rust closure read them; an empty set leaves `cards`
-		-- out, which the verb reads as no cards (an empty table would cross as a record).
-		local args: J.ForEachCardArgs = { each = "each_card" }
-		if #ids > 0 then
-			args.cards = ids
-		end
+		-- The ids go outright, read here as the Rust closure read them (an empty set names no cards,
+		-- #464 gap 1).
 		return {
-			J.for_each_card(args),
+			J.for_each_card({ cards = exile_picks(ctx, ctx:param("exiles")), each = "each_card" }),
 		}
 	elseif level == 5 then
 		return {
