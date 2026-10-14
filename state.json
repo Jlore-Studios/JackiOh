@@ -6097,6 +6097,11 @@
     "846": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-14T03:48:32Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "4a0aaa2c5969a7a9af39dbe86c5e9c6cf062784f"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
