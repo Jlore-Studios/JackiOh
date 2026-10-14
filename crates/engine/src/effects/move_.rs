@@ -24,7 +24,7 @@ use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance, find_instance_mut};
 use crate::wire::TargetAim;
 use crate::wire::{CounteredTo, GameEvent, PlayerId, Zone, ZoneName};
-use crate::zones::{MoveResult, OffFieldZone, is_unit_token, move_to_zone, report_graveyard_landing};
+use crate::zones::{OffFieldZone, exile_to_pile, is_unit_token, move_to_zone, report_graveyard_landing};
 
 /// One card to the exile pile: the whole of §6.3 Exile for a single card, so `exile`, `exile_all`,
 /// `exile_adjacent_to` and `exile_hand` are four ways of naming cards over ONE implementation. A card
@@ -44,16 +44,7 @@ fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
         return;
     }
 
-    let mut card = card.clone();
-    let moved = move_to_zone(ctx.state, &mut card, OffFieldZone::Exile, Default::default());
-    if matches!(moved, MoveResult::Moved) {
-        ctx.state.counters.exiled += 1;
-    }
-    ctx.events.push(GameEvent::Exiled {
-        instance_id: card.id.clone(),
-        def_id: card.def_id.clone(),
-        owner: card.owner,
-    });
+    exile_to_pile(ctx, card.clone());
 }
 
 /// One card back to its controller's hand: the whole of §6.3 Bounce for a single card, shared by

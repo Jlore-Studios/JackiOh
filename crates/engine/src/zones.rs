@@ -1273,6 +1273,27 @@ pub enum GraveyardRedirect {
     LibraryBottom,
 }
 
+/// One card to the exile pile, the step every exile shares (§6.3 Exile): a card that reaches the pile
+/// feeds the game exile counter (R55), a unit token ceases to exist instead and is not counted (R11),
+/// and the `exiled` event reports the card leaving either way. §6.3's Exile row gives no Death
+/// trigger, so nothing is dispatched here.
+pub fn exile_to_pile(sink: &mut EngineSink<'_>, mut card: CardInstance) {
+    if move_to_zone(
+        sink.state,
+        &mut card,
+        OffFieldZone::Exile,
+        MoveToZoneOptions::default(),
+    ) == MoveResult::Moved
+    {
+        sink.state.counters.exiled += 1;
+    }
+    sink.events.push(GameEvent::Exiled {
+        instance_id: card.id,
+        def_id: card.def_id,
+        owner: card.owner,
+    });
+}
+
 /// B5 E5: the event a move toward a graveyard reports once the card has landed, wherever that was —
 /// `enteredGraveyard` in the graveyard, `exiled` when a replacement exiled it, `shuffledIn` at the
 /// bottom of its library — and nothing for a unit token that ceased to exist (R11). Every engine path
