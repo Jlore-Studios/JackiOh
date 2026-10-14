@@ -5955,6 +5955,13 @@
     "884": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-14T18:05:43Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "engine-rules line: the fix lives in crates/engine/src uses counting, which the rule names as hard outright"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
