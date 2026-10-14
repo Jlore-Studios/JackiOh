@@ -6847,13 +6847,13 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-10-14T06:17:00Z",
-      "free": 85072248832,
+      "at": "2026-10-14T06:43:49Z",
+      "free": 85584617472,
       "percent": 31,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38518692924",
-    "runner": "night-vm-muse",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38520119843",
+    "runner": "night-vm-devin-6",
     "shown": null
   },
   "machine_memory": [
