@@ -5395,18 +5395,41 @@
     "865": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T06:18:42Z",
       "issue": 848,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The r215 Call to Chaos chain test still depends on a pool roll at a literal seed, and the comment this branch added says the opposite: that the seed is arbitrary.",
+          "evidence": "`chaos_cursor` only finds the first cursor whose effect roll is \"recast\". The recast then picks the edition with `pick_generated` from the `tags: [Call to Chaos]` pool of every set (`crates/engine/src/subsystems/call_to_chaos.rs:247-249`; core-095, classicplus-073, meditative-095). The test asserts `plays.len() == 2` and `played == 2` and counts only `CardPlayed` events whose `def_id == CHAOS` (core-095), so it passes only while that pick lands on core-095. `c095_call_to_chaos.rs:278-281` says so itself: \"pinning the roll alone does not pin the edition\". Its `recast_of_core_cursor` searches the edition too; this helper does not.",
+          "severity": "blocking",
+          "where": "crates/cards/tests/cross/hand_returns.rs:238"
+        },
+        {
+          "claim": "Seed `hunt-r3-transmog-trap` is still pinned for where Transmogulate's pool roll lands, so acceptance criterion 1 is not met.",
+          "evidence": "The test asserts `replacement.def_id == UNLICENSED` (line 490). The face-down trap is replaced from `same_type_legendaries(Trap)` (`c083_transmogulate.rs:38-45`), and catalog.json gives that pool two cards: core-085 Unlicensed Experimentation and classic-009 Income Tax. The seed wins a 1-in-2 roll that any new Legendary Trap moves. It has no comment and was not converted, although the same kind of Transmogulate pin in `re_entry.rs` r35 was.",
+          "severity": "blocking",
+          "where": "crates/cards/tests/cross/hidden_information.rs:476"
+        },
+        {
+          "claim": "The new doc text says `crates/cards/tests/cross/` pins no seeds, which is false at HEAD for the two tests above.",
+          "evidence": "The added line reads \"`crates/cards/tests/cross/` pins none (#848)\", while `hand_returns.rs` r215 and `hidden_information.rs:476` both still depend on a pool roll at a literal seed.",
+          "severity": "blocking",
+          "where": "docs/ADDING_CARDS.md:193"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-10-14T06:55:05Z",
+      "queued_at": "2026-10-14T07:12:39Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38525430241",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-14T07:00:02Z",
       "stop_requested": false,
       "taken_asks": [],
