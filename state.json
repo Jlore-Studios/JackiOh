@@ -6060,6 +6060,8 @@
       "run_id": "38509255151",
       "started_at": "2026-10-14T04:03:03Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
