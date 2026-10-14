@@ -5410,9 +5410,12 @@
     "what": "build #442 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-14T06:43:20Z",
+    "at": "2026-10-14T06:52:40Z",
     "notes": [
-      "started a night run, as a lane was free: #442 (hard) is queued to build, for `claude-4`: build on `claude-4` (claude, `opus`, strong); review on `claude-4` (claude, `opus`, strong)"
+      "#864: typed it Task",
+      "#863: typed it Task",
+      "#862: typed it Task",
+      "#861: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
