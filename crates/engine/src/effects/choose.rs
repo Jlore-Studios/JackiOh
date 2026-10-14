@@ -153,21 +153,6 @@ fn label(ctx: &EffectContext<'_>, selection: &Selection) -> String {
     }
 }
 
-/// §10.6, §10.8: an option's key is what the client sends back, so one key names one option — two
-/// Duplicating Felinors in reach are two options, and a key built from the label (the card's name)
-/// gave both the same one. The key is built from the selection itself, which is unique among the
-/// options by construction, and never from a name (R177 keeps names off what a view may not read).
-fn key_of(selection: &Selection) -> String {
-    match selection {
-        Selection::Instance { instance_id } => format!("instance:{instance_id}"),
-        Selection::Hero { player } => format!("hero:{player}"),
-        Selection::Mode { option } => format!("mode:{option}"),
-        Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
-        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
-        Selection::None => "none".to_string(),
-    }
-}
-
 fn find_on_board<'c>(ctx: &'c EffectContext<'_>, instance_id: &str) -> Option<&'c CardInstance> {
     let state: &'c GameState = &*ctx.state;
     for player in PLAYER_IDS {
@@ -281,7 +266,7 @@ pub fn choose_target(args: ChooseTargetArgs) -> Effect {
         let options: Vec<PromptOption> = selections
             .into_iter()
             .map(|selection| PromptOption {
-                key: key_of(&selection),
+                key: crate::prompts::option_key(&selection),
                 label: label(reader, &selection),
                 selection,
                 cost: None,
@@ -769,7 +754,7 @@ pub fn choose_cell(args: ChooseCellArgs) -> Effect {
                     }
                     let selection = Selection::Zone { player, row, lane };
                     options.push(PromptOption {
-                        key: key_of(&selection),
+                        key: crate::prompts::option_key(&selection),
                         label: cell_option_label(player, row, lane, chooser),
                         selection,
                         cost: None,
