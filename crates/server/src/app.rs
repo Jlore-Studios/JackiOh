@@ -17,18 +17,20 @@
 //! Not ported (SURFACE §11.3): `loadStore`, `STORE_EXPORT_CANDIDATES` and `StoreUnavailableError`
 //! (the store is `db::store::Db`, chosen here), `createRuntime`'s port overrides and the `Runtime`
 //! type (tests build an `App` through `build`, `tests/support/deps.rs`), and `RunningServer.close`
-//! (the process serves until it is stopped).
+//! (the process serves until SIGTERM or Ctrl-C, then drains: `serve_until`).
 
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use anyhow::anyhow;
 use axum::Router;
 use axum::extract::Request;
 use axum::response::Response;
 use indexmap::IndexMap;
+use tokio::task::JoinHandle;
 
 use crate::actor;
 use crate::api;
@@ -463,6 +465,9 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
+    // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
+    ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
+    ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
 
 /// TS `allRoutes()`.
@@ -634,7 +639,136 @@ fn init_logging() {
         .try_init();
 }
 
-/// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops.
+/// Starts the background loops through `loops::spawn_supervised` and keeps their handles, so
+/// `stop_loops` can abort them on shutdown (#861).
+fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
+    // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
+    // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
+    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
+    // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
+    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
+    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
+    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
+    // instead of dying silently (#842).
+    let mut running = vec![
+        (
+            "matchmaker",
+            loops::spawn_supervised("matchmaker", app.clone(), api::queue::run_matchmaker),
+        ),
+        (
+            "series.sweeper",
+            loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper),
+        ),
+        (
+            "matches.reaper",
+            loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper),
+        ),
+        (
+            "retention.purge",
+            loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge),
+        ),
+    ];
+    if app.env.ladder_bots {
+        running.push((
+            "bots.pool",
+            loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool),
+        ));
+    }
+    running
+}
+
+/// Aborts every loop `spawn_loops` started and waits for the tasks to end (#861's drain).
+async fn stop_loops(running: Vec<(&'static str, JoinHandle<()>)>) {
+    for (_, handle) in &running {
+        handle.abort();
+    }
+    for (name, handle) in running {
+        let _ = handle.await;
+        tracing::info!(event = "loop.stopped", "loop" = name);
+    }
+}
+
+/// SIGTERM or Ctrl-C, whichever comes first (#861).
+///
+/// The SIGTERM handler is installed when this function is called, not when the future is first
+/// polled, so a signal that arrives in between is not lost. The `Ok(())` pattern turns the Ctrl-C
+/// branch off if its handler fails, instead of shutting the server down.
+pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 'static> {
+    #[cfg(unix)]
+    let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    Ok(async move {
+        #[cfg(unix)]
+        let terminated = async move {
+            terminate.recv().await;
+        };
+        #[cfg(not(unix))]
+        let terminated = std::future::pending::<()>();
+        tokio::select! {
+            () = terminated => tracing::info!(event = "server.signal", signal = "SIGTERM"),
+            Ok(()) = tokio::signal::ctrl_c() => tracing::info!(event = "server.signal", signal = "SIGINT"),
+        }
+    })
+}
+
+/// Serves `app` on `listener` until `shutdown` resolves, then drains and answers `Ok`.
+///
+/// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs
+/// at most `drain` long and does five things, in this order: it stops accepting new connections,
+/// aborts the background loops, lets in-flight HTTP requests finish, stops every match actor (open
+/// sockets get close frame 1001 and queues drain so result writes land), waits for every socket to
+/// finish, and closes the store.
+///
+/// axum's graceful shutdown waits only for HTTP requests, because an upgraded socket leaves its
+/// count. That is why the actors are stopped and `all_closed` is awaited. `pg::close` waits for
+/// checked-out connections, which is why it sits inside the `drain` timeout: do not move it out.
+///
+/// Past `drain` it logs `server.drain_timed_out` and still answers `Ok`, so the process exits 0.
+pub async fn serve_until<F>(
+    app: Arc<App>,
+    listener: tokio::net::TcpListener,
+    shutdown: F,
+    drain: Duration,
+) -> anyhow::Result<()>
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    let running = spawn_loops(&app);
+    let (stop_accepting, stopping) = tokio::sync::oneshot::channel::<()>();
+    let server = tokio::spawn(
+        axum::serve(
+            listener,
+            router(app.clone()).into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async move {
+            let _ = stopping.await;
+        })
+        .into_future(),
+    );
+    shutdown.await;
+    tracing::info!(event = "server.draining", "drainSeconds" = drain.as_secs());
+    let _ = stop_accepting.send(());
+    let drained = tokio::time::timeout(drain, async {
+        stop_loops(running).await;
+        let served = server.await;
+        let matches = app.matches.stop_all().await;
+        actor::ws_server::close_all(&app);
+        actor::ws_server::all_closed(&app).await;
+        app.db.close().await;
+        (served, matches)
+    })
+    .await;
+    match drained {
+        Ok((served, matches)) => {
+            served??;
+            tracing::info!(event = "server.stopped", matches = matches);
+        }
+        Err(_) => tracing::warn!(event = "server.drain_timed_out", "drainSeconds" = drain.as_secs()),
+    }
+    Ok(())
+}
+
+/// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops, serve
+/// until SIGTERM or Ctrl-C, drain.
 pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;
@@ -654,6 +788,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
 
     let origins = browser_origins(&app.env);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.env.port)).await?;
+    let shutdown = shutdown_signal()?;
     tracing::info!(
         event = "server.listening",
         port = %app.env.port,
@@ -664,26 +799,11 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         "ladderBots" = app.env.ladder_bots,
     );
 
-    // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
-    // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
-    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
-    // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
-    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
-    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
-    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
-    // instead of dying silently (#842).
-    loops::spawn_supervised("matchmaker", app.clone(), api::queue::run_matchmaker);
-    loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper);
-    loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper);
-    loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge);
-    if app.env.ladder_bots {
-        loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool);
-    }
-
-    axum::serve(
+    serve_until(
+        app,
         listener,
-        router(app).into_make_service_with_connect_info::<SocketAddr>(),
+        shutdown,
+        Duration::from_secs(u64::try_from(crate::config::SHUTDOWN_DRAIN_SECONDS).unwrap_or(0)),
     )
-    .await?;
-    Ok(())
+    .await
 }

@@ -27,7 +27,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, actors stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -155,6 +155,8 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768) |
+| `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
+| `GET` | `/readyz` | none | readiness, render.yaml's `healthCheckPath`: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
