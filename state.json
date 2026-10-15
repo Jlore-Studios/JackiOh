@@ -14443,7 +14443,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T21:31:09Z",
+    "idle_since": null,
     "last_run": "2026-10-15T21:31:09Z",
     "provider": null,
     "requested": false,
