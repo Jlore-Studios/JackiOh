@@ -6947,12 +6947,6 @@
         "tiers": {
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-15T05:43:58Z",
-        "provider": "claude-3",
-        "sha": "b106f20a8f90a47cca2ff1250652ccd35733a28e",
-        "start": "c411c043e88c18dc8c184922c22d578998812aff"
       }
     },
     "959": {
