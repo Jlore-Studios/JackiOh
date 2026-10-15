@@ -39,6 +39,7 @@ const NAMES = [
   "rust_ai",
   "rust_ai_slow_a",
   "rust_ai_slow_b",
+  "rust_luau",
   "rust_tools_wasm",
   "web",
   "e2e",
@@ -59,6 +60,7 @@ const RUST = [
   "rust_ai",
   "rust_ai_slow_a",
   "rust_ai_slow_b",
+  "rust_luau",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
 
@@ -465,7 +467,7 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
-    ["crates/luau/src/lib.rs", ["rust_tools_wasm"]],
+    ["crates/luau/src/lib.rs", ["rust_luau", "rust_tools_wasm"]],
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
