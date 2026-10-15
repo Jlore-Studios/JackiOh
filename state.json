@@ -7321,6 +7321,13 @@
     "992": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T20:14:26Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 5 fails (crates/engine/src/ and spec/ edits), but it is no rules change: the enumeration's output stays the same and only a view mark is added, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
