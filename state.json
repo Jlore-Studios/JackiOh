@@ -4745,7 +4745,7 @@
       "started_at": "2026-10-15T09:55:28Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "833": {
       "action": "build",
