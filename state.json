@@ -7156,6 +7156,14 @@
           "claude": "strong"
         }
       }
+    },
+    "989": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-10-15T17:21:57Z",
+      "issue": 979,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
