@@ -769,7 +769,7 @@ pub fn legal_actions(state: &GameState, player: PlayerId) -> Vec<ActionBody> {
 /// `legal_actions` one action at a time, in the same order: the one place the list is made, so a
 /// caller that only asks whether some action exists (`auto_end_due`) stops computing at the first.
 /// TS's generator: each `yield` is a call to `visit`, and a `Break` from it ends the walk there.
-fn each_legal_action(
+pub(crate) fn each_legal_action(
     state: &GameState,
     player: PlayerId,
     visit: &mut dyn FnMut(ActionBody) -> ControlFlow<()>,

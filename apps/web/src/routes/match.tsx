@@ -50,6 +50,8 @@ import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankWords } from "../rank/rank.ts";
+import { InMatchChat } from "../together/InMatchChat.tsx";
+import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
 import { SeriesBanner, SeriesContinue, useMatchSeries } from "./SeriesBanner.tsx";
@@ -83,6 +85,8 @@ export const matchTestid = {
   watchReplay: "match-watch-replay",
   /** R768000: in a finished match's result panel, its last turn's GIF. */
   shareLastTurn: "match-share-last-turn",
+  /** #936 B51: how many friends watch this match (`data-count`), shown while any do. */
+  watchers: "match-watchers",
 } as const;
 
 /** A connection state in a player's words, for the match bar and the wait before the board. */
@@ -371,6 +375,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           load={() => openOnlineMatchReplay(token, matchId)}
           start={watching.share ? "last" : "first"}
           shareOnOpen={watching.share}
+          // #936 B59: the finished match's replay, shared with a friend.
+          actions={<ShareWithFriend matchId={matchId} />}
           onLeave={() => {
             setWatching(null);
           }}
@@ -460,6 +466,8 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       boardRail={
         <>
           <BackLink showSettings={false} />
+          {/* #936 B58: chat with a friend without leaving the board. */}
+          <InMatchChat />
           <SeriesBanner series={series} matchId={matchId} gameOver={view.result !== null} />
           {/*
             The rematch navigation that survives "View the board": the buttons above live in the
@@ -474,6 +482,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
               <Username name={ranks.seats.p2.username} />
               {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
+            </p>
+          ) : null}
+          {/* #936 B51: the server's `watchers {count}` frame, while anyone is watching. */}
+          {match.watchers > 0 ? (
+            <p className="match-watchers" data-testid={matchTestid.watchers} data-count={match.watchers} role="status">
+              {match.watchers === 1
+                ? t("A friend is watching")
+                : t("{count} friends are watching", { count: match.watchers })}
             </p>
           ) : null}
         </>

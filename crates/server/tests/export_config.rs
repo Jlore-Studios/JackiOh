@@ -188,6 +188,33 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("WS_IDLE_TIMEOUT_SECONDS", json!(c::WS_IDLE_TIMEOUT_SECONDS)),
         ("WS_OUTBOX_MAX_FRAMES", json!(c::WS_OUTBOX_MAX_FRAMES)),
         ("WS_PING_INTERVAL_SECONDS", json!(c::WS_PING_INTERVAL_SECONDS)),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        // SPEC S7's twelve, for the Play together page, its heartbeat, chat and watch views, and the
+        // social poll (SOCIAL_POLL_MS) its unread counts and challenges are read again at.
+        ("CHALLENGE_TTL_MS", json!(c::CHALLENGE_TTL_MS)),
+        ("CHAT_MAX_CHARS", json!(c::CHAT_MAX_CHARS)),
+        ("CHAT_MESSAGES_PER_MINUTE", json!(c::CHAT_MESSAGES_PER_MINUTE)),
+        ("CHAT_PAGE", json!(c::CHAT_PAGE)),
+        ("CHAT_POLL_MS", json!(c::CHAT_POLL_MS)),
+        ("CHAT_RETENTION_DAYS", json!(c::CHAT_RETENTION_DAYS)),
+        ("FRIEND_REQUESTS_PER_HOUR", json!(c::FRIEND_REQUESTS_PER_HOUR)),
+        ("MAX_FRIENDS", json!(c::MAX_FRIENDS)),
+        ("PRESENCE_HEARTBEAT_MS", json!(c::PRESENCE_HEARTBEAT_MS)),
+        ("PRESENCE_TTL_MS", json!(c::PRESENCE_TTL_MS)),
+        ("SOCIAL_POLL_MS", json!(c::SOCIAL_POLL_MS)),
+        ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
+        ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
+        // ---- end Social ----
+        // ---- Duos co-op (#946) ----
+        ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
+        ("DUOS_MULLIGAN_CLOCK_MS", json!(c::DUOS_MULLIGAN_CLOCK_MS)),
+        ("DUOS_PROMPT_CLOCK_MS", json!(c::DUOS_PROMPT_CLOCK_MS)),
+        ("DUOS_ROOM_TTL_MS", json!(c::DUOS_ROOM_TTL_MS)),
+        ("DUOS_ROUND_CLOCK_MS", json!(c::DUOS_ROUND_CLOCK_MS)),
+        ("PING_RATE_LIMIT", json!(c::PING_RATE_LIMIT)),
+        ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
+        ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
+        // ---- end Duos co-op (#946) ----
     ]
 }
 
@@ -208,15 +235,21 @@ fn every_name_is_listed_once() {
     names.sort_unstable();
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
-        listed, 66,
+        // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
+        // SPEC S7's twelve, the social poll and Duos co-op's eight.
+        listed,
+        87,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
          (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), and \
          CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and QUEUE_ENDED_AFTER_READS (R897000)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
+         twelve (#936) with the social poll (SOCIAL_POLL_MS), and Duos co-op's eight clocks and ping \
+         limits (#946)"
     );
 }
 

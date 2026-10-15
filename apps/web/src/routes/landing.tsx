@@ -23,6 +23,7 @@ import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { SettingsButton } from "../settings/index.ts";
 import { useSetting } from "../settings/store.ts";
+import { togetherTestid } from "../together/testids.ts";
 import { ROTATION_INTERVAL_MS, ROTATION_MIN_GAMES, ROTATION_SWAP_MS } from "../stats/config.ts";
 import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
@@ -324,6 +325,15 @@ function Actions(): ReactElement {
           onClick={followInApp(paths.play)}
         >
           {t("Play online")}
+        </a>
+        {/* #936 B54: friends, challenges, chat and Duos co-op. */}
+        <a
+          className="landing-cta landing-cta--secondary"
+          href={paths.together}
+          data-testid={togetherTestid.landingCta}
+          onClick={followInApp(paths.together)}
+        >
+          {t("Play together")}
         </a>
         <a
           className="landing-cta landing-cta--secondary"

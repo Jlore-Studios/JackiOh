@@ -2,7 +2,8 @@
 //! — the two heroes' health, the board contents lane by lane, or the libraries.
 //!
 //! - Health: the two values change places, armor stays with its hero. Not damage, not a heal and not
-//!   "lose health" (R18): no pipeline, no armor step; the only event is `swapped` (§10.3).
+//!   "lose health" (R18): no pipeline, no armor step; the only event is `swapped` (§10.3). In a Duos
+//!   duel the values are own HP, and only while neither hero is spent (#936 B18, `duos_life.rs`).
 //! - Board: contents change sides lane by lane, in both rows of §3.1. A swapped card never leaves the
 //!   field, so R78's reset never runs and everything on it comes along (R14). `controller` changes,
 //!   which is an entry (R171): every card that lands, a dormant Stack card included, takes this turn
@@ -95,13 +96,14 @@ fn bounce_home(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     bounce_card(ctx, card);
 }
 
-/// R73 health: the two values change places; armor stays with its hero.
+/// R73 health: the two values change places; armor stays with its hero. #936 B18: in a Duos duel
+/// the values are the heroes' own HP, and while either hero is spent the swap does nothing at all.
 fn swap_health_now(ctx: &mut EffectContext<'_>) {
     let me = ctx.controller;
     let them = opponent_of(me);
-    let keep = ctx.state.players[me].hero.health;
-    ctx.state.players[me].hero.health = ctx.state.players[them].hero.health;
-    ctx.state.players[them].hero.health = keep;
+    if !crate::duos_life::heroes_swap_health(&mut *ctx.state, me, them) {
+        return;
+    }
     ctx.events.push(GameEvent::Swapped {
         what: SwapWhat::Health,
     });

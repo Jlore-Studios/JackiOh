@@ -1,4 +1,4 @@
-# `e2e/` — the forty specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39` and the custom cards' `40`, plus seventeen component specs
+# `e2e/` — the forty-two specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39`, the custom cards' `40`, Duos co-op's `41` and Play together's `42`, plus seventeen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40, 41, 42
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
@@ -115,6 +115,12 @@ for contract reasons rather than rules reasons.
    `crates/server/src/actor/ws_server.rs`. A handshake off that path is never upgraded, so this is
    not a preference: `support/config.ts`, `cypress.config.ts` and the `wsPlayer` task all default
    to it.
+
+8. **Play together and Duos** (SPEC §9.4, §9.5, §13). Spec 42 is Play together between two fixture
+   accounts, and spec 41 a Duos co-op game of those two against the AI team. Both are networked, so
+   the server must be up. Their test ids (`together-*`, `chat-*`, `coop-*`, `duos-*`,
+   `landing-play-together`) are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
+   sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host.
 
 Every one of these is either an ask on another team or a convention this suite invented because
 BUILD does not fix it. They are all made in `support/`, never in a spec, so each has exactly one

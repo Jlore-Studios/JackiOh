@@ -14,9 +14,10 @@
 //! `from + steps.len()`. A step is `view_for` of the seat the caller played at that step (R677) and
 //! its turn, which is exactly what that seat's live view showed (R97, CLAUDE.md rule 7). Nothing else
 //! leaves: no seed, no log, no state, no deck. An account that held no seat gets the same 404 as a
-//! match that does not exist, so a match id's existence never leaks; a match still open or live is
-//! 409; one whose log is purged 410 `gone`; one this build cannot show 422 `replay_unavailable`,
-//! with part 1's reason in `details.reason`.
+//! match that does not exist, so a match id's existence never leaks, unless a seat holder still its
+//! friend shared the replay with it (B52, `replay_reader`), when it reads the sharer's seat's steps
+//! as the sharer would. A match still open or live is 409; one whose log is purged 410 `gone`; one
+//! this build cannot show 422 `replay_unavailable`, with part 1's reason in `details.reason`.
 //!
 //! The fold is the actor's rebuild's (`registry.rs`): the row's seed, frozen decks, last boards and
 //! Glitch boards, its log, and the dealt seats of an All Random match (R433), under the catalog
@@ -473,12 +474,9 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
     // The seat check comes first and answers what an unknown id answers, so nothing past it tells
-    // an account that held no seat anything about the match.
-    let Some(seats) = tx
-        .matches_seats(match_id)
-        .await?
-        .filter(|seats| seats.players.contains(&profile.id))
-    else {
+    // an account that held no seat anything about the match. Social (#940): B52's friend holding a
+    // share reads it from the sharer's seat (`replay_reader`).
+    let Some((seats, reader)) = replay_reader(&mut tx, match_id, &profile.id).await? else {
         return Err(no_such_replay());
     };
     if seats.phase != MatchPhase::Over {
@@ -526,7 +524,7 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     let (seat, run) = engine::under_checkpoints(checkpoints, || {
         seat_run(
             checkpoints,
-            home_seat(&replay, &profile.id),
+            home_seat(&replay, &reader),
             from,
             count.min(REPLAY_PAGE_STEPS),
         )
@@ -539,3 +537,35 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
         total,
     })
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+use crate::db::store::{MatchSeats, StoreError, Tx};
+
+/// B52: whose seat `caller` reads the replay of `match_id` from, with the match's seats: their own
+/// when they held one; else, for a finished match, the seat of the first seat holder who shared it
+/// with them and is still their friend, neither blocking the other (`shares_sharers`). `None` for
+/// anyone else, who gets what an unknown id gets, so an unshare, an unfriend or a block ends the
+/// read at once.
+async fn replay_reader(
+    tx: &mut Tx<'_>,
+    match_id: &str,
+    caller: &str,
+) -> Result<Option<(MatchSeats, String)>, StoreError> {
+    let Some(seats) = tx.matches_seats(match_id).await? else {
+        return Ok(None);
+    };
+    if seats.players.iter().any(|player| player == caller) {
+        return Ok(Some((seats, caller.to_string())));
+    }
+    if seats.phase != MatchPhase::Over {
+        return Ok(None);
+    }
+    let sharer = tx
+        .shares_sharers(match_id, caller)
+        .await?
+        .into_iter()
+        .find(|sharer| seats.players.contains(sharer));
+    Ok(sharer.map(|sharer| (seats, sharer)))
+}
+// ---- end Social: watching and shared replays ----

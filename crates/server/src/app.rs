@@ -65,6 +65,10 @@ pub struct App {
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
     pub queue_presence: api::queue::QueuePresence,
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
+    /// limiter's reason.
+    pub social: crate::social::Social,
 }
 
 // ---------------------------------------------------------------------------
@@ -486,6 +490,28 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
+    // match id.
+    (
+        "GET",
+        "/api/replays/shared",
+        AuthLevel::Active,
+        h!(crate::social::shares::list_shared),
+    ),
+    (
+        "POST",
+        "/api/replays/:matchId/shares",
+        AuthLevel::Active,
+        h!(crate::social::shares::share_replay),
+    ),
+    (
+        "DELETE",
+        "/api/replays/:matchId/shares/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::shares::unshare_replay),
+    ),
+    // ---- end Social: watching and shared replays ----
     // api/replays.rs
     (
         "GET",
@@ -499,6 +525,151 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // social/*.rs (SPEC S7). `/api/chat/unread` comes before `/api/chat/:friendId`, which would
+    // otherwise take it as a friend's id.
+    (
+        "GET",
+        "/api/friends",
+        AuthLevel::Active,
+        h!(crate::social::friends::get_friends),
+    ),
+    (
+        "POST",
+        "/api/friends/requests",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/accept",
+        AuthLevel::Active,
+        h!(crate::social::friends::accept_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::friends::decline_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/requests/:id",
+        AuthLevel::Active,
+        h!(crate::social::friends::cancel_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::remove_friend),
+    ),
+    (
+        "POST",
+        "/api/blocks",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_block),
+    ),
+    (
+        "DELETE",
+        "/api/blocks/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::delete_block),
+    ),
+    (
+        "POST",
+        "/api/presence",
+        AuthLevel::Active,
+        h!(crate::social::presence::heartbeat),
+    ),
+    (
+        "POST",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::create),
+    ),
+    (
+        "GET",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::list),
+    ),
+    (
+        "POST",
+        "/api/challenges/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::challenges::decline),
+    ),
+    (
+        "DELETE",
+        "/api/challenges/:id",
+        AuthLevel::Active,
+        h!(crate::social::challenges::cancel),
+    ),
+    (
+        "GET",
+        "/api/chat/unread",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_unread),
+    ),
+    (
+        "POST",
+        "/api/chat/messages/:id/report",
+        AuthLevel::Active,
+        h!(crate::social::chat::report),
+    ),
+    (
+        "GET",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_messages),
+    ),
+    (
+        "POST",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::send),
+    ),
+    // ---- end Social ----
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: duos/rooms.rs and duos/replay.rs.
+    (
+        "POST",
+        "/api/duos/rooms",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::create),
+    ),
+    (
+        "GET",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::get_room),
+    ),
+    (
+        "POST",
+        "/api/duos/rooms/:code/join",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::join),
+    ),
+    (
+        "DELETE",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::cancel),
+    ),
+    (
+        "GET",
+        "/api/duos/live",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::live),
+    ),
+    (
+        "GET",
+        "/api/duos/matches/:matchId/replay",
+        AuthLevel::Active,
+        h!(crate::duos::replay::get_replay),
+    ),
+    // ---- end Duos co-op (#946) ----
     // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
@@ -574,6 +745,8 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),
         queue_presence: api::queue::QueuePresence::new(),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        social: crate::social::Social::default(),
     });
 
     if app.env.e2e {
@@ -641,6 +814,41 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
 
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // S7's `/ws/watch`, a friend's seat watched SPECTATE_DELAY_MS behind (`social::watch`); as on
+    // `/ws/match`, anything but an upgrade on its path is the API's.
+    let watch_app = app.clone();
+    let watch_cors = cors.clone();
+    let watch = move |request: Request| {
+        let app = watch_app.clone();
+        let cors = watch_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_watch(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Social: watching and shared replays ----
+
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: `/ws/duos`, the co-op socket, beside `/ws/match` (`actor::ws_server::handle_duos`).
+    let duos_app = app.clone();
+    let duos_cors = cors.clone();
+    let duos_socket = move |request: Request| {
+        let app = duos_app.clone();
+        let cors = duos_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_duos(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Duos co-op (#946) ----
+
     let fallback = move |request: Request| {
         let app = app.clone();
         let cors = cors.clone();
@@ -649,6 +857,10 @@ pub fn router(app: Arc<App>) -> Router {
 
     Router::new()
         .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
+        // Social (#939): S7's watch socket.
+        .route(actor::ws_server::WATCH_PATH, axum::routing::any(watch))
+        // Duos co-op (#946)
+        .route(actor::ws_server::WS_DUOS_PATH, axum::routing::any(duos_socket))
         .fallback(fallback)
 }
 
@@ -695,6 +907,26 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
             "retention.purge",
             loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge),
         ),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        // SPEC S7: B49's sweep that marks lapsed challenges expired. (B53's chat purge runs inside
+        // `retention.purge`.)
+        (
+            "challenges.sweeper",
+            loops::spawn_supervised(
+                "challenges.sweeper",
+                app.clone(),
+                crate::social::challenges::run_sweeper,
+            ),
+        ),
+        // ---- end Social ----
+        // ---- Duos co-op (#946) ----
+        // Fullsend SPEC S6, B34, B40: expired co-op rooms go, finished actors leave memory, and a live
+        // co-op match a restart left without an actor is folded back.
+        (
+            "duos.sweeper",
+            loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper),
+        ),
+        // ---- end Duos co-op (#946) ----
     ];
     if app.env.ladder_bots {
         running.push((
@@ -742,7 +974,7 @@ pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 's
 ///
 /// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs
 /// at most `drain` long and does five things, in this order: it stops accepting new connections,
-/// aborts the background loops, lets in-flight HTTP requests finish, stops every match actor (open
+/// aborts the background loops, lets in-flight HTTP requests finish, stops every match and co-op actor (open
 /// sockets get close frame 1001 and queues drain so result writes land), waits for every socket to
 /// finish, and closes the store.
 ///
@@ -779,6 +1011,12 @@ where
         stop_loops(running).await;
         let served = server.await;
         let matches = app.matches.stop_all().await;
+        // #936: the co-op actors too, so none writes its log after the store closes; each match's
+        // log stays, and the next boot folds it back (`duos::registry`).
+        let duos = crate::duos::registry::registry(&app);
+        for match_id in duos.live() {
+            duos.stop(&match_id).await;
+        }
         actor::ws_server::close_all(&app);
         actor::ws_server::all_closed(&app).await;
         app.db.close().await;

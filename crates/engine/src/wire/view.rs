@@ -10,6 +10,7 @@ use indexmap::IndexMap;
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
 
+use crate::state::DuosLife;
 use crate::wire::actions::RevealAt;
 use crate::wire::catalog_types::{
     CardDef, CardElement, CardType, Keyword, KeywordKind, PlayerId, PromptKind, Row, Tag,
@@ -745,6 +746,11 @@ pub struct HeroView {
     pub powers: Vec<HeroPowerView>,
     /// `powers[0] ?? null`: the one a single-button hero panel shows.
     pub power: Option<HeroPowerView>,
+    /// #936 S3, B61: in a Duos duel, this hero's team pool and whether its own HP is spent, public to
+    /// both seats so the board draws both bars. Absent in a 1v1 game, whose view is as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub duos: Option<DuosLife>,
 }
 
 /// One player-level modifier (§10.1 `PlayerState.mods`) as the hero panel shows it.

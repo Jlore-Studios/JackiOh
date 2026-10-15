@@ -391,6 +391,41 @@ fn trio_of(ticket: &Ticket) -> Result<FrozenTrio, ApiError> {
     }
 }
 
+/// R890000: a seat the compare-and-set refused — the player found another game between the
+/// sweep's read and the claim. Answered through the sweep's failed-start path, like any start
+/// that failed after the claim.
+fn seat_taken() -> ApiError {
+    ApiError::new(ApiErrorCode::AlreadyInMatch, "finish your current match first")
+}
+
+/// R890000: undoes a pair's start — or a seat the compare-and-set refused — by letting go only of
+/// the seats that point at this match, then forgetting the `open` skeleton. The clears are
+/// conditional, so a rival match that seated a player meanwhile keeps its flag; the tickets stay
+/// claimed, as a failed start leaves them today.
+async fn cleanup_pair_start(app: &App, a_profile_id: &str, b_profile_id: &str, match_id: &str) {
+    let cleanup = async {
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.profiles_clear_in_match(a_profile_id, match_id)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.profiles_clear_in_match(b_profile_id, match_id)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        discard_open(app, match_id).await
+    }
+    .await;
+    if let Err(cleanup) = cleanup {
+        tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
+    }
+}
+
 /// R263: forget the `open` skeleton `tickets_claim_pair` wrote, in its own transaction.
 pub(crate) async fn discard_open(app: &App, match_id: &str) -> Result<(), ApiError> {
     let mut tx = app
@@ -546,13 +581,26 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             .begin(None)
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
-        // §9.5: in-match state is set here and cleared by `results.rs` at every ending.
-        tx.profiles_set_in_match(&a.profile_id, Some(match_id))
+        // §9.5: in-match state is set here and cleared by `results.rs` at every ending. Both
+        // seats are claimed compare-and-set (R890000): a room join that seated a player between
+        // the sweep's read and the claim loses one seat here instead of seating them twice, and
+        // dropping `tx` rolls both stores back, so the rival flag is never touched.
+        let a_seated = tx
+            .profiles_set_in_match(&a.profile_id, Some(match_id))
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
-        tx.profiles_set_in_match(&b.profile_id, Some(match_id))
+        let b_seated = tx
+            .profiles_set_in_match(&b.profile_id, Some(match_id))
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
+        if !a_seated || !b_seated {
+            // Before the commit, so nothing was written: undo the claim's skeleton and let
+            // `try_pair` record the failed start (the tickets stay claimed). Dropped first: the
+            // fake store's lock is held by this transaction, and the cleanup begins its own.
+            drop(tx);
+            cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
+            return Err(seat_taken());
+        }
         tx.commit()
             .await
             .map_err(|error| ApiError::internal(error.to_string()))?;
@@ -579,27 +627,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
         // `tickets_claim_pair` wrote with both profiles pointing at it: the players would stay locked
         // out until the reaper's open-row sweep (R1450) deletes it. Undo it now, before the error
         // stands (the tickets stay claimed).
-        let cleanup = async {
-            let mut tx = app
-                .db
-                .begin(None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.profiles_set_in_match(&a.profile_id, None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.profiles_set_in_match(&b.profile_id, None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            discard_open(app, match_id).await
-        }
-        .await;
-        if let Err(cleanup) = cleanup {
-            tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
-        }
+        cleanup_pair_start(app, &a.profile_id, &b.profile_id, match_id).await;
         return Err(error);
     }
     tracing::info!(
@@ -1091,6 +1119,44 @@ async fn start_bot_match(
     // Everything after the claim lets both go if it fails: `tickets_claim_for_bot` already put the bot
     // in the match, and otherwise only the sweeper's release of stale starts would let them go,
     // `BOT_STALE_START_SECONDS` after the claim (R1454), or the reaper's open-row sweep (R1450).
+    //
+    // §9.5's in-match state for the player, compare-and-set (R890000): a room join that seated
+    // them between the claim and now loses the seat here instead of seating them twice.
+    // `tickets_claim_for_bot` put the bot in the match. A lost seat and a failed write both
+    // undo the claim below; the transaction is over either way before the cleanup begins its
+    // own (the fake store's lock is held by it).
+    let seated: Result<bool, ApiError> = async {
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let won = tx
+            .profiles_set_in_match(&ticket.profile_id, Some(match_id))
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        if won {
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+        }
+        Ok(won)
+    }
+    .await;
+    match seated {
+        Ok(true) => {}
+        Ok(false) => {
+            // Before any commit, so nothing was written: undo the claim and let the fallback
+            // record the failed start (the ticket stays claimed).
+            cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;
+            return Err(seat_taken());
+        }
+        Err(error) => {
+            cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;
+            return Err(error);
+        }
+    }
+
     let started = async {
         let bot_seat = if random {
             MatchSeat {
@@ -1113,19 +1179,6 @@ async fn start_bot_match(
         };
         let seats = (human, bot_seat);
 
-        // §9.5's in-match state for the player; `tickets_claim_for_bot` put the bot in the match.
-        let mut tx = app
-            .db
-            .begin(None)
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
-        tx.profiles_set_in_match(&ticket.profile_id, Some(match_id))
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
-        tx.commit()
-            .await
-            .map_err(|error| ApiError::internal(error.to_string()))?;
-
         // R604: a match the queue pairs is ranked. The mode is read off the claimed ticket.
         app.matches
             .start(
@@ -1145,28 +1198,9 @@ async fn start_bot_match(
     .await;
     if let Err(error) = started {
         // As `start_paired_match`'s: both profiles are let go and the skeleton discarded before the
-        // error stands (the ticket stays claimed).
-        let cleanup = async {
-            let mut tx = app
-                .db
-                .begin(None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.profiles_set_in_match(&ticket.profile_id, None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.profiles_set_in_match(&bot.profile_id, None)
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            tx.commit()
-                .await
-                .map_err(|error| ApiError::internal(error.to_string()))?;
-            discard_open(app, match_id).await
-        }
-        .await;
-        if let Err(cleanup) = cleanup {
-            tracing::error!(event = "queue.pair_cleanup_failed", matchId = %match_id, message = %cleanup.message);
-        }
+        // error stands (the ticket stays claimed). The clears are conditional (R890000), which
+        // also releases the bot `tickets_claim_for_bot` seated.
+        cleanup_pair_start(app, &ticket.profile_id, &bot.profile_id, match_id).await;
         return Err(error);
     }
     tracing::info!(

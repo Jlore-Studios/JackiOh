@@ -382,6 +382,173 @@ fn preview(sets: &[engine::SetName]) -> Result<(), JsError> {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Duos co-op (#936 SPEC S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
+// ---------------------------------------------------------------------------------------------
+//
+// The five bindings mirror the 1v1 ones: a `DuosState` crosses as JSON in the same envelope as a
+// `GameState` (`unwrapped`), a setup the engine would panic on is refused first with its own message,
+// and an illegal action is the result's `error`, never thrown. Duos states are not cached: only the
+// dev route plays them, and the cache above is sized for the 1v1 callers.
+//
+// Only the `duos` feature builds them: `/dev/duos` is the one caller, and a development build's
+// alone (production serves it a 404), so `scripts/build-wasm.sh` turns the feature on for the dev
+// server only (`JACKIOH_WASM_DUOS=1`, apps/web's `predev`), keeping them out of every other module:
+// the one a player loads and the e2e client CI builds. Without it each binding throws the reason, as
+// `preview_sets` does without `preview`, so the module exports the same functions either way.
+
+#[cfg(feature = "duos")]
+mod duos_bindings {
+    use std::str::FromStr;
+
+    use jackioh_engine::duos::{self as duos_engine, DuosReduceResult, DuosState};
+    use jackioh_engine::wire::{
+        DUOS_SEATS, DuosAction, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat,
+    };
+    use jackioh_engine::{self as engine, CardDefs, DECK_SIZE, Handicap};
+    use wasm_bindgen::prelude::*;
+
+    use super::{parse, to_json, unwrapped};
+
+    /// `"a1"`, `"a2"`, `"b1"` or `"b2"`; anything else is refused with `DuosSeat`'s own message.
+    fn duos_seat(text: &str) -> Result<DuosSeat, JsError> {
+        DuosSeat::from_str(text).map_err(|error| JsError::new(&error))
+    }
+
+    /// The deck a seat's options name.
+    fn duos_deck(decks: &DuosDecks, seat: DuosSeat) -> &[String] {
+        match seat {
+            DuosSeat::A1 => &decks.a1,
+            DuosSeat::A2 => &decks.a2,
+            DuosSeat::B1 => &decks.b1,
+            DuosSeat::B2 => &decks.b2,
+        }
+    }
+
+    /// The handicap a seat's options name, if any (§9.9; absent is a human's).
+    fn duos_handicap(handicaps: Option<&DuosHandicaps>, seat: DuosSeat) -> Option<&Handicap> {
+        let handicaps = handicaps?;
+        match seat {
+            DuosSeat::A1 => handicaps.a1.as_ref(),
+            DuosSeat::A2 => handicaps.a2.as_ref(),
+            DuosSeat::B1 => handicaps.b1.as_ref(),
+            DuosSeat::B2 => handicaps.b2.as_ref(),
+        }
+    }
+
+    /// `check_setup` for the four seats, in its order (every handicap, then every deck against its
+    /// seat's size): each duel is a `create_game`, which panics where TypeScript threw, so a refusal is
+    /// named here, with the engine's own message and the seat's name as its label.
+    fn check_duos_setup(options: &DuosCreateOptions) -> Result<(), JsError> {
+        let catalog: &CardDefs = match &options.catalog {
+            Some(catalog) => catalog,
+            None => engine::registered_catalog(),
+        };
+        let handicaps = options.handicaps.as_ref();
+        for seat in DUOS_SEATS {
+            if let Some(handicap) = duos_handicap(handicaps, seat) {
+                engine::validate_handicap(handicap, seat.as_str())?;
+            }
+        }
+        for seat in DUOS_SEATS {
+            let size = duos_handicap(handicaps, seat).map_or(DECK_SIZE, |handicap| handicap.deck_size);
+            engine::validate_deck(duos_deck(&options.decks, seat), catalog, seat.as_str(), size)?;
+        }
+        Ok(())
+    }
+
+    /// A `DuosState` argument, out of its envelope.
+    fn duos_state_of(what: &str, state_json: &str) -> Result<DuosState, JsError> {
+        parse(&format!("{what}: the state"), unwrapped(state_json))
+    }
+
+    /// `DuosReduceResult`'s JSON as the 1v1 result's: `{"state":…,"events":[…]}` plus `"error"` on a refusal.
+    fn duos_reduce_result_json(result: DuosReduceResult) -> Result<String, JsError> {
+        let DuosReduceResult { state, events, error } = result;
+        let state = to_json(&state)?;
+        let events = to_json(&events)?;
+        let error = match &error {
+            Some(refusal) => format!(",\"error\":{}", to_json(&refusal.to_string())?),
+            None => String::new(),
+        };
+        Ok(format!("{{\"state\":{state},\"events\":{events}{error}}}"))
+    }
+
+    /// `DuosState` (TS `duosCreate({ seed, decks: { a1, a2, b1, b2 }, catalog?, teams?, handicaps?, dealt? })`).
+    #[wasm_bindgen]
+    pub fn duos_create(options_json: &str) -> Result<String, JsError> {
+        let options: DuosCreateOptions = parse("duosCreate", options_json)?;
+        check_duos_setup(&options)?;
+        to_json(&duos_engine::duos_create(&options))
+    }
+
+    /// `{ state, events, error? }`: both duels set up, all four mulligans open (B1, B2).
+    #[wasm_bindgen]
+    pub fn duos_begin(state_json: &str) -> Result<String, JsError> {
+        let state = duos_state_of("duosBegin", state_json)?;
+        duos_reduce_result_json(duos_engine::duos_begin(&state))
+    }
+
+    /// `{ state, events, error? }` for one `DuosAction`; an illegal one is refused in `error`, never thrown.
+    #[wasm_bindgen]
+    pub fn duos_reduce(state_json: &str, action_json: &str) -> Result<String, JsError> {
+        let state = duos_state_of("duosReduce", state_json)?;
+        let action: DuosAction = parse("duosReduce: the action", action_json)?;
+        duos_reduce_result_json(duos_engine::duos_reduce(&state, &action))
+    }
+
+    /// `DuosActionBody[]`: everything `seat` may do now.
+    #[wasm_bindgen]
+    pub fn duos_legal_actions(state_json: &str, seat: &str) -> Result<String, JsError> {
+        let state = duos_state_of("duosLegalActions", state_json)?;
+        to_json(&duos_engine::duos_legal_actions(&state, duos_seat(seat)?))
+    }
+
+    /// `DuosView`: the only window the client has onto a Duos game (B23).
+    #[wasm_bindgen]
+    pub fn duos_view_for(state_json: &str, seat: &str) -> Result<String, JsError> {
+        let state = duos_state_of("duosViewFor", state_json)?;
+        to_json(&duos_engine::duos_view_for(&state, duos_seat(seat)?))
+    }
+}
+
+#[cfg(not(feature = "duos"))]
+mod duos_bindings {
+    use wasm_bindgen::prelude::*;
+
+    /// What every Duos binding throws in a module built without them.
+    fn absent(what: &str) -> JsError {
+        JsError::new(&format!(
+            "{what}: this module was built without the `duos` feature, which only development builds turn on (/dev/duos)"
+        ))
+    }
+
+    #[wasm_bindgen]
+    pub fn duos_create(_options_json: &str) -> Result<String, JsError> {
+        Err(absent("duosCreate"))
+    }
+
+    #[wasm_bindgen]
+    pub fn duos_begin(_state_json: &str) -> Result<String, JsError> {
+        Err(absent("duosBegin"))
+    }
+
+    #[wasm_bindgen]
+    pub fn duos_reduce(_state_json: &str, _action_json: &str) -> Result<String, JsError> {
+        Err(absent("duosReduce"))
+    }
+
+    #[wasm_bindgen]
+    pub fn duos_legal_actions(_state_json: &str, _seat: &str) -> Result<String, JsError> {
+        Err(absent("duosLegalActions"))
+    }
+
+    #[wasm_bindgen]
+    pub fn duos_view_for(_state_json: &str, _seat: &str) -> Result<String, JsError> {
+        Err(absent("duosViewFor"))
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The AI (SURFACE §9)
 // ---------------------------------------------------------------------------------------------
 
