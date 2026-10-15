@@ -172,6 +172,16 @@ describe("the rail", () => {
     expect(syncState()).toBe("saved");
   });
 
+  it("each row is named in words, with no aria-label to hide its drawn count from voice control", () => {
+    mount({ decks: [savedDeck("full", "Aggro", ONE, 1)], trios: [savedTrio("t", "Ladder", ["full", null, null], 3)] });
+    const deck = screen.getByRole("button", { name: `Aggro, ${String(DECK_SIZE)} of ${String(DECK_SIZE)} cards, Ready` });
+    expect(deck).toBe(screen.getByTestId(deckRowId("full")));
+    expect(deck).not.toHaveAttribute("aria-label");
+    const trio = screen.getByRole("button", { name: "Ladder, 1 of 3 decks, not ready" });
+    expect(trio).toBe(screen.getByTestId(trioRowId("t")));
+    expect(trio).not.toHaveAttribute("aria-label");
+  });
+
   it("R250 a deck holding cards the player does not own says how many", () => {
     const missing: Record<string, number> = { ...collection };
     delete missing[ONE[0] ?? ""];

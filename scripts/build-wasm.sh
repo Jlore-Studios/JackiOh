@@ -5,7 +5,7 @@
 # `prebuild`, `prebuild:e2e` and `pretest` run it, so `pnpm --filter @jackioh/web
 # dev|build|build:e2e|test` always has both fresh. The Luau module sits inside pkg/ so everything
 # that handles the normal module's output (.gitignore, eslint's ignores, CI's `web-build` artifact)
-# carries it too.
+# carries it too. JACKIOH_WASM_NORMAL=0 builds the Luau module alone (below).
 #
 # Idempotent, and it installs nothing that is present:
 #   - the wasm32-unknown-unknown target, added through rustup only when it is missing;
@@ -40,6 +40,11 @@
 # only the dev server serves it. A networked co-op game needs none (the server plays it), so every
 # other module (`build:e2e`'s, `test`'s, the production bundle's) leaves them out. The Luau module
 # never carries them. Switching recompiles the bindings crate only.
+#
+# JACKIOH_WASM_NORMAL: 1 (the default) builds the normal module; 0 skips it, with its target and
+# wasm-bindgen, and builds the Luau module alone. CI builds each module in a job of its own, side by
+# side (ci.yml's `web (wasm module)` and `web (wasm luau module)`): one after the other they took
+# over seven minutes (#959). With JACKIOH_WASM_LUAU=0 it would build nothing, so that pair fails.
 
 set -eu
 
@@ -72,71 +77,85 @@ if ! command -v cargo >/dev/null 2>&1; then
   exit 1
 fi
 
-# The target. rust-toolchain.toml lists it, but a toolchain installed before that line existed has
-# none, and rustup adds a toolchain file's targets only when it installs the toolchain itself.
-if command -v rustup >/dev/null 2>&1; then
-  if ! rustup target list --installed | grep -qx "$WASM_TARGET"; then
-    echo "build-wasm: adding the $WASM_TARGET target"
-    rustup target add "$WASM_TARGET"
-  fi
+case "${JACKIOH_WASM_NORMAL:-1}" in
+  1 | 0) ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_NORMAL is 1 (the default) or 0, not \"$JACKIOH_WASM_NORMAL\"" >&2
+    exit 1
+    ;;
+esac
+if [ "${JACKIOH_WASM_NORMAL:-1}" = 0 ] && [ "${JACKIOH_WASM_LUAU:-1}" = 0 ]; then
+  echo "build-wasm: JACKIOH_WASM_NORMAL=0 with JACKIOH_WASM_LUAU=0 builds nothing" >&2
+  exit 1
 fi
 
-# wasm-bindgen-cli, from the release tarball.
-installed=$("$WASM_BINDGEN" --version 2>/dev/null || true)
-if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
-  case "$(uname -s)-$(uname -m)" in
-    Linux-x86_64) triple="x86_64-unknown-linux-musl" ;;
-    Linux-aarch64 | Linux-arm64) triple="aarch64-unknown-linux-gnu" ;;
-    Darwin-x86_64) triple="x86_64-apple-darwin" ;;
-    Darwin-arm64) triple="aarch64-apple-darwin" ;;
+if [ "${JACKIOH_WASM_NORMAL:-1}" = 1 ]; then
+  # The target. rust-toolchain.toml lists it, but a toolchain installed before that line existed has
+  # none, and rustup adds a toolchain file's targets only when it installs the toolchain itself.
+  if command -v rustup >/dev/null 2>&1; then
+    if ! rustup target list --installed | grep -qx "$WASM_TARGET"; then
+      echo "build-wasm: adding the $WASM_TARGET target"
+      rustup target add "$WASM_TARGET"
+    fi
+  fi
+
+  # wasm-bindgen-cli, from the release tarball.
+  installed=$("$WASM_BINDGEN" --version 2>/dev/null || true)
+  if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
+    case "$(uname -s)-$(uname -m)" in
+      Linux-x86_64) triple="x86_64-unknown-linux-musl" ;;
+      Linux-aarch64 | Linux-arm64) triple="aarch64-unknown-linux-gnu" ;;
+      Darwin-x86_64) triple="x86_64-apple-darwin" ;;
+      Darwin-arm64) triple="aarch64-apple-darwin" ;;
+      *)
+        echo "build-wasm: no wasm-bindgen-cli release for $(uname -s)-$(uname -m); install it with" >&2
+        echo "  cargo install wasm-bindgen-cli --version $WASM_BINDGEN_VERSION --root $ROOT/.cache" >&2
+        exit 1
+        ;;
+    esac
+    name="wasm-bindgen-$WASM_BINDGEN_VERSION-$triple"
+    url="https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WASM_BINDGEN_VERSION/$name.tar.gz"
+    echo "build-wasm: downloading $name"
+    scratch=$(mktemp -d)
+    trap 'rm -rf "$scratch"' EXIT
+    curl --proto '=https' --tlsv1.2 -fsSL "$url" -o "$scratch/wasm-bindgen.tar.gz"
+    tar -xzf "$scratch/wasm-bindgen.tar.gz" -C "$scratch"
+    mkdir -p "$BIN_DIR"
+    cp "$scratch/$name/wasm-bindgen" "$WASM_BINDGEN"
+    chmod +x "$WASM_BINDGEN"
+    installed=$("$WASM_BINDGEN" --version)
+    if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
+      echo "build-wasm: the downloaded wasm-bindgen says \"$installed\", not $WASM_BINDGEN_VERSION" >&2
+      exit 1
+    fi
+  fi
+
+  FEATURES=""
+  case "${JACKIOH_WASM_PREVIEW:-1}" in
+    1) FEATURES="preview" ;;
+    0) ;;
     *)
-      echo "build-wasm: no wasm-bindgen-cli release for $(uname -s)-$(uname -m); install it with" >&2
-      echo "  cargo install wasm-bindgen-cli --version $WASM_BINDGEN_VERSION --root $ROOT/.cache" >&2
+      echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
       exit 1
       ;;
   esac
-  name="wasm-bindgen-$WASM_BINDGEN_VERSION-$triple"
-  url="https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$WASM_BINDGEN_VERSION/$name.tar.gz"
-  echo "build-wasm: downloading $name"
-  scratch=$(mktemp -d)
-  trap 'rm -rf "$scratch"' EXIT
-  curl --proto '=https' --tlsv1.2 -fsSL "$url" -o "$scratch/wasm-bindgen.tar.gz"
-  tar -xzf "$scratch/wasm-bindgen.tar.gz" -C "$scratch"
-  mkdir -p "$BIN_DIR"
-  cp "$scratch/$name/wasm-bindgen" "$WASM_BINDGEN"
-  chmod +x "$WASM_BINDGEN"
-  installed=$("$WASM_BINDGEN" --version)
-  if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
-    echo "build-wasm: the downloaded wasm-bindgen says \"$installed\", not $WASM_BINDGEN_VERSION" >&2
-    exit 1
+  case "${JACKIOH_WASM_DUOS:-0}" in
+    1) FEATURES="${FEATURES:+$FEATURES,}duos" ;;
+    0) ;;
+    *)
+      echo "build-wasm: JACKIOH_WASM_DUOS is 0 (the default) or 1, not \"$JACKIOH_WASM_DUOS\"" >&2
+      exit 1
+      ;;
+  esac
+  if [ -n "$FEATURES" ]; then
+    cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features "$FEATURES"
+  else
+    cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
   fi
+  mkdir -p "$OUT_DIR"
+  "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
+  echo "build-wasm: wrote $OUT_DIR"
 fi
-
-FEATURES=""
-case "${JACKIOH_WASM_PREVIEW:-1}" in
-  1) FEATURES="preview" ;;
-  0) ;;
-  *)
-    echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
-    exit 1
-    ;;
-esac
-case "${JACKIOH_WASM_DUOS:-0}" in
-  1) FEATURES="${FEATURES:+$FEATURES,}duos" ;;
-  0) ;;
-  *)
-    echo "build-wasm: JACKIOH_WASM_DUOS is 0 (the default) or 1, not \"$JACKIOH_WASM_DUOS\"" >&2
-    exit 1
-    ;;
-esac
-if [ -n "$FEATURES" ]; then
-  cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features "$FEATURES"
-else
-  cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
-fi
-mkdir -p "$OUT_DIR"
-"$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
-echo "build-wasm: wrote $OUT_DIR"
 
 # R915009, #919: the Luau module, the engine with the card kit, which the web loads only for a
 # practice game with a custom card and for the creator (apps/web/src/wasm/luau.ts). JACKIOH_WASM_LUAU
@@ -162,8 +181,12 @@ if command -v rustup >/dev/null 2>&1; then
   fi
 fi
 
-# emsdk, cloned and installed once into .cache/emsdk.
+# emsdk, cloned and installed once into .cache/emsdk. A .cache/emsdk without the `emsdk` script is
+# no clone, only what a build cache gave back of one: Vercel's restores every node_modules it saved,
+# and an installed emsdk holds two (its Node's and emscripten's), so a deploy found those alone and
+# `git clone` refused the non-empty directory. Only this script writes there, so it starts over.
 if [ ! -x "$EMSDK_DIR/emsdk" ]; then
+  rm -rf "$EMSDK_DIR"
   echo "build-wasm: cloning emsdk $EMSDK_VERSION into $EMSDK_DIR"
   git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR"
 fi

@@ -16,7 +16,8 @@ import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { expectNoBlockingViolations } from "../../support/a11y.ts";
-import { accounts, routes, seedFor, timeouts } from "../../support/config.ts";
+import { allCardIds } from "../../support/cards.ts";
+import { accounts, constants, routes, seedFor, timeouts } from "../../support/config.ts";
 import {
   BOARD,
   GAME,
@@ -179,6 +180,10 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
     });
 
     it("/decks", () => {
+      // One full deck, whatever specs ran before this one saved: the list's rows and the open deck's
+      // card strips are what this page checks, and the exception for the strips must fire.
+      cy.clearDecks(accounts.p1());
+      cy.saveDeck(accounts.p1(), { name: "Axe", cards: allCardIds().slice(0, constants.DECK_SIZE) });
       checkSignedIn("/decks", accounts.p1(), routes.deckbuilder(), WORKSHOP);
     });
 
