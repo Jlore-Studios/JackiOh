@@ -71,6 +71,9 @@ const TRIPWIRE: &str = "fx-duos-tripwire";
 const BRUTE: &str = "fx-duos-brute";
 /// A 1-cost Unit: at the end of its controller's turn, NUKE_DAMAGE to its controller's hero.
 const EMBER: &str = "fx-duos-ember";
+/// A 1-cost Unit: at the start of its controller's turn, that turn ends (R456, as a Tommy Tempo drawn
+/// at its start ends it).
+const STALL: &str = "fx-duos-stall";
 
 const BOLT_DAMAGE: i32 = 6;
 const NUKE_DAMAGE: i32 = 25;
@@ -149,6 +152,7 @@ fn catalog() -> CardDefs {
         unit(TRIPWIRE, "D14", 1, 1, "tripwire"),
         unit(BRUTE, "D15", BRUTE_ATTACK, 5, "brute"),
         unit(EMBER, "D16", 1, 1, "ember"),
+        unit(STALL, "D17", 1, 1, "stall"),
     ] {
         defs.insert(def.id.clone(), def);
     }
@@ -227,6 +231,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
         EMBER.into(),
         both(Script {
             end_of_turn: Some(hook(|_ctx| vec![hit("selfHero", NUKE_DAMAGE)])),
+            ..Script::default()
+        }),
+    );
+    map.insert(
+        STALL.into(),
+        both(Script {
+            start_of_turn: Some(hook(|_ctx| vec![effects::end_turn(json_as(json!({})))])),
             ..Script::default()
         }),
     );
@@ -1281,6 +1292,48 @@ mod b7_turn_ended_by_an_effect {
             refused(&state, B1, raw_play(&state, B1, &card));
         }
         assert!(!duos_seats_to_act(&state).contains(&B1));
+    }
+
+    /// #936: a first turn that ends as it begins, while the other duel's mulligans are still open,
+    /// used to open round 1 on the duel's new active player, so round 1 went to B1 and A2 and duel 0
+    /// stayed a turn ahead for the rest of the game, every round mixing the teams. On the server a
+    /// Tommy Tempo drawn at the start of A1's first turn put A1 in round 2, the AI team's, which then
+    /// waited a whole round clock for a person who was not expecting to act.
+    #[test]
+    fn b7_a_first_turn_ended_before_round_1_opens_is_still_round_1s_and_its_seat_has_ended() {
+        setup();
+        let mut state = duos_begin(&duos_create(&options("b7-round-0"))).state;
+        put(&mut state.duels[0], STALL, slot(P1, Row::Units, 1), json!({}));
+        for seat in [A1, B1] {
+            let body = mulligan_keeping_all(&state, seat);
+            state = ok(&state, seat, body);
+        }
+        assert_eq!(state.round, 0, "duel 1's mulligans are still open");
+        assert_eq!(state.duels[0].turn, 2, "A1's first turn ended as it began");
+        assert_eq!(state.duels[0].active, P2);
+
+        for seat in [A2, B2] {
+            let body = mulligan_keeping_all(&state, seat);
+            state = ok(&state, seat, body);
+        }
+        assert_eq!(state.round, 1);
+        assert_eq!(state.round_seats, [A1, A2], "round 1 is team A's in both duels");
+        assert_eq!(state.ended, [true, false], "A1's first turn is over");
+        assert_eq!(sorted(duos_seats_to_act(&state)), [A2]);
+        assert!(
+            acting_moves(&state, B1).is_empty(),
+            "{:?}",
+            acting_moves(&state, B1)
+        );
+        refused(&state, B1, end_turn());
+
+        let state = ok(&state, A2, end_turn());
+        assert_eq!(state.round, 2);
+        assert_eq!(state.round_seats, [B1, B2], "round 2 is team B's in both duels");
+        assert_eq!(state.duels[0].turn, 2, "duel 0's turn is not ended a second time");
+        assert_eq!(state.duels[1].turn, 2);
+        assert_eq!(state.ended, [false, false]);
+        assert_eq!(sorted(duos_seats_to_act(&state)), [B1, B2]);
     }
 }
 

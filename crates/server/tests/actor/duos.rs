@@ -723,16 +723,6 @@ impl Duos {
         assert_eq!(answer["type"], "ack", "{answer}");
     }
 
-    /// The human ends their turn when their legal actions hold it (they may have been ended
-    /// already, B9).
-    async fn end_turn(&self, human: &WsClient, nonce: &str) {
-        let end = duel(json!({ "type": "endTurn" }));
-        if legal(&last_view(human)).contains(&end) {
-            let answer = act(human, nonce, end).await;
-            assert_eq!(answer["type"], "ack", "{answer}");
-        }
-    }
-
     /// The match's log as the store holds it.
     async fn logged(&self) -> Vec<DuosActionRow> {
         let mut t = self.app.db.begin(None).await.expect("a transaction");
@@ -1018,6 +1008,62 @@ mod b36_the_ai_seats {
         );
     }
 
+    /// The first view of `round` or later `a1` has had since frame `from`, waited for up to `within`
+    /// while the people play along as a person at the table does: each answers a prompt it holds
+    /// (the first answer offered), else ends its turn once its legal actions hold that. A prompt a
+    /// person holds waits for that person, on a clock of its own (DUOS_PROMPT_CLOCK_MS, §12.3), and
+    /// a duel whose new active player is a person's seat gives that person the round seat (§12.3,
+    /// R456: a turn cut short as it begins): neither is a step of the AI's. `acted` counts the
+    /// people's actions by the instant they were taken, so the views they caused are told apart.
+    async fn round_reached(
+        a1: &WsClient,
+        a2: &WsClient,
+        from: usize,
+        round: i64,
+        within: Duration,
+        acted: &mut BTreeMap<Instant, usize>,
+    ) -> Option<(usize, Instant)> {
+        let deadline = Instant::now() + within;
+        loop {
+            settle().await;
+            let reached = a1
+                .timed()
+                .iter()
+                .enumerate()
+                .skip(from)
+                .find(|(_, (_, frame))| round_of(frame) >= round)
+                .map(|(index, (at, _))| (index, *at));
+            if reached.is_some() {
+                return reached;
+            }
+            let mut moved = false;
+            for (client, seat) in [(a1, "a1"), (a2, "a2")] {
+                let offered = legal(&last_view(client));
+                let Some(body) = offered
+                    .iter()
+                    .find(|entry| is_duel(entry, "answer"))
+                    .or_else(|| offered.iter().find(|entry| is_duel(entry, "endTurn")))
+                    .cloned()
+                else {
+                    continue;
+                };
+                let taken: usize = acted.values().sum();
+                *acted.entry(Instant::now()).or_default() += 1;
+                let answer = act(client, &format!("{seat}-{taken}"), body).await;
+                assert_eq!(answer["type"], "ack", "{answer}");
+                moved = true;
+            }
+            if moved {
+                continue;
+            }
+            let now = Instant::now();
+            if now >= deadline {
+                return None;
+            }
+            tokio::time::sleep(WAIT_STEP.min(deadline - now)).await;
+        }
+    }
+
     #[tokio::test(start_paused = true)]
     async fn b36_the_ai_team_plays_its_round_a_step_at_a_time_and_hands_it_back_before_the_round_clock() {
         let h = duos("easy").await;
@@ -1029,26 +1075,27 @@ mod b36_the_ai_seats {
         a1.wait_for(0, PROMPTLY, |frame| round_of(frame) >= 1)
             .await
             .expect("round 1 opens once all four mulligans are in");
-        h.end_turn(&a1, "a1-end").await;
-        h.end_turn(&a2, "a2-end").await;
         let round_clock = ms(DUOS_ROUND_CLOCK_MS);
+        let mut acted: BTreeMap<Instant, usize> = BTreeMap::new();
 
-        let (r2_index, r2_at, _) = a1
-            .wait_for(0, round_clock + PROMPTLY, |frame| round_of(frame) >= 2)
+        let (r2_index, r2_at) = round_reached(&a1, &a2, 0, 2, round_clock + PROMPTLY, &mut acted)
             .await
             .expect("round 2, the AI team's, opens");
-        let (r3_index, r3_at, _) = a1
-            .wait_for(r2_index, round_clock, |frame| round_of(frame) >= 3)
+        let (r3_index, r3_at) = round_reached(&a1, &a2, r2_index, 3, round_clock, &mut acted)
             .await
             .expect("the AI team ends its round before the round clock would");
 
         assert!(r3_at < r2_at + round_clock);
-        // One action per DUOS_AI_STEP_DELAY_MS: never more than one per AI seat at one instant.
+        // One action per DUOS_AI_STEP_DELAY_MS: never more than one per AI seat at one instant, the
+        // views the people's own actions caused aside.
         let mut per_instant: BTreeMap<Instant, usize> = BTreeMap::new();
         for (at, frame) in &a1.timed()[r2_index + 1..r3_index.max(r2_index + 1)] {
             if round_of(frame) == 2 {
                 *per_instant.entry(*at).or_default() += 1;
             }
+        }
+        for (at, views) in &mut per_instant {
+            *views = views.saturating_sub(acted.get(at).copied().unwrap_or(0));
         }
         assert!(
             per_instant.values().all(|views| *views <= 2),

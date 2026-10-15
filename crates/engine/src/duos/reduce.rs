@@ -6,7 +6,8 @@
 //!
 //! Then the settle, in order, until nothing moves (`DUOS_SETTLE_CAP` is its backstop):
 //!   1. the judge: a team's pool at 0 or less, or a duel's own ending, ends the game (B16);
-//!   2. round 1 opens once all four mulligans have resolved and both duels' first turns have begun (B2);
+//!   2. round 1 opens once all four mulligans have resolved and both duels' first turns have begun (B2),
+//!      on those first turns: one an effect has already ended counts its seat as ended (B7);
 //!   3. a round seat with nothing left but End turn, and no pass it may make, is ended (B9, R82's rule);
 //!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5) — each under a
 //!      nonce of its own (`round_end_nonce`), so a fold replays it exactly — and only then is the
@@ -31,7 +32,7 @@ use crate::state::{EngineError, GameState};
 use crate::wire::{
     Action, ActionBody, DUOS_DUELS, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosEvent, DuosOutcome,
-    DuosResult, DuosSeat, GameEvent, GameOverReason, PerTeam, Phase, Team, Zone,
+    DuosResult, DuosSeat, GameEvent, GameOverReason, PLAYER_IDS, PerTeam, Phase, Team, Zone,
 };
 
 use super::legal::{auto_end_due, why_duel_refused, why_pass_refused};
@@ -44,6 +45,9 @@ pub const DUOS_NONCE_PREFIX: &str = "duos:";
 
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
 const BEGIN_NONCE: &str = "duos:begin";
+
+/// A duel's first turn: the one setup starts (`setup.rs`), Player 1's, so team A's in both duels (§12.1).
+const FIRST_TURN: i32 = SETUP_TURN + 1;
 
 /// Deal both duels and open all four mulligans (B1, B2): each duel's `begin_game`, duel 0 first.
 /// Refused once either duel has begun.
@@ -270,14 +274,27 @@ fn round_closed(state: &DuosState) -> bool {
 /// B2, B5, B8, B22: the next round — each duel's active player is its round seat (an extra turn,
 /// R846, keeps a duel's seat on the same team), nobody has ended or passed, and each team's open
 /// concede offer lapses (B11).
+///
+/// Round 1 is both duels' first turns, team A's (B2). A duel whose first turn an effect already
+/// ended while the other duel's mulligans were still open (R456: a Tommy Tempo drawn at its start)
+/// opens round 1 on that turn all the same: its first turn's seat is the round seat, counted as
+/// ended with End turn already reached (B7), so the duel's new active player waits for round 1 to
+/// close. Opening it on the new active player instead would give round 1 to one seat of each team
+/// and leave that duel a turn ahead of the other for the rest of the game.
 fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
     state.round += 1;
     for duel in 0..DUOS_DUELS {
         let game = &state.duels[duel];
-        state.round_seats[duel] = DuosSeat::of(duel, game.active);
-        state.round_turns[duel] = game.turn;
-        state.ended[duel] = false;
-        state.end_applied[duel] = false;
+        let first_turn_over = state.round == 1 && game.turn > FIRST_TURN;
+        let (seat, turn) = if first_turn_over {
+            (DuosSeat::of(duel, PLAYER_IDS[0]), FIRST_TURN)
+        } else {
+            (DuosSeat::of(duel, game.active), game.turn)
+        };
+        state.round_seats[duel] = seat;
+        state.round_turns[duel] = turn;
+        state.ended[duel] = first_turn_over;
+        state.end_applied[duel] = first_turn_over;
         state.passes[duel] = 0;
     }
     state.concede_offer = PerTeam::new(None, None);
