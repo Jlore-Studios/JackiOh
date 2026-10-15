@@ -7768,12 +7768,11 @@
     "what": "suggestions on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-15T22:56:41Z",
+    "at": "2026-10-15T23:02:33Z",
     "notes": [
-      "#1016: typed it Task",
-      "#1015: typed it Task",
-      "#1014: typed it Task",
-      "#1013: typed it Task"
+      "#1013 needs a plan",
+      "#1015 needs a plan",
+      "started a night run, as a lane was free: #1013 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
