@@ -823,6 +823,138 @@ mod b47_status {
         assert_eq!(friend["watchable"], json!(false), "{friend}");
     }
 
+    /// Every store method the fake is asked to run from here on, by name, in order.
+    async fn record_store_calls(app: &App) -> Arc<std::sync::Mutex<Vec<String>>> {
+        let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = Arc::clone(&calls);
+        let hook: jackioh_server::db::fake::OnCall = Arc::new(move |method: &str| {
+            sink.lock().expect("the call log").push(method.to_string());
+            Ok(())
+        });
+        fake(app).lock().await.on_call = Some(hook);
+        calls
+    }
+
+    /// The store methods one `GET /api/friends` of `who`'s asked for, by name, the social ones only
+    /// (a match or co-op actor running beside the request may be writing too).
+    async fn friends_list_reads(app: &Arc<App>, who: &Account) -> (Value, Vec<String>) {
+        const SOCIAL: [&str; 6] = [
+            "friends.",
+            "blocks.",
+            "presence.",
+            "profiles.",
+            "series.",
+            "duos.matches.liveFor",
+        ];
+        let calls = record_store_calls(app).await;
+        let listed = lists(app, who).await;
+        fake(app).lock().await.on_call = None;
+        let asked: Vec<String> = calls
+            .lock()
+            .expect("the call log")
+            .iter()
+            .filter(|method| SOCIAL.iter().any(|prefix| method.starts_with(prefix)))
+            .cloned()
+            .collect();
+        (listed, asked)
+    }
+
+    #[tokio::test]
+    async fn b47_the_friends_list_reads_the_same_few_set_based_queries_whatever_the_number_of_friends() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        befriend(&app, &ada, &bea).await;
+        heartbeat(&app, &bea).await;
+        let (_, one_friend) = friends_list_reads(&app, &ada).await;
+
+        // Four more friends: in a live unranked 1v1, between the games of a Conquest series, in a
+        // co-op match, and offline.
+        let cyd = account(&app, 3, "Cyd").await;
+        let rex = account(&app, 4, "Rex").await;
+        let dov = account(&app, 5, "Dov").await;
+        let eli = account(&app, 6, "Eli").await;
+        let gus = account(&app, 7, "Gus").await;
+        let fay = account(&app, 8, "Fay").await;
+        for friend in [&cyd, &dov, &eli, &fay] {
+            befriend(&app, &ada, friend).await;
+        }
+        live_match(&app, &uuid(510), &cyd, &rex, false).await;
+        let trio = json!({
+            "name": "T",
+            "decks": [{ "name": "a", "cards": [] }, { "name": "b", "cards": [] }, { "name": "c", "cards": [] }],
+        });
+        let series: jackioh_server::db::store::SeriesRow = serde_json::from_value(json!({
+            "id": uuid(520),
+            "sides": [
+                { "profileId": dov.id, "trio": trio, "wins": 0, "pick": null },
+                { "profileId": rex.id, "trio": trio, "wins": 1, "pick": null },
+            ],
+            "catalogVersion": TEST_CATALOG_VERSION,
+            "ranked": false,
+            "seedBase": "seed",
+            "status": "picking",
+            "games": [],
+            "nextMatchId": uuid(521),
+            "pickDeadline": null,
+            "winner": null,
+            "endReason": null,
+            "ratingBefore": null,
+            "ratingAfter": null,
+            "createdAt": 0,
+            "updatedAt": 0,
+            "endedAt": null,
+            "version": 1,
+        }))
+        .expect("a SeriesRow");
+        let mut tx = app.db.begin(None).await.expect("a store transaction");
+        tx.series_create(&series).await.expect("series.create");
+        tx.commit().await.expect("commit");
+        let coop = duos_match(&app, &eli, &gus).await;
+
+        let (listed, five_friends) = friends_list_reads(&app, &ada).await;
+
+        assert_eq!(
+            five_friends, one_friend,
+            "the same reads for five friends as for one: no read per friend"
+        );
+        for per_friend in [
+            "series.active",
+            "duos.matches.liveFor",
+            "friends.get",
+            "blocks.between",
+        ] {
+            assert!(
+                !five_friends.iter().any(|method| method == per_friend),
+                "{per_friend}: {five_friends:?}"
+            );
+        }
+        for set_based in [
+            "presence.lastSeen",
+            "presence.inSeries",
+            "presence.inDuos",
+            "presence.watchable",
+        ] {
+            assert_eq!(
+                five_friends.iter().filter(|method| *method == set_based).count(),
+                1,
+                "{set_based}: {five_friends:?}"
+            );
+        }
+        // And what it reads is what it read before.
+        let status_of = |account: &Account| friend_entry(&listed, &account.id);
+        assert_eq!(status_of(&bea)["status"], "online");
+        assert_eq!(status_of(&cyd)["status"], "inMatch");
+        assert_eq!(status_of(&cyd)["matchId"], json!(uuid(510)));
+        assert_eq!(status_of(&cyd)["watchable"], json!(true));
+        assert_eq!(status_of(&dov)["status"], "inMatch");
+        assert!(status_of(&dov)["matchId"].is_null());
+        assert_eq!(status_of(&dov)["watchable"], json!(false));
+        assert_eq!(status_of(&eli)["status"], "inMatch");
+        assert_eq!(status_of(&eli)["matchId"], json!(coop));
+        assert_eq!(status_of(&fay)["status"], "offline");
+    }
+
     #[tokio::test]
     async fn b47_a_heartbeat_from_a_pending_account_or_no_token_is_refused() {
         let app = empty_test_app().await;

@@ -3863,6 +3863,71 @@ pub fn presence_last_seen(
         .collect())
 }
 
+pub fn presence_in_series(f: &mut FakeTx<'_>, profile_ids: &[String]) -> Result<Vec<String>, StoreError> {
+    call(f, "presence.inSeries")?;
+    let series = &f.tables().series;
+    Ok(profile_ids
+        .iter()
+        .filter(|id| {
+            series.iter().any(|row| {
+                row.status != SeriesStatus::Over
+                    && (row.sides.0.profile_id == **id || row.sides.1.profile_id == **id)
+            })
+        })
+        .cloned()
+        .collect())
+}
+
+/// The newest live match, a tie to the lower id, as `duos::store`'s `matches_live_for` picks one.
+pub fn presence_in_duos(
+    f: &mut FakeTx<'_>,
+    profile_ids: &[String],
+) -> Result<IndexMap<String, String>, StoreError> {
+    call(f, "presence.inDuos")?;
+    let matches = &f.tables().duos.matches;
+    Ok(profile_ids
+        .iter()
+        .filter_map(|id| {
+            matches
+                .iter()
+                .filter(|row| row.ended_at.is_none() && (row.a1 == *id || row.a2 == *id))
+                .max_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| b.id.cmp(&a.id)))
+                .map(|row| (id.clone(), row.id.clone()))
+        })
+        .collect())
+}
+
+pub fn presence_watchable(
+    f: &mut FakeTx<'_>,
+    viewer: &str,
+    profile_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    call(f, "presence.watchable")?;
+    let tables: &FakeTables = f.tables();
+    Ok(profile_ids
+        .iter()
+        .filter(|id| {
+            let Some(profile) = tables.profiles.iter().find(|row| row.id == **id) else {
+                return false;
+            };
+            let Some(match_id) = profile.in_match_id.as_deref() else {
+                return false;
+            };
+            let Some(row) = tables.matches.iter().find(|row| row.id == match_id) else {
+                return false;
+            };
+            let seated = |who: &str| row.players.0 == who || row.players.1 == who;
+            row.status == MatchStatus::Live
+                && row.ranked != Some(true)
+                && seated(id.as_str())
+                && !seated(viewer)
+                && !tables.social.spectators_refused.contains(id.as_str())
+                && friends_unblocked_in(tables, viewer, id.as_str())
+        })
+        .cloned()
+        .collect())
+}
+
 // profiles (B46, B50)
 
 pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
@@ -4043,6 +4108,12 @@ pub fn challenges_expire(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<ChallengeRo
         }
     }
     Ok(expired)
+}
+
+pub fn challenges_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreError> {
+    call(f, "challenges.purge")?;
+    let gone = keep_only(&mut f.tables().social.challenges, |row| row.expires_at > now);
+    Ok(gone as i64)
 }
 
 // rooms
@@ -4250,6 +4321,14 @@ pub fn shares_remove(
         !(row.match_id == match_id && row.sharer == sharer && row.friend == friend)
     });
     Ok(())
+}
+
+pub fn shares_remove_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<i64, StoreError> {
+    call(f, "shares.removeBetween")?;
+    let gone = keep_only(&mut f.tables().replay_shares, |row| {
+        !((row.sharer == x && row.friend == y) || (row.sharer == y && row.friend == x))
+    });
+    Ok(gone as i64)
 }
 
 pub fn shares_sharers(f: &mut FakeTx<'_>, match_id: &str, friend: &str) -> Result<Vec<String>, StoreError> {

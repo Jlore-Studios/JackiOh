@@ -27,7 +27,7 @@ A co-op match ([[§12.9]]) makes its two duels from its seed: duel 0 is a 1v1 ga
 
 - Opening hands go by team: team A's seats, each its duel's Player 1, draw 3, and team B's draw 4 ([[§2.1]] step 2).
 - All four mulligans are open at once, [[R265]]'s way: each seat answers its own when it likes, an answer is sealed ([[R266]]), and a duel's two resolve, its Player 1's first, once both are in. Each of team B's seats is then dealt The Coin ([[R244]]), and each duel resolves its start-of-game effects ([[§2.1]] step 4).
-- The four mulligans share one clock, `DUOS_MULLIGAN_CLOCK_MS` (45 s); a seat still owing when it runs out keeps its hand, as [[R268]] says.
+- The four mulligans share one clock, `DUOS_MULLIGAN_CLOCK_MS` (45 s); a seat still owing when it runs out keeps its whole hand, as [[R268]] says: the AI's own mulligan ([[§12.7]]) never answers for a person, only for a seat past its disconnect grace, which the AI plays outright ([[§12.8]]).
 - No seat takes a main-phase action until all four mulligans have resolved, and the round counter stays at 0 meanwhile. Then round 1 opens, with A1 and A2 to act.
 
 ### 12.3 Rounds and turns
@@ -43,6 +43,7 @@ A round is one team turn. Its round seats are the seats whose turn each duel is 
 - Each duel's turn counter moves once a round, so [[§2.5]]'s turn cap (`TURN_CAP_PLAYER_TURNS`, 60) counts rounds, which are team turns: 30 for each team.
 - A prompt belongs to the seat whose duel opened it, and one duel's prompt never holds up the other duel.
 - No draw is offered or answered in Duos, and a seat's 1v1 concede is refused: a team concedes together ([[§12.8]]).
+- The round's own turn ends reach the duels under nonces of the round's own, in a namespace no seat's action may carry (`duos:`; an action whose nonce starts with it is refused, as [[R270]] keeps the server's `srv-` from a client). So no action can take the nonce a round's close will use and turn that turn end into the duel's replay of an action it has already applied, which would leave the duel's turn where it is and the round never closing. A duel that has already applied a round's nonce refuses that turn end, which is tried again after the next step, rather than taking it as done.
 
 The round has one clock, `DUOS_ROUND_CLOCK_MS` (90 s), in place of [[§9.5]]'s turn clock: when it runs out, every round seat that has not ended has its open prompts answered by the AI ([[§12.7]]) and its turn ended. A prompt held by a seat that is not a round seat has its own clock, `DUOS_PROMPT_CLOCK_MS` (30 s), which on expiry answers that prompt alone, as [[R79]]'s prompt clock does in a 1v1 game. Both are server config values.
 
@@ -58,7 +59,7 @@ A team's life is in two layers: each seat's own HP and the team's shared pool. A
 - An effect that sets a hero's health sets own HP while the seat is not spent (a value of 0 or less spends it, as damage would) and sets the pool once it is, never above the pool's cap.
 - A health swap (Pocket Chaos, [[R73]]) swaps the two heroes' own HP while neither hero is spent, and does nothing once either is.
 
-A co-op game ends at the first of these:
+A co-op game ends at the first of these, judged after each step. The round's close is part of the step that closed it: both duels' turn ends ([[§12.3]]) are applied, duel 0's and then duel 1's, before the game is judged, so pools emptied by either turn end are emptied in the same step, and a team whose pool one of them empties does not win because the other was not yet applied.
 
 | Condition | Result |
 | --- | --- |
@@ -125,8 +126,8 @@ The humans play `DUOS_HUMAN_TEAM` at every tier. A quality gate (`cargo jackioh 
 
 ### 12.8 Leaving
 
-- **A disconnect.** A human seat whose socket has been gone past the disconnect grace (`DISCONNECT_GRACE_SECONDS`, 60 s, [[§9.5]]) is played by the AI, as [[§12.7]] plays team B's seats, until its player reconnects, and its teammate is told that the AI is playing it. A team never loses to a disconnect.
-- **Concede.** Conceding takes both humans. A seat's concede opens its team's concede offer, which both teammates see, and the teammate's concede while the offer stands ends the game, the other team winning. An offer lapses when its round ends.
+- **A disconnect.** A human seat whose socket has been gone past the disconnect grace (`DISCONNECT_GRACE_SECONDS`, 60 s, [[§9.5]]) is played by the AI, as [[§12.7]] plays team B's seats, until its player reconnects, and its teammate is told that the AI is playing it. A team never loses to a disconnect. A move the AI decided while it held a person's seat one way (played outright past the grace, or only to answer for a clock that ran out, [[§12.3]]) is dropped if that hold changed before the move applied, and the seat is decided for again: a player who is back is never played for, whatever clock ran out meanwhile.
+- **Concede.** Conceding takes both humans. A seat's concede opens its team's concede offer, which both teammates see, and the teammate's concede while the offer stands ends the game, the other team winning. Each team has an offer of its own: the other team's concede neither takes nor clears it. An offer lapses when its round ends.
 - **The way back.** A player who leaves a co-op game's page may go back to it while it lasts: the menus' banner offers it, as it offers a live match ([[R765]]).
 
 ### 12.9 Co-op rooms
@@ -135,10 +136,13 @@ A co-op game starts from a room on the Play together page ([[§9.5]]).
 
 - The host makes a room with a difficulty (Easy, Medium or Hard, [[§12.7]]) and a deck, a saved one or a random one. The room has a code of 6 characters from the room-code alphabet ([[§9.5]]) and expires `DUOS_ROOM_TTL_MS` (10 minutes) after it was made if nobody has joined; the host may close it before then. The host invites a friend by sending the code in chat ([[§9.5]]).
 - A second active account joins by the code, with its own deck or a random one, which starts the match: the host is A1, the guest A2, and the AI plays B1 and B2. Both players are taken to the game. A third account is refused as the room being full, and the host cannot join their own room.
+- A code is no key past a block ([[§9.4]]): to a player the host has blocked, or who has blocked the host, the room answers as an unknown code does, to read it and to join it. Once joined, a room answers its host and its guest alone; anyone else reads it as an unknown code (a join is still told the room is full).
+- A host's saved deck is checked against the catalog when the room is made and frozen with that catalog's version. A join after a catalog change is refused as an update, as a 1v1 room's is ([[§9.4]]): the running catalog may no longer deal that deck. The match is pinned to the catalog version it is dealt from: its play, every rebuild of it and its replay read that version's cards ([[R767000]]).
 - One actor per co-op match holds its state on the server, as a 1v1 match's does ([[§9.2]]). Each human seat's socket gets its view and its legal actions as it connects and fresh ones after every applied action; an illegal action is refused and changes nothing. The AI's seats act on the server whenever they owe an action, one action every `DUOS_AI_STEP_DELAY_MS` (700 ms), so the humans can follow them.
-- Every applied action is appended to the match's log, and a crashed actor rebuilds its state by folding `(seed, log)`: the fold reaches the same state and the same hash as live play, and stops at the first action it refuses. The end writes the result once. As for a 1v1 match, the seed, the decks and the log never leave the server ([[§9.1]]). Random-policy co-op games fold back to the hashes they were played to (`cargo jackioh fuzz --duos`), as 1v1 games do.
+- Every applied action is appended to the match's log, and a crashed actor rebuilds its state by folding `(seed, log)` under the match's catalog version: the fold reaches the same state and the same hash as live play, and stops at the first action it refuses. A socket that holds no seat in the match is refused before anything is folded for it, and a fold runs off the server's request threads. The end writes the result once. As for a 1v1 match, the seed, the decks and the log never leave the server ([[§9.1]]). Random-policy co-op games fold back to the hashes they were played to (`cargo jackioh fuzz --duos`), as 1v1 games do.
+- The socket takes a 1v1 socket's nonce rules ([[R270]]) and the round's own namespace (`duos:`, [[§12.3]]) is refused as `srv-` is; a `hello` repeated while one from the same socket is still queued is absorbed by it, as [[R835001]] has it for a 1v1 socket ([[§9.1]]).
 - A co-op game is unranked: it records a result for both humans and moves no rating ([[§9.12]]).
-- Either human seat may watch a finished co-op game again, its own seat's view after each step, as [[§9.5]]'s replays show a 1v1 match; an account that held no human seat gets what an unknown match gets. A co-op game is not in the recent games list.
+- Either human seat may watch a finished co-op game again, its own seat's view after each step, as [[§9.5]]'s replays show a 1v1 match; an account that held no human seat gets what an unknown match gets, and a game still being played has no replay until it ends. The replay folds under the catalog version the match was played on and is refused, never cut short, when this build neither is nor carries that version, or when the log no longer folds to its end or to the result the match recorded ([[R768]], [[R767000]]). A co-op game's log is kept `MATCH_ACTION_RETENTION_DAYS` after the game ends, as a 1v1 match's is ([[§9.5]]); then the retention purge takes it and its replay is gone, while the match and its result stay. A co-op game is not in the recent games list.
 
 ### 12.10 Pings
 

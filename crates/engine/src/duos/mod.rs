@@ -28,7 +28,7 @@ mod state;
 mod view;
 
 pub use legal::{duos_legal_actions, duos_seats_to_act};
-pub use reduce::{duos_begin, duos_reduce};
+pub use reduce::{DUOS_NONCE_PREFIX, duos_begin, duos_reduce};
 pub use replay::{DuosReplayInput, DuosReplayResult, duos_fold, duos_hash};
 pub use state::{DuosReduceResult, DuosState, DuosTeam, duos_create, duos_duel_seed};
 pub use view::duos_view_for;

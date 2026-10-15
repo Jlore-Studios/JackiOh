@@ -4,6 +4,11 @@
 //! dealt. Nothing here decides a rule (CLAUDE.md rule 7): the wrapper owns turns, passes, the pool
 //! and the result, and the server only folds its log and relays its views.
 //!
+//! Every function that reads the catalog runs under the match's `Pinned` catalog (R767000): a co-op
+//! match records the catalog version it began on (`DuosMatchOptions::catalog_version`), and its
+//! play, its rebuilds and its replay all read that version's catalog, the build's own or a shipped
+//! one this build carries, so a patch deployed under a match never changes what its log folds to.
+//!
 //! The decks: a person's saved deck as frozen at the room, or All Random's deal (R258) from the match
 //! seed and their seat, leaning on the newest set when they asked (R1372); an AI seat's deck from the
 //! AI's own random deck-builder at its tier's handicap, as practice deals the AI (§9.9: shadow ban
@@ -16,12 +21,31 @@ use jackioh_engine::duos::{
     duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for,
 };
 use jackioh_engine::wire::{
-    DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat, DuosView, PerTeam,
+    DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
+    PerTeam,
 };
-use jackioh_engine::{Handicap, Rng};
+use jackioh_engine::{Handicap, ReplayRefusal, Rng, ShippedCatalog};
 
-use crate::actor::engine::{deal_random_deck, lean_of};
+use crate::actor::engine::{catalog_for, deal_random_deck, lean_of, with_shipped};
 use crate::duos::store::{DuosChoice, DuosMatch, DuosMatchOptions, SeatDecks, SeatHandicaps, TeamRules};
+
+/// R767000: the catalog a co-op match is played, rebuilt and replayed under: this build's own
+/// (`None`), or the shipped catalog of the version the match began on.
+#[derive(Clone, Copy, Default)]
+pub struct Pinned(Option<&'static ShippedCatalog>);
+
+impl Pinned {
+    /// The catalog of `version`, or why this build cannot fold a game played on it
+    /// (`earlier_patch`: neither its own version nor one it carries).
+    pub fn of(version: &str) -> Result<Pinned, ReplayRefusal> {
+        catalog_for(version).map(Pinned)
+    }
+
+    /// `run` under this catalog, on this thread, for that call.
+    pub fn run<T>(self, run: impl FnOnce() -> T) -> T {
+        with_shipped(self.0, run)
+    }
+}
 
 fn registered() {
     jackioh_cards::register_all();
@@ -29,42 +53,42 @@ fn registered() {
 
 /// S4: a begun co-op game (four mulligans open), or the engine's refusal of the setup. Panics, as
 /// `duos_create` does, on a deck the catalog refuses; the caller catches it.
-pub fn create_and_begin(options: &DuosCreateOptions) -> Result<DuosState, String> {
+pub fn create_and_begin(pinned: Pinned, options: &DuosCreateOptions) -> Result<DuosState, String> {
     registered();
-    let begun = duos_begin(&duos_create(options));
+    let begun = pinned.run(|| duos_begin(&duos_create(options)));
     match begun.error {
         Some(error) => Err(error.to_string()),
         None => Ok(begun.state),
     }
 }
 
-pub fn reduce(state: &DuosState, action: &DuosAction) -> DuosReduceResult {
+pub fn reduce(pinned: Pinned, state: &DuosState, action: &DuosAction) -> DuosReduceResult {
     registered();
-    duos_reduce(state, action)
+    pinned.run(|| duos_reduce(state, action))
 }
 
 /// S4: what `seat` may send now, the `legal` beside its view.
-pub fn legal(state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBody> {
+pub fn legal(pinned: Pinned, state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBody> {
     registered();
-    duos_legal_actions(state, seat)
+    pinned.run(|| duos_legal_actions(state, seat))
 }
 
 /// S4: the seats whose legal actions hold more than a concession.
-pub fn seats_to_act(state: &DuosState) -> Vec<DuosSeat> {
+pub fn seats_to_act(pinned: Pinned, state: &DuosState) -> Vec<DuosSeat> {
     registered();
-    duos_seats_to_act(state)
+    pinned.run(|| duos_seats_to_act(state))
 }
 
 /// S2, B23: the only window a seat gets onto the game.
-pub fn view(state: &DuosState, seat: DuosSeat) -> DuosView {
+pub fn view(pinned: Pinned, state: &DuosState, seat: DuosSeat) -> DuosView {
     registered();
-    duos_view_for(state, seat)
+    pinned.run(|| duos_view_for(state, seat))
 }
 
 /// B24, B40: a match rebuilt from its seed, options and log.
-pub fn fold(input: &DuosReplayInput) -> DuosReplayResult {
+pub fn fold(pinned: Pinned, input: &DuosReplayInput) -> DuosReplayResult {
     registered();
-    duos_fold(input)
+    pinned.run(|| duos_fold(input))
 }
 
 pub fn hash(state: &DuosState) -> String {
@@ -105,7 +129,7 @@ pub fn create_options(row: &DuosMatch) -> DuosCreateOptions {
 /// A person's deck: their frozen saved deck, or All Random's deal for their seat (R258, R1372).
 fn person_deck(choice: &DuosChoice, seed: &str, seat: DuosSeat) -> Vec<String> {
     match choice {
-        DuosChoice::Deck { deck } => deck.cards.clone(),
+        DuosChoice::Deck { deck, .. } => deck.cards.clone(),
         DuosChoice::Random { lean_newest } => {
             deal_random_deck(&format!("{seed}:{seat}-deck"), lean_of(*lean_newest))
         }
@@ -129,8 +153,21 @@ fn ai_deck(seed: &str, seat: DuosSeat, handicap: &Handicap) -> Vec<String> {
 /// S6, B30: everything a co-op match between the room's two choices is created with. The people are
 /// team A under `DUOS_HUMAN_TEAM` with no handicap; the AI is team B under `duos_ai_team(difficulty)`
 /// with `AI_DIFFICULTY[difficulty]` on each of its seats. A person's random deck is dealt (R433), an
-/// AI's never (practice's rule: R185's redaction would hide the AI's own library from itself).
+/// AI's never (practice's rule: R185's redaction would hide the AI's own library from itself). The
+/// match is pinned to `catalog_version`, the catalog it is dealt from (R767000); `pinned` is it.
 pub fn match_options(
+    pinned: Pinned,
+    catalog_version: &str,
+    seed: &str,
+    difficulty: Difficulty,
+    host: &DuosChoice,
+    guest: &DuosChoice,
+) -> DuosMatchOptions {
+    pinned.run(|| dealt_options(catalog_version, seed, difficulty, host, guest))
+}
+
+fn dealt_options(
+    catalog_version: &str,
     seed: &str,
     difficulty: Difficulty,
     host: &DuosChoice,
@@ -162,26 +199,62 @@ pub fn match_options(
             b1: ai_handicap,
             b2: ai_handicap,
         },
+        catalog_version: catalog_version.to_string(),
     }
 }
 
-/// B41: `seat`'s view after each step of the match: the game as it began (all four mulligans open),
-/// then after each logged action. A refused action ends the steps where the fold would stop (B24).
+/// B41: both people's steps of a match, each seat's view as the game began (all four mulligans open)
+/// and after each logged action, exactly what that seat's live view showed.
+pub struct DuosSteps {
+    pub a1: Vec<DuosView>,
+    pub a2: Vec<DuosView>,
+    /// Where the game ended up, for the caller to hold to the result the match recorded.
+    pub result: Option<DuosResult>,
+}
+
+impl DuosSteps {
+    /// A person's own steps (team B's seats are the AI's and have none).
+    pub fn of(&self, seat: DuosSeat) -> &[DuosView] {
+        match seat {
+            DuosSeat::A2 => &self.a2,
+            _ => &self.a1,
+        }
+    }
+}
+
+/// B41: the match folded once under its catalog, both people's views after every step. A log the
+/// engine no longer folds to its end, its setup or any action refused, is `rules_changed` (B24, R768):
+/// the replay is refused, never cut short. Panics, as `duos_create` does, on a deck the catalog
+/// refuses; the caller catches it.
 pub fn steps_for(
+    pinned: Pinned,
     options: &DuosCreateOptions,
     log: &[DuosAction],
-    seat: DuosSeat,
-) -> Result<Vec<DuosView>, String> {
-    let mut state = create_and_begin(options)?;
-    let mut steps = Vec::with_capacity(log.len() + 1);
-    steps.push(view(&state, seat));
-    for action in log {
-        let result = reduce(&state, action);
-        if result.error.is_some() {
-            break;
+) -> Result<DuosSteps, ReplayRefusal> {
+    registered();
+    pinned.run(|| {
+        let begun = duos_begin(&duos_create(options));
+        if begun.error.is_some() {
+            return Err(ReplayRefusal::RulesChanged);
         }
-        state = result.state;
-        steps.push(view(&state, seat));
-    }
-    Ok(steps)
+        let mut state = begun.state;
+        let mut steps = DuosSteps {
+            a1: Vec::with_capacity(log.len() + 1),
+            a2: Vec::with_capacity(log.len() + 1),
+            result: None,
+        };
+        steps.a1.push(duos_view_for(&state, DuosSeat::A1));
+        steps.a2.push(duos_view_for(&state, DuosSeat::A2));
+        for action in log {
+            let result = duos_reduce(&state, action);
+            if result.error.is_some() {
+                return Err(ReplayRefusal::RulesChanged);
+            }
+            state = result.state;
+            steps.a1.push(duos_view_for(&state, DuosSeat::A1));
+            steps.a2.push(duos_view_for(&state, DuosSeat::A2));
+        }
+        steps.result = state.result;
+        Ok(steps)
+    })
 }

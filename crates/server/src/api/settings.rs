@@ -29,6 +29,7 @@ use crate::db::store::{
     PlayerSettingValue, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow,
 };
+use crate::social::watch::revoke_all_of;
 
 /// R633: a group id is a lower-case slug (`gameplay`, `audio`, `fx`, `cards`).
 fn is_group_id_shape(id: &str) -> bool {
@@ -225,6 +226,10 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
     }
     let allowed = tx.profiles_allows_spectators(&profile.id).await?;
     tx.commit().await?;
+    // B50: watching off lets go of whoever watches now, not only of the next hello.
+    if !allowed {
+        revoke_all_of(app, &profile.id);
+    }
     let settings = match outcome {
         PlayerSettingsMergeOutcome::Limit => {
             return Err(ApiError::with_details(
@@ -272,9 +277,11 @@ async fn put_allow_spectators(app: &Arc<App>, profile_id: &str, allow: bool) -> 
     tx.profiles_set_allow_spectators(profile_id, allow).await?;
     let row = tx.player_settings_get(profile_id).await?;
     tx.commit().await?;
+    // B50: watching off lets go of whoever watches now, not only of the next hello.
+    let revoked = if allow { 0 } else { revoke_all_of(app, profile_id) };
     log_info(
         "settings.spectators",
-        json!({ "profileId": profile_id, "allowSpectators": allow }),
+        json!({ "profileId": profile_id, "allowSpectators": allow, "watchersRevoked": revoked }),
     );
     ok_of(&settings_answer(settings_view(row.as_ref()), allow))
 }

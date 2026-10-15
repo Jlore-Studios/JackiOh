@@ -11,9 +11,15 @@
 //
 // Networked: it needs `E2E=1 cargo run --release -p jackioh-server` beside the client. Daily only, as
 // every spec outside scripts/shard-specs.mjs's SMOKE. No wait depends on a server clock: every wait is a
-// retried DOM or HTTP assertion bounded by a poll (`CHAT_POLL_MS`, the social screens' cadence).
+// retried DOM or HTTP assertion bounded by the poll that brings it: the friends list's
+// (`PRESENCE_HEARTBEAT_MS`), the challenges' (`SOCIAL_POLL_MS`) or an open chat's (`CHAT_POLL_MS`).
 
-import { CHAT_POLL_MS, MATCH_FOUND_NAV_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
+import {
+  CHAT_POLL_MS,
+  MATCH_FOUND_NAV_DELAY_MS,
+  PRESENCE_HEARTBEAT_MS,
+  SOCIAL_POLL_MS,
+} from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, routes, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
   CHALLENGE_ACCEPT,
@@ -51,11 +57,17 @@ import {
 /** Play together's route, mirroring `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
 
-/** A social read lands within one poll and a render. */
-const POLL_TIMEOUT_MS = CHAT_POLL_MS + timeouts.view;
+/** A change to the friends list (a request, a friend, a status) lands within its poll and a render. */
+const FRIENDS_TIMEOUT_MS = PRESENCE_HEARTBEAT_MS + timeouts.view;
+
+/** A challenge lands within the challenges' poll and a render. */
+const CHALLENGE_TIMEOUT_MS = SOCIAL_POLL_MS + timeouts.view;
+
+/** An open conversation's reply lands within the chat's poll and a render. */
+const CHAT_TIMEOUT_MS = CHAT_POLL_MS + timeouts.view;
 
 /** The challenger's follow: a poll to see the join, the "Match found!" beat, then the board's path. */
-const FOLLOW_TIMEOUT_MS = POLL_TIMEOUT_MS + MATCH_FOUND_NAV_DELAY_MS + timeouts.view;
+const FOLLOW_TIMEOUT_MS = CHALLENGE_TIMEOUT_MS + MATCH_FOUND_NAV_DELAY_MS + timeouts.view;
 
 /** A match page, capturing its id. */
 const MATCH_PATH = /^\/match\/([^/]+)$/;
@@ -216,7 +228,7 @@ describe("41 Play together — friends, chat and challenges between two accounts
       cy.request({ method: "POST", url: api("/api/friends/requests"), headers: bearer(two), body: { username: oneName } })
         .its("status")
         .should("eq", 201);
-      cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${twoId}"]`, { timeout: POLL_TIMEOUT_MS }).within(
+      cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(
         () => {
           cy.get(ts(TOGETHER_REQUEST_DECLINE)).click();
         },
@@ -246,7 +258,7 @@ describe("41 Play together — friends, chat and challenges between two accounts
           .its("status")
           .should("eq", 200);
       });
-      cy.get(friendRow(twoId), { timeout: POLL_TIMEOUT_MS }).should("exist");
+      cy.get(friendRow(twoId), { timeout: FRIENDS_TIMEOUT_MS }).should("exist");
     });
 
     // B58: Chat opens the conversation; a message sent shows at once, and the reply within a poll.
@@ -270,7 +282,7 @@ describe("41 Play together — friends, chat and challenges between two accounts
         .its("status")
         .should("eq", 201);
     });
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, REPLY, { timeout: POLL_TIMEOUT_MS }).should("be.visible");
+    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, REPLY, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
     cy.get(ts(CHAT_CLOSE)).click();
     cy.get(ts(CHAT_PANEL)).should("not.exist");
 
@@ -288,7 +300,7 @@ describe("41 Play together — friends, chat and challenges between two accounts
       });
     });
     cy.then(() => {
-      cy.get(`${ts(CHALLENGE_TOAST)}[data-room-code="${roomCode}"]`, { timeout: POLL_TIMEOUT_MS }).within(() => {
+      cy.get(`${ts(CHALLENGE_TOAST)}[data-room-code="${roomCode}"]`, { timeout: CHALLENGE_TIMEOUT_MS }).within(() => {
         cy.get(ts(CHALLENGE_ACCEPT)).click();
       });
     });
@@ -320,7 +332,7 @@ describe("41 Play together — friends, chat and challenges between two accounts
     cy.request({ method: "POST", url: api("/api/presence"), headers: bearer(two) }).its("status").should("eq", 204);
     cy.visitAs(one, TOGETHER);
     cy.then(() => {
-      cy.get(friendRow(twoId, "online"), { timeout: POLL_TIMEOUT_MS }).within(() => {
+      cy.get(friendRow(twoId, "online"), { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
         cy.get(ts(TOGETHER_CHALLENGE)).click();
       });
     });

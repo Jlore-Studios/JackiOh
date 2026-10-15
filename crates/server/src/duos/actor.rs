@@ -19,7 +19,16 @@
 //!    clock for a round with a person in it, a prompt clock for a prompt a person holds outside one, and
 //!    each person's disconnect grace (the 1v1's `DISCONNECT_GRACE_SECONDS`). None of them is an action
 //!    the engine sees: an expiry hands the seat to the AI, whose moves are ordinary logged actions, so
-//!    `(seed, log)` still folds the match exactly.
+//!    `(seed, log)` still folds the match exactly. The mulligan clock's expiry keeps each owing
+//!    person's whole hand (§12.2, R268): the AI's own mulligan never answers for a person (it may for a
+//!    seat past its grace, which the AI plays outright).
+//!  - A move the AI decided is played only while the AI still plays the seat the way it decided it:
+//!    one decided for a seat past its grace is dropped once its person is back, whatever clock has
+//!    run out for them meanwhile, and the seat decides again (B37, B38).
+//!  - Every engine call runs under the catalog the match was dealt from (R767000, `Pinned`), so a
+//!    rebuilt actor plays on as the match began.
+//!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
+//!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame.
 //!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
 //!    viewed (B39).
 //!
@@ -55,7 +64,7 @@ use crate::config::{
     PING_RATE_WINDOW_MS, REJECTION_ALERT_WINDOW_MS,
 };
 use crate::db::store::StoreError;
-use crate::duos::engine;
+use crate::duos::engine::{self, Pinned};
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
     error_message, parse_duos_message,
@@ -175,8 +184,9 @@ fn fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// Why a person's seat (a1, a2) is in the AI's hands for a while.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Forced {
-    /// B38 (and the mulligan clock, as round 0): this round, its prompts are answered and its turn
-    /// ended for it.
+    /// The mulligan clock (§12.2, R268): its mulligan is answered by keeping the whole hand.
+    KeepHand,
+    /// B38: this round, its prompts are answered and its turn ended for it.
     FinishRound(i32),
     /// The prompt clock: this one prompt is answered for it.
     AnswerPrompt(String),
@@ -187,6 +197,8 @@ enum Forced {
 enum Mode {
     /// b1 and b2, and a person's seat past its grace (B36, B37): everything it owes.
     Full,
+    /// Its mulligan, by keeping the whole hand: never the AI's own mulligan (R268).
+    KeepHand,
     /// Its prompts and mulligan, then its end of turn (B38).
     FinishRound,
     /// That prompt only.
@@ -194,11 +206,45 @@ enum Mode {
 }
 
 /// Whether `seat` owes the game something the AI would play in `mode`.
-fn owes(state: &DuosState, seat: DuosSeat, mode: &Mode) -> bool {
+fn owes(pinned: Pinned, state: &DuosState, seat: DuosSeat, mode: &Mode) -> bool {
     match mode {
-        Mode::Full => engine::seats_to_act(state).contains(&seat),
-        Mode::FinishRound => owes_answer(state, seat) || engine::legal(state, seat).iter().any(is_end_turn),
+        Mode::Full => engine::seats_to_act(pinned, state).contains(&seat),
+        Mode::KeepHand => owes_mulligan(state, seat),
+        Mode::FinishRound => {
+            owes_answer(state, seat) || engine::legal(pinned, state, seat).iter().any(is_end_turn)
+        }
         Mode::AnswerPrompt(choice) => held_prompt(state, seat).as_deref() == Some(choice.as_str()),
+    }
+}
+
+/// R268: the mulligan that keeps every card of the hand, the legal one keeping the most.
+fn keep_whole_hand(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
+    legal
+        .iter()
+        .filter_map(|body| match body {
+            DuosActionBody::Duel {
+                body: ActionBody::Mulligan { keep },
+            } => Some((keep.len(), body)),
+            _ => None,
+        })
+        .max_by_key(|(kept, _)| *kept)
+        .map(|(_, body)| body.clone())
+}
+
+/// What the AI plays for `seat` in `mode` without a decision of its own: the whole hand kept, the
+/// turn ended, or `fallback`'s pick.
+fn without_search(
+    mode: &Mode,
+    state: &DuosState,
+    seat: DuosSeat,
+    legal: &[DuosActionBody],
+) -> Option<DuosActionBody> {
+    match mode {
+        Mode::KeepHand => keep_whole_hand(legal),
+        Mode::FinishRound if !owes_answer(state, seat) => {
+            legal.iter().find(|body| is_end_turn(body)).cloned()
+        }
+        _ => fallback(legal),
     }
 }
 
@@ -209,6 +255,7 @@ struct AiJob {
     mode: Option<Mode>,
     seed: String,
     cursor: u32,
+    pinned: Pinned,
 }
 
 impl AiJob {
@@ -220,11 +267,12 @@ impl AiJob {
         let Some(mode) = &self.mode else {
             return (None, self.cursor);
         };
-        if !owes(&self.state, self.seat, mode) {
+        if !owes(self.pinned, &self.state, self.seat, mode) {
             return (None, self.cursor);
         }
-        let legal = engine::legal(&self.state, self.seat);
+        let legal = engine::legal(self.pinned, &self.state, self.seat);
         match mode {
+            Mode::KeepHand => (keep_whole_hand(&legal), self.cursor),
             Mode::FinishRound if !owes_answer(&self.state, self.seat) => {
                 (legal.iter().find(|body| is_end_turn(body)).cloned(), self.cursor)
             }
@@ -245,7 +293,10 @@ impl AiJob {
             budget: AI_BUDGET,
             should_stop: Some(&should_stop),
         };
-        let body = duos_decide(&self.state, self.seat, &mut options).filter(|body| !ai_forbidden(body));
+        let body = self
+            .pinned
+            .run(|| duos_decide(&self.state, self.seat, &mut options))
+            .filter(|body| !ai_forbidden(body));
         (body, options.rng.cursor())
     }
 }
@@ -261,6 +312,8 @@ pub struct DuosActorInput {
     pub state: DuosState,
     /// The rows already logged: the seq counter and the nonce map are rebuilt from them.
     pub log: Vec<DuosActionRow>,
+    /// R767000: the catalog the match was dealt from, which every engine call runs under.
+    pub pinned: Pinned,
 }
 
 /// Which clock ran out, with the timer that ran it, so an expiry a later arm replaced is ignored.
@@ -286,8 +339,10 @@ impl Expiry {
 /// One task on the actor's serialized queue.
 enum Task {
     Arm,
+    /// R835001: `generation` is the socket generation that sent it (`Core::socket_generation`).
     Hello {
         seat: DuosSeat,
+        generation: u64,
     },
     Attach {
         seat: DuosSeat,
@@ -307,12 +362,13 @@ enum Task {
         reply: oneshot::Sender<DuosServerMessage>,
     },
     Expire(Expiry),
-    /// The move the AI decided for `seat` on the state as it stood when the log's next seq was
-    /// `version`.
+    /// The move the AI decided for `seat`, in `mode`, on the state as it stood when the log's next
+    /// seq was `version`.
     AiMove {
         seat: DuosSeat,
         version: i64,
         cursor: u32,
+        mode: Option<Mode>,
         body: Option<DuosActionBody>,
     },
     Idle(oneshot::Sender<()>),
@@ -375,6 +431,11 @@ struct Core {
     malformed_at: [VecDeque<i64>; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
+    /// By `HUMAN_SEATS` (R835001's rule): the socket generation whose Hello is queued and unrun, so
+    /// a repeat from that socket is absorbed; a Hello from a newer socket always enqueues.
+    hello_pending: [Option<u64>; 2],
+    /// By `HUMAN_SEATS`: bumped on every attach, the first included.
+    socket_generation: [u64; 2],
     /// The result is written (or the row already had one when the actor was built).
     finished: bool,
     finished_at: Option<i64>,
@@ -384,6 +445,8 @@ struct Core {
 struct Shared {
     app: Arc<App>,
     row: DuosMatch,
+    /// R767000: the catalog every engine call runs under.
+    pinned: Pinned,
     inbox: mpsc::UnboundedSender<Task>,
     core: Mutex<Core>,
 }
@@ -425,7 +488,12 @@ async fn run_queue(shared: Weak<Shared>, mut inbox: mpsc::UnboundedReceiver<Task
 
 /// Builds the actor and arms it. Must be called inside a tokio runtime.
 pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
-    let DuosActorInput { row, state, log } = input;
+    let DuosActorInput {
+        row,
+        state,
+        log,
+        pinned,
+    } = input;
     let next_seq = log.iter().fold(0, |highest, entry| highest.max(entry.seq)) + 1;
     let acks: IndexMap<String, (DuosSeat, i64)> = log
         .iter()
@@ -453,6 +521,8 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         recent_actions: [VecDeque::new(), VecDeque::new()],
         malformed_at: [VecDeque::new(), VecDeque::new()],
         pings: [VecDeque::new(), VecDeque::new()],
+        hello_pending: [None, None],
+        socket_generation: [0, 0],
         finished,
         finished_at: finished.then(now_ms),
         stopped: false,
@@ -461,6 +531,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
     let shared = Arc::new(Shared {
         app,
         row,
+        pinned,
         inbox,
         core: Mutex::new(core),
     });
@@ -488,9 +559,15 @@ impl DuosActor {
     async fn run(&self, task: Task) {
         match task {
             Task::Arm => self.on_arm().await,
-            Task::Hello { seat } => {
-                // §9.5: a fresh full view, never a log replay.
-                let core = self.lock();
+            Task::Hello { seat, generation } => {
+                // §9.5: a fresh full view, never a log replay. R835001: the flag is cleared only for
+                // the generation that set it, so a newer socket's queued Hello stays marked.
+                let mut core = self.lock();
+                if let Some(index) = human(seat)
+                    && core.hello_pending[index] == Some(generation)
+                {
+                    core.hello_pending[index] = None;
+                }
                 self.push_seat(&core, seat);
             }
             Task::Attach { seat } => self.on_attach(seat),
@@ -514,8 +591,9 @@ impl DuosActor {
                 seat,
                 version,
                 cursor,
+                mode,
                 body,
-            } => self.on_ai_move(seat, version, cursor, body).await,
+            } => self.on_ai_move(seat, version, cursor, mode, body).await,
             Task::Idle(done) => {
                 let _ = done.send(());
             }
@@ -563,12 +641,12 @@ impl DuosActor {
         let Some(socket) = self.socket_for(core, seat) else {
             return;
         };
-        let mut view: DuosView = engine::view(&core.state, seat);
+        let mut view: DuosView = engine::view(self.shared.pinned, &core.state, seat);
         let now = now_ms();
         view.own.clock_ms = self
             .deadline_for(core, seat)
             .map(|at| i32::try_from((at - now).max(0)).unwrap_or(i32::MAX));
-        let legal = engine::legal(&core.state, seat);
+        let legal = engine::legal(self.shared.pinned, &core.state, seat);
         socket.send(encode(&DuosServerMessage::View {
             view: Box::new(view),
             legal,
@@ -705,9 +783,10 @@ impl DuosActor {
                     }
                     core.mulligan = None;
                     core.mulligan_expired = true;
+                    // §12.2, R268: each person still owing keeps the hand they were dealt.
                     for seat in HUMAN_SEATS {
                         if owes_mulligan(&core.state, seat) {
-                            core.forced[slot(seat)] = Some(Forced::FinishRound(0));
+                            core.forced[slot(seat)] = Some(Forced::KeepHand);
                         }
                     }
                 }
@@ -871,7 +950,14 @@ impl DuosActor {
                     }
                 }
             }
-            Ok(DuosClientMessage::Hello { .. }) => self.enqueue(Task::Hello { seat }),
+            Ok(DuosClientMessage::Hello { .. }) => {
+                // R835001: a hello while this socket's last one is still queued is absorbed by it.
+                let generation = core.socket_generation[index];
+                if core.hello_pending[index] != Some(generation) {
+                    core.hello_pending[index] = Some(generation);
+                    self.enqueue(Task::Hello { seat, generation });
+                }
+            }
             Ok(DuosClientMessage::Ping { ping, target }) => self.relay_ping(&mut core, seat, ping, target),
             Ok(DuosClientMessage::Action { nonce, body }) => {
                 let now = now_ms();
@@ -975,7 +1061,7 @@ impl DuosActor {
                 nonce: nonce.clone(),
                 body,
             };
-            let result = engine::reduce(&core.state, &action);
+            let result = engine::reduce(self.shared.pinned, &core.state, &action);
             (action, result, core.next_seq)
         };
 
@@ -1122,6 +1208,7 @@ impl DuosActor {
             return Some(Mode::Full);
         }
         match &core.forced[slot(seat)] {
+            Some(Forced::KeepHand) if owes_mulligan(&core.state, seat) => Some(Mode::KeepHand),
             Some(Forced::FinishRound(round)) if *round == core.state.round => Some(Mode::FinishRound),
             Some(Forced::AnswerPrompt(choice))
                 if held_prompt(&core.state, seat).as_deref() == Some(choice.as_str()) =>
@@ -1148,7 +1235,7 @@ impl DuosActor {
             let Some(mode) = self.ai_mode(&core, seat) else {
                 continue;
             };
-            if !owes(&core.state, seat, &mode) {
+            if !owes(self.shared.pinned, &core.state, seat, &mode) {
                 continue;
             }
             core.ai_busy[index] = true;
@@ -1160,6 +1247,7 @@ impl DuosActor {
                     return;
                 };
                 let cursor = job.cursor;
+                let mode = job.mode.clone();
                 let decided = tokio::task::spawn_blocking(move || {
                     std::panic::catch_unwind(AssertUnwindSafe(|| job.decide()))
                 })
@@ -1180,6 +1268,7 @@ impl DuosActor {
                         seat,
                         version,
                         cursor,
+                        mode,
                         body,
                     });
                 }
@@ -1198,17 +1287,27 @@ impl DuosActor {
             mode: actor.ai_mode(&core, seat),
             seed: actor.shared.row.seed.clone(),
             cursor: core.ai_cursor[slot(seat)],
+            pinned: actor.shared.pinned,
         };
         Some((job, core.next_seq))
     }
 
-    /// Plays the AI's move for `seat` while the AI still holds the seat (its person may be back), as
-    /// a server action. A move decided on a state the log has since moved past (the other duel, a
-    /// pass, a person's answer) still goes when the engine takes it; refused, the seat decides again
-    /// on the state as it is, as a ladder bot does (R1452). A fresh move the engine refuses is traded
-    /// for the fallback once; a move that could not be written is decided again `BOT_WRITE_RETRY_MS`
-    /// later.
-    async fn on_ai_move(&self, seat: DuosSeat, version: i64, cursor: u32, body: Option<DuosActionBody>) {
+    /// Plays the AI's move for `seat` while the AI still holds the seat the way it decided the move
+    /// (`decided`), as a server action. A move decided in another mode than the seat's now is dropped
+    /// and the seat decides again: a person back from past their grace is never played for, even when
+    /// a clock has handed the AI their prompts or their turn's end meanwhile (B37, B38). A move
+    /// decided on a state the log has since moved past (the other duel, a pass, a person's answer)
+    /// still goes when the engine takes it; refused, the seat decides again on the state as it is, as
+    /// a ladder bot does (R1452). A fresh move the engine refuses is traded for the fallback once; a
+    /// move that could not be written is decided again `BOT_WRITE_RETRY_MS` later.
+    async fn on_ai_move(
+        &self,
+        seat: DuosSeat,
+        version: i64,
+        cursor: u32,
+        decided: Option<Mode>,
+        body: Option<DuosActionBody>,
+    ) {
         let (held, current) = {
             let mut core = self.lock();
             let index = slot(seat);
@@ -1219,7 +1318,7 @@ impl DuosActor {
             }
             (self.ai_mode(&core, seat), core.next_seq)
         };
-        let Some(mode) = held else {
+        let Some(mode) = held.filter(|mode| decided.as_ref() == Some(mode)) else {
             self.drive_ai();
             return;
         };
@@ -1246,14 +1345,9 @@ impl DuosActor {
         if refused {
             let retry = {
                 let core = self.lock();
-                if owes(&core.state, seat, &mode) {
-                    let legal = engine::legal(&core.state, seat);
-                    match mode {
-                        Mode::FinishRound if !owes_answer(&core.state, seat) => {
-                            legal.iter().find(|body| is_end_turn(body)).cloned()
-                        }
-                        _ => fallback(&legal),
-                    }
+                if owes(self.shared.pinned, &core.state, seat, &mode) {
+                    let legal = engine::legal(self.shared.pinned, &core.state, seat);
+                    without_search(&mode, &core.state, seat, &legal)
                 } else {
                     None
                 }
@@ -1331,6 +1425,8 @@ impl DuosActor {
             if core.stopped {
                 None
             } else {
+                // R835001: a new socket generation, so its hello is never absorbed by an older one's.
+                core.socket_generation[index] += 1;
                 Some(core.sockets[index].replace(socket.clone()))
             }
         };
@@ -1401,11 +1497,11 @@ impl DuosActor {
 
     /// `seat`'s view as its socket would get it (without the clock).
     pub fn view_for(&self, seat: DuosSeat) -> DuosView {
-        engine::view(&self.lock().state, seat)
+        engine::view(self.shared.pinned, &self.lock().state, seat)
     }
 
     pub fn legal_for(&self, seat: DuosSeat) -> Vec<DuosActionBody> {
-        engine::legal(&self.lock().state, seat)
+        engine::legal(self.shared.pinned, &self.lock().state, seat)
     }
 
     /// `duos_hash` of the live state, for a rebuild's check; never sent to a socket.

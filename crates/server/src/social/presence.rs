@@ -5,26 +5,31 @@
 //! A friend is `inMatch` while a live 1v1 match holds them (the in-match flag §9.5 sets and every
 //! ending clears, which `GET /api/auth/me` reads as `currentMatchId`), while they are between the
 //! games of a Conquest series that is not over (`currentSeriesId`, R259), or while a live Duos
-//! co-op match holds them (`duos::live_match_of`, B42); else `online` while their last heartbeat is
-//! at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it reads as a person
-//! who is away, and in a match as a person in one (R1452).
+//! co-op match holds them (B42, read as `duos::live_match_of` reads it); else `online` while their
+//! last heartbeat is at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it
+//! reads as a person who is away, and in a match as a person in one (R1452).
 //!
-//! `watchable` (B50) is `social::watch::watchable`: the viewer may watch the friend's live 1v1
-//! match, which is not ranked, whose friend allows spectators (`profiles.allow_spectators`) and has
-//! fewer than `SPECTATORS_PER_MATCH` watchers. The watch socket judges it again at its hello.
+//! `watchable` (B50): the viewer may watch the friend's live 1v1 match, which is not ranked, whose
+//! friend allows spectators (`profiles.allow_spectators`) and has fewer than `SPECTATORS_PER_MATCH`
+//! watchers. The watch socket judges it again at its hello (`social::watch`).
+//!
+//! `standings` reads every friend's at once, in the caller's transaction, by a fixed number of
+//! set-based reads (heartbeats, series, co-op matches, the watch checks), whatever the number of
+//! friends, so `GET /api/friends`, which a client reads every `PRESENCE_HEARTBEAT_MS`, costs one
+//! transaction and no per-friend query.
 
 use std::sync::Arc;
 
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiResult, Req, now_ms};
+use crate::api::http::{ApiResult, Req, now_ms};
 use crate::app::App;
-use crate::config::PRESENCE_TTL_MS;
-use crate::db::store::Profile;
+use crate::config::{PRESENCE_TTL_MS, SPECTATORS_PER_MATCH};
+use crate::db::store::{Profile, StoreError, Tx};
 use crate::social::no_content;
-use crate::social::watch::watchable;
+use crate::social::watch::watcher_count;
 
 /// S7's `Friend.status`.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,29 +67,36 @@ pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(no_content())
 }
 
-/// B47, B50: each profile's standing as `viewer_id` sees it, by profile id, read from the profiles
-/// as given (their in-match flag), the series that are not over, their heartbeats and, outside any
-/// transaction, whether `viewer_id` may watch the 1v1 match holding them and the Duos co-op matches.
+/// B47, B50: each profile's standing as `viewer_id` sees it, by profile id, read in `tx` from the
+/// profiles as given (their in-match flag) and four set-based reads: their heartbeats, those a
+/// series that is not over holds, the live Duos co-op match holding each, and those whose live 1v1
+/// match `viewer_id` may watch; each watched match's room is the actor's count, in memory.
 pub(crate) async fn standings(
+    tx: &mut Tx<'_>,
     app: &App,
     viewer_id: &str,
     profiles: &[Profile],
-) -> Result<IndexMap<String, Standing>, ApiError> {
+) -> Result<IndexMap<String, Standing>, StoreError> {
     if profiles.is_empty() {
         return Ok(IndexMap::new());
     }
     let now = now_ms();
     let ids: Vec<String> = profiles.iter().map(|profile| profile.id.clone()).collect();
-
-    let mut tx = app.db.begin(None).await?;
-    let seen = tx.presence_last_seen(&ids).await?;
-    let in_series: IndexSet<String> = tx
-        .series_active()
-        .await?
-        .into_iter()
-        .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
+    let in_match: Vec<String> = profiles
+        .iter()
+        .filter(|profile| profile.in_match_id.is_some())
+        .map(|profile| profile.id.clone())
         .collect();
-    tx.commit().await?;
+    let idle: Vec<String> = profiles
+        .iter()
+        .filter(|profile| profile.in_match_id.is_none())
+        .map(|profile| profile.id.clone())
+        .collect();
+
+    let seen = tx.presence_last_seen(&ids).await?;
+    let in_series = tx.presence_in_series(&idle).await?;
+    let in_duos = tx.presence_in_duos(&idle).await?;
+    let watchable = tx.presence_watchable(viewer_id, &in_match).await?;
 
     let mut standings = IndexMap::new();
     for profile in profiles {
@@ -92,7 +104,8 @@ pub(crate) async fn standings(
             Standing {
                 status: Status::InMatch,
                 match_id: Some(match_id.clone()),
-                watchable: watchable(app, viewer_id, profile).await?,
+                watchable: watchable.contains(&profile.id)
+                    && watcher_count(app, match_id) < SPECTATORS_PER_MATCH,
             }
         } else if in_series.contains(&profile.id) {
             Standing {
@@ -100,11 +113,11 @@ pub(crate) async fn standings(
                 match_id: None,
                 watchable: false,
             }
-        } else if let Some(duos_match) = crate::duos::live_match_of(app, &profile.id).await? {
+        } else if let Some(duos_match) = in_duos.get(&profile.id) {
             // Out of scope: watching a Duos game (SPEC, Out of scope).
             Standing {
                 status: Status::InMatch,
-                match_id: Some(duos_match),
+                match_id: Some(duos_match.clone()),
                 watchable: false,
             }
         } else if seen

@@ -25,14 +25,22 @@ use crate::db::store::{FrozenDeck, StoreResult, Tx};
 // ---------------------------------------------------------------------------
 
 /// What a person brings to a co-op seat (S6's `deckId` or `random: true`), frozen when the room is
-/// made or joined: one of their saved decks, checked legal then (R253's `freeze_choice`), or a deal
-/// from the match seed when the match starts (R258), leaning on the newest set when they asked
-/// (R1372). The `host_choice` / `guest_choice` column.
+/// made or joined: one of their saved decks, checked legal then (R253's `freeze_choice`) under the
+/// catalog version it names, or a deal from the match seed when the match starts (R258), leaning on
+/// the newest set when they asked (R1372). The `host_choice` / `guest_choice` column.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosChoice {
-    Deck { deck: FrozenDeck },
-    Random { lean_newest: bool },
+    Deck {
+        deck: FrozenDeck,
+        /// §9.4: the catalog the deck was checked against. A join under another catalog is refused
+        /// (`update_required`), as a 1v1 room's is: the running catalog may not deal it.
+        #[serde(default)]
+        catalog_version: String,
+    },
+    Random {
+        lean_newest: bool,
+    },
 }
 
 /// One row of `public.duos_rooms` (S6, B33, B34).
@@ -95,6 +103,10 @@ pub struct DuosMatchOptions {
     pub dealt: Vec<DuosSeat>,
     pub teams: TeamRules,
     pub handicaps: SeatHandicaps,
+    /// R767000: the catalog version the match was dealt and is played on, so its rebuilds and its
+    /// replay fold under that version's catalog whatever this build's is.
+    #[serde(default)]
+    pub catalog_version: String,
 }
 
 /// One row of `public.duos_matches` (S6, B40, B42).
@@ -260,6 +272,13 @@ impl Tx<'_> {
     /// The match's log in seq order.
     pub async fn duos_actions(&mut self, match_id: &str) -> StoreResult<Vec<DuosActionRow>> {
         duos_dispatch!(self, actions(match_id))
+    }
+
+    /// The retention purge (`api/retention.rs`): deletes the log of every co-op match that ended
+    /// before `ended_before`, as a 1v1 match's log goes (`MATCH_ACTION_RETENTION_DAYS`). The match
+    /// row, its result with it, stays. Answers how many rows went.
+    pub async fn duos_actions_purge(&mut self, ended_before: i64) -> StoreResult<u64> {
+        duos_dispatch!(self, actions_purge(ended_before))
     }
 }
 
@@ -604,6 +623,20 @@ mod pg {
         )))
     }
 
+    pub async fn actions_purge(t: &mut PgTx<'_>, ended_before: i64) -> Result<u64, StoreError> {
+        run_as(t, None).await?;
+        let done = sqlx::query(
+            "delete from public.duos_match_actions a
+              using public.duos_matches m
+              where a.match_id = m.id
+                and m.ended_at < to_timestamp($1::double precision / 1000.0)",
+        )
+        .bind(ended_before)
+        .execute(&mut **t)
+        .await?;
+        Ok(done.rows_affected())
+    }
+
     pub async fn actions(t: &mut PgTx<'_>, match_id: &str) -> Result<Vec<DuosActionRow>, StoreError> {
         run_as(t, None).await?;
         if !is_uuid(match_id) {
@@ -813,6 +846,19 @@ mod fake {
         Ok(())
     }
 
+    pub fn actions_purge(f: &mut FakeTx<'_>, ended_before: i64) -> Result<u64, StoreError> {
+        let tables = call(f, "duos.actions.purge")?;
+        let expired: Vec<String> = tables
+            .matches
+            .iter()
+            .filter(|row| row.ended_at.is_some_and(|ended_at| ended_at < ended_before))
+            .map(|row| row.id.clone())
+            .collect();
+        let before = tables.actions.len();
+        tables.actions.retain(|row| !expired.contains(&row.match_id));
+        Ok((before - tables.actions.len()) as u64)
+    }
+
     pub fn actions(f: &mut FakeTx<'_>, match_id: &str) -> Result<Vec<DuosActionRow>, StoreError> {
         let tables = call(f, "duos.actions.list")?;
         let mut rows: Vec<DuosActionRow> = tables
@@ -873,6 +919,7 @@ mod tests {
                     b1: None,
                     b2: None,
                 },
+                catalog_version: "test".to_string(),
             },
             created_at,
             ended_at: None,
@@ -975,6 +1022,41 @@ mod tests {
         let log = t.duos_actions("m1").await.expect("the log");
         assert_eq!(log.iter().map(|entry| entry.seq).collect::<Vec<_>>(), vec![1, 2]);
         assert_eq!(seat_of_logged(&log[0].action), Some(DuosSeat::A1));
+    }
+
+    #[tokio::test]
+    async fn the_purge_takes_the_log_of_a_match_that_ended_before_the_cutoff_and_nothing_else() {
+        let db = Db::fake();
+        let mut t = db.begin(None).await.expect("a transaction");
+        for (id, created_at) in [("old", 1), ("new", 2), ("live", 3)] {
+            t.duos_matches_create(&duos_match(id, "p1", "p2", created_at))
+                .await
+                .expect("a match");
+            for seq in 1..=2 {
+                t.duos_actions_append(&row(id, seq, &format!("{id}-{seq}")))
+                    .await
+                    .expect("a row");
+            }
+        }
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        t.duos_matches_finish("old", &result, 100)
+            .await
+            .expect("finished");
+        t.duos_matches_finish("new", &result, 300)
+            .await
+            .expect("finished");
+
+        assert_eq!(t.duos_actions_purge(200).await.ok(), Some(2));
+
+        assert!(t.duos_actions("old").await.expect("the log").is_empty());
+        assert_eq!(t.duos_actions("new").await.expect("the log").len(), 2);
+        assert_eq!(t.duos_actions("live").await.expect("the log").len(), 2);
+        let kept = t
+            .duos_matches_get("old")
+            .await
+            .expect("a read")
+            .expect("the match stays");
+        assert_eq!(kept.result, Some(result));
     }
 
     #[tokio::test]

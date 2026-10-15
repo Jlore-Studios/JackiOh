@@ -162,15 +162,15 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5) |
-| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4) |
-| `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend |
-| `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship and every request either way) and unblock |
+| `GET` | `/api/friends` | active | the caller's friends with their status (`offline`, `online`, `inMatch`) and whether they may be watched, the requests in and out, and the players the caller blocks (§9.4), read in one transaction by a fixed number of set-based queries whatever the number of friends |
+| `POST`, `DELETE` | `/api/friends/requests`, `/:id/accept`, `/:id/decline`, `/api/friends/requests/:id`, `/api/friends/:profileId` | active | a request by exact `name#tag` (an unknown name and a blocked pair answer the same 404; `self`, `already_friends`, `already_requested`, `friend_cap` are 409; past `FRIEND_REQUESTS_PER_HOUR` is 429; a mutual request is accepted at once), its answer or its cancel, and removing a friend (which deletes the replay shares between the two, either way, and lets go a watch of either by the other) |
+| `POST`, `DELETE` | `/api/blocks`, `/api/blocks/:profileId` | active | block (removing the friendship, every request and every replay share either way, and letting go a watch of either by the other) and unblock |
 | `POST` | `/api/presence` | active | the heartbeat, every `PRESENCE_HEARTBEAT_MS`; a friend reads as online for `PRESENCE_TTL_MS` after it |
-| `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room |
+| `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; share a finished match the caller held a seat in with a friend, and unshare it |
-| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS` (§12.9) |
-| `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a co-op match, step by step, 404 to anyone else (§12.9) |
+| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§12.9) |
+| `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§12.9) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
@@ -233,10 +233,15 @@ what the match actor holds, with four seats:
   one;
 - every applied action goes to `duos_match_actions` and pushes fresh views to both human seats; an
   illegal action answers `illegal_action` with its nonce and changes nothing; a rebuilt actor folds the
-  log with `duos_fold`, and the end writes the result and `ended_at` once, unranked, for both humans;
+  log with `duos_fold` on the blocking pool, only for a profile that holds a seat, and the end writes
+  the result and `ended_at` once, unranked, for both humans; every engine call runs under the catalog
+  version the match was dealt from (`DuosMatchOptions::catalog_version`, R767000);
+- a nonce starting `srv-` or `duos:` (the engine's round's own) is `malformed`, and a `hello` repeated
+  while one from the same socket is still queued is absorbed (R835001's rule);
 - the round clock (`DUOS_ROUND_CLOCK_MS`) answers every unended round seat's prompts by the AI and
   ends its turn; a prompt held off the round has `DUOS_PROMPT_CLOCK_MS`; the four mulligans share
-  `DUOS_MULLIGAN_CLOCK_MS`;
+  `DUOS_MULLIGAN_CLOCK_MS`, whose expiry keeps each owing person's whole hand (R268); a move the AI
+  decided under one hold of a seat is dropped if the hold changed before it applies;
 - a human seat disconnected past `DISCONNECT_GRACE_SECONDS` is played by the AI until it reconnects,
   its teammate told `teammate {aiPlaying: true}`; a team never loses to a disconnect;
 - a ping is shape-checked (a `hand` target names the sender's own team's side and an index inside that
@@ -251,7 +256,9 @@ friend's live, unranked match whose player allows watching (`profiles.allow_spec
 than `SPECTATORS_PER_MATCH` watchers. The watcher gets `view {view, legal: []}`, the friend's seat's
 `view_for`, each `SPECTATE_DELAY_MS` after the state it shows; anything else is `error forbidden` and a
 close. Every frame a watcher sends after `hello` is ignored, and leaving changes nothing in the match.
-Both players' own match sockets get `watchers {count}` when the count changes.
+Both players' own match sockets get `watchers {count}` when the count changes. A watcher already in
+gets the same `error forbidden` and close the moment the friend turns watching off (`PUT
+/api/settings`), or the two unfriend or either blocks the other (`MatchActor::revoke_watchers`).
 
 ## Card statistics (§9.11, R376–R378)
 
@@ -518,7 +525,9 @@ loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0037 adds
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
 the result) and `duos_match_actions` (the log, unique by seq and by nonce); the seed and the log are
 the server's alone, as a 1v1 match's are: a room's host and guest may read it (but its frozen deck
-choices), and no client role reads a co-op match or its log (no grant, no policy).
+choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
+loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
+match's (`duos::purge_expired_logs`); the match row and its result stay.
 
 ## Tests
 

@@ -38,8 +38,9 @@ pub struct DuosState {
     pub end_applied: Vec<bool>,
     /// [duel 0, duel 1]: the passes the round seat has made this round (B19, B22).
     pub passes: Vec<i32>,
-    /// The open concede offer (B11): the seat that conceded first, waiting for its teammate.
-    pub concede_offer: Option<DuosSeat>,
+    /// Each team's open concede offer (B11): the seat that conceded first, waiting for its teammate.
+    /// One per team, so one team's concede never touches the other's offer.
+    pub concede_offer: PerTeam<Option<DuosSeat>>,
     pub result: Option<DuosResult>,
 }
 
@@ -138,7 +139,7 @@ pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
         ended: vec![false; DUOS_DUELS],
         end_applied: vec![false; DUOS_DUELS],
         passes: vec![0; DUOS_DUELS],
-        concede_offer: None,
+        concede_offer: PerTeam::new(None, None),
         result: None,
     }
 }

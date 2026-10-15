@@ -1,7 +1,9 @@
 //! The live co-op actors (fullsend SPEC S6, B40), as `actor/registry.rs` holds the 1v1 ones: `start`
 //! creates an actor for a match a join just wrote, `actor_for` rebuilds one that is not in memory by
-//! folding `(seed, options, log)` (`duos_fold`), and `stop` drops one and leaves its log alone, which
-//! is what a crash looks like from outside.
+//! folding `(seed, options, log)` (`duos_fold`) on the blocking pool, under the catalog the match was
+//! played on (R767000), and `stop` drops one and leaves its log alone, which is what a crash looks
+//! like from outside. A socket is told it holds no seat before anything is folded for it (§9.1).
+//! The registry also keeps the co-op replays opened lately (`duos::replay`).
 //!
 //! One registry per running `App`, reached through `registry(app)`. It is not a field of `App`, so
 //! nothing that builds an `App` changes: it lives in a map keyed by the app's address, beside a weak
@@ -11,6 +13,8 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, LazyLock, Mutex, Weak};
+
+use jackioh_engine::ReplayRefusal;
 
 use indexmap::IndexMap;
 use tokio::sync::OnceCell;
@@ -24,7 +28,8 @@ use crate::actor::ws_server::Socket;
 use crate::api::http::lock;
 use crate::app::App;
 use crate::duos::actor::{DuosActor, DuosActorInput, create_duos_actor};
-use crate::duos::engine;
+use crate::duos::engine::{self, Pinned};
+use crate::duos::replay::DuosReplayCache;
 use crate::duos::store::{DuosActionRow, DuosMatch, action_of};
 
 /// Why a socket could not be handed to a co-op seat.
@@ -56,6 +61,23 @@ pub struct DuosRegistry {
     actors: Mutex<IndexMap<String, DuosActor>>,
     /// In-flight rebuilds, so two sockets arriving together fold the log once.
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
+    /// B41: the finished matches' replays opened lately.
+    pub replays: DuosReplayCache,
+}
+
+/// R767000: the catalog a match is played under. A version this build neither is nor carries cannot
+/// be folded as it was played; a live match is still better rebuilt than left without an actor (its
+/// people would be held in it for ever), so it runs on this build's catalog, and the error says so.
+pub fn pinned_for(row: &DuosMatch) -> Pinned {
+    Pinned::of(&row.options.catalog_version).unwrap_or_else(|reason: ReplayRefusal| {
+        tracing::error!(
+            event = "duos.catalog.unpinned",
+            matchId = %row.id,
+            catalogVersion = %row.options.catalog_version,
+            reason = %reason,
+        );
+        Pinned::default()
+    })
 }
 
 /// One running app's registry, beside a weak handle on its app.
@@ -91,8 +113,9 @@ fn logged_actions(log: &[DuosActionRow]) -> Result<Vec<DuosAction>, DuosAttachEr
 }
 
 impl DuosRegistry {
-    /// Creates the actor of a match whose row a join just wrote (B33), on the state it began with.
-    pub fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState) -> DuosActor {
+    /// Creates the actor of a match whose row a join just wrote (B33), on the state it began with,
+    /// under the catalog it was dealt from.
+    pub fn start(&self, app: &Arc<App>, row: DuosMatch, state: DuosState, pinned: Pinned) -> DuosActor {
         let match_id = row.id.clone();
         let actor = create_duos_actor(
             Arc::clone(app),
@@ -100,6 +123,7 @@ impl DuosRegistry {
                 row,
                 state,
                 log: Vec::new(),
+                pinned,
             },
         );
         lock(&self.actors).insert(match_id.clone(), actor.clone());
@@ -122,12 +146,22 @@ impl DuosRegistry {
         let Some(row) = row else {
             return Err(DuosAttachError::NotFound);
         };
+        if row.ended_at.is_some() && log.is_empty() {
+            // A finished match whose log the retention purge has taken: nothing left to show.
+            return Err(DuosAttachError::NotFound);
+        }
         let input = DuosReplayInput {
             options: engine::create_options(&row),
             log: logged_actions(&log)?,
         };
-        let folded = catch_unwind(AssertUnwindSafe(|| engine::fold(&input)))
-            .map_err(|payload| DuosAttachError::Internal(panic_text(payload)))?;
+        let pinned = pinned_for(&row);
+        // Off the runtime, as the AI's decisions are: a long log is a long fold.
+        let folded = tokio::task::spawn_blocking(move || {
+            catch_unwind(AssertUnwindSafe(|| engine::fold(pinned, &input)))
+        })
+        .await
+        .map_err(|error| DuosAttachError::Internal(error.to_string()))?
+        .map_err(|payload| DuosAttachError::Internal(panic_text(payload)))?;
         if let Some(at) = folded.refused_at {
             // An action the engine once applied and now refuses is a determinism break: the log no
             // longer folds the match. Rebuild anyway, on the state up to it, and say so loudly.
@@ -140,6 +174,7 @@ impl DuosRegistry {
                 row,
                 state: folded.state,
                 log,
+                pinned,
             },
         );
         lock(&self.actors).insert(match_id.to_string(), actor.clone());
@@ -177,7 +212,9 @@ impl DuosRegistry {
     }
 
     /// B35: hands a socket to the seat `profile_id` holds, rebuilding the actor first when needed.
-    /// The seat's view and legal actions follow on the actor's queue.
+    /// The seat's view and legal actions follow on the actor's queue. A profile that holds no seat
+    /// in the match is refused from the match's row before anything is folded (§9.1): a match id is
+    /// no key to the server's work.
     pub async fn attach(
         &self,
         app: &Arc<App>,
@@ -185,7 +222,20 @@ impl DuosRegistry {
         profile_id: &str,
         socket: Socket,
     ) -> Result<DuosSeat, DuosAttachError> {
-        let actor = self.actor_for(app, match_id).await?;
+        let actor = match self.get(match_id) {
+            Some(actor) => actor,
+            None => {
+                let row = one_tx!(app.db, |t| t.duos_matches_get(match_id).await?)
+                    .map_err(|error| DuosAttachError::Internal(error.to_string()))?;
+                let seated = row
+                    .as_ref()
+                    .is_some_and(|row| row.a1 == profile_id || row.a2 == profile_id);
+                if !seated {
+                    return Err(DuosAttachError::NotFound);
+                }
+                self.actor_for(app, match_id).await?
+            }
+        };
         let Some(seat) = actor.seat_of(profile_id) else {
             return Err(DuosAttachError::NotFound);
         };

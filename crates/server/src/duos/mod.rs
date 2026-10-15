@@ -3,7 +3,7 @@
 //! (`/ws/duos`) and one actor per match.
 //!
 //! - `rooms`: the HTTP routes: make, read, join and free a room, and the caller's live co-op match.
-//! - `replay`: a finished (or live) match's steps as the caller's seat saw them (B41).
+//! - `replay`: a finished match's steps as the caller's seat saw them (B41).
 //! - `ws`: the socket's authentication and hello, before the actor takes it (B35).
 //! - `actor`: the match itself: the state, the log, the clocks, the AI's seats and the pings
 //!   (B35–B40). `registry`: the live actors, and a crashed one folded back (B40).
@@ -28,10 +28,13 @@ use std::time::Duration;
 
 use crate::actor::contracts::one_tx;
 use crate::app::{App, now_ms};
-use crate::config::{DUOS_ROOM_TTL_MS, MATCH_REAPER_INTERVAL_SECONDS};
+use crate::config::{DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_REAPER_INTERVAL_SECONDS};
 use crate::db::store::StoreError;
 
 pub use registry::{DuosRegistry, registry};
+
+/// Unit conversion, not configuration.
+const MS_PER_DAY: i64 = 86_400_000;
 
 /// The live co-op match holding `profile_id`, if any (B42, B47).
 pub async fn live_match_of(app: &App, profile_id: &str) -> Result<Option<String>, StoreError> {
@@ -39,6 +42,19 @@ pub async fn live_match_of(app: &App, profile_id: &str) -> Result<Option<String>
     let live = tx.duos_matches_live_for(profile_id).await?;
     tx.commit().await?;
     Ok(live)
+}
+
+/// The retention purge's co-op half (`api::retention::run_purge`): a co-op match's log goes
+/// `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1 match's does; the match row, its
+/// result with it, stays, and its replay then answers 410 (`duos::replay`). The replays opened from
+/// the logs it took go with them. Answers how many log rows went.
+pub async fn purge_expired_logs(app: &Arc<App>) -> Result<u64, StoreError> {
+    let before = now_ms() - MATCH_ACTION_RETENTION_DAYS * MS_PER_DAY;
+    let purged = one_tx!(app.db, |t| t.duos_actions_purge(before).await?)?;
+    if purged > 0 {
+        registry(app).replays.clear();
+    }
+    Ok(purged)
 }
 
 /// One sweep: B34's expired rooms go (a joined room one TTL later than an unjoined one, so its host's

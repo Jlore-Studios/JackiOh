@@ -5977,6 +5977,101 @@ pub async fn presence_last_seen(
         .collect())
 }
 
+/// One statement over `series_active_idx`'s rows; in the order the ids were named, as the fake
+/// answers.
+pub async fn presence_in_series(t: &mut PgTx<'_>, profile_ids: &[String]) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select p1_profile_id, p2_profile_id from public.series
+          where status <> 'over'
+            and (p1_profile_id = any($1::uuid[]) or p2_profile_id = any($1::uuid[]))",
+    )
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut held: Vec<String> = Vec::new();
+    for row in &rows {
+        held.extend(uuid_text_or_null(row, "p1_profile_id")?);
+        held.extend(uuid_text_or_null(row, "p2_profile_id")?);
+    }
+    Ok(ids.into_iter().filter(|id| held.contains(id)).collect())
+}
+
+/// One statement: each named profile's newest live co-op match (`distinct on`, ordered as
+/// `duos_matches_live_for` orders), in the order the ids were named.
+pub async fn presence_in_duos(
+    t: &mut PgTx<'_>,
+    profile_ids: &[String],
+) -> Result<IndexMap<String, String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(IndexMap::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select distinct on (p.id) p.id as profile_id, d.id as match_id
+           from unnest($1::uuid[]) as p(id)
+           join public.duos_matches d on d.ended_at is null and (d.a1 = p.id or d.a2 = p.id)
+          order by p.id, d.created_at desc, d.id",
+    )
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut live: IndexMap<String, String> = IndexMap::new();
+    for row in &rows {
+        live.insert(uuid_text(row, "profile_id")?, uuid_text(row, "match_id")?);
+    }
+    Ok(ids
+        .iter()
+        .filter_map(|id| live.get(id).map(|match_id| (id.clone(), match_id.clone())))
+        .collect())
+}
+
+/// One statement: each named profile's in-match flag joined to its match, with B50's store checks
+/// (`social::watch::watchable_in`'s, for many friends at once); in the order the ids were named.
+pub async fn presence_watchable(
+    t: &mut PgTx<'_>,
+    viewer: &str,
+    profile_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() || !is_uuid(viewer) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(viewer)).await?;
+    let rows = sqlx::query(
+        "select p.id from public.profiles p
+           join public.matches m on m.id = p.current_match_id
+          where p.id = any($2::uuid[]) and p.id <> $1::uuid
+            and p.allow_spectators
+            and m.status = 'live' and m.ranked is not true
+            and p.id in (m.p1_profile_id, m.p2_profile_id)
+            and $1::uuid is distinct from m.p1_profile_id
+            and $1::uuid is distinct from m.p2_profile_id
+            and exists (select 1 from public.friendships f
+                         where f.a = least($1::uuid, p.id) and f.b = greatest($1::uuid, p.id))
+            and not exists (select 1 from public.blocks k
+                             where (k.blocker = $1::uuid and k.blocked = p.id)
+                                or (k.blocker = p.id and k.blocked = $1::uuid))",
+    )
+    .bind(viewer)
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let watchable = rows
+        .iter()
+        .map(|row| uuid_text(row, "id"))
+        .collect::<Result<Vec<String>, StoreError>>()?;
+    Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
+}
+
 // profiles (B46, B50)
 
 pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
@@ -6226,6 +6321,19 @@ pub async fn challenges_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<Challen
     .await
     .map_err(db_error)?;
     challenges_of(&rows)
+}
+
+pub async fn challenges_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "delete from public.challenges where expires_at <= ",
+        ts!("$1")
+    ))
+    .bind(now)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
 // rooms
@@ -6489,6 +6597,24 @@ pub async fn shares_remove(
     .await
     .map_err(db_error)?;
     Ok(())
+}
+
+pub async fn shares_remove_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<i64, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(0);
+    }
+    run_as(t, Some(x)).await?;
+    let done = sqlx::query(
+        "delete from public.replay_shares
+          where (sharer = $1::uuid and friend = $2::uuid)
+             or (sharer = $2::uuid and friend = $1::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
 pub async fn shares_sharers(

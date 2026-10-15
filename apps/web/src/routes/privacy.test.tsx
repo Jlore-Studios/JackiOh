@@ -9,7 +9,14 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MIN_ACCOUNT_AGE_YEARS, PLAY_TELEMETRY_RETENTION_DAYS, TERMS_VERSION } from "@jackioh/server-config";
+import {
+  CHALLENGE_TTL_MS,
+  DUOS_ROOM_TTL_MS,
+  MATCH_ACTION_RETENTION_DAYS,
+  MIN_ACCOUNT_AGE_YEARS,
+  PLAY_TELEMETRY_RETENTION_DAYS,
+  TERMS_VERSION,
+} from "@jackioh/server-config";
 
 import { PUBLIC_PAGES, sitemapXml } from "../../static-pages.ts";
 import { consentTestid } from "../auth/testids.ts";
@@ -59,7 +66,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-14");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-15");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {
@@ -131,6 +138,44 @@ describe("the privacy policy", () => {
       `how you played a finished match: ${PLAY_TELEMETRY_RETENTION_DAYS} days after the match ends`,
     );
     expect(section(/deleting your account/i)).toMatch(/the records of how you played/);
+  });
+
+  it("#936 says what Play together and co-op show, keep and delete, as the server does", () => {
+    render(<PrivacyRoute />);
+    const page = screen.getByTestId(privacyTestid.screen);
+    const section = (name: RegExp): string =>
+      within(page).getByRole("heading", { name }).closest("section")?.textContent ?? "";
+    const minutes = (ms: number): number => ms / 60_000;
+
+    // Co-op is collected: its rooms and its games, every move included.
+    const collected = section(/what we collect/i);
+    expect(collected).toMatch(/co-op \(Duos\)/);
+    expect(collected).toMatch(/the co-op rooms you make or join/);
+    expect(collected).toMatch(/every player.s deck, every move, and the result/);
+
+    // Who sees it: a teammate sees the hand; an opponent's friends see your moves; an opponent may share.
+    const handled = section(/who handles it/i);
+    expect(handled).toMatch(/your teammate sees your hand, your face-down cards and the choices in front of you/);
+    expect(handled).toMatch(/from your opponent.s seat, which shows your moves as your opponent sees them/);
+    expect(handled).toMatch(/a replay your opponent shares shows the game from their seat, your moves included/);
+
+    // How long: co-op moves as 1v1 moves, a challenge for its life, a share until its sharer or the
+    // friendship ends it; no "until you or the other player removes them" for what only one side may.
+    const kept = section(/how long we keep it/i);
+    expect(kept).toContain(`co-op games included: ${String(MATCH_ACTION_RETENTION_DAYS)} days after the match ends`);
+    expect(kept).toContain(`A challenge: about ${String(minutes(CHALLENGE_TTL_MS))} minutes after it was sent`);
+    expect(kept).toMatch(/accepted, declined, cancelled or left unanswered/);
+    expect(kept).toContain(`A co-op room: about ${String(minutes(DUOS_ROOM_TTL_MS))} minutes after it was made`);
+    expect(kept).toMatch(/the player who shared it takes it back \(only they can\)/);
+    expect(kept).toMatch(/removes the friendship or blocks the other, which deletes every share between you for good/);
+    expect(kept).toMatch(/A block: until the player who made it lifts it/);
+    expect(kept).not.toMatch(/until you or the other player removes them/);
+
+    // Deleting: a co-op game goes for both teammates, and a live one holds the deletion back.
+    const deleting = section(/deleting your account/i);
+    expect(deleting).toMatch(/deleting either teammate.s account deletes the whole co-op game, its moves and its result, for both of you/);
+    expect(deleting).toMatch(/during a match, a co-op game or a Conquest series that hasn.t finished/);
+    expect(deleting).toMatch(/challenges, co-op rooms and replay shares/);
   });
 
   it("R632 says the sign-in session lasts only as long as the tab, not as a stored sign-in", () => {

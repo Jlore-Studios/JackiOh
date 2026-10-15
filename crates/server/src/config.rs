@@ -180,7 +180,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
 /// holds it to). Changing either page's text changes its date and so this, and every account is
 /// asked to agree again.
-pub const TERMS_VERSION: &str = "2026-10-13/2026-10-14";
+pub const TERMS_VERSION: &str = "2026-10-13/2026-10-15";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -1824,9 +1824,19 @@ pub const CHAT_RETENTION_DAYS: i64 = 30;
 pub const CHAT_PAGE: i64 = 50;
 /// B58: how often an open chat panel reads its conversation again.
 pub const CHAT_POLL_MS: i64 = 4_000;
-// NOT IN SPEC: how often the challenge sweeper marks lapsed challenges expired. A lapsed challenge
-// is already shut (its room expired with it, the reaper takes the room's row, and no read lists the
-// challenge), so the sweep only tidies the rows; ten seconds keeps them honest for one cheap update.
+/// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge
+/// toast, on every screen, and Play together). A challenge lives CHALLENGE_TTL_MS, so ten seconds
+/// shows one within a twelfth of its life; the friends list itself is read once a heartbeat
+/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at.
+pub const SOCIAL_POLL_MS: i64 = 10_000;
+/// §9.5, §9.8: challenges one account may send in an hour; the next is 429. Each opens a room and a
+/// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
+/// minutes, a challenge's whole life, kept up for an hour.
+pub const CHALLENGES_PER_HOUR: usize = 30;
+// NOT IN SPEC: how often the challenge sweeper deletes the challenges lapsed by now. A lapsed
+// challenge is already shut (its room expired with it, the reaper takes the room's row, and no read
+// lists the challenge), so the sweep only removes the rows; ten seconds keeps none much past its
+// CHALLENGE_TTL_MS for one cheap delete.
 pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
 // ---- end Social ----
 // ---- Duos co-op (#946) ----

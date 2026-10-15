@@ -426,6 +426,126 @@ mod b52_sharing_a_replay {
         w.assert_unknown_to(&w.c).await;
     }
 
+    /// A second finished match, between C and D, which C shares with A: a share the other way.
+    async fn shared_back(w: &World) -> String {
+        let played = played_game("share-back", PLAYED_ACTIONS);
+        let match_id = uuid(701);
+        seed_finished(&w.app, &match_id, (w.c.id.as_str(), w.d.id.as_str()), &played).await;
+        let (status, body) = w.share_match(&match_id, &w.c, &w.a).await;
+        assert_eq!(status, 204, "{body}");
+        match_id
+    }
+
+    /// No share left between A and C, either way: their rows are gone, not merely unread.
+    async fn assert_no_share_between_a_and_c(w: &World, back: &str) {
+        let left: Vec<Value> = fake(&w.app)
+            .lock()
+            .await
+            .tables
+            .replay_shares
+            .iter()
+            .filter(|row| {
+                (row.sharer == w.a.id && row.friend == w.c.id)
+                    || (row.sharer == w.c.id && row.friend == w.a.id)
+            })
+            .map(to_json)
+            .collect();
+        assert!(left.is_empty(), "{left:?}");
+        w.assert_unknown_to(&w.c).await;
+        assert!(w.shared_with(&w.c).await.is_empty());
+        assert!(w.shared_with(&w.a).await.is_empty());
+        let (status, body) = api(
+            &w.app,
+            "GET",
+            &format!("/api/replays/{back}"),
+            &w.a.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!((status, body), w.unknown(&w.a).await);
+    }
+
+    #[tokio::test]
+    async fn b52_b45_an_unfriend_either_way_deletes_the_shares_so_friends_again_read_none() {
+        for sharer_removes in [true, false] {
+            let w = world("share-10").await;
+            assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+            let back = shared_back(&w).await;
+            assert_eq!(w.shared_with(&w.a).await.len(), 1);
+            let (who, whom) = if sharer_removes {
+                (&w.a, &w.c)
+            } else {
+                (&w.c, &w.a)
+            };
+
+            let (status, body) = api(
+                &w.app,
+                "DELETE",
+                &format!("/api/friends/{}", whom.id),
+                &who.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            befriend(&w.app, &w.c, &w.a).await;
+
+            assert_no_share_between_a_and_c(&w, &back).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn b52_b46_a_block_either_way_deletes_the_shares_so_unblocked_friends_read_none() {
+        for sharer_blocks in [true, false] {
+            let w = world("share-11").await;
+            assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+            let back = shared_back(&w).await;
+            let (who, whom) = if sharer_blocks { (&w.a, &w.c) } else { (&w.c, &w.a) };
+
+            let (status, body) = api(
+                &w.app,
+                "POST",
+                "/api/blocks",
+                &who.token,
+                json!({ "profileId": whom.id }),
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            let (status, body) = api(
+                &w.app,
+                "DELETE",
+                &format!("/api/blocks/{}", whom.id),
+                &who.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            befriend(&w.app, &w.a, &w.c).await;
+
+            assert_no_share_between_a_and_c(&w, &back).await;
+        }
+    }
+
+    #[tokio::test]
+    async fn b52_an_unfriend_leaves_the_shares_with_other_friends() {
+        let w = world("share-12").await;
+        assert_eq!(w.share(&w.a, &w.c).await.0, 204);
+        befriend(&w.app, &w.a, &w.d).await;
+        assert_eq!(w.share(&w.a, &w.d).await.0, 204);
+
+        let (status, body) = api(
+            &w.app,
+            "DELETE",
+            &format!("/api/friends/{}", w.c.id),
+            &w.a.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+
+        assert_eq!(w.shared_with(&w.d).await.len(), 1);
+        assert_eq!(w.replay(&w.d).await, w.replay(&w.a).await);
+    }
+
     #[tokio::test]
     async fn b52_sharing_with_a_player_who_is_not_a_friend_is_404() {
         let w = world("share-7").await;

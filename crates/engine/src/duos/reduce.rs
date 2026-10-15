@@ -9,11 +9,19 @@
 //!   2. round 1 opens once all four mulligans have resolved and both duels' first turns have begun (B2);
 //!   3. a round seat with nothing left but End turn, and no pass it may make, is ended (B9, R82's rule);
 //!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5) — each under a
-//!      nonce of its own (`round_end_nonce`), so a fold replays it exactly;
+//!      nonce of its own (`round_end_nonce`), so a fold replays it exactly — and only then is the
+//!      game judged: the round's close is part of the step that closed it, so pools both End turns
+//!      emptied are emptied in the same step (B16, §12.4);
 //!   5. once both duels' turns have moved on, the next round opens with each duel's new active player
 //!      as its round seat (B5, B8) — a turn an effect ended (R456) has moved already (B7).
 //!
 //! After every change to a duel the pools are made equal again (B15, `duel_changed`).
+//!
+//! The wrapper's own nonces (the settle after `duos_begin`, each round's End turns) are minted in a
+//! namespace of their own, `DUOS_NONCE_PREFIX`, which no seat's action may carry, so no action can
+//! take a nonce the round's close is about to use and turn that End turn into a duel's silent
+//! replay (R270's stall). A duel that finds the round's nonce already applied refuses the End turn
+//! rather than taking it as done.
 
 use crate::catalog::fused_id_specs;
 use crate::config::{DUOS_SETTLE_CAP, SETUP_TURN};
@@ -23,14 +31,19 @@ use crate::state::{EngineError, GameState};
 use crate::wire::{
     Action, ActionBody, DUOS_DUELS, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosEvent, DuosOutcome,
-    DuosResult, DuosSeat, GameEvent, GameOverReason, Phase, Team, Zone,
+    DuosResult, DuosSeat, GameEvent, GameOverReason, PerTeam, Phase, Team, Zone,
 };
 
 use super::legal::{auto_end_due, why_duel_refused, why_pass_refused};
 use super::state::{DuosReduceResult, DuosState, duos_seat};
 
+/// The namespace of the wrapper's own nonces: a seat's action whose nonce starts with it is refused,
+/// so the nonces the round's close reaches the duels under are never a seat's (R270's rule, as the
+/// server keeps `srv-` for its own).
+pub const DUOS_NONCE_PREFIX: &str = "duos:";
+
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
-const BEGIN_NONCE: &str = "duos-begin";
+const BEGIN_NONCE: &str = "duos:begin";
 
 /// Deal both duels and open all four mulligans (B1, B2): each duel's `begin_game`, duel 0 first.
 /// Refused once either duel has begun.
@@ -80,6 +93,11 @@ fn apply(state: &mut DuosState, action: &DuosAction, events: &mut Vec<DuosEvent>
     if state.result.is_some() {
         return Err(EngineError::new("the game is over"));
     }
+    if action.nonce.starts_with(DUOS_NONCE_PREFIX) {
+        return Err(EngineError::new(format!(
+            r#"a nonce starting "{DUOS_NONCE_PREFIX}" is the round's own"#
+        )));
+    }
     let seat = action.seat;
     match &action.body {
         DuosActionBody::Duel { body } => {
@@ -110,19 +128,23 @@ fn apply(state: &mut DuosState, action: &DuosAction, events: &mut Vec<DuosEvent>
 }
 
 /// B11: the first concede opens the team's offer, the teammate's concede ends the game for the other
-/// team, and the offerer's own second concede is refused (its offer already stands).
+/// team, and the offerer's own second concede is refused (its offer already stands). Each team has
+/// an offer of its own, so the other team's concede neither takes nor clears it.
 fn concede(state: &mut DuosState, seat: DuosSeat, events: &mut Vec<DuosEvent>) -> Result<(), EngineError> {
-    if state.concede_offer == Some(seat) {
-        return Err(EngineError::new(
+    let team = seat.team();
+    match state.concede_offer[team] {
+        Some(offer) if offer == seat => Err(EngineError::new(
             "your offer to concede stands: the game ends once your teammate concedes too",
-        ));
+        )),
+        Some(_) => {
+            end(state, events, won_by(team.other(), DUOS_REASON_CONCEDE));
+            Ok(())
+        }
+        None => {
+            state.concede_offer[team] = Some(seat);
+            Ok(())
+        }
     }
-    if state.concede_offer == Some(seat.teammate()) {
-        end(state, events, won_by(seat.team().other(), DUOS_REASON_CONCEDE));
-        return Ok(());
-    }
-    state.concede_offer = Some(seat);
-    Ok(())
 }
 
 /// B20: pay the pass cost, take the card out of the passer's hand and put it at the right end of the
@@ -209,16 +231,14 @@ fn settle(state: &mut DuosState, nonce: &str, events: &mut Vec<DuosEvent>) {
             }
         }
         if state.ended.iter().all(|ended| *ended) {
+            // Both End turns, then one judge (B16): what either did to the pools is the same step's.
             for duel in 0..DUOS_DUELS {
-                if state.end_applied[duel] {
-                    continue;
-                }
-                if end_round_turn(state, duel, nonce, events) {
+                if !state.end_applied[duel] && end_round_turn(state, duel, nonce, events) {
                     moved = true;
                 }
-                if judge(state, events) {
-                    return;
-                }
+            }
+            if judge(state, events) {
+                return;
             }
             if round_closed(state) {
                 open_round(state, events);
@@ -248,8 +268,8 @@ fn round_closed(state: &DuosState) -> bool {
 }
 
 /// B2, B5, B8, B22: the next round — each duel's active player is its round seat (an extra turn,
-/// R846, keeps a duel's seat on the same team), nobody has ended or passed, and an open concede
-/// offer lapses (B11).
+/// R846, keeps a duel's seat on the same team), nobody has ended or passed, and each team's open
+/// concede offer lapses (B11).
 fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
     state.round += 1;
     for duel in 0..DUOS_DUELS {
@@ -260,20 +280,22 @@ fn open_round(state: &mut DuosState, events: &mut Vec<DuosEvent>) {
         state.end_applied[duel] = false;
         state.passes[duel] = 0;
     }
-    state.concede_offer = None;
+    state.concede_offer = PerTeam::new(None, None);
     events.push(DuosEvent::RoundStarted { round: state.round });
 }
 
 /// B5: End turn reaches `duel` at the round's close, as its active player. Whether it did: a duel
 /// that refuses it (it cannot while its round seat has ended with no prompt open) is tried again
-/// after the next step.
+/// after the next step. So is one that has applied the round's nonce already: its `reduce` would
+/// answer that replay with the state unchanged and no error, and taking that as the End turn would
+/// leave the duel's turn where it is and the round closed for ever.
 fn end_round_turn(state: &mut DuosState, duel: usize, nonce: &str, events: &mut Vec<DuosEvent>) -> bool {
     let game = &state.duels[duel];
-    let action = Action::new(
-        ActionBody::EndTurn,
-        game.active,
-        round_end_nonce(nonce, state.round, duel),
-    );
+    let nonce = round_end_nonce(nonce, state.round, duel);
+    if game.applied.iter().any(|applied| applied.nonce == nonce) {
+        return false;
+    }
+    let action = Action::new(ActionBody::EndTurn, game.active, nonce);
     let result = reduce(game, &action);
     if result.error.is_some() {
         return false;
@@ -285,10 +307,11 @@ fn end_round_turn(state: &mut DuosState, duel: usize, nonce: &str, events: &mut 
     true
 }
 
-/// The nonce the wrapper's own End turn reaches a duel under: the closing action's, the round and
-/// the duel, so no two of a game's are alike and a fold replays them exactly.
+/// The nonce the wrapper's own End turn reaches a duel under: in the wrapper's namespace, with the
+/// round, the duel and the closing action's nonce, so no seat's action carries it, no two of a
+/// game's are alike and a fold replays them exactly.
 fn round_end_nonce(nonce: &str, round: i32, duel: usize) -> String {
-    format!("{nonce}:end:r{round}:d{duel}")
+    format!("{DUOS_NONCE_PREFIX}end:r{round}:d{duel}:{nonce}")
 }
 
 /// What follows any change to duel `duel` (B7, B15).

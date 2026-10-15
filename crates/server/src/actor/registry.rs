@@ -522,5 +522,13 @@ impl Registry {
     pub fn watcher_count(&self, match_id: &str) -> usize {
         self.get(match_id).map_or(0, |actor| actor.watcher_count())
     }
+
+    /// B50, B46: lets go, in every match in memory, each watcher `revoked(watcher, friend)` names
+    /// (`MatchActor::revoke_watchers`). A watcher is only ever in memory, so no match elsewhere holds
+    /// one. Answers how many went.
+    pub fn revoke_watchers(&self, revoked: impl Fn(&str, &str) -> bool) -> usize {
+        let actors: Vec<MatchActor> = lock(&self.actors).values().cloned().collect();
+        actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
+    }
 }
 // ---- end Social: watching and shared replays ----

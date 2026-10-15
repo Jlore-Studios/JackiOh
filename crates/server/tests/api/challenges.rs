@@ -13,9 +13,11 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use jackioh_server::app::App;
-use jackioh_server::config::{CHALLENGE_TTL_MS, ROOM_CODE_LENGTH};
+use jackioh_server::config::{CHALLENGE_TTL_MS, CHALLENGES_PER_HOUR, ROOM_CODE_LENGTH};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StartMatchInput};
+
+use jackioh_server::social::challenges::sweep;
 
 use crate::support::deps::{TEST_CATALOG_VERSION, add_user, call, empty_test_app};
 use crate::support::engine::{fake_deck, install_test_cards};
@@ -39,6 +41,9 @@ where
 {
     u64::try_from(value).expect("a duration fits a u64")
 }
+
+/// An hour, in milliseconds: the challenge allowance's window.
+const HOUR_MS: u64 = 3_600_000;
 
 async fn advance(ms: u64) {
     tokio::time::advance(Duration::from_millis(ms)).await;
@@ -348,6 +353,37 @@ mod b48_a_challenge_to_an_online_idle_friend {
         assert_eq!(theirs["incoming"][0]["challengeId"], json!(challenge_id));
     }
 
+    #[tokio::test(start_paused = true)]
+    async fn b48_past_challenges_per_hour_a_challenge_answers_429_until_the_hour_has_passed() {
+        let p = pair().await;
+        for _ in 0..CHALLENGES_PER_HOUR {
+            let (challenge_id, _) = p.challenged().await;
+            let (status, body) = api(
+                &p.app,
+                "DELETE",
+                &format!("/api/challenges/{challenge_id}"),
+                &p.challenger.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+        }
+
+        let (status, body) = challenge(&p.app, &p.challenger, with_friend(random_room(), &p.friend)).await;
+
+        assert_eq!(status, 429, "{body}");
+        assert!(p.none_listed().await, "the refused challenge opened nothing");
+        // Another account's allowance is its own.
+        let (status, body) = challenge(&p.app, &p.friend, with_friend(random_room(), &p.challenger)).await;
+        assert_eq!(status, 201, "{body}");
+
+        advance(HOUR_MS).await;
+        heartbeat(&p.app, &p.friend).await;
+        heartbeat(&p.app, &p.challenger).await;
+        let (status, body) = challenge(&p.app, &p.challenger, with_friend(random_room(), &p.friend)).await;
+        assert_eq!(status, 201, "{body}");
+    }
+
     #[tokio::test]
     async fn b48_b46_a_block_stops_challenges_in_both_directions() {
         let p = pair().await;
@@ -458,6 +494,58 @@ mod b49_accept_decline_cancel_and_expiry {
         assert!(p.none_listed().await, "expired challenges are not listed");
         let (status, body) = join_room(&p.app, &p.friend, &room_code, random_room()).await;
         assert_eq!(status, 404, "the expired challenge's room is gone: {body}");
+    }
+
+    /// The challenge rows the store holds.
+    async fn rows(app: &App) -> usize {
+        fake(app).lock().await.tables.social.challenges.len()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b49_the_sweeper_deletes_every_challenge_row_once_its_ttl_has_passed() {
+        let p = pair().await;
+        let third = account(&p.app, 3, "Tess").await;
+        befriend(&p.app, &p.challenger, &third).await;
+        heartbeat(&p.app, &third).await;
+        // One declined, one cancelled, one never answered, one accepted by joining (last: the match
+        // it starts holds the challenger).
+        let (declined, _) = p.challenged().await;
+        let (status, _) = api(
+            &p.app,
+            "POST",
+            &format!("/api/challenges/{declined}/decline"),
+            &p.friend.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204);
+        let (cancelled, _) = p.challenged().await;
+        let (status, _) = api(
+            &p.app,
+            "DELETE",
+            &format!("/api/challenges/{cancelled}"),
+            &p.challenger.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204);
+        let (status, body) = challenge(&p.app, &p.challenger, with_friend(random_room(), &third)).await;
+        assert_eq!(status, 201, "{body}");
+        let (_, joined) = p.challenged().await;
+        let (status, body) = join_room(&p.app, &p.friend, &joined, random_room()).await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(rows(&p.app).await, 4);
+
+        // Within its TTL, a closed challenge's row is kept (answering it again is still 204).
+        sweep(&p.app).await.expect("a sweep");
+        assert_eq!(rows(&p.app).await, 4);
+
+        advance(millis(CHALLENGE_TTL_MS)).await;
+        assert_eq!(sweep(&p.app).await.expect("a sweep"), 4);
+
+        assert_eq!(rows(&p.app).await, 0, "no challenge row outlives its TTL");
+        assert!(p.none_listed().await);
+        assert_eq!(len(&listed(&p.app, &third).await["incoming"]), 0);
     }
 
     #[tokio::test]

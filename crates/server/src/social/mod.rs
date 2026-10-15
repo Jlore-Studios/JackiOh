@@ -34,7 +34,7 @@ use time::format_description::well_known::Rfc3339;
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, RateLimiter, Req, create_rate_limiter, json as json_response,
 };
-use crate::config::{CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_HOUR};
+use crate::config::{CHALLENGES_PER_HOUR, CHAT_MESSAGES_PER_MINUTE, FRIEND_REQUESTS_PER_HOUR};
 use crate::db::store::{Profile, StoreError, Tx};
 
 /// Unit conversions, not configuration.
@@ -54,6 +54,8 @@ pub struct Social {
     pub friend_requests: RateLimiter,
     /// B53: `CHAT_MESSAGES_PER_MINUTE` chat messages a minute per sender.
     pub chat: RateLimiter,
+    /// B48: `CHALLENGES_PER_HOUR` challenges an hour per challenger.
+    pub challenges: RateLimiter,
 }
 
 impl Default for Social {
@@ -61,6 +63,7 @@ impl Default for Social {
         Social {
             friend_requests: create_rate_limiter(FRIEND_REQUESTS_PER_HOUR, MS_PER_HOUR),
             chat: create_rate_limiter(CHAT_MESSAGES_PER_MINUTE, MS_PER_MINUTE),
+            challenges: create_rate_limiter(CHALLENGES_PER_HOUR, MS_PER_HOUR),
         }
     }
 }

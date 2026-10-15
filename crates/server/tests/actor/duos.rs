@@ -1,7 +1,8 @@
 //! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: the hello view, applied and
-//! illegal actions, the AI seats, the disconnect takeover, the round clock, pings (relayed to the
-//! teammate only, shape-checked, rate-limited, never in a view or the replay), the end of a game and
-//! the per-match replay.
+//! illegal actions, the AI seats, the disconnect takeover, the round clock, the mulligan clock, pings
+//! (relayed to the teammate only, shape-checked, rate-limited, never in a view or the replay), the
+//! end of a game and the per-match replay, which a finished game has (§12.9). Where a test reads
+//! what was logged while the game is live, it reads the store's log.
 //!
 //! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
 //! since real TCP races a paused clock), so the upgrade, the auth (`?token=`) and the frames are the
@@ -27,15 +28,19 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 
 use jackioh_engine::config::{
-    DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, Difficulty, UNIT_ZONES, duos_ai_team,
+    DECK_SIZE, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, Difficulty, UNIT_ZONES, duos_ai_team,
 };
+use jackioh_engine::wire::DuosSeat;
+use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
-    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, PING_RATE_LIMIT,
-    PING_RATE_WINDOW_MS,
+    DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MAX_SAVED_DECKS,
+    PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
 use jackioh_server::db::fake::FakeData;
-use jackioh_server::db::store::Db;
+use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::duos::registry;
+use jackioh_server::duos::store::DuosActionRow;
 
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app};
@@ -60,6 +65,10 @@ const PING: u8 = 0x9;
 const PONG: u8 = 0xA;
 /// The close code a transport reports when the stream ends without a close frame.
 const ABNORMAL_CLOSE: u16 = 1006;
+/// R148's close for a match the socket may not have.
+const CLOSE_NOT_FOUND: u16 = 4404;
+/// The epoch-ms stamp a saved deck carries; nothing reads it back.
+const SAVED_AT: i64 = 1_700_000_000_000;
 /// A close frame that carried no code.
 const NO_STATUS: u16 = 1005;
 
@@ -499,6 +508,83 @@ fn hand_len(player_view: &Value) -> usize {
     player_view["you"]["hand"].as_array().map_or(0, Vec::len)
 }
 
+/// The instance ids of a `PlayerView`'s own hand.
+fn hand_ids(player_view: &Value) -> Vec<String> {
+    player_view["you"]["hand"]
+        .as_array()
+        .map(|cards| {
+            cards
+                .iter()
+                .filter_map(|card| card["instanceId"].as_str().map(str::to_string))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The first `DECK_SIZE` playable catalog cards `wanted` takes, in `catalog.json` order: a legal deck.
+fn deck_where(wanted: impl Fn(&Value) -> bool) -> Vec<String> {
+    jackioh_cards::register_all();
+    let size = count(DECK_SIZE);
+    let cards: Vec<String> = jackioh_cards::CATALOG
+        .values()
+        .map(|def| serde_json::to_value(def).expect("a card serialises"))
+        .filter(|def| {
+            def["token"] != json!(true)
+                && !def["tags"]
+                    .as_array()
+                    .is_some_and(|tags| tags.contains(&json!("Token")))
+        })
+        .filter(|def| wanted(def))
+        .filter_map(|def| def["id"].as_str().map(str::to_string))
+        .take(size)
+        .collect();
+    assert_eq!(cards.len(), size, "the catalog holds a deck of them");
+    cards
+}
+
+/// `owner` owns every card of `cards` and keeps them as their saved deck `deck_id`.
+async fn save_deck(app: &Arc<App>, owner: &Account, deck_id: &str, cards: &[String]) {
+    let rows: Vec<Value> = cards
+        .iter()
+        .map(|id| json!({ "cardId": id, "quantity": 1 }))
+        .collect();
+    let entries: Vec<CollectionEntry> = serde_json::from_value(Value::Array(rows)).expect("entries");
+    let deck = serde_json::from_value(json!({
+        "id": deck_id,
+        "profileId": owner.id,
+        "name": "co-op deck",
+        "cards": cards,
+        "portrait": null,
+        "catalogVersion": jackioh_cards::catalog_version(),
+        "createdAt": SAVED_AT,
+        "updatedAt": SAVED_AT,
+    }))
+    .expect("a saved deck");
+    let mut t = app.db.begin(None).await.expect("a transaction");
+    t.collection_upsert_quantities(&owner.id, &entries)
+        .await
+        .expect("collection.upsertQuantities");
+    t.decks_upsert(&deck, MAX_SAVED_DECKS as _)
+        .await
+        .expect("decks.upsert");
+    t.commit().await.expect("the commit");
+}
+
+/// The text frames a test socket was sent since it was last drained, parsed.
+fn drain(frames: &mut mpsc::Receiver<SocketFrame>) -> Vec<Value> {
+    let mut out = Vec::new();
+    while let Ok(frame) = frames.try_recv() {
+        if let SocketFrame::Text(text) = frame {
+            out.push(serde_json::from_str(&text).unwrap_or(Value::String(text)));
+        }
+    }
+    out
+}
+
+fn views_in(frames: &[Value]) -> usize {
+    frames.iter().filter(|frame| frame["type"] == "view").count()
+}
+
 /// The mulligan entry of `legal` that keeps the most cards.
 fn keep_whole_hand(frame: &Value) -> Option<Value> {
     legal(frame)
@@ -555,19 +641,25 @@ struct Duos {
 }
 
 async fn duos(difficulty: &str) -> Duos {
+    duos_with(difficulty, None).await
+}
+
+/// A Duos match whose host brings `host_deck` as a saved deck (dealt at random when `None`).
+async fn duos_with(difficulty: &str, host_deck: Option<Vec<String>>) -> Duos {
     jackioh_cards::register_all();
     let app = empty_test_app().await;
     let host = account(&app, 1, "Hana").await;
     let guest = account(&app, 2, "Gus").await;
     let outsider = account(&app, 3, "Otto").await;
-    let (status, created) = api(
-        &app,
-        "POST",
-        "/api/duos/rooms",
-        &host.token,
-        json!({ "difficulty": difficulty, "random": true }),
-    )
-    .await;
+    let room = match &host_deck {
+        Some(cards) => {
+            let deck_id = uuid(800);
+            save_deck(&app, &host, &deck_id, cards).await;
+            json!({ "difficulty": difficulty, "deckId": deck_id })
+        }
+        None => json!({ "difficulty": difficulty, "random": true }),
+    };
+    let (status, created) = api(&app, "POST", "/api/duos/rooms", &host.token, room).await;
     assert_eq!(status, 201, "{created}");
     let code = created["code"].as_str().expect("a room code").to_string();
     let (status, joined) = api(
@@ -639,6 +731,23 @@ impl Duos {
             let answer = act(human, nonce, end).await;
             assert_eq!(answer["type"], "ack", "{answer}");
         }
+    }
+
+    /// The match's log as the store holds it.
+    async fn logged(&self) -> Vec<DuosActionRow> {
+        let mut t = self.app.db.begin(None).await.expect("a transaction");
+        let log = t.duos_actions(&self.match_id).await.expect("the log");
+        t.commit().await.expect("the commit");
+        log
+    }
+
+    /// Both people concede (B11), which ends the game: its replay opens (§12.9).
+    async fn concede_both(&self, a1: &WsClient, a2: &WsClient) {
+        for (client, nonce) in [(a1, "a1-concede"), (a2, "a2-concede")] {
+            let answer = act(client, nonce, concede()).await;
+            assert_eq!(answer["type"], "ack", "{answer}");
+        }
+        settle().await;
     }
 
     async fn replay(&self, who: &Account) -> Value {
@@ -783,7 +892,7 @@ mod b35_the_socket {
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
-        let steps = h.steps(&h.host).await.len();
+        let logged = h.logged().await.len();
         let (a1_from, a2_from) = (a1.received(), a2.received());
 
         for (nonce, body) in [
@@ -813,7 +922,7 @@ mod b35_the_socket {
                 .any(|entry| is_duel(entry, "mulligan")),
             "A1 still owes its mulligan"
         );
-        assert_eq!(h.steps(&h.host).await.len(), steps, "nothing was logged");
+        assert_eq!(h.logged().await.len(), logged, "nothing was logged");
     }
 
     #[tokio::test(start_paused = true)]
@@ -1302,8 +1411,7 @@ mod b39_pings {
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
-        let host_steps = h.steps(&h.host).await.len();
-        let guest_steps = h.steps(&h.guest).await.len();
+        let logged = h.logged().await.len();
         let (a1_from, a2_from) = (a1.received(), a2.received());
 
         for _ in 0..2 {
@@ -1331,14 +1439,23 @@ mod b39_pings {
             "a ping pushes no view"
         );
         assert!(a1.of_type_since(a1_from, "ack").is_empty(), "a ping is no action");
-        let steps = h.steps(&h.host).await;
-        assert_eq!(steps.len(), host_steps, "a ping is never logged");
-        assert_eq!(h.steps(&h.guest).await.len(), guest_steps);
-        for step in &steps {
-            assert!(!step.to_string().contains("killThis"), "{step}");
+        let log = h.logged().await;
+        assert_eq!(log.len(), logged, "a ping is never logged");
+        for row in &log {
+            assert!(!row.action.to_string().contains("killThis"), "{:?}", row.action);
         }
         assert!(!last_view(&a1).to_string().contains("killThis"));
         assert!(!last_view(&a2).to_string().contains("killThis"));
+
+        // Nor is one in the finished game's replay: a step per logged action, the two concedes.
+        h.concede_both(&a1, &a2).await;
+        for who in [&h.host, &h.guest] {
+            let steps = h.steps(who).await;
+            assert_eq!(steps.len(), logged + 3);
+            for step in &steps {
+                assert!(!step.to_string().contains("killThis"), "{step}");
+            }
+        }
     }
 }
 
@@ -1353,38 +1470,46 @@ mod b40_b42_the_log_the_replay_and_the_end {
     async fn b40_b41_each_applied_action_adds_one_replay_step_seen_from_the_callers_own_seat() {
         let h = duos("easy").await;
         let a1 = h.seat(&h.host).await;
-        let _a2 = h.seat(&h.guest).await;
+        let a2 = h.seat(&h.guest).await;
         h.ai_mulligans_answered(&a1).await;
-        let host_before = h.replay(&h.host).await;
-        let guest_before = h.replay(&h.guest).await;
-        assert_eq!(host_before["seat"], "a1", "{host_before}");
-        assert_eq!(guest_before["seat"], "a2", "{guest_before}");
+        let before = h.logged().await.len();
+        let keep = keep_whole_hand(&last_view(&a1)).expect("A1 owes its mulligan");
 
-        h.keep(&a1, "a1-keep").await;
+        let answer = act(&a1, "a1-keep", keep).await;
+
+        assert_eq!(answer["type"], "ack", "{answer}");
+        let at = usize::try_from(answer["seq"].as_u64().expect("a seq")).expect("a step");
         settle().await;
-
-        let host_after = h.steps(&h.host).await;
-        let guest_after = h.steps(&h.guest).await;
-        assert_eq!(
-            host_after.len(),
-            host_before["steps"].as_array().map_or(0, Vec::len) + 1
-        );
-        assert_eq!(
-            guest_after.len(),
-            guest_before["steps"].as_array().map_or(0, Vec::len) + 1
-        );
-        assert!(host_after.iter().all(|step| step["seat"] == "a1"));
-        assert!(guest_after.iter().all(|step| step["seat"] == "a2"));
-        let last = host_after.last().expect("a step");
         let pushed = last_view(&a1);
+        assert_eq!(h.logged().await.len(), before + 1, "one row for one action");
+
+        // §12.9: the replay is the finished game's.
+        h.concede_both(&a1, &a2).await;
+        let logged = h.logged().await.len();
+        let host = h.replay(&h.host).await;
+        let guest = h.replay(&h.guest).await;
+        assert_eq!(host["seat"], "a1", "{host}");
+        assert_eq!(guest["seat"], "a2", "{guest}");
+        let host_steps = host["steps"].as_array().cloned().expect("steps");
+        let guest_steps = guest["steps"].as_array().cloned().expect("steps");
         assert_eq!(
-            last["own"]["you"]["hand"], pushed["view"]["own"]["you"]["hand"],
-            "{last}"
+            host_steps.len(),
+            logged + 1,
+            "the game as it began, then a step per action"
         );
-        assert!(mulligan_answered(&last["own"]), "{last}");
-        assert_eq!(last["round"], pushed["view"]["round"]);
-        // A2's step shows its own duel, not A1's.
-        let theirs = guest_after.last().expect("a step");
+        assert_eq!(guest_steps.len(), logged + 1);
+        assert!(host_steps.iter().all(|step| step["seat"] == "a1"));
+        assert!(guest_steps.iter().all(|step| step["seat"] == "a2"));
+        // Step `at` is the state right after A1's keep, as A1's own view showed it then.
+        let mine = &host_steps[at];
+        assert_eq!(
+            mine["own"]["you"]["hand"], pushed["view"]["own"]["you"]["hand"],
+            "{mine}"
+        );
+        assert!(mulligan_answered(&mine["own"]), "{mine}");
+        assert_eq!(mine["round"], pushed["view"]["round"]);
+        // A2's step shows its own duel, not A1's, and A1's answered mulligan as its teammate's.
+        let theirs = &guest_steps[at];
         assert!(mulligan_answered(&theirs["teammate"]), "{theirs}");
     }
 
@@ -1454,5 +1579,218 @@ mod b40_b42_the_log_the_replay_and_the_end {
         assert_eq!(status, 404, "{body}");
         assert!(body["steps"].is_null(), "{body}");
         assert!(h.live(&h.outsider).await.is_null());
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §12.2, R268 — the mulligan clock keeps a person's hand
+// ---------------------------------------------------------------------------------------------
+
+mod r268_the_mulligan_clock {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r268_the_mulligan_clock_keeps_each_owing_persons_whole_hand_never_the_ais_mulligan() {
+        // Every card costs 4 or more: the AI's own mulligan, which keeps the cheap ones, would send
+        // nearly all of the host's opening hand back.
+        let costly = deck_where(|def| def["cost"].as_i64().is_some_and(|cost| cost >= 4));
+        let h = duos_with("easy", Some(costly)).await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let dealt_a1 = hand_ids(&first_view(&a1)["view"]["own"]);
+        let dealt_a2 = hand_ids(&first_view(&a2)["view"]["own"]);
+        assert!(
+            !dealt_a1.is_empty() && !dealt_a2.is_empty(),
+            "both were dealt a hand"
+        );
+
+        // Neither person answers: the clock runs out, and round 1 opens once it has answered both.
+        let within = ms(DUOS_MULLIGAN_CLOCK_MS) + ms(DUOS_AI_STEP_DELAY_MS) * 4 + PROMPTLY;
+        let (_, _, opened) = a1
+            .wait_for(0, within, |frame| round_of(frame) >= 1)
+            .await
+            .unwrap_or_else(|| panic!("round 1 never opened: {:?}", a1.frames()));
+
+        let holds_a1 = hand_ids(&opened["view"]["own"]);
+        let holds_a2 = hand_ids(&opened["view"]["teammate"]);
+        for card in &dealt_a1 {
+            assert!(
+                holds_a1.contains(card),
+                "A1 keeps {card}: dealt {dealt_a1:?}, holds {holds_a1:?}"
+            );
+        }
+        for card in &dealt_a2 {
+            assert!(
+                holds_a2.contains(card),
+                "A2 keeps {card}: dealt {dealt_a2:?}, holds {holds_a2:?}"
+            );
+        }
+        // Each person's answer is the one mulligan that keeps every card.
+        let log = h.logged().await;
+        for seat in ["a1", "a2"] {
+            let answer = log
+                .iter()
+                .find(|row| row.action["seat"] == seat && row.action["body"]["body"]["type"] == "mulligan")
+                .unwrap_or_else(|| panic!("{seat}'s mulligan was answered: {log:?}"));
+            let kept = answer.action["body"]["body"]["keep"]
+                .as_array()
+                .map_or(0, Vec::len);
+            let dealt = if seat == "a1" { &dealt_a1 } else { &dealt_a2 };
+            assert_eq!(kept, dealt.len(), "{seat}: {:?}", answer.action);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// B37, B38 — a move the AI decided under one hold is not played under another
+// ---------------------------------------------------------------------------------------------
+
+mod b37_b38_the_ais_hold {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn b37_b38_a_move_the_ai_decided_for_a_seat_past_its_grace_is_dropped_once_its_person_is_back() {
+        // Units of cost 1 or less: playing A1's round 1 outright, the AI always has a card to play.
+        let cheap =
+            deck_where(|def| def["type"] == "Unit" && def["cost"].as_i64().is_some_and(|cost| cost <= 1));
+        let h = duos_with("easy", Some(cheap)).await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        h.keep(&a2, "a2-keep").await;
+        let (_, opened_at, _) = a1
+            .wait_for(0, PROMPTLY, |frame| round_of(frame) >= 1)
+            .await
+            .expect("round 1 opens once all four mulligans are in");
+        let (grace, round_clock, step) = (
+            ms(DISCONNECT_GRACE_MS),
+            ms(DUOS_ROUND_CLOCK_MS),
+            ms(DUOS_AI_STEP_DELAY_MS),
+        );
+
+        // A1 drops so that its grace runs out half a step before round 1's clock: the AI takes A1
+        // over outright, the clock then hands it A1's turn's end, and the AI's first move for A1,
+        // a step after the grace, is decided while it still plays A1 outright.
+        let dropped = opened_at + round_clock - grace - step / 2;
+        tokio::time::sleep_until(dropped).await;
+        a1.hang_up().await;
+        let decided_at = dropped + grace + step;
+        tokio::time::sleep_until(decided_at - Duration::from_millis(1)).await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        assert!(actor.ai_playing(DuosSeat::A1), "the AI plays A1 outright");
+        let logged = actor.next_seq();
+        // The decision starts (off the runtime), and before it lands A1's person is back.
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (back, _frames) = Socket::channel();
+        actor.attach(DuosSeat::A1, back);
+        assert_eq!(
+            actor.next_seq(),
+            logged,
+            "the AI's move for A1 is still being decided"
+        );
+
+        // The round clock ran out for A1 meanwhile: the AI only ends A1's turn now.
+        a2.wait_for(0, step * 4 + PROMPTLY, |frame| round_of(frame) >= 2)
+            .await
+            .unwrap_or_else(|| panic!("round 1 never closed: {:?}", a2.frames()));
+        let moves: Vec<Value> = h
+            .logged()
+            .await
+            .into_iter()
+            .filter(|row| row.seq >= logged && row.action["seat"] == "a1")
+            .map(|row| row.action["body"].clone())
+            .collect();
+        assert!(!moves.is_empty(), "A1's turn was ended for it");
+        for body in &moves {
+            assert_eq!(
+                *body,
+                json!({ "kind": "duel", "body": { "type": "endTurn" } }),
+                "nothing but the end of A1's turn is played for its person: {moves:?}"
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §9.1 — repeated hellos coalesce (R835001's rule)
+// ---------------------------------------------------------------------------------------------
+
+mod hello_coalescing {
+    use super::*;
+
+    const HELLO: &str = r#"{"type":"hello"}"#;
+
+    #[tokio::test(start_paused = true)]
+    async fn hellos_repeated_while_one_is_queued_coalesce_and_a_newer_socket_always_gets_its_own() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let (socket, mut frames) = Socket::channel();
+        actor.attach(DuosSeat::A1, socket.clone());
+        actor.idle().await;
+        drain(&mut frames);
+
+        // A burst with nothing awaited between the frames: every hello but the first is absorbed.
+        for _ in 0..10 {
+            socket.receive(HELLO.to_string());
+        }
+        actor.idle().await;
+        assert_eq!(views_in(&drain(&mut frames)), 1);
+
+        // A flood stays far below one view push per frame.
+        for _ in 0..200 {
+            socket.receive(HELLO.to_string());
+        }
+        actor.idle().await;
+        assert!(views_in(&drain(&mut frames)) <= 10);
+
+        // A hello on a newer socket is never absorbed by the older one's queued Hello.
+        let (older, _older_frames) = Socket::channel();
+        actor.attach(DuosSeat::A1, older.clone());
+        actor.idle().await;
+        older.receive(HELLO.to_string());
+        let (revived, mut revived_frames) = Socket::channel();
+        actor.attach(DuosSeat::A1, revived.clone());
+        revived.receive(HELLO.to_string());
+        actor.idle().await;
+        // The attach's own view, the older socket's queued Hello, and the newer socket's.
+        assert_eq!(views_in(&drain(&mut revived_frames)), 3);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// B40, §9.1 — a rebuild, and none for a socket that holds no seat
+// ---------------------------------------------------------------------------------------------
+
+mod b40_the_rebuild {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn b40_a_hello_from_an_account_with_no_seat_folds_nothing_and_a_seats_hello_rebuilds_the_match() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        let held = registry(&h.app);
+        let live = held.get(&h.match_id).expect("the live actor");
+        let (hash, next_seq) = (live.hash(), live.next_seq());
+        held.stop(&h.match_id).await;
+        assert!(!held.has(&h.match_id));
+
+        let outsider = h.served.connect(DUOS_PATH, &h.outsider.token).await;
+        outsider.send_json(hello(&h.match_id)).await;
+        assert_eq!(outsider.wait_closed(PROMPTLY).await, Some(CLOSE_NOT_FOUND));
+        assert!(outsider.of_type("view").is_empty(), "{:?}", outsider.frames());
+        assert!(
+            !held.has(&h.match_id),
+            "nothing was folded for a socket that holds no seat"
+        );
+
+        // The host's own hello folds the match back, to the state it was stopped in.
+        let back = h.seat(&h.host).await;
+        let rebuilt = held.get(&h.match_id).expect("the rebuilt actor");
+        assert_eq!(rebuilt.hash(), hash);
+        assert_eq!(rebuilt.next_seq(), next_seq);
+        assert_eq!(first_view(&back)["view"]["seat"], "a1");
     }
 }

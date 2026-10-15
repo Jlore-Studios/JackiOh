@@ -3,7 +3,9 @@
 //! seat's views, each `SPECTATE_DELAY_MS` after the state it shows, with `legal: []`; ranked,
 //! opted-out, full, non-friend and blocked are `forbidden` then closed; a watcher's frames never
 //! reach the reducer; a watcher leaving changes nothing in the match; the players' own match sockets
-//! hear `watchers {count}` when the count changes.
+//! hear `watchers {count}` when the count changes. A watcher already in is let go the same way
+//! (`forbidden`, then closed) once the friend turns watching off, or the two unfriend or either
+//! blocks the other.
 //!
 //! The match is a real one on the registry, played with the server tests' cards
 //! (`support::engine`); its players are attached with in-memory sockets (`support::socket`), as the
@@ -445,6 +447,149 @@ mod b51_the_watcher_count {
 
         for socket in [&w.p1, &w.p2] {
             assert_eq!(watcher_counts(socket), vec![json!(1), json!(2), json!(1)]);
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// B50, B46 — a watch the friend withdraws, or that an unfriend or a block ends, ends at once
+// ---------------------------------------------------------------------------------------------
+
+mod b50_b46_a_watch_ends_when_its_leave_does {
+    use super::*;
+
+    /// `forbidden`, as a refused hello gets, then the socket closes with R148's 4403.
+    async fn assert_let_go(client: &WsClient) {
+        let refusal = client
+            .wait_for(0, PROMPTLY, |frame| {
+                frame["type"] == "error" && frame["code"] == "forbidden"
+            })
+            .await;
+        assert!(refusal.is_some(), "no forbidden: {:?}", client.frames());
+        assert_eq!(
+            client.wait_closed(PROMPTLY).await,
+            Some(4403),
+            "{:?}",
+            client.frames()
+        );
+    }
+
+    /// The world with a second friend of the friend's watching too, both admitted; the players' counts
+    /// cleared.
+    async fn two_watching() -> (World, Account, WsClient, WsClient) {
+        let w = world(false).await;
+        let other = account(&w.app, 15, "Oda").await;
+        befriend(&w.app, &other, &w.friend).await;
+        let first = w.watch(&w.watcher).await;
+        let second = w.watch(&other).await;
+        settle().await;
+        for client in [&first, &second] {
+            assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+            assert!(client.close_code().is_none(), "admitted");
+        }
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(2)));
+        w.p1.clear();
+        w.p2.clear();
+        (w, other, first, second)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b50_turning_watching_off_lets_every_watcher_go_and_the_players_hear_the_count() {
+        let (w, _other, first, second) = two_watching().await;
+
+        let (status, body) = api(
+            &w.app,
+            "PUT",
+            "/api/settings",
+            &w.friend.token,
+            json!({ "allowSpectators": false }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        settle().await;
+
+        assert_let_go(&first).await;
+        assert_let_go(&second).await;
+        for socket in [&w.p1, &w.p2] {
+            assert_eq!(
+                watcher_counts(socket).last(),
+                Some(&json!(0)),
+                "{:?}",
+                socket.messages()
+            );
+        }
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b50_turning_watching_off_with_the_settings_groups_lets_the_watcher_go_too() {
+        let w = world(false).await;
+        let watcher = w.watch(&w.watcher).await;
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(1)));
+
+        let (status, body) = api(
+            &w.app,
+            "PUT",
+            "/api/settings",
+            &w.friend.token,
+            json!({ "groups": {}, "allowSpectators": false }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        settle().await;
+
+        assert_let_go(&watcher).await;
+        assert_eq!(watcher_counts(&w.p1).last(), Some(&json!(0)));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b50_b45_an_unfriend_either_way_lets_that_watcher_go_and_no_other() {
+        for friend_removes in [true, false] {
+            let (w, _other, first, second) = two_watching().await;
+            let (who, whom) = if friend_removes {
+                (&w.friend, &w.watcher)
+            } else {
+                (&w.watcher, &w.friend)
+            };
+
+            let (status, body) = api(
+                &w.app,
+                "DELETE",
+                &format!("/api/friends/{}", whom.id),
+                &who.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 204, "{body}");
+            settle().await;
+
+            assert_let_go(&first).await;
+            assert!(second.close_code().is_none(), "the other friend still watches");
+            assert!(second.of_type("error").is_empty(), "{:?}", second.frames());
+            for socket in [&w.p1, &w.p2] {
+                assert_eq!(watcher_counts(socket), vec![json!(1)], "{:?}", socket.messages());
+            }
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b50_b46_a_block_either_way_lets_that_watcher_go_and_no_other() {
+        for friend_blocks in [true, false] {
+            let (w, _other, first, second) = two_watching().await;
+            let (who, whom) = if friend_blocks {
+                (&w.friend, &w.watcher)
+            } else {
+                (&w.watcher, &w.friend)
+            };
+
+            block(&w.app, who, whom).await;
+            settle().await;
+
+            assert_let_go(&first).await;
+            assert!(second.close_code().is_none(), "the other friend still watches");
+            for socket in [&w.p1, &w.p2] {
+                assert_eq!(watcher_counts(socket), vec![json!(1)], "{:?}", socket.messages());
+            }
         }
     }
 }

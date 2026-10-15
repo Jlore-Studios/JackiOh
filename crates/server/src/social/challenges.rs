@@ -1,12 +1,14 @@
 //! Challenges (SPEC S7, B48, B49): a challenge to a friend is a room code sent to them.
 //!
-//! - `POST /api/challenges` takes the body `POST /api/rooms` takes, plus `friendId`. Only a friend
-//!   neither side blocked may be challenged (else 404); one in a match, a series or a co-op game is
-//!   409 `busy`, one not online 409 `offline` (B47's status); a second open challenge to the same
-//!   friend is 409 `already_challenged`. Then the room is opened exactly as `POST /api/rooms` opens
-//!   it (`actor::rooms::open_room`: the same body, mode rules and refusals), open for
-//!   `CHALLENGE_TTL_MS` instead of `ROOM_CODE_TTL_SECONDS`, so it lapses with the challenge, and the
-//!   answer is `201 {challengeId, roomCode}`.
+//! - `POST /api/challenges` takes the body `POST /api/rooms` takes, plus `friendId`. Past
+//!   `CHALLENGES_PER_HOUR` an hour per account it is 429, counted on every attempt before anything
+//!   else, so a create-and-cancel loop can neither grow the table nor flood a friend with toasts.
+//!   Only a friend neither side blocked may be challenged (else 404); one in a match, a series or a
+//!   co-op game is 409 `busy`, one not online 409 `offline` (B47's status); a second open challenge
+//!   to the same friend is 409 `already_challenged`. Then the room is opened exactly as
+//!   `POST /api/rooms` opens it (`actor::rooms::open_room`: the same body, mode rules and refusals),
+//!   open for `CHALLENGE_TTL_MS` instead of `ROOM_CODE_TTL_SECONDS`, so it lapses with the
+//!   challenge, and the answer is `201 {challengeId, roomCode}`.
 //! - `GET /api/challenges`: the caller's open challenges that have not lapsed, received and sent.
 //! - Accepting is joining the room with its code through the existing `POST /api/rooms/:code/join`,
 //!   whose claim marks the challenge accepted in its own transaction (`challenges_accept_room`). A
@@ -14,9 +16,12 @@
 //!   (`assert_may_join`).
 //! - `POST /api/challenges/:id/decline` (its friend) and `DELETE /api/challenges/:id` (its
 //!   challenger) close it and free its room (`actor::rooms::release_room`); 204, or 404 for anyone
-//!   else. Answering one that is no longer open changes nothing and is 204 too.
-//! - A challenge lapses `CHALLENGE_TTL_MS` after it was made, its room with it; the sweeper
-//!   (`run_sweeper`) then marks it expired.
+//!   else. Answering one that is no longer open changes nothing and is 204 too, until the sweeper
+//!   has deleted it (below), after which it is the 404 of an id no challenge holds.
+//! - A challenge lapses `CHALLENGE_TTL_MS` after it was made, its room with it. The sweeper
+//!   (`run_sweeper`, every `CHALLENGE_SWEEP_INTERVAL_SECONDS`) then deletes its row, whatever became
+//!   of it (accepted, declined, cancelled or never answered): no challenge row outlives its TTL by
+//!   more than one sweep.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -26,7 +31,9 @@ use serde_json::json;
 
 use crate::actor::rooms::{open_room, release_room};
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiResult, Req, log_info, log_warn, now_ms, ok, str, to_json};
+use crate::api::http::{
+    ApiError, ApiResult, Req, account_key, log_info, log_warn, now_ms, ok, rate_limited, str, to_json,
+};
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::{CHALLENGE_SWEEP_INTERVAL_SECONDS, CHALLENGE_TTL_MS};
@@ -54,6 +61,15 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let friend_id = str(&req.body, "friendId")?;
     let now = now_ms();
 
+    // Counted on every attempt, before anything is read (as B43 counts friend requests).
+    let key = account_key(&me);
+    if !app.social.challenges.allow(&key, now) {
+        return Err(rate_limited(
+            "too many challenges; try again later",
+            app.social.challenges.retry_after_ms(&key, now),
+        ));
+    }
+
     let mut tx = app.db.begin(Some(&me)).await?;
     let friend = if are_friends(&mut tx, &me, &friend_id).await? {
         tx.profiles_get_by_id(&friend_id).await?
@@ -61,7 +77,6 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         None
     };
     let open = tx.challenges_open_of(&me, now).await?;
-    tx.commit().await?;
     let Some(friend) = friend else {
         return Err(not_found("that player is not your friend"));
     };
@@ -72,10 +87,11 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         return refused(409, "already_challenged", "You've already challenged them.");
     }
     // B48: an online, idle friend.
-    let status = standings(app, &me, std::slice::from_ref(&friend))
+    let status = standings(&mut tx, app, &me, std::slice::from_ref(&friend))
         .await?
         .get(&friend.id)
         .map(|standing| standing.status);
+    tx.commit().await?;
     match status {
         Some(Status::Online) => {}
         Some(Status::InMatch) => return refused(409, "busy", "They're playing a game right now."),
@@ -211,12 +227,13 @@ pub async fn assert_may_join(app: &App, code: &str, joiner: &str) -> Result<(), 
     }
 }
 
-/// B49: marks every challenge lapsed by now expired; answers how many.
-pub async fn sweep(app: &App) -> Result<usize, ApiError> {
+/// B49: deletes every challenge lapsed by now (`expires_at`, `CHALLENGE_TTL_MS` after it was made),
+/// open or closed; answers how many went. Its room lapsed with it, so nothing else is freed.
+pub async fn sweep(app: &App) -> Result<i64, ApiError> {
     let mut tx = app.db.begin(None).await?;
-    let expired = tx.challenges_expire(now_ms()).await?;
+    let purged = tx.challenges_purge(now_ms()).await?;
     tx.commit().await?;
-    Ok(expired.len())
+    Ok(purged)
 }
 
 /// The challenge sweeper: once now and then every `CHALLENGE_SWEEP_INTERVAL_SECONDS`. A failure is
@@ -225,7 +242,7 @@ pub async fn run_sweeper(app: Arc<App>) {
     loop {
         match sweep(&app).await {
             Ok(0) => {}
-            Ok(expired) => log_info("challenges.expired", json!({ "count": expired })),
+            Ok(purged) => log_info("challenges.purged", json!({ "count": purged })),
             Err(error) => log_warn("challenges.sweep_failed", json!({ "message": error.message })),
         }
         tokio::time::sleep(Duration::from_secs(

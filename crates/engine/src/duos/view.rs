@@ -18,7 +18,7 @@ pub fn duos_view_for(state: &DuosState, seat: DuosSeat) -> DuosView {
         team: team_view(state, seat.team(), true),
         enemy: team_view(state, seat.team().other(), false),
         round: state.round,
-        concede_offered_by: state.concede_offer.filter(|offer| offer.team() == seat.team()),
+        concede_offered_by: state.concede_offer[seat.team()],
         result: state.result.clone(),
     }
 }

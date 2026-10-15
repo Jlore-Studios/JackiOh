@@ -2279,7 +2279,12 @@ fn mulligan_window(snapshot: &MatchSnapshot) -> Vec<PlayerId> {
 // leaving changes nothing in the match but the count the players are told (B51).
 
 use crate::actor::protocol::watchers_frame;
+use crate::actor::ws_server::WS_CLOSE;
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+
+/// What a revoked watcher's `forbidden` frame and close say: the words every refused hello carries
+/// (`social::watch`), so a socket learns that it may no longer watch, never which change said so.
+pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 
 /// RFC 6455's normal closure and "going away": a watcher's socket is closed with the first when a
 /// newer socket of the same account replaces it, and with the second when the actor goes (wire
@@ -2430,6 +2435,50 @@ impl MatchActor {
     /// B51: how many sockets watch this match now.
     pub fn watcher_count(&self) -> usize {
         self.lock().spectate.watchers.len()
+    }
+
+    /// B50, B46: the watchers `revoked(watcher, friend)` names (the watcher's account and the
+    /// account whose seat it watches) are let go at once: each socket is told `forbidden`, as a
+    /// refused hello is, and closed with R148's 4403, and the players hear the new count (B51). The
+    /// friend turning watching off, or the two unfriending or blocking, calls this: being let in once
+    /// is no standing leave. Answers how many went.
+    pub fn revoke_watchers(&self, revoked: &dyn Fn(&str, &str) -> bool) -> usize {
+        let gone: Vec<Watcher> = {
+            let mut core = self.lock();
+            let (first, second) = &self.shared.seats;
+            let friend_of = |home: PlayerId| {
+                [first, second]
+                    .into_iter()
+                    .find(|seat| seat.player == home)
+                    .map(|seat| seat.profile_id.as_str())
+            };
+            let (gone, kept): (Vec<Watcher>, Vec<Watcher>) = std::mem::take(&mut core.spectate.watchers)
+                .into_iter()
+                .partition(|watcher| {
+                    friend_of(watcher.home).is_some_and(|friend| revoked(&watcher.profile_id, friend))
+                });
+            core.spectate.watchers = kept;
+            if !gone.is_empty() && !core.stopped {
+                tracing::info!(event = "match.watcher.revoked", matchId = %self.match_id_str(), revoked = gone.len(), watchers = core.spectate.watchers.len());
+                self.push_watchers(&core);
+            }
+            gone
+        };
+        // Already out of the list, so their close handlers find nothing to take off.
+        let refusal = encode(&error_message(
+            SocketErrorCode::Forbidden,
+            WATCH_NOT_ALLOWED,
+            None,
+        ));
+        for watcher in &gone {
+            if watcher.socket.is_open() {
+                watcher.socket.send(&refusal);
+                watcher
+                    .socket
+                    .close(Some(WS_CLOSE.forbidden), Some(WATCH_NOT_ALLOWED));
+            }
+        }
+        gone.len()
     }
 
     /// A watcher's socket went: it leaves, and the players hear the new count (B51).

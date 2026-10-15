@@ -5941,9 +5941,11 @@ mod bots {
 /// them.
 mod social {
     use super::*;
+    use jackioh_engine::config::DUOS_HUMAN_TEAM;
     use jackioh_server::db::store::{
         ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, ReplayShare,
     };
+    use jackioh_server::duos::store::DuosMatch;
 
     fn request(from_profile: &str, to_profile: &str, at: i64) -> FriendRequestRow {
         from(json!({ "id": id(), "fromProfile": from_profile, "toProfile": to_profile, "createdAt": at }))
@@ -6413,6 +6415,165 @@ mod social {
         assert!(q!(harness, t => t.shares_sharers("not-a-uuid", &b.id)).is_empty());
     }
 
+    /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
+    /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
+    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, unranked, seating the friend
+    /// and not the viewer, the friend allowing it). Each answers in the order named.
+    async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
+        let viewer = active_profile(harness, None).await;
+        let rival = active_profile(harness, None).await;
+        let watched = active_profile(harness, None).await;
+        let ranked = active_profile(harness, None).await;
+        let shy = active_profile(harness, None).await;
+        let blocked = active_profile(harness, None).await;
+        let stranger = active_profile(harness, None).await;
+        let picking = active_profile(harness, None).await;
+        let coop = active_profile(harness, None).await;
+        let idle = active_profile(harness, None).await;
+        let now = harness.now();
+        for friend in [&watched, &ranked, &shy, &blocked, &picking, &coop, &idle] {
+            q!(harness, t => t.friends_make(&viewer.id, &friend.id, now));
+        }
+        q!(harness, t => t.blocks_add(&blocked.id, &viewer.id, now));
+        q!(harness, t => t.profiles_set_allow_spectators(&shy.id, false));
+        let live = |p1: &str, ranked: bool| -> MatchRow {
+            from(spread(
+                j(&match_row(&id(), p1, &rival.id, harness, now)),
+                json!({ "ranked": ranked }),
+            ))
+        };
+        for (player, is_ranked) in [
+            (&watched, false),
+            (&ranked, true),
+            (&shy, false),
+            (&blocked, false),
+            (&stranger, false),
+        ] {
+            let row = live(&player.id, is_ranked);
+            q!(harness, t => t.matches_create(&row));
+            q!(harness, t => t.profiles_set_in_match(&player.id, Some(row.id.as_str())));
+        }
+        // The viewer's own opponent: a seat the viewer holds is never watched.
+        let against = match_row(&id(), &viewer.id, &idle.id, harness, now);
+        q!(harness, t => t.matches_create(&against));
+        q!(harness, t => t.profiles_set_in_match(&idle.id, Some(against.id.as_str())));
+
+        let named: Vec<String> = [
+            &idle, &shy, &watched, &ranked, &blocked, &stranger, &picking, &coop,
+        ]
+        .iter()
+        .map(|profile| profile.id.clone())
+        .collect();
+        assert_eq!(
+            q!(harness, t => t.presence_watchable(&viewer.id, &named)),
+            vec![watched.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_watchable("not-a-uuid", &named)).is_empty());
+        assert!(q!(harness, t => t.presence_watchable(&viewer.id, &[])).is_empty());
+
+        q!(harness, t => t.series_create(&super::series::series_row(harness, &rival.id, &picking.id, json!({}))));
+        let finished = super::series::series_row(
+            harness,
+            &coop.id,
+            &idle.id,
+            json!({ "status": "over", "winner": "p1", "endReason": "forfeit", "endedAt": now }),
+        );
+        q!(harness, t => t.series_create(&finished));
+        assert_eq!(
+            q!(harness, t => t.presence_in_series(&named)),
+            vec![picking.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_in_series(&[])).is_empty());
+
+        let coop_match = |a1: &str, a2: &str, at: i64| -> DuosMatch {
+            from(json!({
+                "id": id(),
+                "seed": "seed-duos",
+                "a1": a1,
+                "a2": a2,
+                "difficulty": "easy",
+                "options": {
+                    "decks": { "a1": ["core-001"], "a2": ["core-002"], "b1": ["core-003"], "b2": ["core-004"] },
+                    "dealt": [],
+                    "teams": { "a": j(&DUOS_HUMAN_TEAM), "b": j(&DUOS_HUMAN_TEAM) },
+                    "handicaps": { "a1": null, "a2": null, "b1": null, "b2": null },
+                },
+                "createdAt": at,
+                "endedAt": null,
+                "result": null,
+            }))
+        };
+        let older = coop_match(&coop.id, &stranger.id, now - 2_000);
+        let newer = coop_match(&rival.id, &coop.id, now - 1_000);
+        let ended = coop_match(&idle.id, &rival.id, now - 500);
+        for row in [&older, &newer, &ended] {
+            q!(harness, t => t.duos_matches_create(row));
+        }
+        assert!(q!(harness, t => t.duos_matches_finish(&ended.id, &json!({ "outcome": "draw" }), now)));
+        assert_eq!(
+            q!(harness, t => t.presence_in_duos(&named))
+                .into_iter()
+                .collect::<Vec<(String, String)>>(),
+            vec![
+                (stranger.id.clone(), older.id.clone()),
+                (coop.id.clone(), newer.id.clone())
+            ]
+        );
+        assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
+    }
+
+    /// B46, B52 (#936 review): an unfriend or a block deletes every share between the two, either
+    /// way, and no other.
+    async fn s7_shares_between_a_pair_go_together(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_finish(&over, now - 5_000));
+        for (sharer, friend) in [(&a, &b), (&b, &a), (&a, &c), (&b, &c)] {
+            q!(harness, t => t.friends_make(&sharer.id, &friend.id, now - 10_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": sharer.id, "friend": friend.id, "createdAt": now,
+            }));
+            q!(harness, t => t.shares_put(&share));
+        }
+
+        assert_eq!(q!(harness, t => t.shares_remove_between(&b.id, &a.id)), 2);
+        assert_eq!(q!(harness, t => t.shares_remove_between(&a.id, &b.id)), 0);
+        assert!(q!(harness, t => t.shares_sharers(&over, &a.id)).is_empty());
+        assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
+        assert_eq!(
+            sorted(&q!(harness, t => t.shares_sharers(&over, &c.id))),
+            sorted(&[a.id.clone(), b.id.clone()])
+        );
+        assert_eq!(q!(harness, t => t.shares_remove_between("not-a-uuid", &a.id)), 0);
+    }
+
+    /// B49 (#936 review): the sweeper's purge deletes every challenge lapsed by now, open or
+    /// closed, and none that has not.
+    async fn s7_challenges_lapsed_by_now_are_purged_whatever_their_state(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let open = challenge(&a.id, &b.id, "KLM234", now - 3_000, now - 1);
+        let declined = challenge(&b.id, &a.id, "LMN345", now - 3_000, now);
+        let live = challenge(&a.id, &c.id, "MNP456", now - 3_000, now + 1);
+        for row in [&open, &declined, &live] {
+            assert!(q!(harness, t => t.challenges_create(row, now - 3_000)));
+        }
+        assert!(q!(harness, t => t.challenges_close(&declined.id, ChallengeState::Declined)).is_some());
+
+        assert_eq!(q!(harness, t => t.challenges_purge(now)), 2);
+
+        assert!(q!(harness, t => t.challenges_get(&open.id)).is_none());
+        assert!(q!(harness, t => t.challenges_get(&declined.id)).is_none());
+        assert_eq!(q!(harness, t => t.challenges_get(&live.id)), Some(live.clone()));
+        assert_eq!(q!(harness, t => t.challenges_purge(now)), 0);
+    }
+
     /// 0036's cascade: a deleted profile takes every social row that names it.
     async fn s7_a_deleted_profile_takes_its_social_rows(harness: &StoreHarness) {
         let a = active_profile(harness, None).await;
@@ -6452,6 +6613,9 @@ mod social {
         s7_chat_pages_reads_reports_and_purges,
         s7_replay_shares_are_read_while_friends_and_unblocked,
         s7_a_deleted_profile_takes_its_social_rows,
+        s7_presence_reads_many_profiles_at_once,
+        s7_shares_between_a_pair_go_together,
+        s7_challenges_lapsed_by_now_are_purged_whatever_their_state,
     );
 }
 
@@ -6636,10 +6800,41 @@ mod duos {
         assert!(q!(harness, t => t.profiles_get_by_id(&a1.id)).is_some());
     }
 
+    /// §12.9, the retention purge: a co-op match's log goes once the match ended before the cutoff,
+    /// as a 1v1 match's; a match that ended later, or is live, keeps its log; the row stays.
+    async fn s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        let old = duos_match(&a1.id, &a2.id, now - 30_000);
+        let recent = duos_match(&a1.id, &a2.id, now - 20_000);
+        let live = duos_match(&a1.id, &a2.id, now - 10_000);
+        for row in [&old, &recent, &live] {
+            q!(harness, t => t.duos_matches_create(row));
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now - 9_000)));
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, 2, "n-2", now - 8_000)));
+        }
+        assert!(q!(harness, t => t.duos_matches_finish(&old.id, &result, now - 5_000)));
+        assert!(q!(harness, t => t.duos_matches_finish(&recent.id, &result, now - 1_000)));
+
+        assert_eq!(q!(harness, t => t.duos_actions_purge(now - 2_000)), 2);
+
+        assert!(q!(harness, t => t.duos_actions(&old.id)).is_empty());
+        assert_eq!(q!(harness, t => t.duos_actions(&recent.id)).len(), 2);
+        assert_eq!(q!(harness, t => t.duos_actions(&live.id)).len(), 2);
+        let kept = must(
+            q!(harness, t => t.duos_matches_get(&old.id)),
+            "the match row stays",
+        );
+        assert_eq!(kept.result, Some(result));
+    }
+
     both_stores!(
         s6_rooms_are_claimed_once_and_reaped,
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,
+        s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
     );
 }
 

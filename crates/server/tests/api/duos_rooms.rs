@@ -3,7 +3,9 @@
 //! AI on B1 and B2) and both learn its `matchId`; a third gets `409 full`, the host `409 own_room`; an
 //! unjoined room expires `DUOS_ROOM_TTL_MS` after it was made and the host may delete it first;
 //! `GET /api/duos/live` names the caller's live co-op match; the per-match replay answers each human
-//! their own seat and anyone else 404.
+//! their own seat of a finished game (409 while it is live, 410 once the retention purge has taken
+//! its log, 422 when this build cannot fold it as it was played) and anyone else 404; a blocked pair
+//! neither reads nor joins the other's room, and a joined room answers its two people alone.
 //!
 //! The whole router over the fake store, from accounts seeded active with a tagged username. The
 //! seats choose `random: true` (the server deals), except where a saved deck is the point. A
@@ -14,10 +16,16 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
-use jackioh_server::app::App;
-use jackioh_server::config::{CODE_ALPHABET, DUOS_ROOM_TTL_MS, MAX_SAVED_DECKS, ROOM_CODE_LENGTH};
+use jackioh_engine::wire::{DuosActionBody, DuosSeat};
+use jackioh_server::app::{App, now_ms};
+use jackioh_server::config::{
+    CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MAX_SAVED_DECKS,
+    REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
+};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
+use jackioh_server::duos::registry;
+use jackioh_server::duos::store::{DuosActionRow, DuosMatch, DuosRoom};
 
 use crate::support::deps::{add_user, call, empty_test_app};
 
@@ -247,6 +255,76 @@ impl Three {
         let match_id = body["matchId"].as_str().expect("a match id").to_string();
         (code, match_id)
     }
+
+    /// A started match both people then concede (B11), so it is finished.
+    async fn finished(&self) -> String {
+        let (_, match_id) = self.started().await;
+        finish(&self.app, &match_id).await;
+        match_id
+    }
+}
+
+/// Both people concede through the live actor, which ends the match (B11) and writes its result.
+async fn finish(app: &Arc<App>, match_id: &str) {
+    let actor = registry(app).get(match_id).expect("the live actor");
+    for (seat, nonce) in [(DuosSeat::A1, "a1-concede"), (DuosSeat::A2, "a2-concede")] {
+        let answer = actor
+            .submit(seat, nonce.to_string(), DuosActionBody::Concede)
+            .await;
+        let answer = serde_json::to_value(&answer).expect("an answer");
+        assert_eq!(answer["type"], "ack", "{answer}");
+    }
+    assert!(actor.is_finished(), "the result is written");
+}
+
+/// The match row and its log, as the store holds them.
+async fn stored(app: &Arc<App>, match_id: &str) -> (DuosMatch, Vec<DuosActionRow>) {
+    store!(app, t => {
+        let row = t.duos_matches_get(match_id).await.expect("duos.matches.get").expect("the match");
+        let log = t.duos_actions(match_id).await.expect("duos.actions");
+        (row, log)
+    })
+}
+
+/// A copy of the finished match `from` under a new id, its row and its log's actions as `edit`
+/// leaves them: a match the server never played, to fold.
+async fn copied(
+    app: &Arc<App>,
+    from_id: &str,
+    n: u32,
+    edit: impl FnOnce(&mut Value, &mut Vec<Value>),
+) -> String {
+    let (row, log) = stored(app, from_id).await;
+    let mut row = serde_json::to_value(&row).expect("a row");
+    let mut actions: Vec<Value> = log.iter().map(|entry| entry.action.clone()).collect();
+    edit(&mut row, &mut actions);
+    let id = uuid(n);
+    row["id"] = json!(id);
+    let copy: DuosMatch = from(row);
+    let (result, ended_at) = (
+        copy.result.clone().expect("a finished match's result"),
+        copy.ended_at.expect("a finished match's end"),
+    );
+    store!(app, t => {
+        t.duos_matches_create(&copy).await.expect("duos.matches.create");
+        t.duos_matches_finish(&id, &result, ended_at).await.expect("duos.matches.finish");
+        for (at, action) in actions.iter().enumerate() {
+            let seq = i64::try_from(at).expect("a seq") + 1;
+            let row = DuosActionRow {
+                match_id: id.clone(),
+                seq,
+                nonce: action["nonce"].as_str().expect("a nonce").to_string(),
+                action: action.clone(),
+                at: ended_at,
+            };
+            t.duos_actions_append(&row).await.expect("duos.actions.append");
+        }
+    });
+    id
+}
+
+fn refusal_reason(body: &Value) -> &Value {
+    &body["error"]["details"]["reason"]
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -305,13 +383,11 @@ mod b33_rooms {
         assert_eq!(shown["matchId"], json!(match_id));
         assert_eq!(live(&t.app, &t.host).await, json!(match_id));
         assert_eq!(live(&t.app, &t.guest).await, json!(match_id));
-        for (who, seat) in [(&t.host, "a1"), (&t.guest, "a2")] {
+        // §12.9: a live co-op game has no replay yet, for either of its people.
+        for who in [&t.host, &t.guest] {
             let (status, body) = replay(&t.app, who, &match_id).await;
-            assert_eq!(status, 200, "{body}");
-            assert_eq!(body["seat"], seat, "{body}");
-            for step in body["steps"].as_array().expect("steps") {
-                assert_eq!(step["seat"], seat, "{step}");
-            }
+            assert_eq!(status, 409, "{body}");
+            assert!(body["steps"].is_null(), "{body}");
         }
     }
 
@@ -521,5 +597,309 @@ mod b41_b42_replay_and_live {
 
         assert!(live(&t.app, &t.third).await.is_null());
         assert_eq!(live(&t.app, &t.host).await, json!(match_id));
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// B41, §12.9, R767000 — the replay of a finished game, under the catalog it was played on
+// ---------------------------------------------------------------------------------------------
+
+mod b41_the_finished_replay {
+    use super::*;
+
+    #[tokio::test]
+    async fn b41_a_finished_match_answers_each_person_their_own_seats_steps_and_a_live_one_is_409() {
+        let t = three().await;
+        let (_, match_id) = t.started().await;
+        let (status, body) = replay(&t.app, &t.host, &match_id).await;
+        assert_eq!(status, 409, "{body}");
+
+        finish(&t.app, &match_id).await;
+
+        let (_, log) = stored(&t.app, &match_id).await;
+        for (who, seat) in [(&t.host, "a1"), (&t.guest, "a2")] {
+            let (status, body) = replay(&t.app, who, &match_id).await;
+            assert_eq!(status, 200, "{body}");
+            assert_eq!(body["seat"], seat, "{body}");
+            let steps = body["steps"].as_array().expect("steps");
+            assert_eq!(steps.len(), log.len() + 1, "as it began, then a step per action");
+            for step in steps {
+                assert_eq!(step["seat"], seat, "{step}");
+            }
+            let last = steps.last().expect("the end");
+            assert_eq!(
+                last["result"],
+                json!({ "outcome": "win", "winner": "b", "reason": "concede" })
+            );
+        }
+        let (status, _) = replay(&t.app, &t.third, &match_id).await;
+        assert_eq!(status, 404);
+    }
+
+    #[tokio::test]
+    async fn b41_a_finished_replay_is_folded_once_and_kept_for_the_next_request() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        let held = registry(&t.app);
+        assert_eq!(held.replays.held(now_ms()), 0);
+
+        let (status, first) = replay(&t.app, &t.host, &match_id).await;
+        assert_eq!(status, 200, "{first}");
+        assert_eq!(held.replays.held(now_ms()), 1, "the fold is kept");
+        let (status, again) = replay(&t.app, &t.host, &match_id).await;
+        assert_eq!(status, 200, "{again}");
+        assert_eq!(again, first);
+        let (status, theirs) = replay(&t.app, &t.guest, &match_id).await;
+        assert_eq!(status, 200, "{theirs}");
+        assert_eq!(theirs["seat"], "a2");
+        assert_eq!(held.replays.held(now_ms()), 1, "one fold serves both people");
+    }
+
+    #[tokio::test]
+    async fn r767000_a_join_pins_the_match_to_the_catalog_it_is_dealt_from() {
+        let t = three().await;
+        let (_, match_id) = t.started().await;
+
+        let (row, _) = stored(&t.app, &match_id).await;
+
+        assert_eq!(row.options.catalog_version, t.app.catalog.version);
+        assert_eq!(
+            serde_json::to_value(&row.options).expect("options")["catalogVersion"],
+            json!(t.app.catalog.version)
+        );
+    }
+
+    #[tokio::test]
+    async fn r767000_a_match_played_on_a_catalog_this_build_does_not_carry_is_422_earlier_patch() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        let gone = copied(&t.app, &match_id, 901, |row, _| {
+            row["options"]["catalogVersion"] = json!("v-gone");
+        })
+        .await;
+
+        let (status, body) = replay(&t.app, &t.host, &gone).await;
+
+        assert_eq!(status, 422, "{body}");
+        assert_eq!(*refusal_reason(&body), json!("earlier_patch"), "{body}");
+        assert!(body["steps"].is_null(), "{body}");
+        // The match it was copied from, on this build's own catalog, still shows.
+        assert_eq!(replay(&t.app, &t.host, &match_id).await.0, 200);
+    }
+
+    #[tokio::test]
+    async fn b24_b41_a_log_that_no_longer_folds_is_refused_rules_changed_never_cut_short() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        // B1 ends a turn during the mulligans: the engine refuses it, so this log does not fold.
+        let broken = copied(&t.app, &match_id, 902, |_, actions| {
+            actions.insert(
+                0,
+                json!({ "seat": "b1", "nonce": "refused-1", "body": { "kind": "duel", "body": { "type": "endTurn" } } }),
+            );
+        })
+        .await;
+
+        let (status, body) = replay(&t.app, &t.host, &broken).await;
+
+        assert_eq!(status, 422, "{body}");
+        assert_eq!(*refusal_reason(&body), json!("rules_changed"), "{body}");
+        assert!(
+            body["steps"].is_null(),
+            "no step of a fold that went wrong: {body}"
+        );
+    }
+
+    #[tokio::test]
+    async fn b41_a_log_that_folds_to_another_end_than_the_recorded_result_is_refused_rules_changed() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        let misrecorded = copied(&t.app, &match_id, 903, |row, _| {
+            row["result"] = json!({ "outcome": "win", "winner": "a", "reason": "concede" });
+        })
+        .await;
+
+        let (status, body) = replay(&t.app, &t.guest, &misrecorded).await;
+
+        assert_eq!(status, 422, "{body}");
+        assert_eq!(*refusal_reason(&body), json!("rules_changed"), "{body}");
+    }
+
+    #[tokio::test]
+    async fn r768_the_co_op_replay_is_held_to_the_replay_allowance() {
+        let t = three().await;
+        let match_id = t.finished().await;
+        for _ in 0..REPLAY_REQUESTS_PER_MINUTE {
+            let (status, body) = replay(&t.app, &t.host, &match_id).await;
+            assert_eq!(status, 200, "{body}");
+        }
+
+        let (status, body) = replay(&t.app, &t.host, &match_id).await;
+
+        assert_eq!(status, 429, "{body}");
+        // The allowance is the account's: the other person still reads their own.
+        assert_eq!(replay(&t.app, &t.guest, &match_id).await.0, 200);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §12.9 — the retention purge takes a finished co-op game's log
+// ---------------------------------------------------------------------------------------------
+
+mod retention {
+    use super::*;
+
+    /// Unit conversion, not configuration.
+    const MS_PER_DAY: u64 = 86_400_000;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_finished_co_op_matchs_log_goes_match_action_retention_days_after_it_ended_and_its_replay_is_410()
+     {
+        let t = three().await;
+        let old = t.finished().await;
+        assert_eq!(replay(&t.app, &t.host, &old).await.0, 200, "kept, and opened");
+        advance(millis(MATCH_ACTION_RETENTION_DAYS) * MS_PER_DAY + 1).await;
+        let recent = t.finished().await;
+        let (_, live_id) = t.started().await;
+        let (_, live_log) = stored(&t.app, &live_id).await;
+
+        let purged = jackioh_server::duos::purge_expired_logs(&t.app)
+            .await
+            .expect("the purge");
+
+        assert!(purged > 0);
+        assert!(
+            stored(&t.app, &old).await.1.is_empty(),
+            "the old game's log is gone"
+        );
+        let (row, _) = stored(&t.app, &old).await;
+        assert!(row.result.is_some(), "its row and result stay");
+        assert!(!stored(&t.app, &recent).await.1.is_empty());
+        assert_eq!(stored(&t.app, &live_id).await.1.len(), live_log.len());
+        let (status, body) = replay(&t.app, &t.host, &old).await;
+        assert_eq!(status, 410, "{body}");
+        assert!(code_is(&body, "gone"), "{body}");
+        assert_eq!(replay(&t.app, &t.guest, &recent).await.0, 200);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §12.9 — blocks, and a joined room is its two people's
+// ---------------------------------------------------------------------------------------------
+
+mod room_privacy {
+    use super::*;
+
+    async fn block(app: &Arc<App>, blocker: &Account, blocked: &Account) {
+        store!(app, t => t.blocks_add(&blocker.id, &blocked.id, now_ms()).await.expect("blocks.add"));
+    }
+
+    async fn unblock(app: &Arc<App>, blocker: &Account, blocked: &Account) {
+        store!(app, t => t.blocks_remove(&blocker.id, &blocked.id).await.expect("blocks.remove"));
+    }
+
+    #[tokio::test]
+    async fn a_blocked_pair_neither_reads_nor_joins_the_others_room_and_hears_what_an_unknown_code_answers() {
+        let t = three().await;
+        let code = room(&t.app, &t.host).await;
+        let (_, unknown_get) = get_room(&t.app, &t.guest, "ZZZZZZ").await;
+        let (_, unknown_join) = join(&t.app, &t.guest, "ZZZZZZ").await;
+
+        for (blocker, blocked) in [(&t.host, &t.guest), (&t.guest, &t.host)] {
+            block(&t.app, blocker, blocked).await;
+            let (status, body) = get_room(&t.app, &t.guest, &code).await;
+            assert_eq!(status, 404, "{body}");
+            assert_eq!(body, unknown_get);
+            let (status, body) = join(&t.app, &t.guest, &code).await;
+            assert_eq!(status, 404, "{body}");
+            assert_eq!(body, unknown_join);
+            assert!(live(&t.app, &t.guest).await.is_null());
+            unblock(&t.app, blocker, blocked).await;
+        }
+
+        // Anyone else, and the pair once unblocked, still may.
+        assert_eq!(get_room(&t.app, &t.third, &code).await.0, 200);
+        let (status, body) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 200, "{body}");
+    }
+
+    #[tokio::test]
+    async fn a_joined_room_answers_its_host_and_guest_alone() {
+        let t = three().await;
+        let (code, match_id) = t.started().await;
+
+        for who in [&t.host, &t.guest] {
+            let (status, shown) = get_room(&t.app, who, &code).await;
+            assert_eq!(status, 200, "{shown}");
+            assert_eq!(shown["matchId"], json!(match_id));
+        }
+        let (status, body) = get_room(&t.app, &t.third, &code).await;
+        assert_eq!(status, 404, "{body}");
+        assert!(body["matchId"].is_null(), "{body}");
+        // S6: a third account's join is still told the room is full.
+        let (status, body) = join(&t.app, &t.third, &code).await;
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "full"), "{body}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// §9.4, R767000 — a host's deck frozen under another catalog
+// ---------------------------------------------------------------------------------------------
+
+mod stale_catalog {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_room_whose_frozen_deck_was_checked_under_another_catalog_refuses_the_join_409_update_required()
+    {
+        let t = three().await;
+        let now = now_ms();
+        let stale: DuosRoom = from(json!({
+            "code": "STALEA",
+            "host": t.host.id,
+            "guest": null,
+            "difficulty": "easy",
+            "hostChoice": {
+                "kind": "deck",
+                "deck": { "name": "co-op deck", "cards": deck() },
+                "catalogVersion": "v-before-the-deploy",
+            },
+            "guestChoice": null,
+            "matchId": null,
+            "createdAt": now,
+            "expiresAt": now + i64::try_from(DUOS_ROOM_TTL_MS).expect("a ttl"),
+        }));
+        assert!(store!(t.app, tx => tx.duos_rooms_create(&stale).await.expect("duos.rooms.create")));
+
+        let (status, body) = join(&t.app, &t.guest, "STALEA").await;
+
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "update_required"), "{body}");
+        assert!(live(&t.app, &t.guest).await.is_null(), "no match was started");
+        let (status, shown) = get_room(&t.app, &t.host, "STALEA").await;
+        assert_eq!(status, 200, "{shown}");
+        assert!(shown["guest"].is_null(), "the room is left unclaimed: {shown}");
+    }
+
+    #[tokio::test]
+    async fn a_room_whose_frozen_deck_was_checked_under_the_running_catalog_starts_its_match() {
+        let t = three().await;
+        with_saved_deck(&t.app, &t.host.id, &uuid(800)).await;
+        let (status, body) = create(
+            &t.app,
+            &t.host,
+            json!({ "difficulty": "easy", "deckId": uuid(800) }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a room code").to_string();
+
+        let (status, body) = join(&t.app, &t.guest, &code).await;
+
+        assert_eq!(status, 200, "{body}");
+        let match_id = body["matchId"].as_str().expect("a match id");
+        let (row, _) = stored(&t.app, match_id).await;
+        assert_eq!(row.options.decks.a1, deck(), "the host plays the deck they froze");
     }
 }

@@ -52,7 +52,7 @@ pub fn duos_legal_actions(state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBo
             }
         }
     }
-    if state.concede_offer != Some(seat) {
+    if state.concede_offer[seat.team()] != Some(seat) {
         out.push(DuosActionBody::Concede);
     }
     out

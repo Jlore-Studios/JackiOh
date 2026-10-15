@@ -3,8 +3,9 @@
 // chat with any friend, and Duos co-op (`duos/CoopPanel.tsx`, which gets the friends list).
 //
 // Behind the gate like `/play` (B54). Every list is the server's answer (`net/social.ts`), read again
-// every `SOCIAL_POLL_MS` so a friend coming online, a request arriving or a challenge being taken
-// shows without a reload, and again at once after each of this page's own changes. Nothing here is a
+// without a reload: the friends list (statuses, requests, blocks) every `FRIENDS_POLL_MS`, the pace a
+// status changes at, and the challenges and unread counts every `SOCIAL_POLL_MS`; and each list again
+// at once after each of this page's own changes. Nothing here is a
 // rule (CLAUDE.md rule 7): which friend can be challenged or watched is what the server says of them
 // (`status`, `watchable`), and every refusal is shown in the server's words.
 //
@@ -44,7 +45,7 @@ import { SHARED_ANCHOR } from "./anchors.ts";
 import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
-import { SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { attempt, messageOf, unreadCountsOf, usePolled } from "./session.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 import { togetherTestid } from "./testids.ts";
@@ -296,7 +297,7 @@ function RequestRow({
 
 export function TogetherRoute(): ReactElement {
   useLocale();
-  const [friends, reloadFriends] = usePolled(getFriends, SOCIAL_POLL_MS);
+  const [friends, reloadFriends] = usePolled(getFriends, FRIENDS_POLL_MS);
   const [challenges, reloadChallenges] = usePolled(getChallenges, SOCIAL_POLL_MS);
   const [unread, reloadUnread] = usePolled(getUnread, SOCIAL_POLL_MS);
   const [shared] = usePolled(getSharedReplays, null);

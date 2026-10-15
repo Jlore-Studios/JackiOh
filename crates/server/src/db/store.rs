@@ -2480,6 +2480,35 @@ impl Tx<'_> {
         dispatch!(self, presence_last_seen(profile_ids))
     }
 
+    /// B47, one read for a whole friends list: those of the named profiles a Conquest series that
+    /// is not over holds (either side), in the order named.
+    pub async fn presence_in_series(&mut self, profile_ids: &[String]) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_in_series(profile_ids))
+    }
+
+    /// B47, one read for a whole friends list: the live co-op match holding each named profile (the
+    /// newest, as `duos_matches_live_for` answers one), by profile id in the order named; a profile
+    /// in none is left out.
+    pub async fn presence_in_duos(
+        &mut self,
+        profile_ids: &[String],
+    ) -> StoreResult<IndexMap<String, String>> {
+        dispatch!(self, presence_in_duos(profile_ids))
+    }
+
+    /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
+    /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
+    /// neither blocking the other, the match is live, not ranked, seats the friend and not `viewer`,
+    /// and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`) is the
+    /// actor's to judge.
+    pub async fn presence_watchable(
+        &mut self,
+        viewer: &str,
+        profile_ids: &[String],
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_watchable(viewer, profile_ids))
+    }
+
     // profiles (B46, B50)
 
     /// The profile a client named by id, or `None`: `profiles_get_by_id` for an id that came off
@@ -2558,6 +2587,12 @@ impl Tx<'_> {
     /// B49: marks every open challenge lapsed by `now` expired; answers them.
     pub async fn challenges_expire(&mut self, now: i64) -> StoreResult<Vec<ChallengeRow>> {
         dispatch!(self, challenges_expire(now))
+    }
+
+    /// B49: deletes every challenge lapsed by `now` (`expires_at <= now`), open or closed, so none
+    /// outlives its `CHALLENGE_TTL_MS`; answers how many went.
+    pub async fn challenges_purge(&mut self, now: i64) -> StoreResult<i64> {
+        dispatch!(self, challenges_purge(now))
     }
 
     // rooms
@@ -2652,6 +2687,12 @@ impl Tx<'_> {
     /// B52: removes `sharer`'s share of `match_id` with `friend`; a no-op when there is none.
     pub async fn shares_remove(&mut self, match_id: &str, sharer: &str, friend: &str) -> StoreResult<()> {
         dispatch!(self, shares_remove(match_id, sharer, friend))
+    }
+
+    /// B46, B52: deletes every share between the two, either way: an unfriend or a block ends them
+    /// for good, so making friends again restores none. Answers how many went.
+    pub async fn shares_remove_between(&mut self, x: &str, y: &str) -> StoreResult<i64> {
+        dispatch!(self, shares_remove_between(x, y))
     }
 
     /// B52: who shared the finished match `match_id` with `friend` and may still be read through: each

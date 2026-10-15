@@ -237,7 +237,10 @@ net/social.ts            fetch wrappers for every Play together route, typed (Fr
                          Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
 net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
 together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
-together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel
+together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel; the
+                         friends list is read only while its list is open
+together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
+                         PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS
 together/ChallengeToast.tsx  mounted once in the shell; polls GET /api/challenges while signed in and
                          toasts an incoming challenge anywhere: Accept opens /play with the room code
                          filled in (R767), Decline declines

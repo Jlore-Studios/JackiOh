@@ -1,6 +1,7 @@
 // Chat from the board (#936, B58): a toggle in the match screen's board rail, with the unread count
 // beside it, that lists the friends who are on (online or in a game) and opens the chat panel with
-// the one picked. The friends are read only while the list is open; the unread count every
+// the one picked. The friends list is read only while that list is open (at once, then every
+// `FRIENDS_POLL_MS`), never while the board is just played; the unread count every
 // `SOCIAL_POLL_MS`.
 
 import { useState, type ReactElement } from "react";
@@ -9,7 +10,7 @@ import Username from "../auth/Username.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getFriends, getUnread, type PlayerRef } from "../net/social.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
-import { SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { unreadCountsOf, usePolled } from "./session.ts";
 import { chatTestid } from "./testids.ts";
 import { STATUS_WORDS } from "./words.tsx";
@@ -24,7 +25,7 @@ function OnlineFriends({
   unread: Readonly<Record<string, number>>;
   onPick: (friend: PlayerRef) => void;
 }): ReactElement {
-  const [friends] = usePolled(getFriends, SOCIAL_POLL_MS);
+  const [friends] = usePolled(getFriends, FRIENDS_POLL_MS);
   if (friends.kind === "loading") {
     return (
       <p className="in-match-chat__note" role="status">

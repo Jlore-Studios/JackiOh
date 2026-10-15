@@ -13,7 +13,14 @@
 //! never which check said so. Every frame after the hello is dropped unread: none reaches the
 //! reducer, and a watcher leaving changes nothing in the match but the count its players see (B51).
 //!
-//! `watchable` is S7's `Friend.watchable`, for the friends list.
+//! Being let in is no standing leave (§9.8, "the friend can turn it off"; B46): when the friend turns
+//! `allowSpectators` off (`revoke_all_of`), or the two unfriend or either blocks the other
+//! (`revoke_between`), the watcher's socket gets the same `forbidden` and close at once
+//! (`MatchActor::revoke_watchers`). A hello that passed its checks just before such a change is
+//! judged again once its socket is in (`admit`), so the change never misses it.
+//!
+//! S7's `Friend.watchable`, for the friends list, is `social::presence::standings`'s, which judges
+//! what this module's checks judge for every friend at once (`Tx::presence_watchable`).
 
 use std::future::Future;
 use std::sync::Arc;
@@ -24,17 +31,15 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::actor::contracts::SocketHandlers;
+use crate::actor::match_actor::WATCH_NOT_ALLOWED as NOT_ALLOWED;
 use crate::actor::protocol::{SocketErrorCode, encode, error_message};
 use crate::actor::registry::AttachError;
 use crate::actor::ws_server::{Socket, WS_CLOSE, upgrade_token};
 use crate::api::http::assert_active;
 use crate::app::App;
-use crate::config::{MALFORMED_FRAMES_PER_WINDOW, SPECTATORS_PER_MATCH};
+use crate::config::MALFORMED_FRAMES_PER_WINDOW;
 use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
 use crate::social::friends::are_friends;
-
-/// The one message every refusal after sign-in carries (R148's way).
-const NOT_ALLOWED: &str = "you may not watch this match";
 
 /// RFC 6455's policy violation, as the match socket closes a flood of malformed frames with (wire
 /// vocabulary, not a tuned number).
@@ -195,7 +200,18 @@ async fn admit(
         )
         .await
     {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            // An unfriend, a block or watching turned off that committed after the checks above, and
+            // revoked before this socket was in, is read now: the socket is in, so a change from here
+            // on revokes it, and one before is seen by this read.
+            if !may_watch(app, &watcher.id, &hello).await? {
+                tracing::info!(event = "watch.revoked_at_hello", matchId = %hello.match_id);
+                app.matches.revoke_watchers(|watcher_id, friend_id| {
+                    watcher_id == watcher.id && friend_id == hello.friend_id
+                });
+            }
+            Ok(())
+        }
         Err(AttachError::Api(error)) => {
             tracing::info!(event = "watch.refused", matchId = %hello.match_id, reason = %error.message);
             Err(refused(WS_CLOSE.forbidden, NOT_ALLOWED))
@@ -254,26 +270,23 @@ pub async fn may_watch(app: &App, watcher_id: &str, hello: &WatchHello) -> Resul
     Ok(allowed)
 }
 
-/// S7's `Friend.watchable`, for the friends list (B47, B56): `viewer_id` and `friend` are friends,
-/// neither blocking the other; `friend` is in a live 1v1 match that is not ranked and holds no seat
-/// of `viewer_id`'s; `friend` allows spectators; and fewer than SPECTATORS_PER_MATCH sockets watch
-/// the match. The hello is judged again when it comes.
-pub async fn watchable(app: &App, viewer_id: &str, friend: &Profile) -> Result<bool, StoreError> {
-    let Some(match_id) = friend.in_match_id.as_deref() else {
-        return Ok(false);
-    };
-    if watcher_count(app, match_id) >= SPECTATORS_PER_MATCH {
-        return Ok(false);
-    }
-    let mut tx = app.db.begin(None).await?;
-    let allowed = watchable_in(&mut tx, viewer_id, &friend.id, match_id).await?;
-    tx.commit().await?;
-    Ok(allowed)
-}
-
 /// B51: how many sockets watch `match_id` now; none for a match whose actor is not in memory.
 pub fn watcher_count(app: &App, match_id: &str) -> usize {
     app.matches.watcher_count(match_id)
+}
+
+/// B50: `friend_id` turned watching off: every socket watching their seat is let go. Answers how
+/// many went.
+pub fn revoke_all_of(app: &App, friend_id: &str) -> usize {
+    app.matches
+        .revoke_watchers(|_watcher, friend| friend == friend_id)
+}
+
+/// B50, B46: `x` and `y` are no longer friends, or one blocked the other: a socket of either
+/// watching the other's seat is let go. Answers how many went.
+pub fn revoke_between(app: &App, x: &str, y: &str) -> usize {
+    app.matches
+        .revoke_watchers(|watcher, friend| (watcher == x && friend == y) || (watcher == y && friend == x))
 }
 
 /// B50's store checks, in one transaction: `viewer_id` and `friend_id` are two accounts that are

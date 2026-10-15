@@ -20,8 +20,8 @@ use jackioh_engine::config::{
     duos_ai_team,
 };
 use jackioh_engine::duos::{
-    DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create, duos_fold, duos_hash,
-    duos_legal_actions, duos_reduce, duos_scenario, duos_seats_to_act, duos_view_for,
+    DUOS_NONCE_PREFIX, DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create, duos_fold,
+    duos_hash, duos_legal_actions, duos_reduce, duos_scenario, duos_seats_to_act, duos_view_for,
 };
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -69,6 +69,8 @@ const GAMBIT: &str = "fx-duos-gambit";
 const TRIPWIRE: &str = "fx-duos-tripwire";
 /// A 1-cost 5/5 Unit.
 const BRUTE: &str = "fx-duos-brute";
+/// A 1-cost Unit: at the end of its controller's turn, NUKE_DAMAGE to its controller's hero.
+const EMBER: &str = "fx-duos-ember";
 
 const BOLT_DAMAGE: i32 = 6;
 const NUKE_DAMAGE: i32 = 25;
@@ -146,6 +148,7 @@ fn catalog() -> CardDefs {
         field_trap(GAMBIT, "D13", "gambit"),
         unit(TRIPWIRE, "D14", 1, 1, "tripwire"),
         unit(BRUTE, "D15", BRUTE_ATTACK, 5, "brute"),
+        unit(EMBER, "D16", 1, 1, "ember"),
     ] {
         defs.insert(def.id.clone(), def);
     }
@@ -217,6 +220,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
         TRIPWIRE.into(),
         both(Script {
             enters_hand: Some(hook(|_ctx| vec![hit("selfHero", TRIPWIRE_DAMAGE)])),
+            ..Script::default()
+        }),
+    );
+    map.insert(
+        EMBER.into(),
+        both(Script {
+            end_of_turn: Some(hook(|_ctx| vec![hit("selfHero", NUKE_DAMAGE)])),
             ..Script::default()
         }),
     );
@@ -1087,6 +1097,97 @@ mod b5_turn_end_sync {
         );
     }
 
+    /// One action under the seat's own nonce.
+    fn under(state: &DuosState, seat: DuosSeat, nonce: &str, body: DuosActionBody) -> DuosReduceResult {
+        duos_reduce(
+            state,
+            &DuosAction {
+                seat,
+                nonce: nonce.to_string(),
+                body,
+            },
+        )
+    }
+
+    #[test]
+    fn b5_a_seat_action_in_the_wrappers_nonce_namespace_is_refused() {
+        let mut state = begun("b5-reserved");
+        let card = give(&mut state, A1, NOOP);
+        let play = legal_play(&state, A1, &card);
+        for nonce in [
+            DUOS_NONCE_PREFIX.to_string(),
+            format!("{DUOS_NONCE_PREFIX}begin"),
+            format!("{DUOS_NONCE_PREFIX}end:r1:d0:mine"),
+        ] {
+            for body in [play.clone(), end_turn(), pass(&card), DuosActionBody::Concede] {
+                let what = label(&body);
+                let before = duos_hash(&state);
+                let result = under(&state, A1, &nonce, body);
+                assert!(result.error.is_some(), "{nonce}: {what} was accepted");
+                assert_eq!(duos_hash(&result.state), before, "{nonce}: {what}");
+            }
+        }
+    }
+
+    #[test]
+    fn b5_a_move_under_the_nonce_a_rounds_close_once_minted_cannot_stall_the_round() {
+        // R270's stall: A1 plays under the nonce the wrapper used to mint for duel 0's End turn when
+        // the action `closing` closes round 1 ("<nonce>:end:r<round>:d<duel>"), then closes it.
+        let mut state = begun("b5-stall");
+        let closing = "b5-stall-close";
+        let card = give(&mut state, A1, NOOP);
+        let play = legal_play(&state, A1, &card);
+        let played = under(&state, A1, &format!("{closing}:end:r1:d0"), play);
+        assert!(played.error.is_none(), "{:?}", played.error);
+        let state = ok(&played.state, A2, end_turn());
+
+        let closed = under(&state, A1, closing, end_turn());
+
+        assert!(closed.error.is_none(), "{:?}", closed.error);
+        let state = closed.state;
+        assert_eq!(state.round, 2, "the round closed");
+        for game in &state.duels {
+            assert_eq!(game.active, P2);
+            assert_eq!(game.turn, 2);
+        }
+        assert_eq!(state.round_seats, [B1, B2]);
+        assert_eq!(sorted(duos_seats_to_act(&state)), [B1, B2]);
+    }
+
+    #[test]
+    fn b5_a_duel_that_has_applied_the_rounds_own_nonce_refuses_its_end_turn_and_the_next_step_closes_the_round()
+     {
+        let mut state = begun("b5-replayed");
+        let closing = "b5-replayed-close";
+        // Duel 0 already holds the nonce round 1's close will send its End turn under.
+        state.duels[0].applied.push(AppliedAction {
+            nonce: format!("{DUOS_NONCE_PREFIX}end:r1:d0:{closing}"),
+            events: Vec::new(),
+        });
+        let state = ok(&state, A2, end_turn());
+
+        let closed = under(&state, A1, closing, end_turn());
+
+        assert!(closed.error.is_none(), "{:?}", closed.error);
+        let state = closed.state;
+        assert_eq!(state.round, 1, "duel 0 refused the End turn, so the round waits");
+        assert_eq!(
+            state.end_applied,
+            [false, true],
+            "a replayed nonce is never taken as the End turn"
+        );
+        assert_eq!(state.duels[0].turn, 1, "duel 0's turn has not moved");
+        assert_eq!(state.duels[1].turn, 2);
+
+        // The next step tries duel 0 again under its own nonce, and the round closes.
+        let state = ok(&state, A1, DuosActionBody::Concede);
+        assert_eq!(state.round, 2);
+        for game in &state.duels {
+            assert_eq!(game.active, P2);
+            assert_eq!(game.turn, 2);
+        }
+    }
+
     #[test]
     fn b5_in_team_bs_round_team_a_can_neither_act_nor_end_it() {
         let state = finish_round(begun("b5-round-2"));
@@ -1335,7 +1436,7 @@ mod b10_no_draws_no_duel_concede {
         refused(&state, A1, duel(ActionBody::OfferDraw));
         refused(&state, A1, duel(ActionBody::Concede));
         refused(&state, B1, duel(ActionBody::Concede));
-        assert!(state.concede_offer.is_none());
+        assert_eq!(state.concede_offer, PerTeam::new(None, None));
         assert!(state.result.is_none());
     }
 
@@ -1358,7 +1459,7 @@ mod b11_team_concede {
     fn b11_one_concede_opens_the_teams_offer_and_ends_nothing() {
         let state = begun("b11");
         let state = ok(&state, A1, DuosActionBody::Concede);
-        assert_eq!(state.concede_offer, Some(A1));
+        assert_eq!(state.concede_offer, PerTeam::new(Some(A1), None));
         assert!(state.result.is_none());
         for seat in [A1, A2] {
             assert_eq!(duos_view_for(&state, seat).concede_offered_by, Some(A1), "{seat}");
@@ -1396,7 +1497,7 @@ mod b11_team_concede {
             again.state.result.is_none(),
             "only the teammate's concede ends the game"
         );
-        assert_eq!(again.state.concede_offer, Some(A1));
+        assert_eq!(again.state.concede_offer, PerTeam::new(Some(A1), None));
     }
 
     #[test]
@@ -1404,7 +1505,7 @@ mod b11_team_concede {
         let state = begun("b11-lapse");
         let state = ok(&state, A1, DuosActionBody::Concede);
         let state = finish_round(state);
-        assert_eq!(state.concede_offer, None);
+        assert_eq!(state.concede_offer, PerTeam::new(None, None));
         assert_eq!(duos_view_for(&state, A2).concede_offered_by, None);
 
         let state = finish_round(state);
@@ -1414,7 +1515,32 @@ mod b11_team_concede {
             state.result.is_none(),
             "A1's old offer lapsed: A2's concede opens a new one"
         );
-        assert_eq!(state.concede_offer, Some(A2));
+        assert_eq!(state.concede_offer, PerTeam::new(Some(A2), None));
+    }
+
+    #[test]
+    fn b11_each_team_holds_its_own_offer_so_the_other_teams_concede_never_clears_it() {
+        let state = begun("b11-two-offers");
+        let state = ok(&state, A1, DuosActionBody::Concede);
+        let state = ok(&state, B1, DuosActionBody::Concede);
+        assert!(state.result.is_none(), "two offers, one per team, end nothing");
+        assert_eq!(state.concede_offer, PerTeam::new(Some(A1), Some(B1)));
+        for (seat, offer) in [(A1, A1), (A2, A1), (B1, B1), (B2, B1)] {
+            assert_eq!(
+                duos_view_for(&state, seat).concede_offered_by,
+                Some(offer),
+                "{seat} sees its own team's offer"
+            );
+        }
+
+        // Team A's offer still stands: A2's concede joins it and the game ends for team B.
+        let result = act(&state, A2, DuosActionBody::Concede);
+        assert!(result.error.is_none());
+        expect_result(&result.state, DuosOutcome::Win, Some(Team::B), Some("concede"));
+
+        // And the other way: team B's offer stands through team A's.
+        let state = ok(&state, B2, DuosActionBody::Concede);
+        expect_result(&state, DuosOutcome::Win, Some(Team::A), Some("concede"));
     }
 
     #[test]
@@ -1422,7 +1548,7 @@ mod b11_team_concede {
         let state = begun("b11-b");
         let state = ok(&state, B1, DuosActionBody::Concede);
         assert!(state.result.is_none());
-        assert_eq!(state.concede_offer, Some(B1));
+        assert_eq!(state.concede_offer, PerTeam::new(None, Some(B1)));
         let state = ok(&state, B2, DuosActionBody::Concede);
         expect_result(&state, DuosOutcome::Win, Some(Team::A), Some("concede"));
     }
@@ -1761,6 +1887,50 @@ mod b16_game_end {
         let state = cast(state, A1, BLAST).state;
         assert!(state.teams.a.pool <= 0 && state.teams.b.pool <= 0);
         expect_result(&state, DuosOutcome::Draw, None, None);
+    }
+
+    #[test]
+    fn b16_pools_the_two_end_turns_of_a_rounds_close_empty_are_emptied_in_one_step_a_draw() {
+        let mut state = begun("b16-close");
+        // Duel 0's End turn begins B1's turn, whose draw from an empty library is fatigue, and B1 is
+        // spent with one point left in team B's pool.
+        state.duels[0].players[P2].library.clear();
+        for seat in [B1, B2] {
+            let side = side_mut(&mut state, seat);
+            if let Some(life) = side.duos.as_mut() {
+                life.pool = 1;
+                life.spent = seat == B1;
+            }
+            if seat == B1 {
+                side.hero.health = 1;
+            }
+        }
+        state.teams.b.pool = 1;
+        // Duel 1's End turn runs A2's end-of-turn Ember: more than A2's own HP and team A's pool.
+        for seat in [A1, A2] {
+            if let Some(life) = side_mut(&mut state, seat).duos.as_mut() {
+                life.pool = 1;
+            }
+        }
+        state.teams.a.pool = 1;
+        put(&mut state.duels[1], EMBER, slot(P1, Row::Units, 1), json!({}));
+        let state = ok(&state, A1, end_turn());
+        assert!(state.result.is_none());
+
+        let result = act(&state, A2, end_turn());
+
+        assert!(result.error.is_none(), "{:?}", result.error);
+        let state = result.state;
+        assert!(state.teams.b.pool <= 0, "duel 0's End turn emptied team B's pool");
+        assert!(state.teams.a.pool <= 0, "duel 1's End turn emptied team A's pool");
+        expect_result(&state, DuosOutcome::Draw, None, Some("poolEmptied"));
+        assert_eq!(state.round, 1, "no round opens after the game ended");
+        assert!(
+            !result
+                .events
+                .iter()
+                .any(|event| matches!(event, DuosEvent::RoundStarted { .. }))
+        );
     }
 
     #[test]

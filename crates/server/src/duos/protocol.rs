@@ -8,7 +8,9 @@
 //! goes through the 1v1 parser (`actor::protocol::parse_client_message`) itself: the same whitelist,
 //! the same refusal of the server-only types (R79's `timeout`, `disconnectExpired`, `ceilingReached`,
 //! R1127's `emote`) and of a smuggled `playerId`, and the same nonce rules (R270: a nonce starting
-//! `srv-` is the server's). The seat is never the client's: the actor stamps the authenticated one.
+//! `srv-` is the server's), and one more: a nonce starting `duos:` is the engine's own, the one its
+//! round's close reaches the duels under (`DUOS_NONCE_PREFIX`), which the engine refuses from a seat
+//! too. The seat is never the client's: the actor stamps the authenticated one.
 //!
 //! A ping is cosmetic, like an emote or an aim (R643, R738): a top-level frame, never an action, so it
 //! never reaches the reducer, the log, a replay or a view (B39). Its shape is checked here; whether
@@ -20,6 +22,7 @@ use serde_json::{Map, Value, json};
 
 use jackioh_engine::PlayerId;
 use jackioh_engine::config::{BACKROW_ZONES, UNIT_ZONES};
+use jackioh_engine::duos::DUOS_NONCE_PREFIX;
 use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
 
 use crate::actor::protocol::{
@@ -177,7 +180,7 @@ fn parse_target(value: &Value) -> Option<PingTarget> {
     })
 }
 
-/// R270 and §9.8's nonce rules, as the 1v1 parser holds them.
+/// R270 and §9.8's nonce rules, as the 1v1 parser holds them, and the Duos wrapper's own namespace.
 fn check_nonce(value: Option<&Value>) -> Result<String, MalformedMessage> {
     let nonce = match value.and_then(Value::as_str) {
         Some(nonce) if !nonce.is_empty() => nonce,
@@ -189,6 +192,11 @@ fn check_nonce(value: Option<&Value>) -> Result<String, MalformedMessage> {
     if nonce.starts_with(SERVER_NONCE_PREFIX) {
         return Err(malformed(format!(
             r#"a nonce starting "{SERVER_NONCE_PREFIX}" is the server's own (R270)"#
+        )));
+    }
+    if nonce.starts_with(DUOS_NONCE_PREFIX) {
+        return Err(malformed(format!(
+            r#"a nonce starting "{DUOS_NONCE_PREFIX}" is the round's own"#
         )));
     }
     Ok(nonce.to_string())
@@ -397,6 +405,19 @@ mod tests {
             let frame = format!(r#"{{"type":"action","nonce":"n3","body":{{"kind":"duel","body":{body}}}}}"#);
             assert!(parse_duos_message(&frame).is_err(), "{frame}");
         }
+    }
+
+    #[test]
+    fn a_nonce_in_the_duos_wrappers_namespace_is_malformed_and_one_merely_like_it_is_not() {
+        for nonce in ["duos:", "duos:begin", "duos:end:r1:d0:mine"] {
+            let frame = format!(
+                r#"{{"type":"action","nonce":"{nonce}","body":{{"kind":"duel","body":{{"type":"endTurn"}}}}}}"#
+            );
+            assert!(parse_duos_message(&frame).is_err(), "{frame}");
+        }
+        // The old round-end shape is an ordinary client nonce now: the round's own are `duos:`'s.
+        let frame = r#"{"type":"action","nonce":"mine:end:r1:d0","body":{"kind":"concede"}}"#;
+        assert!(parse_duos_message(frame).is_ok(), "{frame}");
     }
 
     #[test]

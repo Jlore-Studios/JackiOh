@@ -11,11 +11,17 @@
 //!   the other side already sent is accepted at once (B44).
 //! - `POST /api/friends/requests/:id/accept` makes the friendship and deletes the request;
 //!   `…/decline` (its recipient) and `DELETE /api/friends/requests/:id` (its sender) delete it;
-//!   `DELETE /api/friends/:profileId` ends a friendship (B45).
-//! - `POST /api/blocks` `{profileId}` blocks a player: the friendship and every request between the
-//!   two go, either way, and so does every open challenge, its room freed; from then on requests,
-//!   challenges, chat and shares are refused either way (B46). `DELETE /api/blocks/:profileId`
-//!   lifts it.
+//!   `DELETE /api/friends/:profileId` ends a friendship (B45), and with it every replay share
+//!   between the two, either way, and a watch of either by the other (B50, B52): making friends
+//!   again restores neither.
+//! - `POST /api/blocks` `{profileId}` blocks a player: the friendship, every request and every
+//!   replay share between the two go, either way, and so does every open challenge, its room freed,
+//!   and a watch of either by the other; from then on requests, challenges, chat and shares are
+//!   refused either way (B46). `DELETE /api/blocks/:profileId` lifts it and restores nothing.
+//!
+//! `GET /api/friends` is read every `PRESENCE_HEARTBEAT_MS` by each signed-in client, so it reads
+//! everything in one transaction by a fixed number of set-based reads, whatever the number of
+//! friends (`presence::standings`).
 
 use std::sync::Arc;
 
@@ -32,6 +38,7 @@ use crate::app::App;
 use crate::config::MAX_FRIENDS;
 use crate::db::store::{ChallengeState, FriendRequestRow, Profile, StoreError, Tx};
 use crate::social::presence::{Standing, Status, standings};
+use crate::social::watch::revoke_between;
 use crate::social::{PlayerRef, created, iso, no_content, not_found, param, profiles_by_id, refused};
 use crate::username::sign_in_name;
 
@@ -104,7 +111,6 @@ pub async fn get_friends(app: &Arc<App>, req: Req) -> ApiResult {
     named.extend(blocks.iter().map(|row| row.blocked.clone()));
     named.push(me.clone());
     let profiles = profiles_by_id(&mut tx, &named).await?;
-    tx.commit().await?;
 
     let mut friend_profiles: Vec<(Profile, i64)> = friendships
         .iter()
@@ -119,7 +125,8 @@ pub async fn get_friends(app: &Arc<App>, req: Req) -> ApiResult {
         .iter()
         .map(|(profile, _)| profile.clone())
         .collect();
-    let standing = standings(app, &me, &listed).await?;
+    let standing = standings(&mut tx, app, &me, &listed).await?;
+    tx.commit().await?;
     let friends: Vec<Friend> = friend_profiles
         .iter()
         .map(|(profile, since)| Friend::of(profile, *since, standing.get(&profile.id)))
@@ -251,16 +258,15 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         return refused(409, "friend_cap", "Their friend list is full.");
     }
     let friendship = tx.friends_make(&me, &sender_id, now).await?;
-    let sender = tx.profiles_get_by_id(&sender_id).await?;
-    tx.commit().await?;
-    let Some(sender) = sender else {
+    let Some(sender) = tx.profiles_get_by_id(&sender_id).await? else {
         return Err(not_found("no such friend request"));
     };
+    let standing = standings(&mut tx, app, &me, std::slice::from_ref(&sender)).await?;
+    tx.commit().await?;
     log_info(
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
     );
-    let standing = standings(app, &me, std::slice::from_ref(&sender)).await?;
     let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id));
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }
@@ -290,17 +296,26 @@ async fn remove_request(app: &App, req: Req, mine: fn(&FriendRequestRow, &str) -
     Ok(no_content())
 }
 
-/// `DELETE /api/friends/:profileId` (B45): ends the friendship, if there is one. 204 either way.
+/// `DELETE /api/friends/:profileId` (B45): ends the friendship, if there is one, and with it the
+/// replay shares between the two (B52) and a watch of either by the other (B50). 204 either way.
 pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let friend_id = param(&req, "profileId");
     let mut tx = app.db.begin(Some(&me)).await?;
     let removed = tx.friends_remove(&me, &friend_id).await?;
+    let shares = tx.shares_remove_between(&me, &friend_id).await?;
     tx.commit().await?;
+    // After the commit, so a hello judged from here on is refused and one judged before is revoked.
+    let watchers = revoke_between(app, &me, &friend_id);
     if removed {
         log_info(
             "friends.removed",
-            json!({ "profileId": me, "friendProfileId": friend_id }),
+            json!({
+                "profileId": me,
+                "friendProfileId": friend_id,
+                "sharesRemoved": shares,
+                "watchersRevoked": watchers,
+            }),
         );
     }
     Ok(no_content())
@@ -323,6 +338,8 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     tx.blocks_add(&me, &target, now).await?;
     tx.friends_remove(&me, &target).await?;
     tx.friends_requests_delete_between(&me, &target).await?;
+    // B46, B52: a share either way ends for good, so unblocking restores none.
+    let shares = tx.shares_remove_between(&me, &target).await?;
     // B46, B49: an open challenge either way is cancelled and its room freed. One that lapsed
     // already freed itself: its room expired with it (and its code may be another room's now).
     let closed = tx
@@ -332,9 +349,17 @@ pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
         release_room(&mut tx, &challenge.room_code).await?;
     }
     tx.commit().await?;
+    // B46, B50: and a watch either way ends at once.
+    let watchers = revoke_between(app, &me, &target);
     log_info(
         "blocks.added",
-        json!({ "profileId": me, "blockedProfileId": target, "challengesClosed": closed.len() }),
+        json!({
+            "profileId": me,
+            "blockedProfileId": target,
+            "challengesClosed": closed.len(),
+            "sharesRemoved": shares,
+            "watchersRevoked": watchers,
+        }),
     );
     Ok(no_content())
 }

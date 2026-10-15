@@ -40,6 +40,7 @@ endApplied: Array<boolean>,
  */
 passes: Array<number>, 
 /**
- * The open concede offer (B11): the seat that conceded first, waiting for its teammate.
+ * Each team's open concede offer (B11): the seat that conceded first, waiting for its teammate.
+ * One per team, so one team's concede never touches the other's offer.
  */
-concedeOffer: DuosSeat | null, result: DuosResult | null, };
+concedeOffer: PerTeam<DuosSeat | null>, result: DuosResult | null, };

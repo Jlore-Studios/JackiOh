@@ -16,6 +16,14 @@
 //! 1v1 join). Co-op games are unranked: no rating moves and no results row is written; the result
 //! lives on the match's own row (B40).
 //!
+//! A code is no key past a block (§9.4, §12.9): to an account the host has blocked, or that has
+//! blocked the host, the room answers as an unknown code does, to read and to join. Once joined, a
+//! room answers its host and its guest alone; anyone else reads it as unknown (a join still says it
+//! is full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join
+//! under another catalog is `409 update_required`, as a 1v1 room's (§9.4: a stale catalog is
+//! refused at every door into a match), and the match is pinned to the catalog it is dealt from
+//! (R767000, `DuosMatchOptions::catalog_version`).
+//!
 //! S6's two join refusals keep the error body every route answers with, the code being S6's:
 //! `409 { "error": { "code": "full" | "own_room", "message" } }`.
 
@@ -44,7 +52,7 @@ use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, ROOM_CODE_LENGTH};
 use crate::db::store::Profile;
-use crate::duos::engine;
+use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
 use crate::duos::store::{DuosChoice, DuosMatch, DuosRoom};
@@ -126,10 +134,14 @@ fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     }
 }
 
-/// R253: the deck is checked legal now and frozen; a random choice keeps its lean for the deal.
+/// R253: the deck is checked legal now, under the running catalog, and frozen with that catalog's
+/// version; a random choice keeps its lean for the deal.
 async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result<DuosChoice, ApiError> {
     match freeze_choice(app, profile_id, choice).await? {
-        FrozenChoice::Bo1 { deck } => Ok(DuosChoice::Deck { deck }),
+        FrozenChoice::Bo1 { deck } => Ok(DuosChoice::Deck {
+            deck,
+            catalog_version: app.catalog.version.clone(),
+        }),
         FrozenChoice::Random { lean_newest } => Ok(DuosChoice::Random { lean_newest }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
     }
@@ -200,15 +212,23 @@ fn not_open() -> ApiError {
     ApiError::new(ApiErrorCode::NotFound, "that co-op room is not open")
 }
 
-/// A room a caller may read or join: joined, or unjoined and unexpired (B34). Missing, malformed and
-/// expired codes are one answer, so a scan cannot tell "wrong" from "too late".
-async fn room_of(app: &App, req: &Req) -> Result<DuosRoom, ApiError> {
+/// A room `caller` may read or join: joined, or unjoined and unexpired (B34), and its host and the
+/// caller not blocked either way (§12.9). Missing, malformed, expired and blocked codes are one
+/// answer, so a scan cannot tell "wrong" from "too late", nor a blocked caller that it is one.
+async fn room_of(app: &App, req: &Req, caller: &str) -> Result<DuosRoom, ApiError> {
     let Some(code) = code_of(req) else {
         return Err(not_open());
     };
-    let room = one_tx!(app.db, |t| t.duos_rooms_get(&code).await?)?;
+    let (room, blocked) = one_tx!(app.db, |t| {
+        let room = t.duos_rooms_get(&code).await?;
+        let blocked = match &room {
+            Some(room) if room.host != caller => t.blocks_between(&room.host, caller).await?,
+            _ => false,
+        };
+        (room, blocked)
+    })?;
     match room {
-        Some(room) if room.guest.is_some() || room.expires_at > now_ms() => Ok(room),
+        Some(room) if !blocked && (room.guest.is_some() || room.expires_at > now_ms()) => Ok(room),
         _ => Err(not_open()),
     }
 }
@@ -261,8 +281,13 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `GET /api/duos/rooms/:code`: the room as its lobby shows it, the match id once the guest joined.
 pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
-    caller_profile(&req)?;
-    let room = room_of(app, &req).await?;
+    let profile = caller_profile(&req)?;
+    let room = room_of(app, &req, &profile.id).await?;
+    // §12.9: a joined room is its two people's; to anyone else it is as gone as an unknown code.
+    let member = room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str());
+    if room.guest.is_some() && !member {
+        return Err(not_open());
+    }
     let ids: Vec<String> = std::iter::once(room.host.clone())
         .chain(room.guest.clone())
         .collect();
@@ -290,7 +315,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let choice = read_choice(&req.body)?;
     let joiner_seed = seed_override_of(app, &req.body)?;
-    let room = room_of(app, &req).await?;
+    let room = room_of(app, &req, &profile.id).await?;
     if room.host == profile.id {
         return Ok(refusal(
             409,
@@ -301,16 +326,41 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     if room.guest.is_some() {
         return Ok(refusal(409, "full", "someone already joined that room"));
     }
+    // §9.4: a stale catalog is refused at every door into a match. The host's deck was checked
+    // against the catalog it was frozen under, which may not deal it now.
+    if let DuosChoice::Deck { catalog_version, .. } = &room.host_choice
+        && *catalog_version != app.catalog.version
+    {
+        return Err(ApiError::with_details(
+            ApiErrorCode::UpdateRequired,
+            "update required",
+            json!({ "expected": app.catalog.version, "received": catalog_version }),
+        ));
+    }
     assert_free(app, &profile).await?;
     let guest_choice = freeze(app, &profile.id, &choice).await?;
     assert_host_free(app, &room.host).await?;
 
     // Everything the match is created with is settled, and the engine has begun it, before anything is
-    // written: a setup the engine refuses leaves the room open and nothing behind.
+    // written: a setup the engine refuses leaves the room open and nothing behind. The match is
+    // pinned to the running catalog (R767000).
+    let catalog_version = app.catalog.version.clone();
+    let pinned = Pinned::of(&catalog_version).map_err(|reason| {
+        ApiError::internal(format!(
+            "the running catalog {catalog_version} cannot be played: {reason}"
+        ))
+    })?;
     let match_id = new_uuid();
     let seed = take_seed(&room.code, joiner_seed).unwrap_or_else(new_seed);
     let options = catch_unwind(AssertUnwindSafe(|| {
-        engine::match_options(&seed, room.difficulty, &room.host_choice, &guest_choice)
+        engine::match_options(
+            pinned,
+            &catalog_version,
+            &seed,
+            room.difficulty,
+            &room.host_choice,
+            &guest_choice,
+        )
     }))
     .map_err(|payload| ApiError::internal(panic_text(payload)))?;
     let now = now_ms();
@@ -326,7 +376,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         result: None,
     };
     let state = catch_unwind(AssertUnwindSafe(|| {
-        engine::create_and_begin(&engine::create_options(&row))
+        engine::create_and_begin(pinned, &engine::create_options(&row))
     }))
     .map_err(|payload| ApiError::internal(panic_text(payload)))?
     .map_err(ApiError::internal)?;
@@ -344,7 +394,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     if claimed.is_none() {
         return Ok(refusal(409, "full", "someone already joined that room"));
     }
-    registry(app).start(app, row, state);
+    registry(app).start(app, row, state, pinned);
     tracing::info!(
         event = "duos.room.joined",
         code = %room.code,
