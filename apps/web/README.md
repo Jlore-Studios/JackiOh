@@ -352,7 +352,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
   whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
   its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
-  and leaves no last board, and resumes only as a sandbox.
+  and leaves no last board, and resumes only as a sandbox. A sandbox game whose deck names custom
+  cards carries them, and its panel offers them first (R962000).
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
