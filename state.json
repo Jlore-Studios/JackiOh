@@ -6299,7 +6299,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-15T05:03:05Z",
+      "feedback_since": "2026-10-15T07:45:23Z",
       "forced": false,
       "interruptions": 0,
       "issue": 887,
@@ -6314,11 +6314,11 @@
       "round_tier": "medium",
       "run_id": "38700795741",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-15T07:45:23Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1,
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse",
