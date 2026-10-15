@@ -389,6 +389,13 @@
     "1015": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T23:16:17Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 3: the new tests cite R883 by name (no note changes), and the shared drag/click keyword button takes care; borderline easy rates medium"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
