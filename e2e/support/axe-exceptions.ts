@@ -49,6 +49,7 @@ const LOG_LINE_SIZE =
 export const AXE_EXCEPTIONS: readonly AxeException[] = [
   { route: "/", rule: "label-content-name-mismatch", selector: ".landing-fan-card", reason: CARD_FACE_LABEL },
   { route: "/almanac", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
+  { route: "/decks", rule: "label-content-name-mismatch", selector: ".db-card", reason: CARD_FACE_LABEL },
   { route: "/decks", rule: "label-content-name-mismatch", selector: ".db-tile", reason: DECK_TILE_LABEL },
   { route: "/practice board", rule: "label-content-name-mismatch", selector: ".prompt-card", reason: CARD_FACE_LABEL },
   { route: "hotseat board, a unit in play", rule: "target-size", selector: ".log .log-card", reason: LOG_LINE_SIZE },
