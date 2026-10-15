@@ -6958,6 +6958,13 @@
     "959": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T06:03:24Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): with no GitHub access I cannot verify no open PR touches these scope files, so easy is out"
+      },
       "handoff": {
         "at": "2026-10-15T05:41:54Z",
         "draft": "# Draft plan for #959 (planner's notes)\n\n## Found so far\n- Slow jobs: `web (wasm, client build)` 7m25s (ci.yml job `wasm`), `rust (test tools, wasm)` 7m8s\n  (ci.yml `rust-test` group `tools, wasm`: `--workspace --exclude engine/cards/server/ai`, i.e.\n  jackioh-tools (bin unit tests + tests/acceptance.rs + tests/luau.rs), jackioh-luau (lib + tests\n  api, export_api, host, kit), jackioh-wasm (lib, no tests), jackioh-wasm-luau (bin, no tests)).\n- f00edc3 is #928 (v0.5.0): it changed Cargo.lock, rust-toolchain.toml (targets), build-wasm.sh\n  (second module: Luau on emscripten, #919). So this was main's first run with those, caches\n  likely partly cold. Still, steady state is near/over 5 min, so split.\n- ci.yml is .github/ -> bot cannot change it; the matrix split needs a person.\n- ci-scope.sh's rust_<group> lines mirror ci.yml groups; held by crates/tools/tests/acceptance.rs\n  RUST_GROUPS and apps/web/src/net/ci-scope.test.ts NAMES/RUST. #925 (#882) added four\n  rust_cards_lib_* lines but ci.yml still has one `cards lib` group (person has not applied it).\n\n## Measured locally (4 cores, CARGO_PROFILE_TEST_DEBUG=0)\n- tools, wasm group: cold build 3m15s; warm (workspace crates only, as CI from rust-cache) 2m32s\n  (engine 0-116 s, cards 23-120 s, luau 23-130 s, then test bins to ~152 s).\n- Test run: tools bin unit tests 195 tests, 94-99 s wall (user 4m57s); everything else ~10 s.\n  Slowest: arena::tests::two_self_agents_over_four_games_are_deterministic 93 s in the run\n  (35 s alone, 90 s CPU, rayon); gate b28/b29/b30 ~44 s each in the run (6 s alone);\n  arena r747000 26 s; fuzz r180 24 s; fuzz m4 20 s; gate b42 19 s.\n- jackioh-ai at test opt-level 2 (via --config): tests 94->80 s, compile +16 s. Rejected.\n- Only arena::, gate::, fuzz:: test names contain those substrings (filters are safe).\n\n## Shape so far\n- Human required: ci.yml edits (rust-test matrix split; wasm job split).\n- Bot: scripts/build-wasm.sh mode to build only the Luau module; ci-scope.sh lines +\n  acceptance.rs RUST_GROUPS + ci-scope.test.ts NAMES/RUST for the new groups.\n- wasm job measuring in progress (/tmp/wasm-cold.log).",
