@@ -6905,7 +6905,7 @@
       "asks": [],
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-15T01:55:48Z",
+      "feedback_since": "2026-10-15T06:04:43Z",
       "handoff": {
         "at": "2026-10-15T05:43:25Z",
         "family": "claude",
@@ -6921,15 +6921,16 @@
       "last_findings": [],
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-15T04:44:15Z",
       "round_tier": "medium",
       "run_id": "38690229717",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-15T06:04:43Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
