@@ -18,7 +18,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot,
+    events_of_type, in_hand, matches_object, new_game, put, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, anti_greed, cast_spell, cast_unit, draw_two, log_card, notes, palantir, plain,
@@ -121,20 +121,6 @@ fn view_events(state: &GameState, viewer: PlayerId) -> Vec<Value> {
         .iter()
         .map(|event| serde_json::to_value(event).expect("an event serialises"))
         .collect()
-}
-
-/// Jest's `toMatchObject`: every key of `expected` is in `actual` with a matching value (objects by
-/// subset, arrays by length and element).
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn first_card(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInstance {

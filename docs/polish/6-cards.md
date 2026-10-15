@@ -267,7 +267,6 @@ export function CardArt(props: CardArtProps): ReactElement;
 
 ```ts
 // model.ts
-export type FaceLayout = "full" | "compact" | "minion";
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
   /** What the gem shows: the view's live number whenever there is one, "X" for an X card, else the printed price. */

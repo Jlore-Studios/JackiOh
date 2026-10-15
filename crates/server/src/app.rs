@@ -473,11 +473,6 @@ pub static ROUTES: &[Route] = &[
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
 
-/// TS `allRoutes()`.
-pub fn all_routes() -> &'static [Route] {
-    ROUTES
-}
-
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
@@ -568,8 +563,6 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     Ok(app)
 }
 
-const WS_PATH: &str = "/ws/match";
-
 /// A WebSocket handshake (`Upgrade: websocket`), which `actor::ws_server::handle` answers; anything
 /// else on the same path is an ordinary request for the API router (TS's `ws` server only ever saw
 /// upgrades).
@@ -624,7 +617,7 @@ pub fn router(app: Arc<App>) -> Router {
     };
 
     Router::new()
-        .route(WS_PATH, axum::routing::any(socket))
+        .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
         .fallback(fallback)
 }
 

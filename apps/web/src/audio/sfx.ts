@@ -1,12 +1,14 @@
 // Procedural sound effects (docs/polish/2-sound.md, "sfx.ts"; B14, B15, B16): one sfxr-style recipe
 // per `SfxId`. It stays within its returned span, connects only into `out` below peak 1, uses positive
 // exponential ramps, and relies only on Web Audio that the test fake implements.
-// Cypress imports this file alone, so it imports only `./types.ts` and `./constants.ts`; local recipe
-// values need no constants (CLAUDE.md rule 9). PITCH (R655) preserves timings; LEVELS (B57) are tested.
+// Cypress imports this file alone, so it imports only small leaf modules (`./types.ts`, `./constants.ts`,
+// `../game/damageFeel.ts`, `../fx/rng.ts`); local recipe values need no constants (CLAUDE.md rule 9).
+// PITCH (R655) preserves timings; LEVELS (B57) are tested.
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
 import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
 import { damageTier, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
+import { createRng } from "../fx/rng.ts";
 
 export const SFX_IDS: readonly SfxId[] = [
   "draw", "play", "summon", "attack", "impact", "shieldShatter", "heal", "buff", "debuff",
@@ -37,23 +39,13 @@ export type SfxSpec = { recipe: SfxRecipe; /** upper bound over all params */ du
 const NOISE_SEED = 0x4a41434b; // "JACK"
 const noiseCache = new WeakMap<BaseAudioContext, AudioBuffer>();
 
-function mulberry32(seed: number): () => number {
-  let a = seed | 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** 1 s of mono white noise, cached per context (WeakMap), filled from a fixed-seed mulberry32 so every run is identical. */
 export function noiseBuffer(ctx: BaseAudioContext): AudioBuffer {
   const cached = noiseCache.get(ctx);
   if (cached !== undefined) return cached;
   const length = Math.round(ctx.sampleRate);
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const random = mulberry32(NOISE_SEED);
+  const random = createRng(NOISE_SEED);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < length; i += 1) data[i] = random() * 2 - 1;
   noiseCache.set(ctx, buffer);

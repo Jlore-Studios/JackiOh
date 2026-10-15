@@ -30,7 +30,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::feng_shui::{FS, register_feng_shui};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, new_game, put, set_library, sink_for, slot,
+};
 use crate::rules::fixtures::scripts::{HERO_POWERS as FIXTURE_POWER_NAMES, heroic_power};
 
 // ---------------------------------------------------------------------------
@@ -229,10 +231,6 @@ fn on_field_now(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id)
         .cloned()
         .unwrap_or_else(|| panic!("expected card {id}"))
-}
-
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 /// A power's stored name (R103) as its JSON string, whatever Rust type holds it.

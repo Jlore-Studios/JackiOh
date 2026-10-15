@@ -11,26 +11,8 @@ use jackioh_engine::effects::{cards_in_card_scope, summon};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, put, slot};
+use crate::rules::fixtures::harness::{in_hand, matches_object, put, slot};
 use crate::rules::fixtures::instance_data::{billy, blood_moon, instance_game};
-
-/// Jest's `toMatchObject` over serialised JSON: every key `expected` names is in `actual` with a
-/// matching value (objects by subset, arrays element by element and of the same length).
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
-}
 
 fn to_json<T: serde::Serialize>(value: &T) -> Value {
     serde_json::to_value(value).expect("serialises")

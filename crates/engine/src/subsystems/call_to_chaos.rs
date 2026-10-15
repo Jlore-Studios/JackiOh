@@ -424,12 +424,12 @@ pub fn roll_chaos_effects(
         .collect()
 }
 
-/// R436: tell both players what was rolled, before any of it resolves — the rolled clauses by their
-/// printed labels, in the order they resolve. The card itself follows R97 (`viewFor.redactEvent`): a
-/// #95 read by nobody is the sentinel, while what it rolled is public, as the resolution is.
-fn announce_roll(rolled: &[ChaosEffectDef]) -> Effect {
-    let labels: Vec<String> = rolled.iter().map(|effect| effect.label.to_string()).collect();
-    Effect::new("callToChaos:announce", move |ctx| {
+/// R436: tell both players what was rolled or picked, before any of it resolves — the clauses by their
+/// printed labels, in the order they resolve, as the effect named `kind` (`callToChaos:announce` here,
+/// `doRandomEntries:announce` for a random pick). The card itself follows R97 (`viewFor.redactEvent`):
+/// a #95 read by nobody is the sentinel, while what it rolled is public, as the resolution is.
+pub(crate) fn announce_chaos(kind: &'static str, labels: Vec<String>) -> Effect {
+    Effect::new(kind, move |ctx| {
         let (instance_id, def_id) = match ctx.live_self() {
             Some(card) => (card.id.clone(), card.def_id.clone()),
             None => (String::new(), ctx.def_id.clone().unwrap_or_default()),
@@ -474,7 +474,10 @@ pub fn call_to_chaos(args: CallToChaosArgs) -> Effect {
                 .filter_map(|name| table.iter().find(|effect| effect.name == name.as_str()).copied())
                 .collect(),
         };
-        let mut effects = vec![announce_roll(&rolled)];
+        let mut effects = vec![announce_chaos(
+            "callToChaos:announce",
+            rolled.iter().map(|effect| effect.label.to_string()).collect(),
+        )];
         effects.extend(rolled.iter().map(|chosen| (chosen.build)()));
         let names: Vec<&str> = rolled.iter().map(|chosen| chosen.name).collect();
         EffectPart {

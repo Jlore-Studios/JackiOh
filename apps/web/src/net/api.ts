@@ -1007,10 +1007,6 @@ export type PlayerStatsAccountResponse = {
   updatedAt: number | null;
 };
 
-export function getPlayerStats(token: string): Promise<PlayerStatsAccountResponse> {
-  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", { token });
-}
-
 export function putPlayerStats(
   token: string,
   data: { stats?: Record<string, unknown>; isPrivate?: boolean },

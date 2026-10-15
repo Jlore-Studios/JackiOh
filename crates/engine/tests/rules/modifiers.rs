@@ -15,14 +15,14 @@
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use serde::Serialize;
-
 use jackioh_engine::effects::{damage, draw, next_turn_mana, steal};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::{indestructible, plain, trampler};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot,
+};
 
 // Local defs. Indices start above 1300 so they never collide with a fixture catalog or another test
 // file's local defs.
@@ -346,10 +346,6 @@ fn mod_ids(state: &GameState) -> Vec<String> {
         .collect()
 }
 
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// The `modifierChanged` events, as their JSON.
 fn modifier_changes(events: &[GameEvent]) -> Vec<Value> {
     events_of_type(events, GameEventType::ModifierChanged)
@@ -390,19 +386,6 @@ fn last_index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
 
 fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
-}
-
-/// vitest's `toMatchObject` over JSON.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 mod player_modifiers_and_their_three_expiries_2_2_10_1 {

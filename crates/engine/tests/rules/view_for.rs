@@ -14,7 +14,7 @@ use jackioh_engine::effects::steal::steal;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, set_library, slot};
 
 // Fixtures
 
@@ -190,23 +190,6 @@ fn serialized(view: &PlayerView) -> String {
 
 fn quoted(id: &str) -> String {
     format!("\"{id}\"")
-}
-
-/// Every key `expected` names matches in `actual` (objects recursively); arrays match element by element.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn expect_match(actual: &Value, expected: Value) {

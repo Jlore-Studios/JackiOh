@@ -9,6 +9,7 @@ use jackioh_engine::{PlayerId::P1, Row::Units};
 use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::x_bolt;
+use crate::rules::fixtures::harness::json_of;
 
 /// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
 /// borrows all three, so they live here and `sink()` lends them out.
@@ -87,10 +88,6 @@ fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// The `cost` of every `costChanged` event, in order.
 fn costs(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CostChanged)
@@ -126,7 +123,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             0
         );
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::CostChanged)),
+            json_of(events_of_type(&sink.events, GameEventType::CostChanged)),
             json!([{ "type": "costChanged", "instanceId": card.id, "cost": 0 }])
         );
 
@@ -172,7 +169,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
         // printed 1 + costMod 4 − discount 2 = 3.
         assert_eq!(live(sink.state, &card).cost_mod, 4);
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::CostChanged)),
+            json_of(events_of_type(&sink.events, GameEventType::CostChanged)),
             json!([{ "type": "costChanged", "instanceId": card.id, "cost": 3 }])
         );
     }
@@ -198,7 +195,7 @@ mod set_cost_mod_s6_3_cost_r65_m3_t1 {
             3
         );
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::CostChanged)),
+            json_of(events_of_type(&sink.events, GameEventType::CostChanged)),
             json!([{ "type": "costChanged", "instanceId": card.id, "cost": 3 }])
         );
 
@@ -293,7 +290,7 @@ mod set_cost_override_s6_3_cost_r65_m3_t1 {
             3
         );
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::CostChanged)),
+            json_of(events_of_type(&sink.events, GameEventType::CostChanged)),
             json!([
                 { "type": "costChanged", "instanceId": card.id, "cost": 1 },
                 { "type": "costChanged", "instanceId": dear.id, "cost": 3 },

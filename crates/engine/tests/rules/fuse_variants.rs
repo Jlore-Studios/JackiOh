@@ -33,29 +33,7 @@ use crate::rules::fixtures::generation::{
     felinor_b, felinor_c, field_trap, frozen, fuse_a, fuse_b, fuser, hand_card, immutable, lab, mutate, pick,
     plain_trap, playing, replayed, slime, slop, x_unit,
 };
-use crate::rules::fixtures::harness::{put, set_library, slot};
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// `JSON.parse(JSON.stringify(state))`.
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).expect("a state survives JSON")
-}
-
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
-}
+use crate::rules::fixtures::harness::{json_of, matches_object, put, round_trip, set_library, slot};
 
 /// TS `sinkFor(state)`: a sink whose rng starts at the state's cursor, as reduce does. The events and
 /// the rng are kept beside the state, so the test can change the state between calls as TS's shared

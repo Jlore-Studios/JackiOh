@@ -209,6 +209,20 @@ pub fn instance_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardIns
     }
 }
 
+/// The card an effect that names one card acts on (`setRadiant`, `steal`, `transform`,
+/// `grantAbility`, …). R174: a card named by id is aimed at the stay it had when the run began
+/// (`instance_on_its_stay`); otherwise the unit `target` names, the first chosen selection by default.
+pub fn instance_by_id_or_spec(
+    ctx: &EffectContext<'_>,
+    instance_id: Option<&str>,
+    target: Option<&TargetSpec>,
+) -> Option<CardInstance> {
+    if let Some(instance_id) = instance_id {
+        return instance_on_its_stay(ctx, instance_id);
+    }
+    instance_of(ctx, target.unwrap_or(&TargetSpec::Chosen { index: None }))
+}
+
 // ---------------------------------------------------------------------------
 // Board scope: how a verb names cards nobody chose
 // ---------------------------------------------------------------------------

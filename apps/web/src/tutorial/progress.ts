@@ -6,6 +6,8 @@ import { useSyncExternalStore } from "react";
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION } from "./config.ts";
 import { TUTORIAL_LESSONS, type TutorialLesson } from "./lessons.ts";
+import { isRecord } from "../wire/json.ts";
+import { localStorageOrNull } from "../net/storage.ts";
 
 export type TutorialHiddenChoice = {
   readonly hidden: boolean;
@@ -28,10 +30,6 @@ let snapshot: TutorialProgress | null = null;
 
 const listeners = new Set<() => void>();
 let storageListening = false;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function parseChoice(raw: unknown): TutorialHiddenChoice | null {
   if (!isRecord(raw)) return null;
@@ -66,17 +64,9 @@ export function parseTutorialProgress(raw: unknown): TutorialProgress {
   }
 }
 
-function storageOrNull(): Storage | null {
-  try {
-    return window.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function loadStored(): TutorialProgress {
   try {
-    const raw = storageOrNull()?.getItem(TUTORIAL_PROGRESS_KEY) ?? null;
+    const raw = localStorageOrNull()?.getItem(TUTORIAL_PROGRESS_KEY) ?? null;
     return raw === null ? EMPTY : parseTutorialProgress(raw);
   } catch {
     return EMPTY;
@@ -85,7 +75,7 @@ function loadStored(): TutorialProgress {
 
 function persist(progress: TutorialProgress): void {
   try {
-    storageOrNull()?.setItem(
+    localStorageOrNull()?.setItem(
       TUTORIAL_PROGRESS_KEY,
       JSON.stringify({
         v: TUTORIAL_PROGRESS_VERSION,

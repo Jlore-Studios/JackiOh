@@ -49,7 +49,7 @@ use std::time::Duration;
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, COIN_DEF_ID, CardCost, CardDef, CreateGameArgs, DEFAULT_PORTRAIT, EMOTE_COOLDOWN_MS,
+    Action, ActionBody, COIN_DEF_ID, CardCost, CreateGameArgs, DEFAULT_PORTRAIT, EMOTE_COOLDOWN_MS,
     EMOTE_HAND_SIZE, EMOTE_IDS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GameOverReason, GameResult, PLAYER_IDS,
     Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
@@ -399,17 +399,12 @@ async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
 
 // --- decks -------------------------------------------------------------------------------------
 
-/// TS `catalog.isToken` (`src/api/catalog.ts`): a token by flag or by tag.
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.iter().any(|tag| tag.as_str() == "Token")
-}
-
 /// TS `loadCatalog()`'s `cardIds`, tokens filtered out: every deckable §8 id, in catalog order.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .iter()
-        .filter(|(_, def)| !is_token(def))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .collect()
 }

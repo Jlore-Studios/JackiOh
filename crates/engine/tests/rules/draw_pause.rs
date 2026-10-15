@@ -23,7 +23,7 @@ use jackioh_engine::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use jackioh_engine::testkit::*;
 use jackioh_engine::work::owed_work;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{events_of_type, new_game, put, round_trip, set_library, slot};
 
 // Fixtures.
 
@@ -259,10 +259,6 @@ fn answer(state: &GameState) -> ReduceResult {
         panic!("{error}");
     }
     result
-}
-
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("and parses")
 }
 
 /// The `drawn` events of one player. `state.counters.drawn` is both players' (R55), and an `answer`
