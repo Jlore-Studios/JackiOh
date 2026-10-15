@@ -6578,11 +6578,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-15T14:36:39Z",
+        "at": "2026-10-15T14:50:18Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "least sure whether a spawn allow-list counts as engine rules, but it decides reducer legality in crates/engine/src/ and ships with a cross-crate client plus spec change, so hard holds"
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "rule 5 (no rules work in crates/engine/src/) fails: the spawn rule in crates/engine/src/sandbox.rs changes, plus a new ruling and web wiring, so the hard rating stands"
       },
       "failures": 0,
       "forced": false,
