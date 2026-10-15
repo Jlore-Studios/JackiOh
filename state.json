@@ -182,34 +182,6 @@
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     },
-    "403": {
-      "action": "build",
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "provider": "claude-2",
-      "queued_at": "2026-10-07T00:10:21Z",
-      "requested_by": "squishy-squooby",
-      "run_id": "37558828383",
-      "started_at": "2026-10-07T01:48:01Z",
-      "stop_requested": false
-    },
-    "404": {
-      "action": "build",
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "provider": "claude-2",
-      "queued_at": "2026-10-07T00:11:04Z",
-      "requested_by": "squishy-squooby",
-      "run_id": "37558882065",
-      "started_at": "2026-10-07T01:48:41Z",
-      "stop_requested": false
-    },
     "430": {
       "failures": 0,
       "forced": false,
@@ -219,31 +191,6 @@
       "queued_at": "2026-10-13T13:32:41Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
-    },
-    "432": {
-      "action": "build",
-      "died": 0,
-      "difficulty_by": {
-        "at": "2026-10-08T02:52:55Z",
-        "difficulty": "medium",
-        "provider": "claude-3",
-        "tier": "strong",
-        "why": "fails easy lines 2, 3 and 7: a new ruling (R767) in spec/, a change in crates/server's export_config test as well as apps/web, and an e2e spec; it touches no crates/engine or AI code, so it is not hard"
-      },
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "pending_request": false,
-      "planned_at": "2026-10-08T02:52:57Z",
-      "planned_by": "`claude-3` (claude, `opus`, strong)",
-      "planned_tier": "strong",
-      "pr": 490,
-      "provider": "claude-3",
-      "run_id": "37720060922",
-      "started_at": "2026-10-08T02:53:54Z",
-      "stop_requested": false,
-      "strikes": 0
     },
     "436": {
       "action": "build",
@@ -272,27 +219,22 @@
     },
     "442": {
       "action": "build",
-      "asks": [],
       "closeout": true,
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 870,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-14T04:38:56Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
       "run_id": "38530786791",
       "started_at": "2026-10-14T07:49:29Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "tree": {
         "adopted": true,
         "at": "2026-10-13T07:05:08Z",
@@ -719,20 +661,6 @@
       "run_id": "38448401456",
       "started_at": "2026-10-13T18:39:21Z",
       "stop_requested": false
-    },
-    "490": {
-      "cleared": {
-        "at": "2026-10-08T04:05:02Z",
-        "by": "`claude` (strong)",
-        "sha": "8080b8f0e92e780c58ab40bf681835d55f92aa61"
-      },
-      "closed_at": "2026-10-08T04:13:10Z",
-      "difficulty": "medium",
-      "failures": 0,
-      "feedback_since": "2026-10-08T02:53:54Z",
-      "issue": 432,
-      "kind": "revise",
-      "merged": true
     },
     "501": {
       "cleared": {
@@ -4045,21 +3973,10 @@
     },
     "767": {
       "action": "build",
-      "asks": [],
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-14T19:05:25Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "**Goal.** A finished game's replay folds under the catalog version it was played on. The build carries every shipped version except the newest, which is its own: the definitions are rebuilt from the snapshots, and the scripts are the build's own except where one is kept under `history/`. The engine, the server route and the practice worker fold an older game under that version. A version the build does not carry is still refused as `earlier_patch`, and a fold that misses its hash is still refused as `rules_changed`. `patches check` proves that every carried version's definitions and scripts are present. The ruling is R767000, and the WASM module stays within #442 L12.\n\n**Files to touch**\n\n| Path | | What |\n|---|---|---|\n| crates/engine/src/catalog.rs | change | `ShippedCatalog`, `register_shipped`, `shipped_catalog`, `FOLDING`, `with_shipped` |\n| crates/engine/src/scripts.rs | change | `registered_entry`, `registry_identity` |\n| crates/engine/src/replay.rs | change | `catalog_for`, `under_checkpoints`, `replay_open`, `replay_page` |\n| crates/engine/src/wire/replays.rs | change | `ReplayCheckpoints.catalog_version` |\n| crates/engine/src/testkit/scenario.rs, testkit/mod.rs | change | `register_shipped` override |\n| crates/engine/tests/rules/replay_steps.rs | change | tests |\n| crates/engine/README.md | change | Purity |\n| crates/cards/build.rs | change | `history.json`, `KEPT_SCRIPTS` |\n| crates/cards/src/history.rs | new | the carried versions, with tests |\n| crates/cards/src/lib.rs | change | the module, `register_all` |\n| crates/cards/README.md | change | \u00a74, \u00a76 |\n| crates/tools/src/patches.rs | change | `check_carried`, with tests |\n| crates/tools/README.md | change | the `patches check` row |\n| crates/server/src/actor/engine.rs | change | wrappers |\n| crates/server/src/api/replays.rs | change | `open_uncached`, `get_replay` |\n| crates/server/tests/api/replays.rs | change | tests |\n| crates/ai/tests/ai/replay_versions.rs | new | practice-shaped test |\n| crates/ai/tests/ai/mod.rs | change | `pub mod replay_versions;` |\n| crates/wasm/src/main.rs | change | `replay_open` |\n| apps/web/src/wire/cards.ts | change | `CARRIED_VERSIONS` |\n| apps/web/src/practice/saveStore.ts | change | `PracticeReplay.setup` |\n| apps/web/src/practice/core.ts | change | keep the setup and fold with it |\n| apps/web/src/practice/replays.test.ts | change | test |\n| apps/web/src/wire/generated/ReplayCheckpoints.ts | generated | ts-rs |\n| spec/rulings/R767000.md | new | the ruling |\n| spec/rulings/R0768.md, spec/09-architecture.md, spec/11-rulings.md | change | link R767000 |\n| spec/INDEX.md | generated | `spec index` |\n| CLAUDE.md | change | rule 4's list of statics |\n| docs/ADDING_CARDS.md | change | \u00a73, kept scripts |\n\nDo not touch:\n- `.github/`, `.harness/`, `.squishy/`, `bot/`, `.claude/`\n- `.cargo/config.toml`, `scripts/`, any manifest or lockfile\n- `catalog.json`, the snapshots, any card script, `size.test.ts`\n\nThe governing rules are \u00a79.2, \u00a79.3, R388, R646, R768, R105 and CLAUDE.md rules 3, 4, 7 and 9.\n\n**Steps**\n\n1. **`catalog.rs`.**\n   - Add `pub struct ShippedCatalog { version: String, defs: CardDefs, index: IndexMap<String, usize, IdHash>, scripts: IndexMap<String, CardScripts, IdHash> }` with:\n     - `pub fn new(version: &str, defs: CardDefs, scripts: IndexMap<String, CardScripts>)`, which builds the index the way `register_catalog` does;\n     - `version()`, `defs()`, and a private `find(def_id)`;\n     - a hand-written `Debug`, like `FusedScripts`'s.\n   - Add `static SHIPPED: OnceLock<fn(&str) -> Option<&'static ShippedCatalog>>` and `pub fn register_shipped(find)`.\n   - Add `pub fn shipped_catalog(version) -> Option<&'static ShippedCatalog>`.\n     - The testkit's `shipped_override()` comes first: while it is set, it stands for every version (find by version).\n     - Then `SHIPPED`.\n     - Add a non-testkit twin that returns `None`, like `test_override`.\n   - Add `thread_local! { static FOLDING: Cell<Option<&'static ShippedCatalog>> = const {\n(the rest of the state was cut here)\n\n## Log\n(earlier lines of the log were cut here)\n- start build run: reading the code the plan touches.\n",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "ow the wire type and the replay core.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/src/wire/replays.rs\", \"old_string\": \" /// The game was played on another catalog version than this build's.\\n \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/src/wire/replays.rs\", \"old_string\": \" /// The state every `REPLAY_CHECKPOINT_EVERY` accepted actions, step 0's\u2026\n- Bash: {\"command\": \"grep -rn \\\"ts(optional\\\" crates/engine/src/wire | head -5; grep -rn \\\"skip_serializing_if = \\\\\\\"Option::is_none\\\\\\\"\\\" -A1 crates/engine/src/wire/view.rs | head -6; cat apps/web/src/wire/\u2026\n- Grep: {\"pattern\": \"ReplayCheckpoints \\\\{\", \"path\": \"/home/runner/work/_temp/work/item-767\", \"output_mode\": \"content\", \"glob\": \"*.rs\"}\n- said: Now `replay.rs`.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/src/replay.rs\", \"old_string\": \"/// R768: fold a finished game once and check it before any step is shown: anot\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/src/replay.rs\", \"old_string\": \"pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/src/replay.rs\", \"old_string\": \"use crate::config::{Handicap, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};\", \"n\u2026\n- Bash: {\"command\": \"cargo build -p jackioh-engine --features testkit 2>&1 | tail -30\", \"description\": \"Build the engine with testkit\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts --no-run > /tmp/warm-build.log 2>&1; echo exit $? >> /tmp/warm-build.log\", \"description\": \"Warm the workspace t\u2026\n- Bash: {\"command\": \"grep -n \\\"fn unit_def\\\" -A25 crates/engine/tests/rules/fixtures/catalog.rs | head -40; grep -n \\\"\\\\\\\"fx-\\\\|id: \\\\\\\"\\\" crates/engine/tests/rules/fixtures/scripts.rs | head -20; grep -n \\\"\u2026\n- Bash: {\"command\": \"grep -n \\\"cry\\\" crates/engine/tests/rules/fixtures/scripts.rs | head; grep -n \\\"pub cry\\\\b\\\\|pub cry:\\\" crates/engine/src/script.rs\", \"description\": \"Find fixture scripts with a cry hook\u2026\n- Bash: {\"command\": \"sed -n 150,180p crates/engine/tests/rules/fixtures/scripts.rs; sed -n 360,400p crates/engine/tests/rules/fixtures/scripts.rs\", \"description\": \"Read stockpile and double-edge fixture scri\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/engine/tests/rules/replay_steps.rs\", \"old_string\": \"// R768, issue #508: what a replay shows. A seat's view at any st\u2026\n- Bash: {\"command\": \"sed -n 94,103p crates/engine/tests/rules/fixtures/harness.rs; grep -n \\\"pub mod\\\\|mod \\\" crates/engine/tests/rules/fixtures/mod.rs | head\", \"description\": \"Check RandomGame visibility\"}\n- said: Now append the R767000 tests.\n- Bash: {\"command\": \"cat >> crates/engine/tests/rules/replay_steps.rs <<'EOF'\\n\\n/// R767000: the version the shipped catalogs below were played on.\\nconst OLD: &str = \\\"v-old\\\";\\n\\n/// R767000: the fixture \u2026\n- Bash: {\"command\": \"grep -rn \\\"pub const PLAYER_IDS\\\" crates/engine/src; grep -n \\\"pub attack\\\" crates/engine/src/wire/catalog_types.rs | head -3; grep -n \\\"string_union\\\" -A12 crates/engine/src/wire/mod.rs\u2026\n- Bash: {\"command\": \"tail -5 /tmp/warm-build.log\", \"description\": \"Check warm build progress\"}\n- Bash: {\"command\": \"cat crates/cards/Cargo.toml; grep -n \\\"preserve_order\\\\|serde_json\\\" Cargo.toml\", \"description\": \"Check cards crate manifest and serde_json features\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn compile\\\" -B6 -A20 crates/luau/src/lib.rs\", \"description\": \"Read jackioh_luau::compile\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \"//! It also compiles the catalog version in: the `version` of the last entry of\\n//! \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \"/// One card file: its set, its module name, its absolute path and its `ID`.\\nstruct \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \" let out = out_dir.join(\\\"registry.rs\\\");\\n std::fs::write(&out, render(&files, &by_i\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \"/// The `version` of `patches.json`'s last entry: the newest shipped patch (SURFACE \\\u2026\n- said: Now skip `history/` in `find_card_files` and add `find_kept_scripts`.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \" let parts: Vec<String> = relative\\n .components()\\n .map(|c| c.as_os_str().to_string\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \" files\\n}\\n\\nfn walk(dir: &Path, out: &mut Vec<PathBuf>) {\", \"new_string\": \" files\\n}\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \"fn render(files: &[CardFile], by_id: &BTreeMap<&str, &CardFile>) -> String {\", \"new_s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/build.rs\", \"old_string\": \" ScriptSource::Luau { .. } => {\\n let _ = writeln!(out, \\\" ({id:?}, luau_script_{}_{}\u2026\n- Bash: {\"command\": \"cat crates/cards/src/scripts/core/c073_anti_oneshot_armor.luau; grep -n \\\"anti_oneshot\\\" crates/engine/src/script.rs | head -3; ls crates/cards/src/\", \"description\": \"Read core-073 Luau \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-767/crates/cards/src/history.rs\", \"content\": \"//! R767000: the shipped catalog versions this build carries, so a replay folds under the version its\\n/\u2026\n- said: You've hit your session limit \u00b7 resets 11:40pm (UTC)\n- said: You've hit your session limit \u00b7 resets 11:40pm (UTC)"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T14:27:13Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -4074,11 +3991,9 @@
       "stop_requested": true,
       "stopped_at": "2026-10-14T19:40:56Z",
       "stopped_by": "squishy-squooby",
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "768": {
-      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -4779,13 +4694,11 @@
     },
     "824": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T02:58:13Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -4793,16 +4706,13 @@
       "planned_tier": "strong",
       "pr": 854,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-14T00:10:58Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
       "run_id": "38503844106",
       "started_at": "2026-10-14T02:59:23Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "831": {
@@ -5099,7 +5009,6 @@
     },
     "848": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T03:54:27Z",
@@ -5112,7 +5021,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T03:54:31Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -5120,22 +5028,18 @@
       "planned_tier": "medium",
       "pr": 865,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-14T03:44:33Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38521386033",
       "started_at": "2026-10-14T06:18:42Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "849": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T04:37:54Z",
@@ -5148,7 +5052,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T04:37:55Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5156,28 +5059,23 @@
       "planned_tier": "strong",
       "pr": 860,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-14T03:43:27Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38512219284",
       "started_at": "2026-10-14T04:38:40Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "850": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T04:05:22Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5185,16 +5083,13 @@
       "planned_tier": "strong",
       "pr": 866,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-14T03:34:19Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "38516872110",
       "started_at": "2026-10-14T05:30:01Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "851": {
@@ -5269,7 +5164,6 @@
     },
     "854": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-14T08:40:08Z",
         "by": "`claude` (strong)",
@@ -5286,46 +5180,16 @@
       "interruptions": 0,
       "issue": 824,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-14T08:00:32Z",
       "round_tier": "strong",
       "run_id": "38532041400",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-14T08:00:47Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 4,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/engine/tests/golden/games.jsonl"
-          ],
-          "from": "64526ad4328757fdcf0b1edc9a743af93f8a9183",
-          "main": "b724c93157e63a6a78cb0600b13bccaac0a52c26"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38532041400",
-            "tier": "strong"
-          }
-        ],
-        "sha": "02a56cd1c3c3117a01a3228ade0446ae5fbf7300",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 4
     },
     "855": {
       "action": "review",
@@ -5443,7 +5307,6 @@
     },
     "860": {
       "action": "review",
-      "asks": [],
       "ci_fixed_head": "2a75319caa3dbdce9e52e8f0d447df481bf144ab",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -5466,52 +5329,22 @@
       "interruptions": 0,
       "issue": 849,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-14T07:44:58Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "38530316614",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-14T07:45:22Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38527889134",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "38530316614",
-            "tier": "strong"
-          }
-        ],
-        "sha": "5dfcd9dfef0627c42278f2ec762e9cab17acfd3e",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "861": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T14:22:31Z",
@@ -5524,7 +5357,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T14:22:34Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -5532,22 +5364,18 @@
       "planned_tier": "strong",
       "pr": 951,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-14T14:00:22Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38653437071",
       "started_at": "2026-10-14T23:21:06Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "862": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T14:15:24Z",
@@ -5560,7 +5388,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T14:15:27Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -5568,22 +5395,18 @@
       "planned_tier": "strong",
       "pr": 883,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-14T14:00:51Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38578962519",
       "started_at": "2026-10-14T14:16:48Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "864": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T14:21:25Z",
@@ -5596,7 +5419,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T14:21:27Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -5604,22 +5426,18 @@
       "planned_tier": "strong",
       "pr": 952,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-14T14:10:00Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38657139614",
       "started_at": "2026-10-14T23:57:49Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "865": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-14T10:46:57Z",
@@ -5636,40 +5454,18 @@
       "interruptions": 0,
       "issue": 848,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-14T07:12:39Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "38530386493",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-14T07:45:59Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 2,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38530386493",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9a1192219f63e3ae0d80a60dfc6013586bdd0281",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 2
     },
     "866": {
       "cleared": {
@@ -5683,30 +5479,10 @@
       "feedback_since": "2026-10-14T05:30:01Z",
       "issue": 850,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38516872110",
-            "tier": "strong"
-          }
-        ],
-        "sha": "049e0ad0e80d3817342298e34b0855f57f89fc31",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "870": {
       "action": "revise",
-      "asks": [],
       "cleared": {
         "at": "2026-10-14T12:10:52Z",
         "by": "`claude` (strong)",
@@ -5723,64 +5499,23 @@
       "interruptions": 0,
       "issue": 442,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-14T11:41:18Z",
       "round_tier": "medium",
       "run_id": "38558263692",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-14T11:41:31Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/cards/src/scripts/classic/c049_anti_greed_machine.rs"
-          ],
-          "from": "38bd64b79b284e9c9e7d190cf2a01b843ad67c28",
-          "main": "3ba94f1f9a0176954587acefa5ae566fe9e314b1"
-        },
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38558263692",
-            "tier": "medium"
-          }
-        ],
-        "sha": "a81c3676b2010412468f676f3c652b7eb7a0ff9d",
-        "tiers": {
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "871": {
       "action": "build",
-      "asks": [],
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-14T14:32:28Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\nPlan: the issue's Plan (kept below as \"Plan\"). Run 1 (opus).\n\nDecisions so far:\n- Item 1: the cross-face test is \"both faces hold f under this slot's key\" (`hooks::get_fn` on the\n  other face), not \"both faces hold f somewhere\". Cache keyed by (pointer, None|Some(face)): an\n  across adapter (any key, valid on both faces) is shared by pointer among across slots; a\n  per-face adapter by (pointer, face). Rejected: the plan's example (pointer, hook key) for the\n  cross-face cache, which would split gap 10's sharing on a card with two separate face tables.\n- Item 2: `uses` numbers through `numbers::to_i32(.., site_load)` -> LuauError::Number naming\n  \"<card> <face> load\". Other non-number shapes (`uses = true`) still default to 1: not in scope.\n- Item 3: found that `rng_shuffle` builds an answer sized by the script's own list, and a hook can\n  keep several lifted answers in locals without a capped allocation between them, so \"bounded by\n  the state\" alone is false. Plan: reader wrapper (`reads.rs`) and J.query/J.pool put the cap\n  back and fail with a memory error when the VM is past it (one `used_memory()` per reader call);\n  measure with `luau bench` against a main build. If it costs speed, revert to docs-only.\n\nDone: items 1-3 coded (script.rs; sandbox.rs `uncapped`, reads.rs, api/mod.rs), tests added\n(api.rs `one_function_under_another_hook_on_each_face_runs_on_both_faces` + fixture\n`shared_other_keys.luau`; host.rs `an_activations_uses_...`, `an_allocation_past_the_memory_cap_after_a_reader_...`,\n`a_reader_whose_answer_leaves_the_vm_past_...`). `cargo test -p jackioh-luau` green; the item 1\nand 2 tests fail on HEAD's script.rs (\"lx-other-keys radiant cry: error converting Lua nil to\nfunction\"; `uses = 1.5` loads).\nDocs done: crates/luau/README.md (memory cap bullet, load_card sharing), api-gaps.md (gap 14 +\ntwo `shared_functions` mentions), PORTING.md (one phrase). docs/v0.4.0/README.md \u00a77 still names\n`shared_functions` as the reconcile's record: left as history.\nInstrumentation done and removed (script.rs has no XX871). Across the 308 Luau cards with direct\nhooks, one slot's adapter changed: classic-058 Common Resources' Radiant endOfTurn (base\n{startOfTurn=f}, radiant {startOfTurn=f, endOfTurn=f}) is now its own Radiant adapter instead of\nthe shared startOfTurn one. f names no sub-hook and reads `param` off ctx, so effects are the\nsame; its tests assert no ptr_eq there.\nMain worktree for the bench: ../jackioh-wt/bench-main (branch wt/bench-main) \u2014 REMOVE IT and\n`git branch -D wt/bench-main` before stopping.\nNext: /tmp/chain.sh (background): cards tests -> /tmp/cards-tests.log, branch release ->\n/tmp/release.log, main release -> /tmp/main-release.log. Then spec check, golden check, fuzz 200,\n`luau bench --parent-bin ../jackioh-wt/bench-main/target/release/jackioh`, clippy, fmt.\n\n## Log\n(earlier lines of the log were cut here)\nith a fixture test in `crates/luau/tests/`. Change no card's behaviour: every card's own tests, `golden check` (240/240) and `luau diff` still pass unchanged.\n\n### 2. The findings\n\n1. **A shared hook adapter can look its function up under the wrong key** (`crates/luau/src/script.rs`, `direct_hook`, about line 413).\n   - **What happens:** `hook_cache` is keyed by the Luau function's pointer alone. The adapter it builds keeps the `Site` of the first key it saw (`hook: key`). When the cache is shared across faces (`hooks::adapt_hook(.., across_faces)`), the adapter resolves that first key on the running face.\n   - **The failure:** say a card's base face holds a function `f` under `cry`, and its Radiant face holds the same `f` only under a different key (`death`). The Radiant face's `death` reuses the adapter built for `cry`, and on a Radiant run it looks up `cry` on the Radiant table, finds nil, and the hook fails (\"nil to function\").\n   - **What must keep working:** the sharing gaps 10 and 14 of #464 rely on (`Arc::ptr_eq` in `classicplus-070` Chaos Machine's tests: one function under two keys of one face; `classic-082` Sheeople and `classicplus-047` Jogg's Box: one function under the same key of both faces).\n   - **The fix:** share an adapter only where the running face resolves the same function under the key the adapter looks up. For example, key the cross-face cache by (pointer, hook key), and keep the within-face sharing by pointer, since within one face both keys hold the function.\n   - **Tests:** a fixture whose base face has `cry = f` and whose Radiant face has only `death = f`, run on both faces, alongside the existing gap 10 and gap 14 fixtures.\n2. **An activation's `uses` skips L6's integer check** (`script.rs`, the activations declaration, about line 219). `Ok(Value::Number(n)) => ActivationUses::Count(n as i32)` turns 1.5 into 1, and wraps 2^32+1 to 1, with no error. `Value::Integer(n)` is cast the same way.\n   - **The fix:** read it through `numbers::to_i32` (or the boundary's own integer check), so a non-integral or out-of-range count is a load error naming the card and face, as L6 requires everywhere else.\n   - **Tests:** a fixture declaring `uses = 1.5`, and one declaring `uses = 4294967297`, each refused at load.\n3. **The memory cap is lifted while readers build their answers** (`crates/luau/src/sandbox.rs`, `MemoryCap::lift`, about line 170). #870 scoped the cap this way for speed: under a cap, mlua runs every value the host builds through a protected call. That was the bulk of the slowdown, and the speed budgets in `docs/v0.4.0/README.md` \u00a77 depend on it.\n   - **The problem:** while a reader, `J.query` or `J.pool` builds its answer, a hook can hold more than `LUAU_MEMORY_BYTES`. So the claim in `crates/luau/README.md` and the code comment, that \"the hook's next allocation past the cap fails\", is not always true.\n   - **The fix:** keep the speed. Make the README and comments say what does hold: a reader's answer is bounded by the state it reads, not by the script, and is counted; the script's own allocations stay capped, and its next allocation past the cap after a reader returns still fails.\n   - **Tests:** a fixture script that calls a reader and then allocates past the cap, and fails.\n   - **If you find a way to bound reader allocations without losing the speed,** measure it with `cargo jackioh luau bench` and the web wrapper's golden step against `main`, and write the numbers in the notes. Otherwise leave the code as it is.\n\n### 3. Files\n\n- **Change:** `crates/luau/src/script.rs`, `crates/luau/src/sandbox.rs` (comments only, unless \u00a72 item 3's last point applies), `crates/luau/README.md`, `crates/luau/tests/` and its fixtures, `docs/v0.4.0/api-gaps.md` if it describes item 1's sharing.\n- **Must not touch:** card scripts, `crates/engine` behaviour, `.github/`.\n\n### 4. Tests\n\n- `cargo test -p jackioh-luau` with the new fixtures, and `cargo test -p jackioh-cards --features jackioh-engine/testkit` (the whole crate: every `.luau` loads through the changed code).\n- `cargo jackioh golden check` (240/240), `cargo jackioh fuzz --seeds 200`, `cargo jackioh luau bench`.\n- `cargo clippy --workspace --all-targets -- -D warnings`.\n\n### 5. Done when\n\n- [ ] Item 1's fixture runs on both faces, and Chaos Machine's, Sheeople's and Jogg's Box's `Arc::ptr_eq` tests still pass.\n- [ ] Item 2's two fixtures are refused at load, naming the card and face.\n- [ ] Item 3's documentation says what holds, with its fixture.\n- [ ] The checks in \u00a74 pass.\n- Running cards lib tests (c070) with instrumentation -> /tmp/instr.log.\n- Instrumented run: only classic-058 radiant endOfTurn changes adapter (see State).\n- Started /tmp/chain.sh in background.\n- cards tests (whole crate, testkit): 5884 unit + 754 cross passed, 0 failed (/tmp/cards-tests.log).\n- Branch release tools built (2m42s). spec check ok (844 rulings), catalog check ok, patches check ok.\n- fmt --check ok; clippy -p jackioh-luau --all-targets -D warnings clean; luau tests 1+32+34 pass.\n- Waiting on main release build in ../jackioh-wt/bench-main (/tmp/main-release.log).\n",
-        "provider": "claude-3",
-        "reason": "`claude-3` reached its usage limit",
-        "trail": "cards build\", \"timeout\": 130000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; grep -c \\\"XX871SLOT\\\" /tmp/instr.log; grep \\\"XX871SLOT\\\" /tmp/instr.log | awk '{print $2}' | sort -u | wc -l; grep \\\"XX871 \\\" /tmp/instr.log | s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; f=$(grep -rl 'pub const ID: &str = \\\"classic-058\\\"' crates/cards/src/scripts); echo $f; cat ${f%.rs}.luau; grep \\\"XX871SLOT classic-058\\\" /tmp/i\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; sed -n 178,192p crates/luau/src/reads.rs; grep -n \\\"fn scoped\\\" -A25 crates/luau/src/reads.rs | head -40\", \"description\": \"Check how param reade\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; ls crates/cards/src/scripts/*/*.luau | wc -l; cp /tmp/script.rs.new crates/luau/src/script.rs; grep -c XX871 crates/luau/src/script.rs\", \"descri\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-871/crates/luau/src/script.rs\", \"old_string\": \" // One adapter for one function under two hooks, across both faces too (#464 gap\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; sed -n 40,80p scripts/worktree.sh\", \"description\": \"Read the rest of worktree.sh\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; timeout 600 scripts/worktree.sh bench-main da817ba6545384562621ee3b8233a5a9ac71b3ef 2>&1 | tail -5; git -C ../jackioh-wt/bench-main log --onelin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; cat > /tmp/chain.sh <<'EOF'\\n#!/bin/sh\\ncd /home/runner/work/_temp/work/item-871\\ncargo test -p jackioh-cards --features jackioh-engine/testkit \u2026\n- Bash: {\"command\": \"/tmp/chain.sh\", \"description\": \"Run cards tests, then release builds of branch and main\", \"timeout\": 7200000, \"run_in_background\": true}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace('''Next: temp instrumentation (XX871 eprintln in script.rs direct_hook; clea\u2026\n- Bash: {\"command\": \"d=$(ls -d ~/.cargo/registry/src/*/mlua-0.12.2 | head -1); echo $d; grep -n \\\"pub fn used_memory\\\" -A 20 $d/src/state.rs; grep -n \\\"pub fn set_memory_limit\\\" -A 20 $d/src/state.rs\", \"desc\u2026\n- Bash: {\"command\": \"d=$(ls -d ~/.cargo/registry/src/*/mlua-0.12.2 | head -1); sed -n 1,140p $d/src/memory.rs | grep -n \\\"fn allocator\\\" -A 45\", \"description\": \"Read mlua allocator limit logic\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; cat scripts/build-wasm.sh | head -60; sed -n 1,60p apps/web/src/wasm/replay.test.ts\", \"description\": \"Read build-wasm script and wasm replay tes\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; grep -n \\\"^export\\\" apps/web/src/wasm/index.ts | head -60\", \"description\": \"List wasm wrapper exports\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; sed -n 405,428p apps/web/src/wasm/index.ts; sed -n 360,370p apps/web/src/wasm/index.ts; grep -n \\\"setupFiles\\\\|include\\\" apps/web/vitest.config.\u2026\n- Write: {\"file_path\": \"/tmp/probe/golden-step.probe.test.ts\", \"content\": \"// Throwaway probe for #871 (never committed): the mean and median time of one golden step through\\n// the wrapper \\u2014 chooseActio\u2026\n- Bash: {\"command\": \"tail -c 400 /tmp/cards-tests.log; ls /tmp/release.log 2>/dev/null\", \"description\": \"Check cards test progress\"}\n- tool error: Exit code 2 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-luau v0.4.0 (/home/runner/work/_temp/work/item-871/crates/luau)\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; git diff crates/luau/tests/host.rs\", \"description\": \"Review host.rs test diff\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-871/crates/luau/tests/host.rs\", \"old_string\": \" let module = |face: Face, uses: &str| {\\n format!(\\n \\\"return {{ base = {{}}, {}\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; git diff crates/luau/tests/api.rs | head -70\", \"description\": \"Review api.rs test diff\"}\n- Bash: {\"command\": \"sleep 100; tail -c 300 /tmp/cards-tests.log\", \"description\": \"Wait for cards tests\", \"timeout\": 130000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; grep -n \\\"Patch v\\\" docs/issues-and-patches.md | head -20\", \"description\": \"Check patch title conventions\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; sed -n 88,123p docs/issues-and-patches.md\", \"description\": \"Read version number rules\"}\n- Bash: {\"command\": \"sleep 115; tail -c 300 /tmp/cards-tests.log\", \"description\": \"Wait for cards tests\", \"timeout\": 130000}\n- Bash: {\"command\": \"sleep 110; grep -E \\\"test result|FAILED|panicked|^EXIT\\\" /tmp/cards-tests.log | head -20\", \"description\": \"Check cards test results\", \"timeout\": 130000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; echo \\\"- cards tests (whole crate, testkit): 5884 unit + 754 cross passed, 0 failed (/tmp/cards-tests.log).\\\" >> .bot-notes.md; tail -c 200 /tmp\u2026\n- Bash: {\"command\": \"sleep 115; tail -c 200 /tmp/release.log\", \"description\": \"Wait for release build\", \"timeout\": 130000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; for c in \\\"spec check\\\" \\\"catalog check\\\" \\\"patches check\\\"; do echo \\\"== $c\\\"; ./target/release/jackioh $c 2>&1 | tail -3; echo \\\"exit $?\\\"; do\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; cargo fmt --check && echo FMT_OK; timeout 1800 cargo clippy -p jackioh-luau --all-targets -- -D warnings 2>&1 | tail -5\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; timeout 1200 cargo test -p jackioh-luau --features jackioh-engine/testkit 2>&1 | grep -E \\\"^test .*FAILED|test result|panicked|^error|^warning\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-871; cat >> .bot-notes.md <<'EOF'\\n- Branch release tools built (2m42s). spec check ok (844 rulings), catalog check ok, patches check ok.\\n- fmt --ch\u2026\n- said: You've hit your session limit \u00b7 resets 6:40pm (UTC)\n- said: You've hit your session limit \u00b7 resets 6:40pm (UTC)"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-14T11:46:16Z",
@@ -5789,12 +5524,10 @@
       "run_id": "38575874826",
       "started_at": "2026-10-14T13:56:05Z",
       "stop_requested": false,
-      "taken_asks": [],
       "verdict_rounds": 0
     },
     "872": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T13:53:22Z",
@@ -5805,48 +5538,26 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-14T14:03:28Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "### 1. Goal\n\n`luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau` exits 0 with no errors, and with no warnings either. Change no card's behaviour: every card's own tests, `golden check` (240/240) and `luau diff` for each card you touch still pass.\n\n### 2. Getting the analyzer\n\nIt must be the Luau that `mlua` builds, 0.740: `Cargo.lock`'s `luau0-src` is `+luau740`. Get the release binary:\n\n```\ncurl -fsSL -o /tmp/luau-ubuntu.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip\necho \"7d4035db01816f977f6e4c42e3d5e8ef4235d95e9afe63a3c38905b42dde60f2  /tmp/luau-ubuntu.zip\" | sha256sum --check\nunzip -o -j /tmp/luau-ubuntu.zip luau-analyze -d .cache/bin\necho \"36d0d89c008e037215bdaa96f0cfc049dd5920bd931fffb76eeb269b7ae4de21  .cache/bin/luau-analyze\" | sha256sum --check\n```\n\n`require(\"@jackioh\")` resolves through `crates/cards/src/scripts/.luaurc`. Its alias has no `.luau` extension (#464 fixed that), so the CLI finds the module.\n\n### 3. What to expect\n\nOn an earlier tree head (e84ab92, before the last batches), the run gave:\n\n- **One type error:** `classic/c001_curse_of_the_forgotten_classic.luau:69`, where the table literal for a `J.ForcedTarget` fails. Hoist its `spec` into an annotated `J.TargetSpec` local, as `crates/luau/README.md` says.\n- **19 `ImportUnused` warnings**, in cards with no hooks that still `require(\"@jackioh\")`. Part 11's convention leaves the require out of such cards.\n\nBatches 11\u201319 added about 200 more scripts, so run it first and work from what it prints. Fix each finding in the script, never by loosening `--!strict`. If a finding is in the generated `crates/cards/luau/jackioh.luau`, fix its generator (`crates/luau/tests/export_api.rs`) and regenerate it with `cargo test -p jackioh-luau --features ts --test export_api`. Never edit the file by hand.\n\n### 4. Files\n\n- **Change:** the `.luau` card scripts the analyzer names, and, only if it names `jackioh.luau`, `crates/luau/tests/export_api.rs` together with the regenerated `crates/cards/luau/jackioh.luau`.\n- **Must not touch:** any card's `.rs` or tests, `crates/engine`, `.github/`.\n\n### 5. Tests\n\n- The analyzer command in \u00a71: no errors, no warnings.\n- `cargo test -p jackioh-cards --features jackioh-engine/testkit` (the whole crate).\n- `cargo jackioh golden check` (240/240), and `cargo jackioh luau diff --parent-bin <main before this change> --cards <every card you changed>` at 0 mismatches.\n\n### 6. Done when\n\n- [ ] The analyzer is clean on every script and on `jackioh.luau`.\n- [ ] The checks in \u00a75 pass, and no card's behaviour changed.\n\n## State\n\nBLOCKED on step 2: the sandbox denied the `curl` that downloads the Luau 0.740 release zip from\ngithub.com (permission denied, not a network error), and there is no `luau-analyze` anywhere on the\nbox (`command -v`, `find /`, no `.cache/`, no cargo registry sources). No file has been changed.\n\nChecked by hand, without the analyzer (a static grep over all 409 `.luau` files in\n`crates/cards/src/scripts`):\n- `classic/c001_curse_of_the_forgotten_classic.luau:69` already hoists `spec` into an annotated\n  `J.TargetSpec` local, so the plan's one expected type error is already fixed on this head.\n- No script `require(\"@jackioh\")` and then never uses `J` (comments stripped), so the plan's 19\n  `ImportUnused` warnings are gone too. 38 scripts have no require at all.\n- What the analyzer says about the ~200 scripts of batches 11-19 is unknown: guessing strict-mode\n  errors without the checker would be inventing evidence, so nothing was edited.\n\nNext, for whoever has the binary: run the plan's \u00a72 download (or put the verified binary at\n`.cache/bin/luau-analyze`), run the \u00a71 command, fix what it prints, then \u00a75.\n\n## Log\n\n- Tried `curl` for the release zip (twice, once as a compound command): permission denied.\n- Searched the box for an existing luau-analyze: none.\n- Grepped the scripts for the two findings the plan predicted: both already fixed.\n",
-        "provider": "claude-1",
-        "reason": "only a person can do it, its builder says",
-        "trail": "- Bash: {\"command\": \"ls -a | head -50 && cat .bot-notes.md 2>/dev/null | head -80\", \"description\": \"List worktree and read bot notes\"}\n- Bash: {\"command\": \"cat .bot-notes.md | wc -l; head -5 .bot-notes.md; ls .cache/bin 2>/dev/null; cat .gitignore | head -30; which luau-analyze\", \"description\": \"Check notes and existing analyzer\"}\n- tool error: Exit code 1 41 ### 1. Goal `luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau` exits 0 with no errors, and with no warnings either. Change\u2026\n- Bash: {\"command\": \"grep -n \\\"cache\\\" .gitignore; mkdir -p /tmp/luau-dl && curl -fsSL -o /tmp/luau-dl/luau-ubuntu.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip && echo \\\"7d40\u2026\n- tool error: Permission to use Bash with command grep -n \"cache\" .gitignore; mkdir -p /tmp/luau-dl && curl -fsSL -o /tmp/luau-dl/luau-ubuntu.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubun\u2026\n- Bash: {\"command\": \"curl -fsSL -m 60 -o /tmp/luau-ubuntu.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip; echo exit=$?\", \"description\": \"Download the Luau 0.740 release zip\"}\n- tool error: Permission to use Bash with command curl -fsSL -m 60 -o /tmp/luau-ubuntu.zip https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip; echo exit=$? has been denied.\n- Bash: {\"command\": \"ls .cache 2>&1 | head; command -v luau-analyze luau; find / -name 'luau-analyze*' -not -path '*/proc/*' 2>/dev/null | head; ls ~/.cargo/registry/src/*/ 2>/dev/null | grep -i luau\", \"desc\u2026\n- Bash: {\"command\": \"ls ~/.cargo/registry/src/ 2>&1; find / -type d -name 'luau0-src*' -not -path '/proc/*' 2>/dev/null | head; ls target 2>&1 | head -3\", \"description\": \"Find luau0-src crate source on disk\"}\n- Bash: {\"command\": \"cat crates/cards/src/scripts/.luaurc; ls crates/cards/src/scripts/; git ls-files 'crates/cards/src/scripts/**/*.luau' | wc -l; cargo --version; ls ~/.cargo 2>&1 | head\", \"description\": \"\u2026\n- Bash: {\"command\": \"sed -n 40,100p crates/cards/src/scripts/classic/c001_curse_of_the_forgotten_classic.luau\", \"description\": \"Read the known type-error site in c001\"}\n- Bash: {\"command\": \"cd crates/cards/src/scripts; for f in $(git ls-files '**/*.luau'); do if grep -q 'require(\\\"@jackioh\\\")' $f; then n=$(grep -v 'require(\\\"@jackioh\\\")' $f | grep -cE '\\\\bJ\\\\b'); if [ \\\"$n\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-872/crates/cards/src/scripts; for f in $(git ls-files '**/*.luau'); do if grep -q 'require(\\\"@jackioh\\\")' $f; then n=$(grep -v 'require(\\\"@jackioh\\\")\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-872/.bot-notes.md\", \"offset\": 36}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-872/.bot-notes.md\", \"old_string\": \"- [ ] The checks in \\u00a75 pass, and no card's behaviour changed.\\n\", \"new_string\": \"- [ ] T\u2026\n- said: <!-- bot: {\"status\": \"blocked\", \"human_required\": true, \"question\": \"The night bot could not get the Luau 0.740 analyzer. The sandbox denied the `curl` for https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip, and there is no `luau-analyze` on the box. Please do one of these: (\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "provider": "claude-1",
-      "question": "The night bot could not get the Luau 0.740 analyzer. The sandbox denied the `curl` for https://github.com/luau-lang/luau/releases/download/0.740/luau-ubuntu.zip, and there is no `luau-analyze` on the box. Please do one of these: (a) allow that download for the bot's builder, or (b) run `luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau` yourself with the checksummed 0.740 binary and paste the output on the issue. Then re-assign it to the bot, which will fix what the analyzer prints and run the checks in the plan's \u00a75.",
       "queued_at": "2026-10-14T15:33:16Z",
       "requested_by": "jgoetzmann",
       "run_id": "38576052073",
       "started_at": "2026-10-14T13:57:58Z",
       "stop_requested": true,
       "stopped_at": "2026-10-14T16:50:31Z",
-      "stopped_by": "jgoetzmann",
-      "taken_asks": []
+      "stopped_by": "jgoetzmann"
     },
     "873": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-14T12:41:14Z",
         "difficulty": "medium",
         "provider": "muse",
         "tier": "medium",
         "why": "easy-rule line 6 fails: the db half of the fix must land in .github/workflows/ci.yml, a forbidden path, so only a person can make it"
-      },
-      "handoff": {
-        "at": "2026-10-14T12:40:49Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "# Plan (muse-spark-1.3-contributor, medium)\n\n**Human required:** a person must edit `.github/workflows/ci.yml` (exact lines in Steps 7\u20138): split the `ai` test group into three and remove the `deploy rehearsal` suite from the `db` job. The bot may not change `.github/`. Everything else below the bot builds.\n\n## Goal\n\nCI run 38561889040 flagged two jobs over the 7-minute alert: `db (deploy rehearsal)` at 7m 3s and `rust (test ai)` at 7m 17s. Done means every CI job finishes under the 5-minute target with headroom: the AI's single 351-test integration binary is split into three binaries so the `ai` matrix group can run as three parallel jobs, and the deploy rehearsal (a release Docker build plus three container boots, which no safe code change can fit under five minutes) moves to the daily super run, which already runs it.\n\n## Files to touch\n\n| File | New / change | What changes |\n|---|---|---|\n| `crates/ai/tests/ai_slow_a.rs` | new | Binary root declaring `support`, `match_`, `shadow_ban` via `#[path]` |\n| `crates/ai/tests/ai_slow_b.rs` | new | Binary root declaring `support`, `tutorial_tier`, `lethal` via `#[path]` |\n| `crates/ai/tests/ai/mod.rs` | change | Remove the four `pub mod` lines moved out (list in Step 4) |\n| `crates/ai/tests/ai.rs` | change | Header comment names the split (Step 5) |\n\nMust not touch: `.github/` (person-only, Steps 7\u20138), `bot/`, `.harness/`, `.squishy/`, `.claude/`; `scripts/ci-scope.sh`, `crates/tools/tests/acceptance.rs`, `apps/web/src/net/ci-scope.test.ts` (new files already match the existing `crates/ai/*` \u2192 `rust_ai` and `crates/*/tests/*` \u2192 web/e2e-off patterns, so scope maps stay green untouched); `e2e/scripts/shard-specs.mjs` (WEIGHTS untouched: e2e smoke was not flagged, and fresh CI timings need the GitHub API, which no bot tool can reach); `crates/server/tests/deploy/rehearse.sh` and `crates/server/Dockerfile` (no safe cut: the build is the production image and the three boots assert different behaviors); `spec/`, `crates/engine/src/`, `crates/cards/` (no rules or cards work; SPEC \u00a79.9/R186 are background only, no new ruling).\n\n## Steps\n\n1. Record the baseline. Run `cargo test -p jackioh-ai --test ai -- --list | wc -l` (351 today). Measured 2026-10-14 (2 vCPU; CI's 4 vCPU run ~1.5\u00d7 faster): full binary 135 s wall; slow modules `match_` 32 s, `tutorial_tier` 29 s, `shadow_ban` 24 s, `lethal` 24 s, `deck` 17 s, `skill` 6.5 s, rest \u2264 4 s each.\n2. Create `crates/ai/tests/ai_slow_a.rs` with exactly this content (55 tests: `match_` 17 + `shadow_ban` 38):\n   ```rust\n   //! The AI integration tests too slow to share the `ai` binary (issue #873): full\n   //! `play_match` games (`match_`) and the shadow-ban table (`shadow_ban`) at AI_BUDGET.\n   //! CI runs this as `rust (test ai slow a)`; locally `cargo test -p jackioh-ai --test ai_slow_a`.\n   //!\n   //! `#[path]` because the modules live beside the rest under `tests/ai/`: `tests/ai/mod.rs`\n   //! must not name them, or they would run in both binaries.\n\n   #[path = \"ai/support.rs\"]\n   mod support;\n   #[path = \"ai/match_.rs\"]\n   mod match_;\n   #[path = \"ai/shadow_ban.rs\"]\n   mod shadow_ban;\n   ```\n   Three binaries, not two: `match_` + `shadow_ban` (56 s) and `tutorial_tier` + `lethal` (53 s) balance against the fast rest (~46 s); halves would leave one job near the limit with no headroom. No file moves: every test file imports only `super::support` and outside crates (verified by grep), and `use super::*;` lines sit inside each file's own submodules, so re-rooting is safe.\n3. Create `crates/ai/tests/ai_slow_b.rs` with the same header pattern (naming `rust (test ai slow b)` and `--test ai_slow_b`, citing the tutorial tier and lethal searches) declaring `support`, `tutorial_tier`, `lethal` (13 tests: 4 + 9).\n4. In `crates/ai/tests/ai/mod.rs`, delete exactly these four lines, leaving `support` and all other modules: `pub mod lethal;`, `pub mod match_;`, `pub mod shadow_ban;`, `pub mod tutorial_tier;`. Do not move or edit any file under `tests/ai/`.\n5. In `crates/ai/tests/ai.rs`, replace the first two doc lines with:\n   ```rust\n   //! The fast integration-test binary for the ported AI tests (SURFACE \u00a71): every\n   //! `packages/ai/test/<x>.test.ts` is a module of `ai/`, except the four too slow for a\n   //! five-minute job, which `ai_slow_a.rs` and `ai_slow_b.rs` run (issue #873).\n   ```\n   Leave the `#[path]` note below it unchanged.\n6. Verify (commands in Tests): `cargo test -p jackioh-ai --test ai` (expect 283 tests), `--test ai_slow_a` (55), `--test ai_slow_b` (13); the three counts sum to 351, so no test is lost or doubled. Then `cargo fmt --check`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, and `cargo test -p jackioh-tools --test acceptance ci_scope` (scope maps still hold). Record each binary's wall time for the person.\n7. [PERSON] In `.github/workflows/ci.yml`'s `rust-test` matrix, replace\n   ```yaml\n             - group: ai\n               cache: ai\n               test: -p jackioh-ai\n   ```\n   with\n   ```yaml\n             - group: ai\n               cache: ai\n               test: -p jackioh-ai --test ai\n               binaries: jackioh-ai ai ai_slow_a ai_slow_b\n             - group: ai slow a\n               cache: ai-slow-a\n               test: -p jackioh-ai --test ai_slow_a\n               binaries: jackioh-ai ai ai_slow_a ai_slow_b\n             - group: ai slow b\n               cache: ai-slow-b\n               test: -p jackioh-ai --test ai_slow_b\n               binaries: jackioh-ai ai ai_slow_a ai_slow_b\n   ```\n   The `binaries` pins mirror the engine/cards pattern and fail the job if a fourth AI binary ever appears unrun. No `scripts/ci-scope.sh` change: its `crates/ai/*` line already turns on `rust_ai` for the new files, and ci.yml does not read per-group scope lines yet (#751).\n8. [PERSON] In `.github/workflows/ci.yml`'s `db-suite` matrix, delete the entry\n   ```yaml\n             - suite: deploy rehearsal\n               script: crates/server/tests/deploy/rehearse.sh\n               rust: false\n               image-cache: true\n   ```\n   and its now-unused plumbing: the 8-line `# The rehearsal's image is built by buildx \u2026` comment, the `docker/setup-buildx-action@v3` and `crazy-max/ghaction-github-runtime@v3` steps (with their `if: ${{ matrix.image-cache }}` lines and the cache-service comment), and the `REHEARSAL_CACHE_FROM` / `REHEARSAL_CACHE_TO` env lines. Keep `docker pull postgres:16`: the remaining `sql invariants` and `store contract` suites start their own `postgres:16` containers. Do not change `.github/workflows/super.yml`: its `db` job already runs all three suites daily regardless of changed paths, so the rehearsal keeps running there. Rejected alternative: splitting the rehearsal into build/boot jobs sharing a saved image \u2014 the image transfer alone costs minutes, the boot-only path is untestable without Docker, and both jobs would sit near the limit with no headroom.\n\n## Tests\n\n- `cargo test -p jackioh-ai --test ai` \u2014 283 tests pass; wall ~45 s locally.\n- `cargo test -p jackioh-ai --test ai_slow_a` \u2014 55 tests pass (`match_` + `shadow_ban`).\n- `cargo test -p jackioh-ai --test ai_slow_b` \u2014 13 tests pass (`tutorial_tier` + `lethal`).\n- Count guard: each binary's `-- --list | wc -l` gives 283 / 55 / 13, summing to the Step 1 baseline of 351. A module listed in both roots would break the sum (double-run); a module listed in neither would break it the other way.\n- `cargo fmt --check`.\n- `cargo clippy -p jackioh-ai --all-targets -- -D warnings` (rule 4 purity lint covers tests too; the new roots add no code and no `#[allow]`).\n- `cargo test -p jackioh-tools --test acceptance ci_scope` \u2014 the four scope-map tests still pass with the new files present.\n- Person-side proof: the next CI run shows `rust (test ai)`, `rust (test ai slow a)`, `rust (test ai slow b)` each under 5 minutes, and no `db (deploy rehearsal)` job on pull requests.\n\n## Done when\n\n- [ ] The three AI binaries pass with counts 283 / 55 / 13 summing to 351.\n- [ ] `cargo fmt --check`, th",
-        "provider": "muse",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "- cache: ai-slow-b\n- test: -p jackioh-ai --test ai_slow_b\n- binaries: jackioh-ai ai ai_slow_a ai_slow_b\n- ```\n- The `binaries` pins mirror the engine/cards pattern and fail the job if a fourth AI binary ever appears unrun. No `scripts/ci-scope.sh` change: its `crates/ai/*` line already turns on `rust_ai` for the new files, and ci.yml does not read per-group scope lines yet (#751).\n- 8. [PERSON] In `.github/workflows/ci.yml`'s `db-suite` matrix, delete the entry\n- ```yaml\n- - suite: deploy rehearsal\n- script: crates/server/tests/deploy/rehearse.sh\n- rust: false\n- image-cache: true\n- ```\n- and its now-unused plumbing: the 8-line `# The rehearsal's image is built by buildx \u2026` comment, the `docker/setup-buildx-action@v3` and `crazy-max/ghaction-github-runtime@v3` steps (with their `if: ${{ matrix.image-cache }}` lines and the cache-service comment), and the `REHEARSAL_CACHE_FROM` / `RE\u2026\n- ## Tests\n- - `cargo test -p jackioh-ai --test ai` \u2014 283 tests pass; wall ~45 s locally.\n- - `cargo test -p jackioh-ai --test ai_slow_a` \u2014 55 tests pass (`match_` + `shadow_ban`).\n- - `cargo test -p jackioh-ai --test ai_slow_b` \u2014 13 tests pass (`tutorial_tier` + `lethal`).\n- - Count guard: each binary's `-- --list | wc -l` gives 283 / 55 / 13, summing to the Step 1 baseline of 351. A module listed in both roots would break the sum (double-run); a module listed in neither would break it the other way.\n- - `cargo fmt --check`.\n- - `cargo clippy -p jackioh-ai --all-targets -- -D warnings` (rule 4 purity lint covers tests too; the new roots add no code and no `#[allow]`).\n- - `cargo test -p jackioh-tools --test acceptance ci_scope` \u2014 the four scope-map tests still pass with the new files present.\n- - Person-side proof: the next CI run shows `rust (test ai)`, `rust (test ai slow a)`, `rust (test ai slow b)` each under 5 minutes, and no `db (deploy rehearsal)` job on pull requests.\n- ## Done when\n- - [ ] The three AI binaries pass with counts 283 / 55 / 13 summing to 351.\n- - [ ] `cargo fmt --check`, the AI clippy gate, and the `ci_scope` acceptance tests pass.\n- - [ ] Each new binary's wall time is reported in the PR for the person's matrix change.\n- - [ ] The person confirms the Step 7 matrix edit (three `ai` groups with `binaries` pins) and the Step 8 `deploy rehearsal` removal with plumbing cleanup.\n- - [ ] No file outside the Files table changed (`git status --porcelain` shows only the four AI test files).\n- ## Risks\n- - Double-run / lost tests if a module is named in both roots or neither: the count-sum guard in Tests catches it; the `binaries` pins catch a future third binary going unrun.\n- - `support.rs` helpers (`register_cards`, `ai_pool`, the `OnceLock` in `observe`) now initialize once per binary instead of once total: same results, a few seconds of repeated one-time setup, already inside the measured walls.\n- - Determinism and hidden information are unchanged: identical tests, seeds, and budgets, only regrouped; no test asserts timing.\n- - A PR touching only `Dockerfile`, `render.yaml`, or `tests/deploy/` will set `db=true` via the untouched scope script and run `sql invariants` + `store contract` without the rehearsal: harmless over-testing, covered daily by super.\n- - If the three new AI jobs still exceed five minutes, the remaining cost is fixed per-job setup/compile (not test time): that follow-up is a cache/setup change in `.github/`, person-only and out of scope here.\n- ## Open questions\n- - None blocking the bot's part. For the person: (a) accept the coverage trade \u2014 deploy-rehearsal signal moves from same-PR (only when db paths change) to the next daily super run; (b) apply Steps 7\u20138 verbatim. If the rehearsal must stay per-PR, say so and the split becomes a build/boot artifact des\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-873 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-873/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "kind": "build",
       "pending_request": false,
@@ -5855,11 +5566,9 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
-      "question": "a person must edit `.github/workflows/ci.yml` (exact lines in Steps 7\u20138): split the `ai` test group into three and remove the `deploy rehearsal` suite from the `db` job. The bot may not change `.github/`. Everything else below the bot builds.",
       "run_id": "38563242790",
       "started_at": "2026-10-14T12:22:40Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "874": {
       "action": "build",
@@ -5899,26 +5608,21 @@
     },
     "877": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "pr": 879,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-14T14:19:28Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
       "run_id": "38580014076",
       "started_at": "2026-10-14T14:23:53Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "879": {
@@ -5933,30 +5637,10 @@
       "feedback_since": "2026-10-14T14:23:53Z",
       "issue": 877,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38580014076",
-            "tier": "strong"
-          }
-        ],
-        "sha": "af7dad0875163d0e45734b328a89ef14919b0828",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "882": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T17:57:54Z",
@@ -5969,7 +5653,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T17:57:57Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -5977,14 +5660,11 @@
       "planned_tier": "medium",
       "pr": 925,
       "provider": "muse",
-      "question": "",
       "round_tier": "medium",
       "run_id": "38622757947",
       "started_at": "2026-10-14T19:20:40Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "883": {
@@ -5999,26 +5679,7 @@
       "feedback_since": "2026-10-14T14:16:48Z",
       "issue": 862,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38578962519",
-            "tier": "strong"
-          }
-        ],
-        "sha": "c3790670ef1611abd7848c04bb4b860fd9cc61d8",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "884": {
       "action": "build",
@@ -6124,7 +5785,6 @@
     },
     "891": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T21:01:27Z",
@@ -6137,7 +5797,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T21:01:30Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -6145,22 +5804,18 @@
       "planned_tier": "strong",
       "pr": 957,
       "provider": "claude-6",
-      "question": "",
       "queued_at": "2026-10-14T17:09:35Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "38658063929",
       "started_at": "2026-10-15T00:06:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "892": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T19:29:45Z",
@@ -6173,7 +5828,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T19:29:49Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
@@ -6181,17 +5835,14 @@
       "planned_tier": "strong",
       "pr": 956,
       "provider": "claude-7",
-      "question": "",
       "queued_at": "2026-10-14T17:08:06Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
       "run_id": "38656670464",
       "started_at": "2026-10-14T23:52:47Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "896": {
@@ -6258,7 +5909,6 @@
     },
     "897": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T20:04:27Z",
@@ -6271,7 +5921,6 @@
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-14T20:04:30Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -6279,17 +5928,14 @@
       "planned_tier": "medium",
       "pr": 927,
       "provider": "muse",
-      "question": "",
       "queued_at": "2026-10-14T19:32:00Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "medium",
       "run_id": "38630882543",
       "started_at": "2026-10-14T20:19:00Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
       "verdict_rounds": 1
     },
     "898": {
@@ -6330,7 +5976,6 @@
       "taken_asks": []
     },
     "902": {
-      "asks": [],
       "closeout": false,
       "forced": false,
       "pending_request": false,
@@ -6449,19 +6094,8 @@
     },
     "923": {
       "action": "plan",
-      "asks": [],
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-14T20:30:28Z",
-        "draft": "## Goal\n\nPractice setup gains a **Sandbox** choice: a normal game against the AI plus a dev-tools panel that searches the catalog (name, text, id, set, type, cost, rarity; Radiant toggle) and spawns a card, base or Radiant, for either seat into a hand, a field lane, a graveyard or the library top; sets hero health and Armor and current and max mana; draws; destroys or removes a card; and holds the AI's turn. The engine enforces it: one `sandbox` action, legal only in a game created with `sandbox: true`, never in `legal_actions` (so the AI never takes it), logged so the game folds, refused by the server, counting for nothing (no summary, last board, player statistics or tutorial progress).\n\n## Files to touch\n\n| Path | | What |\n| --- | --- | --- |\n| `crates/engine/src/wire/actions.rs` | change | `SandboxZone`, `SandboxOp`, `ActionBody::Sandbox`, `ActionType::Sandbox`, `NON_ACTIVE_ACTION_TYPES` |\n| `crates/engine/src/sandbox.rs` | new | `why_sandbox_refused`, `apply_sandbox` |\n| `crates/engine/src/lib.rs` | change | `pub mod sandbox;`, `pub use sandbox::*;` |\n| `crates/engine/src/reduce.rs` | change | header, `apply_action` arm, skip `end_due_turns` |\n| `crates/engine/src/state.rs` | change | `CreateGameOptions.sandbox`, `GameState.sandbox` |\n| `crates/engine/src/replay.rs` | change | `ReplayInput.sandbox`, `opening` |\n| `crates/engine/src/game_summary.rs` | change | `None` for a sandbox |\n| `crates/engine/src/subsystems/glitch.rs` | change | reset keeps the flag |\n| `crates/engine/src/wire/view.rs` | change | `PlayerView.sandbox` |\n| `crates/engine/src/view_for.rs` | change | fill it |\n| `crates/engine/src/config.rs` | change | `SANDBOX_*` constants |\n| `crates/engine/tests/export_config.rs` | change | export them |\n| `crates/engine/tests/rules/fixtures/sandbox.rs` | new | fixtures |\n| `crates/engine/tests/rules/fixtures/mod.rs` | change | `pub mod sandbox;` |\n| `crates/engine/tests/rules/sandbox.rs` | new | rules tests |\n| `crates/engine/tests/rules/mod.rs` | change | `pub mod sandbox;` |\n| `crates/engine/README.md` | change | entry point, module map |\n| `crates/ai/tests/ai/sandbox.rs` | new | AI test |\n| `crates/ai/tests/ai/mod.rs` | change | `pub mod sandbox;` |\n| `crates/server/src/actor/protocol.rs` | change | parse refusal |\n| `crates/server/src/actor/engine.rs` | change | `sandbox: None` \u00d72 |\n| `crates/server/tests/actor/match_actor.rs` | change | refusal test |\n| `crates/server/tests/actor/engine_real.rs` | change | no-sandbox test |\n| `crates/server/README.md` | change | one bullet |\n| `crates/tools/src/fuzz.rs` | change | `sandbox: None` \u00d72 |\n| `apps/web/src/wire/generated/*.ts`, `apps/web/src/wire/engineConfig.ts` | regenerated | cargo test |\n| `apps/web/src/wire/index.ts` | change | export `SandboxOp`, `SandboxZone` |\n| `apps/web/src/wasm/index.ts` | change | `CreateGameArgs.sandbox` |\n| `apps/web/src/practice/protocol.ts` | change | `PracticeStartConfig.sandbox` |\n| `apps/web/src/practice/core.ts` | change | create, fold, board, AI guard, resume |\n| `apps/web/src/practice/resume.ts` | change | keep the flag |\n| `apps/web/src/practice/PracticeSetup.tsx` | change | checkbox |\n| `apps/web/src/practice/testids.ts` | change | `sandbox` |\n| `apps/web/src/practice/config.ts` | change | `SANDBOX_RESULTS_SHOWN` |\n| `apps/web/src/practice/sandbox.ts` | new | search, targets, bodies, testids |\n| `apps/web/src/practice/SandboxPanel.tsx` | new | panel |\n| `apps/web/src/practice/sandbox.css` | new | styles |\n| `apps/web/src/routes/practice.tsx` | change | config, panel, hold, stats |\n| `apps/web/src/practice/sandbox.test.ts` | new | helpers |\n| `apps/web/src/practice/SandboxPanel.test.tsx` | new | panel |\n| `apps/web/src/practice/core.test.ts` | change | worker |\n| `apps/web/src/practice/resume.test.ts` | change | resume |\n| `apps/web/src/routes/practice.test.tsx` | change | setup |\n| `apps/web/README.md` | change | practice bullet |\n| `e2e/support/testids.ts` | change | `PRACTICE_SANDBOX` |\n| `spec/rulings/R923000.md`, `spec/rulings/R923001.md`, `spec/rulings/R923002.md` | new | rulings |\n| `spec/09-architecture.md` | change | \u00a79.9, \u00a79.11 |\n| `spec/10-engine-guide.md` | change | \u00a710.2 |\n| `spec/11-rulings.md` | change | provenance |\n| `spec/INDEX.md` | regenerated | `cargo jackioh spec index` |\n\nNot touched: `crates/cards`, `crates/luau`, `crates/wasm` (serde passes the fields), `crates/ai/src`, catalog, patches, migrations, `.github/`, `.harness/`, `.squishy/`, `bot/`. Governing: \u00a72.3, \u00a76.3 Summon, \u00a79.9, \u00a79.11, \u00a710.2, \u00a710.8; R1, R411, R4, R11, R80, R82, R345, R187, R508, R639, R943, R676.\n\n## Steps\n\n1. **`wire/actions.rs`**: above `ActionBody`, two enums deriving `Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash` with `Selection`'s ts attribute:\n   ```rust\n   #[serde(tag = \"to\", rename_all = \"camelCase\", rename_all_fields = \"camelCase\")]\n   pub enum SandboxZone { Hand, Field { lane: i32 }, Graveyard, LibraryTop }\n   #[serde(tag = \"kind\", rename_all = \"camelCase\", rename_all_fields = \"camelCase\")]\n   pub enum SandboxOp {\n       Spawn { def_id: String, radiant: bool, seat: PlayerId, zone: SandboxZone },\n       SetHero { seat: PlayerId, health: i32, armor: i32 },\n       SetMana { seat: PlayerId, current: i32, max: i32 },\n       Draw { seat: PlayerId, count: i32 },\n       Destroy { instance_id: String },\n       Remove { instance_id: String },\n   }\n   ```\n   Append `Sandbox { op: SandboxOp }` last in `ActionBody` (doc R923000), `Sandbox = \"sandbox\"` last in `ActionType`, its `action_type` arm, and `ActionType::Sandbox` in `NON_ACTIVE_ACTION_TYPES` (a held AI turn can be arranged). Not in `PROMPT_OPEN_ACTION_TYPES`.\n2. **`config.rs`** near `HAND_CAP`, R923000 docs: `SANDBOX_VALUE_MAX: i32 = 99`, `SANDBOX_HEALTH_MIN: i32 = 1`, `SANDBOX_DRAW_MAX: i32 = HAND_CAP`; add all three to `export_config.rs`' import and `constants` (no annotation).\n3. **`state.rs`**: `CreateGameOptions.sandbox` after `glitch_boards` and `GameState.sandbox` after `secrets`, both `Option<bool>` with `reset_owed`'s serde and `ts(optional, type = \"true\")` attributes; `build_game` literal: `sandbox: if options.sandbox == Some(true) { Some(true) } else { None },`.\n4. `sandbox` threads: `replay.rs` `ReplayInput.sandbox` (serde as its siblings), `opening` passes `input.sandbox`; `game_summary.rs` `summarize_game` starts `if input.sandbox == Some(true) { return None; }`, its literal `sandbox: None`; `glitch.rs` `reset_match` options `sandbox: old.sandbox`; `sandbox: None` in `fuzz.rs`'s two `FoldArgs` (~518, ~1252) and server `actor/engine.rs` `create_game_args`, `fold_args` (comment: the server never creates a sandbox game).\n5. **`wire/view.rs`** `PlayerView.sandbox` after `emotes_heard`, attributes as `random_targets`; `view_for.rs`: `sandbox: if state.sandbox == Some(true) { Some(true) } else { None },`.\n6. **`crates/engine/src/sandbox.rs`** (header: R923000\u2013R923002; not `jackioh-luau`'s sandbox). `reduce` returns the input state on `Err`, so a refusal after a write is safe.\n   - `pub fn why_sandbox_refused(state: &GameState) -> Result<(), EngineError>`: flag not `Some(true)` \u2192 `\"this game is not a sandbox\"`; `phase != Phase::Main` \u2192 `\"the sandbox works only in a main phase\"`.\n   - `pub fn apply_sandbox(sink: &mut EngineSink<'_>, sender: PlayerId, op: &SandboxOp) -> Result<(), EngineError>`, one private fn per op:\n   - **Spawn**: `crate::catalog::find_def(None, def_id)` else `\"no card {def_id} in the catalog\"`; `!set_is_open(def.set)` \u2192 `\"{def_id} is a card of {set}, which has not shipped yet\"`. New card `new_instance(&mut *sink.state, def_id, seat, zone)`, `radiant` set:\n     - Hand (`Zone::Hand`): `crate::draw::add_to_hand`; `Burned` \u2192 `\"that hand is full\"`.\n     - Field: `mark = sink.events.len()`; in a block, `resolve::make_context(sink, None, HookOptions { controller: Some(seat), ..Default::default() })` (as `attack_summon.rs:107`), `resolve::apply_effects(&[effects::summon::summon(SummonArgs { def_id, lane: Some(lane), radiant: radiant.then_some(true), ..Default::default() })], &mut ctx)` (no `new_instance`); no `GameEvent::Summoned` with this `player` and `def_id` in `events[mark..]` \u2192 `\"that card cannot go there\"`.\n     - Graveyard (`Zone::Resolving`): `zones::move_to_zone(.., OffFieldZone::Graveyard, Default::default())`, then `zones::report_graveyard_landing`; not `MoveResult::Moved` \u2192 `\"that card cannot go to a graveyard\"`.\n     - LibraryTop (`Zone::Library`): `draw::put_into_library(sink, &mut card, false, None, LibraryEnd::Top)`; `Dropped` \u2192 `\"that library is full\"`.\n   - **SetHero**: health outside `SANDBOX_HEALTH_MIN..=SANDBOX_VALUE_MAX` \u2192 `\"health must be between {min} and {max}, got {health}\"`; armor outside `0..=SANDBOX_VALUE_MAX` \u2192 `\"Armor must be between 0 and {max}, got {armor}\"`; `damage::set_hero_health(sink, seat, health, None)`, `hero.armor = armor`.\n   - **SetMana**: each value outside `0..=SANDBOX_VALUE_MAX` \u2192 `\"mana must be between 0 and {max}, got {value}\"`; write `mana.current`, `mana.max`; push `mana::mana_event`.\n   - **Draw**: outside `1..=SANDBOX_DRAW_MAX` \u2192 `\"a sandbox draw is 1 to {max} cards, got {count}\"`; `draw::draw(sink, seat, count)`.\n   - `seen_card(state, sender, id)`: `find_instance` kept only if `ownership::readers_where_it_lies(state, card).contains(&sender)`, else `\"no card {id} you can see\"`.\n   - **Destroy**: `seen_card`; not on the field \u2192 `\"only a card on the field can be destroyed\"`; apply `effects::destroy::destroy(DestroyArgs { target: TargetSpec::Instance { .. } })` in a context with `controller: Some(card.controller)`. **Remove**: `seen_card`; `effects::move_::exile(ExileArgs { .. })` the same way.\n7. **`reduce.rs`**: header line `sandbox \u2192 sandbox.applySandbox, refused unless the game was created as one; never listed (R923000)`; arm `ActionBody::Sandbox { op } => { crate::sandbox::why_sandbox_refused(sink.state)?; crate::sandbox::apply_sandbox(sink, action.player_id, op) }`; in `reduce`, run `end_due_turns` only `if action_type != ActionType::Sandbox` (R923000: no move). `each_legal_action` unchanged.\n8. **Server `protocol.rs`**: `ActionType::Sandbox` into `SERVER_ONLY_ACTION_TYPES` (doc: only a practice sandbox takes it; the server creates none); in `parse_action_body` after the Emote check, `parsed == Some(ActionType::Sandbox)` \u2192 `malformed(r#\"\"sandbox\" is a practice sandbox action, never a match's (R923000)\"#)`; `| ActionType::Sandbox` in the unreachable arm. README \"What the actor holds\": a bullet.\n9. **Web wire**: `wasm/index.ts` `CreateGameArgs.sandbox?: true` (doc R923000); `wire/index.ts` exports `SandboxOp`, `SandboxZone`.\n10. **`protocol.ts`**: `PracticeStartConfig.sandbox?: true`. **`core.ts`**: `startGame` and `foldInputOf` spread `sandbox: true` from the config; `keepsBoard` adds `&& game.config.sandbox !== true`; `isForbiddenAiAction` true for `\"sandbox\"`; `resumeGame` throws its \"not the one the page remembers\" error when the two configs' `sandbox === true` differ; header fold tuple names `sandbox`. **`resume.ts`**: `isConfig` accepts `sandbox` absent or `true`; `writePracticeResume` keeps it.\n11. `config.ts`: `SANDBOX_RESULTS_SHOWN = 24`. `testids.ts`: `sandbox: \"practice-sandbox\"`; mirror `PRACTICE_SANDBOX` after `PRACTICE_LEAN_NEWEST` in `e2e/support/testids.ts`.\n12. **`PracticeSetup.tsx`**: `PracticeSetupChoice.sandbox?: boolean`; a `t()` checkbox \"Sandbox: dev tools to spawn cards and set up the board\" (testid `practiceTestid.sandbox`) above Start; `submit` adds `sandbox: true` when checked.\n13. **`practice/sandbox.ts`** (pure; never import `game/deckbuilder/filters.ts`, it bundles `CATALOG`):\n    - `sandboxTestid`: `panel`, `holdAi`, `seat`, `search`, `radiant`, `zone`, `lane`, `result(defId)`, `health`, `armor`, `setHero`, `manaCurrent`, `manaMax`, `setMana`, `drawCount`, `draw`, `target`, `destroy`, `remove`, each `\"sandbox-<kebab>\"` (`result` \u2192 `sandbox-result-${defId}`).\n    - `searchSandboxCards(defs: CardDefs, query: string, radiant: boolean): CardDef[]`: whitespace terms of the trimmed lower-cased query; none \u2192 `[]`; catalog order, every term inside the lower-cased, newline-joined name, `fillParams(def, radiant ? \"radiant\" : \"base\")`, id, set, type, cost words (number, `\"x\"`, `\"<base> embiggen <embiggen>\"`), rarity.\n    - `spawnBody(defId, radiant, seat, zone: \"hand\" | \"field\" | \"graveyard\" | \"libraryTop\", lane): ActionBody`; `sandboxBody(op: SandboxOp): ActionBody`; `sideOf(view, seat)`; `wholeOr(text, fallback)` (`Math.trunc(Number(text))` if finite and non-blank).\n    - `sandboxTargets(view, defs): { instanceId; label }[]`: your hand (array), your units, your public backrow (`faceDown === false`), the opponent's units and public backrow, your graveyard, theirs; label `\"<You|AI>: <name> (<hand|field|graveyard>)\"` via `t()`, name `defs[defId]?.name ?? defId`.\n14. **`SandboxPanel.tsx`** (imports `sandbox.css`): props `{ view; defs: CardDefs; aiHeld; onHoldAi(held); onAction(body) }`. `<details className=\"sandbox-panel\" open>`, summary \"Sandbox\": hold checkbox; seat select (\"You\"/\"AI\"); search, Radiant checkbox, zone select, lane select (`1..view.you.units.length`, Field only); up to `SANDBOX_RESULTS_SHOWN` result buttons with `<CardFace face={faceModel({ defId, def, radiant })} layout=\"compact\" lazyArt />`, aria-label \"Spawn {name}\", click \u2192 `onAction(spawnBody(\u2026))`; child `SeatControls key={seat}` with number inputs initialised from `sideOf` (bounds from `SANDBOX_*`; draw default 1) and Set hero, Set mana, Draw; target select with Destroy and Remove. No legality checks (refusals show as the board's error). CSS: `position: fixed`, inline end, `top: 4.5rem`, `width: min(22rem, 92vw)`, `max-height: calc(100dvh - 6rem)`, `overflow: auto`, `z-index: 21`, `var(--bg)`, `1px solid var(--line)`.\n15. **`routes/practice.tsx`**: `configFor`, `onPlayAgain` carry `sandbox`; after `onAction`: `aiHeld` state reset by `useEffect` on `game`, and `useEffect(() => { controller?.setHold(\"sandbox\", aiHeld); }, [controller, aiHeld])`; `trackStats` also needs `config.sandbox !== true`; HUD mode text \"Sandbox\"; before the board `<div>`: the panel when `snapshot.view.sandbox === true && defs !== null`.\n16. **Spec.** Front matter as `R0345.md`:\n    - R923000 \"A practice sandbox: dev tools as an engine action, only in a game created as one\": the flag and its carriers (fold, Glitch reset); the six ops; either seat, main phase, no prompt or mulligan; no turn counts it and no automatic end follows it (R82, R345, R456); names only a card its sender may read; logged and folded; never in `legalActions`; the server refuses it and creates none; counts for nothing (\u00a79.11, R508, R639, tutorial); `viewFor.sandbox`; rejected: a client-side tool (rule 7).\n    - R923001 \"A spawned card is placed, not played\": a Created card (R943) on the verbs' paths; no Cry (R1; R411 is card text), no play, summoning sick; arrival triggers answer as usual; a placement the rules turn away (R4, R80, R11, a zone) is refused, not burned; Hearthstone semantics.\n    - R923002 \"The sandbox's hero and mana settings\": health set as `healthSet` (1\u201399), Armor the hero's own (R124), mana until the next refresh (\u00a72.3); rejected: writing `permMod`.\n    \u00a710.2: before \", plus server-only `timeout`\" add `` `sandbox {op}` `` with [[R923000]]; \u00a79.9: a closing **Sandbox** paragraph; \u00a79.11 Player statistics: exclude a sandbox game; `11-rulings.md`: an \"(issue #923, 2026-10-14)\" paragraph in the R849000 style. Run `cargo jackioh spec index`.\n17. READMEs: engine (`create_game` row, module map), web (practice bullet).\n18. Run the full workspace cargo test to regenerate `apps/web/src/wire/`.\n\n## Tests\n\n- `fixtures/sandbox.rs`: over `vanilla_catalog(40, 1)`, `sb-crier` (Unit; Cry `effects::damage` 3 to `enemyHero`, as `double_edge`), `sb-trap`, `sb-spell`, `sb-unshipped` (set `\"Boss\"`); `setup_sandbox_catalog()`; `sandbox_game(seed) -> (GameState, Vec<Action>)`: flagged `create_game`, `begin_game`, keep-all mulligans (as `auto_end_turn.rs::mulligans`).\n- `tests/rules/sandbox.rs` (active seat `a`):\n  - `r923000_only_a_game_created_as_a_sandbox_takes_one`: flag and `view_for(..).sandbox` both seats; unflagged refuses with \"this game is not a sandbox\".\n  - `r923000_never_listed_and_off_turn_outside_prompts_and_the_mulligan`: no `Sandbox` in either `legal_actions`; non-active Draw accepted; count 0 refused; mulligan and `pending` (`emotes.rs`'s JSON) refusals.\n  - `r923000_no_turn_ends_by_itself_after_one`: SetMana{a,0,0}: `a` still active, no `TurnAutoEnded`; then `SetAutoEndTurn { enabled: true }` auto-ends.\n  - `r923000_a_sandbox_game_replays_from_its_log`: spawn, SetHero{P2,7,1}, Draw, EndTurn; flagged `fold` errorless, same `hash_state`; unflagged refuses the three.\n  - `r923000_a_sandbox_game_leaves_no_summary`: mulligans + Concede: `None` flagged, `Some` not.\n  - `r923000_a_glitch_reset_deals_a_sandbox_again`: `reset_match(&mut sink_for(&mut state))`.\n  - `r923000_destroy_and_remove_name_only_a_card_the_sender_can_see`: destroyed P2 unit (`put`) in P2's graveyard; removed own hand card in exile; P2 hand id, own library id, hand Destroy refused.\n  - `r923001_a_spawned_unit_is_summoned_not_played`: Radiant crier at lane 3: radiant, `summoned_turn == Some(turn)`, enemy hero `HERO_HEALTH`, `Summoned` without `CardPlayed`, `counters.played` unchanged.\n  - `r923001_each_zone_takes_the_card_or_refuses`: hand (`created == Some(true)`), graveyard, `library[0]`, face-down trap; every step-6 refusal (Spell, occupied lane, lane 9, unshipped, unknown, full hand, `fx-token-rush` to graveyard).\n  - `r923002_set_hero_health_and_armor`: 12/3 + `HealthSet`; 0, 100, Armor \u22121 refused.\n  - `r923002_set_mana_lasts_until_the_next_refresh`: 7/9 + `ManaChanged`; after both seats end a turn `max == max_mana_for(..)`; 100 refused.\n- `crates/ai/tests/ai/sandbox.rs` `r923000_the_ai_never_takes_a_sandbox_action`: `register_cards`, `random_decks`, flagged game, 40 `decide` steps (`AiOptions::with_budget`, `skill.rs`'s `QUICK`): no `Sandbox` in `legal_actions`, `candidate_set` or the decision.\n- Server: `match_actor.rs` `m6_t4_the_match_actor` after the R79 test, `r923000_refuses_a_sandbox_action_sent_by_a_client` (exact message, no rows, no result); `engine_real.rs` new module, `r923000_the_server_creates_and_folds_no_sandbox_game` (both args `None`; its state refuses a Draw).\n- Web (`describe`/`it` titles carry `R923000`): `sandbox.test.ts` (each search field, AND, empty, Radiant text; target order without hidden cards; exact `spawnBody`; `wholeOr`); `SandboxPanel.test.tsx` (search + click \u2192 exact spawn body for p2, field lane 2, Radiant; hero, mana, draw bodies; `onHoldAi(true)`; Destroy, Remove); `core.test.ts` (sandbox start, `keepAll` + `aiStep` to main, spawn to hand, set AI hero, `fold` with `sandbox: true` to `debug.hash` and errors without, no `lastBoard` after concede; free game error \"this game is not a sandbox\"); `resume.test.ts` round trip; `routes/practice.test.tsx` (as the R1373 test; the host's start reply adds `sandbox: true` to the view for a sandbox config): checked \u2192 `starts()[0].sandbox === true` and `sandbox-panel` shown, unchecked \u2192 neither.\n\n```\ncargo test -p jackioh-engine --features testkit --test rules r9230\ncargo test -p jackioh-ai --test ai r923000\ncargo test -p jackioh-server --test server r923000\ncargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts\npnpm --dir apps/web exec vitest run src/practice src/routes/practice.test.tsx\npnpm --dir apps/web typecheck && pnpm exec eslint apps/web e2e\ncargo jackioh spec check\n```\n\n## Done when\n\n- [ ] A sandbox game searches, spawns into every zone for both seats, sets health, Armor and mana, draws, destroys, removes and holds the AI.\n- [ ] It folds from its log; the server refuses the action; the AI never takes one.\n- [ ] All tests above pass; regenerated `apps/web/src/wire/` kept; every harness check green.\n\n## Risks\n\n- **Hashes**: new fields are `None` unless set, so goldens hash unchanged; never write `Some(false)`.\n- **Hidden information**: `seen_card` is the only lookup for Destroy and Remove.\n- **Replay**: every practice fold path (`foldInputOf`, resume) passes `sandbox`.\n- **Auto end**: skip `end_due_turns` for `Sandbox` only; R82 and R345 tests stay green.\n\n## Open questions\n\n- Max mana lasts until the next refresh; making it stick needs a \u00a72.3 decision.\n- Remove exiles; a traceless delete would need a new event.\n- A spawn the rules turn away is refused rather than burned.\n- Custom cards (#915) are unshipped; the search takes `defs`, so they merge in later.",
-        "family": "claude",
-        "kind": "draft",
-        "notes": "",
-        "provider": "claude-7",
-        "reason": "stopped by @squishy-squooby",
-        "trail": "nPlayAgain\\\\|const initial\\\\b\\\\|const initial =\\\" -A10 apps/web/src/routes/practice.tsx | head -40\", \"description\": \"Read onPlayAgain in practice route\"}\n- Bash: {\"command\": \"sed -n 1,57p apps/web/src/practice/config.ts; sed -n 260,300p apps/web/src/cards/model.ts\", \"description\": \"Read practice config.ts and FaceSource\"}\n- Bash: {\"command\": \"grep -rn \\\"make_context(\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/resolve.rs\\\" | head -8; sed -n 90,110p crates/engine/src/resolve.rs\", \"description\": \"Find make\u2026\n- Bash: {\"command\": \"sed -n 100,125p crates/engine/src/attack_summon.rs\", \"description\": \"Read attack_summon make_context example\"}\n- Bash: {\"command\": \"grep -rn \\\"SERVER_ONLY_ACTION_TYPES\\\\|CLIENT_ACTION_TYPES\\\" crates --include=*.rs | grep -v \\\"^crates/server/src/actor/protocol.rs:1[01][0-9]:\\\" | head; sed -n 1585,1610p crates/server/t\u2026\n- Bash: {\"command\": \"sed -n 262,292p apps/web/README.md\", \"description\": \"Read web README practice section\"}\n- Bash: {\"command\": \"sed -n 171p spec/09-architecture.md; grep -n \\\"fn exile_card\\\" -A3 crates/engine/src/effects/move_.rs | head -5; grep -n \\\"pub fn instance_of\\\" -A15 crates/engine/src/effects/targets.rs \u2026\n- Bash: {\"command\": \"sed -n 61,110p crates/engine/src/effects/targets.rs\", \"description\": \"Read resolve_target for Instance spec\"}\n- Bash: {\"command\": \"grep -n \\\"error\\\" apps/web/src/game/Game.tsx | head -12\", \"description\": \"Check Game error prop handling\"}\n- Bash: {\"command\": \"grep -n \\\"jackioh/shared\\\\|jackioh/engine\\\\\\\"\\\" apps/web/vite.config.ts apps/web/tsconfig.json | head; ls apps/web/src/wire/ | head -30; grep -n \\\"generated\\\" apps/web/src/wire/shared.ts\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/wire/index.ts | grep -n \\\"generated\\\\|export\\\" | head -30\", \"description\": \"Read wire index exports\"}\n- Bash: {\"command\": \"grep -rln \\\"Sandbox\\\\b\\\\|SandboxOp\\\\|sandbox\\\" crates apps/web/src --include=*.rs --include=*.ts --include=*.tsx | head; grep -rn \\\"fn r923\\\\|R923[0-9]\\\" crates apps/web/src e2e spec --i\u2026\n- Bash: {\"command\": \"grep -rnoh \\\"R923[0-9]*\\\" crates apps/web/src e2e spec | sort | uniq -c | head\", \"description\": \"Check R923 ids cited in repo\"}\n- Bash: {\"command\": \"grep -rhoE \\\"R923[0-9]+\\\" crates apps/web/src e2e spec | sort -u | head\", \"description\": \"List R923xxx ids beyond R923\"}\n- Bash: {\"command\": \"grep -rn \\\"ActionType::ALL\\\" crates apps --include=*.rs | head; grep -rn \\\"\\\\\\\"ceilingReached\\\\\\\"\\\" apps/web/src --include=*.ts --include=*.tsx | head\", \"description\": \"Find ActionType::\u2026\n- Bash: {\"command\": \"sed -n 90,120p crates/engine/tests/rules/fixtures/catalog.rs; grep -n \\\"pub fn fixture_catalog\\\" -A12 crates/engine/tests/rules/fixtures/scripts.rs\", \"description\": \"Check vanilla catalo\u2026\n- Bash: {\"command\": \"sed -n 268,300p apps/web/src/wire/catalog.ts; grep -n \\\"export function CardFace\\\\|export type CardFaceProps\\\" -A14 apps/web/src/cards/CardFace.tsx | head -30\", \"description\": \"Check fil\u2026\n- Bash: {\"command\": \"for r in R0001 R0011 R0043 R0064 R0082 R0151 R0187 R0311 R0345 R0417 R0456 R0508 R0639 R0676 R0943 R0004 R0080 R0178 R0018 R0124 R0181 R0097; do printf \\\"%s: \\\" $r; grep -m1 \\\"^title:\\\" \u2026\n- Bash: {\"command\": \"sed -n 1,20p spec/rulings/R0001.md | cut -c1-700; grep -n \\\"Summon\\\" spec/06-keywords.md | head -5 | cut -c1-400\", \"description\": \"Read R1 Cry ruling and Summon keyword\"}\n- Bash: {\"command\": \"grep -rn \\\"R411\\\" crates/engine/src | head -5\", \"description\": \"Find R411 implementation\"}\n- Bash: {\"command\": \"grep -rln \\\"R411\\\" crates | head -5; sed -n 1,12p spec/rulings/R0411.md | cut -c1-600\", \"description\": \"Locate R411 in cards and spec\"}\n- Bash: {\"command\": \"for r in R0460 R0688 R0047 R0033 R0215 R0766 R0290 R0169 R1143 R0002; do printf \\\"%s: \\\" $r; grep -m1 \\\"^title:\\\" spec/rulings/$r.md 2>/dev/null || echo MISSING; done; grep -n \\\"### 2.3\\\u2026\n- Bash: {\"command\": \"sed -n 40,95p crates/engine/tests/rules/fixtures/catalog.rs | grep -n \\\"cost\\\\|\\\\\\\"id\\\\\\\"\\\\|fn token_def\\\" ; grep -n \\\"pub fn reset_match\\\\|pub(crate) fn reset_match\\\" crates/engine/src/\u2026\n- Bash: {\"command\": \"grep -n \\\"it(\\\\\\\"\\\" apps/web/src/routes/practice.test.tsx | head -20; grep -n \\\"starts()\\\\[0\\\\]\\\" apps/web/src/routes/practice.test.tsx | head -3\", \"description\": \"Find route tests that \u2026\n- Bash: {\"command\": \"sed -n 855,875p apps/web/src/routes/practice.test.tsx\", \"description\": \"Read a route test that starts a game\"}\n- Bash: {\"command\": \"sed -n 840,856p apps/web/src/routes/practice.test.tsx | grep -n \\\"it(\\\\|renderRoute\\\\|render(\\\" \", \"description\": \"Find the lean toggle test name\"}\n- Bash: {\"command\": \"grep -n \\\"^\\\\.practice-hud {\\\" -A14 apps/web/src/practice/practice.css | head -20; grep -n \\\"z-index\\\" apps/web/src/practice/practice.css | head -5\", \"description\": \"Read practice HUD cs\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Status\\n- Investigation complete (engine, server, AI, web, spec). Writing final plan text next; see final message.\\n- Tests decided: engine tests/rules/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-923/.bot-plan.md\", \"content\": \"## Goal\\n\\nA practice game can be started as a **sandbox**: a normal game against the AI plus a dev-tools panel that se\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"sed -n 74,92p crates/engine/tests/rules/fixtures/catalog.rs; grep -n \\\"pub fn is_unit_token\\\" -A20 crates/engine/src/zones.rs | head -22\", \"description\": \"Check token_def type and is_uni\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-923/.bot-plan.md\", \"content\": \"## Goal\\n\\nPractice setup gains a **Sandbox** choice: a normal game against the AI plus a dev-tools panel that searches\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"ls crates/server/tests/ | head; grep -n \\\"mod actor\\\\|mod engine_real\\\\|mod match_actor\\\" crates/server/tests/*.rs crates/server/tests/actor/mod.rs 2>/dev/null | head\", \"description\": \"C\u2026"
-      },
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
@@ -6472,11 +6106,9 @@
       "started_at": "2026-10-14T20:05:43Z",
       "stop_requested": true,
       "stopped_at": "2026-10-14T20:23:49Z",
-      "stopped_by": "squishy-squooby",
-      "taken_asks": []
+      "stopped_by": "squishy-squooby"
     },
     "924": {
-      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -6490,7 +6122,6 @@
     },
     "925": {
       "action": "revise",
-      "asks": [],
       "audit_tier": "strong",
       "cleared": {
         "at": "2026-10-15T01:16:44Z",
@@ -6507,44 +6138,21 @@
       "interruptions": 0,
       "issue": 882,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-4",
-      "question": "",
       "queued_at": "2026-10-14T23:23:15Z",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
       "run_id": "38658484134",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-15T00:11:07Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38658484134",
-            "tier": "strong"
-          }
-        ],
-        "sha": "9945116b9bcedbe5ccfae0d8d1b1d06ffa89f6c6",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 1
     },
     "927": {
       "action": "revise",
-      "asks": [],
       "ci_fixed_head": "8f9fa837ee832a99ea185c05d7849179327419e2",
       "ci_fixes": 2,
       "ci_reruns": {
@@ -6568,45 +6176,22 @@
       "interruptions": 0,
       "issue": 897,
       "kind": "revise",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-3",
-      "question": "",
       "queued_at": "2026-10-14T23:35:53Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "38655608671",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-14T23:42:08Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 3,
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38655608671",
-            "tier": "strong"
-          }
-        ],
-        "sha": "8f9fa837ee832a99ea185c05d7849179327419e2",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "verdict_rounds": 3
     },
     "929": {
       "action": "plan",
-      "asks": [],
       "difficulty_by": {
         "at": "2026-10-14T21:34:58Z",
         "difficulty": "medium",
@@ -6616,15 +6201,6 @@
       },
       "failures": 0,
       "forced": false,
-      "handoff": {
-        "at": "2026-10-14T21:33:35Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "# Plan (muse-spark-1.3-contributor, medium)\n\n**Human required:** every change this needs is under `bot/` or `.github/workflows/`, which the night bot may not touch (CLAUDE.md, \"The night bot\"). A person makes the two small edits below, runs the bot's own unit tests, and closes #899 by hand as the end-to-end proof.\n\n## Goal\n\nA bare human comment of `approve` or `reject` (the word alone on its line, the documented vote on a `bot:suggestion` issue) is answered promptly: `approve` queues the suggestion to build exactly as `bot:build` does, and `reject` closes it unbuilt with the declined log entry, instead of being ignored by both the event handler and the sweep. Issue #899 is then closed by hand to prove the path works.\n\n## Files to touch\n\n| File | New / change | What changes |\n|---|---|---|\n| `.github/workflows/bot-commands.yml` | change | `jobs.event.if`: the `issue_comment` clause also wakes for a bare approve/reject vote |\n| `bot/harness/sweep.py` | change | `_comments` (via `_asks`): a bare vote counts as a request so the sweep recovers missed votes |\n| `bot/tests/test_sweep.py` | change | `LostCommentTests`: one test each that the sweep answers a bare `approve` and a bare `reject` |\n\nDo not touch anything else: no `crates/`, `apps/web`, `e2e/`, or `spec/` change, no ruling note, no label, config, schedule, or dependency change, and no other file under `bot/`, `.github/`, or `.harness/`. No spec section or ruling governs this change; the governing contract is `bot/README.md` (\"Giving it work\", the Commands table's `approve`/`reject` row, the Labels table's `bot:suggestion` row, \"No request is lost\") with the vote semantics in `bot/harness/commands.py` (`VOTES`, `vote`, `VOTE_HELP`) and `bot/harness/events.py` (`on_comment`, `answer_vote`).\n\n## Steps\n\n1. In `bot/harness/sweep.py`, make `_comments` recognise bare votes on issue comments. In the `act` closure inside `_comments` (around line 242), compute `vote = \"\" if review_comment else commands.vote(body, ctx.cfg.bot_login)[0]` and change the filter `if not _asks(ctx, body) or not _trusted(ctx, comment)` to skip only when there is neither a vote nor a command (`if (not vote and not _asks(ctx, body)) or not _trusted(ctx, comment)`). `commands` is already imported. Leave review comments vote-free, matching `events.on_comment`, which ignores votes there. Copy the settled/trust/claim flow around it unchanged.\n2. In `.github/workflows/bot-commands.yml`, extend the `issue_comment` wake clause (lines 55\u201358) so a bare vote starts the event job at once instead of waiting for the sweep. Append to the `/harness` / `@jgoetzmann-bot` `contains(...)` disjunction an OR over substring checks for the two vote words in their common casings (`approve`, `Approve`, `APPROVE`, `reject`, `Reject`, `REJECT`) on `github.event.comment.body`, keeping the existing owner/member/collaborator and actor guards. Precision stays in Python (`commands.vote` requires the word alone on its line and ignores quotes and fences), so an over-wake on prose merely runs the handler to a harmless `no command`. Update the job's header comment (lines 42\u201346) to say bare suggestion votes wake it.\n3. In `bot/tests/test_sweep.py`, add `LABEL_SUGGESTION` to the `harness.config` import, then add two tests to `LostCommentTests` following `test_a_command_nobody_answered_is_answered_by_the_sweep`: `test_a_bare_approve_vote_is_answered_by_the_sweep` (open suggestion issue, `add_comment(n, \"approve\", OPERATOR, created_at=AN_HOUR_AGO)`, `sweep.sweep`, assert `bot:suggestion` is off, `bot:build` is on, the reply queues the issue, and a second sweep returns `[]`) and `test_a_bare_reject_vote_is_answered_by_the_sweep` (same with `\"reject\"`, assert the issue is closed and the reply starts `Rejected: I closed #n`, and a second sweep returns `[]`).\n4. Close #899 by hand (comment `approve` to build it or `reject`/close to decline it), confirming the bot answers within one event run.\n\n## Tests\n\n- `bot/tests/test_sweep.py`: `test_a_bare_approve_vote_is_answered_by_the_sweep` (bare approve on an open `bot:suggestion` is queued by the sweep and answered exactly once) and `test_a_bare_reject_vote_is_answered_by_the_sweep` (bare reject closes it with the rejection reply, answered exactly once). Run from `bot/`: `python3 -m unittest tests.test_sweep -v`, then the full suite as `bot-selftest.yml` does: `python3 -m unittest discover -s tests -t .`.\n- Live proof (no unit test can cover the workflow gate): the hand-closed #899 from step 4, answered by the event job rather than the sweep.\n\n## Done when\n\n- [ ] A bare `approve` on an open suggestion queues it (`bot:suggestion` off, queued reply) via the event job immediately.\n- [ ] A bare `reject` closes it unbuilt with the rejection reply and declined entry, via the event job immediately.\n- [ ] A vote the event job misses is still answered by the next sweep (the two new tests).\n- [ ] No double answers: a second sweep after either vote reports nothing.\n- [ ] `python3 -m unittest discover -s tests -t .` passes from `bot/`; the workflow YAML still parses; #899 is closed.\n\n## Risks\n\n- Extra workflow wakes from the substring gate cost a short no-op run each; bounded because Python answers `no command` without replying or reacting, and `claim` keeps the sweep from repeating it. Not raising the sweep cadence instead: GitHub already fires the ten-minute schedule late (see `bot-status.yml`'s header), so cadence alone cannot fix latency.\n- Vote false positives follow the long-documented semantics (word alone on its line; quoted and fenced lines excluded by `command_lines`, proven in `test_flow.py`); the gate changes none of that, it only decides what wakes the job.\n- Trust and level checks are untouched: the sweep still requires a trusted author and `execute` still enforces the maintainer level for votes, replying without acting otherwise.\n\n## Open questions\n\nNone blocking. The only judgment call is #899's disposition (build it with `approve`, or decline it with `reject`/close), which the person closing it makes in step 4.\n\n# Notes\n\n",
-        "provider": "muse",
-        "reason": "its plan leaves nothing the bot may do",
-        "trail": "- <!-- bot: {\"difficulty\": \"medium\", \"why\": \"line 9 (stands alone): with no GitHub access I cannot verify no open PR touches sweep.py, and line 6 already fails since every fix file is a forbidden path\"} -->\n- **Human required:** every change this needs is under `bot/` or `.github/workflows/`, which the night bot may not touch (CLAUDE.md, \"The night bot\"). A person makes the two small edits below, runs the bot's own unit tests, and closes #899 by hand as the end-to-end proof.\n- ## Goal\n- A bare human comment of `approve` or `reject` (the word alone on its line, the documented vote on a `bot:suggestion` issue) is answered promptly: `approve` queues the suggestion to build exactly as `bot:build` does, and `reject` closes it unbuilt with the declined log entry, instead of being ignore\u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `.github/workflows/bot-commands.yml` | change | `jobs.event.if`: the `issue_comment` clause also wakes for a bare approve/reject vote |\n- | `bot/harness/sweep.py` | change | `_comments` (via `_asks`): a bare vote counts as a request so the sweep recovers missed votes |\n- | `bot/tests/test_sweep.py` | change | `LostCommentTests`: one test each that the sweep answers a bare `approve` and a bare `reject` |\n- Do not touch anything else: no `crates/`, `apps/web`, `e2e/`, or `spec/` change, no ruling note, no label, config, schedule, or dependency change, and no other file under `bot/`, `.github/`, or `.harness/`. No spec section or ruling governs this change; the governing contract is `bot/README.md` (\"G\u2026\n- ## Steps\n- 1. In `bot/harness/sweep.py`, make `_comments` recognise bare votes on issue comments. In the `act` closure inside `_comments` (around line 242), compute `vote = \"\" if review_comment else commands.vote(body, ctx.cfg.bot_login)[0]` and change the filter `if not _asks(ctx, body) or not _trusted(ctx, \u2026\n- 2. In `.github/workflows/bot-commands.yml`, extend the `issue_comment` wake clause (lines 55\u201358) so a bare vote starts the event job at once instead of waiting for the sweep. Append to the `/harness` / `@jgoetzmann-bot` `contains(...)` disjunction an OR over substring checks for the two vote words \u2026\n- 3. In `bot/tests/test_sweep.py`, add `LABEL_SUGGESTION` to the `harness.config` import, then add two tests to `LostCommentTests` following `test_a_command_nobody_answered_is_answered_by_the_sweep`: `test_a_bare_approve_vote_is_answered_by_the_sweep` (open suggestion issue, `add_comment(n, \"approve\"\u2026\n- 4. Close #899 by hand (comment `approve` to build it or `reject`/close to decline it), confirming the bot answers within one event run.\n- ## Tests\n- - `bot/tests/test_sweep.py`: `test_a_bare_approve_vote_is_answered_by_the_sweep` (bare approve on an open `bot:suggestion` is queued by the sweep and answered exactly once) and `test_a_bare_reject_vote_is_answered_by_the_sweep` (bare reject closes it with the rejection reply, answered exactly once)\u2026\n- - Live proof (no unit test can cover the workflow gate): the hand-closed #899 from step 4, answered by the event job rather than the sweep.\n- ## Done when\n- - [ ] A bare `approve` on an open suggestion queues it (`bot:suggestion` off, queued reply) via the event job immediately.\n- - [ ] A bare `reject` closes it unbuilt with the rejection reply and declined entry, via the event job immediately.\n- - [ ] A vote the event job misses is still answered by the next sweep (the two new tests).\n- - [ ] No double answers: a second sweep after either vote reports nothing.\n- - [ ] `python3 -m unittest discover -s tests -t .` passes from `bot/`; the workflow YAML still parses; #899 is closed.\n- ## Risks\n- - Extra workflow wakes from the substring gate cost a short no-op run each; bounded because Python answers `no command` without replying or reacting, and `claim` keeps the sweep from repeating it. Not raising the sweep cadence instead: GitHub already fires the ten-minute schedule late (see `bot-sta\u2026\n- - Vote false positives follow the long-documented semantics (word alone on its line; quoted and fenced lines excluded by `command_lines`, proven in `test_flow.py`); the gate changes none of that, it only decides what wakes the job.\n- - Trust and level checks are untouched: the sweep still requires a trusted author and `execute` still enforces the maintainer level for votes, replying without acting otherwise.\n- ## Open questions\n- None blocking. The only judgment call is #899's disposition (build it with `approve`, or decline it with `reject`/close), which the person closing it makes in step 4.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-4/_work/_temp/work/item-929 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-4/_work/_temp/work/item-929/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
@@ -6633,17 +6209,14 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
-      "question": "every change this needs is under `bot/` or `.github/workflows/`, which the night bot may not touch (CLAUDE.md, \"The night bot\"). A person makes the two small edits below, runs the bot's own unit tests, and closes #899 by hand as the end-to-end proof.",
       "queued_at": "2026-10-14T21:21:05Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38640573939",
       "started_at": "2026-10-14T21:29:26Z",
-      "stop_requested": false,
-      "taken_asks": []
+      "stop_requested": false
     },
     "951": {
       "action": "review",
-      "asks": [],
       "ci_fixed_head": "eb8101626f197940f07bf9cd91a29e9b38aa29ee",
       "ci_fixes": 1,
       "ci_reruns": {
@@ -6666,52 +6239,22 @@
       "interruptions": 0,
       "issue": 861,
       "kind": "review",
-      "last_findings": [],
       "merged": true,
       "pending_request": false,
       "provider": "claude-1",
-      "question": "",
       "queued_at": "2026-10-15T01:54:48Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
       "run_id": "38669306665",
-      "self_check_findings": [],
       "source": "",
       "started_at": "2026-10-15T02:07:50Z",
       "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 1,
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38663814996",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "38669306665",
-            "tier": "strong"
-          }
-        ],
-        "sha": "eb8101626f197940f07bf9cd91a29e9b38aa29ee",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "verdict_rounds": 1
     },
     "952": {
       "action": "review",
-      "asks": [],
       "cleared": {
         "at": "2026-10-15T01:23:02Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6734,35 +6277,8 @@
       "review_floor": "",
       "review_notes": "",
       "run_id": "38664795116",
-      "self_check_findings": [],
       "started_at": "2026-10-15T01:18:45Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "votes": {
-        "approvals": [
-          "muse",
-          "claude"
-        ],
-        "builder": "muse",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38657139614",
-            "tier": "medium"
-          },
-          {
-            "family": "claude",
-            "run": "38664795116",
-            "tier": "strong"
-          }
-        ],
-        "sha": "92b436d4004a237d1734ec8e443831b6e86f2806",
-        "tiers": {
-          "claude": "strong",
-          "muse": "medium"
-        }
-      }
+      "stop_requested": false
     },
     "955": {
       "action": "review",
@@ -6840,26 +6356,7 @@
       "feedback_since": "2026-10-14T23:52:47Z",
       "issue": 892,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38656670464",
-            "tier": "strong"
-          }
-        ],
-        "sha": "fefde383af60345ca2fdfd50e779df7c9a7a35d5",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "957": {
       "ci_reruns": {
@@ -6876,26 +6373,7 @@
       "feedback_since": "2026-10-15T00:06:59Z",
       "issue": 891,
       "kind": "revise",
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "run": "38658063929",
-            "tier": "strong"
-          }
-        ],
-        "sha": "39e507ae258c9e4c738fed4baa77d2d2f28a4047",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     },
     "958": {
       "action": "revise",
@@ -13394,9 +12872,9 @@
     }
   },
   "pruned": {
-    "at": "2026-10-14T06:44:27Z",
-    "dropped": 31,
-    "shed": 82
+    "at": "2026-10-15T06:54:41Z",
+    "dropped": 4,
+    "shed": 35
   },
   "rate_limited_until": "2026-10-02T21:30:00Z",
   "run_requested": null,
