@@ -9,7 +9,7 @@
 import type { ReactElement } from "react";
 
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
-import { CONTACT_URL } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -21,7 +21,7 @@ export const copyrightTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const COPYRIGHT_LAST_UPDATED = "2026-10-13";
+export const COPYRIGHT_LAST_UPDATED = "2026-10-15";
 
 export default function CopyrightRoute(): ReactElement {
   const locale = useLocale();
@@ -69,10 +69,13 @@ export default function CopyrightRoute(): ReactElement {
 
         <section aria-labelledby="copyright-agent">
           <h3 id="copyright-agent">Our designated agent</h3>
-          {/* OWNER: the agent registered at copyright.gov/dmca-directory, exactly as registered. The
-              registration expires every three years (docs/compliance.md). */}
+          <p>
+            Email notices to <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
+          </p>
+          {/* OWNER: the agent registered at copyright.gov/dmca-directory, exactly as registered, with
+              the email above. The registration expires every three years (docs/compliance.md). */}
           <p data-owner-slot="dmca-agent">
-            [Owner to add: the designated agent&rsquo;s name, postal address, email and telephone number, as
+            [Owner to add: the designated agent&rsquo;s name, postal address and telephone number, as
             registered with the U.S. Copyright Office.]
           </p>
         </section>
@@ -99,7 +102,7 @@ export default function CopyrightRoute(): ReactElement {
         <section aria-labelledby="copyright-contact">
           <h3 id="copyright-contact">Contact</h3>
           <p>
-            A notice goes to the designated agent above. Other questions: <a href={CONTACT_URL}>contact us on GitHub</a>.
+            A notice goes to the designated agent above. Other questions: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>
         </section>
       </article>

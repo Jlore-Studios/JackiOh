@@ -13,13 +13,14 @@ use std::panic::catch_unwind;
 
 use indexmap::IndexMap;
 use jackioh_ai::{
-    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, MatchConfig, MatchHooks, MatchRecord, Matchup, NextSwing,
-    SeatController, action_key, candidate_actions, evaluate, game_config, greedy_action, play_match,
-    random_action,
+    AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, MatchConfig, MatchHooks, MatchRecord, Matchup,
+    NextSwing, SeatController, action_key, candidate_actions, decide, evaluate, game_config, greedy_action,
+    play_match, random_action,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, Action, ActionBody, ActionType, FoldArgs, GameState, PerPlayer, PerPlayerOpt, PlayerId,
-    Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce, seat_to_act, subsystems,
+    Rng, Value, create_rng, def_of, fold, hash_state, json, json_as, query_cost, reduce, seat_to_act,
+    subsystems,
 };
 
 use super::support::{
@@ -172,16 +173,60 @@ mod play_match_b26 {
         let mut calls = 0;
         let timed = {
             let mut hooks = MatchHooks {
-                time_decision: Some(Box::new(|_seat: PlayerId, run: &mut dyn FnMut()| {
-                    calls += 1;
-                    run();
-                })),
+                time_decision: Some(Box::new(
+                    |_state: &GameState, _seat: PlayerId, _rng: &Rng, run: &mut dyn FnMut()| {
+                        calls += 1;
+                        run();
+                    },
+                )),
                 ..MatchHooks::default()
             };
             play_match(&config, &mut hooks)
         };
         assert!(calls > 0);
         assert_eq!(timed.hash, play_match(&config, &mut MatchHooks::default()).hash);
+    }
+
+    #[test]
+    fn r977000_the_timing_hook_hands_out_each_position_and_deciding_it_again_plays_the_matchs_action() {
+        const REDECIDED: usize = 6;
+        register_cards();
+        let config = game_config(Matchup::AiVsRandom, 1, AI_GATE_BUDGET, AI_GATE.seed_series);
+        let mut positions: Vec<(GameState, PlayerId, Rng)> = Vec::new();
+        let record = {
+            let mut hooks = MatchHooks {
+                time_decision: Some(Box::new(
+                    |state: &GameState, seat: PlayerId, rng: &Rng, run: &mut dyn FnMut()| {
+                        positions.push((state.clone(), seat, rng.clone()));
+                        run();
+                    },
+                )),
+                ..MatchHooks::default()
+            };
+            play_match(&config, &mut hooks)
+        };
+        assert!(record.thrown.is_empty());
+        assert!(record.rejected.is_empty());
+        assert_eq!(positions.len(), record.log.len());
+
+        let mut redecided = 0;
+        for (at, (state, seat, rng)) in positions.iter().enumerate() {
+            if redecided == REDECIDED {
+                break;
+            }
+            if !matches!(config.controllers[*seat], SeatController::Ai { .. }) {
+                continue;
+            }
+            let mut options = AiOptions {
+                rng: rng.clone(),
+                budget: AI_GATE_BUDGET,
+                should_stop: None,
+            };
+            let again = decide(state, *seat, &mut options).map(|decision| decision.action);
+            assert_eq!(again.as_ref(), Some(&record.log[at].body), "position {at}");
+            redecided += 1;
+        }
+        assert_eq!(redecided, REDECIDED);
     }
 }
 

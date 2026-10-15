@@ -12,7 +12,8 @@ Pure and seeded like the engine (CLAUDE.md rule 4): its `Cargo.toml` depends on 
 `serde_json` and `indexmap` only, and its `clippy.toml` is the engine's (no clock, no I/O, no
 environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes from an `Rng` the
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
-`now`). A node counter keeps its tallies in `Cell`, which the lint allows.
+`now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
+(R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).

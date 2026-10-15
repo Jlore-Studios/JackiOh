@@ -19,7 +19,9 @@
 //! and `timeout` ban from any game whose forced card the card was (`sweep_verdict`).
 //!
 //! Pure like the rest of src/: the clock arrives as `now`, which the CLI passes and a test leaves
-//! out, so a test's sweep never times out on a slow machine.
+//! out, so a test's sweep never times out on a slow machine. A decision the clock finds slow is handed
+//! to `retime` as a `SlowDecision` (R977000); the CLI times it again against the perf gate's
+//! yardstick, and only one still slow counts in `timeouts`, while `rawTimeouts` counts every one.
 //!
 //! Port of `packages/ai/src/sweep.ts`. TS's `try`/`catch` around dealing and playing a game is
 //! `catch_unwind`: a deck that cannot be dealt, or a game that panics where TS threw, is an error.
@@ -31,7 +33,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
     AI_DIFFICULTY, ActionBody, CostOptions, Difficulty, GameState, OffFieldZone, PerPlayer, PerPlayerOpt,
-    Phase, PlayerId, create_rng, effective_cost, opponent_of, zone_cards,
+    Phase, PlayerId, Rng, create_rng, effective_cost, opponent_of, zone_cards,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -41,6 +43,7 @@ use crate::deck::{AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::match_::{MatchConfig, MatchHooks, SeatController, play_match};
 use crate::shadow_ban::SHADOW_BAN;
+use crate::types::SearchBudget;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
@@ -126,6 +129,10 @@ pub struct SweepStats {
     pub plays: i32,
     pub errors: i32,
     pub timeouts: i32,
+    /// R977000: the timeouts before the re-timer: every decision the clock found slow, and every
+    /// game past maxActions. 0 in older slices.
+    #[serde(default)]
+    pub raw_timeouts: i32,
     /// R390: over the plays after which the game went on.
     pub eval_delta_sum: f64,
     pub eval_delta_count: i32,
@@ -205,12 +212,27 @@ pub struct SweepVerdict {
     pub watch: Option<String>,
 }
 
-/// `sweepCard`'s and `sweepAtRisk`'s options (TS's anonymous `{ seeds?, now?, tier? }`).
+/// R977000: a decision the sweep's clock found slower than AI_SWEEP.decisionMs, as the AI faced it:
+/// deciding `state` for `seat` at `budget` on a clone of `rng` makes the same decision again.
+#[derive(Clone, Copy)]
+pub struct SlowDecision<'a> {
+    pub state: &'a GameState,
+    pub seat: PlayerId,
+    pub budget: SearchBudget,
+    /// The AI's stream before the decision, as `play_match` hands it to the timing hook.
+    pub rng: &'a Rng,
+}
+
+/// `sweepCard`'s and `sweepAtRisk`'s options (TS's anonymous `{ seeds?, now?, tier? }`, and R977000's
+/// `retime`).
 #[derive(Clone, Copy, Default)]
 pub struct SweepOptions<'a> {
     pub seeds: Option<i32>,
     /// The clock, in milliseconds (TS `performance.now`); absent, no decision ever times out.
     pub now: Option<&'a dyn Fn() -> f64>,
+    /// R977000: whether a decision the clock found slow is still slower than decisionMs timed again
+    /// (`cargo jackioh sweep`: against the perf gate's yardstick); absent, every one counts.
+    pub retime: Option<&'a dyn Fn(&SlowDecision<'_>) -> bool>,
     pub tier: Option<Difficulty>,
 }
 
@@ -444,6 +466,7 @@ fn empty_stats(def_id: &str) -> SweepStats {
         plays: 0,
         errors: 0,
         timeouts: 0,
+        raw_timeouts: 0,
         eval_delta_sum: 0.0,
         eval_delta_count: 0,
         losing_plays: 0,
@@ -459,6 +482,7 @@ fn add_stats(into: &mut SweepStats, from: &SweepStats) {
     into.plays += from.plays;
     into.errors += from.errors;
     into.timeouts += from.timeouts;
+    into.raw_timeouts += from.raw_timeouts;
     into.eval_delta_sum += from.eval_delta_sum;
     into.eval_delta_count += from.eval_delta_count;
     into.losing_plays += from.losing_plays;
@@ -476,6 +500,7 @@ struct SweepGame {
     cards: Vec<SweepStats>,
     errors: i32,
     timeouts: i32,
+    raw_timeouts: i32,
 }
 
 /// R390: one play of a card by `seat`, counted into its stats. Every play counts in `plays`. A play
@@ -503,7 +528,8 @@ pub fn record_sweep_play(stats: &mut SweepStats, before: &GameState, after: &Gam
 /// 1), the turns it sat in hand affordable (effectiveCost <= mana at the AI's turn start), and its
 /// plays (`record_sweep_play`). The game's errors (throws, rejected or "fallback" AI actions; a game
 /// that cannot even be dealt is one) and timeouts (a decision whose `now()` duration > decisionMs, or
-/// maxActions hit) come back beside them.
+/// maxActions hit) come back beside them. A decision the clock found slow counts in `timeouts` only
+/// when the re-timer, if there is one, finds it slow again (R977000); `raw_timeouts` counts them all.
 fn play_sweep_game(
     seed: &str,
     def_id: &str,
@@ -511,7 +537,7 @@ fn play_sweep_game(
     tier: Difficulty,
     filler: &Filler,
     tracked: &[String],
-    now: Option<&dyn Fn() -> f64>,
+    options: &SweepOptions,
 ) -> SweepGame {
     let setup = match catch_unwind(AssertUnwindSafe(|| sweep_config(seed, def_id, n, tier, filler))) {
         Ok(setup) => setup,
@@ -524,6 +550,7 @@ fn play_sweep_game(
                 }],
                 errors: 1,
                 timeouts: 0,
+                raw_timeouts: 0,
             };
         }
     };
@@ -543,10 +570,12 @@ fn play_sweep_game(
         .collect();
     let mut errors = 0;
     let mut timeouts = 0;
+    let mut raw_timeouts = 0;
     // The last AI turn whose start was already counted, so a turn is counted once however many
     // actions it holds.
     let mut counted_turn: Option<i32> = None;
     let mut slow_decisions = 0;
+    let mut raw_slow_decisions = 0;
 
     let played = {
         let mut hooks = MatchHooks {
@@ -597,19 +626,35 @@ fn play_sweep_game(
             )),
             ..MatchHooks::default()
         };
-        if let Some(now) = now {
+        if let Some(now) = options.now {
+            let retime = options.retime;
             let slow = &mut slow_decisions;
-            hooks.time_decision = Some(Box::new(move |seat: PlayerId, run: &mut dyn FnMut()| {
-                let started = now();
-                run();
-                if seat == ai_seat && now() - started > f64::from(AI_SWEEP.decision_ms) {
-                    *slow += 1;
-                }
-            }));
+            let raw = &mut raw_slow_decisions;
+            hooks.time_decision = Some(Box::new(
+                move |state: &GameState, seat: PlayerId, rng: &Rng, run: &mut dyn FnMut()| {
+                    let started = now();
+                    run();
+                    if seat == ai_seat && now() - started > f64::from(AI_SWEEP.decision_ms) {
+                        *raw += 1;
+                        // R977000: the re-timer has the last word; without one the clock's stands.
+                        // AI_GATE_BUDGET is the budget `sweep_config` seats the AI at.
+                        let position = SlowDecision {
+                            state,
+                            seat,
+                            budget: AI_GATE_BUDGET,
+                            rng,
+                        };
+                        if retime.is_none_or(|retime| retime(&position)) {
+                            *slow += 1;
+                        }
+                    }
+                },
+            ));
         }
         catch_unwind(AssertUnwindSafe(|| play_match(&config, &mut hooks)))
     };
     timeouts += slow_decisions;
+    raw_timeouts += raw_slow_decisions;
 
     match played {
         Ok(record) => {
@@ -617,6 +662,7 @@ fn play_sweep_game(
             // A game still running at maxActions is a timeout; one a throw ended is already an error.
             if record.result.is_none() && record.thrown.is_empty() {
                 timeouts += 1;
+                raw_timeouts += 1;
             }
         }
         Err(_) => errors += 1,
@@ -625,6 +671,7 @@ fn play_sweep_game(
         cards,
         errors,
         timeouts,
+        raw_timeouts,
     }
 }
 
@@ -650,7 +697,7 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
             tier,
             &filler,
             &tracked,
-            options.now,
+            options,
         );
         let card = game.cards.into_iter().next().unwrap_or_else(|| SweepStats {
             games: 1,
@@ -661,6 +708,7 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
             &SweepStats {
                 errors: game.errors,
                 timeouts: game.timeouts,
+                raw_timeouts: game.raw_timeouts,
                 ..card
             },
         );
@@ -703,7 +751,7 @@ pub fn sweep_at_risk(
 
     for n in 1..=seeds {
         let seed = format!("sweep2:{tier}:{def_id}:{n}");
-        let game = play_sweep_game(&seed, def_id, n, tier, &filler, &tracked, options.now);
+        let game = play_sweep_game(&seed, def_id, n, tier, &filler, &tracked, options);
         for card in &game.cards {
             let forced = card.def_id == def_id;
             let total = totals
@@ -714,6 +762,7 @@ pub fn sweep_at_risk(
                 &SweepStats {
                     errors: if forced { game.errors } else { 0 },
                     timeouts: if forced { game.timeouts } else { 0 },
+                    raw_timeouts: if forced { game.raw_timeouts } else { 0 },
                     ..card.clone()
                 },
             );
