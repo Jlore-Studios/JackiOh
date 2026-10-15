@@ -2427,6 +2427,12 @@ player: PlayerId,
 
 export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone"
 
+export type ZoneRef = {
+player: PlayerId,
+row: Row,
+lane: number,
+}
+
 export type ZoneScope = {
 side: ScopeSide?,
 rows: {Row}?,
