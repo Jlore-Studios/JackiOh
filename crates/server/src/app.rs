@@ -673,6 +673,14 @@ pub static ROUTES: &[Route] = &[
         h!(crate::duos::replay::get_replay),
     ),
     // ---- end Duos co-op (#946) ----
+    // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
+    // answers as a path nobody serves.
+    (
+        "POST",
+        api::e2e::E2E_RESEED_PATH,
+        AuthLevel::None,
+        h!(api::e2e::post_reseed),
+    ),
     // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
     ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
     ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),

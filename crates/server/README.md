@@ -150,6 +150,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | Method | Path | Auth | What |
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
+| `POST` | `/api/e2e/reseed` | none | E2E mode only, elsewhere a path nobody serves (404): R144's reseed on demand, which spec 10 calls first; answers `{ profiles, grantedCards, codes }` |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
 | `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), and `queued` (R897000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
