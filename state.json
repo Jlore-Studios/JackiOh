@@ -7777,30 +7777,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-15T20:51:51Z",
+      "feedback_since": "2026-10-15T21:56:03Z",
       "forced": false,
       "interruptions": 0,
       "issue": 993,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The issue requires that `cargo jackioh gate` (smoke) passes and does not regress against main, but nobody ran the gate on this branch or on its base; the PR says the comparison 'belongs to CI', and CI does not run the AI gates on pull requests.",
-          "evidence": "The builder's report says 'Not run here: the smoke gate'. `.github/workflows/ci.yml:29` reads 'Not run per pull request (README \u00a77): ... the AI gates'; only super.yml runs `gate --full`, daily, after the merge. The plan said 'If the base has moved, measure main again ... Put both sets of numbers in the PR.' The base did move: the branch sits on e619da14 (#995), not the planner's b030da60. #995 changes how every AI deck is dealt: `crates/ai/src/deck.rs` now shapes only when `options.shape` is set, and no caller sets it, where before it shaped every seat under this AI's own ban list. So the 15/20 \u2192 16/20 smoke numbers and the 198-202 screen were measured on decks the gate no longer deals. Since then main has also taken #984, which changes the AI's search and evaluation. As it stands this AI change would auto-merge without one gate run on its own base.",
-          "severity": "blocking",
-          "where": "task"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-15T21:50:40Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38812935369",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-15T21:56:03Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
