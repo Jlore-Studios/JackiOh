@@ -149,6 +149,10 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
+- A seat's life is the engine's `effective_life` (own HP and the team's pool while unspent, §13.4)
+  everywhere the AI reads one: the evaluation, `ready_gap`, the reply's `reply_face_value` and the My
+  Pawn surcharge. The hero value and `closing` are anchored at `starting_life` (`DUOS_OWN_HEALTH` plus
+  the pool's cap). A 1v1 seat reads its hero's health and `HERO_HEALTH`, as before (R964000).
 - The tiers are `duos_ai_team(difficulty)` for the team (Easy the humans' rules, Medium free passing,
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI

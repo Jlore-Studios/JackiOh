@@ -42,6 +42,7 @@ import {
 import Hand from "./Hand.tsx";
 import Hero from "./Hero.tsx";
 import Log from "./Log.tsx";
+import { offerDrawControlText } from "./DrawOffer.tsx";
 import SandSurface from "./SandSurface.tsx";
 import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
@@ -500,6 +501,7 @@ function ControlButton({
   confirm,
   turnState,
   pressed = false,
+  title,
   onPress,
 }: {
   control: BoardControl;
@@ -513,6 +515,8 @@ function ControlButton({
   turnState?: "ready" | "waiting" | "enemy" | "locked";
   /** A dispatched turn-end stays visibly depressed until the next rendered view takes over. */
   pressed?: boolean;
+  /** A tooltip, where the label is a short form of it (Offer draw while R36 blocks it). */
+  title?: string;
   onPress: () => void;
 }): ReactElement {
   const legal = isLegal(highlight, testId);
@@ -521,6 +525,7 @@ function ControlButton({
       type="button"
       className={cx("control", `control-${control}`)}
       data-testid={testId}
+      title={title}
       data-legal={legalAttr(legal)}
       data-glow={glowAttr(highlight, testId)}
       data-confirm={confirm}
@@ -583,6 +588,7 @@ export default function Board({
   const endTurnLegal = isLegal(highlight, testid.endTurn);
   const ownTurn = view.result === null && view.active === view.viewer;
   const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
+  const offerDrawText = offerDrawControlText(view);
 
   function pressEndTurn(): void {
     if (needsConfirm && !armed) {
@@ -699,7 +705,8 @@ export default function Board({
           <ControlButton
             control="offer-draw"
             testId={testid.offerDraw}
-            label={t("Offer draw")}
+            label={offerDrawText.label}
+            title={offerDrawText.title}
             highlight={highlight}
             animating={animating}
             onPress={() => onControl?.("offer-draw")}

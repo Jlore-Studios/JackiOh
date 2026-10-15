@@ -1,33 +1,44 @@
 //! The AI's static evaluation (SPEC §9.9): hero health (concave, so the last points weigh most),
 //! hero armor, board stats and keywords through §10.4's layers (a Defense-Position unit's attack at
-//! a discount), cards in hand, library, the enemy's face damage next turn against our health and the
-//! reverse, and, late in the game, the turn cap. Patch v0.2.0's mechanics through the engine's own
-//! readers: a unit the engine bars from attacking (E35) counts no attack, Spell Damage (E6) and Immune
-//! to Spells are worth something, a Brittle count (B3.3) discounts its card, an Animated backrow card
-//! (B3.1) is partly a unit already, and an own hand card's `costMod` (B3.4, R65) moves its worth. It
-//! reads only what the seat may know or what a determinization sampled, and nothing here reads a
-//! handicap or a difficulty (R180).
+//! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
+//! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
+//! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
+//! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
+//! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
+//! card's `costMod` (B3.4, R65) moves its worth. It reads only what the seat may know or what a
+//! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     AttackTarget, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    cannot_attack, card_keywords, credit_lapsing, find_def, has_keyword, hero_armor_of, owed_mana_of,
-    own_cost, query_cost, subsystems, unit_view,
+    cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword, hero_armor_of,
+    owed_mana_of, own_cost, query_cost, subsystems, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::EvalWeights;
 
-/// A hero's health, concave: heroHealth × sqrt(h × HERO_HEALTH), so 30 health is worth 30.
-fn hero_value(health: i32, w: &EvalWeights) -> f64 {
+/// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
+/// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
+/// every team's own HP is DUOS_OWN_HEALTH, §13.7). Both teams' life is public (§13.6).
+pub fn starting_life(state: &GameState, player: PlayerId) -> i32 {
+    match state.players[player].duos {
+        Some(life) => DUOS_OWN_HEALTH + life.pool_cap,
+        None => HERO_HEALTH,
+    }
+}
+
+/// A hero's life (`effective_life`, R964000), concave: heroHealth × sqrt(h × start), `start` its
+/// `starting_life`, so a full hero is worth its life: 30 in a 1v1 game.
+fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
     if health <= 0 {
         return -w.win;
     }
-    w.hero_health * (f64::from(health) * f64::from(HERO_HEALTH)).sqrt()
+    w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
 }
 
 /// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
@@ -138,9 +149,10 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift) * brittle_share(card, w)
 }
 
-/// A hero's side of the ledger: its concave health and its armor.
+/// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
-    hero_value(state.players[player].hero.health, w) + w.hero_armor * f64::from(hero_armor_of(state, player))
+    hero_value(effective_life(state, player), starting_life(state, player), w)
+        + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
 /// Everything on one side but the hero: the board, the backrow, the hand and the library.
@@ -303,15 +315,19 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
 
     let enemy_damage = face_threat(state, opp);
     let our_damage = face_threat(state, seat);
+    // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
+    // the hero's health in a 1v1 game.
+    let seat_life = effective_life(state, seat);
+    let opp_life = effective_life(state, opp);
     let seat_first = next == NextSwing::Seat;
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
     let threat = threat_share
-        * (if enemy_damage >= state.players[seat].hero.health {
+        * (if enemy_damage >= seat_life {
             w.lethal_threat
         } else {
             w.threat_per_damage * f64::from(enemy_damage)
         });
-    let pressure = if our_damage >= state.players[opp].hero.health {
+    let pressure = if our_damage >= opp_life {
         if seat_first {
             w.lethal_on_board
         } else {
@@ -325,9 +341,9 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
     // on the enemy hero is worth more than the concave hero value alone says.
     let span = (f64::from(TURN_CAP_PLAYER_TURNS) - w.closing_from).max(1.0);
     let progress = ((f64::from(state.turn) - w.closing_from).max(0.0) / span).min(1.0);
-    let closing = w.closing_weight * progress * f64::from(HERO_HEALTH - state.players[opp].hero.health);
+    let closing = w.closing_weight * progress * f64::from(starting_life(state, opp) - opp_life);
 
-    let race = w.enemy_health * f64::from(state.players[opp].hero.health);
+    let race = w.enemy_health * f64::from(opp_life);
 
     let board = material(state, seat, seat, w) - material(state, opp, seat, w);
 

@@ -11,19 +11,21 @@
 
 use std::cell::Cell;
 
-use jackioh_ai::{AiOptions, decide, duos_decide, duos_passes};
-use jackioh_engine::config::{DUOS_HUMAN_TEAM, DUOS_PASS_COST, DUOS_POOL_HEALTH_HARD, duos_ai_team};
+use jackioh_ai::{AiOptions, decide, duos_decide, duos_passes, starting_life};
+use jackioh_engine::config::{
+    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
+};
 use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_scenario, duos_view_for,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, ActionBody, ActionType, COIN_DEF_ID, DECK_SIZE, Difficulty, GameState, MAX_MANA, PlayerId,
-    PlayerState, Row, UNIT_ZONES, Value, Zone, ZoneRef, create_rng, def_of, hand_cap_of, legal_actions,
-    lock_zone, new_instance, query_cost,
+    PlayerState, Row, UNIT_ZONES, Value, Zone, ZoneRef, create_rng, def_of, effective_life, hand_cap_of,
+    legal_actions, lock_zone, new_instance, query_cost,
 };
 use jackioh_engine::wire::{
     DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosSeat,
-    DuosTeamRules, PerTeam,
+    DuosTeamRules, PerTeam, Team,
 };
 
 use super::support::register_cards;
@@ -865,5 +867,41 @@ fn b31_the_same_state_and_options_give_the_same_action_twice() {
         assert_eq!(first.rng.cursor(), second.rng.cursor(), "case {at}: {seat}");
         let passes = duos_passes(state, seat);
         assert_eq!(passes, duos_passes(state, seat), "case {at}: {seat}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R964000: a seat's life is its own HP and its team's pool
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn r964000_every_seat_starts_at_its_own_hp_and_its_teams_pool() {
+    let hard = PerTeam {
+        a: DUOS_HUMAN_TEAM,
+        b: duos_ai_team(Difficulty::Hard),
+    };
+    let cases = [
+        (round_one("r964000", None), DUOS_POOL_HEALTH),
+        (round_one("r964000-hard", Some(hard)), DUOS_POOL_HEALTH_HARD),
+    ];
+    for (state, team_b_pool) in &cases {
+        for seat in DUOS_SEATS {
+            let pool = if seat.team() == Team::B {
+                *team_b_pool
+            } else {
+                DUOS_POOL_HEALTH
+            };
+            let duel = &state.duels[seat.duel()];
+            assert_eq!(
+                starting_life(duel, seat.player()),
+                DUOS_OWN_HEALTH + pool,
+                "{seat}"
+            );
+            assert_eq!(
+                effective_life(duel, seat.player()),
+                DUOS_OWN_HEALTH + pool,
+                "{seat}"
+            );
+        }
     }
 }

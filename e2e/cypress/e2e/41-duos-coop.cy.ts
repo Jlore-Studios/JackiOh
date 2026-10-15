@@ -16,6 +16,7 @@
 // - B64 "The ping wheel (`duos-ping-wheel`) … offers the five pings; a received ping … marks the card
 //   (`duos-ping-marker`) … and flashes the portal when it is on the other view."
 // - B39 (client half): a ping goes to the teammate only, and the teammate's arrives.
+// - §13.9 (#965): the result panel's "Watch the replay" plays the host's own seat's steps with the replay controls, offering nothing live.
 //
 // S6's room takes no seed, so the deal is not fixed: every assertion holds for any deal. Where B9
 // ends a seat that has nothing but End turn to do, the guest ends too and the spec waits for the
@@ -37,10 +38,18 @@ import {
   DUOS_PING_WHEEL,
   DUOS_POOL,
   DUOS_PORTAL,
+  DUOS_REPLAY,
   DUOS_RESULT,
+  DUOS_RESULT_REPLAY,
   DUOS_TEAMMATE_STRIP,
   DUOS_WAITING,
   END_TURN,
+  REPLAY_BACK,
+  REPLAY_BACK_STEP,
+  REPLAY_END,
+  REPLAY_FORWARD_STEP,
+  REPLAY_READOUT,
+  REPLAY_SCRUBBER,
   duosPingId,
   handCardId,
   heroId,
@@ -420,6 +429,31 @@ describe("40 duos co-op — two players against the Easy AI", () => {
       expect(seat.view?.result?.reason, "B11: the game ends by concede").to.eq("concede");
       expect(seat.view?.result?.winner, "and the other team wins").to.eq("b");
     });
+
+    // §13.9: the result panel's replay, the host's own seat's steps, with nothing live on it.
+    cy.get(ts(DUOS_RESULT_REPLAY)).click();
+    cy.get(ts(DUOS_REPLAY), { timeout: timeouts.view }).should("have.attr", "data-step", "0");
+    cy.get(ts(DUOS_RESULT)).should("not.exist");
+    cy.get(ts(DUOS_CONCEDE)).should("not.exist");
+    cy.get(ts(DUOS_WAITING)).should("not.exist");
+    cy.get(ts(heroId("opponent"))).trigger("pointerover", { pointerType: "mouse" });
+    cy.get(ts(DUOS_PING_WHEEL)).should("not.exist");
+    cy.get(ts(REPLAY_FORWARD_STEP)).click();
+    cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", "1");
+    cy.get(ts(REPLAY_BACK_STEP)).click();
+    cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", "0");
+    cy.get(ts(REPLAY_SCRUBBER))
+      .invoke("attr", "max")
+      .then((max) => {
+        const last = Number(max);
+        expect(last, "the replay holds the game's steps").to.be.greaterThan(1);
+        cy.get(ts(REPLAY_END)).click();
+        cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", String(last));
+        cy.get(ts(REPLAY_SCRUBBER)).should("have.value", String(last));
+      });
+    cy.get(ts(REPLAY_READOUT)).should("contain.text", "Round");
+    cy.get(ts(REPLAY_BACK)).click();
+    cy.get(ts(DUOS_RESULT)).should("have.attr", "data-outcome", "loss");
     cy.then(() => {
       guest.close();
     });

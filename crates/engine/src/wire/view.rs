@@ -1182,6 +1182,13 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draw_offer: Option<DrawOfferView>,
+    /// §2.5, R36: while a declined offer still keeps the viewer from offering a draw, how many of
+    /// their own turns it covers — the one under way when it is theirs, then the coming ones; the
+    /// turn of the decline itself is not counted. Only ever the viewer's own block, never the
+    /// opponent's (CLAUDE.md rule 7). Absent when nothing blocks them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub draw_offer_blocked_turns: Option<i32>,
     /// R345: `false` when the viewer has turned R82's automatic turn end off for themselves. Absent
     /// means on, the rule's default. Only ever the viewer's own preference, never the opponent's.
     /// Only ever `Some(false)`.

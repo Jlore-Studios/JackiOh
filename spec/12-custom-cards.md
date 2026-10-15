@@ -54,6 +54,7 @@ A custom card's hook runs under the sandbox, the integer boundary and the memory
 - **Saving a deck** that names a custom card is allowed: decks are drafts ([[R250]]), so D3 also accepts a well-formed custom id, which need not name a card the player still has.
 - **Online**: every queue, room, rematch and ranked path refuses a deck or trio that names a custom card, with its own reason, **L7**, "a deck with a custom card plays only in practice", before any other queue rule.
 - **The AI's deck** never holds a custom card.
+- **The sandbox** ([[R962000]]). A practice sandbox game ([[§9.9]]) whose setup carries custom cards may spawn each of them as it spawns a shipped card, and no custom card it was not given.
 
 ### 12.7 Replays
 

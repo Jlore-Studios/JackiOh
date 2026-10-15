@@ -533,16 +533,18 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
 
     cy.playByName("KY's Trial");
     // R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
-    cy.get(promptOf("mode"), { timeout: timeouts.view }).should("be.visible");
-    cy.get(`${promptOf("mode")} [data-set]`).should("have.length", 3);
-    cy.get(promptOf("mode")).then(($sets) => {
+    // The engine asks a `mode` prompt, which the board draws as a Discover pop-up, since it offers
+    // DISCOVER_OPTION_LIMIT options or fewer (Prompt.tsx; `boardKind` in support/playthrough.ts).
+    cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
+    cy.get(`${promptOf("discover")} [data-set]`).should("have.length", 3);
+    cy.get(promptOf("discover")).then(($sets) => {
       const core = $sets.find('[data-set="Core"]');
       const chosen = core.length > 0 ? core : $sets.find("[data-set]").first();
       cy.wrap(chosen.attr("data-set") ?? "").as("trialSet");
       cy.wrap(chosen).click();
     });
-    cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
-    cy.get(`${promptOf("discover")} [data-number]`)
+    // The numbers follow in the same pop-up, so wait on them, not on the pop-up.
+    cy.get(`${promptOf("discover")} [data-number]`, { timeout: timeouts.view })
       .should("have.length", 3)
       .each(($option) => {
         const n = $option.attr("data-number") ?? "";

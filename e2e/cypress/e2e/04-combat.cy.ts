@@ -66,7 +66,8 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     advanceToTurn(2);
     cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(4);
-    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 }, answers: [{ kind: "embiggen", options: ["false"] }] });
+    // Turn 4 is p2's second turn: 2 mana, so Jilliax's Paid (3) price is not offered and no price picker opens.
+    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 } });
 
     advanceToTurn(5);
     cy.instanceAt("p1", "units", 1).then((timmy) => {
@@ -135,7 +136,7 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     advanceToTurn(3);
     cy.playByName("Pointmaster", { zone: { side: "you", row: "units", lane: 2 } });
     advanceToTurn(4);
-    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 1 }, answers: [{ kind: "embiggen", options: ["false"] }] });
+    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 1 } });
 
     advanceToTurn(5);
     cy.instanceAt("p1", "units", 1).then((timmy) => {

@@ -75,7 +75,7 @@ const BUSY = "[data-animating], [data-speaking]";
  * practice's pacing does (`useBoardBusy` in `routes/practice.tsx`), so Play never starts a step over
  * the last one's animation.
  */
-function useBoardBusy(root: HTMLElement | null): boolean {
+export function useBoardBusy(root: HTMLElement | null): boolean {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (root === null || typeof MutationObserver !== "function") return;
