@@ -7222,8 +7222,10 @@
     "what": "suggestions on muse"
   },
   "last_sweep": {
-    "at": "2026-10-15T19:10:16Z",
-    "notes": [],
+    "at": "2026-10-15T19:16:09Z",
+    "notes": [
+      "#990 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
