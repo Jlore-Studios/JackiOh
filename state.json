@@ -6158,6 +6158,8 @@
       "run_id": "38658063929",
       "started_at": "2026-10-15T00:06:59Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
