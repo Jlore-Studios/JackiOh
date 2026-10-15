@@ -7320,7 +7320,9 @@
     },
     "992": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6200556824"
+      ],
       "difficulty_by": {
         "at": "2026-10-15T20:14:26Z",
         "difficulty": "medium",
@@ -7353,9 +7355,7 @@
       "started_at": "2026-10-15T20:02:58Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6200556824"
-      ]
+      "taken_asks": []
     },
     "993": {
       "action": "plan",
