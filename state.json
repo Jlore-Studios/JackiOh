@@ -7163,6 +7163,8 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-10-15T19:06:09Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38791040874",
       "self_check_findings": [],
       "source": "conflict",
