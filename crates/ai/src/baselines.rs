@@ -12,7 +12,7 @@ use crate::determinize::{DeterminizeOptions, determinize};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
-use crate::simulate::{create_node_counter, simulate};
+use crate::simulate::{create_node_counter, simulate_first_answers};
 
 /// §10.7's random policy for `seat` (subsystems::choose_action with AI_SKIPPED_ACTIONS, its default
 /// skip set, which TS passed explicitly).
@@ -22,8 +22,8 @@ pub fn random_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
 
 /// One-ply greedy on one determinization of redact(state, seat): mulligan → mulligan_keep; draw offer
 /// → decline; else the candidate (not endTurn) with the highest `evaluate` (with its own frozen
-/// GREEDY_EVAL weights) after `simulate`, or endTurn when none beats standing still (prompts: the
-/// best answer). `None` if !ai_to_act.
+/// GREEDY_EVAL weights) after `simulate_first_answers`, or endTurn when none beats standing still
+/// (prompts: the best answer). `None` if !ai_to_act.
 pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option<ActionBody> {
     if !ai_to_act(state, seat) {
         return None;
@@ -61,7 +61,8 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         .pending
         .as_ref()
         .is_some_and(|pending| pending.player_id == seat);
-    // Every candidate gets its one simulation, auto-answers of the other seat's prompts included.
+    // Every candidate gets its one simulation, auto-answers of the other seat's prompts included: the
+    // first legal answer each (`simulate_first_answers`), as the gates were fixed on.
     let counter = create_node_counter(candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
 
     let mut best: Option<ActionBody> = None;
@@ -70,7 +71,7 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         if matches!(action, ActionBody::EndTurn) {
             continue;
         }
-        let Some(Ok(next)) = simulate(&det, seat, action, &counter) else {
+        let Some(Ok(next)) = simulate_first_answers(&det, seat, action, &counter) else {
             continue;
         };
         let score = evaluate(&next, seat, NextSwing::Enemy, &GREEDY_EVAL);

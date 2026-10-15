@@ -88,3 +88,12 @@ opt-level = 2
 # (78f131c^:.fullsend/notes/perf.md: "s" 12.64 MB, 2.38 MB gzipped; 3 12.38 MB, 2.31 MB).
 [profile.release]
 lto = "thin"
+
+# The AI in one codegen unit. Over the default 16, rustc groups its 20 modules by their sizes and the
+# inlined items they share, so growing one module can regroup others, and LLVM then inlines and
+# duplicates differently across the crate. #891's simulate.rs change did: the browser module grew
+# 3,912 B gzipped, 638 B over #442 L12's cap (`apps/web/src/wasm/size.test.ts`). In one unit the
+# module is 3,937,232 B gzipped before #891 and 3,937,326 B after (3,990,864 B before at 16), and
+# the AI's release build takes about 9 s longer.
+[profile.release.package.jackioh-ai]
+codegen-units = 1
