@@ -6879,7 +6879,9 @@
     },
     "979": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6197570149"
+      ],
       "difficulty_by": {
         "at": "2026-10-15T17:20:39Z",
         "difficulty": "medium",
@@ -6912,9 +6914,7 @@
       "started_at": "2026-10-15T17:08:08Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6197570149"
-      ]
+      "taken_asks": []
     },
     "980": {
       "ci_reruns": {
