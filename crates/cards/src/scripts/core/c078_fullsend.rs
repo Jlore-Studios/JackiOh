@@ -12,12 +12,75 @@
 //! Radiant rider lights every hand card once a card was played this turn; the base face grants a
 //! discount, not a condition (cost is on the faces, R280).
 
+use jackioh_engine::effects::{add_player_modifier, delay, exile_hand, refresh_mana};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-078";
 
 // The numbers are declared (R386): `refresh`, §6.3 Refresh's 3 (R364: spent mana given back, never
 // past max); `discount`, "Your cards cost (1) less this turn" on both faces; and `comboDraw`, the
 // Radiant face's "gain 'Combo: Draw 1'" — one card per play.
+
+/// The step name the delayed effect carries; it labels the pause.
+const EXILE_STEP: &str = "exileHand";
+
+/// R62: the end-of-turn delayed effect. It runs after the trap window and before cleanup, and it
+/// exiles whatever the hand holds then — including cards drawn by the Combo rider this turn.
+fn exile_the_hand(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![exile_hand(json_as(json!({ "player": "self" })))]
+}
+
+/// The Radiant face's rider: each card played this turn draws 1 (§10.5 step 5).
+fn combo_draw(ctx: &EffectContext<'_>) -> Effect {
+    add_player_modifier(json_as(json!({
+        "player": "self",
+        "mod": {
+            "kind": "comboDraw",
+            "amount": param(ctx, "comboDraw"),
+            "expiry": { "until": "thisTurn", "turn": ctx.state.turn }
+        }
+    })))
+}
+
+/// The two faces differ only in whether the turn's cards gain the Combo draw.
+fn fullsend(with_combo_draw: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut effects = vec![
+                refresh_mana(json_as(json!({ "amount": param(&*ctx, "refresh") }))),
+                add_player_modifier(json_as(json!({
+                    "player": "self",
+                    // "your cards", so no `onlyType`; R65 applies it as a flat discount before Curvature.
+                    "mod": {
+                        "kind": "costDiscount",
+                        "amount": param(&*ctx, "discount"),
+                        "expiry": { "until": "thisTurn", "turn": ctx.state.turn }
+                    }
+                }))),
+            ];
+            if with_combo_draw {
+                effects.push(combo_draw(ctx));
+            }
+            // R62: `delay` takes a PlayerSpec, so "my own end of turn" is "self" (§6.3, §2.2).
+            effects.push(delay(json_as(json!({
+                "at": { "phase": "end", "player": "self" },
+                "step": EXILE_STEP,
+                "hook": RESUME_HOOK
+            }))));
+            effects
+        })),
+        // The one registration (R126): the step table the `delay` above names.
+        resume: IndexMap::from([(EXILE_STEP, hook(exile_the_hand))]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fullsend(false),
+        radiant: fullsend(true),
+    }
+}
 
 // #78 /fullsend — SPEC §8.3, R62, R65, R364, §2.3, §10.5 step 5.
 //
@@ -27,9 +90,9 @@ pub const ID: &str = "core-078";
 // The discount is read off the hand's own cost (`viewFor`, §10.8) and confirmed by paying; R65's X-cost
 // clause by playing an X card for exactly X. R62's place for the exile is proved by the event order.
 // R662's yellow glow (Radiant lights the hand, base lights nothing) is tested at the end of this file.
-
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

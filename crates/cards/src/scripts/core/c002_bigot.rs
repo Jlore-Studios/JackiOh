@@ -12,8 +12,33 @@
 //! units. It marks every match exactly as `destroy` does, so they are all collected in one state
 //! check (R59) and nothing dies between the marks.
 
+use jackioh_engine::effects::{destroy, destroy_all};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-002";
 
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "enemy", "of": ["unit"], "notTags": ["Human"] }),
+        )],
+        cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![destroy_all(json_as(json!({
+                "side": "enemy",
+                "rows": ["units"],
+                "notTags": ["Human"]
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // BUILD M4-T4 row 2: "Destroys chosen enemy non-Human, Human not targetable, no target → enters
 // anyway; radiant clears every enemy non-Human, Humans survive".

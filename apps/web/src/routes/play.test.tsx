@@ -12,7 +12,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE } from "@jackioh/engine/config";
-import { newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
+import { LEAN_NEWEST, newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
 import {
@@ -43,11 +43,13 @@ import {
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { ROOM_LINK_SHARE_TITLE, ROOM_LINK_STORAGE_KEY } from "../net/roomLink.ts";
-import { PLAY_LEAN_NEWEST_KEY, leanNewestLabel } from "../game/LeanNewest.tsx";
+import { PLAY_LEAN_NEWEST_KEY, PLAY_LEAN_SET_KEY, leanLabel } from "../game/LeanNewest.tsx";
 import PlayRoute, {
   MATCH_FOUND_STATUS,
   MODE_LABEL,
   PLAY_CHOICE_KEY,
+  defaultDeck,
+  defaultTrio,
   pairTargetOf,
   playModeTestid,
   playTestid,
@@ -640,43 +642,47 @@ describe("the lobby's answers", () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// R1372: All Random's "More cards from the newest set"
+// R1372, R924000: All Random's "More cards from"
 // ---------------------------------------------------------------------------------------------
 
-describe("R1372 All Random's more cards from the newest set", () => {
-  it("R1372 the switch is All Random's alone, names the newest set and starts off", async () => {
+describe("R1372 R924000 All Random's more cards from", () => {
+  it("R1372 R924000 the picker is All Random's alone, names the newest set and starts at none", async () => {
     await renderLobby();
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
     pickMode("random");
-    const toggle = screen.getByTestId(playTestid.leanNewest);
-    expect(toggle).not.toBeChecked();
-    expect(toggle.closest("label")).toHaveTextContent(leanNewestLabel());
-    expect(leanNewestLabel()).toBe(`More cards from the newest set (${newestShippedSet()})`);
+    const picker = screen.getByTestId(playTestid.leanNewest) as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    expect(picker.closest("label")).toHaveTextContent(leanLabel());
+    expect(within(picker).getByText(`The newest set (${newestShippedSet()})`)).toBeInTheDocument();
     pickMode("bo3");
     expect(screen.queryByTestId(playTestid.leanNewest)).toBeNull();
   });
 
-  /** The lobby in All Random, whichever mode this device remembered, once the switch is on screen. */
-  async function renderRandomLobby(): Promise<HTMLInputElement> {
+  /** The lobby in All Random, whichever mode this device remembered, once the picker is on screen. */
+  async function renderRandomLobby(): Promise<HTMLSelectElement> {
     render(<PlayRoute token={TOKEN} />);
     await waitFor(() => {
       expect(vi.mocked(getDecks)).toHaveBeenCalled();
     });
     const random = screen.getByTestId(playModeTestid("random")) as HTMLInputElement;
     if (!random.checked) pickMode("random");
-    return (await screen.findByTestId(playTestid.leanNewest)) as HTMLInputElement;
+    return (await screen.findByTestId(playTestid.leanNewest)) as HTMLSelectElement;
   }
 
-  it("R1372 on, Find a match, Create a room and Join send leanNewest; off, they send none", async () => {
+  function pickLean(picker: HTMLElement, value: string): void {
+    fireEvent.change(picker, { target: { value } });
+  }
+
+  it("R924000 with a pick, Find a match, Create a room and Join send leanSet; with none, they send none", async () => {
     vi.mocked(enqueue).mockImplementation((_token, choice) => Promise.resolve(openTicket(choice.mode)));
     vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
     vi.mocked(joinRoom).mockResolvedValue({ matchId: "match-9", seriesId: null, code: "ABCD", seat: "p2", mode: "random" });
-    fireEvent.click(await renderRandomLobby());
-    expect(screen.getByTestId(playTestid.leanNewest)).toBeChecked();
+    pickLean(await renderRandomLobby(), "Classic");
+    expect((screen.getByTestId(playTestid.leanNewest) as HTMLSelectElement).value).toBe("Classic");
 
     fireEvent.click(screen.getByTestId(playTestid.queue));
     await waitFor(() => {
-      expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random", leanNewest: true });
+      expect(vi.mocked(enqueue)).toHaveBeenLastCalledWith(TOKEN, { mode: "random", leanSet: "Classic" });
     });
     // Locked while queued, like the rest of the setup.
     expect(screen.getByTestId(playTestid.leanNewest)).toBeDisabled();
@@ -685,28 +691,33 @@ describe("R1372 All Random's more cards from the newest set", () => {
       expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
     });
 
-    // Off, a room is made with no lean at all.
-    fireEvent.click(screen.getByTestId(playTestid.leanNewest));
+    // None, a room is made with no lean at all.
+    pickLean(screen.getByTestId(playTestid.leanNewest), "");
     fireEvent.click(screen.getByTestId(playTestid.createRoom));
     await screen.findByTestId(playTestid.roomCode);
     expect(vi.mocked(createRoom)).toHaveBeenLastCalledWith(TOKEN, { mode: "random" });
     cleanup();
 
-    // On again, a join carries it.
-    fireEvent.click(await renderRandomLobby());
+    // "Newest" is sent as the pick: the server resolves the set when it deals.
+    pickLean(await renderRandomLobby(), LEAN_NEWEST);
     fireEvent.change(screen.getByTestId(playTestid.joinInput), { target: { value: "abcd" } });
     fireEvent.submit(screen.getByTestId(playTestid.joinForm));
     await waitFor(() => {
-      expect(vi.mocked(joinRoom)).toHaveBeenLastCalledWith(TOKEN, "ABCD", { mode: "random", leanNewest: true });
+      expect(vi.mocked(joinRoom)).toHaveBeenLastCalledWith(TOKEN, "ABCD", { mode: "random", leanSet: LEAN_NEWEST });
     });
   });
 
-  it("R1372 the pick is kept on this device and a refused storage only starts it off", async () => {
-    fireEvent.click(await renderRandomLobby());
-    expect(window.localStorage.getItem(PLAY_LEAN_NEWEST_KEY)).toBe("true");
+  it("R924000 the pick is kept on this device, R1372's switch reads as newest, and a refused storage only starts it at none", async () => {
+    pickLean(await renderRandomLobby(), "Meditative");
+    expect(window.localStorage.getItem(PLAY_LEAN_SET_KEY)).toBe("Meditative");
     cleanup();
 
-    expect(await renderRandomLobby()).toBeChecked();
+    expect((await renderRandomLobby()).value).toBe("Meditative");
+    cleanup();
+
+    window.localStorage.removeItem(PLAY_LEAN_SET_KEY);
+    window.localStorage.setItem(PLAY_LEAN_NEWEST_KEY, "true");
+    expect((await renderRandomLobby()).value).toBe(LEAN_NEWEST);
     cleanup();
 
     const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
@@ -716,10 +727,10 @@ describe("R1372 All Random's more cards from the newest set", () => {
       throw new Error("blocked");
     });
     try {
-      const toggle = await renderRandomLobby();
-      expect(toggle).not.toBeChecked();
-      fireEvent.click(toggle);
-      expect(screen.getByTestId(playTestid.leanNewest)).toBeChecked();
+      const picker = await renderRandomLobby();
+      expect(picker.value).toBe("");
+      pickLean(picker, "Core");
+      expect((screen.getByTestId(playTestid.leanNewest) as HTMLSelectElement).value).toBe("Core");
     } finally {
       getItem.mockRestore();
       setItem.mockRestore();
@@ -1133,5 +1144,48 @@ describe("R767 a room shared as a link", () => {
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R915005: a deck naming a custom card plays only in practice
+// ---------------------------------------------------------------------------------------------
+
+describe("R915005 the lobby never offers a deck or trio that names a custom card", () => {
+  const CUSTOM = deck("d-custom", "Imps", [...run(1 + DECK_SIZE).slice(1), "custom-ember-imp"]);
+  const CUSTOM_TRIO = trio("t-custom", "Imp trio", [AGGRO.id, CUSTOM.id, RAMP.id]);
+
+  it("R915005 defaultDeck and defaultTrio pass over a practice deck, even when it is the remembered one", () => {
+    expect(defaultDeck([CUSTOM, AGGRO], CUSTOM.id)).toBe(AGGRO);
+    expect(defaultDeck([CUSTOM], null)).toBeNull();
+    expect(defaultTrio([CUSTOM_TRIO, MAIN], CUSTOM_TRIO.id, [AGGRO, CUSTOM, CONTROL, RAMP])).toBe(MAIN);
+    expect(defaultTrio([CUSTOM_TRIO], null, [AGGRO, CUSTOM, RAMP])).toBeNull();
+  });
+
+  it("R915005 the practice deck shows off, marked practice only, the remembered pick falls back, and the note says why", async () => {
+    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo1", deckId: CUSTOM.id }));
+    vi.mocked(getDecks).mockResolvedValue(decksAnswer([CUSTOM, AGGRO], [CUSTOM_TRIO, MAIN]));
+    await renderLobby();
+
+    const select = screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement;
+    expect(select.value).toBe(AGGRO.id);
+    const option = within(select).getByRole("option", { name: "Imps (practice only)" }) as HTMLOptionElement;
+    expect(option.disabled).toBe(true);
+    expect(screen.getByTestId(playTestid.practiceOnly)).toHaveTextContent("A deck with a custom card plays only in practice");
+
+    pickMode("bo3");
+    const trios = screen.getByTestId(playTestid.trioSelect) as HTMLSelectElement;
+    expect(trios.value).toBe(MAIN.id);
+    expect((within(trios).getByRole("option", { name: "Imp trio (practice only)" }) as HTMLOptionElement).disabled).toBe(true);
+    expect(screen.getByTestId(playTestid.practiceOnly)).toHaveTextContent("cannot play Conquest");
+  });
+
+  it("R915005 with only practice decks there is nothing to queue or bring to a room", async () => {
+    vi.mocked(getDecks).mockResolvedValue(decksAnswer([CUSTOM], []));
+    await renderLobby();
+    expect((screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement).value).toBe("");
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinSubmit)).toBeDisabled();
   });
 });

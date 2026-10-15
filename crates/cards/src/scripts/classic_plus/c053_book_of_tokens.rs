@@ -10,7 +10,49 @@
 //! keeps the most tokens: the Radiant face prints Lucky 1, and the Lucky read is the running card's
 //! own, so a Degrade or an Upgrade of that number moves it (B3.4), as Two Grapes reads its Lucky.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-053";
+
+/// TS `cardDef("core-t-rush").id`.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+/// The printed "1-2": the fewest and most tokens one cast summons.
+const MIN_TOKENS: i32 = 1;
+const MAX_TOKENS: i32 = 2;
+
+/// §6.1: the Lucky X the running card has now, printed plus given (R1438; its Radiant face prints
+/// Lucky 1).
+fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
+    ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
+}
+
+fn book_of_tokens(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let roll = |rng: &mut Rng| -> i32 { MIN_TOKENS + rng.int(MAX_TOKENS - MIN_TOKENS + 1) };
+            // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+            let lucky = lucky_of(ctx) + luck_of(&*ctx.state, ctx.controller);
+            let count = if lucky > 0 {
+                ctx.rng.lucky(lucky, roll, |a, b| a.max(b))
+            } else {
+                roll(&mut *ctx.rng)
+            };
+            (0..count)
+                .map(|_| summon(json_as(json!({ "defId": RUSH_TOKEN, "radiant": radiant }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: book_of_tokens(false),
+        radiant: book_of_tokens(true),
+    }
+}
 
 // C+ #53 Book of Tokens — SPEC §8.7 row 53, BUILD M9 Classic+ row C+ 53: "Summons 1-2 Rush Tokens (3/3
 // Rush), the count random, into your leftmost open zones, one on a nearly full board, none on a full

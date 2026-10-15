@@ -7,7 +7,43 @@
 //! (R60). The aura is Core #64 Gifted Program's static flag at §10.5 step 3 by tag (R213, R214):
 //! every Fruit its controller plays, casts included, resolves on its Radiant face.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-068";
+
+// The Radiant face's "Each costs (0).": the declared number `setCost` (R386), less being better.
+
+fn static_flags() -> StaticFlags {
+    StaticFlags {
+        radiant_plays_tagged: Some(vec![Tag::Fruit]),
+        ..StaticFlags::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(static_flags()),
+        cry: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({ "query": { "tags": ["Fruit"] }, "count": param(ctx, "fruits") })))]
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        static_flags: Some(static_flags()),
+        cry: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Fruit"] },
+                "count": param(ctx, "fruits"),
+                "costOverride": param(ctx, "setCost")
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #68 Organic Produce — SPEC §8.7 row 68, BUILD M9 row C+ 68: a Field Spell whose Cry adds a random
 // card of the Fruit pool (R382), never Organic Produce (R387); its aura makes every Fruit-tagged card its
@@ -70,7 +106,7 @@ mod tests {
         assert_eq!(def["cost"], json!(4));
         assert_eq!(def["type"], json!("Field Spell"));
         assert_eq!(def["tags"], json!(["Fruit"]));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert_eq!(base.static_flags.and_then(|flags| flags.radiant_plays_tagged), Some(vec![Tag::Fruit]));
         assert_eq!(radiant.static_flags.and_then(|flags| flags.radiant_plays_tagged), Some(vec![Tag::Fruit]));
     }

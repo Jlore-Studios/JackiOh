@@ -14,7 +14,32 @@
 //!   (§5.2); a card cast on draw, burned, or a fatigue or limited draw gets nothing (R596).
 //! - **Voice line** (R204, `card-audio.json5`): "We must expand our minds."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-079";
+
+fn touched_by_ky(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut effects = vec![set_hand_cap(json_as(json!({ "cap": param(&*ctx, "handSize") })))];
+            let draws = param(&*ctx, "draw");
+            if radiant {
+                effects.extend((0..draws.max(0)).map(|_| draw_priced(json_as(json!({ "radiant": true })))));
+            } else {
+                effects.push(draw(json_as(json!({ "count": draws }))));
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: touched_by_ky(false),
+        radiant: touched_by_ky(true),
+    }
+}
 
 // M #79 Touched by KY — SPEC §8.8 row 79, BUILD M10 row M 79: "Cry (played or cast): your hand cap
 // becomes 12 for the rest of the game, shown on both views, then you draw 4 (R1143): with 9 cards in

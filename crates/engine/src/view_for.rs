@@ -784,6 +784,7 @@ fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     state
         .transient_defs
         .get(def_id)
+        .or_else(|| state.custom_defs.get(def_id))
         .or_else(|| registered_catalog().get(def_id))
 }
 
@@ -1581,6 +1582,16 @@ fn redact_event(
     let instance = text_at(&shown, "instanceId");
 
     match event.event_type() {
+        // R915004: a custom card's failure names the card as the card itself is named: a viewer who may
+        // not read it learns that a script failed, never whose or why.
+        GameEventType::ScriptFailed => {
+            if !instance.is_empty() && hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+                shown.insert("message".to_string(), Value::String("a script failed".to_string()));
+            }
+            rebuild(shown)
+        }
+
         // A card named with its definition: both go, or neither.
         //
         // `cardResolved` (§10.5 step 7) is one of these rather than a public event: R97 judges a card
@@ -2255,6 +2266,9 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
                 }
                 if let Some(def) = state.transient_defs.get(text) {
                     defs.insert(text.clone(), def.clone());
+                } else if let Some(def) = state.custom_defs.get(text) {
+                    // R915000: a custom card's definition, which no client catalog holds either.
+                    defs.insert(text.clone(), def.clone());
                 }
             }
             Value::Array(items) => {
@@ -2271,7 +2285,7 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
         }
     }
     let mut defs: IndexMap<String, CardDef> = IndexMap::new();
-    if state.transient_defs.is_empty() {
+    if state.transient_defs.is_empty() && state.custom_defs.is_empty() {
         return defs;
     }
     match serde_json::to_value(view) {

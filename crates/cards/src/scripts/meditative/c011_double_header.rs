@@ -13,7 +13,67 @@
 //! copies. A cast is a play (R70); a countered card never reached the log (R448). Double Header does
 //! not answer its own play (R119), so the turn it lands copies nothing (R826).
 
+use jackioh_engine::effects::add_to_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-011";
+
+/// Whether `instance_id` is the first card `player` played this turn, and played that once (R826).
+fn first_played(state: &GameState, player: PlayerId, instance_id: &str) -> bool {
+    let played = played_ids_this_turn(state, player);
+    played.first().is_some_and(|first| first == instance_id)
+        && played.iter().filter(|id| *id == instance_id).count() == 1
+}
+
+/// `radiant`: the Radiant face's copy is Radiant; the base face's never is.
+fn first_card_copied(radiant: bool) -> TriggerDef {
+    TriggerDef::new(
+        if radiant {
+            "m11r-first-card-copied"
+        } else {
+            "m11-first-card-copied"
+        },
+        &[GameEventType::CardResolved],
+        move |ctx, event| {
+            let GameEvent::CardResolved {
+                player,
+                instance_id,
+                def_id,
+                ..
+            } = event
+            else {
+                return vec![];
+            };
+            let Some(this) = ctx.self_.as_ref() else {
+                return vec![];
+            };
+            if *player != ctx.controller || *instance_id == this.id {
+                return vec![];
+            }
+            if !first_played(&*ctx.state, *player, instance_id) {
+                return vec![];
+            }
+            vec![add_to_hand(json_as(json!({
+                "defId": def_id,
+                "costOverride": param(&*ctx, "setCost"),
+                "radiant": radiant,
+            })))]
+        },
+    )
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![first_card_copied(false)],
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![first_card_copied(true)],
+            ..Script::default()
+        },
+    }
+}
 
 // Meditative #11 Double Header — SPEC §8.8 row 11, BUILD M10 row M 11: "From the turn after it
 // lands, the first card you play each turn, once it resolves, adds a fresh base copy costing (0)
@@ -92,7 +152,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert_eq!(scripts.base.triggers.len(), 1);
         assert_eq!(scripts.radiant.triggers.len(), 1);
     }

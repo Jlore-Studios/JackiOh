@@ -6,7 +6,30 @@
 //! change fits, or an Immutable one, is unchanged; an empty hand draws nothing (R129); the other player
 //! learns only that a card of that hand changed (R97, R440). AI cards declare no numbers (B8).
 
+use jackioh_engine::effects::upgrade;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-10";
+
+const CARDS: i32 = 1;
+const RADIANT_CARDS: i32 = 2;
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            end_of_turn: Some(hook(|_ctx| {
+                vec![upgrade(json_as(json!({ "scope": { "zones": ["hand"] }, "random": CARDS })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            end_of_turn: Some(hook(|_ctx| {
+                vec![upgrade(json_as(json!({ "scope": { "zones": ["hand"] }, "random": RADIANT_CARDS })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // T-AI-10 Fine-Tuning — SPEC §8.7 row T-AI-10, BUILD M9 row T-AI-10: a Field Spell that, at each end of
 // its controller's turn, Upgrades one random card in their hand (R386: one draw; an Immutable card or one
@@ -69,7 +92,7 @@ mod tests {
             assert_eq!(def["type"], json!("Field Spell"));
             assert_eq!(def["tags"], json!(["AI", "Token"]));
             assert_eq!(def["token"], json!(true));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.end_of_turn.is_some());
             assert!(scripts.radiant.end_of_turn.is_some());
             assert!(scripts.base.start_of_turn.is_none());
@@ -140,7 +163,7 @@ mod tests {
             fn r129_an_empty_hand_nothing_and_no_random_draw() {
                 let mut s = fine_tuning(vec![], false, None);
                 let source = s.backrow(P1, 1);
-                let end_of_turn = crate::scripts_of()[super::super::super::ID].clone().base.end_of_turn.expect("the end-of-turn hook");
+                let end_of_turn = super::super::super::script().base.end_of_turn.expect("the end-of-turn hook");
                 let mut events: Vec<GameEvent> = Vec::new();
                 let state = s.state_mut();
                 let cursor = state.rng_cursor;

@@ -10,13 +10,62 @@
 //!            takes it all and the rest find it empty, no fatigue (R87); most of it burns at the hand
 //!            cap (§2.4), which is the card.
 
+use jackioh_engine::effects::{discard_random, draw};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-064";
+
+/// "End of turn: Discard 2 random cards." — random (R682).
+const END_OF_TURN_DISCARDS: i32 = 2;
+
+fn end_of_turn(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![discard_random(json_as(json!({ "count": END_OF_TURN_DISCARDS })))]
+}
+
+/// Whether this event is a card its controller discarded.
+fn your_discard(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    matches!(event, GameEvent::Discarded { owner, .. } if *owner == ctx.controller)
+}
+
+fn answer(draws: Hook) -> TriggerDef {
+    TriggerDef::new("recycle", &[GameEventType::Discarded], move |ctx, event| {
+        if your_discard(ctx, event) { draws(ctx) } else { vec![] }
+    })
+    .with_when(|ctx, event| your_discard(ctx, event))
+}
+
+/// "Draw that many": one draw for each card discarded.
+fn draw_one(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![draw(json_as(json!({ "count": 1 })))]
+}
+
+/// "Draw your deck": the deck's size as the draw starts (R58).
+fn draw_deck(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let count = zone_count(&*ctx.state, ctx.controller, OffFieldZone::Library);
+    vec![draw(json_as(json!({ "count": count })))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(end_of_turn)),
+        triggers: vec![answer(hook(draw_one))],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        end_of_turn: Some(hook(end_of_turn)),
+        triggers: vec![answer(hook(draw_deck))],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // Every discard of yours is shown: C #15 Nose Hunter, C #26 Rapid Draw, C #37 Last Hurrah, C #8 Pickle
 // played against you, Core #80 Zao Gao, Core #21 Hinder and C #89 Paul Allen's Ghost's targeting cost.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -113,7 +162,7 @@ mod tests {
             assert_eq!(def["type"], "Field Spell");
             assert_eq!(def["cost"], 2);
             assert!(def["params"].is_null());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.end_of_turn.is_some());
             assert_eq!(
                 scripts.base.triggers.iter().map(|trigger| js(&trigger.on)).collect::<Vec<Value>>(),

@@ -1,7 +1,7 @@
 # `jackioh-server`
 
 The authority for everything that is not presentation: identity, usernames (R1432–R1436) and the
-invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
+invite gate, the collection ledger, saved decks and trios, custom cards (R915008), an active account's tutorial progress
 (R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
 Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
 (R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
@@ -43,8 +43,8 @@ tx.commit().await?`.
 
 **The seams to the pure crates.** `actor/engine.rs` is the one path to the engine's game functions
 (`create_game`, `begin_game`, `reduce`, `legal_actions`, `view_for`, `fold`) and deals All Random's
-decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the newest set that ships
-when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); it calls
+decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
+"newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
@@ -144,6 +144,8 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
+| `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
+| `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
 | `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
@@ -160,6 +162,26 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
+
+**Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
+`CUSTOM_CARDS_PER_ACCOUNT` (50) custom cards in `public.custom_cards`, whose row-level security lets
+only the owner read its rows; no client role writes one, and the server writes through
+`app.create_custom_card` (the cap, counted under the profile lock, against the smaller of its own
+number and `app.settings.max_custom_cards`) and `app.update_custom_card` (compare-and-set on the
+version). Each card is the engine's `CustomCard`: `POST` takes `{ frame, source, builder? }` and
+mints the id (`custom-` and 32 lowercase hex digits) at version 1; `PUT` takes `{ version, frame,
+source, builder? }`, `version` the one it replaces, and answers the card at that version and one, or
+409 `conflict` with `details.version` when another save came first; a refusal of the engine's
+validator (`custom::validate_custom_card`, R915001) is a 400 whose message is the first issue's and
+whose `details.issues` are its `CustomIssue`s; the cap is a 409 with `details.limit`; another
+profile's card answers as a missing one (404). A body is read under `API_MAX_BODY_BYTES` like every
+other, which a card at every limit fits (the router reads a body before it picks the handler, so
+there is no cap of the routes' own). **The server never compiles or runs a script**: it does not
+link `jackioh-luau` (#902 V4), and a source is text it stores; the creator checks a script with the
+browser's Luau module before it saves it. A deck naming a custom id saves as a draft (D3, R250), and
+every queue, room and rematch path refuses it with the validator's L7 (R915005): the queue and the
+rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen decks, through
+`decks::assert_no_custom_cards`.
 
 ## WebSocket surface
 

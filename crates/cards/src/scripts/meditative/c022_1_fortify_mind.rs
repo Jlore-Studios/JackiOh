@@ -15,7 +15,145 @@
 //! included — whatever the secret's state; being burned is not a discard. The penalties fall on
 //! whoever plays or discards the card, even the secret's owner (R863).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-022-1";
+
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn guess_modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: SecretChoice::ALL.iter().map(|choice| choice.as_str().to_string()).collect(),
+    }]
+}
+
+fn guess_of(mode: Option<String>) -> Option<SecretChoice> {
+    mode?.parse::<SecretChoice>().ok()
+}
+
+/// One choice's penalty, on the player who plays or discards this card: Greed taxes their own next
+/// refresh and discards at random; Attack hits their own hero and each of their Units; Defend heals
+/// and armors the opponent's side instead (R863).
+fn penalty(ctx: &EffectContext<'_>, guess: SecretChoice) -> Vec<Effect> {
+    match guess {
+        SecretChoice::Greed => vec![
+            next_turn_mana(json_as(json!({ "amount": -param(ctx, "mana") }))),
+            discard_random(json_as(json!({ "count": param(ctx, "discards") }))),
+        ],
+        SecretChoice::Attack => vec![damage_all(json_as(json!({
+            "amount": param(ctx, "damage"),
+            "side": "self",
+            "heroes": true,
+        })))],
+        SecretChoice::Defend => {
+            let heal_n = param(ctx, "heal");
+            let armor_n = param(ctx, "armor");
+            vec![
+                heal(json_as(json!({ "target": { "of": "enemyHero" }, "amount": heal_n }))),
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(|ctx| {
+                        active_units_of(ctx.state, ctx.controller.opponent())
+                            .iter()
+                            .map(|unit| unit.id.clone())
+                            .collect()
+                    }),
+                    each: each_of(move |instance_id| {
+                        heal(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "amount": heal_n,
+                        })))
+                    }),
+                }),
+                gain_hero_armor(json_as(json!({ "amount": armor_n, "player": "enemy" }))),
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(|ctx| {
+                        active_units_of(ctx.state, ctx.controller.opponent())
+                            .iter()
+                            .map(|unit| unit.id.clone())
+                            .collect()
+                    }),
+                    each: each_of(move |instance_id| {
+                        grant_keyword(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "keyword": { "kind": "Armor", "n": armor_n },
+                        })))
+                    }),
+                }),
+            ]
+        }
+    }
+}
+
+/// Every penalty at once: the base face's discard clause (R862).
+fn all_penalties(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let mut out = penalty(ctx, SecretChoice::Greed);
+    out.extend(penalty(ctx, SecretChoice::Attack));
+    out.extend(penalty(ctx, SecretChoice::Defend));
+    out
+}
+
+fn fortify_mind(discard_clause: bool) -> Script {
+    Script {
+        modes: guess_modes(),
+        cry: Some(hook(|ctx| {
+            let guess = guess_of(chosen_options(ctx).into_iter().next());
+            // R862: the guess is judged against the secret this card's own Mind Games linked in its
+            // memory. No guess, no link (a copy, or one another card made) or no live secret — a
+            // resolved one included — and the card does nothing.
+            let link = recalled(ctx, SECRET_KEY)
+                .and_then(|value| value.as_str().map(str::to_string));
+            let (Some(guess), Some(secret_id)) = (guess, link) else {
+                return vec![];
+            };
+            let Some(choice) = secret_of(ctx.state, &secret_id).and_then(|secret| secret.choice)
+            else {
+                return vec![];
+            };
+            let mut out =
+                vec![guess_secret(json_as(json!({ "secretId": secret_id, "guess": guess.as_str() })))];
+            if judge(guess, choice) == PredictOutcome::Lost {
+                out.extend(penalty(ctx, guess));
+            }
+            out
+        })),
+        graveyard_triggers: if discard_clause {
+            vec![TriggerDef::new(
+                "discardPenalty",
+                &[GameEventType::Discarded],
+                |ctx, event| {
+                    // R862: the clause answers its own discard — Temporary's included — whatever the
+                    // secret's state, even after it resolved or when none was ever kept.
+                    let GameEvent::Discarded { instance_id, .. } = event else {
+                        return vec![];
+                    };
+                    if !ctx.self_.as_ref().is_some_and(|card| &card.id == instance_id) {
+                        return vec![];
+                    }
+                    all_penalties(ctx)
+                },
+            )]
+        } else {
+            Vec::new()
+        },
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fortify_mind(true),
+        radiant: fortify_mind(false),
+    }
+}
 
 // Meditative #22.1 Fortify Mind — SPEC §8.8 row 22.1, BUILD M10 row M 22.1: "(0) Token Spell
 // (printed Epic): Temporary; played, its declared guess is judged against its linked secret

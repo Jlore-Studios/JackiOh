@@ -10,7 +10,33 @@
 //! R70: a cast pays nothing and never uses a discount, so it is left for the next Spell played.
 //! The amount is the declared `discount` (R386), read through `param`; both faces run this script.
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::add_player_modifier;
+
 pub const ID: &str = "classic-035";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![add_player_modifier(json_as(json!({
+                "player": "self",
+                "mod": {
+                    "kind": "costDiscount",
+                    "amount": param(ctx, "discount"),
+                    // "your next Spell": Spells only, and only the first one.
+                    "onlyType": "Spell",
+                    "oncePerTurn": true,
+                    // "this turn": §2.2's cleanup takes it if unused.
+                    "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+                },
+            })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 4 is its declared `discount`, which `param` reads off the running face.
+    CardScripts { radiant: base.clone(), base }
+}
 
 // C #35 Prep — SPEC §8.6 row 35, BUILD M9 Classic row C 35: "Your next Spell this turn costs (2) less
 // (#35 Lunar Eclipse's modifier: the Spell type only, floored at (0), R65); a Unit, Field Spell or
@@ -18,7 +44,7 @@ pub const ID: &str = "classic-035";
 // (R70); radiant: (4) less; its tuned number (discount) reads through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const PREP: &str = "classic-035";
@@ -58,7 +84,7 @@ mod tests {
         fn runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(js(&registered_catalog()[ID])["id"], PREP);
-            let scripts = crate::scripts_of()[PREP].clone();
+            let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));

@@ -5,6 +5,10 @@
 // `addCard` rejects duplicates, full decks (D2, D4), and compared cards (R251); existing clashes stay visible.
 //
 // The store autosaves (R256); completing a deck saves immediately.
+//
+// R915005: the account's custom cards come in the catalog the route hands it (set `Custom`), behind a
+// "Custom" set chip beside the way to the creator; a deck that names one is "Practice only", in the
+// validator's own words (L7).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactElement } from "react";
 
@@ -15,11 +19,14 @@ import { PortraitPicker } from "../../emotes/PortraitPicker.tsx";
 import { closeInspect } from "../../cards/index.ts";
 import { readerName } from "../../cards/chinese.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
+import { paths } from "../../net/navigate.ts";
+import { followInApp } from "../../routes/nav.tsx";
 import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
+import { FILTER_SETS, visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
+import { CUSTOM_SET } from "./loadout.ts";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import { useCardWinRates } from "./useCardWinRates.ts";
 import {
@@ -36,7 +43,9 @@ import {
   DECK_NAME_INPUT,
   DECK_SAVE_ERROR,
   DECK_STATUS,
+  DECK_PRACTICE_ONLY,
   DECK_VERDICT,
+  DECKS_OPEN_CREATOR,
   LOADOUT_ERRORS,
   WORKSHOP_BACK,
   deckCompareChipId,
@@ -51,6 +60,7 @@ import {
   deckVerdict,
   holdersOf,
   joinNames,
+  practiceOnly,
   removeCard,
   trioLabel,
   triosHolding,
@@ -176,6 +186,11 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     [deck, catalog, collection, limits.nameLength],
   );
   const code = useMemo(() => (codeShown ? encodeDeckCode(label, deck.cards, catalog) : ""), [codeShown, label, deck.cards, catalog]);
+  // R915005: the "Custom" chip, once the catalog holds one of the account's custom cards.
+  const sets = useMemo(
+    () => (Object.values(catalog.cards).some((def) => def.set === CUSTOM_SET) ? [...FILTER_SETS, CUSTOM_SET] : FILTER_SETS),
+    [catalog],
+  );
 
   // The card's name in the reader's words, read when a status line is drawn, not when it is made.
   const nameOf = useCallback(
@@ -444,6 +459,11 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             <h3 className="ws-verdict-title" id={verdictTitleId}>
               {verdict.ok ? (collection === null ? t("Complete") : t("Ready to queue")) : t("Before you can queue this deck")}
             </h3>
+            {practiceOnly(verdict) ? (
+              <p className="ws-practice-only" data-testid={DECK_PRACTICE_ONLY}>
+                {t("Practice only: a deck with a custom card plays against the AI in practice, never online.")}
+              </p>
+            ) : null}
             <ul
               className="db-errors"
               data-testid={LOADOUT_ERRORS}
@@ -536,6 +556,12 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
           sort={sort}
           onSort={onSort}
           ownedUnavailable={collection === null}
+          sets={sets}
+          setsAfter={
+            <a className="db-chip db-chip--link" href={paths.creator} data-testid={DECKS_OPEN_CREATOR} onClick={followInApp(paths.creator)}>
+              {t("Make a custom card")}
+            </a>
+          }
           deck={{
             deckName: label,
             collection,

@@ -12,8 +12,85 @@
 //! face-down trap stays face-down, read by its new controller. R195: in hand the card glows when the
 //! opponent controls enough permanents now. The threshold is the declared `threshold` (R386).
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::{ForEachCardArgs, choose_target, for_each_card, steal};
 
 pub const ID: &str = "classic-040";
+
+/// The Radiant pick's resume step.
+const STEAL_STEP: &str = "steal";
+
+/// The permanents `player`'s opponent controls: the tops of their unit piles, then their backrow.
+fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
+    let enemy = opponent_of(player);
+    let backrow: Vec<CardInstance> = slots_of(enemy, Row::Backrow)
+        .iter()
+        .flat_map(|slot| card_at(state, slot).cloned())
+        .collect();
+    let mut permanents: Vec<CardInstance> =
+        active_units_of(state, enemy).into_iter().cloned().collect();
+    permanents.extend(backrow);
+    permanents
+}
+
+/// "If your opponent controls {threshold} or more permanents": the one test the Cry and the glow make.
+/// The Cry's and the glow's contexts are different types, so the caller hands over the three readings.
+fn enough_permanents(state: &GameState, controller: PlayerId, threshold: i32) -> bool {
+    enemy_permanents(state, controller).len() as i32 >= threshold
+}
+
+/// R195: in hand, whether playing it now would steal.
+fn condition_met(c: ConditionContext) -> bool {
+    c.zone == ConditionZone::Hand && enough_permanents(c.state, c.controller, param(&c, "threshold"))
+}
+
+/// R60: one of them at random, drawn as the Cry reaches the clause.
+fn random_permanent(c: &mut EffectContext) -> Vec<String> {
+    let permanents = enemy_permanents(c.state, c.controller);
+    c.rng.shuffle(&permanents).into_iter().take(1).map(|card| card.id).collect()
+}
+
+fn steal_it(instance_id: &str) -> Effect {
+    steal(json_as(json!({ "instanceId": instance_id })))
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            let threshold = param(ctx, "threshold");
+            if enough_permanents(ctx.state, ctx.controller, threshold) {
+                vec![for_each_card(ForEachCardArgs {
+                    cards: Arc::new(random_permanent),
+                    each: Arc::new(steal_it),
+                })]
+            } else {
+                vec![]
+            }
+        })),
+        condition_met: Some(condition_hook(condition_met)),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            let threshold = param(ctx, "threshold");
+            if enough_permanents(ctx.state, ctx.controller, threshold) {
+                vec![choose_target(json_as(json!({
+                    "step": STEAL_STEP,
+                    "scope": { "side": "enemy", "of": ["unit", "backrow"] },
+                    "prompt": "Steal one of their permanents",
+                })))]
+            } else {
+                vec![]
+            }
+        })),
+        resume: IndexMap::from([(STEAL_STEP, hook(|_ctx| vec![steal(json_as(json!({ "target": { "of": "chosen" } })))]))]),
+        condition_met: Some(condition_hook(condition_met)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #40 MC Tech — SPEC §8.6 row 40, BUILD M9 Classic row C 40: at resolution, if the opponent controls 4+
 // permanents (unit-pile tops and backrow, face-down included; dormant cards don't count, R13), steal one at
@@ -23,10 +100,9 @@ pub const ID: &str = "classic-040";
 // The face-down traps used below never fire during these plays: My Pawn answers only a lethal attack,
 // Bread and Butter and Intern Stimmy the end of a turn, and Unlicensed Experimentation a permanent of a
 // type its controller controls (p2 controls no Unit when they hold only traps).
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const TECH: &str = "classic-040";
@@ -68,7 +144,7 @@ mod tests {
         fn has_a_script_per_face_and_the_radiant_pick_answers_into_its_resume_step() {
             crate::register_all();
             assert_eq!(crate::card_def(ID).id, TECH);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.resume.contains_key("steal"));
         }

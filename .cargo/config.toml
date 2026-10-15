@@ -1,14 +1,15 @@
 [alias]
 jackioh = "run --release -p jackioh-tools --"
 
-# The browser module's link (`scripts/build-wasm.sh` builds `crates/wasm` for this target): every
-# `-s` flag reaches the one `emcc` link `cargo` drives, so nothing else names them.
+# The Luau browser module's link (#919: `scripts/build-wasm.sh` builds `crates/wasm/luau` for this
+# target, and nothing else does): every `-s` flag reaches the one `emcc` link `cargo` drives, so
+# nothing else names them. The normal module is `wasm32-unknown-unknown` and takes none of these.
 [target.wasm32-unknown-emscripten]
 rustflags = [
   # -O3: emcc's default is -O0 (unoptimized syslibs, no wasm-opt, unminified glue, assertions on).
   # -sINITIAL_MEMORY=64MB: the module holds multi-MB states and the AI searches on them; starting
-  # where the heap settles skips the whole-heap-copy growth pauses (register_all's Luau init grew
-  # out of 16MB). -sSTACK_SIZE=1MB: parity with the wasm32-unknown-unknown module's stack.
+  # where the heap settles skips the whole-heap-copy growth pauses (the Luau VM's init grows out of
+  # 16MB). -sSTACK_SIZE=1MB: parity with the wasm32-unknown-unknown module's stack.
   "-C", "link-args=-O3",
   "-C", "link-args=-sINITIAL_MEMORY=64MB",
   "-C", "link-args=-sSTACK_SIZE=1MB",
@@ -17,6 +18,6 @@ rustflags = [
   "-C", "link-args=-sENVIRONMENT=web,worker,node",
   "-C", "link-args=-sALLOW_MEMORY_GROWTH=1",
   "-C", "link-args=-sDYNAMIC_EXECUTION=0",
-  "-C", "link-args=-sEXPORTED_FUNCTIONS=_main,_init,_catalog,_catalog_version,_carried_versions,_create_game,_begin_game,_reduce,_legal_actions,_view_for,_seat_to_act,_hash_state,_fold,_replay_open,_replay_page,_last_board_for,_seat_played_by,_find_instance,_deal_emote_hand,_preview_sets,_ai_to_act,_ai_decide,_build_ai_deck,_choose_action,_constants,_craft_preview,_engine_tables,_validator,_jackioh_free,_jackioh_last_error",
+  "-C", "link-args=-sEXPORTED_FUNCTIONS=_main,_init,_catalog,_catalog_version,_carried_versions,_create_game,_begin_game,_reduce,_legal_actions,_view_for,_seat_to_act,_hash_state,_fold,_replay_open,_replay_page,_last_board_for,_seat_played_by,_find_instance,_deal_emote_hand,_preview_sets,_ai_to_act,_ai_decide,_build_ai_deck,_choose_action,_constants,_craft_preview,_engine_tables,_validator,_check_custom_card,_jackioh_free,_jackioh_last_error",
   "-C", "link-args=-sEXPORTED_RUNTIME_METHODS=UTF8ToString,stringToNewUTF8",
 ]

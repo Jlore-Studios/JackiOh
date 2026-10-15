@@ -264,18 +264,18 @@ fn room_seats(
 ) -> Result<(MatchSeat, MatchSeat), ApiError> {
     if room.mode == QueueMode::Random {
         // R258: dealt from the match seed and the seat, and frozen into the match row like any deck.
-        // R642: the portraits are dealt the same way, uniformly and seat by seat. R1372: each seat's
-        // deck leans on the newest set exactly when its own player asked, the host when the room was
+        // R642: the portraits are dealt the same way, uniformly and seat by seat. R1372, R924000:
+        // each seat's deck leans on the set its own player picked, if any, the host when the room was
         // made and the joiner now.
         let joiner_lean = match joiner {
-            FrozenChoice::Random { lean_newest } => *lean_newest,
-            _ => false,
+            FrozenChoice::Random { lean } => *lean,
+            _ => None,
         };
         return Ok((
             MatchSeat {
                 profile_id: room.host_profile_id.clone(),
                 player: PlayerId::P1,
-                deck: deal_random_deck(&format!("{seed}:p1-deck"), lean_of(room.host_lean_newest)),
+                deck: deal_random_deck(&format!("{seed}:p1-deck"), lean_of(room.host_lean)),
                 portrait: Some(
                     pick_portrait_from_seed(&format!("{seed}:portrait:p1"))
                         .as_str()
@@ -369,8 +369,11 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
                 FrozenChoice::Bo3 { trio } => Some(trio.clone()),
                 _ => None,
             },
-            // R1372: an All Random host's lean waits with the room for the deal at the join.
-            host_lean_newest: matches!(frozen, FrozenChoice::Random { lean_newest: true }),
+            // R1372, R924000: an All Random host's lean waits with the room for the deal at the join.
+            host_lean: match &frozen {
+                FrozenChoice::Random { lean } => *lean,
+                _ => None,
+            },
             catalog_version: app.catalog.version.clone(),
             created_at: now,
             expires_at,

@@ -19,9 +19,13 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
-    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN,
-    GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
-    REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS,
+    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
+    CUSTOM_BUILDER_MAX_BYTES, CUSTOM_COST_MAX, CUSTOM_HEALTH_MAX, CUSTOM_ID_PREFIX, CUSTOM_KEYWORDS,
+    CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
+    CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
+    DIFFICULTIES, DRAWS_PER_TURN, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES,
+    MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, SANDBOX_ARMOR_MAX,
+    SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -41,6 +45,7 @@ import type { Handicap } from \"./generated/Handicap.ts\";
 import type { CraftHatPrice } from \"./generated/CraftHatPrice.ts\";
 import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
 import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
+import type { KeywordKind } from \"./generated/KeywordKind.ts\";
 import type { Tag } from \"./generated/Tag.ts\";
 
 export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice };
@@ -97,6 +102,21 @@ fn engine_config_ts() -> String {
             Some("readonly CraftVerbPrice[]"),
             CRAFT_VERB_PRICES,
         ),
+        // R915001: a custom card's frame limits, which the creator shows (the validator decides).
+        constant("CUSTOM_ATTACK_MAX", None, &CUSTOM_ATTACK_MAX),
+        constant("CUSTOM_BUILDER_MAX_BYTES", None, &CUSTOM_BUILDER_MAX_BYTES),
+        constant("CUSTOM_COST_MAX", None, &CUSTOM_COST_MAX),
+        constant("CUSTOM_HEALTH_MAX", None, &CUSTOM_HEALTH_MAX),
+        constant("CUSTOM_ID_PREFIX", None, CUSTOM_ID_PREFIX),
+        constant("CUSTOM_KEYWORDS", Some("readonly KeywordKind[]"), CUSTOM_KEYWORDS),
+        constant("CUSTOM_KEYWORDS_MAX", None, &CUSTOM_KEYWORDS_MAX),
+        constant("CUSTOM_NAME_MAX_LENGTH", None, &CUSTOM_NAME_MAX_LENGTH),
+        constant("CUSTOM_PARAMS_MAX", None, &CUSTOM_PARAMS_MAX),
+        constant("CUSTOM_PARAM_KEY_MAX_LENGTH", None, &CUSTOM_PARAM_KEY_MAX_LENGTH),
+        constant("CUSTOM_PARAM_MAX", None, &CUSTOM_PARAM_MAX),
+        constant("CUSTOM_RADIANT_STAT_MAX", None, &CUSTOM_RADIANT_STAT_MAX),
+        constant("CUSTOM_SOURCE_MAX_BYTES", None, &CUSTOM_SOURCE_MAX_BYTES),
+        constant("CUSTOM_TEXT_MAX_LENGTH", None, &CUSTOM_TEXT_MAX_LENGTH),
         constant("DECK_SIZE", None, &DECK_SIZE),
         constant("DIFFICULTIES", Some("readonly Difficulty[]"), DIFFICULTIES),
         constant("DRAWS_PER_TURN", None, &DRAWS_PER_TURN),
@@ -109,6 +129,11 @@ fn engine_config_ts() -> String {
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        // R923002: the practice sandbox panel's bounds.
+        constant("SANDBOX_ARMOR_MAX", None, &SANDBOX_ARMOR_MAX),
+        constant("SANDBOX_DRAW_MAX", None, &SANDBOX_DRAW_MAX),
+        constant("SANDBOX_HERO_HEALTH_MAX", None, &SANDBOX_HERO_HEALTH_MAX),
+        constant("SANDBOX_MANA_MAX", None, &SANDBOX_MANA_MAX),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
     ];
@@ -132,8 +157,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Twenty-four constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 24, "{text}");
+    // Twenty-eight constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 42, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

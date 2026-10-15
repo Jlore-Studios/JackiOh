@@ -8,7 +8,49 @@
 //! tuning moves it (M10). The bonus reads the defender's tags, so it never applies against a Unit
 //! immune to tribal tag based hate (M #25), whatever the attacker's tags (MD-B1, R940).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-052";
+
+fn economic_anxiety(yours_only: bool, poisonous: bool) -> Script {
+    Script {
+        attack_mods: Some(attack_mod_hook(move |args| {
+            if yours_only && args.attacker.controller != args.self_.controller {
+                return AttackMod::default();
+            }
+            // MD-B1, R940: M #25 is immune to it, an untagged attacker included; the view's
+            // `conditionTargets` reads this same hook, so the yellow skips it too.
+            if immune_to_tribal_hate(args.state, args.defender) {
+                return AttackMod::default();
+            }
+            let attacker_tags = &def_of(Some(args.state), &args.attacker.def_id).tags;
+            let defender_tags = &def_of(Some(args.state), &args.defender.def_id).tags;
+            if attacker_tags.iter().any(|tag| defender_tags.contains(tag)) {
+                return AttackMod::default();
+            }
+            AttackMod {
+                attack: param(&args, "bonus"),
+                poisonous,
+            }
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn base() -> Script {
+    economic_anxiety(false, false)
+}
+
+pub fn radiant() -> Script {
+    economic_anxiety(true, true)
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: economic_anxiety(false, false),
+        radiant: economic_anxiety(true, true),
+    }
+}
 
 #[cfg(test)]
 mod tests {

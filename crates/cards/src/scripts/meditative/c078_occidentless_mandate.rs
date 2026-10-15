@@ -19,7 +19,47 @@
 //! - **Tribal hate** (R1424): "non-CN" picks cards by lacking a tribal tag. The count and the exile read
 //!   one scope, so a card that a tribal-hate immunity keeps out of the scope is kept out of both.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-078";
+
+/// Every non-CN permanent, both sides, both rows.
+fn non_cn_permanents() -> BoardScope {
+    json_as(json!({ "side": "any", "rows": ["units", "backrow"], "notTags": ["CN"] }))
+}
+
+fn mandate(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let scope = non_cn_permanents();
+            // R1142: counted before the exile, by the controller as it stands now.
+            // MD-B1, R940: the exile is harmful — an immune card is in neither the count nor the exile.
+            let yours = cards_in_scope_aimed(&*ctx, &scope, TargetAim::Harm)
+                .iter()
+                .filter(|card| card.controller == ctx.controller)
+                .count() as i32;
+            let mut effects = vec![exile_all(scope)];
+            if yours > 0 {
+                let mut add = json!({ "query": { "tags": ["CN"] }, "count": yours });
+                if radiant {
+                    add["radiant"] = json!(true);
+                    add["costMod"] = json!(-param(&*ctx, "discount"));
+                }
+                effects.push(add_random_from_catalog(json_as(add)));
+            }
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: mandate(false),
+        radiant: mandate(true),
+    }
+}
 
 // M #78 Occidentless Mandate — SPEC §8.8 row 78, BUILD M10 row M 78: "Exiles every non-CN permanent
 // on both sides and rows (face-down and Indestructible ones too, no Death); then adds one random

@@ -1250,3 +1250,51 @@ fn gap14_shared_hook_resolves_named_hooks_on_the_running_face() {
         );
     }
 }
+
+/// One function under a different hook on each face — `cry` on the base face, only `death` on the
+/// Radiant face (#871). An adapter looks its function up under the key it was built for, so the
+/// faces get one adapter each, and each runs its own face's function, its named `each_card`
+/// included, whatever face the context names (a Radiant ingredient fused into a base host, #765).
+/// One adapter shared by the two looked `cry` up on the Radiant face and found nothing.
+#[test]
+fn one_function_under_another_hook_on_each_face_runs_on_both_faces() {
+    use jackioh_engine::testkit::{EngineSink, PlayerId, Rng};
+    common::ensure_installed();
+    let scripts = load_card("lx-other-keys", fixture!("shared_other_keys")).expect("loads");
+    assert!(scripts.base.death.is_none() && scripts.radiant.cry.is_none());
+    let cry = scripts.base.cry.as_ref().expect("base cry");
+    let death = scripts.radiant.death.as_ref().expect("radiant death");
+    assert!(!Arc::ptr_eq(cry, death), "one adapter a face");
+    for (hook, want) in [(cry, "base:lx-target"), (death, "radiant:lx-target")] {
+        for radiant in [false, true] {
+            let mut state = scenario(json!({ "seed": "lx-other-keys", "p1": { "hand": ["lx-p-for-each"] } }))
+                .state()
+                .clone();
+            let probe = jackioh_engine::zone_cards(&state, PlayerId::P1, jackioh_engine::OffFieldZone::Hand)
+                .into_iter()
+                .next()
+                .expect("a hand card to run as")
+                .clone();
+            let probe_id = probe.id.clone();
+            let mut events = Vec::new();
+            let mut rng = Rng::new(&state.seed, state.rng_cursor);
+            let mut ctx =
+                EffectContext::new(EngineSink::new(&mut state, &mut events, &mut rng), PlayerId::P1);
+            ctx.self_ = Some(probe);
+            ctx.radiant = radiant;
+            for effect in hook(&mut ctx) {
+                (effect.apply)(&mut ctx);
+            }
+            drop(ctx);
+            let memory = jackioh_engine::state::find_instance(&state, &probe_id)
+                .expect("the probe card")
+                .memory
+                .clone();
+            assert_eq!(
+                memory.get("other_keys_face").and_then(|face| face.as_str()),
+                Some(want),
+                "{want}'s face runs its own function with radiant = {radiant}"
+            );
+        }
+    }
+}

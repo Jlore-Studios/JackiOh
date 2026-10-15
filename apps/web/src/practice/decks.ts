@@ -123,6 +123,9 @@ export function deckChoiceValue(choice: PracticeDeckChoice): string {
       return `${PRESET_PREFIX}${choice.id}`;
     case "saved":
       return `${SAVED_PREFIX}${String(choice.index)}`;
+    case "try":
+      // #920: the creator's "Try it" is no choice the setup offers; its game reads as the random deck.
+      return RANDOM_VALUE;
   }
 }
 

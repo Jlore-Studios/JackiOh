@@ -11,7 +11,34 @@
 //! fewer exist, none when none do); the resolving card never picks itself. "You lose 5 health" is
 //! R18's `loseHealth`, not damage: it bypasses Armor, #73 Going Long's cap and Fed Fauci's tokens.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-027";
+
+/// §8.2: the blood price is the same on both faces; only the number of cards changes. Both are
+/// declared numbers (R386): `loss`, 5, less being better, and `cards`, 2 on the Radiant face and tuned
+/// there alone (R749: the base face's "a random card" prints no number and is always 1).
+fn blood_ridden() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            vec![
+                set_radiant_random(json_as(json!({ "zones": "hand", "count": param(&*ctx, "cards") }))),
+                lose_health(json_as(json!({ "player": "self", "amount": param(&*ctx, "loss") }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = blood_ridden();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #27 Blood Ridden Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 27): "Cast on draw; a random
 // non-Radiant hand card becomes Radiant (R60); 5 health lost ignoring Going Long (R18); radiant

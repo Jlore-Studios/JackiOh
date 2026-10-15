@@ -28,7 +28,28 @@
 //! The Radiant face's Indestructible is the catalog's (2/2, holding R275's doubling), so the script
 //! is the same; it survives the hit it draws, and R347 keeps Taunt off it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-033";
+
+pub fn script() -> CardScripts {
+    // `ReplacementDef` holds a `when` closure, so it is built in Rust, not through `json_as`.
+    let base = Script {
+        replacements: vec![ReplacementDef {
+            id: "joro".into(),
+            on: ReplacementMoment::Targeted,
+            where_: Some(ReplacementWhere::Hand),
+            when: None,
+            instead: ReplacementInstead { interpose: Some(true), ..ReplacementInstead::default() },
+            then: None,
+            by: Some(ReplacementBy::Spell),
+        }],
+        ..Script::default()
+    };
+
+    // Same script: the Radiant face differs only in the catalog's Indestructible.
+    CardScripts { radiant: base.clone(), base }
+}
 
 // C #33 Joro — SPEC §8.6 row 33, BUILD M9 Classic row C 33: "From your hand only (R394): when your
 // opponent targets one of your Units with a Spell (R651), by a declared target of a Spell played or
@@ -47,7 +68,7 @@ pub const ID: &str = "classic-033";
 // case C #20 The Power to Punish, the Trap case C #5 Tesla.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const JORO: &str = "classic-033";
@@ -101,7 +122,7 @@ mod tests {
         fn is_one_replacement_at_targeted_from_the_hand_answering_only_a_spell_the_same_on_both_faces_with_no_numbers() {
             crate::register_all();
             assert!(crate::card_def(ID).params.is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // `ReplacementDef` is not serialisable (its `when` is a closure), so field by field.
             for face in [&scripts.base, &scripts.radiant] {
                 // The Radiant face is the same declaration.

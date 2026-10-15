@@ -11,9 +11,16 @@
 //!                    turn), R69 (it still dies if its max health falls to 0 or less). §6.1: "can be
 //!                    exiled or sacrificed", so Tribute, Sacrifice and Exile still remove it.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-025";
 
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script::default(),
+        radiant: Script::default(),
+    }
+}
 
 // #25 4-mana 7/7 — SPEC §8.2, BUILD M4-T4 row 25: "Armor 7 zeroes a 7 hit; radiant 14/14 Armor 7,
 // Reborn: it comes back once at 1 health, from combat or a Tribute, and an exile removes it for good"
@@ -23,7 +30,7 @@ pub const ID: &str = "core-025";
 // fixtures depend on those scripts too).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,7 +99,7 @@ mod tests {
                 serde_json::to_value(&def.radiant.keywords).unwrap(),
                 json!([{ "kind": "Armor", "n": 7 }, { "kind": "Reborn" }])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(is_empty_script(&scripts.base));
             assert!(is_empty_script(&scripts.radiant));
         }

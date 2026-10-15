@@ -10,7 +10,36 @@
 //! shown to the deck's owner (R311) and refused at the library cap (R80). A copy of this Unit is summoned
 //! with no Cry (R1), so only a played one shuffles.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-075";
+
+/// §7, §8.7: the token the Cry shuffles in (TS `cardDef("classicplus-075-1").id`, read off the catalog).
+fn pack_id() -> String {
+    crate::card_def("classicplus-075-1").id
+}
+
+fn explorer(pack: String, radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "defId": pack.as_str(), "count": param(&*ctx, "packs") });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![shuffle_into(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let pack = pack_id();
+    CardScripts {
+        base: explorer(pack.clone(), false),
+        radiant: explorer(pack, true),
+    }
+}
 
 // C+ #75 J-lease J-Jungle EX-plorer — SPEC §8.7 row 75, BUILD M9 Classic+ row C+ 75: "Cry shuffles a
 // J-lease J-Jungle EX-plorer Pack (C+ #75.1) into your deck at a random position (R80's cap), shown in
@@ -70,7 +99,7 @@ mod tests {
                 [json!(2), json!(5), json!(5), json!(10), json!(10)]
             );
             assert!(def.refs.as_ref().is_some_and(|refs| refs.iter().any(|id| id == PACK)));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

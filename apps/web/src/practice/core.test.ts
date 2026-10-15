@@ -1007,6 +1007,28 @@ describe("R1373 practice's Random deck with more cards from the newest set", () 
     }
   });
 
+  it("R924000 the worker leans the human's random deck on the set picked, and newest is R1373's lean exactly", () => {
+    const seed = "r924000-pick";
+    const classic = driver();
+    classic.send({ type: "start", config: config({ seed, humanSeat: "p1", deck: { kind: "random", leanSet: "Classic" } }) });
+    const human = seatIndex("p1");
+    const picked = debugOf(classic).decks[human];
+    expect(picked).toEqual(
+      buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, { banned: [], gatedSets: [], leanSet: "Classic" }),
+    );
+    const defs = registeredCatalog();
+    expect(picked.filter((id) => defs[id]?.set === "Classic").length).toBeGreaterThanOrEqual(
+      Math.ceil(DECK_SIZE * AI_DECK.leanMinShare),
+    );
+
+    // A game kept before the picker (R668, R768) carries `leanNewest`, and deals what "newest" deals.
+    const newest = driver();
+    newest.send({ type: "start", config: config({ seed, deck: { kind: "random", leanSet: "newest" } }) });
+    const kept = driver();
+    kept.send({ type: "start", config: config({ seed, deck: { kind: "random", leanNewest: true } }) });
+    expect(debugOf(newest).decks).toEqual(debugOf(kept).decks);
+  });
+
   it("R1373 the switch off, or on a preset, changes nothing", () => {
     const preset = PRACTICE_PRESETS[0];
     if (preset === undefined) throw new Error("there is no practice preset");
@@ -1127,5 +1149,107 @@ describe("R668 the practice save and resume", () => {
     const over = snapshotOf(free.send({ type: "act", action: { type: "concede" } }));
     expect(over.view.result).not.toBeNull();
     expect(saves.read()).toBeNull();
+  });
+});
+
+describe("R923000 a practice sandbox game", () => {
+  const sandboxConfig = (seed: string, over: Partial<PracticeStartConfig> = {}): PracticeStartConfig =>
+    config({ seed, humanSeat: "p1", sandbox: true, ...over });
+
+  /** A card a spawn may name: Bigot, a Core Unit. */
+  function bigotId(): string {
+    const bigot = Object.values(registeredCatalog()).find((def) => def.name === "Bigot");
+    if (bigot === undefined) throw new Error("the catalog has no Bigot");
+    return bigot.id;
+  }
+
+  it("R923000 R923001 R923002 the human's tools wait on the mulligan, then are logged as h<n>, never listed, and the game folds only with the flag", { timeout: 120_000 }, () => {
+    const d = driver();
+    const opened = snapshotOf(d.send({ type: "start", config: sandboxConfig("r923-tools") }));
+    expect(debugOf(d).sandbox).toBe(true);
+
+    const early: ActionBody = { type: "sandbox", op: { kind: "setHero", player: "p2", health: 7 } };
+    const waiting = snapshotOf(d.send({ type: "act", action: early }));
+    expect(waiting.error, "a tool waits on the mulligan").toBe(engineRefusal(stateOf(debugOf(d)), early, "p1"));
+    expect(debugOf(d).log.some((action) => action.type === "sandbox")).toBe(false);
+
+    const main = untilHumanMain(d, "p1", opened);
+    const before = debugOf(d).log.length;
+    const set = snapshotOf(d.send({ type: "act", action: early }));
+    expect(set.error).toBeNull();
+    expect(set.view.opponent.hero.health).toBe(7);
+
+    const lane = main.view.opponent.units.findIndex((slot) => slot === null) + 1;
+    expect(lane, "the AI's unit row has an open lane").toBeGreaterThan(0);
+    const spawned = snapshotOf(
+      d.send({ type: "act", action: { type: "sandbox", op: { kind: "spawn", player: "p2", defId: bigotId(), to: { zone: "field", row: "units", lane } } } }),
+    );
+    expect(spawned.error).toBeNull();
+    expect(spawned.view.opponent.units[lane - 1]?.defId).toBe(bigotId());
+    expect(spawned.legal.some((action) => action.type === "sandbox"), "legalActions never lists a tool").toBe(false);
+
+    const after = debugOf(d);
+    const tools = after.log.slice(before);
+    expect(tools.map((action) => [action.type, action.playerId])).toEqual([
+      ["sandbox", "p1"],
+      ["sandbox", "p1"],
+    ]);
+    expect(tools.every((action) => action.nonce.startsWith("h"))).toBe(true);
+
+    const { seed, decks, handicaps, log, dealt } = after;
+    const setup = { seed, decks, handicaps, log, ...(dealt === undefined ? {} : { dealt }) };
+    expect(hashState(fold({ ...setup, sandbox: true }).state)).toBe(after.hash);
+    expect(fold(setup).errors.length, "folded as no sandbox, the log's tools are refused").toBeGreaterThan(0);
+  });
+
+  it("R923000 the AI never takes a tool: its steps in a sandbox game log none", { timeout: 120_000 }, () => {
+    const d = driver();
+    let last = snapshotOf(d.send({ type: "start", config: sandboxConfig("r923-ai") }));
+    const rng = createRng("r923-ai:human");
+    for (let n = 0; n < 60 && last.view.result === null; n += 1) {
+      const response = step(d, "p1", rng, last);
+      if (response === null) break;
+      last = snapshotOf(response);
+    }
+    const log = debugOf(d).log;
+    expect(log.some((action) => action.playerId === "p2"), "the AI acted").toBe(true);
+    expect(log.some((action) => action.type === "sandbox")).toBe(false);
+  });
+
+  it("R923000 a game that is not a sandbox refuses every tool with the engine's reason, and the log never moves", { timeout: 60_000 }, () => {
+    const d = driver();
+    untilHumanMain(d, "p1", snapshotOf(d.send({ type: "start", config: config({ seed: "r923-plain", humanSeat: "p1" }) })));
+    const before = debugOf(d);
+    expect(before.sandbox).toBeUndefined();
+    const tool: ActionBody = { type: "sandbox", op: { kind: "draw", player: "p1", count: 1 } };
+    const refused = snapshotOf(d.send({ type: "act", action: tool }));
+    expect(refused.error).toBe(engineRefusal(stateOf(before), tool, "p1"));
+    expect(refused.error).not.toBeNull();
+    expect(debugOf(d).log).toEqual(before.log);
+  });
+
+  it("R923000 R668 a sandbox game resumes as a sandbox, and only for a page that remembers a sandbox", { timeout: 120_000 }, () => {
+    const saves = memorySaveStore();
+    const d = driver({ ...ENV, saves });
+    untilHumanMain(d, "p1", snapshotOf(d.send({ type: "start", config: sandboxConfig("r923-resume") })));
+    d.send({ type: "act", action: { type: "sandbox", op: { kind: "setMana", player: "p1", current: 9, max: 9 } } });
+    const before = debugOf(d);
+
+    const plain = driver({ ...ENV, saves });
+    expect(plain.send({ type: "resume", config: config({ seed: "r923-resume", humanSeat: "p1" }) }).type, "the page remembers no sandbox").toBe("failed");
+    const again = driver({ ...ENV, saves });
+    const resumed = again.send({ type: "resume", config: sandboxConfig("r923-resume") });
+    expect(resumed.type).toBe("started");
+    expect(debugOf(again).hash).toBe(before.hash);
+    expect(debugOf(again).sandbox).toBe(true);
+  });
+
+  it("R923000 R508 a sandbox game brings no last board and leaves none", { timeout: 60_000 }, () => {
+    const d = driver();
+    d.send({ type: "start", config: sandboxConfig("r923-board", { lastBoard: [{ defId: bigotId(), radiant: false }] }) });
+    expect(debugOf(d).lastBoards).toBeUndefined();
+    const over = snapshotOf(d.send({ type: "act", action: { type: "concede" } }));
+    expect(over.view.result).not.toBeNull();
+    expect(over.lastBoard).toBeUndefined();
   });
 });

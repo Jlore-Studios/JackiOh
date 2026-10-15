@@ -40,6 +40,8 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use jackioh_engine::LeanPick;
+
 use crate::api::collection::caller_profile;
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
@@ -280,7 +282,7 @@ async fn enqueue_ticket(
     // current catalog; All Random needs no deck at all (R258).
     let frozen = freeze_choice(app, &profile.id, choice).await?;
 
-    let (mode, deck, portrait, trio, lean_newest) = match frozen {
+    let (mode, deck, portrait, trio, lean) = match frozen {
         // §9.4, §9.5: frozen. This copy lands in the ticket and later the match or series; the saved
         // deck is never read again. R642: the deck's portrait freezes with it.
         FrozenChoice::Bo1 { deck } => (
@@ -288,11 +290,11 @@ async fn enqueue_ticket(
             deck.cards.clone(),
             deck.portrait.clone(),
             None,
-            false,
+            None,
         ),
-        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), false),
-        // R1372: the player's lean waits in the ticket for the deal, as a deck would.
-        FrozenChoice::Random { lean_newest } => (QueueMode::Random, Vec::new(), None, None, lean_newest),
+        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), None),
+        // R1372, R924000: the player's lean waits in the ticket for the deal, as a deck would.
+        FrozenChoice::Random { lean } => (QueueMode::Random, Vec::new(), None, None, lean),
     };
     let ticket = Ticket {
         id: new_uuid(),
@@ -302,7 +304,7 @@ async fn enqueue_ticket(
         deck,
         portrait,
         trio,
-        lean_newest,
+        lean,
         catalog_version: app.catalog.version.clone(),
         enqueued_at: now_ms(),
         status: TicketStatus::Open,
@@ -506,11 +508,11 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
 }
 
 /// The All Random deck R258 deals one seat from the match seed (`{seed}:p1-deck`, `{seed}:p2-deck`),
-/// leaning on the newest set when that seat's ticket asked (R1372).
-fn dealt_deck(seed: &str, seat: &str, lean_newest: bool) -> Vec<String> {
+/// leaning on the set that seat's ticket picked, if it picked one (R1372, R924000).
+fn dealt_deck(seed: &str, seat: &str, lean: Option<LeanPick>) -> Vec<String> {
     crate::actor::engine::deal_random_deck(
         &format!("{seed}:{seat}-deck"),
-        crate::actor::engine::lean_of(lean_newest),
+        crate::actor::engine::lean_of(lean),
     )
 }
 
@@ -523,8 +525,8 @@ fn dealt_portrait(seed: &str, seat: &str) -> Option<String> {
 /// process has already claimed, which is what makes it safe to write.
 ///
 /// Best of 1 plays the two frozen decks. All Random (R258) deals both from the match seed and seat,
-/// each leaning on the newest set exactly when its own ticket asked (R1372: a leaning ticket pairs
-/// with one that does not), and the dealt decks go into the match row so `(seed, decks, log)` replays
+/// each leaning on the set its own ticket picked, if any (R1372, R924000: a leaning ticket pairs with
+/// one that does not, or one that leans on another set), and the dealt decks go into the match row so `(seed, decks, log)` replays
 /// it. Portraits ride the same way (R642): the ticket's own for Best of 1, a uniform pick dealt from
 /// the seed for All Random.
 async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
@@ -539,7 +541,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: a.profile_id.clone(),
             player: jackioh_engine::PlayerId::P1,
             deck: if random {
-                dealt_deck(&seed, "p1", a.lean_newest)
+                dealt_deck(&seed, "p1", a.lean)
             } else {
                 a.deck.clone()
             },
@@ -553,7 +555,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: b.profile_id.clone(),
             player: jackioh_engine::PlayerId::P2,
             deck: if random {
-                dealt_deck(&seed, "p2", b.lean_newest)
+                dealt_deck(&seed, "p2", b.lean)
             } else {
                 b.deck.clone()
             },
@@ -1104,7 +1106,7 @@ async fn start_bot_match(
         profile_id: ticket.profile_id.clone(),
         player: human_player,
         deck: if random {
-            dealt_deck(&seed, human_player.as_str(), ticket.lean_newest)
+            dealt_deck(&seed, human_player.as_str(), ticket.lean)
         } else {
             ticket.deck.clone()
         },
@@ -1160,7 +1162,7 @@ async fn start_bot_match(
             MatchSeat {
                 profile_id: bot.profile_id.clone(),
                 player: bot_player,
-                deck: dealt_deck(&seed, bot_player.as_str(), false),
+                deck: dealt_deck(&seed, bot_player.as_str(), None),
                 portrait: dealt_portrait(&seed, bot_player.as_str()),
             }
         } else {

@@ -9,8 +9,20 @@
 //! leftmost free zone; the dying unit's zone is reserved for its Reborn return, so the summon lands
 //! beside it.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-003";
 
+pub fn script() -> CardScripts {
+    /* Printed keywords only (§10.4); an empty Script is the whole base card. */
+    let base = Script::default();
+    let radiant = Script {
+        death: Some(hook(|_ctx| vec![summon(json_as(json!({ "defId": "core-003", "player": "self" })))])),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // BUILD M4-T4 row 3: "Shield eats first hit; dies → returns at 1 without Reborn; radiant Death
 // summons a base Right-house defender on both deaths while Reborn keeps its zone (R8, R64)".

@@ -10,7 +10,36 @@
 //! The amount is the declared number `heal` (R386), read through `param`: 9 on the base face, 18 on
 //! the Radiant one, two at a time per Degrade or Upgrade. Both faces run this one script.
 
+use jackioh_engine::effects::heal;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-003";
+
+/// R19: any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![
+        // R656: a heal helps, so a random cast that targets enemies aims this at friends.
+        TargetDecl {
+            aim: Some(TargetAim::Help),
+            ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))
+        },
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": param(&*ctx, "heal") })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 18 is its declared `heal`, which `param` reads off the running face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #3 Book of Heal — SPEC §8.6 row 3, BUILD M9 Classic row C 3: "Heal a target 9, either side: a
 // Unit up to its max health, a hero with no cap (R19); a full-health Unit gains nothing; radiant 18;
@@ -19,7 +48,6 @@ pub const ID: &str = "classic-003";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -57,7 +85,7 @@ mod tests {
         fn declares_one_target_any_unit_or_hero_on_either_side_r19_and_runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(ID, BOOK);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit", "hero"] } }])

@@ -12,7 +12,71 @@
 //! skipped — then one on its controller's hero. "Your" is the Virus's controller, its victim, since
 //! M #49 and M #49.1 make it for the opponent (R12); forced attacks still make it attack (R53).
 
+use jackioh_engine::effects::{damage, destroy, discard_random, for_each_card};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-049-2";
+
+fn destroy_self() -> ActivationDecl {
+    ActivationDecl {
+        id: "destroy".to_string(),
+        label: "Destroy this".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "self" } })))]),
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: the declared `discards` and `damage` (1 and 2, Radiant 2
+    // and 4) are what differ. The amount is read as the hook resolves and moved into each hit, so
+    // a Nerf or Buff on the numbers moves every hit of the turn (R386).
+    let virus = Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        activations: vec![destroy_self()],
+        death: Some(hook(|ctx| {
+            vec![discard_random(json_as(json!({
+                "count": param(&*ctx, "discards"),
+            })))]
+        })),
+        start_of_turn: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
+            vec![
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|each: &mut EffectContext<'_>| {
+                        adjacent_to(each, &json_as(json!({ "of": "self" })), &BoardScope::default())
+                            .into_iter()
+                            .filter(|card| card.def_id != ID)
+                            .map(|card| card.id)
+                            .collect()
+                    }),
+                    each: Arc::new(move |instance_id: &str| {
+                        damage(json_as(json!({
+                            "to": { "of": "instance", "instanceId": instance_id },
+                            "amount": amount,
+                        })))
+                    }),
+                }),
+                damage(json_as(json!({
+                    "to": { "of": "selfHero" },
+                    "amount": amount,
+                }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        base: virus.clone(),
+        radiant: virus,
+    }
+}
 
 // M #49.2 Yile's Virus — SPEC §8.8 row 49.2, BUILD M10 row M 49.2.
 #[cfg(test)]

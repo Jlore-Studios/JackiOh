@@ -12,7 +12,174 @@
 //! Any other price change stays gone, and a #31 that reaches its graveyard any other way (discarded,
 //! burned, countered) was never flagged for a return, so nothing is noted for it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-031";
+
+/// §8 row 31: what each face adds to the times played before taking the Fibonacci number.
+#[derive(Clone, Copy)]
+struct FibOffset {
+    base: i32,
+    radiant: i32,
+}
+
+const FIB_OFFSET: FibOffset = FibOffset { base: 1, radiant: 3 };
+
+/// R429: "It costs (1) more, to a maximum of (4)."
+const RETURN_COST_STEP: i32 = 1;
+const RETURN_COST_CAP: i32 = 4;
+
+/// R280: the formula as each face prints it — "Fib(times played + 1)" — which the preview labels its
+/// number with. Read off the catalog text, so the label is always a substring of the face it names.
+#[derive(Clone)]
+struct Formula {
+    base: String,
+    radiant: String,
+}
+
+fn formula() -> Formula {
+    let def = crate::card_def(ID);
+    Formula {
+        base: formula_in(&def.base.text),
+        radiant: formula_in(&def.radiant.text),
+    }
+}
+
+/// By hand, as a pure crate has no regex crate (SURFACE §3): the first "Fib(" that a ")" closes, through that ")".
+fn formula_in(text: &str) -> String {
+    let mut from = 0;
+    while let Some(at) = text[from..].find("Fib(") {
+        let start = from + at;
+        let open = start + "Fib(".len();
+        if let Some(close) = text[open..].find(')') {
+            return text[start..open + close + 1].to_string();
+        }
+        from = open;
+    }
+    panic!("#31's text names no Fib(…) formula: {text}");
+}
+
+/// The plays the Fib index counts: the ones the card has had, this one included. While the card is
+/// resolving its play has been counted already (§10.5 step 4); anywhere else — in hand, for the
+/// preview — "if it resolved now" is one more play than it has had.
+fn plays_if_resolved_now(self_: &CardInstance) -> i32 {
+    let counted = times_played_of(self_);
+    if self_.zone.z() == ZoneName::Resolving {
+        counted
+    } else {
+        counted + 1
+    }
+}
+
+/// The damage the card deals if it resolves now — the Cry's amount and the preview's value, one
+/// function so the two cannot disagree (R280). R25: `fib` clamps the index at 11, so it tops out at 89.
+fn damage_for(self_: &CardInstance, radiant: bool) -> i32 {
+    fib(plays_if_resolved_now(self_) + if radiant { FIB_OFFSET.radiant } else { FIB_OFFSET.base })
+}
+
+fn blast(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    // The card as it stands now, its play already counted.
+    let amount = match ctx.live_self() {
+        None => fib(0),
+        Some(self_) => damage_for(self_, ctx.radiant),
+    };
+    vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+}
+
+/// R65 outside a hand: the card's own cost, `costOverride` or printed, plus `costMod`, floored at 0 —
+/// with `carried`, the climb its return gives back (R429, R766), added to `costMod`.
+fn own_cost(state: &GameState, self_: &CardInstance, carried: i32) -> i32 {
+    (self_.cost_override.unwrap_or_else(|| printed_cost(state, self_)) + self_.cost_mod + carried).max(0)
+}
+
+/// "End of turn: Return this to your hand. It costs (1) more, to a maximum of (4)." Only on the turn
+/// it was played: the spell stays in the graveyard when its hand is full (`bounce` burns it back,
+/// §2.4), and a card that is still there on a later turn is no longer returning, so the turn log —
+/// which `startTurn` clears — is the gate.
+fn return_to_hand(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(self_) = ctx.live_self().cloned() else {
+        return vec![];
+    };
+    if self_.zone.z() != ZoneName::Graveyard {
+        return vec![];
+    }
+    if !was_played_this_turn(ctx.state, self_.owner, &self_) {
+        return vec![];
+    }
+    // R429, R766: the climb its earlier returns gave it, which the graveyard took off it and its return
+    // gives back (noted as its play landed it, `return_price_of`), and the return's +1 on top.
+    // R429: never above (4), so at (4) the +1 adds nothing and the climb it had is all it gets.
+    let carried = return_price_of(&self_);
+    let raise = RETURN_COST_STEP
+        .min(RETURN_COST_CAP - own_cost(ctx.state, &self_, carried))
+        .max(0);
+    // R78: the price rides on the instance in the hand, until a graveyard takes it off again (R766). It
+    // lands only on a card that reached the hand: a full hand burns the card back to the graveyard
+    // (§2.4, R4), which is no return. `returnPrice` notes it as the climb beside the `costMod`, so the
+    // next return gives back this and nothing else.
+    let price = carried + raise;
+    let mut effects = vec![bounce(json_as(json!({ "target": { "of": "self" } })))];
+    if price != 0 {
+        effects.push(set_cost_mod(json_as(
+            json!({ "amount": price, "inHandOnly": true, "returnPrice": true }),
+        )));
+    }
+    effects
+}
+
+/// R81: the target travels in the `play` action; "target" is any unit or hero (§8 Conventions).
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// R280: "Fib(times played + 1) {n}" — the damage it deals if played now, in hand, and as the card
+/// stands wherever else it may be read. It reads its own count of plays, which is the card's (§9.1):
+/// `viewFor` shows it only where the card itself is shown, never on the opponent's hand.
+fn preview(formula: Formula) -> PreviewHook {
+    condition_hook(move |ctx: ConditionContext<'_>| -> Vec<PreviewValue> {
+        vec![PreviewValue {
+            label: if ctx.radiant { formula.radiant.clone() } else { formula.base.clone() },
+            value: damage_for(ctx.self_, ctx.radiant),
+            display: None,
+            ids: None,
+        }]
+    })
+}
+
+/// R429: §10.5 step 4 counts this card's plays on its instance, and step 7 notes the price it was
+/// played at for its own return (R766).
+fn static_flags() -> Option<StaticFlags> {
+    Some(StaticFlags {
+        counts_plays: Some(true),
+        return_keeps_price: Some(true),
+        ..StaticFlags::default()
+    })
+}
+
+pub fn script() -> CardScripts {
+    let formula = formula();
+
+    let base = Script {
+        static_flags: static_flags(),
+        targets: targets(),
+        cry: Some(hook(blast)),
+        end_of_turn: Some(hook(return_to_hand)),
+        preview: Some(preview(formula.clone())),
+        ..Script::default()
+    };
+
+    // The radiant face changes only the Fibonacci offset (R275), so the return clause is kept.
+    let radiant = Script {
+        static_flags: static_flags(),
+        targets: targets(),
+        cry: Some(hook(blast)),
+        end_of_turn: Some(hook(return_to_hand)),
+        preview: Some(preview(formula)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // BUILD M4-T4 must-pass row 31, as R429 rewrites it: "1st play → 1 damage, 2nd → 2, 3rd → 3, 4th → 5,
 // 5th → 8; clamps at 89 (R25); its cost — costMod, discounts, the cost paid — changes its price and
@@ -22,13 +189,8 @@ pub const ID: &str = "core-031";
 // a unit with an unspent exertion is always a meaningful action.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
-
-    /// The card's two faces as the registry builds them from its Luau source.
-    fn script() -> CardScripts {
-        crate::scripts_of()[ID].clone()
-    }
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

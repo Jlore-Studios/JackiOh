@@ -5,9 +5,12 @@
 //! (`Registry::presence_of`). Games of a Conquest series offer nothing: the series' continue flow
 //! owns what comes next. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 //!
-//! R1372: an All Random rematch deals fresh decks, each seat's offer carrying its player's "More
-//! cards from the newest set" (`leanNewest`, absent = off; the latest offer's stands). A Best-of-1
-//! rematch replays its frozen decks and reads no lean.
+//! R1372, R924000: an All Random rematch deals fresh decks, each seat's offer carrying its player's
+//! "More cards from" pick (`leanSet`, absent = none, or R1372's `leanNewest` from an older client; the
+//! latest offer's stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
+//!
+//! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
+//! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
 //!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
@@ -20,12 +23,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 use indexmap::IndexMap;
-use jackioh_engine::PlayerId;
+use jackioh_engine::{LeanPick, PlayerId};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::collection::caller_profile;
-use crate::api::decks::lean_newest_of;
+use crate::api::decks::{assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -63,8 +66,8 @@ pub struct RematchStatusBody {
 struct OfferEntry {
     /// Seat -> the stakes it offered.
     offers: IndexMap<PlayerId, RematchStakes>,
-    /// R1372: seat -> its latest offer's "More cards from the newest set".
-    leans: IndexMap<PlayerId, bool>,
+    /// R1372, R924000: seat -> its latest offer's "More cards from" pick.
+    leans: IndexMap<PlayerId, Option<LeanPick>>,
     /// `now` of the latest offer; the sweep reads this.
     at: i64,
     /// The game equal stakes made, once made.
@@ -157,17 +160,23 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
 
 /// Creates the rematch both seats offered, as `queue.rs`'s `start_paired_match` makes a paired
 /// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
-/// fresh decks from it, each leaning on the newest set when its seat asked (`leans`, R1372).
+/// fresh decks from it, each leaning on the set its seat picked, if any (`leans`, R1372, R924000).
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
     mode: QueueMode,
     stakes: RematchStakes,
-    leans: (bool, bool),
+    leans: (Option<LeanPick>, Option<LeanPick>),
     match_id: &str,
 ) -> Result<(), ApiError> {
-    let seed = new_seed();
     let random = mode == QueueMode::Random;
+    // R915005: a deck with a custom card plays only in practice, so the frozen decks a Best-of-1
+    // rematch would replay are asked the validator's L7, as the queue asks it, before anything is
+    // claimed. All Random deals from the catalog, which holds no custom card.
+    if !random {
+        assert_no_custom_cards(&[&finished.decks.0, &finished.decks.1])?;
+    }
+    let seed = new_seed();
     let portrait_of = |at: usize| -> Option<String> {
         finished
             .portraits
@@ -485,10 +494,10 @@ pub async fn offer_rematch(app: &Arc<App>, req: Req) -> ApiResult {
 async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let stakes = stakes_of(&req.body)?;
-    // R1372: absent is off, so an offer from a client before it is a plain rematch.
-    let lean_newest = lean_newest_of(&req.body)?;
+    // R1372, R924000: absent is no lean, so an offer from a client before it is a plain rematch.
+    let lean = lean_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
-    let match_id = offer_as(app, &match_row, seat, stakes, lean_newest).await?;
+    let match_id = offer_as(app, &match_row, seat, stakes, lean).await?;
     let created = RematchOfferBody { match_id };
     Ok(json(
         200,
@@ -524,7 +533,7 @@ pub async fn offer_for_bot(
     let Some(match_row) = found else {
         return Ok(None);
     };
-    offer_as(app, &match_row, seat, stakes, false).await
+    offer_as(app, &match_row, seat, stakes, None).await
 }
 
 /// The offer of `seat` (the seat its account began the match in) once the caller is known: the
@@ -536,7 +545,7 @@ async fn offer_as(
     match_row: &MatchRow,
     seat: PlayerId,
     stakes: RematchStakes,
-    lean_newest: bool,
+    lean: Option<LeanPick>,
 ) -> Result<Option<String>, ApiError> {
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
@@ -580,11 +589,11 @@ async fn offer_as(
         };
         entry.at = now;
         entry.offers.insert(seat, stakes);
-        entry.leans.insert(seat, lean_newest);
+        entry.leans.insert(seat, lean);
         if entry.offers.get(&seat.opponent()) == Some(&stakes) && entry.match_id.is_none() {
             let new_id = new_uuid();
             entry.match_id = Some(new_id.clone());
-            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().unwrap_or(false);
+            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().flatten();
             let leans = (lean_of(PlayerId::P1), lean_of(PlayerId::P2));
             (Some((new_id, entry.generation, leans)), None)
         } else {

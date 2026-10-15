@@ -11,7 +11,62 @@
 //! Radiant: "They" are the cards that went in, so a card the cap left behind gets no discount, and a
 //! change made inside a library is read by nobody (R177). Then the draw (§2.4's pipeline).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-030";
+
+fn recycle(discounts: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // The graveyard as the Spell begins to resolve, read once for both halves.
+            let shuffled: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Graveyard)
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            let mut effects = Vec::new();
+            {
+                let shuffled = shuffled.clone();
+                effects.push(for_each_card(ForEachCardArgs {
+                    cards: Arc::new(move |_c| shuffled.clone()),
+                    each: Arc::new(|instance_id| shuffle_card_into(json_as(json!({ "instanceId": instance_id })))),
+                }));
+            }
+            if discounts {
+                // A card's declared numbers do not move while its Spell resolves, so the discount is
+                // read here, where the context is in hand.
+                let discount = param(&*ctx, "discount");
+                let shuffled = shuffled.clone();
+                effects.push(for_each_card(ForEachCardArgs {
+                    // The cards that went in: the graveyard's, now in the library.
+                    cards: Arc::new(move |c| {
+                        zone_cards(&*c.state, c.controller, OffFieldZone::Library)
+                            .iter()
+                            .filter(|card| shuffled.contains(&card.id))
+                            .map(|card| card.id.clone())
+                            .collect()
+                    }),
+                    each: Arc::new(move |instance_id| {
+                        set_cost_mod(json_as(json!({
+                            "target": { "of": "instance", "instanceId": instance_id },
+                            "amount": -discount,
+                        })))
+                    }),
+                }));
+            }
+            effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = recycle(false);
+
+    let radiant = recycle(true);
+
+    CardScripts { base, radiant }
+}
 
 // C #30 Recycle — SPEC §8.6 row 30, BUILD M9 Classic row C 30: shuffles every graveyard card into your
 // deck at random positions; R80's cap: cards that don't fit stay in the graveyard; positions are blank
@@ -20,6 +75,7 @@ pub const ID: &str = "classic-030";
 // (R381); numbers: R386.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -67,7 +123,7 @@ mod tests {
         fn has_a_script_per_face() {
             crate::register_all();
             assert_eq!(crate::card_def(RECYCLE).id, RECYCLE);
-            let scripts = crate::scripts_of()[RECYCLE].clone();
+            let scripts = script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

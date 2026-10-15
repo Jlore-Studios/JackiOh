@@ -305,6 +305,37 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::decks::delete_trio),
     ),
+    // api/custom_cards.rs (SPEC §12.9, R915008)
+    (
+        "GET",
+        "/api/custom-cards",
+        AuthLevel::Active,
+        h!(api::custom_cards::list_custom_cards),
+    ),
+    (
+        "POST",
+        "/api/custom-cards",
+        AuthLevel::Active,
+        h!(api::custom_cards::create_custom_card),
+    ),
+    (
+        "GET",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::get_custom_card),
+    ),
+    (
+        "PUT",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::update_custom_card),
+    ),
+    (
+        "DELETE",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::delete_custom_card),
+    ),
     // api/queue.rs
     ("POST", "/api/queue", AuthLevel::Active, h!(api::queue::enqueue)),
     ("DELETE", "/api/queue", AuthLevel::Active, h!(api::queue::dequeue)),

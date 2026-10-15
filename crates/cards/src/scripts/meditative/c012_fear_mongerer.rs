@@ -9,7 +9,26 @@
 //! trap window and the delayed effects do not run (R62). The rounds run one after another (R824).
 //! `times` is tuned on the Radiant face only (R749): the base face's "your End of turn effects" is once.
 
+use jackioh_engine::effects::{TriggerTurnHooksArgs, trigger_turn_hooks};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-012";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![trigger_turn_hooks(TriggerTurnHooksArgs {
+                times: param(&*ctx, "times"),
+            })]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the base face reads its printed `times` (1, R749), the Radiant face its 2.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // Meditative #12 Fear Mongerer — SPEC §8.8 row 12, BUILD M10 row M 12: "Cry (played or cast, R1):
 // every end-of-turn hook you have now runs once, as the end-of-turn step would queue it (field
@@ -84,7 +103,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "times", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
     }

@@ -46,13 +46,13 @@ deployment decision that can be made later without touching the code.
 
 | Component | Where it runs | Stateful? | Owns |
 | --- | --- | --- | --- |
-| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server |
+| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server, and a practice game with custom cards and the card creator load a second module, `crates/wasm/luau`, with the card kit (SPEC §12.10, R915009) |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
-| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), RLS, the private `app` schema |
+| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454) |
+| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log |
-| `crates/engine` + `crates/cards` (its Luau scripts run by `crates/luau`) | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
+| `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
 
@@ -63,7 +63,7 @@ SPEC §9.1, restated as channels rather than domains:
 | Channel | Credential | What it carries |
 | --- | --- | --- |
 | Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
-| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
+| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own custom cards, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
@@ -119,6 +119,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `loadout_deck_cards` | own rows | `profile_id = auth.uid()` | none |
 | `decks` | own rows | `profile_id = auth.uid()` | **none** — the server upserts a draft by the id the client minted (R250, R256) |
 | `trios` | own rows | `profile_id = auth.uid()` | none (R252) |
+| `custom_cards` | own rows | `profile_id = auth.uid()` | **none** — the server writes a card only once the engine's validator passes it (R915008, R915001) |
 | `tickets` | own rows | `profile_id = auth.uid()` | none — enqueue freezes a deck (§9.5) |
 | `matches` | **none** | no policy | none — holds `seed` and both decks (§3.1) |
 | `match_actions` | **none** | no policy | none — append-only by trigger (§9.3) |
@@ -228,8 +229,8 @@ cannot hold a comment, and three things in them are not obvious:
   `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
   (but their manifests, which cargo reads), `render.yaml`, the root docs, a crate's `tests/`, and the
   client's test files (`*.test.ts(x)`, `apps/web/src/test/`), `apps/web/scripts/` and its README. The
-  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/luau`,
-  `crates/ai` and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
+  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
+  and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
   commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
   no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
@@ -245,17 +246,16 @@ cannot hold a comment, and three things in them are not obvious:
   the script's decisions, over diffs in a throwaway repo.
 - **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
   `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
-  against the engine, cards, Luau and AI crates beside it: `rust:1.97-slim-bookworm` stages, with `g++`
-  for Luau's C++, run `cargo build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
+  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
+  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
   workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
   `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
   patch history and every migration are compiled into the binary, so nothing at run time needs Node,
   pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
   catalog and serves; `render.yaml` sets no build or start command, and
   `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
-  `vercel.json`'s install step (`scripts/vercel-install.sh`) installs rustup and the
-  `wasm32-unknown-emscripten` target before `pnpm install`, because the web build compiles the WASM
-  module, and `scripts/build-wasm.sh` installs the pinned emsdk it links with when it is missing.
+  `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
+  `pnpm install`, because the web build compiles the WASM module.
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
@@ -628,7 +628,7 @@ step that is not yet implemented says which BUILD task delivers it.
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
-   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
+   `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` — and records them in `app.migrations`. Expected result: 32 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -685,6 +685,13 @@ step that is not yet implemented says which BUILD task delivers it.
    to the terms in force on its next visit; an account already active is not asked its age.
    0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
    its replay (R768); older matches keep none and their replays are held to their results rows.
+   0036 lets "More cards from" pick the set (R924000): `tickets.lean_set` and
+   `matches.room_lean_set` hold the pick as text, `newest` for every row 0027's boolean had on and
+   null for the rest. It only adds: 0027's columns stay, unread, for the deploy before it.
+   0037 adds `custom_cards` (R915008): an active account's custom cards, which their owner reads and
+   no client role writes, written by the server through `app.create_custom_card` (under the cap,
+   `max_custom_cards` in `app.settings`) and `app.update_custom_card` (a compare-and-set on the
+   card's version); deleting an account deletes its cards. It needs nothing else from the bring-up.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

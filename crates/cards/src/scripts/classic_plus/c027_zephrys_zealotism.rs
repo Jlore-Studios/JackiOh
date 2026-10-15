@@ -9,14 +9,44 @@
 //! "Refresh your mana" is §6.3 Refresh (R364): current mana rises toward max and never past it,
 //! so a Refresh of every crystal gives back what was spent, and a player at or above max gains nothing.
 
+use jackioh_engine::effects::{refresh_mana, replace_hand_with_perfect};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-027";
+
+/// "Refresh your mana": every spent crystal, capped at max mana (R364), whatever the player's max is
+/// (§9.9's handicaps).
+/// An `i32` has no infinity; the Refresh adds this to current mana before capping
+/// (`mana::refresh_some_mana`), so `i32::MAX` would overflow: half of it is still
+/// more than any max mana, and the sum stays in range.
+const ALL_MANA: i32 = i32::MAX / 2;
+
+/// The faces differ only in which face the scorer ranks and the new cards arrive with.
+fn zealotism(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![
+                replace_hand_with_perfect(json_as(json!({ "radiant": radiant }))),
+                refresh_mana(json_as(json!({ "amount": ALL_MANA }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: zealotism(false),
+        radiant: zealotism(true),
+    }
+}
 
 // C+ #27 Zephrys Zealotism (SPEC §8.7 row 27; B5 E34, R29, R364, R387, R416, R1446): replaces hand
 // with the scorer's top distinct non-token picks of every set that ships for current state. Replaced cards
 // go to graveyard and new ones are hidden (R97). Refreshes mana up to max. Radiant cards arrive radiant.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -103,7 +133,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, ZEALOTISM);
             assert_eq!(crate::card_def(ID).id, ZEALOTISM);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let (base_cry, radiant_cry) = (scripts.base.cry.unwrap(), scripts.radiant.cry.unwrap());
             // Each face is its own script, built by its own call.
             assert!(!std::sync::Arc::ptr_eq(&base_cry, &radiant_cry));

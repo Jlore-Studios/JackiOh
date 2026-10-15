@@ -12,7 +12,41 @@
 //! The Radiant Book of Flame is C #16's base face (R57's radiant flag off), added through §2.4's
 //! pipeline: a full hand burns it (R4, R317); in hand it follows R97.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-029";
+
+const VITAL_HEALTH: i32 = 13;
+
+/// C #16 Book of Flame, which the Radiant face adds on its base face.
+const BOOK_OF_FLAME: &str = "classic-016";
+
+fn set_vital_health() -> Effect {
+    set_health(json_as(json!({ "to": { "of": "chosen" }, "value": VITAL_HEALTH })))
+}
+
+pub fn script() -> CardScripts {
+    let targets = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["hero"] }))];
+
+    let base = Script {
+        targets: targets.clone(),
+        cry: Some(hook(|_ctx| vec![set_vital_health()])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        targets,
+        cry: Some(hook(|_ctx| {
+            vec![
+                set_vital_health(),
+                add_to_hand(json_as(json!({ "defId": BOOK_OF_FLAME }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: a declared hero target, either
 // side, set to 13 from above or below with Armor unchanged: not damage and not a heal, so hit caps, C #75,
@@ -56,7 +90,7 @@ mod tests {
             let def = crate::card_def(VITAL);
             assert_eq!(def.id, VITAL);
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 serde_json::to_value(&scripts.base.targets).expect("declarations serialise"),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["hero"] } }])

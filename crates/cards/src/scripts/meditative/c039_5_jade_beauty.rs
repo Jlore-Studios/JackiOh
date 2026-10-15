@@ -16,7 +16,23 @@
 //! printed (10), with no Cry to fire.
 //! Tunes: none; the thresholds are ME-JADE's config.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039-5";
+
+fn beauty() -> Script {
+    Script {
+        end_of_turn: Some(hook(|_ctx| vec![allure_enemy_units()])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces Allure alike; the Radiant face's stats and keywords are catalog data.
+    let base = beauty();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #39.5 Jade Beauty — SPEC §8.8 row 39.5, BUILD M10 row M 39.5: "Summoned with no Cry
 // when its player's Jade Counter crosses 5, once a game, none at a full row with the threshold

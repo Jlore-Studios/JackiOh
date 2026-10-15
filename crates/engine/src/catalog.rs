@@ -195,6 +195,10 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     if let Some(def) = state.and_then(|state| state.transient_defs.get(def_id)) {
         return Some(def);
     }
+    // R915000: a custom card's definition is the game's own, never the catalog's.
+    if crate::custom::is_custom_id(def_id) {
+        return state.and_then(|state| state.custom_defs.get(def_id));
+    }
     if let Some(shipped) = folding() {
         return shipped.find(def_id);
     }

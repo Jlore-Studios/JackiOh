@@ -11,7 +11,18 @@
 //!               included.
 //! Its proof: `test/classic/073-nurse-cleaver.test.ts`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-073";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    CardScripts {
+        // The same empty script: the Radiant face's 6/12 and its Charge for Rush are catalog data.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #73 Nurse Cleaver (SPEC §8.6 row 73; BUILD M9 row C 73). (2) Unit, Common, 3/6 → 6/12: Rush,
 // Cleave, Lifesteal; Radiant: Charge, Cleave, Lifesteal. Keywords only.
@@ -19,6 +30,7 @@ pub const ID: &str = "classic-073";
 /// `describe("C #73 Nurse Cleaver")`.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

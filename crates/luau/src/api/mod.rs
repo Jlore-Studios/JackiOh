@@ -11,7 +11,7 @@ use serde::de::DeserializeOwned;
 use serde_json::Value as Json;
 
 use crate::numbers::{self, arg};
-use crate::sandbox::MemoryCap;
+use crate::sandbox::uncapped;
 use crate::{LuauError, Site};
 
 /// One effect a hook returned, walked but not yet built: the verb's name and its arguments.
@@ -307,26 +307,30 @@ fn compare_luau_values(a: &Value, b: &Value) -> std::cmp::Ordering {
 }
 
 fn query_catalog(lua: &Lua, args: Value) -> mlua::Result<Value> {
-    // Built with the memory cap lifted, as a reader's answer is (`MemoryCap`).
-    let _uncapped = MemoryCap::lift(lua);
-    let json: Json = serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
-    let query_args: jackioh_engine::CatalogQueryArgs =
-        serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;
-    let defs = jackioh_engine::catalog::query(&query_args);
-    lua.to_value(&defs)
+    // Built with the memory cap lifted, as a reader's answer is (`uncapped`).
+    uncapped(lua, || {
+        let json: Json =
+            serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
+        let query_args: jackioh_engine::CatalogQueryArgs =
+            serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;
+        let defs = jackioh_engine::catalog::query(&query_args);
+        lua.to_value(&defs)
+    })
 }
 
 fn pool_catalog(lua: &Lua, (own_id, args): (String, Value)) -> mlua::Result<Value> {
-    let _uncapped = MemoryCap::lift(lua);
-    let json: Json = serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
-    let query_args: jackioh_engine::CatalogQueryArgs =
-        serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;
-    let defs = jackioh_engine::catalog::query(&jackioh_engine::catalog::excluding_def_id(
-        None,
-        &query_args,
-        Some(&own_id),
-    ));
-    lua.to_value(&defs)
+    uncapped(lua, || {
+        let json: Json =
+            serde_json::from_value(arg::<Json>(args)?).map_err(|e| Error::runtime(e.to_string()))?;
+        let query_args: jackioh_engine::CatalogQueryArgs =
+            serde_json::from_value(json).map_err(|e| Error::runtime(e.to_string()))?;
+        let defs = jackioh_engine::catalog::query(&jackioh_engine::catalog::excluding_def_id(
+            None,
+            &query_args,
+            Some(&own_id),
+        ));
+        lua.to_value(&defs)
+    })
 }
 
 fn cost_catalog(_: &Lua, def_or_id: Value) -> mlua::Result<i32> {

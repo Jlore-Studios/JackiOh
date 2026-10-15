@@ -51,7 +51,7 @@ export type PrintedRarity = Exclude<Rarity, "Token">;
  * §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the last
  * part of its patch (R1420); Boss and Boss-X are reserved.
  */
-export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X";
+export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Boss" | "Boss-X" | "Custom";
 
 /**
  * The sets that ship, in catalog order. A pool that names no set draws from all of them (R380), and
@@ -76,6 +76,32 @@ export function newestShippedSet(): SetName {
   const newest = SHIPPED_SETS[SHIPPED_SETS.length - 1];
   if (newest === undefined) throw new Error("SHIPPED_SETS lists no set");
   return newest;
+}
+
+/** R924000: the word the pick "newest" is written as. The engine's `LEAN_NEWEST`, mirrored. */
+export const LEAN_NEWEST = "newest";
+
+/**
+ * R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): `"newest"`,
+ * the newest set that ships when the deck is dealt (R1371), or one shipped set. No lean is the pick's
+ * absence. The engine's `LeanPick`, which no generated type carries, mirrored as the string it is
+ * serialised as.
+ */
+export type LeanPick = typeof LEAN_NEWEST | SetName;
+
+/** R924000: the picker's choices after "none", in its order: "newest", then every set that ships. */
+export function leanPicks(): LeanPick[] {
+  return [LEAN_NEWEST, ...SHIPPED_SETS];
+}
+
+/** R924000: whether a value is a pick the server and the practice worker read: "newest" or a set that ships. */
+export function isLeanPick(value: unknown): value is LeanPick {
+  return typeof value === "string" && (leanPicks() as string[]).includes(value);
+}
+
+/** R924000: the set a pick leans on, asked when the deck is dealt: "newest" follows `newestShippedSet`. */
+export function leanSetOf(pick: LeanPick): SetName {
+  return pick === LEAN_NEWEST ? newestShippedSet() : pick;
 }
 
 /** §5: 0 to 6, 100 (Ceaseless Void), X, or "A embiggen B". */

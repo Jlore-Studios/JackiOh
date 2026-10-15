@@ -1,0 +1,29 @@
+[package]
+name = "jackioh-wasm-luau"
+description = "The Luau browser module (#919): the engine, cards, AI and validator with the card kit, for a practice game with a custom card. JSON strings in and out over C (docs/v0.3.0/SURFACE.md §10)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# A binary, not a library: `rustc` only emits emscripten's JavaScript glue (the `MODULARIZE` factory
+# the web awaits) when the `emcc` link produces a program (scripts/build-wasm.sh). It is its own
+# crate, not a target of `crates/wasm`, because that crate's `wasm-bindgen` exports would reach this
+# link as imports emscripten cannot satisfy.
+[[bin]]
+name = "jackioh-wasm-luau"
+path = "src/main.rs"
+
+[features]
+default = []
+# R1420's preview, as `crates/wasm`'s `preview`: the development and test builds turn it on, the
+# production bundle off (`JACKIOH_WASM_PREVIEW=0`).
+preview = ["jackioh-engine/testkit"]
+
+[dependencies]
+jackioh-engine = { workspace = true }
+jackioh-cards = { workspace = true }
+jackioh-ai = { workspace = true }
+jackioh-luau = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }

@@ -11,7 +11,64 @@
 //! the opponent when it left a hand (R177); the price paid was the old card's; a Unit or trap replaced
 //! this way takes no zone. Activating is not a play.
 
+use jackioh_engine::effects::{add_player_modifier, discard_hand, discard_random};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-023";
+
+/// C #16, the Book of Flame this card names (its `refs`).
+const BOOK_OF_FLAME: &str = "classic-016";
+
+/// "Discard {discards} cards": that many at random, or the whole hand when it holds no more.
+fn discard_cards(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let count = param(&*ctx, "discards");
+    let held = zone_count(&*ctx.state, ctx.controller, OffFieldZone::Hand);
+    if held == 0 {
+        return vec![];
+    }
+    if held <= count {
+        return vec![discard_hand(json_as(json!({ "player": "self" })))];
+    }
+    vec![discard_random(json_as(json!({ "count": count })))]
+}
+
+fn pact(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(discard_cards)),
+        activations: vec![ActivationDecl {
+            id: "pact".to_string(),
+            label: if radiant {
+                "This turn, each card you play is replaced by a Radiant Book of Flame".to_string()
+            } else {
+                "This turn, each card you play is replaced by a Book of Flame".to_string()
+            },
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![],
+            can_activate: None,
+            has: None,
+            run: hook(move |ctx| {
+                vec![add_player_modifier(json_as(json!({
+                    "mod": {
+                        "kind": "replacePlays",
+                        "defId": BOOK_OF_FLAME,
+                        "radiant": radiant,
+                        "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+                    },
+                })))]
+            }),
+        }],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: pact(false),
+        radiant: pact(true),
+    }
+}
 
 // C #23 Devil's Pact — SPEC §8.6 row 23, BUILD M9 Classic row C 23: a play from the graveyard (R454)
 // is replaced too; the modifier expires at cleanup; the opponent's view never names a replaced card
@@ -107,7 +164,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.id, PACT);
             assert!(def.refs.unwrap_or_default().contains(&BOOK.to_string()));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.cry.is_some());
                 assert_eq!(face.activations[0].uses, ActivationUses::Count(1));

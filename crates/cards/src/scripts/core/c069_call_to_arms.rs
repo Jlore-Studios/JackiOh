@@ -12,7 +12,37 @@
 //! R65: the filter reads each def's cost out of play (`matches_filter` via `query_cost`).
 //! The `type: "Unit"` filter matters as well as the cost: `recruit` would take any permanent.
 
+use jackioh_engine::effects::{RecruitFilter, recruit};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-069";
+
+/// §8.3: "Recruit 3", the same on both faces.
+const RECRUITS: usize = 3;
+
+fn units_costing(max: i32) -> RecruitFilter {
+    json_as(json!({ "type": "Unit", "costRange": { "max": max } }))
+}
+
+/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
+/// the face that is running.
+fn call_to_arms() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            let filter = units_costing(param(&*ctx, "costLimit"));
+            (0..RECRUITS)
+                .map(|_| recruit(json_as(json!({ "filter": filter, "player": "self" }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = call_to_arms();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #69 Call to Arms — SPEC §8.3, BUILD M4-T4: "Three top-down recruits of cost ≤1, library order
 // otherwise kept, stops when the board fills; radiant ≤2".
@@ -86,7 +116,7 @@ mod tests {
         #[test]
         fn r81_the_spell_asks_for_nothing_no_declared_target_and_no_mode() {
             crate::register_all();
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.base.modes.is_empty());
             assert!(scripts.radiant.targets.is_empty());

@@ -12,7 +12,43 @@
 //! hand when the play's choices are validated (§10.5 step 1), so it needs no `excludeSelf`. A pick the
 //! board cannot satisfy fizzles the Cry and the unit still enters (§8 Conventions, R90).
 
+use jackioh_engine::effects::summon_copy;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-061";
+
+/// The one difference between the faces: base narrows the pick to Humans, radiant does not.
+fn postdoc(humans_only: bool) -> Script {
+    let mut filter = json!({
+        // "on the field" and §8's Conventions: either side unless the cell narrows it.
+        "side": "any",
+        "of": ["unit"],
+    });
+    if humans_only {
+        filter["tags"] = json!(["Human"]);
+    }
+    let targets = vec![TargetDecl::target(1, 1, filter)];
+
+    Script {
+        targets,
+        cry: Some(hook(|_ctx| {
+            vec![summon_copy(json_as(json!({
+                "of": { "of": "chosen" },
+                // §8.3: the copy has no text and no granted keywords of its own.
+                "vanilla": true,
+                "grantedKeywords": false,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: postdoc(true),
+        radiant: postdoc(false),
+    }
+}
 
 // #61 Prejudiced Postdoc — SPEC §8.3, BUILD M4-T4 row 61.
 //
@@ -20,7 +56,7 @@ pub const ID: &str = "core-061";
 // damage; auras apply afresh; an Immutable target is legal (R23, R57); radiant any unit."
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -212,7 +248,7 @@ mod tests {
             // The pick travels in the play action, so the narrowing lives in the declaration `legalActions`
             // and R90 read — not in the hook. This is the only place the base/radiant difference exists.
             crate::register_all();
-            let faces = crate::scripts_of()[ID].clone();
+            let faces = script();
             assert_eq!(
                 serde_json::to_value(&faces.base.targets).expect("declarations serialise"),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"], "tags": ["Human"] } }])

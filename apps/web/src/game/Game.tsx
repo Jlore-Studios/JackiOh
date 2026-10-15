@@ -14,7 +14,8 @@
 // which is the only thing that talks to the engine (CLAUDE.md rule 7). Two pieces of chrome sit
 // beside the board and hold no rule either: the Concede control asks "Concede this game?" before it
 // sends anything (ConfirmConcede.tsx; `concedeFor` is the seat that asked), and the draw offer's
-// notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx).
+// notices, with the answering seat's Accept and Decline, come from the view (DrawOffer.tsx). So does
+// R915004's notice that a custom card's script failed (ScriptFailedNotice.tsx).
 //
 // `legal` belongs to `props.view`, so it only reaches the board once the board SHOWS that view.
 // While the runner holds it back (the AI's last attack still playing out, say), the board draws the
@@ -41,6 +42,7 @@ import type { EmoteShow } from "../emotes/session.ts";
 import type { HeroEmotes } from "./Hero.tsx";
 import Board from "./Board.tsx";
 import ConfirmConcede from "./ConfirmConcede.tsx";
+import ScriptFailedNotice from "./ScriptFailedNotice.tsx";
 import DrawOfferNotice from "./DrawOffer.tsx";
 import Prompt from "./Prompt.tsx";
 import { promptOver } from "./promptOver.ts";
@@ -656,6 +658,8 @@ export default function Game({
               </p>
             ) : null}
             {boardNotice}
+            {/* R915004: a custom card's script that failed, from the newest view; a replay's log says it. */}
+            {replay ? null : <ScriptFailedNotice view={view} />}
             {/* `view` is newest for this notice: it changes no board position, and its actions use
                 the same held-back legal list as every other board control. */}
             <DrawOfferNotice
