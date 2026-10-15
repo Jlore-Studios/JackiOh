@@ -1511,3 +1511,83 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
         }
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// R976000: shaping is an option, never a ban list's match
+// ---------------------------------------------------------------------------------------------
+
+mod r976000_shaping_is_an_option {
+    use jackioh_ai::shaped_weight;
+
+    use super::*;
+
+    /// The mean `shaped_weight` of a deck's cards.
+    fn mean_shaped(deck: &[String]) -> f64 {
+        deck.iter().map(|id| shaped_weight(id)).sum::<f64>() / deck.len() as f64
+    }
+
+    #[test]
+    fn r976000_a_seat_under_this_ais_own_shadow_ban_is_shaped_only_when_the_option_asks() {
+        register_cards();
+        let easy = AI_DIFFICULTY.easy;
+        // The options an arena seat for this AI carried before the fix: its own list under a mana cap.
+        let own = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS });
+        let asked = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS, "shape": true });
+        // The daily gates' and practice's options.
+        let plain = json!({ "manaCap": easy.mana_cap });
+        let deal = |literal: &Value, seed: &str| {
+            build_ai_deck(
+                &mut create_rng(seed, 0),
+                easy.deck_size,
+                &options(literal.clone()),
+            )
+        };
+        let (mut differing, mut own_mean, mut asked_mean) = (0, 0.0, 0.0);
+        for n in 1..=SEEDS {
+            let seed = format!("r976000:own:{n}");
+            let (unasked, shaped) = (deal(&own, &seed), deal(&asked, &seed));
+            assert_eq!(
+                unasked,
+                deal(&plain, &seed),
+                "seed {n}: a matching ban list alone shaped the deal"
+            );
+            assert!(
+                shaped.iter().all(|id| !is_shadow_banned(id)),
+                "seed {n}: shaping dealt a banned card: {shaped:?}"
+            );
+            differing += usize::from(shaped != unasked);
+            own_mean += mean_shaped(&unasked);
+            asked_mean += mean_shaped(&shaped);
+        }
+        assert!(differing > 0, "the option shaped no deal in {SEEDS} seeds");
+        assert!(
+            asked_mean > own_mean,
+            "shaped decks hold no more shaped weight ({asked_mean}) than unshaped ones ({own_mean})"
+        );
+    }
+
+    #[test]
+    fn r976000_the_option_shapes_whatever_the_ban_list_and_is_absent_unless_set() {
+        register_cards();
+        let plain = options(json!({ "banned": [], "gatedSets": [] }));
+        let asked = options(json!({ "banned": [], "gatedSets": [], "shape": true }));
+        let shaped_somewhere = (1..=50).any(|n| {
+            let seed = format!("r976000:any:{n}");
+            build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &asked)
+                != build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &plain)
+        });
+        assert!(
+            shaped_somewhere,
+            "`shape` changed no deal under an empty ban list"
+        );
+        assert!(!AiDeckOptions::default().shape);
+        assert_eq!(
+            serde_json::to_value(AiDeckOptions::default()).ok(),
+            Some(json!({}))
+        );
+        assert_eq!(
+            serde_json::to_value(options(json!({ "shape": true }))).ok(),
+            Some(json!({ "shape": true }))
+        );
+    }
+}
