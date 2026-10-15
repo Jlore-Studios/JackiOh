@@ -123,13 +123,28 @@ export function restartInBuilder(draft: Draft): Draft {
   return { ...withModel({ ...draft, model: null }, model), view: "builder" };
 }
 
+/**
+ * A frame or model as the server writes it back: keys in one order, and an empty list or an unset
+ * value the same as none, since serde skips them (`CustomFrame`'s `keywords`, `params` and stats).
+ */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value === null || typeof value !== "object") return value;
+  const kept: Record<string, unknown> = {};
+  for (const [key, held] of Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (held === undefined || held === null || (Array.isArray(held) && held.length === 0)) continue;
+    kept[key] = canonical(held);
+  }
+  return kept;
+}
+
+function sameJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
 /** Whether the draft differs from the card it was read from (a new card is unsaved until its first save). */
 export function isDirty(draft: Draft, saved: CustomCard | null): boolean {
   if (saved === null) return true;
   const card = cardOf(draft);
-  return (
-    JSON.stringify(card.frame) !== JSON.stringify(saved.frame) ||
-    card.source !== saved.source ||
-    JSON.stringify(card.builder ?? null) !== JSON.stringify(saved.builder ?? null)
-  );
+  return !sameJson(card.frame, saved.frame) || card.source !== saved.source || !sameJson(card.builder ?? null, saved.builder ?? null);
 }
