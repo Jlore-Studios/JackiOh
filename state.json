@@ -7328,6 +7328,13 @@
     "994": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T19:42:45Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on several lines at once: it changes a Cypress spec (line 7), a spec note (line 3), and the server, e2e and docs together (line 2)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
