@@ -345,6 +345,16 @@ pub const RATING_WINDOW_FULL_AFTER_SECONDS: i64 =
 // widen before being reconsidered, without hammering the ticket table.
 pub const MATCHMAKER_SWEEP_INTERVAL_SECONDS: i64 = 3;
 
+/// SPEC §11 R897000: how long a queued ticket may go unheard from before the pairing sweep
+/// cancels it, in milliseconds. Six missed `SERIES_POLL_SECONDS` polls, so a flaky connection
+/// does not eject a real player, and under `BOT_FALLBACK_MIN_SECONDS`, so expiry always runs
+/// before the empty-queue fallback could seat the absent player.
+pub const QUEUE_TICKET_STALE_MS: i64 = 12_000;
+/// SPEC §11 R897000: how many `GET /api/auth/me` reads in a row must say the ticket is gone
+/// before the client stops waiting with a rejoin message. Two, so one failed or slow read cannot
+/// end a live queue.
+pub const QUEUE_ENDED_AFTER_READS: usize = 2;
+
 /// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
 /// claimed in it and the games that ended in it.
 pub const QUEUE_READOUT_WINDOW_SECONDS: i64 = 3600;

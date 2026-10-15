@@ -130,7 +130,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), and `ageCheckOwed` and `termsOwed` (R757000, R757001) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), and `queued` (R897000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
@@ -144,7 +144,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
