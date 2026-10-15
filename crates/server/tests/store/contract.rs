@@ -703,6 +703,60 @@ mod profiles {
         );
     }
 
+    async fn r890000_seat_claim_is_compare_and_set(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let first = id();
+        let second = id();
+        q!(harness, t => t.matches_create(&match_row(&first, &profile.id, &other.id, harness, harness.now())));
+        q!(harness, t => t.matches_create(&match_row(&second, &profile.id, &other.id, harness, harness.now())));
+
+        // The first writer wins.
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(first.as_str()))));
+        // A second seat over a taken one loses without writing.
+        assert!(!q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"],
+            first.as_str()
+        );
+
+        // A conditional clear for another match is a no-op; for the holding match it frees.
+        q!(harness, t => t.profiles_clear_in_match(&profile.id, &second));
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"],
+            first.as_str()
+        );
+        q!(harness, t => t.profiles_clear_in_match(&profile.id, &first));
+        assert!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"]
+                .is_null()
+        );
+
+        // A freed seat seats again, and clearing stays unconditional.
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, None)));
+        assert!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"]
+                .is_null()
+        );
+
+        // A profile that was never there errors on set, never on clear.
+        assert!(call!(harness, t => t.profiles_set_in_match(&id(), Some(first.as_str()))).is_err());
+        q!(harness, t => t.profiles_clear_in_match(&id(), &first));
+    }
+
     /// R603: a new profile starts at Glickman's deviation and volatility, and both move with it.
     async fn r603_round_trips_the_whole_glicko_triple(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
@@ -758,6 +812,7 @@ mod profiles {
         returns_null_for_an_unknown_profile,
         reads_many_profiles_at_once,
         moves_the_rating_and_the_in_match_pointer,
+        r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
         r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently,
     );
