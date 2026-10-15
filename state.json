@@ -7259,6 +7259,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "992": {
+      "suggestion": true
+    },
     "993": {
       "asks": [
         "c:6200542325"
