@@ -7,8 +7,9 @@ the issue was written, whether the network can beat today's AI, and each design 
 options and a recommendation. Then it lists the seven parts, each a sub-issue of #466, and the
 calls that are a person's.
 
-Nothing here is built yet. Each part is a sub-issue of #466, #1006 to #1012 (The parts). Rulings the build needs take numbers from #466's block, R466000 to
-R466999 (`docs/issues-and-patches.md`).
+Nothing here is built yet. Each part is a sub-issue of #466, #1006 to #1012 (The parts), and
+takes the rulings it needs from its own issue's block: #1006 owns R1006000 to R1006999
+(`docs/issues-and-patches.md`, Ruling numbers).
 
 ## Where things stand
 
