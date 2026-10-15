@@ -6614,6 +6614,13 @@
     "964": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T14:42:08Z",
+        "difficulty": "hard",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "The change is small and fully specified, but every code edit is in crates/ai/src (evaluate, lethal, reply, simulate), and the rule rates the AI's search there hard. It also adds a ruling, which rules out easy."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
