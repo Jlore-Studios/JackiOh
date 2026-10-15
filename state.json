@@ -6631,6 +6631,13 @@
     "965": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T14:39:21Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "fails easy on size (12 files), two places (apps/web and e2e) and an e2e spec change; nothing engine/AI/migration, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
