@@ -2,7 +2,10 @@
 //! lands mid-action counts before the declarations that follow it in the same action's events.
 //! Found by fuzz seed 359: R44's AI turn summoned a Conjure Rush Token, granted it Windfury among
 //! six keywords, and fought with it twice, all inside one outer action — no between-action state
-//! ever held the token, so the old oracle read attack number 2 as an extra attack.
+//! ever held the token, so the old oracle read attack number 2 as an extra attack. Fuzz seed 7758 of
+//! the handicapped wave (#874) found the other way a unit gains a keyword, a Buff's keyword row
+//! (`upgraded`, R386): My Pawn's random rest of the turn (R44) Buffed the attacker it had stopped into
+//! Windfury, and it attacked again inside the same action.
 //!
 //! I6 (hidden information, issue #348) is proved by feeding the oracle a view or an event that names a
 //! card the seat may not read (a hidden definition beside any id, a former id, R227, or the seat's
@@ -108,6 +111,66 @@ mod i2_a_windfury_granted_inside_one_action_s_events {
             ),
         ];
         let found = monitor.after(&events, g.state());
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
+    }
+
+    /// p1's unit with `gained` in its Buff record (R386), the end state of a Buff that resolved
+    /// mid-action, and a fresh monitor; then one Buff event moving `change` and two declarations.
+    fn buffed_twice_declared(gained: &[&str], change: Value) -> Vec<String> {
+        let mut g = scenario(json!({
+            "p1": { "field": [{ "def": VANILLA, "lane": 1 }] },
+            "p2": { "field": [{ "def": VANILLA, "lane": 1 }] },
+        }));
+        let unit = unit_at(&g, PlayerId::P1, 1, "p1 should hold a unit in lane 1");
+        let prey = unit_at(&g, PlayerId::P2, 1, "p2 should hold a unit in lane 1");
+        let add_keywords: Vec<Value> = gained.iter().map(|kind| json!({ "kind": kind })).collect();
+        find_instance_mut(g.state_mut(), &unit.id)
+            .expect("the unit")
+            .tuning = Some(json_as(json!({ "addKeywords": add_keywords })));
+
+        let mut monitor = create_invariant_monitor(g.state());
+        let events = vec![
+            event(json!({ "type": "upgraded", "instanceId": unit.id, "defId": VANILLA, "change": change })),
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": prey.id, "forced": false }),
+            ),
+            event(
+                json!({ "type": "attackDeclared", "attackerId": unit.id, "targetId": prey.id, "forced": false }),
+            ),
+        ];
+        monitor.after(&events, g.state())
+    }
+
+    /// Fuzz seed 7758 of the handicapped wave (#874): My Pawn cancelled an attack (R44), the random rest
+    /// of the turn cast CN Peptides on the attacker, whose Buffs gave it Windfury, and it attacked again,
+    /// all inside the one outer action. A unit that gains Windfury after one attack may attack once more
+    /// (R636), and a Buff's keyword row is a gain like a grant.
+    #[test]
+    fn r636_r386_two_declarations_after_a_mid_action_buff_into_windfury_are_one_legal_windfury_turn() {
+        let change = json!({ "kind": "keyword", "keyword": { "kind": "Windfury" }, "added": true });
+        assert_eq!(buffed_twice_declared(&["Windfury"], change), no_violations());
+    }
+
+    /// R1160: a multiplied Buff reports the keywords it added beyond the first as `also`.
+    #[test]
+    fn r636_r1160_a_multiplied_buff_that_adds_windfury_among_its_also_keywords_counts_too() {
+        let change = json!({
+            "kind": "keyword",
+            "keyword": { "kind": "Ranged" },
+            "added": true,
+            "also": [{ "kind": "Windfury" }],
+        });
+        assert_eq!(
+            buffed_twice_declared(&["Ranged", "Windfury"], change),
+            no_violations()
+        );
+    }
+
+    #[test]
+    fn r636_r386_a_buff_into_another_keyword_leaves_the_second_declaration_an_extra_attack() {
+        let change = json!({ "kind": "keyword", "keyword": { "kind": "Ranged" }, "added": true });
+        let found = buffed_twice_declared(&["Ranged"], change);
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains("I2 extra attack"), "{}", found[0]);
     }
