@@ -7246,6 +7246,9 @@
       "started_at": "2026-10-15T19:28:21Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "994": {
+      "suggestion": true
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
