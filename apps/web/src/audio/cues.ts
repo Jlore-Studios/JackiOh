@@ -668,6 +668,8 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   secretChosen: { sfx: "trapSet", cues: () => [sfx("trapSet")] },
   secretRevealed: { sfx: "trapSting", cues: () => [sfx("trapSting")] },
   predicted: { sfx: "notify", cues: () => [sfx("notify")] },
+  // R831003: KY's Papaya's curve sweeps across the board.
+  curveDrawn: { sfx: "whoosh", cues: () => [sfx("whoosh")] },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

@@ -1105,10 +1105,9 @@ pub fn declare_attack(
         }
     }
 
-    // R1202: the attack Windfast would make, a Unit summoned from its controller's hand makes
-    // instead. Asked parks the attack behind the hand pick; the pick's answer declares it.
-    match crate::attack_summon::replace_attacker(sink, &attacker, &target, false) {
-        crate::attack_summon::Replaced::Asked => return Ok(()),
+    // R1202, R831006: the attack Windfast would make, a random Unit summoned from its controller's
+    // hand makes instead.
+    match crate::attack_summon::replace_attacker(sink, &attacker) {
         crate::attack_summon::Replaced::By(unit) => {
             let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
             return declare_instead(sink, &unit, &target, Some(&attacker.id), bounce);
@@ -1267,8 +1266,7 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
     // R1202: a forced attack Windfast would make, its substitute makes instead.
     let since = crate::stays::exit_mark(sink.state);
     let (attacker, instead_of, bounce) =
-        match crate::attack_summon::replace_attacker(sink, &attacker, &target, true) {
-            crate::attack_summon::Replaced::Asked => return,
+        match crate::attack_summon::replace_attacker(sink, &attacker) {
             crate::attack_summon::Replaced::By(unit) => {
                 let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
                 (*unit, Some(attacker.id.clone()), bounce)

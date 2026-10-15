@@ -1,13 +1,14 @@
-//! C+ #62 KY's Papaya (SPEC §8.7 row 62, R422; BUILD M9 row C+ 62). (1) Spell, Fruit, KY, Epic.
-//!   Base:    "Draw a curve y = ax³ + bx² + cx + d across the board, … Exile every card on the curve."
+//! C+ #62 KY's Papaya (SPEC §8.7 row 62, R422, R831003; BUILD M9 row C+ 62). (1) Spell, Fruit, KY, Epic.
+//!   Base:    "Discover 1 to 4 cells, each among 3 random cells in different lanes; the curve y = ax³ +
+//!             bx² + cx + d goes through them, … Exile every card on the curve."
 //!   Radiant: "… Exile every enemy card on the curve."
 //!
-//! The curve is the engine's (E32): the player picks 1 to 4 cells in different
-//! lanes, one board-cell prompt at a time, the curve is the lowest-degree polynomial through them in
-//! exact rationals, and the top card at every cell on it is exiled. The picks are board cells, not
-//! cards, so they keep the cell chrome: the Discover rule is for card selections, and twenty cells
-//! are past its five-option limit either way. The running face decides the rows: `papayaAnswered`
-//! reads `ctx.radiant` and keeps to the enemy's rows 2 and 3 on the Radiant one.
+//! The curve is the engine's (E32): the player Discovers 1 to 4 cells in different lanes, each among
+//! `PAPAYA_OFFERS` random cells of the lanes not used yet, then "done" (patch v0.3.9, R831003; it chose
+//! any cell on the board before). The curve is the lowest-degree polynomial through them in exact
+//! rationals, announced in a public `curveDrawn`, and the top card at every cell on it is exiled. The
+//! running face decides the rows: `papayaAnswered` reads `ctx.radiant` and keeps to the enemy's rows 2
+//! and 3 on the Radiant one.
 
 use jackioh_engine::prelude::*;
 
@@ -24,8 +25,8 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, BUILD M9 row C+ 62: one board-cell prompt at a time (20
-// cells, then the unused lanes' cells and "done"), x the lane and y the row from the caster's seat, the
+// C+ #62 KY's Papaya — SPEC §8.7 row 62, R422, R831003, BUILD M9 row C+ 62: one Discover at a time (3
+// random cells of the unused lanes, then "done" after the first), x the lane and y the row from the caster's seat, the
 // lowest-degree curve in exact rationals, every card on it exiled (a pile's top; face-down openly; tokens
 // cease; nothing between lanes); cells never cards (R177); a random cast answers itself (R452); radiant only enemy cards.
 #[cfg(test)]
@@ -57,37 +58,72 @@ mod tests {
         scenario(json!({ "p1": p1, "p2": full_side() }))
     }
 
-    /// The option key of the cell (x, y) from `caster`'s seat: y 0 their backrow, 1 their units, 2 the
-    /// other seat's units, 3 the other seat's backrow.
-    fn cell_for(x: i32, y: usize, caster: PlayerId) -> String {
-        let other = caster.opponent();
-        let (player, row) = [(caster, "backrow"), (caster, "units"), (other, "units"), (other, "backrow")][y];
-        format!("zone:{player}:{row}:{}", x + 1)
+    /// "Done"'s option key.
+    const DONE: &str = "mode:done";
+
+    /// The option key of the cell (x, y) from the caster's seat (R831003): y 0 their backrow, 1 their
+    /// units, 2 the other seat's units, 3 the other seat's backrow.
+    fn cell(x: i32, y: usize) -> String {
+        format!("mode:{x},{y}")
     }
 
-    fn cell(x: i32, y: usize) -> String {
-        cell_for(x, y, PlayerId::P1)
+    /// R831003: answer the open Discover with the cell (x, y). Its offer is the match rng's, so a test
+    /// that means a particular curve puts the cell in the offer first, in place of the first cell offered.
+    fn pick(s: &mut Scenario, x: i32, y: usize) {
+        let key = cell(x, y);
+        let Some(pending) = s.state_mut().pending.as_mut() else {
+            panic!("a Discover is open");
+        };
+        if !pending.options.iter().any(|option| option.key == key) {
+            pending.options[0] = PromptOption {
+                key: key.clone(),
+                label: format!("({x}, {y})"),
+                selection: Selection::Mode {
+                    option: format!("{x},{y}"),
+                },
+                cost: None,
+                radiant: None,
+            };
+        }
+        s.answer(json!(key));
+    }
+
+    /// The keys of the open Discover's options.
+    fn keys(s: &Scenario) -> Vec<String> {
+        s.state()
+            .pending
+            .as_ref()
+            .map(|pending| pending.options.iter().map(|option| option.key.clone()).collect())
+            .unwrap_or_default()
     }
 
     fn curve(s: &mut Scenario, cells: &[(i32, usize)]) {
         s.play(PAPAYA, json!({}));
         for &(x, y) in cells {
-            s.answer(json!(cell(x, y)));
+            pick(s, x, y);
         }
         if cells.len() < 4 {
-            s.answer(json!("none"));
+            s.answer(json!(DONE));
         }
         assert!(s.state().pending.is_none());
     }
 
     fn exiled(s: &Scenario) -> Vec<String> {
-        let mut ids: Vec<String> = s.pile(PlayerId::P1, "exile").into_iter().map(|card| card.id).collect();
+        let mut ids: Vec<String> = s
+            .pile(PlayerId::P1, "exile")
+            .into_iter()
+            .map(|card| card.id)
+            .collect();
         ids.extend(s.pile(PlayerId::P2, "exile").into_iter().map(|card| card.id));
         ids
     }
 
     fn at(s: &Scenario, player: PlayerId, row: &str, lane: i32) -> String {
-        let card = if row == "units" { s.unit(player, lane) } else { s.backrow(player, lane) };
+        let card = if row == "units" {
+            s.unit(player, lane)
+        } else {
+            s.backrow(player, lane)
+        };
         match card {
             Some(card) => card.id,
             None => panic!("nothing in {player} {row} {lane}"),
@@ -115,7 +151,10 @@ mod tests {
                 let mut ctx = make_context(
                     &mut sink,
                     self_.as_ref(),
-                    HookOptions { controller: Some(controller), ..HookOptions::default() },
+                    HookOptions {
+                        controller: Some(controller),
+                        ..HookOptions::default()
+                    },
                 );
                 apply_effects(&effects, &mut ctx);
             }
@@ -143,56 +182,72 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r422_the_cells_come_one_board_cell_prompt_at_a_time_20_cells_then_the_unused_lanes_cells_and_done_never_more_than_21_answers_every_one_in_legal_actions() {
+        fn r831003_each_cell_is_discovered_among_3_random_cells_of_the_unused_lanes_then_done_every_one_in_legal_actions()
+         {
             let mut s = full(false);
             s.play(PAPAYA, json!({}));
             let mut sizes: Vec<usize> = Vec::new();
-            for (x, y) in [(2, 1), (0, 3), (4, 0)] {
-                let pending = s.state().pending.clone().unwrap_or_else(|| panic!("a cell prompt"));
-                assert_eq!(pending.kind, PromptKind::Cell);
+            let mut used: Vec<String> = Vec::new();
+            for _ in 0..3 {
+                let pending = s.state().pending.clone().unwrap_or_else(|| panic!("a Discover"));
+                assert_eq!(pending.kind, PromptKind::Mode);
                 let answers = legal_actions(s.state(), PlayerId::P1)
                     .into_iter()
                     .filter(|action| matches!(action, ActionBody::Answer { .. }))
                     .count();
                 assert_eq!(answers, pending.options.len());
                 sizes.push(pending.options.len());
-                s.answer(json!(cell(x, y)));
+                let cells: Vec<String> = keys(&s).into_iter().filter(|key| key.as_str() != DONE).collect();
+                // Never a lane already on the curve.
+                assert!(
+                    cells
+                        .iter()
+                        .all(|key| !used.iter().any(|lane| key.starts_with(lane.as_str())))
+                );
+                let first = cells[0].clone();
+                used.push(first.split(',').next().unwrap_or_default().to_string() + ",");
+                s.answer(json!(first));
             }
-            sizes.push(s.state().pending.as_ref().map_or(0, |pending| pending.options.len()));
-            assert_eq!(sizes, vec![20, 17, 13, 9]);
-            assert!(sizes.iter().copied().max().unwrap_or(0) <= 21);
-            let pending = s.state().pending.as_ref();
-            assert_eq!(
-                pending.and_then(|pending| pending.options.last()).map(|option| option.selection.clone()),
-                Some(Selection::None)
+            sizes.push(
+                s.state()
+                    .pending
+                    .as_ref()
+                    .map_or(0, |pending| pending.options.len()),
             );
             assert_eq!(
-                pending.map(|pending| {
-                    pending.options.iter().any(|option| option.key.ends_with(":3") || option.key.ends_with(":1"))
-                }),
-                Some(false)
+                sizes,
+                vec![
+                    PAPAYA_OFFERS as usize,
+                    PAPAYA_OFFERS as usize + 1,
+                    PAPAYA_OFFERS as usize + 1,
+                    PAPAYA_OFFERS as usize + 1
+                ]
             );
+            assert_eq!(keys(&s).last().map(String::as_str), Some(DONE));
         }
 
         #[test]
-        fn r422_the_cells_are_offered_empty_occupied_or_locked_alike() {
-            let mut s = scenario(json!({ "p1": { "hand": [PAPAYA, FILLER] }, "p2": { "hand": [FILLER] } }));
-            by_hand(
-                &mut s,
-                vec![lock(json_as(json!({ "zone": { "of": "lane", "player": "enemy", "row": "units", "lane": 2 } })))],
-                None,
-                PlayerId::P1,
-                false,
-            );
-            s.play(PAPAYA, json!({}));
-            let keys: Vec<String> = s
-                .state()
-                .pending
-                .as_ref()
-                .map(|pending| pending.options.iter().map(|option| option.key.clone()).collect())
-                .unwrap_or_default();
-            assert!(keys.contains(&"zone:p2:units:2".to_string()));
-            assert_eq!(s.state().pending.as_ref().map(|pending| pending.options.len()), Some(20));
+        fn r831003_the_offers_are_cells_empty_occupied_or_locked_alike() {
+            // A locked enemy unit zone in lane 2, (1, 2) from p1's seat, is offered under some seed.
+            let offered = (0..100).any(|n| {
+                let mut s = scenario(json!({
+                    "seed": format!("papaya-locked-{n}"),
+                    "p1": { "hand": [PAPAYA, FILLER] },
+                    "p2": { "hand": [FILLER] },
+                }));
+                by_hand(
+                    &mut s,
+                    vec![lock(json_as(
+                        json!({ "zone": { "of": "lane", "player": "enemy", "row": "units", "lane": 2 } }),
+                    ))],
+                    None,
+                    PlayerId::P1,
+                    false,
+                );
+                s.play(PAPAYA, json!({}));
+                keys(&s).contains(&cell(1, 2))
+            });
+            assert!(offered);
         }
 
         #[test]
@@ -205,8 +260,8 @@ mod tests {
             s.play(PAPAYA, json!({}));
             // p2's y = 2 row is p1's unit row: the constant through (1, 2) exiles p1's units in lanes 1 and 2.
             let lanes = vec![at(&s, PlayerId::P1, "units", 1), at(&s, PlayerId::P1, "units", 2)];
-            s.answer(json!(cell_for(1, 2, PlayerId::P2)));
-            s.answer(json!("none"));
+            pick(&mut s, 1, 2);
+            s.answer(json!(DONE));
             assert_eq!(sorted(exiled(&s)), sorted(lanes));
             assert!(s.unit(PlayerId::P2, 1).is_some());
             assert!(s.backrow(PlayerId::P1, 1).is_some());
@@ -215,7 +270,9 @@ mod tests {
         #[test]
         fn r422_one_cell_is_a_constant_its_whole_row_is_exiled_and_nothing_else() {
             let mut s = full(false);
-            let row: Vec<String> = (1..=5).map(|lane| at(&s, PlayerId::P2, "backrow", lane)).collect();
+            let row: Vec<String> = (1..=5)
+                .map(|lane| at(&s, PlayerId::P2, "backrow", lane))
+                .collect();
             curve(&mut s, &[(2, 3)]);
             assert_eq!(sorted(exiled(&s)), sorted(row));
             assert!(s.state().players.p1.exile.is_empty());
@@ -263,7 +320,8 @@ mod tests {
         }
 
         #[test]
-        fn r422_four_cells_fix_the_cubic_the_fourth_ends_the_picking_and_it_may_hit_a_cell_of_the_fifth_lane() {
+        fn r422_four_cells_fix_the_cubic_the_fourth_ends_the_picking_and_it_may_hit_a_cell_of_the_fifth_lane()
+        {
             let mut s = full(false);
             // y = x³/2 − 3x² + 9x/2 through (0, 0), (1, 2), (2, 1), (3, 0) is 2 at x = 4: p2's unit in lane 5.
             let hits = vec![
@@ -275,7 +333,13 @@ mod tests {
             ];
             curve(&mut s, &[(0, 0), (1, 2), (2, 1), (3, 0)]);
             assert_eq!(sorted(exiled(&s)), sorted(hits));
-            s.expect_events(json!(["cardPlayed", "promptOpened", "exiled", "cardResolved"]));
+            s.expect_events(json!([
+                "cardPlayed",
+                "promptOpened",
+                "curveDrawn",
+                "exiled",
+                "cardResolved"
+            ]));
         }
 
         #[test]
@@ -284,10 +348,20 @@ mod tests {
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "backrow": [TRAP, TRAP] },
             }));
-            let traps = vec![at(&s, PlayerId::P2, "backrow", 1), at(&s, PlayerId::P2, "backrow", 2)];
-            assert_ne!(s.backrow(PlayerId::P2, 1).and_then(|card| card.face_up), Some(true));
+            let traps = vec![
+                at(&s, PlayerId::P2, "backrow", 1),
+                at(&s, PlayerId::P2, "backrow", 2),
+            ];
+            assert_ne!(
+                s.backrow(PlayerId::P2, 1).and_then(|card| card.face_up),
+                Some(true)
+            );
             curve(&mut s, &[(0, 3)]);
-            let pile: Vec<String> = s.pile(PlayerId::P2, "exile").into_iter().map(|card| card.id).collect();
+            let pile: Vec<String> = s
+                .pile(PlayerId::P2, "exile")
+                .into_iter()
+                .map(|card| card.id)
+                .collect();
             assert_eq!(sorted(pile), sorted(traps.clone()));
             for viewer in [PlayerId::P1, PlayerId::P2] {
                 let shown: Vec<(String, String)> = s
@@ -295,17 +369,23 @@ mod tests {
                     .events
                     .iter()
                     .filter_map(|event| match event {
-                        GameEvent::Exiled { instance_id, def_id, .. } => Some((instance_id.clone(), def_id.clone())),
+                        GameEvent::Exiled {
+                            instance_id, def_id, ..
+                        } => Some((instance_id.clone(), def_id.clone())),
                         _ => None,
                     })
                     .collect();
-                assert_eq!(sorted(shown.iter().map(|(id, _)| id.clone()).collect()), sorted(traps.clone()));
+                assert_eq!(
+                    sorted(shown.iter().map(|(id, _)| id.clone()).collect()),
+                    sorted(traps.clone())
+                );
                 assert!(shown.iter().all(|(_, def_id)| def_id == TRAP));
             }
         }
 
         #[test]
-        fn s6_3_exile_is_no_destroy_an_indestructible_unit_and_a_reborn_unit_on_the_curve_are_exiled_and_nothing_comes_back() {
+        fn s6_3_exile_is_no_destroy_an_indestructible_unit_and_a_reborn_unit_on_the_curve_are_exiled_and_nothing_comes_back()
+         {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "field": ["core-066", "core-003"] },
@@ -313,7 +393,8 @@ mod tests {
             let rock = s.unit(PlayerId::P2, 1).expect("The Rock");
             let defender = s.unit(PlayerId::P2, 2).expect("a Reborn unit");
             curve(&mut s, &[(0, 2)]);
-            s.expect_in_zone(&rock, "exile").expect_in_zone(&defender, "exile");
+            s.expect_in_zone(&rock, "exile")
+                .expect_in_zone(&defender, "exile");
             assert!(s.unit(PlayerId::P2, 1).is_none());
             assert!(s.unit(PlayerId::P2, 2).is_none());
         }
@@ -331,7 +412,8 @@ mod tests {
         }
 
         #[test]
-        fn s3_2_r13_the_top_of_a_stack_pile_is_exiled_and_the_card_beneath_resumes_not_exiled_by_the_same_curve() {
+        fn s3_2_r13_the_top_of_a_stack_pile_is_exiled_and_the_card_beneath_resumes_not_exiled_by_the_same_curve()
+         {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "field": [{ "def": "core-043", "lane": 1 }, { "def": "core-092", "stack": true }] },
@@ -339,7 +421,10 @@ mod tests {
             let top = s.unit(PlayerId::P2, 1).expect("the top of the pile");
             curve(&mut s, &[(0, 2)]);
             s.expect_in_zone(&top, "exile");
-            assert_eq!(s.unit(PlayerId::P2, 1).map(|card| card.def_id), Some("core-043".to_string()));
+            assert_eq!(
+                s.unit(PlayerId::P2, 1).map(|card| card.def_id),
+                Some("core-043".to_string())
+            );
         }
 
         #[test]
@@ -351,7 +436,8 @@ mod tests {
         }
 
         #[test]
-        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_that_a_prompt_is_open_then_the_exiles() {
+        fn r177_the_prompts_offer_cells_never_cards_the_other_seat_sees_only_that_a_prompt_is_open_then_the_exiles()
+         {
             let mut s = scenario(json!({
                 "p1": { "hand": [PAPAYA, FILLER] },
                 "p2": { "hand": [FILLER], "backrow": [TRAP] },
@@ -359,28 +445,45 @@ mod tests {
             let trap = at(&s, PlayerId::P2, "backrow", 1);
             s.play(PAPAYA, json!({}));
             let elsewhere = json!({ "forYou": false, "pendingFor": "p1" });
-            assert_eq!(serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(), elsewhere);
+            assert_eq!(
+                serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(),
+                elsewhere
+            );
             assert_eq!(
                 s.state().pending.as_ref().map(|pending| {
-                    pending.options.iter().all(|option| matches!(option.selection, Selection::Zone { .. }))
+                    pending
+                        .options
+                        .iter()
+                        .all(|option| matches!(option.selection, Selection::Mode { .. }))
                 }),
                 Some(true)
             );
-            assert!(!serde_json::to_string(&s.view(PlayerId::P1).pending).unwrap().contains(&trap));
-            assert!(!serde_json::to_string(&s.view(PlayerId::P2).pending).unwrap().contains("zone"));
-            s.answer(json!(cell(0, 3)));
-            assert_eq!(serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(), elsewhere);
-            s.answer(json!("none"));
             assert!(
-                s.view(PlayerId::P2)
-                    .events
-                    .iter()
-                    .any(|event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == trap))
+                !serde_json::to_string(&s.view(PlayerId::P1).pending)
+                    .unwrap()
+                    .contains(&trap)
+            );
+            assert!(
+                !serde_json::to_string(&s.view(PlayerId::P2).pending)
+                    .unwrap()
+                    .contains("mode:")
+            );
+            pick(&mut s, 0, 3);
+            assert_eq!(
+                serde_json::to_value(&s.view(PlayerId::P2).pending).unwrap(),
+                elsewhere
+            );
+            s.answer(json!(DONE));
+            assert!(
+                s.view(PlayerId::P2).events.iter().any(
+                    |event| matches!(event, GameEvent::Exiled { instance_id, .. } if *instance_id == trap)
+                )
             );
         }
 
         #[test]
-        fn r452_a_random_cast_answers_the_same_prompts_at_random_nothing_pauses_and_the_curves_cards_are_exiled() {
+        fn r452_a_random_cast_answers_the_same_prompts_at_random_nothing_pauses_and_the_curves_cards_are_exiled()
+         {
             for seed in 1..=4 {
                 let mut s = scenario(json!({
                     "seed": format!("papaya-random-{seed}"),
@@ -402,7 +505,11 @@ mod tests {
                     true,
                 );
                 assert!(s.state().pending.is_none());
-                assert!(!events.iter().any(|event| matches!(event, GameEvent::PromptOpened { .. })));
+                assert!(
+                    !events
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::PromptOpened { .. }))
+                );
                 // A full board: at least the cell the curve was drawn through, and never two cards of one lane.
                 let lanes: Vec<Option<i32>> = events
                     .iter()
@@ -421,8 +528,8 @@ mod tests {
         fn r113_paused_mid_answer_the_cells_so_far_survive_json_and_the_copy_answers_to_the_same_hash() {
             let mut s = full(false);
             s.play(PAPAYA, json!({}));
-            s.answer(json!(cell(0, 0)));
-            s.answer(json!(cell(1, 1)));
+            pick(&mut s, 0, 0);
+            pick(&mut s, 1, 1);
             let paused = s.state().clone();
             let copy: GameState = serde_json::from_value(serde_json::to_value(&paused).unwrap()).unwrap();
             assert_eq!(copy, paused);
@@ -435,12 +542,18 @@ mod tests {
             }
             let mut live = paused;
             let mut revived = copy;
-            for (index, key) in [cell(3, 2), "none".to_string()].iter().enumerate() {
+            for index in 0..2 {
                 let pending = live.pending.clone().unwrap_or_else(|| panic!("a prompt"));
+                // The first cell offered, then "done".
+                let key = if index == 0 {
+                    pending.options[0].key.clone()
+                } else {
+                    DONE.to_string()
+                };
                 let option = pending
                     .options
                     .iter()
-                    .find(|held| held.key == *key)
+                    .find(|held| held.key == key)
                     .cloned()
                     .unwrap_or_else(|| panic!("option {key}"));
                 let body = ActionBody::Answer {
@@ -457,10 +570,20 @@ mod tests {
         #[test]
         fn s9_2_a_game_that_draws_a_curve_replays_from_its_log_to_the_same_hash() {
             crate::register_all();
-            let units = ["core-001", "core-002", "core-004", "core-007", "core-008", "core-009", "core-011", "core-012"];
-            let more = ["core-013", "core-015", "core-019", "core-020", "core-022", "core-025", "core-030", "core-032"];
+            let units = [
+                "core-001", "core-002", "core-004", "core-007", "core-008", "core-009", "core-011",
+                "core-012",
+            ];
+            let more = [
+                "core-013", "core-015", "core-019", "core-020", "core-022", "core-025", "core-030",
+                "core-032",
+            ];
             let mut deck: Vec<String> = units.iter().chain(more.iter()).map(|id| id.to_string()).collect();
-            deck.extend(["core-037", "core-043", "core-045", PAPAYA].iter().map(|id| id.to_string()));
+            deck.extend(
+                ["core-037", "core-043", "core-045", PAPAYA]
+                    .iter()
+                    .map(|id| id.to_string()),
+            );
             let mut found: Option<(String, GameState)> = None;
             let mut n = 0;
             while n < 300 && found.is_none() {
@@ -479,7 +602,13 @@ mod tests {
             let (seed, mut state) = found.unwrap_or_else(|| panic!("no seed deals p1 the Papaya"));
             let mut log: Vec<Action> = Vec::new();
             let mut count: u32 = 0;
-            fn act(state: &GameState, body: ActionBody, player: PlayerId, count: &mut u32, log: &mut Vec<Action>) -> GameState {
+            fn act(
+                state: &GameState,
+                body: ActionBody,
+                player: PlayerId,
+                count: &mut u32,
+                log: &mut Vec<Action>,
+            ) -> GameState {
                 *count += 1;
                 let action = Action::new(body, player, format!("pr{count}"));
                 let result = reduce(state, &action);
@@ -490,8 +619,18 @@ mod tests {
                 result.state
             }
             for player in [PlayerId::P1, PlayerId::P2] {
-                let keep: Vec<String> = state.players[player].hand.iter().map(|card| card.id.clone()).collect();
-                state = act(&state, ActionBody::Mulligan { keep }, player, &mut count, &mut log);
+                let keep: Vec<String> = state.players[player]
+                    .hand
+                    .iter()
+                    .map(|card| card.id.clone())
+                    .collect();
+                state = act(
+                    &state,
+                    ActionBody::Mulligan { keep },
+                    player,
+                    &mut count,
+                    &mut log,
+                );
             }
             let papaya = state
                 .players
@@ -508,8 +647,14 @@ mod tests {
                 &mut count,
                 &mut log,
             );
-            for key in [cell(0, 3), cell(2, 1), "none".to_string()] {
+            // The first cell each Discover offers, twice, then "done".
+            for last in [false, false, true] {
                 let pending = state.pending.clone();
+                let key = match (&pending, last) {
+                    (_, true) => DONE.to_string(),
+                    (Some(pending), false) => pending.options[0].key.clone(),
+                    (None, false) => panic!("a Discover"),
+                };
                 let option = pending
                     .as_ref()
                     .and_then(|pending| pending.options.iter().find(|held| held.key == key).cloned());
@@ -518,14 +663,19 @@ mod tests {
                 };
                 state = act(
                     &state,
-                    ActionBody::Answer { choice_id: pending.id, selection: vec![option.selection] },
+                    ActionBody::Answer {
+                        choice_id: pending.id,
+                        selection: vec![option.selection],
+                    },
                     PlayerId::P1,
                     &mut count,
                     &mut log,
                 );
             }
             assert!(state.pending.is_none());
-            let replayed = fold(&json_as(json!({ "seed": seed, "decks": [deck, deck], "log": log })));
+            let replayed = fold(&json_as(
+                json!({ "seed": seed, "decks": [deck, deck], "log": log }),
+            ));
             assert!(replayed.errors.is_empty());
             assert_eq!(hash_state(&replayed.state), hash_state(&state));
         }
@@ -537,7 +687,10 @@ mod tests {
         #[test]
         fn r422_only_enemy_cards_on_the_curve_are_exiled_y_x_takes_their_2_2_and_3_3_not_your_0_0_and_1_1() {
             let mut s = full(true);
-            let enemy = vec![at(&s, PlayerId::P2, "units", 3), at(&s, PlayerId::P2, "backrow", 4)];
+            let enemy = vec![
+                at(&s, PlayerId::P2, "units", 3),
+                at(&s, PlayerId::P2, "backrow", 4),
+            ];
             curve(&mut s, &[(0, 0), (1, 1)]);
             assert_eq!(sorted(exiled(&s)), sorted(enemy));
             assert!(s.state().players.p1.exile.is_empty());
@@ -549,7 +702,9 @@ mod tests {
             curve(&mut own, &[(1, 1)]);
             assert_eq!(exiled(&own), Vec::<String>::new());
             let mut theirs = full(true);
-            let row: Vec<String> = (1..=5).map(|lane| at(&theirs, PlayerId::P2, "units", lane)).collect();
+            let row: Vec<String> = (1..=5)
+                .map(|lane| at(&theirs, PlayerId::P2, "units", lane))
+                .collect();
             curve(&mut theirs, &[(1, 2)]);
             assert_eq!(sorted(exiled(&theirs)), sorted(row));
         }
@@ -558,9 +713,15 @@ mod tests {
         fn r422_the_radiant_face_asks_the_same_prompts() {
             let mut s = full(true);
             s.play(PAPAYA, json!({}));
-            assert_eq!(s.state().pending.as_ref().map(|pending| pending.options.len()), Some(20));
-            s.answer(json!(cell(0, 0)));
-            assert_eq!(s.state().pending.as_ref().map(|pending| pending.options.len()), Some(17));
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.options.len()),
+                Some(PAPAYA_OFFERS as usize)
+            );
+            pick(&mut s, 0, 0);
+            assert_eq!(
+                s.state().pending.as_ref().map(|pending| pending.options.len()),
+                Some(PAPAYA_OFFERS as usize + 1)
+            );
         }
     }
 }

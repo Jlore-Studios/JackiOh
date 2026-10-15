@@ -521,7 +521,7 @@ describe("R383 Animated: its face prints the Unit it becomes, and a card standin
     cleanup();
 
     const collection = render(<CardFace face={faceModel({ defId: "classicplus-012-8", def: def("classicplus-012-8"), radiant: true })} />);
-    expect(collection.container.querySelector(".cf-atk")?.getAttribute("data-face-attack")).toBe("20");
+    expect(collection.container.querySelector(".cf-atk")?.getAttribute("data-face-attack")).toBe("14");
     expect(collection.container.querySelector(".cf-hp")?.getAttribute("data-face-health")).toBe("6");
     cleanup();
 

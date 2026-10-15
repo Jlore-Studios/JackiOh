@@ -42,7 +42,7 @@ use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
 use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
-use crate::state::{CardInstance, EngineError, GameState};
+use crate::state::{CardInstance, EngineError, GameState, ModifierKind};
 use crate::wire::{
     ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, PlagueSpend, PlayerId,
     PromptKind, RevealAt, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
@@ -310,13 +310,21 @@ pub fn tagged_play_radiant(state: &GameState, player: PlayerId, card: &CardInsta
 }
 
 /// §10.5 step 3: whether this play is made Radiant as it is played — #64 Gifted Program's first cheap
-/// card (R213), a tag rule's (Classic+ #68), or Meditative #40 Feng Shui's reward for an auspicious
-/// play (R983). Step 1 reads it to know the face the play's choices answer (R214), and step 3
-/// applies it.
+/// card (R213), a tag rule's (Classic+ #68), Meditative #40 Feng Shui's reward for an auspicious
+/// play (R983), or Meditative #53 Prestige's next play (R831005). Step 1 reads it to know the face
+/// the play's choices answer (R214), and step 3 applies it.
 pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstance, cost_paid: i32) -> bool {
     gifted_makes_radiant(state, player, cost_paid)
         || tagged_play_radiant(state, player, card)
         || crate::subsystems::feng_shui::rewards(state, player, card)
+        || radiant_next_play(state, player)
+}
+
+/// R831005: whether a live `radiantNextPlay` modifier of the player makes their next play Radiant.
+pub fn radiant_next_play(state: &GameState, player: PlayerId) -> bool {
+    state.players[player].mods.iter().any(|modifier| {
+        matches!(modifier.kind, ModifierKind::RadiantNextPlay) && crate::mana::modifier_is_live(state, modifier)
+    })
 }
 
 /// What a play of this card with these prices would pay, read the way §10.5 step 1 reads it (R65) — as

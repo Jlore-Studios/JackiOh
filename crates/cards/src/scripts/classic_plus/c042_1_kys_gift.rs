@@ -1,10 +1,11 @@
 //! C+ #42.1 KY's Gift (SPEC §8.7 row 42.1, §7, R16, R62, R380). (4) Field Spell, KY, Token (printed
 //! Legendary); C+ #42 KY's Test's Hard reward.
-//!   Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a
+//!   Activate: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a
 //!   random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand.
 //!   They cost (0). Radiant: 2 mana, 2 discards, heal 10, and the four cards are Radiant.
 //!
-//! Its controller's start of turn (R62), in the order written. The mana is temporary (§2.3). The discard
+//! An Activate, once a turn (R384; its controller's start of turn, R62, before patch v0.3.9), in the
+//! order written. The mana is temporary (§2.3). The discard
 //! is random from the opponent's hand (R682): fewer cards than asked taking what they have and none
 //! taking nothing. The four cards come from non-token pools of every set (R380), each at `costOverride`
 //! 0; the hand cap burns. The numbers are the declared `mana`, `discards` and `heal` (R386); one script
@@ -12,8 +13,8 @@
 
 pub const ID: &str = "classicplus-042-1";
 
-// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R682, R62, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
-// p2 is active in each scenario, so its `endTurn()` starts p1's turn, where the Gift fires.
+// C+ #42.1 KY's Gift — SPEC §8.7 row 42.1, R682, R384, R97, R177, R380, R386, BUILD M9 row C+ 42.1.
+// p1 is active in each scenario and activates the Gift in its backrow.
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -32,10 +33,9 @@ mod tests {
 
     use crate::merged;
 
-    /// p1's Gift in the backrow, p2 to move; `end_turn()` hands p1 its turn.
+    /// p1's Gift in the backrow, p1 to move.
     fn gift(radiant: bool, p1: Value, p2: Value) -> Scenario {
         scenario(json!({
-            "active": "p2",
             "p1": merged(
                 json!({ "backrow": [{ "def": GIFT, "radiant": radiant }], "library": [FILLER, FILLER], "hand": [FILLER] }),
                 p1,
@@ -74,22 +74,33 @@ mod tests {
         view(s, seat)["events"].as_array().cloned().unwrap_or_default()
     }
 
+    /// The Gift's Activate.
+    fn open(s: &mut Scenario) {
+        s.activate(GIFT, json!({ "ability": "gift" }));
+    }
+
+    fn mana(s: &Scenario) -> i32 {
+        s.state().players.p1.mana.current
+    }
+
     fn events_json(s: &Scenario) -> Vec<Value> {
         s.events().iter().map(|event| serde_json::to_value(event).expect("an event is JSON")).collect()
     }
 
     #[test]
-    fn is_a_start_of_turn_script_on_both_faces_its_numbers_the_declared_mana_discards_and_heal() {
+    fn r384_is_one_activate_once_a_turn_on_both_faces_its_numbers_the_declared_mana_discards_and_heal() {
         let def = crate::card_def(GIFT);
         assert_eq!(def.id, GIFT);
         assert!(def.token);
         assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
         let scripts = crate::scripts_of()[super::ID].clone();
-        let (base, radiant) = (
-            scripts.base.start_of_turn.as_ref().expect("a start-of-turn script"),
-            scripts.radiant.start_of_turn.as_ref().expect("a start-of-turn script"),
-        );
-        assert!(Arc::ptr_eq(base, radiant));
+        for face in [&scripts.base, &scripts.radiant] {
+            assert!(face.start_of_turn.is_none(), "no start-of-turn script since patch v0.3.9");
+            assert_eq!(face.activations.len(), 1);
+            assert_eq!(face.activations[0].id, "gift");
+            assert_eq!(face.activations[0].uses, ActivationUses::Count(1));
+        }
+        assert!(Arc::ptr_eq(&scripts.base.activations[0].run, &scripts.radiant.activations[0].run));
         let params: Vec<Value> =
             def.params.unwrap_or_default().iter().map(|entry| json!([entry.key, entry.base, entry.radiant])).collect();
         assert_eq!(
@@ -103,7 +114,7 @@ mod tests {
         let mut s = gift(false, json!({}), json!({}));
         assert!(!crate::can_upgrade_number(&s, GIFT, "setCost"));
         assert_eq!(crate::degrade_number(&mut s, GIFT, "setCost"), 1);
-        s.end_turn();
+        open(&mut s);
         let made = s.hand(P1).into_iter().filter(|card| card.cost_override == Some(1)).count();
         assert_eq!(made, 4);
     }
@@ -112,11 +123,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r62_at_the_start_of_your_turn_1_mana_above_the_cap_then_the_random_discard_lands_with_no_prompt() {
+        fn r384_the_activate_gains_1_mana_then_the_random_discard_lands_with_no_prompt() {
             let mut s = gift(false, json!({}), json!({}));
-            s.end_turn();
-            assert_eq!(s.state().active, P1);
-            s.expect_mana(P1, MAX_MANA + 1);
+            let before = mana(&s);
+            open(&mut s);
+            assert_eq!(mana(&s), before + 1);
             // R682: no prompt opens — the random discard landed and the rest followed.
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(P2).len(), 1);
@@ -128,7 +139,7 @@ mod tests {
         #[test]
         fn r682_the_opponent_discards_1_at_random_then_your_hero_heals_5_past_30_and_the_four_cards_arrive_at_0() {
             let mut s = gift(false, json!({}), json!({}));
-            s.end_turn();
+            open(&mut s);
             let grave: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.def_id).collect();
             assert_eq!(grave.len(), 1);
             assert!([MENACE, TIMMY].contains(&grave[0].as_str()));
@@ -144,11 +155,10 @@ mod tests {
             for n in 0..12 {
                 let mut s = scenario(json!({
                     "seed": format!("kys-gift-sets-{n}"),
-                    "active": "p2",
                     "p1": { "backrow": [GIFT], "library": [FILLER], "hand": [FILLER] },
                     "p2": { "hand": [], "library": [FILLER] },
                 }));
-                s.end_turn();
+                open(&mut s);
                 for (def_id, _) in added(&s) {
                     sets.push(crate::card_def(&def_id).set.to_string());
                 }
@@ -159,27 +169,40 @@ mod tests {
         #[test]
         fn r16_an_empty_opponent_hand_asks_nothing_and_the_rest_still_happens() {
             let mut s = gift(false, json!({}), json!({ "hand": [], "library": [FILLER] }));
-            s.end_turn();
+            open(&mut s);
             assert!(s.state().pending.is_none());
             s.expect_health(P1, HERO_HEALTH + 5);
             expect_the_four(&added(&s), false);
         }
 
         #[test]
-        fn r62_it_does_nothing_at_the_opponents_start_of_turn() {
-            let mut s = gift(false, json!({}), json!({}));
-            s.end_turn();
-            let health = s.state().players.p1.hero.health;
-            s.end_turn();
-            assert_eq!(s.state().active, P2);
+        fn r384_once_a_turn_a_second_use_is_refused_and_your_next_turn_it_is_yours_again() {
+            let mut s = gift(false, json!({ "library": [FILLER, FILLER, FILLER] }), json!({}));
+            open(&mut s);
+            s.expect_refused(|s| {
+                s.activate(GIFT, json!({ "ability": "gift" }));
+            });
+            s.end_turn().end_turn();
+            assert_eq!(s.state().active, P1);
+            open(&mut s);
+            s.expect_health(P1, HERO_HEALTH + 10);
+        }
+
+        #[test]
+        fn r62_nothing_happens_at_either_start_of_turn_any_more() {
+            let mut s = gift(false, json!({ "library": [FILLER, FILLER, FILLER] }), json!({}));
+            s.end_turn().end_turn();
+            assert_eq!(s.state().active, P1);
             assert!(s.state().pending.is_none());
-            s.expect_health(P1, health);
+            s.expect_health(P1, HERO_HEALTH);
+            assert!(added(&s).is_empty());
+            assert!(s.pile(P2, "graveyard").is_empty());
         }
 
         #[test]
         fn r177_r682_no_prompt_opens_the_opponents_remaining_hand_stays_hidden_the_discard_is_public_the_four_cards_hidden_r97() {
             let mut s = gift(false, json!({}), json!({}));
-            s.end_turn();
+            open(&mut s);
             assert!(s.state().pending.is_none());
             assert!(view(&s, P1)["pending"].is_null());
             let mine = serde_json::to_string(&s.view(P1)).expect("a view is JSON");
@@ -193,10 +216,10 @@ mod tests {
             let p1_events = view_events(&s, P1);
             let p1_discard = p1_events.iter().find(|event| event["type"] == "discarded");
             assert!(p1_discard.is_some_and(|event| event["defId"] == MENACE || event["defId"] == TIMMY));
-            // The four, and the turn's draw: every card reaching p1's hand is the sentinel to p2.
+            // The four: every card reaching p1's hand is the sentinel to p2.
             let adds: Vec<&Value> =
                 p2_events.iter().filter(|event| event["type"] == "addedToHand" && event["player"] == "p1").collect();
-            assert!(adds.len() >= 4);
+            assert_eq!(adds.len(), 4);
             for event in adds {
                 assert_eq!(event["defId"], "hidden");
             }
@@ -205,9 +228,9 @@ mod tests {
         #[test]
         fn r682_the_random_discard_comes_from_the_match_rng_the_same_game_discards_the_same_card() {
             let mut first = gift(false, json!({}), json!({}));
-            first.end_turn();
+            open(&mut first);
             let mut second = gift(false, json!({}), json!({}));
-            second.end_turn();
+            open(&mut second);
             let ids = |s: &Scenario| -> Vec<String> {
                 events_json(s)
                     .iter()
@@ -222,13 +245,11 @@ mod tests {
         fn s2_4_a_full_hand_burns_what_does_not_fit() {
             let hand: Vec<&str> = (0..8).map(|_| FILLER).collect();
             let mut s = gift(false, json!({ "hand": hand, "library": [FILLER] }), json!({}));
-            s.end_turn();
-            // Start-of-turn triggers come before the draw (§2): two of the four fit beside the 8, two are
-            // burned, and then the turn's draw is burned too.
+            open(&mut s);
+            // Two of the four fit beside the 8; two are burned.
             assert_eq!(s.hand(P1).len(), 10);
             assert_eq!(added(&s).len(), 2);
-            assert_eq!(s.pile(P1, "library").len(), 0);
-            assert_eq!(events_json(&s).iter().filter(|event| event["type"] == "burned").count(), 3);
+            assert_eq!(events_json(&s).iter().filter(|event| event["type"] == "burned").count(), 2);
         }
 
         #[test]
@@ -237,8 +258,9 @@ mod tests {
             step_param(s.card_mut(GIFT), "mana", 1);
             step_param(s.card_mut(GIFT), "discards", 1);
             step_param(s.card_mut(GIFT), "heal", 1);
-            s.end_turn();
-            s.expect_mana(P1, MAX_MANA + 2);
+            let before = mana(&s);
+            open(&mut s);
+            assert_eq!(mana(&s), before + 2);
             assert!(s.state().pending.is_none());
             assert_eq!(s.pile(P2, "graveyard").len(), 2);
             assert_eq!(s.hand(P2).len(), 0);
@@ -252,8 +274,9 @@ mod tests {
         #[test]
         fn two_mana_two_random_discards_heal_10_and_the_four_cards_are_radiant() {
             let mut s = gift(true, json!({}), json!({}));
-            s.end_turn();
-            s.expect_mana(P1, MAX_MANA + 2);
+            let before = mana(&s);
+            open(&mut s);
+            assert_eq!(mana(&s), before + 2);
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(P2).len(), 0);
             assert_eq!(s.pile(P2, "graveyard").len(), 2);
@@ -264,7 +287,7 @@ mod tests {
         #[test]
         fn r682_fewer_cards_than_asked_the_opponent_discards_all_they_have() {
             let mut s = gift(true, json!({}), json!({ "hand": [TIMMY], "library": [FILLER] }));
-            s.end_turn();
+            open(&mut s);
             assert!(s.state().pending.is_none());
             assert_eq!(s.hand(P2).len(), 0);
             let grave: Vec<String> = s.pile(P2, "graveyard").into_iter().map(|card| card.def_id).collect();
@@ -276,7 +299,7 @@ mod tests {
         fn r386_a_degrade_steps_the_radiant_heal_from_10_to_9() {
             let mut s = gift(true, json!({}), json!({ "hand": [], "library": [FILLER] }));
             step_param(s.card_mut(GIFT), "heal", -1);
-            s.end_turn();
+            open(&mut s);
             s.expect_health(P1, HERO_HEALTH + 9);
         }
     }

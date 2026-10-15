@@ -28,6 +28,13 @@ const LOT: PendingOption = { key: "mode:core-080", label: "Lot", defId: "core-08
 const AI_LOT: PendingOption = { key: "mode:classicplus-t-ai-01", label: "AI lot", defId: "classicplus-t-ai-01", cost: 15 };
 const BARTER: PendingOption = { key: "instance:h1", label: "Traded", instanceId: "h1", defId: "core-005", cost: -30 };
 const LEAVE: PendingOption = { key: "none", label: "Leave" };
+const RADIANT_LOT: PendingOption = {
+  key: "mode:core-080:radiant",
+  label: "Lot",
+  defId: "core-080",
+  cost: 60,
+  radiant: true,
+};
 
 function marketView(options: PendingOption[]): PlayerView {
   return baseView({ pending: pendingFor("market", options, { budget: 50 }) });
@@ -59,6 +66,16 @@ describe("R1000 the night market's stall", () => {
     expect(screen.getByRole("button", { name: "Lot, 30 yuan" })).toBeInTheDocument();
     // R432: a price is yuan, never a card's "cost N".
     expect(modal.textContent ?? "").not.toMatch(/cost \d/i);
+  });
+
+  it("R831002 a lot sold on its Radiant face shows that face and answers its own option, not the base lot", () => {
+    const onAction = renderMarket(marketView([LOT, RADIANT_LOT, LEAVE]));
+    const radiant = screen.getByTestId("prompt-option-mode:core-080:radiant");
+    expect(radiant).toHaveTextContent("¥60");
+    expect(radiant.querySelector('[data-radiant-face="true"]')).not.toBeNull();
+    expect(screen.getByTestId("prompt-option-mode:core-080").querySelector('[data-radiant-face="true"]')).toBeNull();
+    fireEvent.click(radiant);
+    sent(onAction, [{ pick: "mode", option: "core-080:radiant" }]);
   });
 
   it("R1000 a lot answers its card, and Leave answers none", () => {

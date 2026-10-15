@@ -94,6 +94,7 @@ import {
 } from "./actions.ts";
 import { CardBack, CardFace, faceModel, useInspectTrigger, type FaceModel } from "../cards/index.ts";
 import { chineseName, drawnInChinese } from "../cards/chinese.ts";
+import { setMarkOf } from "../cards/setMark.ts";
 import { isZhCn, t, useLocale } from "../i18n/i18n.ts";
 import { MatchCardsProvider, useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { CraftEditor } from "./craft/CraftEditor.tsx";
@@ -736,6 +737,9 @@ function CardOption(props: {
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
   const number = face === null && NUMBER_OPTION.test(props.item.label) ? props.item.label : null;
+  // R831004: an option that names a set (#82 KY's Trial's first Discover) shows the set's mark (R503).
+  const mark = face === null && number === null ? setMarkOf(props.item.label) : null;
+  const setMark = mark === null || mark.kind === "unknown" ? null : mark;
   const testId = `prompt-option-${props.item.key}`;
   // Lines of code is a hidden stat in matches.
   const inspect = useInspectTrigger(face === null ? null : { key: testId, face }, { prefer: "above", showLoc: false });
@@ -755,6 +759,7 @@ function CardOption(props: {
         data-testid={testId}
         data-verdict={verdict}
         data-number={number ?? undefined}
+        data-set={setMark === null ? undefined : props.item.label}
         data-price={face === null ? undefined : props.item.price}
         data-over-budget={props.over === true ? "true" : undefined}
         aria-pressed={props.pressed}
@@ -773,6 +778,7 @@ function CardOption(props: {
           </span>
         ) : face === null ? (
           <>
+            {setMark === null ? null : <img className="prompt-set-mark" src={setMark.src} alt="" aria-hidden="true" title={setMark.label} />}
             <span className="prompt-card-name">{name}</span>
             {/* A Discover menu's text option (a card's modes): the effect rides `detail`. */}
             {props.item.detail === undefined ? (

@@ -18,7 +18,8 @@ pub const ID: &str = "core-079";
 // The echo count is read through The Coin (§7), whose "Gain 1 mana this turn." makes each resolution
 // a number: one extra resolution is +2 instead of +1, two extra is +3.
 // The "fresh prompts per repeat" half of §10.5 step 6 is read through #82 KY's Trial, whose every
-// resolution opens a Discover (§10.6); #80 Zao Gao's discard is random (R354), so it opens no prompt.
+// resolution opens a Discover of a set and then one of a number (§10.6, R831004); #80 Zao Gao's discard
+// is random (R354), so it opens no prompt.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -27,7 +28,8 @@ mod tests {
 
     const TWINSPELL: &str = "core-079";
     const COIN: &str = "core-t-coin";
-    /// #82 KY's Trial, cost 1: "Discover among 3 distinct random numbers 1–100" (R247).
+    /// #82 KY's Trial, cost 1: "Discover one of 3 random sets, then one of 3 random numbers in it" (R247,
+    /// R831004).
     const TRIAL: &str = "core-082";
 
     const LIBRARY: [&str; 4] = ["core-008", "core-008", "core-008", "core-008"];
@@ -70,6 +72,15 @@ mod tests {
     }
 
     /// Answer the open Discover with its first option, and return the index it named.
+    /// One resolution of KY's Trial: its set Discover (a `mode` prompt), then its number Discover, each
+    /// answered with its first option (R831004).
+    fn trial_answers(s: &mut Scenario) {
+        assert_eq!(pending_kind(s), Some(PromptKind::Mode));
+        discover_first(s);
+        assert_eq!(pending_kind(s), Some(PromptKind::Discover));
+        discover_first(s);
+    }
+
     fn discover_first(s: &mut Scenario) -> String {
         let option = s
             .state()
@@ -214,12 +225,10 @@ mod tests {
 
             s.play(TRIAL, json!({}));
 
-            // First resolution's Discover (§10.6).
-            assert_eq!(pending_kind(&s), Some(PromptKind::Discover));
-            discover_first(&mut s);
-            // The repeat asks again: a prompt of its own, not the first one's answer carried over.
-            assert_eq!(pending_kind(&s), Some(PromptKind::Discover));
-            discover_first(&mut s);
+            // First resolution's two Discovers (§10.6): a set, then a number.
+            trial_answers(&mut s);
+            // The repeat asks again: prompts of its own, not the first one's answers carried over.
+            trial_answers(&mut s);
 
             assert!(s.state().pending.is_none());
             // Two resolutions × one card each, for the Trial that left the hand.
@@ -293,8 +302,7 @@ mod tests {
             s.play(TRIAL, json!({}));
 
             for _resolution in 0..3 {
-                assert_eq!(pending_kind(&s), Some(PromptKind::Discover));
-                discover_first(&mut s);
+                trial_answers(&mut s);
             }
 
             assert!(s.state().pending.is_none());

@@ -682,11 +682,11 @@ pub const KY_TEST_REWARDS: KyTestRewards = KyTestRewards {
     ],
     hard: &[KyTestReward {
         id: "gift",
-        label: "KY's Gift, which costs (0)",
+        label: "KY's Gift",
         def_id: Some("classicplus-042-1"),
         pool: None,
         count: KyTestRewardCount::N(1),
-        cost_override: Some(0),
+        cost_override: None,
     }],
 };
 
@@ -695,6 +695,8 @@ pub const KY_TEST_REWARDS: KyTestRewards = KyTestRewards {
 pub const PAPAYA_ROWS: i32 = 4;
 /// R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have.
 pub const PAPAYA_MAX_CELLS: i32 = 4;
+/// R831003: how many random cells each Discover of the curve offers (patch v0.3.9).
+pub const PAPAYA_OFFERS: i32 = 3;
 
 // Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
 /// One Grape and its chance in percent (`GRAPE_ODDS`).

@@ -553,7 +553,9 @@ mod r14_rotation_m3_t7 {
     }
 
     #[test]
-    fn r11_a_unit_token_bounced_by_a_locked_destination_ceases_to_exist() {
+    fn r11_a_unit_token_a_radiant_crossing_bounces_ceases_to_exist() {
+        // A Locked destination bounced it before patch v0.3.9; now only the Radiant face's crossing
+        // bounces (R831000).
         let mut state = game("rotate-token-bounce");
         let token = put(
             &mut state,
@@ -561,9 +563,8 @@ mod r14_rotation_m3_t7 {
             slot(PlayerId::P1, Row::Units, 5),
             Default::default(),
         );
-        lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 5));
 
-        let (events, result) = rotate(&mut state, "right", json!({}));
+        let (events, result) = rotate(&mut state, "right", json!({ "radiant": true }));
 
         assert_eq!(result.bounced, ids(&[&token]));
         assert_eq!(

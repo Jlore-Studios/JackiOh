@@ -2797,11 +2797,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand."
+      "text": "Discover one of 3 random sets, then one of 3 random numbers in it. Add the Radiant card with that number to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover among 3 different random numbers from 1–100. Add the Radiant Core card with that number to your hand. It costs ({setCost})."
+      "text": "Discover one of 3 random sets, then one of 3 random numbers in it. Add the Radiant card with that number to your hand. It costs ({setCost})."
     }
   },
   "core-083": {
@@ -9020,11 +9020,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Start of turn: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
     }
   },
   "classicplus-043": {
@@ -9754,11 +9754,11 @@
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "Draw a curve y = ax³ + bx² + cx + d across the board, where x is the lane (0 to 4 from your lane 1) and y the row (0 your backrow, 1 your units, 2 their units, 3 their backrow). Exile every card on the curve."
+      "text": "Discover 1 to 4 cells, each among 3 random cells in different lanes; the curve y = ax³ + bx² + cx + d goes through them, where x is the lane (0 to 4 from your lane 1) and y the row (0 your backrow, 1 your units, 2 their units, 3 their backrow). Exile every card on the curve."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw a curve y = ax³ + bx² + cx + d across the board, where x is the lane (0 to 4 from your lane 1) and y the row (0 your backrow, 1 your units, 2 their units, 3 their backrow). Exile every enemy card on the curve."
+      "text": "Discover 1 to 4 cells, each among 3 random cells in different lanes; the curve y = ax³ + bx² + cx + d goes through them, where x is the lane (0 to 4 from your lane 1) and y the row (0 your backrow, 1 your units, 2 their units, 3 their backrow). Exile every enemy card on the curve."
     }
   },
   "classicplus-063": {
@@ -13410,24 +13410,14 @@
     "rarity": "Common",
     "token": false,
     "cost": 1,
-    "params": [
-      {
-        "key": "cards",
-        "base": 1,
-        "radiant": 1,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 83,
     "base": {
       "keywords": [],
-      "text": "De-Radiant a Radiant Unit or face-up backrow card on either side, or a Radiant card in your hand. Add {cards|AI generated card|AI generated cards} to your hand."
+      "text": "De-Radiant a Radiant card on the field or in your hand. The next card you play this turn becomes Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and deck. Add {cards|AI generated card|AI generated cards} to your hand."
+      "text": "De-Radiant every enemy card on the field. The next card you play this turn becomes Radiant."
     }
   },
   "meditative-054": {
@@ -14792,20 +14782,26 @@
       "health": 1,
       "keywords": [
         {
+          "kind": "Rush"
+        },
+        {
           "kind": "Windfury"
         }
       ],
-      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
+      "text": "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [
         {
+          "kind": "Rush"
+        },
+        {
           "kind": "Windfury"
         }
       ],
-      "text": "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+      "text": "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
     }
   },
   "meditative-091-1": {

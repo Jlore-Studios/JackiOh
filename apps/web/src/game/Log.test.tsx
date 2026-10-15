@@ -139,6 +139,18 @@ describe("Log: a line never prints an id or the sentinel (integration QA)", () =
     expect(text).not.toContain("(market)");
   });
 
+  it("R831003 KY's Papaya's curve reads as drawn across the board, whoever drew it", () => {
+    render(
+      <Log
+        view={withEvents(fullBoardView(), [
+          { type: "curveDrawn", player: "p1", cells: [{ player: "p2", row: "units", lane: 3 }] },
+          { type: "curveDrawn", player: "p2", cells: [] },
+        ])}
+      />,
+    );
+    expect(lines()).toEqual(["You drew a curve across the board", "Opponent drew a curve across the board"]);
+  });
+
   it("ends the game in words", () => {
     render(<Log view={withEvents(fullBoardView(), [{ type: "gameOver", winner: "p2", reason: "concede" }])} />);
     expect(lines()).toEqual(["Opponent won. You conceded."]);

@@ -1,9 +1,6 @@
 --!strict
 local J = require("@jackioh")
 
--- "AI generated cards": the R1421 AI pool.
-local AI_TAG = "AI"
-
 -- The base face's pick: a Radiant Unit or face-up backrow card on either side, or a Radiant card in
 -- your hand.
 local TARGETS = {
@@ -41,12 +38,14 @@ local TARGET_CHECKS = {
 	end,
 }
 
--- Add {cards} AI generated cards to your hand.
-local function add_ai(ctx: J.EffectContext, radiant: boolean)
-	return J.add_random_from_catalog({
-		query = { tags = { AI_TAG } },
-		count = ctx:param("cards"),
-		radiant = radiant,
+-- R831005 (patch v0.3.9): "The next card you play this turn becomes Radiant", a this-turn modifier its
+-- next play spends (it added AI generated cards before).
+local function next_play(ctx: J.EffectContext): J.EffectCall
+	return J.add_player_modifier({
+		mod = {
+			kind = "radiantNextPlay",
+			expiry = { ["until"] = "thisTurn", turn = ctx:turn().number },
+		},
 	})
 end
 
@@ -57,13 +56,12 @@ local base = {
 	cry = function(ctx: J.EffectContext)
 		return {
 			J.clear_radiant({}),
-			add_ai(ctx, false),
+			next_play(ctx),
 		}
 	end,
 }
 
--- MD-D8: every Radiant card of the opponent's field, hand and library — never the graveyard, whose
--- cards De-Radiant cannot reach.
+-- MD-D8: every Radiant card of the opponent's field (patch v0.3.9: no longer their hand and deck).
 local radiant = {
 	cry = function(ctx: J.EffectContext)
 		local enemy = ctx:opponent_of(ctx:controller())
@@ -73,15 +71,7 @@ local radiant = {
 				effects[#effects + 1] = J.clear_radiant({ instanceId = card.id })
 			end
 		end
-		local piles: { J.OffFieldZone } = { "hand", "library" }
-		for _, zone in ipairs(piles) do
-			for _, card in ipairs(ctx:zone_cards(enemy, zone)) do
-				if card.radiant then
-					effects[#effects + 1] = J.clear_radiant({ instanceId = card.id })
-				end
-			end
-		end
-		effects[#effects + 1] = add_ai(ctx, true)
+		effects[#effects + 1] = next_play(ctx)
 		return effects
 	end,
 }

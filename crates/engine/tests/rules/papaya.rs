@@ -1,13 +1,15 @@
-//! Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; docs/classic-sets.md B5 E32),
-//! through the fixture Spell: the grid, the curve in exact rationals, the one-cell prompts (E18's
-//! `cell` kind), the Radiant face's enemy rows, what the other seat sees (R97, R177), a random cast
-//! (R452), and a pause that survives JSON and a game that replays (§9.2, §9.3).
+//! Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422, R831003; docs/classic-sets.md B5
+//! E32), through the fixture Spell: the grid, the curve in exact rationals, the Discover of each cell
+//! (`PAPAYA_OFFERS` random cells of the unused lanes, then "done"), the public `curveDrawn`, the Radiant
+//! face's enemy rows, what the other seat sees (R97, R177), a random cast (R452), and a pause that
+//! survives JSON and a game that replays (§9.2, §9.3).
 
 use serde::Serialize;
 
 use jackioh_engine::effects::cast_new;
 use jackioh_engine::subsystems::papaya::{
-    PAPAYA_LANES, PapayaPoint, cards_on_curve, cells_on_curve, curve_at, point_of_zone, zone_of_point,
+    PAPAYA_DONE, PAPAYA_LANES, PapayaPoint, cards_on_curve, cells_on_curve, curve_at, point_of_zone,
+    zone_of_point,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -17,7 +19,7 @@ use crate::rules::fixtures::harness::{events_of_type, put, setup_catalog, sink_f
 use crate::rules::fixtures::papaya::{
     body, curve, curve_quickdraw, field, register_papaya_fixtures, snare, token,
 };
-use crate::rules::fixtures::prompt_harness::{answer_keys, board, cast_now, must, open_as, round_trip};
+use crate::rules::fixtures::prompt_harness::{AnswerResult, answer_keys, board, cast_now, must, open_as, round_trip};
 use crate::rules::fixtures::prompts::register_prompt_fixtures;
 
 fn game(seed: &str) -> GameState {
@@ -38,33 +40,61 @@ fn cells(points: Vec<PapayaPoint>) -> Vec<(i32, i32)> {
     points.iter().map(|point| (point.x, point.y)).collect()
 }
 
-/// The option key of a grid cell, from p1's seat (the caster in every test here).
+/// The option key of a grid cell (R831003: `mode:x,y`, from the caster's seat).
 fn key(x: i32, y: i32) -> String {
-    let zone = zone_of_point(P1, &pt(x, y));
-    format!("zone:{}:{}:{}", zone.player, zone.row, zone.lane)
+    format!("mode:{x},{y}")
 }
 
-/// Cast the curve for p1 and answer these cells, then "done" when fewer than four were given.
-fn draw_curve(state: &mut GameState, points: &[(i32, i32)], radiant: bool) {
+/// The "done" option's key.
+fn done() -> String {
+    format!("mode:{PAPAYA_DONE}")
+}
+
+/// The cells the open Discover offers, in option order ("done" left out).
+fn offered(state: &GameState) -> Vec<(i32, i32)> {
+    must(state.pending.as_ref(), "a Discover")
+        .options
+        .iter()
+        .filter_map(|option| match &option.selection {
+            Selection::Mode { option } => option
+                .split_once(',')
+                .and_then(|(x, y)| Some((x.parse().ok()?, y.parse().ok()?))),
+            _ => None,
+        })
+        .collect()
+}
+
+/// R831003: answer the open Discover with the cell (x, y). Its offer is the match rng's, so a test that
+/// means a particular curve puts the cell in the offer first, in place of the first cell offered.
+fn pick(state: &mut GameState, x: i32, y: i32) -> AnswerResult {
+    let wanted = key(x, y);
+    let pending = must(state.pending.as_mut(), "a Discover");
+    if !pending.options.iter().any(|option| option.key == wanted) {
+        pending.options[0] = PromptOption {
+            key: wanted.clone(),
+            label: format!("({x}, {y})"),
+            selection: Selection::Mode {
+                option: format!("{x},{y}"),
+            },
+            cost: None,
+            radiant: None,
+        };
+    }
+    answer_keys(state, &[&wanted])
+}
+
+/// Cast the curve for p1 and pick these cells, then "done" when fewer than four were given.
+fn draw_curve(state: &mut GameState, points: &[(i32, i32)], radiant: bool) -> Vec<GameEvent> {
     cast_now(state, &curve().id, P1, radiant);
+    let mut events: Vec<GameEvent> = Vec::new();
     for &(x, y) in points {
-        answer_keys(state, &[&key(x, y)]);
+        events.extend(pick(state, x, y).events);
     }
     if (points.len() as i32) < PAPAYA_MAX_CELLS {
-        answer_keys(state, &["none"]);
+        events.extend(answer_keys(state, &[&done()]).events);
     }
     assert!(state.pending.is_none());
-}
-
-fn zone_of(selection: &Selection) -> ZoneRef {
-    match selection {
-        Selection::Zone { player, row, lane } => ZoneRef {
-            player: *player,
-            row: *row,
-            lane: *lane,
-        },
-        _ => panic!("expected a cell"),
-    }
+    events
 }
 
 fn exiled_ids(state: &GameState) -> Vec<String> {
@@ -284,58 +314,64 @@ mod r422_the_curve_in_exact_rationals {
     }
 }
 
-mod r422_the_cells_are_asked_one_board_cell_prompt_at_a_time {
+mod r831003_each_cell_is_discovered_among_3_random_cells {
     use super::*;
 
     #[test]
-    fn r422_the_first_prompt_offers_all_20_cells_and_no_done_and_legal_actions_lists_each_of_them() {
+    fn r831003_the_first_discover_offers_3_cells_in_lane_order_named_by_lane_and_row_and_no_done() {
         let mut state = game("papaya-first");
         cast_now(&mut state, &curve().id, P1, false);
-        let first = open_as(&state, PromptKind::Cell, P1);
-        assert_eq!(first.options.len(), 20);
+        let first = open_as(&state, PromptKind::Mode, P1);
+        assert_eq!(first.options.len(), PAPAYA_OFFERS as usize);
+        let cells = offered(&state);
+        assert_eq!(cells.len(), PAPAYA_OFFERS as usize);
+        let mut in_order = cells.clone();
+        in_order.sort();
+        assert_eq!(cells, in_order);
         assert!(
-            first
-                .options
+            cells
                 .iter()
-                .all(|option| matches!(option.selection, Selection::Zone { .. }))
+                .all(|&(x, y)| (0..PAPAYA_LANES).contains(&x) && (0..4).contains(&y))
         );
-        assert_eq!(answer_count(&state, P1), 20);
-        // The chooser's own rows from the hero outward, then the enemy's: the grid's rows in order.
-        let rows: Vec<i32> = first
-            .options
-            .iter()
-            .map(|option| point_of_zone(P1, &zone_of(&option.selection)).y)
-            .collect();
-        let expected: Vec<i32> = [0, 1, 2, 3]
-            .into_iter()
-            .flat_map(|y| std::iter::repeat_n(y, 5))
-            .collect();
-        assert_eq!(rows, expected);
+        assert!(!first.options.iter().any(|option| option.key == done()));
+        assert_eq!(answer_count(&state, P1), PAPAYA_OFFERS as usize);
+        let rows = ["your backrow", "your Units", "enemy Units", "enemy backrow"];
+        for (option, &(x, y)) in first.options.iter().zip(&cells) {
+            assert_eq!(option.label, format!("Lane {}, {}", x + 1, rows[y as usize]));
+        }
     }
 
     #[test]
-    fn r422_each_later_prompt_offers_the_4_cells_of_every_unused_lane_and_done_never_more_than_21_answers() {
+    fn r831003_each_later_discover_offers_3_cells_of_the_unused_lanes_then_done() {
         let mut state = game("papaya-later");
         cast_now(&mut state, &curve().id, P1, false);
-        let picks = [(1, 2), (3, 0), (0, 3)];
-        for (at, &(x, y)) in picks.iter().enumerate() {
-            answer_keys(&mut state, &[&key(x, y)]);
-            let pending = open_as(&state, PromptKind::Cell, P1);
-            let lanes_left = PAPAYA_LANES as usize - (at + 1);
-            assert_eq!(pending.options.len(), 4 * lanes_left + 1);
+        let mut used: Vec<i32> = Vec::new();
+        for _ in 0..PAPAYA_MAX_CELLS - 1 {
+            let (x, y) = offered(&state)[0];
+            used.push(x);
+            pick(&mut state, x, y);
+            let pending = open_as(&state, PromptKind::Mode, P1);
+            assert_eq!(pending.options.len(), PAPAYA_OFFERS as usize + 1);
             assert_eq!(
-                pending.options.last().map(|option| option.selection.clone()),
-                Some(Selection::None)
+                pending.options.last().map(|option| option.key.clone()),
+                Some(done())
             );
-            let used: Vec<i32> = picks[..=at].iter().map(|&(x, _)| x + 1).collect();
-            assert!(!pending.options.iter().any(|option| matches!(
-                &option.selection,
-                Selection::Zone { lane, .. } if used.contains(lane)
-            )));
-            assert!(prompt_answers(&pending).len() <= 21);
-            assert!(prompt_answers(&pending).len() < MAX_PROMPT_ANSWERS);
-            assert_eq!(answer_count(&state, P1), 4 * lanes_left + 1);
+            assert!(offered(&state).iter().all(|(x, _)| !used.contains(x)));
+            assert_eq!(answer_count(&state, P1), PAPAYA_OFFERS as usize + 1);
         }
+    }
+
+    #[test]
+    fn r831003_the_offer_is_the_match_rngs_the_same_seed_offers_the_same_cells_and_seeds_differ() {
+        let offer_of = |seed: &str| -> Vec<(i32, i32)> {
+            let mut state = game(seed);
+            cast_now(&mut state, &curve().id, P1, false);
+            offered(&state)
+        };
+        assert_eq!(offer_of("papaya-offer"), offer_of("papaya-offer"));
+        let seen: IndexSet<Vec<(i32, i32)>> =
+            (0..8).map(|n| offer_of(&format!("papaya-offer-{n}"))).collect();
+        assert!(seen.len() > 1);
     }
 
     #[test]
@@ -345,12 +381,45 @@ mod r422_the_cells_are_asked_one_board_cell_prompt_at_a_time {
         let enemy = &board[1];
         cast_now(&mut state, &curve().id, P1, false);
         for (x, y) in [(0, 0), (1, 2), (2, 1), (3, 0)] {
-            answer_keys(&mut state, &[&key(x, y)]);
+            pick(&mut state, x, y);
         }
         assert!(state.pending.is_none());
         // The fifth lane's cell (4, 2) is the enemy's unit in lane 5.
         assert!(exiled_ids(&state).contains(&enemy[4].id));
         assert_eq!(exiled_ids(&state).len(), 5);
+    }
+
+    #[test]
+    fn r831003_curve_drawn_names_the_curves_zones_in_lane_order_before_the_exiles_and_both_seats_read_it() {
+        let mut state = game("papaya-drawn");
+        full_board(&mut state);
+        // y = x/2: (0, 0) your backrow lane 1, (2, 1) your units lane 3, (4, 2) their units lane 5.
+        let events = draw_curve(&mut state, &[(0, 0), (2, 1)], false);
+        let drawn = events_json(&events, GameEventType::CurveDrawn);
+        assert_eq!(
+            drawn,
+            vec![json!({
+                "type": "curveDrawn",
+                "player": "p1",
+                "cells": [
+                    { "player": "p1", "row": "backrow", "lane": 1 },
+                    { "player": "p1", "row": "units", "lane": 3 },
+                    { "player": "p2", "row": "units", "lane": 5 },
+                ],
+            })]
+        );
+        let at = |kind: GameEventType| events.iter().position(|event| event.event_type() == kind);
+        assert!(at(GameEventType::CurveDrawn) < at(GameEventType::Exiled));
+        state.applied = vec![AppliedAction {
+            nonce: "pp".into(),
+            events: events.clone(),
+        }];
+        for viewer in [P1, P2] {
+            assert_eq!(
+                events_json(&view_for(&state, viewer).events, GameEventType::CurveDrawn),
+                drawn
+            );
+        }
     }
 
     #[test]
@@ -367,7 +436,7 @@ mod r422_the_cells_are_asked_one_board_cell_prompt_at_a_time {
             json_of(view_for(&state, P2).pending),
             json!({ "forYou": false, "pendingFor": "p1" })
         );
-        let pending = open_as(&state, PromptKind::Cell, P1);
+        let pending = open_as(&state, PromptKind::Mode, P1);
         assert!(
             !serde_json::to_string(&pending.options)
                 .expect("options serialise")
@@ -429,8 +498,8 @@ mod r422_every_card_on_the_curve_is_exiled {
         );
         assert_ne!(trap.face_up, Some(true));
         cast_now(&mut state, &curve().id, P1, false);
-        answer_keys(&mut state, &[&key(0, 3)]);
-        let answered = answer_keys(&mut state, &["none"]);
+        pick(&mut state, 0, 3);
+        let answered = answer_keys(&mut state, &[&done()]);
         assert_eq!(ids_of(&state.players.p2.exile), vec![trap.id.clone()]);
         let exiled: Vec<Value> = events_json(&answered.events, GameEventType::Exiled)
             .iter()
@@ -531,7 +600,7 @@ mod r452_r113_9_3_random_casts_pauses_and_replays {
     use super::*;
 
     #[test]
-    fn r452_a_random_cast_answers_every_cell_prompt_at_random_nothing_pauses_and_its_curve_exiles_what_lies_on_it()
+    fn r452_a_random_cast_answers_every_discover_at_random_nothing_pauses_and_its_curve_exiles_what_lies_on_it()
      {
         for seed in 1..=6 {
             let mut state = game(&format!("papaya-random-{seed}"));
@@ -589,13 +658,13 @@ mod r452_r113_9_3_random_casts_pauses_and_replays {
         let mut state = game("papaya-json");
         full_board(&mut state);
         cast_now(&mut state, &curve().id, P1, false);
-        answer_keys(&mut state, &[&key(0, 3)]);
-        answer_keys(&mut state, &[&key(2, 2)]);
+        pick(&mut state, 0, 3);
+        pick(&mut state, 2, 2);
         let mut copy = round_trip(&state);
         assert_eq!(copy, state);
         for target in [&mut state, &mut copy] {
-            answer_keys(target, &[&key(4, 1)]);
-            answer_keys(target, &["none"]);
+            pick(target, 4, 1);
+            answer_keys(target, &[&done()]);
         }
         assert!(copy.pending.is_none());
         assert_eq!(hash_state(&copy), hash_state(&state));
@@ -656,12 +725,15 @@ mod r452_r113_9_3_random_casts_pauses_and_replays {
             &state,
             json!({ "type": "play", "playerId": "p1", "instanceId": papaya.id }),
         );
-        for selection in [
-            json!({ "pick": "zone", "player": "p1", "row": "units", "lane": 1 }),
-            json!({ "pick": "zone", "player": "p2", "row": "units", "lane": 3 }),
-            json!({ "pick": "none" }),
-        ] {
-            let choice = must(state.pending.as_ref(), "a cell prompt").id.clone();
+        // The first cell each Discover offers, twice, then "done": answers the log replays as they are.
+        for last in [false, false, true] {
+            let pending = must(state.pending.as_ref(), "a Discover");
+            let choice = pending.id.clone();
+            let selection = if last {
+                json!({ "pick": "mode", "option": PAPAYA_DONE })
+            } else {
+                json_of(&pending.options[0].selection)
+            };
             state = act(
                 &state,
                 json!({ "type": "answer", "playerId": "p1", "choiceId": choice, "selection": [selection] }),

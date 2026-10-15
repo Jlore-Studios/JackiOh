@@ -228,6 +228,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+  // Patch v0.3.9 (C+ #62, R831003).
+  curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -313,6 +315,7 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   secretChosen: "trapSet",
   secretRevealed: "trapSting",
   predicted: "notify",
+  curveDrawn: "whoosh",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

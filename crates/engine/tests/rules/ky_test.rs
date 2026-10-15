@@ -182,7 +182,7 @@ mod c_42_kys_test_the_two_prompts_r420 {
                 .collect();
             assert!(labels.contains(&label_of(&before, difficulty.as_str())));
         }
-        assert_eq!(label_of(&before, "Hard"), "Hard: KY's Gift, which costs (0)");
+        assert_eq!(label_of(&before, "Hard"), "Hard: KY's Gift");
         // R129: Easy and Medium roll one draw each; Hard's list has one entry, so nothing is drawn for it.
         assert_eq!(before.rng_cursor - cursor, 2);
     }
@@ -515,14 +515,12 @@ mod c_42_kys_test_the_rewards_r420 {
     }
 
     #[test]
-    fn r420_hard_kys_gift_which_costs_0() {
+    fn r420_hard_kys_gift_at_its_printed_cost() {
+        // Patch v0.3.9 (#831): the Gift costs (4) and arrives at it, no longer at (0).
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
         assert_eq!(hand_ids(&state, P1), vec![gift().id]);
-        assert_eq!(
-            state.players.p1.hand.first().and_then(|card| card.cost_override),
-            Some(0)
-        );
+        assert_eq!(state.players.p1.hand.first().and_then(|card| card.cost_override), None);
     }
 
     #[test]

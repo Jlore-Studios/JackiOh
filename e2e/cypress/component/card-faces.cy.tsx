@@ -188,7 +188,6 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-095 radiant",
       "core-098 base",
       "core-098 radiant",
-      "classic-078 radiant",
       "classicplus-073 base",
       "classicplus-073 radiant",
     ]);
@@ -669,7 +668,7 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
         pending: pendingFor(
           "discover",
           ["7", "42", "100"].map((n) => ({ key: `mode:${n}`, label: n })),
-          { prompt: "KY's Trial: Discover a number from 1 to 100" },
+          { prompt: "KY's Trial: Discover a number" },
         ),
       });
       cy.mount(

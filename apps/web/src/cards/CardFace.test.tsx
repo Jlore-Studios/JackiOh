@@ -370,7 +370,7 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 R1320 patch v0.2.0's words are bold terms (Activate ♾️, Brittle, Animated, Buff, Nerf), and so is Classic #65's End of turn (#85)", () => {
     const termsOf = (id: string): string[] =>
       [...catalogFace(id).querySelectorAll(".card-text strong.cf-term")].map((term) => `${term.getAttribute("data-term") ?? ""}=${term.textContent ?? ""}`);
-    expect(termsOf("classic-078")).toContain("Activate=Activate ♾️:");
+    expect(termsOf("classic-015")).toContain("Activate=Activate ♾️:");
     cleanup();
     expect(termsOf("classicplus-074")).toContain("Brittle=Brittle");
     cleanup();

@@ -157,6 +157,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
     secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
     predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+    curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   };
 }
 

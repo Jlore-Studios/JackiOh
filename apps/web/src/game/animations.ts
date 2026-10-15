@@ -811,6 +811,15 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // C+ #62 KY's Papaya (R831003): the curve is drawn across the board, cell to cell in lane order,
+  // before what it meets is exiled.
+  curveDrawn: {
+    animation: "jk-curve-drawn",
+    durationMs: 700,
+    testid: "board",
+    fx: { recipe: "curve" },
+    target: () => testid.board,
+  },
 };
 
 /**

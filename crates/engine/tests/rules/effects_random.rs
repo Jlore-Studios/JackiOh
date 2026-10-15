@@ -1228,7 +1228,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     }
 
     #[test]
-    fn r14_r88_delegates_the_locked_destination_bounce_rather_than_walking_the_ring_itself() {
+    fn r14_r831000_delegates_to_the_rotation_subsystem_where_a_locked_destination_takes_the_card() {
         let mut state = game("rotate-locked");
         let blocked = put(
             &mut state,
@@ -1240,19 +1240,18 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
 
         let ran = run(&mut state, &[turning("right")], as_p1());
 
-        // A rule only `subsystems/rotation.ts` implements: the card goes to its OWNER's hand (R12).
-        assert_eq!(where_is(&state, &blocked), "hand");
+        // A rule only `subsystems/rotation.rs` implements: since patch v0.3.9 a Lock refuses plays,
+        // not a rotation (R831000), so the card enters the locked zone and nothing is bounced.
+        assert_eq!(where_is(&state, &blocked), "field");
         assert_eq!(
-            state
-                .players
-                .p1
-                .hand
-                .iter()
-                .map(|card| card.id.clone())
-                .collect::<Vec<_>>(),
-            vec![blocked.id.clone()]
+            find_instance(&state, &blocked.id).map(|card| card.zone.clone()),
+            Some(Zone::Field {
+                player: PlayerId::P1,
+                row: Row::Units,
+                lane: 2
+            })
         );
-        assert_eq!(ids_of_type(&ran.events, "bounced"), vec![blocked.id.clone()]);
+        assert!(ids_of_type(&ran.events, "bounced").is_empty());
     }
 
     #[test]

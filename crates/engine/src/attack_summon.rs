@@ -1,10 +1,10 @@
 //! ME-ATTACKSUMMON (Meditative #91 Windfast, #91.1 Windfurious Prime): two hooks on the
 //! attack pipeline (§4.2).
 //!
-//! A replacement (R1202; MD-E14): on every attack Windfast makes, declared or forced, its
-//! controller's Unit from their hand — their pick, no prompt with one — is summoned into the
-//! leftmost open unit zone (R64, no Cry, R1) and makes that attack on the same target as a forced
-//! attack (R53), with its own trap window and combat; Windfast neither strikes nor is struck. The
+//! A replacement (R1202; MD-E14): on every attack Windfast makes, declared or forced, a random Unit
+//! of its controller's hand (the match rng's; patch v0.3.9, R831006: their pick before) is summoned
+//! into the leftmost open unit zone (R64, no Cry, R1) and makes that attack on the same target as a
+//! forced attack (R53), with its own trap window and combat; Windfast neither strikes nor is struck. The
 //! base face bounces the substitute after its combat if it is still on the field. With no Unit in
 //! hand or no open zone Windfast attacks itself.
 //!
@@ -13,8 +13,8 @@
 //! its target first as forced attacks, in lane order, before the Prime's own combat; joiners stay.
 //! A declared attack whose target is gone is cancelled, the exertion spent.
 //!
-//! Everything parked is plain JSON (R113): the hand pick's prompt answers through this module, and
-//! the owed combat or bounce runs here. Every draw is the match rng's.
+//! Everything parked is plain JSON (R113): the owed combat or bounce runs here. Every draw is the
+//! match rng's.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
@@ -25,15 +25,12 @@ use crate::script::EngineSink;
 use crate::state::{CardInstance, DeclaredAttack, EngineError, GameState, Resume, find_instance};
 use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection};
 
-/// R113: the `resume.hook` of the engine sequence this module parks — a replaced attack's hand
-/// pick, and the rest of a Prime's combat or a substitute's bounce a question stopped.
+/// R113: the `resume.hook` of the engine sequence this module parks — the rest of a Prime's combat or
+/// a substitute's bounce a question stopped.
 pub const ATTACK_SUMMON_HOOK: &str = "@attackSummon";
 
 /// Where the owed record sits inside the prompt's and the work item's `resume.data`.
 const OWED_KEY: &str = "attackSummon";
-
-/// The hand pick this module's prompt asks for.
-const PICK_STEP: &str = "pick";
 
 /// The bounce a question stopped (`bounce_after`).
 const BOUNCE_STEP: &str = "bounce";
@@ -59,11 +56,9 @@ pub struct OwedAttackSummon {
     pub since: u32,
 }
 
-/// Whether `replace_attacker` replaced the attack: no substitute, a hand pick asked, or the
-/// summoned substitute making it.
+/// Whether `replace_attacker` replaced the attack: no substitute, or the summoned substitute making it.
 pub enum Replaced {
     No,
-    Asked,
     By(Box<CardInstance>),
 }
 
@@ -146,16 +141,11 @@ fn owe_record(sink: &mut EngineSink<'_>, step: &str, owed: &OwedAttackSummon) {
 // The replacement (R1202)
 // ---------------------------------------------------------------------------
 
-/// R1202: what attacks when `attacker` would — its controller's Unit from their hand instead, or
-/// itself. `No` unless the attacker carries `attack_from_hand`, its controller holds a Unit, and a
-/// unit zone is open. One Unit is summoned at once; several ask the controller's pick (a `hand`
-/// prompt, held on the opponent's turn under its own clock, R79 — one Unit is no prompt, R129).
-pub fn replace_attacker(
-    sink: &mut EngineSink<'_>,
-    attacker: &CardInstance,
-    target: &AttackTarget,
-    forced: bool,
-) -> Replaced {
+/// R1202, R831006: what attacks when `attacker` would — a random Unit of its controller's hand
+/// instead, or itself. `No` unless the attacker carries `attack_from_hand`, its controller holds a
+/// Unit, and a unit zone is open. The pick is the match rng's; one Unit draws no random number
+/// (R129).
+pub fn replace_attacker(sink: &mut EngineSink<'_>, attacker: &CardInstance) -> Replaced {
     if crate::scripts::flags_of(sink.state, attacker).attack_from_hand != Some(true) {
         return Replaced::No;
     }
@@ -167,146 +157,15 @@ pub fn replace_attacker(
     if crate::zones::first_entry_zone(sink.state, controller, Row::Units).is_none() {
         return Replaced::No;
     }
-    if units.len() == 1 {
-        let Some(unit) = units
-            .first()
-            .and_then(|pick| summon_hand_unit(sink, attacker, pick))
-        else {
-            return Replaced::No;
-        };
-        return Replaced::By(Box::new(unit));
-    }
-    let owed = OwedAttackSummon {
-        attacker_id: attacker.id.clone(),
-        target_id: crate::reduce::attack_target_id(target),
-        forced,
-        bounce: crate::scripts::flags_of(sink.state, attacker).bounce_attacker == Some(true),
-        declared: None,
-        instead_of: None,
-        since: crate::stays::exit_mark(sink.state),
+    let Some(unit) = sink
+        .rng
+        .shuffle(&units)
+        .first()
+        .and_then(|pick| summon_hand_unit(sink, attacker, pick))
+    else {
+        return Replaced::No;
     };
-    let mut data = IndexMap::new();
-    data.insert(
-        OWED_KEY.to_string(),
-        serde_json::to_value(&owed).expect("an owed attack summon is plain JSON (§10.1)"),
-    );
-    let options: Vec<crate::state::PromptOption> = units
-        .iter()
-        .map(|card| crate::state::PromptOption {
-            key: format!("instance:{}", card.id),
-            label: crate::catalog::def_of(Some(sink.state), &card.def_id)
-                .name
-                .clone(),
-            selection: Selection::Instance {
-                instance_id: card.id.clone(),
-            },
-            cost: None,
-            radiant: None,
-        })
-        .collect();
-    crate::prompts::open_prompt(
-        sink,
-        crate::prompts::OpenPromptArgs {
-            player: controller,
-            kind: PromptKind::Hand,
-            aim: None,
-            prompt: "Choose a Unit to make the attack".to_string(),
-            options,
-            min: Some(1),
-            max: Some(1),
-            budget: None,
-            owner: None,
-            resume: Resume {
-                def_id: attacker.def_id.clone(),
-                hook: ATTACK_SUMMON_HOOK.to_string(),
-                step: PICK_STEP.to_string(),
-                radiant: attacker.radiant,
-                instance_id: Some(attacker.id.clone()),
-                data,
-            },
-        },
-    );
-    Replaced::Asked
-}
-
-/// R1202: the attacker whose replacement's hand pick is the open prompt, if one is. A declared
-/// attack spent its exertion before the pick opened, and its `attackDeclared` follows the answer.
-pub fn open_pick_attacker(state: &GameState) -> Option<String> {
-    let pending = state.pending.as_ref()?;
-    if pending.resume.hook != ATTACK_SUMMON_HOOK || pending.resume.step != PICK_STEP {
-        return None;
-    }
-    owed_of(&pending.resume.data).map(|owed| owed.attacker_id)
-}
-
-/// R1202: the attack the pick makes — summoned if that is still possible, else the declarer
-/// itself (MD-E14: with nothing to summon Windfast attacks itself). A declared attack keeps its
-/// window; a forced one stays forced.
-fn continue_pick(
-    sink: &mut EngineSink<'_>,
-    owed: &OwedAttackSummon,
-    pick: Option<Selection>,
-) -> Result<(), EngineError> {
-    let Some(declarer) = find_instance(sink.state, &owed.attacker_id).cloned() else {
-        return Ok(());
-    };
-    let unit = match &pick {
-        Some(Selection::Instance { instance_id }) => find_instance(sink.state, instance_id)
-            .cloned()
-            .and_then(|card| summon_hand_unit(sink, &declarer, &card)),
-        _ => None,
-    };
-    let Some(target) = crate::combat::attack_target_of(sink.state, &owed.target_id) else {
-        // The target is gone: nothing attacks, but a summoned substitute still bounces home.
-        if owed.bounce
-            && let Some(unit) = unit
-        {
-            bounce_after(sink, &unit.id, crate::stays::exit_mark(sink.state));
-        }
-        return Ok(());
-    };
-    if owed.forced {
-        let (attacker, instead_of) = match unit {
-            Some(unit) => (unit, Some(owed.attacker_id.clone())),
-            None => (declarer, None),
-        };
-        let bounce = instead_of.is_some() && owed.bounce;
-        crate::combat::force_attack_instead(sink, &attacker, &target, instead_of.as_deref());
-        if bounce {
-            bounce_after(sink, &attacker.id, crate::stays::exit_mark(sink.state));
-        }
-        return Ok(());
-    }
-    match unit {
-        Some(unit) => {
-            crate::combat::declare_instead(sink, &unit, &target, Some(&owed.attacker_id), owed.bounce)
-        }
-        None => crate::combat::declare_instead(sink, &declarer, &target, None, false),
-    }
-}
-
-/// R122: the answer to the replacement's hand pick — validated as any prompt's, filed, and the
-/// sequence goes on: the summon, then the attack it makes. Then the rest of what the question
-/// interrupted drains in R113's order, as `prompts::answer_prompt` does for a card's own step.
-pub fn answer_pick(
-    sink: &mut EngineSink<'_>,
-    answer: &crate::prompts::AnswerInput,
-) -> Result<(), EngineError> {
-    let Some(pending) = sink.state.pending.clone() else {
-        return Err(EngineError::new("no prompt is open"));
-    };
-    crate::prompts::why_answer_refused(&pending, answer)?;
-    let owed = owed_of(&pending.resume.data);
-    crate::prompts::close_prompt(sink);
-    crate::work::begin_work_cascade(sink);
-    if let Some(owed) = owed {
-        let pick = crate::prompts::in_offered_order(&pending, &answer.selection)
-            .into_iter()
-            .next();
-        continue_pick(sink, &owed, pick)?;
-    }
-    crate::work::drain_work(sink);
-    Ok(())
+    Replaced::By(Box::new(unit))
 }
 
 // ---------------------------------------------------------------------------
