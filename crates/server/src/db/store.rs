@@ -1564,6 +1564,13 @@ impl Tx<'_> {
         dispatch!(self, codes_claim(code_id, now))
     }
 
+    /// Sets `revoked_at` on the code carrying `code_hash`, so §9.4 step 5 rejects it exactly as
+    /// an exhausted one. True when a live row was newly revoked; false when no row carries the
+    /// hash or it is already revoked.
+    pub async fn codes_revoke_by_hash(&mut self, code_hash: &str) -> StoreResult<bool> {
+        dispatch!(self, codes_revoke_by_hash(code_hash))
+    }
+
     /// §9.4 step 4: the attempt is logged either way. Written by `redeem`.
     pub async fn codes_log_attempt(&mut self, attempt: &CodeAttempt) -> StoreResult<()> {
         dispatch!(self, codes_log_attempt(attempt))
@@ -1602,6 +1609,13 @@ impl Tx<'_> {
     /// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).
     pub async fn codes_count_failures(&mut self, since: i64) -> StoreResult<i64> {
         dispatch!(self, codes_count_failures(since))
+    }
+
+    /// Flips §9.4's database-side kill switch (`app.settings.redemption_enabled`), which step 5's
+    /// lookup reads and `Tx::redeem` answers `CircuitOpen` from. Answers the previous value, so a
+    /// caller prints what changed.
+    pub async fn redemption_set_enabled(&mut self, enabled: bool) -> StoreResult<bool> {
+        dispatch!(self, redemption_set_enabled(enabled))
     }
 
     // collection (§9.4: an entitlement ledger. `collection_upsert_quantities` and

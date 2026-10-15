@@ -611,3 +611,92 @@ mod a_finished_matchs_seats_may_reopen_its_socket {
         assert_eq!(client.close_code().await, 4403);
     }
 }
+
+mod banned_profiles_are_refused_the_match_socket {
+    //! §9.4's gate on `/ws/match` (issue #887): a banned account's socket is refused, and
+    //! unbanning opens it again.
+    use super::*;
+    use crate::support::deps::empty_test_app;
+    use jackioh_server::db::store::ProfileStatus;
+
+    /// One live match between profile-1 and profile-2, served: `seed_matches`' first match, but
+    /// over an app without R144's fixtures, whose `profiles_create` ids (`profile-1`, …) collide
+    /// with the seats' — banning by id would land on the fixture's row instead of the seat's.
+    async fn listen_bannable() -> (Arc<App>, Listening, String) {
+        let app = empty_test_app().await;
+        let pool = playable();
+        let size = deck_size();
+        let token = add_user(&app, "user-1", "user-1@example.test", true);
+        add_user(&app, "user-2", "user-2@example.test", true);
+        fake(&app).lock().await.seed_profile(json!({
+            "id": "profile-1",
+            "userId": "user-1",
+            "status": "active",
+            "inMatchId": "match-1",
+        }));
+        fake(&app).lock().await.seed_profile(json!({
+            "id": "profile-2",
+            "userId": "user-2",
+            "status": "active",
+            "inMatchId": "match-1",
+        }));
+        app.matches
+            .start(
+                &app,
+                from(json!({
+                    "matchId": "match-1",
+                    "seed": "seed-ws-ban",
+                    "catalogVersion": jackioh_cards::catalog_version(),
+                    "ranked": false,
+                    "seats": [
+                        { "profileId": "profile-1", "player": "p1", "deck": pool[..size].to_vec() },
+                        { "profileId": "profile-2", "player": "p2", "deck": pool[size..size * 2].to_vec() },
+                    ],
+                })),
+            )
+            .await
+            .expect("the registry starts the match");
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let port = listener.local_addr().expect("a bound address").port();
+        let service = router(Arc::clone(&app)).into_make_service_with_connect_info::<std::net::SocketAddr>();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, service).await.expect("the listener serves");
+        });
+        (app, Listening { port, server }, token)
+    }
+
+    async fn set_status(app: &Arc<App>, profile_id: &str, status: ProfileStatus) {
+        let mut tx = app.db.begin(Some(profile_id)).await.expect("a transaction opens");
+        tx.profiles_set_status(profile_id, status)
+            .await
+            .expect("the status is set");
+        tx.commit().await.expect("the transaction commits");
+    }
+
+    #[tokio::test]
+    async fn banned_profile_is_refused_the_socket_and_unbanned_is_opened() {
+        let _serial = SERIAL.lock().await;
+        let (app, listening, token) = listen_bannable().await;
+
+        // Banned through the store: the handshake completes, then the socket is refused with an
+        // error frame and the forbidden close — `assert_active` runs after the upgrade
+        // (`upgrade_socket`), so there is no HTTP status to read here, only no socket and no view.
+        set_status(&app, "profile-1", ProfileStatus::Banned).await;
+        let mut refused = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        let refusal = refused
+            .next_message(READ_TIMEOUT)
+            .await
+            .expect("an error frame before the close");
+        assert_eq!(refusal["type"], "error");
+        assert_eq!(refused.close_code().await, 4403);
+
+        // Unbanned: the same handshake opens onto the seat's first view.
+        set_status(&app, "profile-1", ProfileStatus::Active).await;
+        let mut client = open(listening.port, &query("match-1", &token), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+}

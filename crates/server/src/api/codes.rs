@@ -95,7 +95,7 @@ fn identical_code_error() -> ApiError {
 
 /// §9.4: codes are stored hashed — a keyed SHA-256 (HMAC) of the normalized code under the
 /// `${CODE_PEPPER}:code` pepper, hex. Separate code and IP domains keep their hashes apart.
-fn code_hash(code_pepper: &str, plain: &str) -> String {
+pub(crate) fn code_hash(code_pepper: &str, plain: &str) -> String {
     let key = format!("{code_pepper}:code");
     let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes())
         .unwrap_or_else(|error| panic!("an HMAC key of any length: {error}"));

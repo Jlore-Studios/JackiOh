@@ -14,6 +14,7 @@ pub mod export_records;
 pub mod import_dev_records;
 pub mod invite_clusters;
 pub mod mint_code;
+pub mod moderate;
 pub mod season_start;
 pub mod seed_accounts;
 pub mod seed_catalog;
