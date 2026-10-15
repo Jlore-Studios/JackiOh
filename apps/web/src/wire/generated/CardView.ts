@@ -59,6 +59,14 @@ conditionActive?: true,
  */
 counteredOnPlay?: true, 
 /**
+ * R979000, §10.8: why the viewer's own hand card cannot be played now
+ * (`play_choices::why_hand_card_unplayable`), as `UnitView.attack_reason` (R849000) is for an
+ * attack. Set only on the viewer's own hand card while they may act (their turn, the main
+ * phase, no prompt open) and `play_actions_for` lists no play of it. Absent otherwise, never
+ * `false` or empty, so a view with no unplayable card is byte for byte what it was.
+ */
+playReason?: string, 
+/**
  * R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
  * `preview` hook returns — the label the formula as the running face prints it, the value what it
  * would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a

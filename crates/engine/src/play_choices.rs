@@ -1859,6 +1859,138 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
         .collect()
 }
 
+/// R979000, §10.8: why a card in `player`'s hand cannot be played now — the first refusal in a fixed
+/// order, in the engine's own words, as `UnitView.attack_reason` (R849000) is for an attack. Every
+/// branch reads the same function `legal_actions` (through `play_actions_for`) and §10.5 step 1
+/// (through `why_choices_refused`) already call, so the reason and the listing cannot disagree;
+/// nothing here restates a check (`reduce.rs`'s header). `None` when a play is listed, and when no
+/// refusal below fires — an Equip with no host on a board with open zones, or a targeting cost the
+/// hand cannot pay, says nothing rather than the wrong thing.
+///
+/// The order is ban, price, zone, Tribute, choices: what §10.5 meets first is said first, with the
+/// ban (a price rule read after the price, R455) ahead of the price it forbids at, since a banned
+/// card is refused at every price it could be played at.
+pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
+    // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped as it stamps
+    // them, and every one forbidden (R455) — the listing left none out for this reason.
+    let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
+        legal_x_values(state, player, card)
+            .into_iter()
+            .map(Some)
+            .collect()
+    } else {
+        vec![None]
+    };
+    let embiggens: Vec<Option<bool>> = if has_embiggen_price(state, card) {
+        legal_embiggen_choices(state, card)
+            .into_iter()
+            .map(Some)
+            .collect()
+    } else {
+        vec![None]
+    };
+    let mut banned = 0;
+    let mut combos = 0;
+    let mut ban_message: Option<String> = None;
+    for x in &x_values {
+        for embiggen in &embiggens {
+            combos += 1;
+            let probe = CardInstance {
+                x: x.or(card.x),
+                embiggened: embiggen.or(card.embiggened),
+                ..card.clone()
+            };
+            let cost = crate::mana::play_cost(state, &probe);
+            if let Err(error) = crate::cost_rules::why_play_banned(state, player, &probe, cost) {
+                banned += 1;
+                ban_message.get_or_insert(error.message);
+            }
+        }
+    }
+    if combos > 0 && banned == combos {
+        return ban_message;
+    }
+    // (b) Price: `play_prices` left nothing unbanned. An X card with no legal X names its smallest
+    // refusal (R348); otherwise the cheapest unbanned price the purse cannot meet (R1223).
+    let prices = play_prices(state, player, card);
+    if prices.is_empty() {
+        if chooses_x(state, card) && legal_x_values(state, player, card).is_empty() {
+            return why_x_refused(state, player, MIN_CHOSEN_X, None)
+                .err()
+                .map(|error| error.message);
+        }
+        return None;
+    }
+    let cheapest = prices.iter().min_by_key(|price| price.cost)?;
+    if cheapest.cost > crate::credit::spendable_mana(state, player) {
+        return crate::credit::why_unaffordable(state, card, cheapest.cost)
+            .err()
+            .map(|error| error.message);
+    }
+    let tribute_sets = legal_tribute_sets(state, player, card);
+    // (c) Zone: no set the Tribute could pay leaves a zone — neither an open one, nor one the set
+    // itself empties (R391), nor a host an Equip play would fuse into (R1086, read off this price's
+    // probe, as the listing reads it).
+    if needs_zone(state, card) {
+        let sets: Vec<&[String]> = if tribute_sets.is_empty() {
+            vec![&[]]
+        } else {
+            tribute_sets.iter().map(Vec::as_slice).collect()
+        };
+        let nowhere = sets.iter().all(|tributes| {
+            default_zone_for(state, player, card, tributes).is_none()
+                && legal_zones_for(state, player, card, tributes).is_empty()
+                && legal_equip_zones_for(state, player, &cheapest.probe, tributes).is_empty()
+        });
+        if nowhere {
+            return refuse_zone(state, player, card, None, &[])
+                .err()
+                .map(|error| error.message);
+        }
+    }
+    // (d) Tribute: the board cannot pay what the play costs (§6.3).
+    if tribute_cost_of(state, card) > 0 && tribute_sets.is_empty() {
+        return refuse_tributes(state, player, card, None)
+            .err()
+            .map(|error| error.message);
+    }
+    // (e) Choices: the resolving face at the cheapest price declares something the board cannot
+    // answer — a needed pick (R703) or a mode with no allowed option (R831008). The probe is the
+    // listing's default (this price, its zone, its first Tribute set, no picks), so the refusal is
+    // the one §10.5 step 1 gives that play.
+    let face = resolving_face(state, player, card, cheapest.cost);
+    if play_choice_combinations(state, player, &face, None).is_empty() {
+        let paid: &[String] = tribute_sets.first().map(Vec::as_slice).unwrap_or(&[]);
+        let probe = PlayAction {
+            instance_id: card.id.clone(),
+            zone: if needs_zone(state, card) {
+                default_zone_for(state, player, card, paid).map(|slot| ZoneChoice {
+                    row: slot.row,
+                    lane: slot.lane,
+                })
+            } else {
+                None
+            },
+            x: cheapest.x,
+            embiggen: cheapest.embiggen,
+            equip: None,
+            tributes: if paid.is_empty() {
+                None
+            } else {
+                Some(paid.to_vec())
+            },
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        };
+        return why_choices_refused(state, player, card, &probe)
+            .err()
+            .map(|error| error.message);
+    }
+    None
+}
+
 /// R1200 (ME-RANDOMTARGETS): the face §10.5 step 1 reads a play's choices against — the one
 /// `why_choices_refused` computes (`resolving_face` with the action's own prices).
 pub fn face_for_action(

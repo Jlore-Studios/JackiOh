@@ -48,6 +48,8 @@
 //!     only, beside the normal price `cost` already is.
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
+//!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
+//!     (`with_play_reason`).
 //!
 //! Stats are never read off an instance: `layers.unitView` recomputes every stat and keyword on read
 //! (§10.4), so no stored total ever reaches the client.
@@ -293,6 +295,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         power: None,
         condition_active: None,
         countered_on_play: None,
+        play_reason: None,
         preview: None,
         type_: None,
         brittle: None,
@@ -413,6 +416,37 @@ fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance
 fn with_counter_warning(mut view: CardView, countered: bool) -> CardView {
     if countered {
         view.countered_on_play = Some(true);
+    }
+    view
+}
+
+/// R979000: why the viewer's own hand card cannot be played now, or no key at all — the key is
+/// never empty, so a view with no unplayable card looks exactly as it did before R979000. Only
+/// while the viewer may act (their turn, the main phase, no prompt open) and `play_actions_for`
+/// lists no play of the card; nothing else calls this, so the opponent's hand and post-game hands
+/// carry no key. Which plays are offered stays `legal_actions`' answer.
+fn with_play_reason(
+    mut view: CardView,
+    state: &GameState,
+    card: &CardInstance,
+    viewer: PlayerId,
+) -> CardView {
+    if state.result.is_some() || state.phase != crate::wire::Phase::Main {
+        return view;
+    }
+    if state.pending.is_some() {
+        return view;
+    }
+    if state.active != viewer {
+        return view;
+    }
+    if !crate::play_choices::play_actions_for(state, viewer, card).is_empty() {
+        return view;
+    }
+    if let Some(reason) = crate::play_choices::why_hand_card_unplayable(state, viewer, card)
+        && !reason.is_empty()
+    {
+        view.play_reason = Some(reason);
     }
     view
 }
@@ -993,12 +1027,17 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 .iter()
                 .map(|card| {
                     with_preview(
-                        with_counter_warning(
-                            with_condition(
-                                with_embiggen_cost(hand_card_view(state, card), state, card),
-                                condition_active(state, card, viewer, ConditionZone::Hand),
+                        with_play_reason(
+                            with_counter_warning(
+                                with_condition(
+                                    with_embiggen_cost(hand_card_view(state, card), state, card),
+                                    condition_active(state, card, viewer, ConditionZone::Hand),
+                                ),
+                                countered.contains(&card.id),
                             ),
-                            countered.contains(&card.id),
+                            state,
+                            card,
+                            viewer,
                         ),
                         preview_of(state, card, viewer, ConditionZone::Hand),
                     )

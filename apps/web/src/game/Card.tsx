@@ -232,9 +232,9 @@ function formOf(card: CardView | null, unit: UnitView | null | undefined, type: 
   return "full";
 }
 
-/** R849000: a card's native tooltip, its name and why your own unit cannot attack now. */
-function cardTitle(name: string, unit: UnitView | null | undefined): string {
-  const reason = unit?.attackReason;
+/** R849000: a card's native tooltip, its name and why your own unit cannot attack now; R979000: a card in hand that cannot be played says why instead. */
+function cardTitle(name: string, unit: UnitView | null | undefined, card: CardView | null): string {
+  const reason = unit?.attackReason ?? (unit == null ? card?.playReason : undefined);
   return reason === undefined ? name : t("{name}: {reason}", { name, reason: t(reason) });
 }
 
@@ -437,7 +437,7 @@ export default function Card(props: CardProps): ReactElement {
       style={position === "DEF" ? { transform: "rotate(90deg) scale(0.72)" } : undefined}
       // The hover preview replaces the native tooltip; with previews off, the name comes back, and
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
-      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit)}
+      title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
       {unit !== undefined && unit !== null ? (
         <MinionFace face={face} unit={unit} />
