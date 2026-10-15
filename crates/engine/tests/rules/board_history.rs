@@ -13,7 +13,9 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::board_history::{phoenix, register_board_history_fixtures, rewind};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::field::{act, banner, playing, spatula, tower, watcher};
-use crate::rules::fixtures::harness::{events_of_type, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, json_of, matches_object, put, round_trip, setup_catalog, slot,
+};
 
 /// p1's main phase of turn 1 with the field fixtures and this file's registered, the history emptied.
 fn board(seed: &str) -> GameState {
@@ -27,24 +29,6 @@ const PLAIN_UNIT: &str = "fx-1";
 
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
-}
-
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// The live card (TS held the object itself; Rust looks it up by id).
@@ -85,10 +69,6 @@ fn history_turns(state: &GameState) -> Option<Vec<i32>> {
         .board_history
         .as_ref()
         .map(|history| history.iter().map(|snapshot| snapshot.turn).collect())
-}
-
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).unwrap()
 }
 
 mod e29_the_record_r419_r62 {
