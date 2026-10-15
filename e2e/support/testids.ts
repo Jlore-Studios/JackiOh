@@ -236,6 +236,8 @@ export function deckRowId(deckId: string): string {
 /** R250: deck creation is disabled at its cap. */
 export const DECK_NEW = "deck-new";
 export const DECK_CAP_REASON = "deck-cap-reason";
+/** R915005: "Practice only" on a deck row (`data-practice-only="true"`) and in the open deck's verdict. */
+export const DECK_PRACTICE_ONLY = "deck-practice-only";
 
 export const TRIO_LIST = "trio-list";
 export const TRIO_CAP = "trio-cap";
@@ -394,6 +396,10 @@ export const PRACTICE_DECK_CURVE = "practice-deck-curve";
 export function practiceDeckCardId(defId: string): string {
   return `practice-deck-card-${defId}`;
 }
+/** R915005, #921: a saved deck naming a custom card the account lacks, and `?try=`'s wait and miss. */
+export const PRACTICE_CUSTOM_BLOCKED = "practice-custom-blocked";
+export const PRACTICE_TRY_LOADING = "practice-try-loading";
+export const PRACTICE_TRY_MISSING = "practice-try-missing";
 export const PRACTICE_START = "practice-start";
 export const PRACTICE_LOADING = "practice-loading";
 export const PRACTICE_ERROR = "practice-error";
@@ -683,3 +689,28 @@ export const REMATCH_STATUS = "rematch-status";
 // R612's banner mirrors matchTestid in apps/web/src/routes/match.tsx: whether the game moves the rating.
 export const MATCH_RANKS = "match-ranks";
 
+
+// #920: the card creator's selectors mirror `creatorTestid` in `apps/web/src/creator/testids.ts`
+// (SPEC §12.11, R915010).
+
+export const CREATOR_SCREEN = "creator-screen";
+export const CREATOR_LIST_ITEM = "creator-list-item";
+export const CREATOR_NEW_CARD = "creator-new-card";
+export const CREATOR_NAME = "creator-name";
+export const CREATOR_COST = "creator-cost";
+export const CREATOR_TEXT = "creator-text";
+export const CREATOR_TARGET = "creator-target";
+export const CREATOR_ADD_HOOK = "creator-add-hook";
+export const CREATOR_ADD_STEP = "creator-add-step";
+export const CREATOR_STEP_VERB = "creator-step-verb";
+export const CREATOR_STEP_TARGET = "creator-step-target";
+export const CREATOR_STEP_AMOUNT = "creator-step-amount";
+export const CREATOR_VIEW_BUILDER = "creator-view-builder";
+export const CREATOR_VIEW_CODE = "creator-view-code";
+export const CREATOR_BUILDER = "creator-builder";
+export const CREATOR_CODE_INPUT = "creator-code-input";
+export const CREATOR_SCRIPT_PROBLEM = "creator-script-problem";
+export const CREATOR_CHECKING = "creator-checking";
+export const CREATOR_PREVIEW = "creator-preview";
+export const CREATOR_SAVE = "creator-save";
+export const CREATOR_SAVED = "creator-saved";

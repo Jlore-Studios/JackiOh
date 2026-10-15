@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-eight specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37` and the accessibility check's `38`, plus seventeen component specs
+# `e2e/` — the thirty-nine specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38` and the custom cards' `39`, plus seventeen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
