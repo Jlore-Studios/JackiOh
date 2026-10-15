@@ -49,6 +49,11 @@ pub const ROOM_CODE_LENGTH: usize = 6;
 /// the literal `15 * 60 * 1000` in `api/deps.ts`'s `defaultLimits()` (`roomCodeTtlMs`); v0.3.0 names
 /// it here (CLAUDE.md rule 9, research C §10 #17), and `api/deps.ts` is not ported.
 pub const ROOM_CODE_TTL_SECONDS: i64 = 15 * 60;
+/// R890000, §9.5: how many unclaimed unexpired rooms one host may hold open at once. Three bounds
+/// how far one host's rooms can amplify a seat race without stranding a host whose old room
+/// lingers to expiry. Advisory: the seat compare-and-set is what stops a double seat, not this.
+/// `create` refuses a fourth with 409.
+pub const MAX_OPEN_ROOMS_PER_HOST: i64 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The code alphabet (§9.4, §9.5).

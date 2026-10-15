@@ -1026,17 +1026,40 @@ pub fn profiles_answer_username_prompt(f: &mut FakeTx<'_>, profile_id: &str) -> 
     Ok(())
 }
 
-/// Pass `None` to clear. §9.5: every terminal reason clears both players'.
+/// §9.5: every terminal reason clears both players'. Setting `Some` is the same
+/// compare-and-set as Postgres's (R890000): only a free seat is written, and a taken one answers
+/// `Ok(false)` without writing. Goes through `call_cas` like `series.update`, so a race hook
+/// answering `CallOutcome::Lose` loses, as the store's other compare-and-sets do.
 pub fn profiles_set_in_match(
     f: &mut FakeTx<'_>,
     profile_id: &str,
     match_id: Option<&str>,
-) -> Result<(), StoreError> {
-    call(f, "profiles.setInMatch")?;
+) -> Result<bool, StoreError> {
+    if call_cas(f, "profiles.setInMatch")? == CallOutcome::Lose {
+        return Ok(false);
+    }
     let Some(row) = profile_of(f.tables(), profile_id) else {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     };
+    if match_id.is_some() && row.in_match_id.is_some() {
+        return Ok(false);
+    }
     row.in_match_id = match_id.map(str::to_string);
+    Ok(true)
+}
+
+/// R890000: clears the seat only while it points at `match_id`. Always `Ok`.
+pub fn profiles_clear_in_match(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    match_id: &str,
+) -> Result<(), StoreError> {
+    call(f, "profiles.clearInMatch")?;
+    if let Some(row) = profile_of(f.tables(), profile_id)
+        && row.in_match_id.as_deref() == Some(match_id)
+    {
+        row.in_match_id = None;
+    }
     Ok(())
 }
 
@@ -1338,10 +1361,17 @@ pub fn matches_mode_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<Queu
     Ok(match_mode_in(f.tables(), match_id))
 }
 
-/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263); discarding it forgets its claim time (R1450).
+/// No `open` rows here: a reserved match id is only an id until the registry creates it (R263); discarding it forgets its claim time (R1450). A room claimed for that id whose match
+/// never started goes with it (R890000): Postgres deletes the claimed `open` row, which frees
+/// its code, so the fake drops the room row too. A started room's row stays, still joined.
 pub fn matches_discard_open(f: &mut FakeTx<'_>, match_id: &str) -> Result<(), StoreError> {
     call(f, "matches.discardOpen")?;
     keep_only(&mut f.tables().reserved, |reserved| reserved.match_id != match_id);
+    if !f.tables().matches.iter().any(|row| row.id == match_id) {
+        keep_only(&mut f.tables().rooms, |room| {
+            room.match_id.as_deref() != Some(match_id)
+        });
+    }
     Ok(())
 }
 
@@ -1555,6 +1585,23 @@ pub fn rooms_claim(
     row.guest_profile_id = Some(guest_profile_id.to_string());
     row.match_id = Some(match_id.to_string());
     Ok(Some(row.clone()))
+}
+
+/// R890000: the host's rooms nobody has joined and whose expiry has not passed — the advisory
+/// half of `MAX_OPEN_ROOMS_PER_HOST`.
+pub fn rooms_count_open_by_host(
+    f: &mut FakeTx<'_>,
+    host_profile_id: &str,
+    at: i64,
+) -> Result<i64, StoreError> {
+    call(f, "rooms.countOpenByHost")?;
+    Ok(f.tables()
+        .rooms
+        .iter()
+        .filter(|room| {
+            room.host_profile_id == host_profile_id && room.guest_profile_id.is_none() && room.expires_at > at
+        })
+        .count() as i64)
 }
 
 // ---------------------------------------------------------------------------
