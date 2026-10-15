@@ -330,7 +330,9 @@
     },
     "1013": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:6204053824"
+      ],
       "difficulty_by": {
         "at": "2026-10-15T23:14:10Z",
         "difficulty": "hard",
@@ -363,9 +365,7 @@
       "started_at": "2026-10-15T23:03:31Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6204053824"
-      ]
+      "taken_asks": []
     },
     "1014": {
       "action": "plan",
