@@ -8414,6 +8414,10 @@
         {
           "at": "2026-10-15T02:25:16Z",
           "minutes": 10.0
+        },
+        {
+          "at": "2026-10-15T04:25:16Z",
+          "minutes": 36.0
         }
       ],
       "tokens_spent": [
@@ -8553,11 +8557,11 @@
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-10-15T03:40:00Z",
+          "resets_at": "2026-10-15T08:40:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-10-15T02:25:16Z",
-        "rejected_resets_at": "2026-10-15T03:40:00Z",
+        "observed_at": "2026-10-15T04:25:16Z",
+        "rejected_resets_at": "2026-10-15T08:40:00Z",
         "status": "rejected"
       }
     },
