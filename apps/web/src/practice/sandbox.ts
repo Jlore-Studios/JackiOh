@@ -2,15 +2,19 @@
 //
 // Nothing here is a rule (CLAUDE.md rule 7): the panel builds a `sandbox` action from the player's
 // picks and the engine decides; search only finds cards to offer, and a card the engine would refuse
-// (one of a set that has not shipped, R1420) is simply never offered.
+// (one of a set that has not shipped, R1420, or a custom card the game does not carry, R962000) is
+// simply never offered.
 
 import { setShips, type ActionBody, type CardDef, type CardDefs, type PlayerView, type SandboxOp } from "@jackioh/shared";
 
 import { SANDBOX_RESULTS_MAX } from "./config.ts";
 
-/** R923001: every card and token a spawn may make, in catalog order: those of a set that ships. */
-export function spawnableDefs(defs: CardDefs): CardDef[] {
-  return Object.values(defs).filter((def) => setShips(def.set));
+/**
+ * R923001: every card and token a spawn may make: those of a set that ships, in catalog order.
+ * R962000: led by the game's own custom cards (`customs`, from its setup), which no catalog holds.
+ */
+export function spawnableDefs(defs: CardDefs, customs: CardDefs = {}): CardDef[] {
+  return [...Object.values(customs), ...Object.values(defs).filter((def) => setShips(def.set))];
 }
 
 /** A number on the card a search can name: its cost, or an embiggened card's base price. */

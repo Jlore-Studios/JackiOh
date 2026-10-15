@@ -51,7 +51,7 @@ import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
 import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
-import { gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
+import { customDefsOf, gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
@@ -929,6 +929,9 @@ function PracticeScreen({
 
   const defs = state.defs;
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
+  // R962000: the game's own custom cards, which a sandbox game's panel offers beside the catalog.
+  const gameCustoms = state.config?.customCards;
+  const sandboxCustoms = useMemo(() => customDefsOf(gameCustoms ?? []), [gameCustoms]);
 
   // A lesson won is a lesson completed on this device (R294), the moment the view says so, whether
   // or not its result dialog is ever seen; an active account hears of it from the sync (R321).
@@ -1190,7 +1193,7 @@ function PracticeScreen({
       </div>
       {/* R923000: a sandbox game's dev tools, over the board's edge; while the game runs only. */}
       {config.sandbox === true && result === null ? (
-        <SandboxPanel view={snapshot.view} defs={defs} held={sandboxHeld} onHold={onSandboxHold} onTool={onSandboxTool} />
+        <SandboxPanel view={snapshot.view} defs={defs} customs={sandboxCustoms} held={sandboxHeld} onHold={onSandboxHold} onTool={onSandboxTool} />
       ) : null}
       {leaveAskedFor !== null && leaveAskedFor.game === game && result === null ? (
         <PracticeLeave

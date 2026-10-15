@@ -1,6 +1,7 @@
 // `/practice` with custom cards (SPEC §12.6, §12.10; R915005, R915006, R915009; #921): a saved deck
 // that names custom cards starts with them, one naming a card the account no longer has does not,
-// `?try=<id>` deals a random deck around the card, and no such game records card statistics.
+// `?try=<id>` deals a random deck around the card, and no such game records card statistics. R962000:
+// a sandbox game started with one offers it in its panel.
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -110,7 +111,7 @@ function snapshotFor(human: PlayerId, over: boolean): PracticeSnapshot {
 }
 
 /** A host that starts every game and ends it on a concede. */
-function fakeHost(): { factory: Mock<() => PracticeHost>; starts: () => PracticeStartConfig[] } {
+function fakeHost(): { factory: Mock<() => PracticeHost>; starts: () => PracticeStartConfig[]; requests: PracticeRequestBody[] } {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
   let human: PlayerId = "p1";
@@ -132,6 +133,7 @@ function fakeHost(): { factory: Mock<() => PracticeHost>; starts: () => Practice
   return {
     factory: vi.fn(() => host),
     starts: () => requests.flatMap((body) => (body.type === "start" ? [body.config] : [])),
+    requests,
   };
 }
 
@@ -307,6 +309,38 @@ describe("R915009 a practice game with custom cards records no card statistics",
     await concede();
     await waitFor(() => {
       expect(readPlayerStats().games).toBe(1);
+    });
+  });
+});
+
+describe("R962000 a sandbox game started with custom cards", () => {
+  it("R962000 the Sandbox box with a deck naming a custom card starts a sandbox carrying it, whose panel finds and spawns it", async () => {
+    const host = fakeHost();
+    renderRoute(host);
+    await waitFor(() => {
+      expect(Array.from((screen.getByTestId(practiceTestid.deck) as HTMLSelectElement).options).map((o) => o.value)).toContain("saved:1");
+    });
+    fireEvent.change(screen.getByTestId(practiceTestid.deck), { target: { value: "saved:1" } });
+    const preview = await screen.findByTestId(practiceTestid.deckPreview);
+    await waitFor(() => {
+      expect(within(preview).getByTestId(practiceTestid.deckCard(IMP.id))).toHaveTextContent("Ember Imp");
+    });
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(practiceTestid.start));
+    await screen.findByTestId(practiceTestid.sandboxPanel);
+    const [config] = host.starts();
+    expect(config?.sandbox).toBe(true);
+    expect(config?.customCards).toEqual([IMP_IN_GAME]);
+
+    fireEvent.change(screen.getByTestId(practiceTestid.sandboxSearch), { target: { value: "ember imp" } });
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxResult(IMP.id)));
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxSpawn));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({
+        type: "act",
+        action: { type: "sandbox", op: { kind: "spawn", player: config?.humanSeat, defId: IMP.id, to: { zone: "hand" } } },
+      });
     });
   });
 });
