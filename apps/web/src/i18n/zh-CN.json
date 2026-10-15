@@ -1024,6 +1024,7 @@
   "Connected": "已连接",
   "Connecting…": "连接中…",
   "Reconnecting…": "重新连接中…",
+  "Reconnect now": "立即重新连接",
   "This match isn’t available": "这场对局不可用",
   "Disconnected": "已断开连接",
   "This match isn’t available. It may have ended, or it may not be yours to join.": "这场对局不可用。它可能已经结束，或者你无权加入。",
