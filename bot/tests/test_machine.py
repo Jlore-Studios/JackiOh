@@ -1,4 +1,5 @@
-"""The machine's starter (bot/machine/starter.py): which queued jobs wake the machine."""
+"""The machine's starter (bot/machine/starter.py): which queued jobs wake the machine. The
+credits watch (bot/machine/credits.py): when an issue says the credits run low."""
 
 from __future__ import annotations
 
@@ -8,7 +9,7 @@ import unittest
 from datetime import datetime, timezone
 
 from harness.config import REPO_ROOT
-from machine import starter
+from machine import credits, starter
 
 NOW = datetime(2026, 10, 2, 18, 0, tzinfo=timezone.utc)
 
@@ -69,6 +70,36 @@ class StarterTests(unittest.TestCase):
                                      only={"night-vm-gpt", "night-vm-agy", "night-vm-muse",
                                            "night-vm-devin"})
         self.assertEqual([w["label"] for w in night], ["night-vm-gpt"])
+
+
+def plan(amount):
+    state = {"accountPlanType": "FREE", "accountPlanExpirationDate": "2027-04-02T17:02:40Z"}
+    if amount is not None:
+        state["accountPlanRemainingCredits"] = {"amount": amount, "unit": "USD"}
+    return state
+
+
+class CreditsTests(unittest.TestCase):
+    def test_the_issue_opens_only_under_the_floor(self):
+        self.assertIsNone(credits.issue(plan(156.53)))
+        self.assertIsNone(credits.issue(plan(credits.FLOOR)))
+        wanted = credits.issue(plan(19.99))
+        self.assertEqual(wanted["title"], "AWS credits are under $20")
+        self.assertEqual(wanted["labels"], ["human"])
+        self.assertIn("$19.99", wanted["body"])
+        self.assertIn("ending 2027-04-02", wanted["body"])
+
+    def test_a_plan_without_credits_opens_nothing(self):
+        self.assertIsNone(credits.issue(plan(None)))
+
+    def test_an_issue_ever_opened_with_the_title_stops_another(self):
+        def call(items):
+            return lambda method, path, body: {"items": items}
+        self.assertTrue(credits.already_opened(
+            "o/r", call([{"title": credits.TITLE, "state": "closed"}])))
+        self.assertFalse(credits.already_opened(
+            "o/r", call([{"title": "AWS credits are under $20 again?"}])))
+        self.assertFalse(credits.already_opened("o/r", call([])))
 
 
 SETUP = REPO_ROOT / "bot" / "machine" / "setup.sh"
