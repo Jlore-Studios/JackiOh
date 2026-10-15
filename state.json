@@ -7253,13 +7253,8 @@
     "what": "build #990 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-15T19:22:07Z",
-    "notes": [
-      "#994: typed it Task",
-      "#993: typed it Task",
-      "#992: typed it Task",
-      "#991: typed it Task"
-    ],
+    "at": "2026-10-15T19:28:10Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
