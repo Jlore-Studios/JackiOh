@@ -290,11 +290,10 @@ describe("40 custom cards — made in the creator, kept on the account, played i
         cy.get(ts(deckRowId(deckId))).click();
         cy.get(ts(addPoolId(customId)), { timeout: timeouts.view }).click();
         cy.get(ts(DECK_COUNT)).should("have.attr", "data-count", String(constants.DECK_SIZE));
-        cy.get(ts(deckRowId(deckId)), { timeout: timeouts.view })
-          .should("not.have.attr", "data-unsynced")
-          .and("have.attr", "data-practice-only", "true")
-          .find(ts(DECK_PRACTICE_ONLY))
-          .should("exist");
+        // Each attribute check on its own: `not.have.attr` hands the next chainer no element.
+        cy.get(ts(deckRowId(deckId)), { timeout: timeouts.view }).should("not.have.attr", "data-unsynced");
+        cy.get(ts(deckRowId(deckId))).should("have.attr", "data-practice-only", "true");
+        cy.get(ts(deckRowId(deckId))).find(ts(DECK_PRACTICE_ONLY)).should("exist");
         cy.savedDecks(me()).should((saved) => {
           expect(saved.decks[0]?.cards, "the saved deck holds the custom card").to.include(customId);
         });

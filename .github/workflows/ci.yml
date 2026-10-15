@@ -14,15 +14,17 @@
 #              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
 #              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; and, on a
 #              pull request from a training lane's ai/* branch, the training gate (README §8).
-#   web        the WASM module and the e2e client, built once for the run; typecheck and eslint; the
-#              web's unit tests in thirds, without the audio, fx and asset tests.
+#   web        the two WASM modules, side by side, and the e2e client on them, each built once for
+#              the run; typecheck and eslint; the web's unit tests in thirds, without the audio, fx
+#              and asset tests.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
 #              the release jackioh-server, in two shards that each boot their own server.
 #   db         sql, the store contract and the Render deploy rehearsal against a real Postgres, only
 #              when the pull request touches what they test (scripts/ci-scope.sh's `db`); a skip passes.
 #
-# The release build, the WASM module and the built client travel between jobs as artifacts
-# (`rust-release`, `web-build`), so each is compiled once per run, not once per job that uses it.
+# The release build, the WASM modules and the built client travel between jobs as artifacts
+# (`rust-release`, `web-wasm` and `web-wasm-luau`, `web-build`), so each is compiled once per run,
+# not once per job that uses it.
 #
 # Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
 # 10,000-seed fuzz runs, `golden check` (cargo test replays the same traces), every e2e spec beyond
@@ -202,10 +204,17 @@ jobs:
           - group: ai slow b
             cache: ai
             test: -p jackioh-ai --test ai_slow_b
+          # The Luau host's tests, with its `ts` feature on so that `export_api` writes the card
+          # scripts' typed module, which the group's last step holds to what is committed. In
+          # `tools, wasm` that second compile of the engine and the cards, with `ts`, ran after the
+          # group's own and took the job past seven minutes (#959).
+          - group: luau
+            cache: luau
+            test: -p jackioh-luau --features ts
+            luau: true
           - group: tools, wasm
             cache: tools-wasm
-            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai
-            luau: true
+            test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai --exclude jackioh-luau
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -249,9 +258,10 @@ jobs:
             exit 1
           fi
       # crates/luau's export_api test writes crates/cards/luau/jackioh.luau from the Rust types
-      # (ts-rs, under the crate's `ts` feature, which the group's own run leaves off), so it runs
-      # here with the feature, and what it wrote must be what is committed. Skipped until the module
-      # exists, as on main before v0.4.0, whose crates/luau has no `ts` feature.
+      # (ts-rs, under the crate's `ts` feature, which the `luau` group's own run turns on, so this
+      # runs it again without compiling anything), and what it wrote must be what is committed.
+      # Skipped until the module exists, as on main before v0.4.0, whose crates/luau has no `ts`
+      # feature.
       - name: the card scripts' typed module is what the Rust generates (#442 L10)
         if: ${{ matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
         run: |
@@ -433,11 +443,12 @@ jobs:
   # web
   # ------------------------------------------------------------------------------------------------
 
-  # The WASM module (scripts/build-wasm.sh, SURFACE §10.2) and the e2e client (`pnpm build:e2e`,
-  # which BUILD M5-T3's `window.__jackioh` needs: a plain `build` strips it), once for the run. The
-  # unit tests and the typecheck read the module; e2e smoke serves the client.
+  # The two WASM modules (scripts/build-wasm.sh, SURFACE §10.2), each in a job of its own and side
+  # by side: the normal module, and the Luau module (#919), which links through emscripten. One
+  # after the other in one job they took over seven minutes (#959). Neither needs the runner's
+  # Node; the Luau one's emsdk brings its own.
   wasm:
-    name: web (wasm, client build)
+    name: web (wasm module)
     needs: changes
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
@@ -445,10 +456,77 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+        with:
+          node: "false"
       - name: the WASM module
+        env:
+          JACKIOH_WASM_LUAU: "0"
         run: sh scripts/build-wasm.sh
+      # Without pkg/luau, which the next job packs: each module travels alone.
+      - name: pack it
+        run: tar -czf "$RUNNER_TEMP/web-wasm.tgz" --exclude=apps/web/src/wasm/pkg/luau apps/web/src/wasm/pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-wasm
+          path: ${{ runner.temp }}/web-wasm.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  wasm-luau:
+    name: web (wasm luau module)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          emsdk: "true"
+      - name: the Luau WASM module
+        env:
+          JACKIOH_WASM_NORMAL: "0"
+        run: sh scripts/build-wasm.sh
+      - name: pack it
+        run: tar -czf "$RUNNER_TEMP/web-wasm-luau.tgz" apps/web/src/wasm/pkg/luau
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-wasm-luau
+          path: ${{ runner.temp }}/web-wasm-luau.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  # The e2e client on both modules, once for the run: `vite build --mode development`, as `pnpm
+  # build:e2e` runs it (BUILD M5-T3's `window.__jackioh` needs the mode: a plain `build` strips it),
+  # but without the script's `prebuild:e2e`, which would compile both modules again here. Its
+  # artifact, `web-build`, holds the modules and the client: the unit tests and the typecheck read
+  # the modules, e2e smoke serves the client.
+  web-build:
+    name: web (client build)
+    needs: [changes, wasm, wasm-luau]
+    if: ${{ needs.changes.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          rust: "false"
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-wasm
+          path: ${{ runner.temp }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-wasm-luau
+          path: ${{ runner.temp }}
+      - name: unpack the WASM modules
+        run: |
+          tar -xzf "$RUNNER_TEMP/web-wasm.tgz"
+          tar -xzf "$RUNNER_TEMP/web-wasm-luau.tgz"
       - name: the e2e client
-        run: pnpm build:e2e
+        run: pnpm --dir apps/web exec vite build --mode development
       - name: pack them
         run: tar -czf "$RUNNER_TEMP/web-build.tgz" apps/web/src/wasm/pkg apps/web/dist
       - uses: actions/upload-artifact@v4
@@ -460,7 +538,7 @@ jobs:
 
   web-check:
     name: web (typecheck, eslint)
-    needs: [changes, wasm]
+    needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -476,7 +554,7 @@ jobs:
         with:
           name: web-build
           path: ${{ runner.temp }}
-      - name: unpack the WASM module
+      - name: unpack the WASM modules
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: typecheck the web
         run: pnpm --dir apps/web typecheck
@@ -488,7 +566,7 @@ jobs:
   # new card until its assets are rendered (docs/v0.3.0/research/D-ci-spec.md §2.4).
   web-unit:
     name: web (unit ${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: [changes, wasm]
+    needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -505,7 +583,7 @@ jobs:
         with:
           name: web-build
           path: ${{ runner.temp }}
-      - name: unpack the WASM module
+      - name: unpack the WASM modules
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: vitest
         run: >-
@@ -514,7 +592,7 @@ jobs:
 
   web:
     name: web
-    needs: [changes, wasm, web-check, web-unit]
+    needs: [changes, wasm, wasm-luau, web-build, web-check, web-unit]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -523,15 +601,19 @@ jobs:
         env:
           FULL: ${{ needs.changes.outputs.full }}
           WASM: ${{ needs.wasm.result }}
+          WASM_LUAU: ${{ needs.wasm-luau.result }}
+          BUILD: ${{ needs.web-build.result }}
           CHECK: ${{ needs.web-check.result }}
           UNIT: ${{ needs.web-unit.result }}
         run: |
-          echo "full=$FULL wasm=$WASM check=$CHECK unit=$UNIT"
+          echo "full=$FULL wasm=$WASM wasm-luau=$WASM_LUAU build=$BUILD check=$CHECK unit=$UNIT"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
           fi
           test "$WASM" = success
+          test "$WASM_LUAU" = success
+          test "$BUILD" = success
           test "$CHECK" = success
           test "$UNIT" = success
 
@@ -544,7 +626,7 @@ jobs:
   # runs every spec instead, in super.yml's eight shards (`e2e all (k/8)`).
   e2e-smoke-shard:
     name: e2e ${{ inputs.e2e == 'all' && 'all' || 'smoke' }} (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: [changes, wasm, rust-build]
+    needs: [changes, web-build, rust-build]
     if: ${{ needs.changes.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.e2e == 'all' && 20 || 10 }}
@@ -569,7 +651,7 @@ jobs:
   # WASM module.
   e2e-component:
     name: e2e component (chrome)
-    needs: [changes, wasm]
+    needs: [changes, web-build]
     if: ${{ needs.changes.outputs.full == 'true' && inputs.e2e == 'all' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -582,7 +664,7 @@ jobs:
         with:
           name: web-build
           path: ${{ runner.temp }}
-      - name: unpack the WASM module
+      - name: unpack the WASM modules
         run: tar -xzf "$RUNNER_TEMP/web-build.tgz"
       - name: the fixture board's layout, measured in a browser
         run: pnpm --dir e2e exec cypress run --component --browser chrome

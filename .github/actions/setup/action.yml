@@ -32,6 +32,10 @@ inputs:
     description: "true: luau-analyze, Luau's type checker for the card scripts, from the Luau release mlua builds, checked against its SHA-256, kept in .cache/bin and put on PATH; a no-op until crates/cards/luau/jackioh.luau exists"
     required: false
     default: "false"
+  emsdk:
+    description: "true: the emsdk cache with the Rust half alone, for a job that builds only the Luau module (`JACKIOH_WASM_NORMAL=0`), which needs no Node of the runner's; a job with both halves on has the cache anyway"
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -79,9 +83,11 @@ runs:
     # The emsdk (#442 L12). Once the module links through emscripten, scripts/build-wasm.sh clones
     # and installs the emsdk it pins (EMSDK_VERSION) into .cache/emsdk when that is missing: several
     # hundred megabytes, every run. The jobs with both halves on are the ones that build the module
-    # (ci.yml's and super.yml's `wasm`, promote-production.yml's `deploy`), so they cache the
-    # directory, keyed on the pinned version. A build-wasm.sh that pins no emsdk (main's, before
-    # v0.4.0) leaves the version empty, and the cache step is skipped.
+    # (super.yml's `wasm`, promote-production.yml's `deploy`), so they cache the directory, keyed on
+    # the pinned version, and so does a job that asks for it with `emsdk` (ci.yml's `wasm-luau`,
+    # which builds the Luau module alone and installs no Node: the emsdk brings its own). A
+    # build-wasm.sh that pins no emsdk (main's, before v0.4.0) leaves the version empty, and the
+    # cache step is skipped.
     # Unlike the Rust cache, any branch saves it, at the end of a successful job that missed: the key
     # changes only with the pin, so every other run hits an entry exactly and writes nothing, and a
     # pull request writes its own only when it moves the pin. Saved after the build, the entry also
@@ -90,7 +96,7 @@ runs:
     # to the bot's workflows); build-wasm.sh adds wasm32-unknown-emscripten itself when it is missing.
     - name: the emsdk scripts/build-wasm.sh pins
       id: emsdk
-      if: ${{ inputs.node == 'true' && inputs.rust == 'true' }}
+      if: ${{ inputs.rust == 'true' && (inputs.node == 'true' || inputs.emsdk == 'true') }}
       shell: bash
       run: echo "version=$(sed -n 's/^EMSDK_VERSION="\([^"]*\)"$/\1/p' scripts/build-wasm.sh)" | tee -a "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
