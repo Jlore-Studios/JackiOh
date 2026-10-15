@@ -43,7 +43,7 @@ export const lesson: TutorialLesson = {
     "core-073", // Anti-oneshot Armor
     "core-030", // Archivist
     "core-077", // Professor Curvature
-    "core-001", // Big D-fender
+    "core-091", // Fed Fauci
     "core-061", // Prejudiced Postdoc
     "core-012", // Duplicating Felinors
     "core-045", // Deft Duelist
@@ -53,6 +53,8 @@ export const lesson: TutorialLesson = {
   // Sheepish is the AI's only card that costs 1, so once it has three crystals it spends the last
   // one setting the trap beside a 2-cost card (on its third turn, on the coach's line and on the
   // autopilot's), rather than on a cheap unit or spell. No Gravedigger, which could hand the AI its
-  // fired trap back turn after turn.
+  // fired trap back turn after turn. Fed Fauci holds Big D-fender's place (#898): once the AI counted
+  // Armor per hit, it saw that the Rush Tokens' 3 Attack never got past Big D-fender's Armor 3 walls
+  // and held them, so the lesson ran past its turns.
   retryTip: "A face-down card could be a trap. Test it with a cheap unit before you play your best one.",
 };

@@ -800,3 +800,66 @@ mod the_other_entries {
         );
     }
 }
+
+mod r874000_the_fusion_cap {
+    use super::*;
+    use jackioh_engine::subsystems::fuse::fused_card_count;
+
+    /// Fuse p1's hand `times` times, starting from two plain cards: each fusion takes the last one
+    /// and its two copies (R1242), so it holds 2, then 6, 18, 54 cards.
+    fn fused_again(seed: &str, times: usize) -> GameState {
+        let mut state = game(seed, None, None);
+        in_hand(&mut state, "fx-1", P1, 1);
+        in_hand(&mut state, "fx-2", P1, 1);
+        for _ in 0..times {
+            run(&mut state, entry("fuse"), None);
+        }
+        state
+    }
+
+    #[test]
+    fn r874000_a_hand_of_its_own_copies_fused_again_and_again_stops_at_the_cap() {
+        let mut state = game("fuse-cap", None, None);
+        in_hand(&mut state, "fx-1", P1, 1);
+        in_hand(&mut state, "fx-2", P1, 1);
+        let mut held = 2;
+        while held <= FUSED_CARDS_CAP {
+            let events = run(&mut state, entry("fuse"), None);
+            assert_eq!(events_of_type(&events, GameEventType::Fused).len(), 1);
+            let hand = state.players.p1.hand.clone();
+            assert_eq!(hand.len(), 1 + CHAOS_MED_FUSE_COPIES as usize);
+            assert!(
+                hand.iter()
+                    .all(|card| fused_card_count(&state, &card.def_id) == held)
+            );
+            held *= 1 + CHAOS_MED_FUSE_COPIES as usize;
+        }
+        // The next fusion would hold `held`, past the cap: it is not made, so the entry does nothing,
+        // and the hand, its prices and the transient definitions stay as they were.
+        let hand = state.players.p1.hand.clone();
+        let defs = state.transient_defs.len();
+        let events = run(&mut state, entry("fuse"), None);
+        assert!(events_of_type(&events, GameEventType::Fused).is_empty());
+        assert_eq!(ids_of(&state.players.p1.hand), ids_of(&hand));
+        assert_eq!(state.transient_defs.len(), defs);
+    }
+
+    #[test]
+    fn r874000_a_fusion_of_exactly_the_cap_is_made_and_one_card_more_is_not() {
+        // Four fusions leave three cards of 54 each; one of them and ten plain cards make 64.
+        for (extra, made) in [(FUSED_CARDS_CAP - 54, true), (FUSED_CARDS_CAP - 54 + 1, false)] {
+            let mut state = fused_again(&format!("fuse-edge-{extra}"), 4);
+            state.players.p1.hand.truncate(1);
+            assert_eq!(fused_card_count(&state, &state.players.p1.hand[0].def_id), 54);
+            in_hand(&mut state, "fx-3", P1, extra as i32);
+            let events = run(&mut state, entry("fuse"), None);
+            assert_eq!(!events_of_type(&events, GameEventType::Fused).is_empty(), made);
+            let first = state.players.p1.hand[0].def_id.clone();
+            if made {
+                assert_eq!(fused_card_count(&state, &first), FUSED_CARDS_CAP);
+            } else {
+                assert_eq!(state.players.p1.hand.len(), 1 + extra);
+            }
+        }
+    }
+}

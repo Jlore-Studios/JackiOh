@@ -52,7 +52,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{
-    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
+    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_CARDS_CAP, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
 };
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
@@ -445,6 +445,24 @@ pub fn fused_ingredient_specs(state: &GameState, def_id: &str) -> Option<Vec<Fus
     } else {
         None
     }
+}
+
+/// R874000: the cards a definition holds: one for a card that is no fusion, and for a fusion its
+/// ingredients' (`CardDef.ingredients`, R468), each counted the same way. It stops once past
+/// `FUSED_CARDS_CAP`, the most `fuse` makes, so a fusion of fusions is walked no further than that.
+pub fn fused_card_count(state: &GameState, def_id: &str) -> usize {
+    let Some(specs) = crate::catalog::find_def(Some(state), def_id).and_then(|def| def.ingredients.as_ref())
+    else {
+        return 1;
+    };
+    let mut count = 0;
+    for spec in specs {
+        count += fused_card_count(state, &spec.def_id);
+        if count > FUSED_CARDS_CAP {
+            break;
+        }
+    }
+    count.max(1)
 }
 
 /// E36: a fused definition's lines of code are its ingredients' sum, absent when none has any.
@@ -2088,6 +2106,14 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
     }
 
     let state: &GameState = sink.state;
+    // R874000: a fusion past FUSED_CARDS_CAP cards is not made, before any of it is built.
+    let held: usize = ingredients
+        .iter()
+        .map(|card| fused_card_count(state, &card.def_id))
+        .sum();
+    if held > FUSED_CARDS_CAP {
+        return None;
+    }
     let defs: Vec<CardDef> = ingredients
         .iter()
         .map(|card| crate::catalog::def_of(Some(state), &card.def_id).clone())
