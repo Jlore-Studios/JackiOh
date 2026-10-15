@@ -186,6 +186,7 @@ fn stats(overrides: Value) -> Value {
             "plays": 0,
             "errors": 0,
             "timeouts": 0,
+            "rawTimeouts": 0,
             "evalDeltaSum": 0,
             "evalDeltaCount": 0,
             "losingPlays": 0,
@@ -329,6 +330,7 @@ mod sweep_flags_b25 {
             &SweepOptions {
                 seeds: Some(2),
                 now: None,
+                retime: None,
                 tier: None,
             },
         ));
@@ -546,6 +548,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
             &SweepOptions {
                 seeds: Some(1),
                 now: None,
+                retime: None,
                 tier: Some(Difficulty::Easy),
             },
         ));
@@ -564,6 +567,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
             &SweepOptions {
                 seeds: Some(5),
                 now: None,
+                retime: None,
                 tier: Some(Difficulty::Hard),
             },
         ));
@@ -1045,6 +1049,7 @@ mod the_two_pass_sweep_r390 {
             &SweepOptions {
                 seeds: Some(1),
                 now: Some(&now),
+                retime: None,
                 tier: Some(Difficulty::Easy),
             },
         ));
@@ -1093,6 +1098,7 @@ mod the_two_pass_sweep_r390 {
             &SweepOptions {
                 seeds: Some(1),
                 now: None,
+                retime: None,
                 tier: Some(Difficulty::Easy),
             },
         ));
@@ -1103,10 +1109,132 @@ mod the_two_pass_sweep_r390 {
                 .cloned()
                 .unwrap_or_default()
                 .into_iter()
-                .map(|card| spread(card, Some(&json!({ "timeouts": 0 }))))
+                .map(|card| spread(card, Some(&json!({ "timeouts": 0, "rawTimeouts": 0 }))))
                 .collect()
         };
         assert_eq!(untimed(&plain["cards"]), untimed(&timed["cards"]));
+    }
+}
+
+/// R977000: a decision the sweep's clock finds slow is timed again by the caller's `retime`, and only one
+/// still slow is a timeout; `rawTimeouts` keeps the clock's count.
+mod a_slow_decision_timed_again_r977000 {
+    use super::*;
+
+    /// `sweep` run with a clock that makes the AI's first decision, and no other, slower than decisionMs,
+    /// and a re-timer answering `still_slow`: the answer, the decisions handed out, the last budget.
+    /// The re-timer only records: a panic in it would be swallowed as a controller error, so the
+    /// callers assert afterwards, with `errors` 0.
+    fn with_one_slow_decision<T>(
+        still_slow: bool,
+        sweep: impl FnOnce(&SweepOptions<'_>) -> T,
+    ) -> (T, i32, Option<SearchBudget>) {
+        let clock = Cell::new(0.0_f64);
+        let handed = Cell::new(0);
+        let budget = Cell::new(None);
+        // Each call moves past decisionMs until the re-timer is first handed a decision; then it stands still.
+        let now = || {
+            if handed.get() == 0 {
+                clock.set(clock.get() + f64::from(AI_SWEEP.decision_ms) + 1.0);
+            }
+            clock.get()
+        };
+        let retime = |slow: &SlowDecision<'_>| {
+            handed.set(handed.get() + 1);
+            budget.set(Some(slow.budget));
+            still_slow
+        };
+        let out = sweep(&SweepOptions {
+            seeds: Some(1),
+            now: Some(&now),
+            retime: Some(&retime),
+            tier: Some(Difficulty::Easy),
+        });
+        (out, handed.get(), budget.get())
+    }
+
+    /// R977000 a decision the clock found slow and the re-timer found fast is a raw timeout, not a timeout
+    #[test]
+    fn r977000_a_decision_the_clock_found_slow_and_the_retimer_found_fast_is_a_raw_timeout_not_a_timeout() {
+        jackioh_cards::register_all();
+        let (result, handed, budget) =
+            with_one_slow_decision(false, |options| sweep_card("core-011", options));
+        assert_eq!(handed, 1);
+        assert_eq!(budget, Some(AI_GATE_BUDGET));
+        assert_eq!(result.errors, 0);
+        assert_eq!((result.timeouts, result.raw_timeouts), (0, 1));
+        assert!(!result.flags.contains(&SweepFlag::Timeout));
+        let json = js(&result);
+        assert_eq!(json["rawTimeouts"], json!(1));
+        assert_eq!(json["timeouts"], json!(0));
+    }
+
+    /// R977000 a decision slow by the clock and by the re-timer is a timeout
+    #[test]
+    fn r977000_a_decision_slow_by_the_clock_and_by_the_retimer_is_a_timeout() {
+        jackioh_cards::register_all();
+        let (result, handed, _) = with_one_slow_decision(true, |options| sweep_card("core-011", options));
+        assert_eq!(handed, 1);
+        assert_eq!(result.errors, 0);
+        assert_eq!((result.timeouts, result.raw_timeouts), (1, 1));
+        assert!(result.flags.contains(&SweepFlag::Timeout));
+        assert_eq!(
+            sweep_verdict(&[result], &[]).reason,
+            Some(format!(
+                "timeout: easy: 1 decision(s) over {} ms or game(s) past {} actions",
+                AI_SWEEP.decision_ms, AI_SWEEP.max_actions
+            ))
+        );
+    }
+
+    /// R977000 pass 2 charges both counts to the forced card
+    #[test]
+    fn r977000_pass_2_charges_both_counts_to_the_forced_card() {
+        jackioh_cards::register_all();
+        let (pass2, handed, _) = with_one_slow_decision(false, |options| {
+            sweep_at_risk("core-011", &["core-011".to_string()], &[], options)
+        });
+        assert_eq!(handed, 1);
+        assert_eq!(pass2.cards[0].def_id, "core-011");
+        assert_eq!((pass2.cards[0].timeouts, pass2.cards[0].raw_timeouts), (0, 1));
+        assert_eq!(
+            pass2_stats(&[pass2], "core-011", Difficulty::Easy).raw_timeouts,
+            1
+        );
+    }
+
+    /// R977000 without a re-timer every decision the clock found slow is a timeout
+    #[test]
+    fn r977000_without_a_retimer_every_decision_the_clock_found_slow_is_a_timeout() {
+        jackioh_cards::register_all();
+        let clock = Cell::new(0.0_f64);
+        let slow = || {
+            clock.set(clock.get() + f64::from(AI_SWEEP.decision_ms) + 1.0);
+            clock.get()
+        };
+        let result = sweep_card(
+            "core-011",
+            &SweepOptions {
+                seeds: Some(1),
+                now: Some(&slow),
+                retime: None,
+                tier: Some(Difficulty::Easy),
+            },
+        );
+        assert!(result.timeouts > 0);
+        assert_eq!(result.timeouts, result.raw_timeouts);
+    }
+
+    /// R977000 a slice written before the raw count reads it as 0
+    #[test]
+    fn r977000_a_slice_written_before_the_raw_count_reads_it_as_0() {
+        let p1: SweepResult = serde_json::from_value(json!({
+            "defId": "core-030", "games": 8, "drawnGames": 6, "affordableTurns": 5, "plays": 3, "errors": 0,
+            "timeouts": 0, "evalDeltaSum": 12.5, "evalDeltaCount": 3, "tier": "easy", "flags": [], "unswept": false,
+        }))
+        .expect("an old pass-1 line reads");
+        assert_eq!(p1.raw_timeouts, 0);
+        assert_eq!(js(&p1)["rawTimeouts"], json!(0));
     }
 }
 

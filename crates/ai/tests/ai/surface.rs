@@ -453,6 +453,7 @@ mod surface_sweep_cards_clock {
             &SweepOptions {
                 seeds: Some(1),
                 now: Some(&slow),
+                retime: None,
                 tier: None,
             },
         );
