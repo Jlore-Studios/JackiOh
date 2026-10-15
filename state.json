@@ -7159,19 +7159,29 @@
     "989": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-15T17:21:57Z",
       "issue": 979,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "The order of reasons is the one design call the issue asked the ruling to record, and the spec states it two contradictory ways: \u00a710.8, \u00a711 and the first list in R979000 put price before ban, while the code and the ruling's next sentence put the ban first.",
+          "evidence": "\u00a710.8 says \"the first refusal in a fixed order \u2014 no price it can pay, a play ban, no open zone, \u2026\". spec/11-rulings.md's R979000 paragraph gives the same order. spec/rulings/R979000.md first lists \"no price it can pay \u2026 a play ban, no open zone\" and then says \"with the ban ahead of the price it forbids at\". `why_hand_card_unplayable` (play_choices.rs:1873ff) checks (a) ban, then (b) price, and its doc comment says \"The order is ban, price, zone, Tribute, choices\". The spec is the only source of rules, so as written it calls the code wrong.",
+          "severity": "blocking",
+          "where": "spec/10-engine-guide.md:188"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-10-15T19:06:09Z",
+      "queued_at": "2026-10-15T19:11:21Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38791040874",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "cross-review",
       "started_at": "2026-10-15T19:06:21Z",
       "stop_requested": false,
       "taken_asks": [],
