@@ -6884,9 +6884,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-15T02:30:36Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38671290674",
-    "what": "build #831 on claude-6"
+    "at": "2026-10-15T02:53:43Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38673339255",
+    "what": "suggestions on devin"
   },
   "last_sweep": {
     "at": "2026-10-15T02:52:32Z",
@@ -13284,11 +13284,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T02:19:21Z",
-    "last_run": "2026-10-14T17:13:24Z",
-    "provider": null,
+    "idle_since": "2026-10-15T02:53:43Z",
+    "last_run": "2026-10-15T02:53:43Z",
+    "provider": "devin",
     "requested": false,
-    "run_id": null,
+    "run_id": "38673339255",
     "taken_asks": []
   },
   "usage": {
