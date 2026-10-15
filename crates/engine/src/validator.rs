@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::catalog::set_is_open;
 use crate::config::{DECK_SIZE, MAX_COPIES};
-use crate::wire::{CardDef, CardDefs, Tag, is_js_space, string_union};
+use crate::wire::{CardDefs, is_js_space, string_union};
 
 /// §9.4: exactly 3 decks per loadout. Not in engine config, so it lives here.
 pub const LOADOUT_DECKS: usize = 3;
@@ -173,12 +173,6 @@ fn join_labels(labels: &[String]) -> String {
     }
     let (last, rest) = labels.split_last().expect("at least two labels");
     format!("{} and {last}", rest.join(", "))
-}
-
-/// Mirrors the engine catalog's private token test (§5.1): the printed flag or the tag.
-/// L3 bans both spellings from a deck.
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.contains(&Tag::Token)
 }
 
 // --- L1–L6 (§9.4) ----------------------------------------------------------
@@ -326,7 +320,7 @@ fn check(
 
             // L3 (tokens) — skipped for an unknown id: there is no def to read. L6 reports that id.
             if let Some(def) = def
-                && is_token(def)
+                && def.is_token()
             {
                 errors.push(LoadoutError {
                     rule: LoadoutRule::L3,

@@ -26,6 +26,7 @@ use jackioh_engine::{
 use super::fixtures::combat::{plain, spikey_pillow, taunter};
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
 use super::fixtures::scripts::{anti_oneshot, stockpile};
+use crate::rules::fixtures::harness::{json_of, matches_object};
 
 /// The state, a fresh event list and an rng at the state's cursor, as `reduce` starts one. A sink
 /// borrows all three, so they live here and `sink()` lends them out.
@@ -213,28 +214,6 @@ fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardIn
     find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively;
-/// arrays match element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
-}
-
 /// `resolve_target`'s answer as JSON: `{ kind: "unit", instance }`, `{ kind: "hero", player }`, or
 /// `null`.
 fn target_json(target: Option<DamageTarget>) -> Value {
@@ -368,7 +347,7 @@ mod r70_cast_r78_leaving_the_field_build_m3_t1 {
         assert_eq!(after.buffs, AttackHealth { attack: 0, health: 0 });
         assert!(after.granted_keywords.is_empty());
         assert!(!after.vanilla);
-        assert_eq!(json_of(&after.counters), json!({}));
+        assert_eq!(json_of(after.counters), json!({}));
         assert!(after.memory.is_empty());
         assert_eq!(
             after.exertion,
@@ -804,7 +783,7 @@ mod s6_3_lose_health_r18_m3_t1 {
         );
         assert_eq!(state.players.p2.hero.health, 30 - 12);
         assert_eq!(
-            json_of(&events_of_type(&events, GameEventType::HealthLost)),
+            json_of(events_of_type(&events, GameEventType::HealthLost)),
             json!([{ "type": "healthLost", "player": "p2", "amount": 12 }])
         );
         assert!(events_of_type(&events, GameEventType::Damage).is_empty());
@@ -848,7 +827,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         assert_eq!(state.players.p1.mana.current, 3);
         assert_eq!(state.players.p1.mana.max, 1); // above max is allowed (§2.3)
         assert_eq!(
-            json_of(&events_of_type(&events, GameEventType::ManaChanged)),
+            json_of(events_of_type(&events, GameEventType::ManaChanged)),
             json!([{ "type": "manaChanged", "player": "p1", "current": 3, "max": 1 }])
         );
 
@@ -885,7 +864,7 @@ mod s6_3_mana_and_next_turn_mana_s2_3_m3_t1 {
         );
         assert_eq!(state.players.p1.mana.current, 3);
         assert_eq!(
-            json_of(&events_of_type(&events, GameEventType::ManaChanged)),
+            json_of(events_of_type(&events, GameEventType::ManaChanged)),
             json!([{ "type": "manaChanged", "player": "p1", "current": 3, "max": 4 }])
         );
 
@@ -1106,7 +1085,7 @@ mod s6_3_switch_position_as_an_effect_r20_m3_t1 {
             }
         );
         assert_eq!(
-            json_of(&events_of_type(&events, GameEventType::PositionSwitched)),
+            json_of(events_of_type(&events, GameEventType::PositionSwitched)),
             json!([{ "type": "positionSwitched", "instanceId": unit.id, "position": "DEF" }])
         );
 

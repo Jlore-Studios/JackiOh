@@ -31,6 +31,7 @@ use super::fixtures::generation::{
     playing, quiet_trap, refusal, replayed, scatter, slime, toxins,
 };
 use super::fixtures::harness::{put, slot};
+use crate::rules::fixtures::harness::matches_object;
 
 fn pick(card: &CardInstance) -> Selection {
     Selection::Instance {
@@ -140,23 +141,6 @@ fn play(card: &CardInstance) -> Value {
 
 fn play_on(card: &CardInstance, target: &CardInstance) -> Value {
     json!({ "type": "play", "instanceId": card.id, "targets": [pick(target)], "playerId": "p1" })
-}
-
-/// Every key `expected` names holds the same value in `actual` (objects and arrays recursively).
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(have), Value::Object(want)) => want
-            .iter()
-            .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-        (Value::Array(have), Value::Array(want)) => {
-            have.len() == want.len()
-                && have
-                    .iter()
-                    .zip(want)
-                    .all(|(got, value)| matches_object(got, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn view_json(state: &GameState, player: PlayerId) -> Value {

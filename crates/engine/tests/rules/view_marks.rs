@@ -16,7 +16,7 @@ use jackioh_engine::effects::steal;
 use jackioh_engine::subsystems::combo_index::GRADES;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{matches_object, new_game, put, sink_for, slot};
 
 /// A test-only definition; `index` is its catalog index (3701 on).
 fn def(name: &str, type_: &str, index: i32) -> CardDef {
@@ -118,23 +118,6 @@ fn public_card(entry: Option<&Option<BackrowView>>) -> PublicBackrowView {
 /// A backrow entry as its JSON.
 fn entry_json(entry: &impl serde::Serialize) -> Value {
     serde_json::to_value(entry).expect("a view serialises")
-}
-
-/// Every key of `expected` is in `actual` with a matching value.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 mod r371_the_controllers_view_marks_a_face_down_trap_as_unrevealed {

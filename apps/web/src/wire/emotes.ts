@@ -5,8 +5,6 @@
 // separate deployables (§9.2), so their constants live here, not `crates/server/src/config.rs`
 // (CLAUDE.md rule 9). Practice personas stay in `apps/web/src/practice/personas.ts` (R645).
 
-import type { PlayerId } from "./catalog.ts";
-
 /** MN03's twenty-four emotes: five portrait-specific voice lines, then nineteen shared emoji (R1340, R643). */
 export const VOICE_EMOTE_IDS = ["greetings", "wellPlayed", "oops", "thanks", "threaten"] as const;
 export const EMOJI_EMOTE_IDS = [
@@ -84,26 +82,6 @@ export function pickPortrait(rng: () => number): PortraitId {
   return PORTRAIT_IDS[index] ?? DEFAULT_PORTRAIT;
 }
 
-function hashUnit(seed: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < seed.length; i += 1) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  // Finalize FNV-1a so distinct seat keys do not cluster in one portrait bucket; R642 requires independent draws.
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b) >>> 0;
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35) >>> 0;
-  h ^= h >>> 16;
-  return (h >>> 0) / 0x100000000;
-}
-
-/** All Random (R642): deterministic independent per-seat draw without extra entropy. */
-export function pickPortraitFromSeed(seed: string): PortraitId {
-  return pickPortrait(() => hashUnit(seed));
-}
-
 // Shared client/server rate limit (R643).
 
 export const EMOTE_COOLDOWN_MS = 1500;
@@ -126,5 +104,3 @@ export function emoteGate(sentAt: readonly number[], now: number): EmoteGate {
   }
   return { ok: true, sentAt: kept };
 }
-
-export type EmoteRelay = { from: PlayerId; emote: EmoteId };

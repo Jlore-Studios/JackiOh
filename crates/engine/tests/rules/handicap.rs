@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{token_def, vanilla_catalog, vanilla_deck};
-use crate::rules::fixtures::harness::setup_catalog;
+use crate::rules::fixtures::harness::{round_trip, setup_catalog};
 use crate::rules::fixtures::scripts::{going_long, heroic_power, hinder};
 
 type Handicaps = PerPlayerOpt<Handicap>;
@@ -285,10 +285,6 @@ fn hero_hits(events: &[GameEvent], target: &str) -> Vec<i32> {
             _ => None,
         })
         .collect()
-}
-
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
 }
 
 struct Live {

@@ -13,7 +13,7 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, stacker};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, put, set_library, sink_for, slot};
 use crate::rules::fixtures::instance_data::{asker, brittle_trap, brittle_unit, instance_game};
 
 /// An `ActionInput` from a `json!` object literal (SURFACE §8).
@@ -26,10 +26,6 @@ fn by(player: PlayerId) -> HookOptions {
         controller: Some(player),
         ..Default::default()
     }
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn instance_ids(events: impl Serialize) -> Vec<String> {

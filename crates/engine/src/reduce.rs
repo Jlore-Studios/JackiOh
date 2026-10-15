@@ -898,8 +898,3 @@ fn each_legal_action(
     visit(ActionBody::EndTurn)?;
     visit(ActionBody::Concede)
 }
-
-/// Exported for the AI policy and the client: the instance an `attack` action would move (§10.2).
-pub fn unit_for_action<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
-    find_instance(state, instance_id)
-}

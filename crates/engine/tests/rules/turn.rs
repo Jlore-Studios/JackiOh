@@ -7,7 +7,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, new_game, put, round_trip, set_library, sink_for, slot,
+};
 use crate::rules::fixtures::scripts::{gravedigger, hinder, mana_well, shredder, x_bolt};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
@@ -691,10 +693,6 @@ fn answer_open_prompt(state: &GameState) -> GameState {
 
 fn only<T: Clone>(items: &[T]) -> T {
     items.first().cloned().expect("expected at least one item")
-}
-
-fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
-    serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
 mod r62_r113_r117_r126_r127_delayed_continuations_and_the_end_of_turn_2_2_10_6 {

@@ -27,7 +27,8 @@ use crate::rules::fixtures::activate::{
 };
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot,
+    events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip, set_library, setup_catalog,
+    slot,
 };
 
 // Harness
@@ -104,10 +105,6 @@ fn activate(player: PlayerId, instance_id: &str, extra: Value) -> ActionInput {
     input(body)
 }
 
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).unwrap()
-}
-
 /// Answer the one open prompt with its first option, whoever holds it.
 fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
     let pending = state.pending.as_ref().expect("expected a prompt");
@@ -122,24 +119,6 @@ fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
             player_id: pending.player_id,
         },
     )
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
-}
-
-/// Every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn lacks(value: &Value, key: &str) -> bool {

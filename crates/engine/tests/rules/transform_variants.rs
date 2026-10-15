@@ -11,7 +11,7 @@ use crate::rules::fixtures::generation::{
     act, body, classic_plus_unit, classic_spell, classic_unit, frozen, fuse_a, fuse_b, hand_card, immutable,
     juhan, playing, replayed,
 };
-use crate::rules::fixtures::harness::{events_of_type, put, sink_for, slot};
+use crate::rules::fixtures::harness::{events_of_type, matches_object, put, sink_for, slot};
 
 fn run(sink: &mut EngineSink<'_>, effect: Effect, self_: Option<&CardInstance>) {
     let mut ctx = make_context(
@@ -58,23 +58,6 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
         .into_iter()
         .map(|event| serde_json::to_value(event).expect("an event serialises"))
         .collect()
-}
-
-/// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// `state.players.p1.units[index]?.[0]`.

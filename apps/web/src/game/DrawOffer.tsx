@@ -38,8 +38,6 @@ export type DrawNotice =
   | { kind: "accepted" }
   | { kind: "expired" };
 
-export type DrawOutcome = "declined" | "accepted" | "expired";
-
 /** How many turns an "expired" note outlives its offer. */
 const EXPIRED_NOTE_TURNS = 1;
 

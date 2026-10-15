@@ -28,7 +28,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, json_of, matches_object, new_game, put, slot};
 use crate::rules::fixtures::scripts::{going_long, x_bolt};
 
 // ---------------------------------------------------------------------------
@@ -588,24 +588,6 @@ fn expect_plain_data<T: Serialize + DeserializeOwned + PartialEq + std::fmt::Deb
     let json = serde_json::to_value(value).expect("serialisable");
     let back: T = serde_json::from_value(json).expect("deserialisable");
     assert_eq!(&back, value);
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn keys(options: &[PromptOption]) -> Vec<String> {
