@@ -11,10 +11,12 @@
 //!
 //! `seams.rs` holds the two test seams made from outside the engine: a test-made work handler and
 //! stand-ins for three turn stages. `preview.rs` is R1420's preview of a set that does not ship yet.
+//! `duos_scenario.rs` is #936's: a begun Duos game, every mulligan kept, round 1 open.
 //!
 //! The effects library is not globbed in (its `draw`, `add_to_hand`, `gain_mana`, … share names with
 //! engine functions): a test names `effects::<verb>` or imports the verbs it uses.
 
+pub mod duos_scenario;
 pub mod glow;
 pub mod invariants;
 pub mod preview;
@@ -24,6 +26,7 @@ pub mod seed_search;
 
 pub use crate::*;
 
+pub use duos_scenario::*;
 pub use glow::*;
 pub use invariants::*;
 pub use preview::*;

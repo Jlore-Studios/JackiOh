@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
 };
 
 /// §2.6
@@ -1566,9 +1566,66 @@ pub const CUSTOM_SOURCE_MAX_BYTES: usize = 8_192;
 /// R915001: the longest builder's model a custom card keeps, in bytes of JSON.
 pub const CUSTOM_BUILDER_MAX_BYTES: usize = 16_384;
 
+// ---------------------------------------------------------------------------------------------
+// Duos co-op (#936, fullsend SPEC S1): two 1v1 duels side by side whose teams share a life pool and
+// pass cards to each other (`crate::duos`, `crate::duos_life`).
+// ---------------------------------------------------------------------------------------------
+
+/// B12: each Duos player's own HP, its duel hero's health.
+pub const DUOS_OWN_HEALTH: i32 = 20;
+/// B12: a team's shared pool, which its seats draw on once their own HP is spent (B13).
+pub const DUOS_POOL_HEALTH: i32 = 20;
+/// B30: the Hard AI team's pool.
+pub const DUOS_POOL_HEALTH_HARD: i32 = 30;
+/// B19, B20: the mana a pass costs its passer.
+pub const DUOS_PASS_COST: i32 = 1;
+/// B30: what a pass costs the Medium and Hard AI teams: nothing.
+pub const DUOS_FREE_PASS_COST: i32 = 0;
+/// B19: the passes a seat may make in one round.
+pub const DUOS_PASS_CAP: i32 = 10;
+/// The rules a human team plays by, and the Easy AI team (B30).
+pub const DUOS_HUMAN_TEAM: DuosTeamRules = DuosTeamRules {
+    own_health: DUOS_OWN_HEALTH,
+    pool_health: DUOS_POOL_HEALTH,
+    pass_cost: DUOS_PASS_COST,
+    pass_cap: DUOS_PASS_CAP,
+};
+
+/// The AI team's rules by difficulty (B30): Easy = DUOS_HUMAN_TEAM; Medium = pass_cost 0;
+/// Hard = pass_cost 0 and pool_health DUOS_POOL_HEALTH_HARD. Each AI seat keeps §9.9's
+/// `AI_DIFFICULTY` handicap besides.
+pub fn duos_ai_team(difficulty: Difficulty) -> DuosTeamRules {
+    match difficulty {
+        Difficulty::Easy => DUOS_HUMAN_TEAM,
+        Difficulty::Medium => DuosTeamRules {
+            pass_cost: DUOS_FREE_PASS_COST,
+            ..DUOS_HUMAN_TEAM
+        },
+        Difficulty::Hard => DuosTeamRules {
+            pass_cost: DUOS_FREE_PASS_COST,
+            pool_health: DUOS_POOL_HEALTH_HARD,
+            ..DUOS_HUMAN_TEAM
+        },
+    }
+}
+
+/// The most passes `duos::reduce`'s settle makes after one action: each pass opens a round or ends a
+/// seat's turn, and a round takes each duel at least one player-turn on, so the duels' own turn cap
+/// (R2) ends the game well inside it. A backstop, as `end_due_turns`' guard is.
+pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_ai_teams_rules_follow_their_tier() {
+        assert_eq!(duos_ai_team(Difficulty::Easy), DUOS_HUMAN_TEAM);
+        assert_eq!(duos_ai_team(Difficulty::Medium).pass_cost, DUOS_FREE_PASS_COST);
+        assert_eq!(duos_ai_team(Difficulty::Medium).pool_health, DUOS_POOL_HEALTH);
+        assert_eq!(duos_ai_team(Difficulty::Hard).pool_health, DUOS_POOL_HEALTH_HARD);
+        assert_eq!(duos_ai_team(Difficulty::Hard).pass_cap, DUOS_PASS_CAP);
+    }
 
     #[test]
     fn fib_clamps_and_fatigue_is_n() {

@@ -2128,22 +2128,59 @@ pub async fn profiles_set_glicko(
     Ok(())
 }
 
-/// §9.5: set when a match starts and cleared by every ending.
+/// §9.5: set when a match starts and cleared by every ending. Setting `Some` is a
+/// compare-and-set (R890000): one statement seats only a free profile, so a queue pair, room join,
+/// rematch or series game racing for one seat leaves exactly one winner. `true` seated, `false`
+/// seat taken, `Err` only when the profile is missing; clearing with `None` is unconditional.
 pub async fn profiles_set_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
     match_id: Option<&str>,
-) -> Result<(), StoreError> {
+) -> Result<bool, StoreError> {
     run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
+    let done = sqlx::query(
+        "update public.profiles set current_match_id = $2::uuid
+          where id = $1::uuid and ($2::uuid is null or current_match_id is null)",
+    )
+    .bind(profile_id)
+    .bind(match_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 1 {
+        return Ok(true);
+    }
+    // No row moved: a profile that was never there is an error, as `matches_finish` re-reads its
+    // id; a profile that is there is held by another match. (A free profile pointed at a match
+    // that does not exist raises the foreign key above, as before.)
+    let rows = sqlx::query("select id from public.profiles where id = $1::uuid")
         .bind(profile_id)
-        .bind(match_id)
-        .execute(&mut **t)
+        .fetch_all(&mut **t)
         .await
         .map_err(db_error)?;
-    if done.rows_affected() == 0 {
+    if rows.is_empty() {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     }
+    Ok(false)
+}
+
+/// R890000: clears the seat only while it points at `match_id`, so a start-failure cleanup never
+/// wipes a rival match's flag. Always `Ok`.
+pub async fn profiles_clear_in_match(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    match_id: &str,
+) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(
+        "update public.profiles set current_match_id = null
+          where id = $1::uuid and current_match_id = $2::uuid",
+    )
+    .bind(profile_id)
+    .bind(match_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
     Ok(())
 }
 
@@ -3506,6 +3543,32 @@ pub async fn rooms_claim(
     .await
     .map_err(db_error)?;
     row.map(|row| RoomRow::read(&row).and_then(to_room)).transpose()
+}
+
+/// R890000: how many of the host's rooms are still open, unclaimed and unexpired — the advisory
+/// half of `MAX_OPEN_ROOMS_PER_HOST`. A claimed row has its guest set, a started one is `live`,
+/// and an expired one fails the ceiling, so none of them count.
+pub async fn rooms_count_open_by_host(
+    t: &mut PgTx<'_>,
+    host_profile_id: &str,
+    at: i64,
+) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select count(*)::int as n from public.matches
+          where p1_profile_id = $1::uuid
+            and status = 'open'
+            and room_code is not null
+            and p2_profile_id is null
+            and ceiling_at > ",
+        ts!("$2")
+    ))
+    .bind(host_profile_id)
+    .bind(at)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
 // ---------------------------------------------------------------------------
@@ -5787,6 +5850,958 @@ pub async fn player_stats_list_public(
         .collect()
 }
 
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 over migration 0038's tables. No `app.*` function: each method is one or two plain
+// statements on its own table, and the schema's keys and checks are the rule (one request per
+// direction and pair, `a < b`, one open challenge per pair and direction through the partial
+// unique index `challenges_open_pair_key`, a body of 1 to 500 characters, one report per message
+// and reporter). An id that is not a UUID names no row, as everywhere in this file.
+
+use crate::db::store::{
+    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, FriendshipRow,
+};
+
+/// `public.challenges`' columns, in `challenge_of`'s order.
+macro_rules! challenge_columns {
+    () => {
+        "id, from_profile, to_profile, room_code, mode, created_at, expires_at, state"
+    };
+}
+
+/// `public.chat_messages`' columns, in `chat_message_of`'s order.
+macro_rules! chat_message_columns {
+    () => {
+        "id, from_profile, to_profile, body, created_at, read_at"
+    };
+}
+
+fn friend_request_of(row: &PgRow) -> Result<FriendRequestRow, StoreError> {
+    Ok(FriendRequestRow {
+        id: uuid_text(row, "id")?,
+        from_profile: uuid_text(row, "from_profile")?,
+        to_profile: uuid_text(row, "to_profile")?,
+        created_at: ms_of(get(row, "created_at")?),
+    })
+}
+
+fn friendship_of(row: &PgRow) -> Result<FriendshipRow, StoreError> {
+    Ok(FriendshipRow {
+        a: uuid_text(row, "a")?,
+        b: uuid_text(row, "b")?,
+        since: ms_of(get(row, "since")?),
+    })
+}
+
+fn block_of(row: &PgRow) -> Result<BlockRow, StoreError> {
+    Ok(BlockRow {
+        blocker: uuid_text(row, "blocker")?,
+        blocked: uuid_text(row, "blocked")?,
+        created_at: ms_of(get(row, "created_at")?),
+    })
+}
+
+fn challenge_of(row: &PgRow) -> Result<ChallengeRow, StoreError> {
+    Ok(ChallengeRow {
+        id: uuid_text(row, "id")?,
+        from_profile: uuid_text(row, "from_profile")?,
+        to_profile: uuid_text(row, "to_profile")?,
+        room_code: get(row, "room_code")?,
+        mode: queue_mode_of(&get::<String>(row, "mode")?)?,
+        created_at: ms_of(get(row, "created_at")?),
+        expires_at: ms_of(get(row, "expires_at")?),
+        state: get::<String>(row, "state")?.parse::<ChallengeState>()?,
+    })
+}
+
+/// A `returning` clause's rows in the port's order: oldest first, the id breaking a tie.
+fn challenges_of(rows: &[PgRow]) -> Result<Vec<ChallengeRow>, StoreError> {
+    let mut challenges = rows.iter().map(challenge_of).collect::<Result<Vec<_>, _>>()?;
+    challenges.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    Ok(challenges)
+}
+
+fn chat_message_of(row: &PgRow) -> Result<ChatMessageRow, StoreError> {
+    Ok(ChatMessageRow {
+        id: uuid_text(row, "id")?,
+        from_profile: uuid_text(row, "from_profile")?,
+        to_profile: uuid_text(row, "to_profile")?,
+        body: get(row, "body")?,
+        created_at: ms_of(get(row, "created_at")?),
+        read_at: ms_or_null(get(row, "read_at")?),
+    })
+}
+
+// friends (B43–B45)
+
+pub async fn friends_requests_of(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Vec<FriendRequestRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(
+        "select id, from_profile, to_profile, created_at from public.friend_requests
+          where from_profile = $1::uuid or to_profile = $1::uuid
+          order by created_at, id",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(friend_request_of).collect()
+}
+
+pub async fn friends_request_get(
+    t: &mut PgTx<'_>,
+    request_id: &str,
+) -> Result<Option<FriendRequestRow>, StoreError> {
+    if !is_uuid(request_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(
+        "select id, from_profile, to_profile, created_at from public.friend_requests where id = $1::uuid",
+    )
+    .bind(request_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(friend_request_of).transpose()
+}
+
+pub async fn friends_request_between(
+    t: &mut PgTx<'_>,
+    from: &str,
+    to: &str,
+) -> Result<Option<FriendRequestRow>, StoreError> {
+    if !is_uuid(from) || !is_uuid(to) {
+        return Ok(None);
+    }
+    run_as(t, Some(from)).await?;
+    let row = sqlx::query(
+        "select id, from_profile, to_profile, created_at from public.friend_requests
+          where from_profile = $1::uuid and to_profile = $2::uuid",
+    )
+    .bind(from)
+    .bind(to)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(friend_request_of).transpose()
+}
+
+/// The unique key on `(from_profile, to_profile)` is inferred in `on conflict`, so a second request
+/// of the pair answers false instead of raising.
+pub async fn friends_request_create(t: &mut PgTx<'_>, row: &FriendRequestRow) -> Result<bool, StoreError> {
+    run_as(t, Some(row.from_profile.as_str())).await?;
+    let done = sqlx::query(concat!(
+        "insert into public.friend_requests (id, from_profile, to_profile, created_at)
+         values ($1::uuid, $2::uuid, $3::uuid, ",
+        ts!("$4"),
+        ")
+         on conflict (from_profile, to_profile) do nothing"
+    ))
+    .bind(row.id.as_str())
+    .bind(row.from_profile.as_str())
+    .bind(row.to_profile.as_str())
+    .bind(row.created_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+pub async fn friends_request_delete(t: &mut PgTx<'_>, request_id: &str) -> Result<bool, StoreError> {
+    if !is_uuid(request_id) {
+        return Ok(false);
+    }
+    run_as(t, None).await?;
+    let done = sqlx::query("delete from public.friend_requests where id = $1::uuid")
+        .bind(request_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+pub async fn friends_requests_delete_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<i64, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(0);
+    }
+    run_as(t, Some(x)).await?;
+    let done = sqlx::query(
+        "delete from public.friend_requests
+          where (from_profile = $1::uuid and to_profile = $2::uuid)
+             or (from_profile = $2::uuid and to_profile = $1::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+pub async fn friends_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<FriendshipRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(
+        "select a, b, since from public.friendships
+          where a = $1::uuid or b = $1::uuid
+          order by since, a, b",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(friendship_of).collect()
+}
+
+pub async fn friends_count(t: &mut PgTx<'_>, profile_id: &str) -> Result<i64, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(0);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query("select count(*) as n from public.friendships where a = $1::uuid or b = $1::uuid")
+        .bind(profile_id)
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get(&row, "n")
+}
+
+pub async fn friends_get(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<Option<FriendshipRow>, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(None);
+    }
+    run_as(t, Some(x)).await?;
+    let row = sqlx::query(
+        "select a, b, since from public.friendships
+          where a = least($1::uuid, $2::uuid) and b = greatest($1::uuid, $2::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(friendship_of).transpose()
+}
+
+/// The pair is ordered by the database (`least`, `greatest`), so `a < b` holds whatever text form
+/// the ids arrived in; a friendship with oneself fails that check and raises.
+pub async fn friends_make(t: &mut PgTx<'_>, x: &str, y: &str, at: i64) -> Result<FriendshipRow, StoreError> {
+    run_as(t, Some(x)).await?;
+    sqlx::query(concat!(
+        "insert into public.friendships (a, b, since)
+         values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid), ",
+        ts!("$3"),
+        ")
+         on conflict (a, b) do nothing"
+    ))
+    .bind(x)
+    .bind(y)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    sqlx::query(
+        "delete from public.friend_requests
+          where (from_profile = $1::uuid and to_profile = $2::uuid)
+             or (from_profile = $2::uuid and to_profile = $1::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let row = sqlx::query(
+        "select a, b, since from public.friendships
+          where a = least($1::uuid, $2::uuid) and b = greatest($1::uuid, $2::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    friendship_of(&row)
+}
+
+pub async fn friends_remove(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<bool, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(false);
+    }
+    run_as(t, Some(x)).await?;
+    let done = sqlx::query(
+        "delete from public.friendships
+          where a = least($1::uuid, $2::uuid) and b = greatest($1::uuid, $2::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+// blocks (B46)
+
+pub async fn blocks_of(t: &mut PgTx<'_>, blocker: &str) -> Result<Vec<BlockRow>, StoreError> {
+    if !is_uuid(blocker) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(blocker)).await?;
+    let rows = sqlx::query(
+        "select blocker, blocked, created_at from public.blocks
+          where blocker = $1::uuid
+          order by created_at, blocked",
+    )
+    .bind(blocker)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(block_of).collect()
+}
+
+pub async fn blocks_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<bool, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(false);
+    }
+    run_as(t, Some(x)).await?;
+    let row = sqlx::query(
+        "select exists (
+           select 1 from public.blocks
+            where (blocker = $1::uuid and blocked = $2::uuid)
+               or (blocker = $2::uuid and blocked = $1::uuid)) as blocked",
+    )
+    .bind(x)
+    .bind(y)
+    .fetch_one(&mut **t)
+    .await
+    .map_err(db_error)?;
+    get(&row, "blocked")
+}
+
+pub async fn blocks_add(t: &mut PgTx<'_>, blocker: &str, blocked: &str, at: i64) -> Result<(), StoreError> {
+    run_as(t, Some(blocker)).await?;
+    sqlx::query(concat!(
+        "insert into public.blocks (blocker, blocked, created_at)
+         values ($1::uuid, $2::uuid, ",
+        ts!("$3"),
+        ")
+         on conflict (blocker, blocked) do nothing"
+    ))
+    .bind(blocker)
+    .bind(blocked)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn blocks_remove(t: &mut PgTx<'_>, blocker: &str, blocked: &str) -> Result<bool, StoreError> {
+    if !is_uuid(blocker) || !is_uuid(blocked) {
+        return Ok(false);
+    }
+    run_as(t, Some(blocker)).await?;
+    let done = sqlx::query("delete from public.blocks where blocker = $1::uuid and blocked = $2::uuid")
+        .bind(blocker)
+        .bind(blocked)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+// presence (B47)
+
+pub async fn presence_touch(t: &mut PgTx<'_>, profile_id: &str, at: i64) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(concat!(
+        "insert into public.presence (profile_id, last_seen)
+         values ($1::uuid, ",
+        ts!("$2"),
+        ")
+         on conflict (profile_id)
+         do update set last_seen = greatest(public.presence.last_seen, excluded.last_seen)"
+    ))
+    .bind(profile_id)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+/// In the order the ids were named, as the fake answers.
+pub async fn presence_last_seen(
+    t: &mut PgTx<'_>,
+    profile_ids: &[String],
+) -> Result<IndexMap<String, i64>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(IndexMap::new());
+    }
+    run_as(t, None).await?;
+    let rows =
+        sqlx::query("select profile_id, last_seen from public.presence where profile_id = any($1::uuid[])")
+            .bind(ids.clone())
+            .fetch_all(&mut **t)
+            .await
+            .map_err(db_error)?;
+    let mut seen: IndexMap<String, i64> = IndexMap::new();
+    for row in &rows {
+        seen.insert(uuid_text(row, "profile_id")?, ms_of(get(row, "last_seen")?));
+    }
+    Ok(ids
+        .iter()
+        .filter_map(|id| seen.get(id).map(|at| (id.clone(), *at)))
+        .collect())
+}
+
+/// One statement over `series_active_idx`'s rows; in the order the ids were named, as the fake
+/// answers.
+pub async fn presence_in_series(t: &mut PgTx<'_>, profile_ids: &[String]) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select p1_profile_id, p2_profile_id from public.series
+          where status <> 'over'
+            and (p1_profile_id = any($1::uuid[]) or p2_profile_id = any($1::uuid[]))",
+    )
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut held: Vec<String> = Vec::new();
+    for row in &rows {
+        held.extend(uuid_text_or_null(row, "p1_profile_id")?);
+        held.extend(uuid_text_or_null(row, "p2_profile_id")?);
+    }
+    Ok(ids.into_iter().filter(|id| held.contains(id)).collect())
+}
+
+/// One statement: each named profile's newest live co-op match (`distinct on`, ordered as
+/// `duos_matches_live_for` orders), in the order the ids were named.
+pub async fn presence_in_duos(
+    t: &mut PgTx<'_>,
+    profile_ids: &[String],
+) -> Result<IndexMap<String, String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(IndexMap::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select distinct on (p.id) p.id as profile_id, d.id as match_id
+           from unnest($1::uuid[]) as p(id)
+           join public.duos_matches d on d.ended_at is null and (d.a1 = p.id or d.a2 = p.id)
+          order by p.id, d.created_at desc, d.id",
+    )
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut live: IndexMap<String, String> = IndexMap::new();
+    for row in &rows {
+        live.insert(uuid_text(row, "profile_id")?, uuid_text(row, "match_id")?);
+    }
+    Ok(ids
+        .iter()
+        .filter_map(|id| live.get(id).map(|match_id| (id.clone(), match_id.clone())))
+        .collect())
+}
+
+/// One statement: each named profile's in-match flag joined to its match, with B50's store checks
+/// (`social::watch::watchable_in`'s, for many friends at once); in the order the ids were named.
+pub async fn presence_watchable(
+    t: &mut PgTx<'_>,
+    viewer: &str,
+    profile_ids: &[String],
+) -> Result<Vec<String>, StoreError> {
+    let ids: Vec<String> = profile_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() || !is_uuid(viewer) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(viewer)).await?;
+    let rows = sqlx::query(
+        "select p.id from public.profiles p
+           join public.matches m on m.id = p.current_match_id
+          where p.id = any($2::uuid[]) and p.id <> $1::uuid
+            and p.allow_spectators
+            and m.status = 'live' and m.ranked is not true
+            and p.id in (m.p1_profile_id, m.p2_profile_id)
+            and $1::uuid is distinct from m.p1_profile_id
+            and $1::uuid is distinct from m.p2_profile_id
+            and exists (select 1 from public.friendships f
+                         where f.a = least($1::uuid, p.id) and f.b = greatest($1::uuid, p.id))
+            and not exists (select 1 from public.blocks k
+                             where (k.blocker = $1::uuid and k.blocked = p.id)
+                                or (k.blocker = p.id and k.blocked = $1::uuid))",
+    )
+    .bind(viewer)
+    .bind(ids.clone())
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let watchable = rows
+        .iter()
+        .map(|row| uuid_text(row, "id"))
+        .collect::<Result<Vec<String>, StoreError>>()?;
+    Ok(ids.into_iter().filter(|id| watchable.contains(id)).collect())
+}
+
+// profiles (B46, B50)
+
+pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<Profile>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(None);
+    }
+    profiles_get_by_id(t, profile_id).await
+}
+
+pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(false);
+    }
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
+        .bind(profile_id)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    match row {
+        Some(row) => get(&row, "allow_spectators"),
+        None => Ok(false),
+    }
+}
+
+pub async fn profiles_set_allow_spectators(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    allow: bool,
+) -> Result<(), StoreError> {
+    if !is_uuid(profile_id) {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    run_as(t, Some(profile_id)).await?;
+    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
+        .bind(profile_id)
+        .bind(allow)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    if done.rows_affected() == 0 {
+        return Err(StoreError::from(format!("no profile {profile_id}")));
+    }
+    Ok(())
+}
+
+// challenges (B48, B49)
+
+/// Two statements in the caller's transaction: the pair's lapsed open row (if any) is marked
+/// expired, then the insert, whose `on conflict` names `challenges_open_pair_key`'s columns and
+/// predicate, so a live open challenge of the pair answers false instead of raising.
+pub async fn challenges_create(t: &mut PgTx<'_>, row: &ChallengeRow, now: i64) -> Result<bool, StoreError> {
+    run_as(t, Some(row.from_profile.as_str())).await?;
+    sqlx::query(concat!(
+        "update public.challenges set state = 'expired'
+          where from_profile = $1::uuid and to_profile = $2::uuid and state = 'open'
+            and expires_at <= ",
+        ts!("$3")
+    ))
+    .bind(row.from_profile.as_str())
+    .bind(row.to_profile.as_str())
+    .bind(now)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let done = sqlx::query(concat!(
+        "insert into public.challenges
+           (id, from_profile, to_profile, room_code, mode, created_at, expires_at, state)
+         values ($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text, ",
+        ts!("$6"),
+        ", ",
+        ts!("$7"),
+        ", $8::text)
+         on conflict (from_profile, to_profile) where state = 'open' do nothing"
+    ))
+    .bind(row.id.as_str())
+    .bind(row.from_profile.as_str())
+    .bind(row.to_profile.as_str())
+    .bind(row.room_code.as_str())
+    .bind(literal(&row.mode)?)
+    .bind(row.created_at)
+    .bind(row.expires_at)
+    .bind(literal(&row.state)?)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+pub async fn challenges_get(
+    t: &mut PgTx<'_>,
+    challenge_id: &str,
+) -> Result<Option<ChallengeRow>, StoreError> {
+    if !is_uuid(challenge_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        challenge_columns!(),
+        " from public.challenges where id = $1::uuid"
+    ))
+    .bind(challenge_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(challenge_of).transpose()
+}
+
+pub async fn challenges_open_of(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    now: i64,
+) -> Result<Vec<ChallengeRow>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        challenge_columns!(),
+        " from public.challenges
+          where (from_profile = $1::uuid or to_profile = $1::uuid)
+            and state = 'open' and expires_at > ",
+        ts!("$2"),
+        "
+          order by created_at, id"
+    ))
+    .bind(profile_id)
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(challenge_of).collect()
+}
+
+pub async fn challenges_open_for_room(
+    t: &mut PgTx<'_>,
+    code: &str,
+    now: i64,
+) -> Result<Option<ChallengeRow>, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        challenge_columns!(),
+        " from public.challenges
+          where room_code = $1::text and state = 'open' and expires_at > ",
+        ts!("$2"),
+        "
+          order by created_at desc, id desc
+          limit 1"
+    ))
+    .bind(code)
+    .bind(now)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(challenge_of).transpose()
+}
+
+pub async fn challenges_close(
+    t: &mut PgTx<'_>,
+    challenge_id: &str,
+    state: ChallengeState,
+) -> Result<Option<ChallengeRow>, StoreError> {
+    if !is_uuid(challenge_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "update public.challenges set state = $2::text
+          where id = $1::uuid and state = 'open'
+          returning ",
+        challenge_columns!()
+    ))
+    .bind(challenge_id)
+    .bind(literal(&state)?)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(challenge_of).transpose()
+}
+
+pub async fn challenges_close_between(
+    t: &mut PgTx<'_>,
+    x: &str,
+    y: &str,
+    state: ChallengeState,
+) -> Result<Vec<ChallengeRow>, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(x)).await?;
+    let rows = sqlx::query(concat!(
+        "update public.challenges set state = $3::text
+          where state = 'open'
+            and ((from_profile = $1::uuid and to_profile = $2::uuid)
+              or (from_profile = $2::uuid and to_profile = $1::uuid))
+          returning ",
+        challenge_columns!()
+    ))
+    .bind(x)
+    .bind(y)
+    .bind(literal(&state)?)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    challenges_of(&rows)
+}
+
+pub async fn challenges_accept_room(
+    t: &mut PgTx<'_>,
+    code: &str,
+    guest: &str,
+    now: i64,
+) -> Result<bool, StoreError> {
+    if !is_uuid(guest) {
+        return Ok(false);
+    }
+    run_as(t, Some(guest)).await?;
+    let done = sqlx::query(concat!(
+        "update public.challenges set state = 'accepted'
+          where room_code = $1::text and to_profile = $2::uuid and state = 'open' and expires_at > ",
+        ts!("$3")
+    ))
+    .bind(code)
+    .bind(guest)
+    .bind(now)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+pub async fn challenges_expire(t: &mut PgTx<'_>, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "update public.challenges set state = 'expired'
+          where state = 'open' and expires_at <= ",
+        ts!("$1"),
+        "
+          returning ",
+        challenge_columns!()
+    ))
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    challenges_of(&rows)
+}
+
+pub async fn challenges_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "delete from public.challenges where expires_at <= ",
+        ts!("$1")
+    ))
+    .bind(now)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+// rooms
+
+/// An unjoined room is an `open` row with no second seat (see `rooms_claim`); deleting it frees the
+/// code (R110) as `matches_reap_open` does for a lapsed one. A claimed row keeps `p2_profile_id`
+/// and is never touched.
+pub async fn rooms_release(t: &mut PgTx<'_>, code: &str) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "delete from public.matches
+          where room_code = $1::text and status = 'open' and p2_profile_id is null",
+    )
+    .bind(code)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() > 0)
+}
+
+// chat (B53)
+
+pub async fn chat_insert(t: &mut PgTx<'_>, row: &ChatMessageRow) -> Result<(), StoreError> {
+    run_as(t, Some(row.from_profile.as_str())).await?;
+    sqlx::query(concat!(
+        "insert into public.chat_messages (id, from_profile, to_profile, body, created_at, read_at)
+         values ($1::uuid, $2::uuid, $3::uuid, $4::text, ",
+        ts!("$5"),
+        ", ",
+        nullable_ts!("$6"),
+        ")"
+    ))
+    .bind(row.id.as_str())
+    .bind(row.from_profile.as_str())
+    .bind(row.to_profile.as_str())
+    .bind(row.body.as_str())
+    .bind(row.created_at)
+    .bind(row.read_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn chat_get(t: &mut PgTx<'_>, message_id: &str) -> Result<Option<ChatMessageRow>, StoreError> {
+    if !is_uuid(message_id) {
+        return Ok(None);
+    }
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        chat_message_columns!(),
+        " from public.chat_messages where id = $1::uuid"
+    ))
+    .bind(message_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(chat_message_of).transpose()
+}
+
+/// Read newest first for the page, then turned round: the port answers newest last.
+pub async fn chat_page(
+    t: &mut PgTx<'_>,
+    x: &str,
+    y: &str,
+    before: Option<i64>,
+    limit: i64,
+) -> Result<Vec<ChatMessageRow>, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(x)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        chat_message_columns!(),
+        " from public.chat_messages
+          where ((from_profile = $1::uuid and to_profile = $2::uuid)
+              or (from_profile = $2::uuid and to_profile = $1::uuid))
+            and ($3::double precision is null or created_at < ",
+        ts!("$3"),
+        ")
+          order by created_at desc, id desc
+          limit $4::bigint"
+    ))
+    .bind(x)
+    .bind(y)
+    .bind(before)
+    .bind(limit)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut messages = rows.iter().map(chat_message_of).collect::<Result<Vec<_>, _>>()?;
+    messages.reverse();
+    Ok(messages)
+}
+
+pub async fn chat_mark_read(
+    t: &mut PgTx<'_>,
+    reader: &str,
+    message_ids: &[String],
+    at: i64,
+) -> Result<(), StoreError> {
+    let ids: Vec<String> = message_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() || !is_uuid(reader) {
+        return Ok(());
+    }
+    run_as(t, Some(reader)).await?;
+    sqlx::query(concat!(
+        "update public.chat_messages set read_at = ",
+        ts!("$3"),
+        "
+          where to_profile = $1::uuid and id = any($2::uuid[]) and read_at is null"
+    ))
+    .bind(reader)
+    .bind(ids)
+    .bind(at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn chat_unread(t: &mut PgTx<'_>, profile_id: &str) -> Result<IndexMap<String, i64>, StoreError> {
+    if !is_uuid(profile_id) {
+        return Ok(IndexMap::new());
+    }
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(
+        "select from_profile, count(*) as n from public.chat_messages
+          where to_profile = $1::uuid and read_at is null
+          group by from_profile
+          order by from_profile",
+    )
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut unread = IndexMap::new();
+    for row in &rows {
+        unread.insert(uuid_text(row, "from_profile")?, get::<i64>(row, "n")?);
+    }
+    Ok(unread)
+}
+
+/// The unique key on `(message_id, reporter)` is inferred in `on conflict`: a second report by the
+/// same reporter answers false.
+pub async fn chat_report(t: &mut PgTx<'_>, row: &ChatReportRow) -> Result<bool, StoreError> {
+    run_as(t, Some(row.reporter.as_str())).await?;
+    let done = sqlx::query(concat!(
+        "insert into public.chat_reports (id, message_id, reporter, reason, created_at)
+         values ($1::uuid, $2::uuid, $3::uuid, $4::text, ",
+        ts!("$5"),
+        ")
+         on conflict (message_id, reporter) do nothing"
+    ))
+    .bind(row.id.as_str())
+    .bind(row.message_id.as_str())
+    .bind(row.reporter.as_str())
+    .bind(row.reason.as_str())
+    .bind(row.created_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// The reports go with their messages (`chat_reports.message_id`, `on delete cascade`).
+pub async fn chat_purge(t: &mut PgTx<'_>, before: i64) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(concat!(
+        "delete from public.chat_messages where created_at < ",
+        ts!("$1")
+    ))
+    .bind(before)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+// ---- end Social ----
+
 // ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
@@ -5798,6 +6813,152 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
         _ => "cancelled",
     })
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+// ---------------------------------------------------------------------------
+// Watching a friend (B50) and sharing a replay with one (B52), over migration 0038's tables. Plain
+// statements: 0038 adds no `app.*` function for them. An id that is not a UUID names nobody, as
+// `matches_seats` reads one.
+// ---------------------------------------------------------------------------
+
+use crate::db::store::{ReplayShare, SharedReplayRow};
+
+/// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
+/// sharer held a seat in it, and the two are still friends (`a < b`) with neither blocking the other.
+macro_rules! readable_share {
+    () => {
+        "m.status = 'over'
+            and s.sharer in (m.p1_profile_id, m.p2_profile_id)
+            and exists (select 1 from public.friendships f
+                         where f.a = least(s.sharer, s.friend) and f.b = greatest(s.sharer, s.friend))
+            and not exists (select 1 from public.blocks k
+                             where (k.blocker = s.sharer and k.blocked = s.friend)
+                                or (k.blocker = s.friend and k.blocked = s.sharer))"
+    };
+}
+
+pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
+    if !is_uuid(&share.match_id) || !is_uuid(&share.sharer) || !is_uuid(&share.friend) {
+        return Err(StoreError::from(format!(
+            "a replay share names an id that is not a UUID: {}",
+            stringify(share)
+        )));
+    }
+    run_as(t, Some(&share.sharer)).await?;
+    sqlx::query(concat!(
+        "insert into public.replay_shares (match_id, sharer, friend, created_at)
+         values ($1::uuid, $2::uuid, $3::uuid, ",
+        ts!("$4"),
+        ")
+         on conflict (match_id, sharer, friend) do nothing"
+    ))
+    .bind(share.match_id.as_str())
+    .bind(share.sharer.as_str())
+    .bind(share.friend.as_str())
+    .bind(share.created_at)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn shares_remove(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    sharer: &str,
+    friend: &str,
+) -> Result<(), StoreError> {
+    if !is_uuid(match_id) || !is_uuid(sharer) || !is_uuid(friend) {
+        return Ok(());
+    }
+    run_as(t, Some(sharer)).await?;
+    sqlx::query(
+        "delete from public.replay_shares
+          where match_id = $1::uuid and sharer = $2::uuid and friend = $3::uuid",
+    )
+    .bind(match_id)
+    .bind(sharer)
+    .bind(friend)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(())
+}
+
+pub async fn shares_remove_between(t: &mut PgTx<'_>, x: &str, y: &str) -> Result<i64, StoreError> {
+    if !is_uuid(x) || !is_uuid(y) {
+        return Ok(0);
+    }
+    run_as(t, Some(x)).await?;
+    let done = sqlx::query(
+        "delete from public.replay_shares
+          where (sharer = $1::uuid and friend = $2::uuid)
+             or (sharer = $2::uuid and friend = $1::uuid)",
+    )
+    .bind(x)
+    .bind(y)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+pub async fn shares_sharers(
+    t: &mut PgTx<'_>,
+    match_id: &str,
+    friend: &str,
+) -> Result<Vec<String>, StoreError> {
+    if !is_uuid(match_id) || !is_uuid(friend) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(friend)).await?;
+    let rows = sqlx::query(concat!(
+        "select s.sharer
+           from public.replay_shares s
+           join public.matches m on m.id = s.match_id
+          where s.match_id = $1::uuid and s.friend = $2::uuid and ",
+        readable_share!(),
+        "
+          order by s.created_at, s.sharer"
+    ))
+    .bind(match_id)
+    .bind(friend)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| uuid_text(row, "sharer")).collect()
+}
+
+pub async fn shares_for(t: &mut PgTx<'_>, friend: &str) -> Result<Vec<SharedReplayRow>, StoreError> {
+    if !is_uuid(friend) {
+        return Ok(Vec::new());
+    }
+    run_as(t, Some(friend)).await?;
+    let rows = sqlx::query(concat!(
+        "select s.match_id, s.sharer, s.created_at, m.ended_at
+           from public.replay_shares s
+           join public.matches m on m.id = s.match_id
+          where s.friend = $1::uuid and ",
+        readable_share!(),
+        "
+          order by s.created_at desc, s.match_id desc, s.sharer desc"
+    ))
+    .bind(friend)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| -> Result<SharedReplayRow, StoreError> {
+            Ok(SharedReplayRow {
+                match_id: uuid_text(row, "match_id")?,
+                sharer: uuid_text(row, "sharer")?,
+                created_at: ms_of(get(row, "created_at")?),
+                ended_at: ms_or_null(get(row, "ended_at")?),
+            })
+        })
+        .collect()
+}
+// ---- end Social: watching and shared replays ----
 
 // =============================================================================
 // KNOWN DIVERGENCES from `src/db/fake.rs` (TS: `src/api/e2e-store.ts`)

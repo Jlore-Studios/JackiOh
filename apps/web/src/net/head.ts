@@ -3,7 +3,7 @@
 // re-exports them and writes them into the document (`useDocumentHead`).
 
 import { t } from "../i18n/i18n.ts";
-import { matchIdOf, paths, seriesIdOf, siteOrigin } from "./navigate.ts";
+import { duosIdOf, matchIdOf, paths, seriesIdOf, siteOrigin, watchIdOf } from "./navigate.ts";
 
 /** The name every tab title ends with. */
 export const SITE_NAME = "JackiOh";
@@ -47,12 +47,18 @@ export function screenNameFor(path: string): string | null {
       return "Card creator";
     case paths.replays:
       return "Replays";
+    case paths.together:
+      return "Play together";
     case paths.hotseat:
       // Read here, not at load: Vite's config loader runs this file with no `import.meta.env`.
       return import.meta.env.MODE !== "production" ? "Hotseat" : null;
+    case paths.duosDev:
+      return import.meta.env.MODE !== "production" ? "Duos hotseat" : null;
   }
   if (matchIdOf(path) !== null) return "Match";
   if (seriesIdOf(path) !== null) return "Conquest";
+  if (watchIdOf(path) !== null) return "Watching";
+  if (duosIdOf(path) !== null) return "Duos";
   return null;
 }
 

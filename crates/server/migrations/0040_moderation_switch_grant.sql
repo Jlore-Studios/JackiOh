@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 0038: the moderation switch's grant (issue #887) — `service_role`
+-- Migration 0040: the moderation switch's grant (issue #887) — `service_role`
 -- reads and flips `app.settings.redemption_enabled`
 -- ============================================================================
 -- Serves SPEC §9.4's redemption circuit breaker, which the operator's
@@ -15,7 +15,7 @@
 -- grant, not a `SECURITY DEFINER` function, so the sql suite's CHECK 17
 -- pinned function list is untouched.
 --
--- Apply order: ... -> 0037 -> 0038 (this file).
+-- Apply order: ... -> 0039 -> 0040 (this file).
 -- Safe to re-apply: grants are idempotent.
 -- ============================================================================
 

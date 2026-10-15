@@ -801,6 +801,9 @@ mod the_graceful_shutdown {
                 "series.sweeper".to_string(),
                 "matches.reaper".to_string(),
                 "retention.purge".to_string(),
+                // #936: Play together's challenge sweeper and the co-op sweeper.
+                "challenges.sweeper".to_string(),
+                "duos.sweeper".to_string(),
             ]
         );
         let halted = logs.named("server.stopped");

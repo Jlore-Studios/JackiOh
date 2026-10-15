@@ -10,8 +10,14 @@
 // is kept (the retention constants in crates/server/src/config.rs, purged by migration 0013), what
 // deleting an account removes (migration 0012), the summary each finished
 // match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
-// seat played it (migration 0029, R1442), and the age check and the terms each account agreed to
-// (migration 0034, R757000, R757001). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
+// seat played it (migration 0029, R1442), the age check and the terms each account agreed to
+// (migration 0034, R757000, R757001), Play together's friends, blocks, presence, challenges, chat
+// and replay shares (migration 0038, #936; chat purged after `CHAT_RETENTION_DAYS`, B53; a challenge
+// deleted once `CHALLENGE_TTL_MS` has passed, B49; the shares between two players deleted when either
+// unfriends or blocks the other, B46, B52), who may watch a game you play (B50: your friends, and your
+// opponent's) and Duos co-op (migration 0039, SPEC S6: the teammate's view, B23; its moves kept
+// `MATCH_ACTION_RETENTION_DAYS`; either account's deletion takes the whole co-op game, refused while
+// one is live). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
 // choose. Change the date on the page whenever the text changes: with the terms' date it makes up
 // `TERMS_VERSION`, so every account is asked to agree again.
 
@@ -19,10 +25,15 @@ import type { ReactElement } from "react";
 
 import {
   AUTH_PENDING_ADDRESS_TTL_SECONDS,
+  CHALLENGE_TTL_MS,
+  CHAT_RETENTION_DAYS,
   CODE_ATTEMPT_RETENTION_DAYS,
+  DUOS_ROOM_TTL_MS,
   MATCH_ACTION_RETENTION_DAYS,
   MIN_ACCOUNT_AGE_YEARS,
   PLAY_TELEMETRY_RETENTION_DAYS,
+  PRESENCE_TTL_MS,
+  SPECTATE_DELAY_MS,
 } from "@jackioh/server-config";
 
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
@@ -34,6 +45,10 @@ import "./privacy.css";
 
 /** Unit conversion, not configuration. */
 const SECONDS_PER_HOUR = 3600;
+/** Unit conversion, not configuration. */
+const MS_PER_SECOND = 1000;
+/** Unit conversion, not configuration. */
+const MS_PER_MINUTE = 60_000;
 
 export const privacyTestid = {
   screen: "privacy-screen",
@@ -41,7 +56,7 @@ export const privacyTestid = {
 } as const;
 
 /** The date the text below last changed, as the page shows it. */
-export const PRIVACY_LAST_UPDATED = "2026-10-13";
+export const PRIVACY_LAST_UPDATED = "2026-10-15";
 
 export default function PrivacyRoute(): ReactElement {
   const locale = useLocale();
@@ -109,6 +124,17 @@ export default function PrivacyRoute(): ReactElement {
               no account itself; the match it belongs to links it to you until it is deleted.
             </li>
             <li>
+              If you use Play together: the friends you add, the friend requests you send and receive, the
+              players you block, the last time your browser told us you were online, the challenges you send
+              and receive, your chat messages with friends and any you report (with the reason you give), the
+              replays you share with a friend, and whether you let friends watch your games.
+            </li>
+            <li>
+              If you play co-op (Duos) with a friend: the co-op rooms you make or join (the room&rsquo;s code, who
+              made and joined it, the difficulty and the deck you brought), and each co-op game: its starting
+              shuffle, every player&rsquo;s deck, every move, and the result.
+            </li>
+            <li>
               Our hosts receive your IP address, your browser type and the pages you ask for with each
               request, and may keep them in their logs. Supabase also records your IP address and browser
               when you sign in.
@@ -145,6 +171,25 @@ export default function PrivacyRoute(): ReactElement {
             <li>Vercel hosts a test copy of it at jackioh.vercel.app.</li>
           </ul>
           <p>In an online match, your opponent sees the moves you make.</p>
+          <p>
+            Your friends see your username and whether you are online or in a game: you count as online for{" "}
+            {PRESENCE_TTL_MS / MS_PER_SECOND} seconds after your browser last told us. A friend you chat with sees
+            your messages, and a friend you share a replay with can watch that game from your seat. If you let
+            friends watch your games (the &ldquo;Let friends watch my games&rdquo; setting, on unless you turn it
+            off), a friend can watch your unranked online games from your seat, {SPECTATE_DELAY_MS / MS_PER_SECOND}{" "}
+            seconds behind; ranked games are never watched.
+          </p>
+          <p>
+            Your opponent&rsquo;s friends can see your moves too. If your opponent lets friends watch their games,
+            their friends can watch an unranked game you play against them from your opponent&rsquo;s seat, which
+            shows your moves as your opponent sees them, {SPECTATE_DELAY_MS / MS_PER_SECOND} seconds behind. And
+            either player of a finished game may share its replay with their own friends: a replay your opponent
+            shares shows the game from their seat, your moves included.
+          </p>
+          <p>
+            In a co-op game, your teammate sees your hand, your face-down cards and the choices in front of you,
+            as you play and in the game&rsquo;s replay afterwards, and the pings you send them.
+          </p>
         </section>
 
         <section aria-labelledby="privacy-not">
@@ -193,8 +238,8 @@ export default function PrivacyRoute(): ReactElement {
             <li>Your account and game data, your age check and the terms you agreed to: until you delete your account.</li>
             <li>Invite-code attempt records: {CODE_ATTEMPT_RETENTION_DAYS} days.</li>
             <li>
-              The move-by-move record of a finished match: {MATCH_ACTION_RETENTION_DAYS} days after the match
-              ends. Its result, and the rating change it made, are kept.
+              The move-by-move record of a finished match, co-op games included: {MATCH_ACTION_RETENTION_DAYS}{" "}
+              days after the match ends. Its result, and the rating change it made, are kept.
             </li>
             <li>
               A finished match&rsquo;s summary for card statistics: for as long as the statistics are kept. It
@@ -203,6 +248,27 @@ export default function PrivacyRoute(): ReactElement {
             <li>
               The record of how you played a finished match: {PLAY_TELEMETRY_RETENTION_DAYS} days after the
               match ends.
+            </li>
+            <li>Chat messages, and any report of one: {CHAT_RETENTION_DAYS} days after the message was sent.</li>
+            <li>
+              A challenge: about {CHALLENGE_TTL_MS / MS_PER_MINUTE} minutes after it was sent, whether it was
+              accepted, declined, cancelled or left unanswered.
+            </li>
+            <li>
+              A co-op room: about {DUOS_ROOM_TTL_MS / MS_PER_MINUTE} minutes after it was made, or twice that
+              once a friend has joined it.
+            </li>
+            <li>
+              A friendship: until either of you removes it or blocks the other. A friend request: until it is
+              accepted, declined or cancelled, or either of you blocks the other. A block: until the player who
+              made it lifts it.
+            </li>
+            <li>
+              A replay share: until the player who shared it takes it back (only they can), or either of you
+              removes the friendship or blocks the other, which deletes every share between you for good.
+            </li>
+            <li>
+              Of your time online, only the latest is kept. All of these go when you delete your account.
             </li>
             <li>Our hosts&rsquo; request logs: as long as each host&rsquo;s own policy says.</li>
           </ul>
@@ -215,8 +281,14 @@ export default function PrivacyRoute(): ReactElement {
             account&rdquo;. That deletes your sign-in, your decks, trios and cards, your tutorial progress, the
             records of how you played, and the record of your age check and of the terms you agreed to.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
-            removed from them. You can&rsquo;t delete your account during a match or a Conquest series that
-            hasn&rsquo;t finished.
+            removed from them. Co-op games are different: deleting either teammate&rsquo;s account deletes the
+            whole co-op game, its moves and its result, for both of you. You can&rsquo;t delete your account
+            during a match, a co-op game or a Conquest series that hasn&rsquo;t finished.
+          </p>
+          <p>
+            Deleting your account also deletes everything of yours on Play together: your friends, friend
+            requests, blocks, challenges, co-op rooms and replay shares, and your chats, the messages your
+            friends sent you included.
           </p>
           <p>
             To ask for a copy of your data, contact us. Please don&rsquo;t put your email address or other

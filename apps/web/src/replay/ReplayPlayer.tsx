@@ -10,10 +10,11 @@
 // last step is `Game`'s own result chip, with both hands (R434).
 //
 // R768000: a result screen opens it at step 0 ("Watch the replay") or at the last step with the
-// last turn's GIF already being made ("Share the last turn").
+// last turn's GIF already being made ("Share the last turn"). #936 B59: an online match's route hands
+// it "Share with a friend" (`actions`), drawn under the toolbar.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 import type { ReplayStep } from "@jackioh/engine";
 import type { ActionBody } from "@jackioh/shared";
@@ -55,6 +56,8 @@ export type ReplayPlayerProps = {
   start?: "first" | "last";
   /** R768000: once the opening step is on the board, open "Share as GIF" and make its turn's GIF. */
   shareOnOpen?: boolean;
+  /** #936 B59: more controls under the toolbar: an online match's "Share with a friend". */
+  actions?: ReactNode;
 };
 
 /** The step on the board, and which mount of the board shows it (`Game`'s key). */
@@ -109,7 +112,13 @@ function focusedControl(): string | null {
   return active.dataset.testid ?? null;
 }
 
-export default function ReplayPlayer({ source, onLeave, start = "first", shareOnOpen = false }: ReplayPlayerProps): ReactElement {
+export default function ReplayPlayer({
+  source,
+  onLeave,
+  start = "first",
+  shareOnOpen = false,
+  actions,
+}: ReplayPlayerProps): ReactElement {
   useLocale();
   const cache = useMemo(() => createStepCache(source), [source]);
   const total = cache.total;
@@ -364,6 +373,7 @@ export default function ReplayPlayer({ source, onLeave, start = "first", shareOn
           <>
             {controls}
             <ShareGif gif={gif} />
+            {actions}
           </>
         }
       />

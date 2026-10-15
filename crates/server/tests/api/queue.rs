@@ -60,7 +60,7 @@ use jackioh_server::config::{
     RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
     rating_window,
 };
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
@@ -1737,9 +1737,12 @@ mod a_paired_match_whose_start_fails {
         let deck_b = save_deck_for(&app, "stranded-b", &second, "stranded-b's deck").await;
 
         enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
+        // The start fails at `matches.create`, and the start-failure cleanup's conditional
+        // clears fail too (R890000 renamed them from `profiles.setInMatch` to
+        // `profiles.clearInMatch`; both names are refused so the cleanup fails either way).
         record_calls(&mut *fake(&app).await, |seen, method| {
             method == "matches.create"
-                || (method == "profiles.setInMatch"
+                || ((method == "profiles.setInMatch" || method == "profiles.clearInMatch")
                     && seen.iter().any(|previous| previous == "matches.create"))
         });
 
@@ -2380,5 +2383,52 @@ mod r253_what_may_be_queued_through_the_real_validator {
             assert_eq!(deck["cards"], json!(decks[n]));
             assert_eq!(nullable(deck, "portrait"), Value::Null);
         }
+    }
+}
+
+// R890000: the seat compare-and-set between the sweep's read and the claim
+
+mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r890000_room_join_between_sweep_read_and_claim_leaves_one_match() {
+        let app = test_app().await;
+        let t = |id, profile_id| SeedTicket {
+            id,
+            profile_id,
+            rating: 1000,
+            waited_ms: 1_000,
+            mode: "bo1",
+        };
+        seed_ticket(&app, t("t-r89-a", "r89-a")).await;
+        seed_ticket(&app, t("t-r89-b", "r89-b")).await;
+
+        // A room join lands between the sweep's busy-set read and the claim: it seats `r89-a`
+        // in its own match first, as `series_recovery.rs`'s `race_first_update` writes its rival
+        // row straight into the tables.
+        fake(&app).await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "tickets.claimPair"
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == "r89-a")
+                && row.in_match_id.is_none()
+            {
+                row.in_match_id = Some("r89-room-match".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        let report = try_pair(&app).await.expect("a sweep");
+        fake(&app).await.before_call = None;
+
+        // The pair never started: no match row, one failed start, and `r89-a` still points at
+        // the room match the rival won while `r89-b` was never seated. Both tickets stay
+        // claimed, as a failed start leaves them.
+        assert_eq!(report.made, 0);
+        assert_eq!(report.failed.len(), 1);
+        assert!(matches_table(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, "r89-a").await, json!("r89-room-match"));
+        assert_eq!(in_match_of(&app, "r89-b").await, Value::Null);
+        assert_eq!(ticket(&app, "t-r89-a").await["status"], "matched");
+        assert_eq!(ticket(&app, "t-r89-b").await["status"], "matched");
     }
 }

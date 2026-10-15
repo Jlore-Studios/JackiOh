@@ -914,6 +914,22 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
+/// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
+/// hashes as before (B3).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DuosLife {
+    pub pool: i32,
+    pub pool_cap: i32,
+    pub spent: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -1023,6 +1039,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub won_by_effect: Option<bool>,
+    /// #936 S3, B12: this seat's Duos life. Present only in a duel a `DuosState` holds, so a 1v1 state
+    /// hashes as before this field existed (B3). Every write to `hero.health` goes through
+    /// `duos_life.rs`, which reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub duos: Option<DuosLife>,
 }
 
 string_union! {
@@ -1579,6 +1601,7 @@ pub fn create_player_state() -> PlayerState {
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
+        duos: None,
     }
 }
 

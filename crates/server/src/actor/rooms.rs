@@ -36,7 +36,7 @@ use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 // `now_ms`: the server's one clock (SURFACE §11.3), read through tokio's clock so a paused test
 // moves every module's "now" together.
 use crate::app::{App, now_ms};
-use crate::config::{ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
+use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 
 /// SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
@@ -318,8 +318,29 @@ fn room_seats(
 
 /// POST /api/rooms — create a room in a mode and return its code (§9.5, R264).
 pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
-    let profile_id = profile_of(&req)?;
-    assert_not_in_match(&req)?;
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // The work is `open_room`'s, which a challenge (SPEC S7, B48) opens its room through too.
+    let room = open_room(app, &req, ROOM_CODE_TTL_SECONDS * 1000).await?;
+    Ok(json_response(
+        200,
+        json!({ "code": room.code, "expiresAt": room.expires_at, "mode": room.mode }),
+    ))
+}
+
+/// A room `open_room` opened: its code, when it stops being joinable, and its mode.
+pub struct OpenedRoom {
+    pub code: String,
+    pub expires_at: i64,
+    pub mode: QueueMode,
+}
+
+/// `POST /api/rooms`' work on the request's caller and body, the room open for `ttl_ms` unjoined:
+/// `ROOM_CODE_TTL_SECONDS` for a room, `CHALLENGE_TTL_MS` for a challenge's (SPEC S7, B48, B49),
+/// which so lapses with its challenge. Every refusal is the route's own.
+pub async fn open_room(app: &App, req: &Req, ttl_ms: i64) -> Result<OpenedRoom, ApiError> {
+    // ---- end Social ----
+    let profile_id = profile_of(req)?;
+    assert_not_in_match(req)?;
     // R257, R264: the same choice the queue takes.
     let choice = read_mode_choice(&req.body)?;
     // R143: an optional `seed`, accepted only by an end-to-end server and rejected elsewhere,
@@ -332,7 +353,22 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let mode = frozen_mode(&frozen);
 
     let now = now_ms();
-    let expires_at = now + ROOM_CODE_TTL_SECONDS * 1000;
+    let expires_at = now + ttl_ms;
+
+    // R890000: one host holds at most `MAX_OPEN_ROOMS_PER_HOST` unclaimed unexpired rooms, so its
+    // rooms cannot amplify a seat race without bound. Advisory: the seat compare-and-set in `join`
+    // is what stops a double seat, not this count.
+    {
+        let mut tx = app.db.begin(None).await?;
+        let open = tx.rooms_count_open_by_host(&profile_id, now).await?;
+        tx.commit().await?;
+        if open >= MAX_OPEN_ROOMS_PER_HOST {
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "you have too many rooms open; wait for someone to join or let one expire",
+            ));
+        }
+    }
 
     for _attempt in 0..CODE_ATTEMPTS {
         // R79, §9.5: 6 characters from the invite-code alphabet.
@@ -376,10 +412,11 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             remember_seed(&code, seed, expires_at, now);
         }
         tracing::info!(event = "room.created", code = %code, hostProfileId = %profile_id, mode = mode.as_str());
-        return Ok(json_response(
-            200,
-            json!({ "code": code, "expiresAt": expires_at, "mode": mode }),
-        ));
+        return Ok(OpenedRoom {
+            code,
+            expires_at,
+            mode,
+        });
     }
 
     tracing::error!(event = "room.code.exhausted", attempts = CODE_ATTEMPTS);
@@ -410,6 +447,10 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             "you created that room; wait for someone to join",
         ));
     }
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // SPEC S7, B49: a room a challenge opened is the challenged friend's to join.
+    crate::social::challenges::assert_may_join(app, &room.code, &profile_id).await?;
+    // ---- end Social ----
     // R264: the room's mode, or a refusal naming it — before the joiner's deck is looked at, so the
     // answer is the useful one.
     if choice_mode(&choice) != room.mode {
@@ -430,6 +471,13 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     // winner (§9.5, mirroring `tickets_claim_pair`).
     let mut tx = app.db.begin(None).await?;
     let claimed = tx.rooms_claim(&room.code, &profile_id, &match_id, now).await?;
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // SPEC S7, B49: accepting a challenge is joining its room, so the claim accepts it, in the
+    // claim's own transaction.
+    if claimed.is_some() {
+        tx.challenges_accept_room(&room.code, &profile_id, now).await?;
+    }
+    // ---- end Social ----
     tx.commit().await?;
     let Some(claimed) = claimed else {
         return Err(ApiError::new(
@@ -522,7 +570,44 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let seats = room_seats(&claimed, &profile_id, &frozen, &seed)?;
-    app.matches
+
+    // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
+    // "clears both players' in-match state" when the result lands). Both seats are claimed
+    // compare-and-set (R890000) before the start, while the claim's renamed `open` row satisfies
+    // the `current_match_id` foreign key, as the queue path's comment states: a queue sweep that
+    // seated a seat between `assert_host_free` and now loses one seat here instead of seating
+    // them twice. Dropping `tx` on a loss rolls both stores back, and `matches_discard_open`
+    // deletes the claim and frees the room code, so the room stays joinable.
+    {
+        let mut tx = app.db.begin(None).await?;
+        let host_seated = tx
+            .profiles_set_in_match(&claimed.host_profile_id, Some(&match_id))
+            .await?;
+        let guest_seated = host_seated && tx.profiles_set_in_match(&profile_id, Some(&match_id)).await?;
+        if host_seated && guest_seated {
+            tx.commit().await?;
+        } else {
+            // Before the commit, so nothing was written — but the claim above did commit, so
+            // delete it and free the room code: the room stays joinable. Dropped first: the
+            // fake store's lock is held by this transaction, and the cleanup begins its own.
+            drop(tx);
+            let mut cleanup = app.db.begin(None).await?;
+            cleanup.matches_discard_open(&match_id).await?;
+            cleanup.commit().await?;
+            if host_seated {
+                return Err(ApiError::new(
+                    ApiErrorCode::AlreadyInMatch,
+                    "finish your current match first",
+                ));
+            }
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "The host of that room is playing another game right now.",
+            ));
+        }
+    }
+    if let Err(error) = app
+        .matches
         .start(
             app,
             StartMatchInput {
@@ -536,14 +621,31 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 stake: None,
             },
         )
-        .await?;
-
-    // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
-    // "clears both players' in-match state" when the result lands).
-    for seat_profile in [&claimed.host_profile_id, &profile_id] {
-        let mut tx = app.db.begin(None).await?;
-        tx.profiles_set_in_match(seat_profile, Some(&match_id)).await?;
-        tx.commit().await?;
+        .await
+    {
+        // The seats committed, so a failed start would lock both players out until the reaper's
+        // open-row sweep (R1450). Undo it now: conditional clears (R890000) that never wipe a
+        // rival flag, then the claim's row.
+        let cleanup: Result<(), ApiError> = async {
+            let mut tx = app.db.begin(None).await?;
+            tx.profiles_clear_in_match(&claimed.host_profile_id, &match_id)
+                .await?;
+            tx.profiles_clear_in_match(&profile_id, &match_id).await?;
+            tx.commit().await?;
+            let mut cleanup = app.db.begin(None).await?;
+            cleanup.matches_discard_open(&match_id).await?;
+            cleanup.commit().await?;
+            Ok(())
+        }
+        .await;
+        if let Err(cleanup_error) = cleanup {
+            tracing::error!(
+                event = "room.start_cleanup_failed",
+                matchId = %match_id,
+                message = %cleanup_error.message,
+            );
+        }
+        return Err(error);
     }
 
     tracing::info!(
@@ -564,3 +666,21 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         }),
     ))
 }
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+
+/// SPEC S7, B49: frees a challenge's room once the challenge is declined or cancelled, in the
+/// caller's transaction: an unjoined room goes (its code is free again, R110, and a join meets the
+/// miss an unknown code is), with the end-to-end seed its host held for it (R143). A room someone
+/// joined is never touched. False when there was no unjoined room under the code.
+pub async fn release_room(
+    tx: &mut crate::db::store::Tx<'_>,
+    code: &str,
+) -> Result<bool, crate::db::store::StoreError> {
+    let released = tx.rooms_release(code).await?;
+    if released {
+        seeds().shift_remove(code);
+    }
+    Ok(released)
+}
+// ---- end Social ----

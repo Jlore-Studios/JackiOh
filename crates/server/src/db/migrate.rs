@@ -170,8 +170,13 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0037_custom_cards.sql"),
     ),
     (
-        "0038_moderation_switch_grant.sql",
-        include_str!("../../migrations/0038_moderation_switch_grant.sql"),
+        "0038_social.sql",
+        include_str!("../../migrations/0038_social.sql"),
+    ),
+    ("0039_duos.sql", include_str!("../../migrations/0039_duos.sql")),
+    (
+        "0040_moderation_switch_grant.sql",
+        include_str!("../../migrations/0040_moderation_switch_grant.sql"),
     ),
 ];
 

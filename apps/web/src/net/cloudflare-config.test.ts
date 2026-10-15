@@ -90,14 +90,14 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat (and /dev/replays, the replay list's old home).
-      .filter(([name]) => name !== "hotseat")
+      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
+      .filter(([name]) => name !== "hotseat" && name !== "duosDev")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {
       expect(served(path), path).toBe(true);
       if (path !== paths.landing) expect(served(`${path}/`), `${path}/`).toBe(true);
     }
-    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat", "/dev/replays"]) expect(served(path), path).toBe(false);
+    for (const path of ["/loginx", "/almanac/extra", "/dev/hotseat", "/dev/duos", "/dev/replays"]) expect(served(path), path).toBe(false);
   });
 });
 

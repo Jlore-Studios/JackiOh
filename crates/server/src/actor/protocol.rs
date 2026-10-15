@@ -770,3 +770,13 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
         other => Err(malformed(format!(r#""{other}" is not a client message"#))),
     }
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+/// B51: `{"type":"watchers","count":n}`, sent to the players' own match sockets when the number of
+/// sockets watching the match changes (S7). A frame of its own rather than a `ServerMessage`: it
+/// carries nothing about the game, and no other frame changes for it.
+pub fn watchers_frame(count: usize) -> String {
+    format!(r#"{{"type":"watchers","count":{count}}}"#)
+}
+// ---- end Social: watching and shared replays ----
