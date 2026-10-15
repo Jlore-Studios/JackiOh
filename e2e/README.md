@@ -48,8 +48,9 @@ pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 
 Under `E2E=1` the server needs no other variable: the Supabase, database and pepper settings fall
 back to fixture placeholders, the store is in memory, and `CATALOG_VERSION` defaults to the version
-compiled into it. It reseeds its fixture accounts and invite codes at every boot (R144), so restart it
-before re-running spec 10. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
+compiled into it. It reseeds its fixture accounts and invite codes at every boot and on
+`POST /api/e2e/reseed` (R144), which spec 10 calls before its first test, so spec 10 re-runs against the
+same server with no restart. CI (`.github/actions/e2e-shard`) boots one release `jackioh-server` and one
 `vite preview` of the `build:e2e` client per shard, waits for `/api/catalog` and the client to answer,
 then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
