@@ -34,7 +34,7 @@ use serde_json::Value;
 
 use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
-use crate::layers::{face_of, unit_has};
+use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
 use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
@@ -555,7 +555,12 @@ pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
 /// R1220: whether this card carries Untributable — no Tribute cost may take it, and every Sacrifice
 /// of it does nothing. Read through the layers so auras apply, as the sacrifice sites do.
 pub fn is_untributable(state: &GameState, card: &CardInstance) -> bool {
-    crate::layers::unit_has(state, card, KeywordKind::Untributable)
+    is_untributable_in(&AuraTable::per_read(state), card)
+}
+
+/// `is_untributable` read through a sweep's `AuraTable` (#892).
+pub fn is_untributable_in(auras: &AuraTable<'_>, card: &CardInstance) -> bool {
+    auras.unit_has(card, KeywordKind::Untributable)
 }
 
 /// R1225: whether this player borrowed mana this turn — at least one spend went past their current

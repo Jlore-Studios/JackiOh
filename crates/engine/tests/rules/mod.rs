@@ -12,6 +12,7 @@ pub mod announce;
 pub mod armor_absorbed;
 pub mod attack_mods;
 pub mod audit;
+pub mod aura_table;
 pub mod auto_end_turn;
 pub mod backrow_death;
 pub mod backrow_piles;

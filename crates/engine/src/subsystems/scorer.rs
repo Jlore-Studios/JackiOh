@@ -35,7 +35,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::{SCORER_DRY_RUN_PLAYS, SCORER_LOW_HEALTH, SCORER_WEIGHTS};
 use crate::damage::DamageTarget;
-use crate::layers::unit_view;
+use crate::layers::AuraTable;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for};
 use crate::rng::Rng;
 use crate::script::EngineSink;
@@ -121,15 +121,21 @@ fn hero_hit(state: &GameState, player: PlayerId, amount: i32, pierce: bool) -> i
 /// legally attack the hero right now, after Armor and the cap (R44). Taunt, exertion, position and
 /// summoning sickness are all in `canAttack`, so a board that cannot reach the hero projects 0.
 pub fn projected_board_damage(state: &GameState, viewer: PlayerId) -> i32 {
+    projected_board_damage_in(&AuraTable::new(state), viewer)
+}
+
+/// `projected_board_damage` read through a sweep's `AuraTable` (#892).
+pub fn projected_board_damage_in(auras: &AuraTable<'_>, viewer: PlayerId) -> i32 {
+    let state = auras.state();
     let enemy = opponent_of(viewer);
     let at_hero = DamageTarget::Hero { player: enemy };
     let mut sum = 0;
     for unit in crate::zones::active_units_of(state, viewer).iter() {
-        if crate::combat::can_attack(state, unit, &at_hero) {
+        if crate::combat::can_attack_in(auras, unit, &at_hero) {
             sum += hero_hit(
                 state,
                 enemy,
-                unit_view(state, unit).attack,
+                auras.unit_view(unit).attack,
                 crate::damage::pierces(state, Some(unit), None),
             );
         }
@@ -145,7 +151,8 @@ pub fn projected_board_damage(state: &GameState, viewer: PlayerId) -> i32 {
 ///
 /// Out of reach from printed data: a damage spell, a Taunt-remover or a buff that would also make
 /// the swing lethal. All three live in card text.
-fn lethal_contribution(state: &GameState, viewer: PlayerId, def: &CardDef, face: &CardFace) -> i32 {
+fn lethal_contribution(auras: &AuraTable<'_>, viewer: PlayerId, def: &CardDef, face: &CardFace) -> i32 {
+    let state = auras.state();
     if def.type_ != CardType::Unit {
         return 0;
     }
@@ -166,7 +173,7 @@ fn lethal_contribution(state: &GameState, viewer: PlayerId, def: &CardDef, face:
     let enemy = opponent_of(viewer);
     let taunted = crate::zones::active_units_of(state, enemy)
         .iter()
-        .any(|unit| has_keyword(&unit_view(state, unit).keywords, KeywordKind::Taunt));
+        .any(|unit| auras.unit_has(unit, KeywordKind::Taunt));
     if taunted {
         return 0;
     }
@@ -197,14 +204,14 @@ fn has_room_to_play(state: &GameState, viewer: PlayerId, face: &CardFace) -> boo
 /// neighbours, so one attack can answer up to three units (§3.1).
 ///
 /// Out of reach from printed data: every board wipe and every targeted destroy, which are text.
-fn killable_units<C: Borrow<CardInstance>>(state: &GameState, enemy_units: &[C], face: &CardFace) -> i32 {
+fn killable_units<C: Borrow<CardInstance>>(auras: &AuraTable<'_>, enemy_units: &[C], face: &CardFace) -> i32 {
     let attack = face.attack.unwrap_or(0);
     let poisonous = has_keyword(&face.keywords, KeywordKind::Poisonous);
     let answered = enemy_units
         .iter()
         .filter(|unit| {
             let unit: &CardInstance = <C as Borrow<CardInstance>>::borrow(*unit);
-            let view = unit_view(state, unit);
+            let view = auras.unit_view(unit);
             if has_keyword(&view.keywords, KeywordKind::Indestructible) {
                 return false;
             }
@@ -687,12 +694,23 @@ pub fn score_def(
     options: &ScorerOptions,
     base: Option<&mut GameState>,
 ) -> Scored {
+    score_def_in(&AuraTable::new(state), viewer, def, options, base)
+}
+
+/// `score_def` read through a sweep's `AuraTable` (#892).
+pub fn score_def_in(
+    auras: &AuraTable<'_>,
+    viewer: PlayerId,
+    def: &CardDef,
+    options: &ScorerOptions,
+    base: Option<&mut GameState>,
+) -> Scored {
     let radiant = options.radiant == Some(true);
     let face = face_for(def, radiant);
     let has_base = base.is_some();
     // What the card's text does, which its printed data cannot say (§10.7's dry run).
-    let played = dry_run(state, viewer, def, radiant, base);
-    score_parts(state, viewer, def, face, played, has_base)
+    let played = dry_run(auras.state(), viewer, def, radiant, base);
+    score_parts(auras, viewer, def, face, played, has_base)
 }
 
 /// MD-D28, R1125: one of the viewer's own cards' score for this state — the judge's reading of a
@@ -715,18 +733,20 @@ pub fn score_instance(
         None => NOTHING,
         Some(base) => dry_run_card(state, viewer, &card, base),
     };
-    Some(score_parts(state, viewer, &def, &face, played, has_base))
+    let auras = AuraTable::new(state);
+    Some(score_parts(&auras, viewer, &def, &face, played, has_base))
 }
 
 /// One candidate's score from its dry run: the shared half of `score_def` and `score_instance`.
 fn score_parts(
-    state: &GameState,
+    auras: &AuraTable<'_>,
     viewer: PlayerId,
     def: &CardDef,
     face: &CardFace,
     played: DryRun,
     has_base: bool,
 ) -> Scored {
+    let state = auras.state();
     let enemy = opponent_of(viewer);
     let enemy_units = crate::zones::active_units_of(state, enemy);
 
@@ -735,13 +755,13 @@ fn score_parts(
     let contribution = if has_base {
         0
     } else {
-        lethal_contribution(state, viewer, def, face)
+        lethal_contribution(auras, viewer, def, face)
     };
     let lethal = played.lethal
         || (contribution > 0
-            && projected_board_damage(state, viewer) + contribution >= state.players[enemy].hero.health);
+            && projected_board_damage_in(auras, viewer) + contribution >= state.players[enemy].hero.health);
 
-    let kills = killable_units(state, &enemy_units, face);
+    let kills = killable_units(auras, &enemy_units, face);
     let clears = played.clears || (!enemy_units.is_empty() && kills >= enemy_units.len() as i32);
 
     let heals = state.players[viewer].hero.health < SCORER_LOW_HEALTH
@@ -822,9 +842,11 @@ pub fn compare_scored(a: &Scored, b: &Scored) -> Ordering {
 pub fn rank(state: &GameState, viewer: PlayerId, options: &ScorerOptions) -> Vec<Scored> {
     // One copy for every candidate's dry run: each plays on a copy of it and puts it back as it was.
     let mut base = dry_run_base(state, viewer);
+    // #892: one aura table for every candidate.
+    let auras = AuraTable::new(state);
     let mut scored: Vec<Scored> = candidate_defs()
         .iter()
-        .map(|def| score_def(state, viewer, def, options, base.as_mut()))
+        .map(|def| score_def_in(&auras, viewer, def, options, base.as_mut()))
         .collect();
     scored.sort_by(compare_scored);
     scored

@@ -10,7 +10,7 @@ use crate::catalog::def_of;
 use crate::config::{
     ANIMATED_FALLBACK_ATTACK, ANIMATED_FALLBACK_HEALTH, BACKROW_ZONES, RADIANT_FALLBACK_FACTOR, UNIT_ZONES,
 };
-use crate::script::{HookArgs, StatMod};
+use crate::script::{AuraEntry, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, Position};
 use crate::tuning::{tuned_keywords, x_of};
 use crate::wire::{
@@ -217,10 +217,9 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     sources
 }
 
-/// Aura contributions for one unit. An aura's `applies` predicate reads instance data only: it must
-/// never call back into `unit_view`, or the layers would recurse.
-fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
-    let mut mods: Vec<StatMod> = Vec::new();
+/// Every aura source's entries, in `aura_sources` order: each source's hook asked once.
+fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
+    let mut entries: Vec<AuraEntry<'_>> = Vec::new();
     for source in aura_sources(state) {
         // §6.1/§6.3: Vanilla "clears printed keywords and scripts", and an aura is part of a card's
         // Script (§10.9), so a Vanilla'd permanent projects nothing. It still *receives* aura grants:
@@ -232,18 +231,72 @@ fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
         let Some(aura) = script.aura.as_ref() else {
             continue;
         };
-        let args = HookArgs {
+        entries.extend(aura(HookArgs {
             state,
             self_: source,
             radiant: source.radiant,
-        };
-        for entry in aura(args) {
-            if (entry.applies)(unit) {
-                mods.push(entry.mod_);
-            }
+        }));
+    }
+    entries
+}
+
+/// The contributions of `entries` that reach `unit`. An aura's `applies` predicate reads instance
+/// data only: it must never call back into `unit_view`, or the layers would recurse.
+fn mods_of(entries: &[AuraEntry<'_>], unit: &CardInstance) -> Vec<StatMod> {
+    entries
+        .iter()
+        .filter(|entry| (entry.applies)(unit))
+        .map(|entry| entry.mod_.clone())
+        .collect()
+}
+
+/// Aura contributions for one unit, every source asked for this read alone.
+fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
+    aura_entries(state)
+        .into_iter()
+        .filter(|entry| (entry.applies)(unit))
+        .map(|entry| entry.mod_)
+        .collect()
+}
+
+/// #892: layer 5's aura entries for a whole sweep. `new` asks each source's hook once and every unit
+/// read through it filters the same entries, so a sweep over the board pays one hook call per source
+/// instead of one per source per unit; `per_read` asks on every read, as `unit_view` does, for a
+/// reader that may read nothing. It borrows the state, so the state cannot change while it lives: a
+/// derived value, not a cache (CLAUDE.md rule 4).
+pub struct AuraTable<'a> {
+    state: &'a GameState,
+    entries: Option<Vec<AuraEntry<'a>>>,
+}
+
+impl<'a> AuraTable<'a> {
+    pub fn new(state: &'a GameState) -> AuraTable<'a> {
+        AuraTable {
+            state,
+            entries: Some(aura_entries(state)),
         }
     }
-    mods
+
+    pub fn per_read(state: &'a GameState) -> AuraTable<'a> {
+        AuraTable { state, entries: None }
+    }
+
+    pub fn state(&self) -> &'a GameState {
+        self.state
+    }
+
+    /// `layers::unit_view` through this table.
+    pub fn unit_view(&self, instance: &CardInstance) -> UnitView {
+        layered_view(
+            instance,
+            compute_layers(self.state, instance, self.entries.as_deref()),
+        )
+    }
+
+    /// `layers::unit_has` through this table.
+    pub fn unit_has(&self, instance: &CardInstance, kind: KeywordKind) -> bool {
+        has_keyword(&self.unit_view(instance).keywords, kind)
+    }
 }
 
 /// §6.1: a unit's keywords are "computed as a set per unit", and §10.4 makes them the union of the
@@ -290,7 +343,11 @@ fn conditional_keywords_of(state: &GameState, instance: &CardInstance) -> Vec<Ke
 }
 
 pub fn unit_view(state: &GameState, instance: &CardInstance) -> UnitView {
-    let layered = compute_layers(state, instance);
+    layered_view(instance, compute_layers(state, instance, None))
+}
+
+/// `unit_view`'s answer from the layers computed.
+fn layered_view(instance: &CardInstance, layered: Layered) -> UnitView {
     // Attack floors at 0; max health may fall to 0, which the state check turns into a death (§10.4).
     let clamped_attack = layered.attack.max(0);
     let armor = armor_of(&layered.keywords);
@@ -308,7 +365,7 @@ pub fn unit_view(state: &GameState, instance: &CardInstance) -> UnitView {
 /// number exactly (`effects/tune::set_number`), since a card whose layers come to −2 shows 0 and a delta
 /// taken off the shown number would land short.
 pub fn unclamped_attack(state: &GameState, instance: &CardInstance) -> i32 {
-    compute_layers(state, instance).attack
+    compute_layers(state, instance, None).attack
 }
 
 /// `compute_layers`' answer.
@@ -320,7 +377,8 @@ struct Layered {
 }
 
 /// §10.4's five layers, attack unfloored: `unit_view` floors it, `unclamped_attack` reads it raw.
-fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
+/// Layer 5 reads a sweep's aura entries (`AuraTable`) when given them, else asks every source.
+fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[AuraEntry<'_>]>) -> Layered {
     let printed = face_of(state, instance);
     let position = instance.position.unwrap_or(Position::Atk);
 
@@ -361,7 +419,10 @@ fn compute_layers(state: &GameState, instance: &CardInstance) -> Layered {
     let auras: Vec<StatMod> = if is_dormant(state, instance) {
         Vec::new()
     } else {
-        aura_mods(state, instance)
+        match table {
+            Some(entries) => mods_of(entries, instance),
+            None => aura_mods(state, instance),
+        }
     };
     for modifier in &auras {
         attack += modifier.attack.unwrap_or(0);
