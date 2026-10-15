@@ -868,7 +868,7 @@ mod stale_catalog {
             "guestChoice": null,
             "matchId": null,
             "createdAt": now,
-            "expiresAt": now + i64::try_from(DUOS_ROOM_TTL_MS).expect("a ttl"),
+            "expiresAt": now + DUOS_ROOM_TTL_MS,
         }));
         assert!(store!(t.app, tx => tx.duos_rooms_create(&stale).await.expect("duos.rooms.create")));
 
