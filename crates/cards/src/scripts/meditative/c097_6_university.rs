@@ -4,7 +4,7 @@
 //!   Engine:  "Activate (R384): separate Buffs (Upgrade, R386) on each permanent acting on your side (unit
 //!            tops, backrow cards, face-down ones, this one included), each application its own draw; an
 //!            Immutable card is left alone (R23); a face-down card's applications are reported as R440
-//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5)."
+//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5; never above 5, R884000)."
 //!
 //! One script serves both faces: only the declared `times` (2, Radiant 5) and the health differ.
 
@@ -126,7 +126,7 @@ mod tests {
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Can't attack" }]));
         assert_eq!(
             js(&def.params),
-            json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1, "max": 5 }])
         );
         let scripts = script();
         let uses = |script: &Script| {
@@ -138,6 +138,39 @@ mod tests {
         };
         assert_eq!(uses(&scripts.base), vec![json!(1)]);
         assert_eq!(uses(&scripts.radiant), vec![json!(1)]);
+    }
+
+    #[test]
+    fn r884000_a_buff_steps_times_up_to_five_and_never_past_it() {
+        let mut s = setup(false);
+        for want in 3..=5 {
+            assert_eq!(crate::upgrade_number(&mut s, ID, "times"), want);
+        }
+        assert!(!crate::can_upgrade_number(&s, ID, "times"));
+        // The Radiant face prints the ceiling, so nothing steps it up.
+        assert!(!crate::can_upgrade_number(&setup(true), ID, "times"));
+    }
+
+    /// The loop #884 found: each use's own Buffs could step its Activate N and its `times`, each use
+    /// funding more, until one turn never ended. Now the turn's uses stop at the cap and `times` at 5.
+    #[test]
+    fn r884000_study_feeding_its_own_activate_n_stops_at_the_cap_and_the_game_goes_on() {
+        let mut s = setup(false);
+        s.card_mut(ID).tuning = Some(json_as(json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP * 10 } })));
+        let decl = subsystems::abilities_of(s.state(), s.card(ID))[0].clone();
+        assert_eq!(subsystems::uses_allowed(s.card(ID), &decl), ACTIVATE_UNLIMITED_CAP);
+        for _ in 0..ACTIVATE_UNLIMITED_CAP {
+            s.activate(ID, json!({}));
+        }
+        s.expect_refused_with(|s| s.activate(ID, json!({})), &format!("{ACTIVATE_UNLIMITED_CAP} times"));
+        assert_eq!(
+            param_value(s.state(), Some(s.card(ID)), "times", ParamValueOptions::default()),
+            5
+        );
+        // The turn ends and the next one starts its count afresh.
+        s.end_turn();
+        s.end_turn();
+        s.activate(ID, json!({}));
     }
 
     mod base {

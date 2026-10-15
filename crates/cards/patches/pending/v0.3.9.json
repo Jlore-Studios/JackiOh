@@ -1,0 +1,21 @@
+{
+  "version": "v0.3.9",
+  "title": "A University's Buffs stop at five",
+  "sources": "#884",
+  "notes": "meditative-097-6 University: its times param gets max 5 (its Radiant value), and an Activate N counts at most ACTIVATE_UNLIMITED_CAP uses a turn, so its own Buffs no longer feed a turn that never ends (R884000).",
+  "player": {
+    "title": "University's Buffs capped",
+    "new": [],
+    "balance": [
+      "University's number of Buffs can be Buffed up to 5, its Radiant value, and never past it."
+    ],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "An Activate ability Buffed past 100 uses is used at most 100 times a turn, so a University that keeps Buffing itself no longer stalls the game."
+    ]
+  },
+  "cards": [
+    "meditative-097-6"
+  ]
+}
