@@ -6480,7 +6480,10 @@
       "feedback_since": "2026-10-15T05:00:00Z",
       "issue": 884,
       "kind": "revise",
+      "queued_at": "2026-10-15T07:05:11Z",
       "self_check_findings": [],
+      "source": "conflict",
+      "stop_requested": false,
       "votes": {
         "approvals": [
           "claude"
