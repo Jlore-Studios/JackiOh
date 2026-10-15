@@ -6853,6 +6853,13 @@
     "979": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T17:20:39Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 4 was the closest call \u2014 wire/view.rs is shared wire but not one of the four named files \u2014 yet lines 1, 2, 3 and 5 fail outright (new ruling, engine src, two crates/apps, ~18 files), so medium stands"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
