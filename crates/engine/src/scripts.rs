@@ -303,6 +303,14 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
     if let Some(entry) = registered_entry(def_id) {
         return Cow::Borrowed(entry);
     }
+    // R915002: a custom card's, from the host lent for this call; none lent, none at all.
+    if crate::custom::is_custom_id(def_id) {
+        return Cow::Owned(
+            crate::custom::custom_scripts(state, def_id)
+                .map(Arc::unwrap_or_clone)
+                .unwrap_or_default(),
+        );
+    }
     if let Some(scripts) = fused_scripts(state, def_id) {
         return Cow::Owned(scripts);
     }
@@ -313,6 +321,17 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
 pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
     if let Some(entry) = registered_entry(def_id) {
         return ScriptRef::Static(if radiant { &entry.radiant } else { &entry.base });
+    }
+    // R915002: a custom card's face, from the host lent for this call.
+    if crate::custom::is_custom_id(def_id) {
+        return match crate::custom::custom_scripts(state, def_id) {
+            Some(scripts) => ScriptRef::Composed(Arc::new(if radiant {
+                scripts.radiant.clone()
+            } else {
+                scripts.base.clone()
+            })),
+            None => ScriptRef::Static(shared_empty_script()),
+        };
     }
     if let Some(face) = fused_face(state, def_id, radiant) {
         return face;

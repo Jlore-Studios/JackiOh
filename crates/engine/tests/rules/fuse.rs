@@ -21,7 +21,9 @@ use jackioh_engine::traps::fire_traps_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::zones::card_at;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, slot,
+};
 
 // Fixtures.
 
@@ -274,23 +276,6 @@ fn keyword_kinds(keywords: &[Keyword]) -> Vec<String> {
         .collect();
     kinds.sort();
     kinds
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// Every key the expected object names matches, recursively.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// A sink whose rng starts at the state's cursor, as reduce does. The events and the rng are kept

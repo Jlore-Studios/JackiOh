@@ -12,7 +12,7 @@
 //!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5) — each under a
 //!      nonce of its own (`round_end_nonce`), so a fold replays it exactly — and only then is the
 //!      game judged: the round's close is part of the step that closed it, so pools both End turns
-//!      emptied are emptied in the same step (B16, §12.4);
+//!      emptied are emptied in the same step (B16, §13.4);
 //!   5. once both duels' turns have moved on, the next round opens with each duel's new active player
 //!      as its round seat (B5, B8) — a turn an effect ended (R456) has moved already (B7).
 //!
@@ -46,7 +46,7 @@ pub const DUOS_NONCE_PREFIX: &str = "duos:";
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
 const BEGIN_NONCE: &str = "duos:begin";
 
-/// A duel's first turn: the one setup starts (`setup.rs`), Player 1's, so team A's in both duels (§12.1).
+/// A duel's first turn: the one setup starts (`setup.rs`), Player 1's, so team A's in both duels (§13.1).
 const FIRST_TURN: i32 = SETUP_TURN + 1;
 
 /// Deal both duels and open all four mulligans (B1, B2): each duel's `begin_game`, duel 0 first.

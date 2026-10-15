@@ -7,7 +7,26 @@
 //! the summon at 5 happens first, then the ascension at 10 (MD-C3).
 //! Tunes: jade 5 ↑.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039-4";
+
+fn red_jade() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![add_jade(json_as(json!({ "amount": param(&*ctx, "jade") })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The same script: the Radiant face's 10 is its declared `jade`, which `param` reads off the
+    // running face.
+    let base = red_jade();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // Meditative #39.4 Red Jade — SPEC §8.8 row 39.4, BUILD M10 row M 39.4: "Raises its caster's Jade
 // Counter by 5: from 0 a Jade Beauty is summoned (MD-C3); jade reads through `param()`; radiant 10:

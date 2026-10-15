@@ -542,6 +542,49 @@ describe("reconnect", () => {
     // 250 and 500 ms, each with 12.5% (half of the quarter) added and rounded down.
     expect(h.delays()).toEqual([281, 562]);
   });
+
+  it("a reconnect's first view clears the not-connected alert a send set while the socket was down", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }) });
+    h.socket().drop(1006);
+    h.client.send({ type: "endTurn" });
+    expect(h.client.snapshot().errorCode).toBe("offline");
+
+    h.runTimers();
+    h.socket().open();
+    // An open alone proves nothing: `hello` is still unanswered.
+    expect(h.client.snapshot().error).toBe("not connected to the match");
+
+    h.socket().deliver({ type: "view", view: baseView({ turn: 3 }) });
+    expect(h.client.snapshot().error).toBeNull();
+    expect(h.client.snapshot().errorCode).toBeNull();
+    expect(h.client.snapshot().view?.turn).toBe(3);
+  });
+
+  it("only a socket's first view clears an error: a refusal after it stays until the next ack or send", () => {
+    const h = connected();
+    h.socket().deliver({ type: "view", view: baseView() });
+    h.socket().deliver({ type: "error", code: "illegal_action", message: "it is not your turn" });
+    h.socket().deliver({ type: "view", view: baseView({ turn: 2 }) });
+    expect(h.client.snapshot().error).toBe("it is not your turn");
+  });
+
+  it("connect() during a backoff opens a socket at once and drops the pending retry", () => {
+    const h = connected();
+    h.socket().drop(1006);
+    expect(h.pending()).toBe(1);
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+    expect(h.pending()).toBe(0);
+
+    h.socket().open();
+    expect(h.client.snapshot().connection).toBe("open");
+    expect(h.socket().frames()).toEqual([{ type: "hello", token: "tok", matchId: "m-1" }]);
+
+    h.client.connect();
+    expect(h.sockets).toHaveLength(2);
+  });
 });
 
 // ---------------------------------------------------------------------------------------------

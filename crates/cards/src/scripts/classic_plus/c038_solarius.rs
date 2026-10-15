@@ -4,7 +4,28 @@
 //! Spell Damage is the catalog's numbered keyword, which §4.4 step 0 reads off the field;
 //! the Death shuffles a fresh C+ #38.1 in at a random position, R80's cap turning it away.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-038";
+
+const SOLARIUS_PRIME: &str = "classicplus-038-1";
+
+fn solarius(radiant: bool) -> Script {
+    Script {
+        death: Some(hook(move |_ctx| {
+            vec![shuffle_into(json_as(json!({ "defId": SOLARIUS_PRIME, "count": 1, "radiant": radiant })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: solarius(false),
+        radiant: solarius(true),
+    }
+}
 
 // C+ #38 Solarius (SPEC §8.7): Spell Damage +2 on field adds to each hit of a Spell you play or cast
 // (§4.4 step 0), never a Field Spell's, a Trap's, a Unit's or an activation's, never the opponent's;

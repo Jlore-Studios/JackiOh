@@ -1,5 +1,5 @@
 //! Play together's social layer (SPEC S7, #936; issues #937, #938, #941): friends by `name#tag`,
-//! blocks, presence, challenges and chat between friends. Migration 0036 holds the rows; the store
+//! blocks, presence, challenges and chat between friends. Migration 0038 holds the rows; the store
 //! methods are `friends_*`, `blocks_*`, `presence_*`, `challenges_*` and `chat_*` (`db/store.rs`).
 //!
 //! - `friends`: the friend list, requests (B43–B45) and blocks (B46).

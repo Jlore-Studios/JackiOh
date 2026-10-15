@@ -10,6 +10,7 @@ import { WS_PING_INTERVAL_SECONDS } from "@jackioh/server-config";
 
 import { isEmoteHand } from "../emotes/hand.ts";
 import { matchSocketUrl } from "../net/api.ts";
+import { isRecord } from "../wire/json.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -148,9 +149,6 @@ function pageWake(handler: () => void): () => void {
 }
 
 // Frame parsing: total and protocol-shaped
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isString = (value: unknown): value is string => typeof value === "string";
 
@@ -351,7 +349,7 @@ export type MatchSnapshot = {
 export type MatchClient = {
   subscribe: (listener: () => void) => () => void;
   snapshot: () => MatchSnapshot;
-  /** Open the socket (idempotent while one is open or pending). */
+  /** Open the socket now, cutting short a waiting backoff (idempotent while a socket is open or opening). */
   connect: () => void;
   /** Send one action. The nonce is minted here; `playerId` is never sent (the actor stamps it). */
   send: (body: ActionBody) => void;
@@ -453,6 +451,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
   let stopped = false;
   /** R643: repeated emotes still notify. */
   let emoteSeq = 0;
+  /** Set when a socket is created; its first `view` proves the server answered (§9.5), so an error from before it is stale. */
+  let awaitingFirstView = false;
 
   function emit(): void {
     for (const listener of [...listeners]) listener();
@@ -488,13 +488,19 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
 
   function handleFrame(frame: ServerFrame): void {
     switch (frame.type) {
-      case "view":
+      case "view": {
+        // A new socket's first view proves the server answered its `hello` (§9.5): an error from
+        // before it (a send while the socket was down) no longer describes the match.
+        const fresh = awaitingFirstView;
+        awaitingFirstView = false;
         patch({
           view: frame.view,
           // A view without `legal` does not blank an earlier legal-action array.
           ...(frame.legal === null ? {} : { legal: frame.legal, legalSource: "view" as const }),
+          ...(fresh ? { error: null, errorCode: null } : {}),
         });
         return;
+      }
       case "ack":
         patch({ ack: { nonce: frame.nonce, seq: frame.seq }, error: null, errorCode: null });
         return;
@@ -540,6 +546,7 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
       return;
     }
     socket = created;
+    awaitingFirstView = true;
     hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
@@ -665,6 +672,8 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
     snapshot: () => snapshot,
     connect: () => {
       stopped = false;
+      // A backoff still waiting is cut short: the socket opens now (the match bar's Reconnect now).
+      cancelRetry();
       unwake ??= wake(onWake);
       open();
     },
@@ -811,6 +820,8 @@ export type UseMatchResult = MatchSnapshot & {
   sendEmote: (emote: EmoteId) => void;
   /** R738: send this seat's aim (null: the aim ended); the server relays it to the opponent. */
   sendAim: (aim: Aim | null) => void;
+  /** Open a socket now rather than at the end of the backoff (the match bar's Reconnect now). */
+  connect: () => void;
   /** The handshake URL, for the diagnostic line on the match route. */
   url: string;
 };
@@ -850,5 +861,12 @@ export function useMatch(options: UseMatchOptions): UseMatchResult {
 
   const snapshot = useSyncExternalStore(client.subscribe, client.snapshot, client.snapshot);
 
-  return { ...snapshot, send: client.send, sendEmote: client.sendEmote, sendAim: client.sendAim, url: client.url() };
+  return {
+    ...snapshot,
+    send: client.send,
+    sendEmote: client.sendEmote,
+    sendAim: client.sendAim,
+    connect: client.connect,
+    url: client.url(),
+  };
 }

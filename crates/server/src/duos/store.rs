@@ -1,4 +1,4 @@
-//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migration 0037): co-op rooms, co-op
+//! The Duos co-op store (fullsend SPEC S6, B33, B34, B40, B42; migration 0039): co-op rooms, co-op
 //! matches and their append-only log, over Postgres (`pg` below) or the in-memory fake (`fake`
 //! below, whose tables are `FakeTables::duos`).
 //!
@@ -14,9 +14,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use jackioh_engine::Handicap;
 use jackioh_engine::config::Difficulty;
 use jackioh_engine::wire::{DuosAction, DuosActionBody, DuosSeat, DuosTeamRules};
+use jackioh_engine::{Handicap, LeanPick};
 
 use crate::db::store::{FrozenDeck, StoreResult, Tx};
 
@@ -27,7 +27,8 @@ use crate::db::store::{FrozenDeck, StoreResult, Tx};
 /// What a person brings to a co-op seat (S6's `deckId` or `random: true`), frozen when the room is
 /// made or joined: one of their saved decks, checked legal then (R253's `freeze_choice`) under the
 /// catalog version it names, or a deal from the match seed when the match starts (R258), leaning on
-/// the newest set when they asked (R1372). The `host_choice` / `guest_choice` column.
+/// the set their "More cards from" pick names, if any (R1372, R924000). The `host_choice` /
+/// `guest_choice` column.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum DuosChoice {
@@ -38,8 +39,11 @@ pub enum DuosChoice {
         #[serde(default)]
         catalog_version: String,
     },
+    /// R924000: `lean` is the pick, written as `leanSet` only when there is one, as the 1v1 ticket's
+    /// frozen choice writes it.
     Random {
-        lean_newest: bool,
+        #[serde(rename = "leanSet", default, skip_serializing_if = "Option::is_none")]
+        lean: Option<LeanPick>,
     },
 }
 
@@ -282,7 +286,7 @@ impl Tx<'_> {
     }
 }
 
-/// Migration 0037's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): a deleted
+/// Migration 0039's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): a deleted
 /// profile's rooms (host or guest) and co-op matches (either seat) go, each match with its log.
 pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
     tables
@@ -299,7 +303,7 @@ pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
 }
 
 // ---------------------------------------------------------------------------
-// Postgres (migration 0037)
+// Postgres (migration 0039)
 // ---------------------------------------------------------------------------
 
 mod pg {
@@ -886,7 +890,7 @@ mod tests {
             host: host.to_string(),
             guest: None,
             difficulty: Difficulty::Easy,
-            host_choice: DuosChoice::Random { lean_newest: false },
+            host_choice: DuosChoice::Random { lean: None },
             guest_choice: None,
             match_id: None,
             created_at: 0,
@@ -949,7 +953,9 @@ mod tests {
             t.duos_rooms_create(&room("ABCDEF", "other", 1_000)).await.ok(),
             Some(false)
         );
-        let choice = DuosChoice::Random { lean_newest: true };
+        let choice = DuosChoice::Random {
+            lean: Some(LeanPick::Newest),
+        };
         let by_host = t
             .duos_rooms_claim("ABCDEF", "host", &choice, "m1", 10)
             .await
@@ -979,7 +985,7 @@ mod tests {
         t.duos_rooms_create(&room("GHJKLM", "host", 500))
             .await
             .expect("a room");
-        let choice = DuosChoice::Random { lean_newest: false };
+        let choice = DuosChoice::Random { lean: None };
         let late = t
             .duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 100)
             .await

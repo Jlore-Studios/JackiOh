@@ -1,12 +1,16 @@
 # `jackioh-luau`
 
-The host that runs card scripts written in Luau (#442, v0.4.0). It holds the sandbox a script
-runs in, the integer boundary every value crosses, the lint that refuses what the sandbox cannot
-stop, one VM per thread, and `load_card`, which turns a compiled script into the engine's
-`CardScripts`. `crates/cards` depends on it: its `build.rs` calls `compile` on every card's
-`.luau`, and its registry calls `load_card` on the bytecode, so every build that takes the cards
-(the server's, the browser's, the tools') compiles it. The engine and the AI do not depend on it.
-The decisions it follows are #442's L3–L8. This file is the contract.
+The host that runs card scripts written in Luau (#442, v0.4.0), kept as the scripting host for
+custom cards (#902, #915). It holds the sandbox a script runs in, the integer boundary every value
+crosses, the lint that refuses what the sandbox cannot stop, one VM per thread, and `load_card`,
+which turns a compiled script into the engine's `CardScripts`.
+
+No official card uses it: v0.4.0 ported 409 card scripts to Luau, and v0.5.0 (#902) brought them
+all back to Rust, since a VM made every game slower and the browser's module bigger for nothing an
+official card needs (`docs/v0.4.0/README.md` §8). No crate the game builds depends on it (#902 V4):
+not the cards, the engine, the AI, the server or the tools. It stays a workspace member, built and
+tested by CI, for code that is not compiled into the game. The decisions it follows are #442's
+L3–L8. This file is the contract.
 
 ## Pinned versions
 
@@ -75,12 +79,17 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   looping (`string.rep`), which spends no interrupts, is bounded too. The allocation that would pass
   the cap fails, and the hook call with it, with an error naming the card, face and hook:
   `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`. Every hook call, a nested one
-  included, runs under the cap (`vm::BudgetGuard`), but a reader, `J.query` and `J.pool` lift it
-  while they build their answer (`sandbox::MemoryCap`): under a cap mlua runs each value the host
-  builds through a protected call, which cost a hook call about half its time, and what the
-  host builds is bounded by the state it reads, not by the script. It is still counted, so the
-  hook's next allocation past the cap fails. For the same reason `J`'s verbs are Luau closures, not
-  Rust functions. Luau collects nothing when an allocation fails, so an outermost hook call
+  included, runs under the cap (`vm::BudgetGuard`). A reader, `J.query` and `J.pool` lift it while
+  they build their answer (`sandbox::uncapped`), since under a cap mlua runs each value the host
+  builds through a protected call, which cost a hook call about half its time; for the same reason
+  `J`'s verbs are Luau closures, not Rust functions. So while a reader builds its answer the VM can
+  hold more than the cap, by what the reader allocates: the state it reads bounds that, or the
+  table the script hands it (`ctx:rng_shuffle`'s list, which the cap held), not anything the script
+  does meanwhile. The answer is counted like everything else: a reader that leaves the VM past the
+  cap fails as the allocation past it would, and the hook call with it, naming the card, face and
+  hook (#871), so a hook never goes on holding more than the cap, however many answers it keeps.
+  The script's own allocations stay capped, its next one past the cap after a reader returns
+  included. Luau collects nothing when an allocation fails, so an outermost hook call
   that finds the VM holding more than `LUAU_MEMORY_COLLECT_BYTES` (half the cap) first collects all
   its garbage: a call that ran out of memory does not fail the next one. `pcall` catches a memory
   error as it catches any Luau error; the allocation never happened, so the cap holds;
@@ -185,17 +194,21 @@ A table's fields are invariant, so a value going into an optional field takes th
 and CI's `rust` check holds it so (#872). Each pure-read context's type (`J.ConditionContext`,
 `J.HookArgs`, `J.CostArgs`, …) declares every reader `shared_readers!` registers on it, typed as on
 `J.EffectContext`: `tests/export_api.rs` reads the macro, so a reader the host adds is typed at once.
-The checked-in `.luaurc` (`crates/cards/src/scripts/.luaurc`) aliases
-`@jackioh` at the committed module, which the CLI resolves (the mapping drops the `.luau`
-extension, which luau-analyze 0.740 refuses as `Unknown require`, #464 gap 15), so local
-strict runs check the files in place.
+A `.luaurc` beside the scripts aliases `@jackioh` at the committed module, which the CLI resolves
+(the mapping drops the `.luau` extension, which luau-analyze 0.740 refuses as `Unknown require`,
+#464 gap 15), so local strict runs check the files in place.
 
 - `load_card(id, bytecode)` runs the module once to read which hooks each face declares, and
   fills those slots of `CardScripts` with closures that capture only the hook's `Site` (card, face
   and hook) and the `&'static` bytecode, so any thread's VM can load the chunk the first time it
   needs it. One function value named under two hooks — two hooks of one face, or one hook of
-  each face — fills both slots with one shared closure, which serves each run from the running
-  face's table (#464 gaps 10 and 14). No Lua value outlives a call.
+  both faces — fills both slots with one shared closure (#464 gaps 10 and 14). A closure looks its
+  function up under the hook it was built for, so it is shared only where the face it runs holds
+  the function under that hook (#871): a hook both faces hold the function under gets a closure
+  that serves each run from the running face's table, shared with every such hook; any other
+  hook's closure runs its own face's table, whatever face the context names, and is shared with
+  that face's other hooks holding the function. A function the base face holds under `cry` and
+  the Radiant face only under `death` gets one closure a face. No Lua value outlives a call.
 - A call runs the module afresh, takes `module[face][hook]` and calls it with `ctx`, a userdata
   scoped to the call (`Lua::scope`), so a script cannot keep it.
 - An effect is data. `J.<verb>(args)` returns `{ verb = "<verb>", args = args }` and touches
@@ -214,7 +227,8 @@ strict runs check the files in place.
 
 `compile(file, source)` lints the source and compiles it with Luau's compiler to the bytecode
 `load_card` takes, with `compiler()` (the disabled builtins and optimization level 1, above).
-`crates/cards/build.rs` calls it on every card's `.luau`, and the tests on their fixtures. Its
+v0.4.0's `crates/cards/build.rs` called it on every card's `.luau`; the tests call it on their
+fixtures. Its
 errors name the file: a lint finding as `"<file>:<line>: <rule>"`, one per line, a syntax error as
 `"<file>:<line>: <Luau's message>"`.
 
@@ -239,8 +253,8 @@ method or a type and is never refused. It refuses:
 
 ## What is bound
 
-Everything a ported card can say in Rust (#448; `docs/v0.4.0/api-gaps.md` lists what is left and
-which cards wait on it):
+Everything a ported card could say in Rust (#448; `docs/v0.4.0/api-gaps.md` lists what was left
+and which cards waited on it):
 
 - **Effects.** One Luau function per effect verb in `crates/engine/src/effects/` (`api/`, one
   file per module, each line a `verb!` call), same name, its argument struct's fields as table

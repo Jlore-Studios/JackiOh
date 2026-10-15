@@ -50,7 +50,7 @@ for file in $files; do
     scripts/build-wasm.sh | scripts/vercel-install.sh | crates/server/Cargo.toml | crates/tools/Cargo.toml) exit 1 ;;
     bot/* | .harness/* | .squishy/* | .github/* | docs/* | reviews/* | e2e/* | spec/* | training/* | scripts/*) ;;
     crates/server/* | crates/tools/* | render.yaml) ;;
-    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/luau/tests/*) ;;
+    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     apps/web/*.test.ts | apps/web/*.test.tsx | apps/web/src/test/* | apps/web/scripts/* | apps/web/README.md) ;;
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md | README.md | SPEC.md | BUILD.md | REVIEW.md) ;;
     ARCHITECTURE-CCG.md | JackiOh_Mechanics.md | JackiOh_Core_Cards.md | JackiOh_Classic_Cards.md | JackiOh_Tokens.md) ;;

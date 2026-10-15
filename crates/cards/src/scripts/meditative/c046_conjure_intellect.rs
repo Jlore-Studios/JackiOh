@@ -9,7 +9,46 @@
 //! (R60). `costOverride` is `setCost` when the embiggen price was paid (`ctx.embiggened`, R81, R65);
 //! `radiant` is set on the Radiant face. The hand cap burns extras (§2.4, R4).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-046";
+
+/// §5.1's pool for one tag: the tag's non-token cards of every set, minus this card (R387).
+fn pool(tag: &str) -> Value {
+    json!({ "tags": [tag], "excludeDefId": ID })
+}
+
+fn conjure(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // "(paid 4: it costs 0)" — the embiggen price, read as the Cry resolves, so the paid
+            // face is the declared `setCost` (R386).
+            let paid = ctx.embiggened.then(|| param(&*ctx, "setCost"));
+            ["KY", "CN", "Book"]
+                .iter()
+                .map(|tag| {
+                    let mut args = json!({ "query": pool(tag), "count": 1 });
+                    if radiant {
+                        args["radiant"] = json!(true);
+                    }
+                    if let Some(cost) = paid {
+                        args["costOverride"] = json!(cost);
+                    }
+                    add_random_from_catalog(json_as(args))
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: conjure(false),
+        radiant: conjure(true),
+    }
+}
 
 // M #46 Conjure Intellect — SPEC §8.8 row 46, BUILD M10 row M 46: "At (2) adds a random KY card, a
 // random CN card and a random Book (each a non-token card of any set, never itself) at their

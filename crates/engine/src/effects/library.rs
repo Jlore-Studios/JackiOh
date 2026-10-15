@@ -14,28 +14,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::effects::targets::{PlayerSpec, player_of};
-use crate::script::{Effect, EffectContext};
-use crate::state::CardInstance;
-use crate::wire::GameEvent;
-use crate::zones::{MoveResult, OffFieldZone, move_to_zone};
-
-/// One card to the exile pile, as `move_.rs`'s `exile` does it: the exile counter counts only cards
-/// that get there, a unit-token library card ceases to exist instead and is not counted (R11, §3.2),
-/// and the `exiled` event reports the card leaving either way for §10.10.
-///
-/// §6.3's Exile row gives no Death trigger, so nothing is dispatched here.
-fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    let mut card = card.clone();
-    let moved = move_to_zone(ctx.state, &mut card, OffFieldZone::Exile, Default::default());
-    if matches!(moved, MoveResult::Moved) {
-        ctx.state.counters.exiled += 1;
-    }
-    ctx.events.push(GameEvent::Exiled {
-        instance_id: card.id.clone(),
-        def_id: card.def_id.clone(),
-        owner: card.owner,
-    });
-}
+use crate::script::Effect;
+use crate::zones::exile_to_pile;
 
 /// `exileRandomFromLibrary`'s arguments: `count` defaults to 1, `player` to "self".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -65,7 +45,7 @@ pub fn exile_random_from_library(args: ExileRandomFromLibraryArgs) -> Effect {
 
         let picks = ctx.sink.rng.shuffle(&ctx.sink.state.players[player].library);
         for card in picks.iter().take(count as usize) {
-            exile_card(ctx, card);
+            exile_to_pile(ctx, card.clone());
         }
     })
 }
@@ -97,7 +77,7 @@ pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
             let Some(card) = ctx.state.players[player].library.last().cloned() else {
                 return;
             };
-            exile_card(ctx, &card);
+            exile_to_pile(ctx, card);
         }
     })
 }

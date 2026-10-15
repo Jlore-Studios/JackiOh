@@ -35,7 +35,7 @@ use crate::config::{ANTI_ONESHOT_CAP, DAMAGE_REDIRECT_CAP, HERO_ARMOR};
 use crate::script::{EngineSink, HeroGuard, HookArgs};
 use crate::state::{CardInstance, GameState, ModifierKind, find_instance, find_instance_mut};
 use crate::wire::{
-    CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword, opponent_of,
+    CardType, GameEvent, Keyword, KeywordKind, PlayerId, Row, ZoneName, armor_of, has_keyword,
 };
 
 /// TS `{ kind: "unit"; instance } | { kind: "hero"; player }`. The unit is carried by value, as TS's
@@ -722,8 +722,4 @@ pub fn set_hero_health(sink: &mut DamageSink<'_>, player: PlayerId, value: i32, 
         health,
         source_id,
     });
-}
-
-pub fn enemy_of(player: PlayerId) -> PlayerId {
-    opponent_of(player)
 }

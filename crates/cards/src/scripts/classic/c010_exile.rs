@@ -18,14 +18,95 @@
 //! pause never re-rolls them (R113). The name is a rules word, so a mention of it is no reference unless
 //! `refs` lists it (R381).
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-010";
+
+/// The enemy permanents on the field: the top of each unit pile, then each backrow card (§3.2, R13).
+fn enemy_permanents() -> BoardScope {
+    json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
+}
+
+/// The fields of the announce this card reads.
+struct Announced {
+    instance_id: String,
+    cost_paid: i32,
+}
+
+/// "When your opponent plays a card that costs ({threshold}) or less": the cost paid (R56, R70).
+fn cheap_play(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Announced> {
+    let GameEvent::CardAnnounced { player, instance_id, cost_paid, .. } = event else {
+        return None;
+    };
+    if *player == ctx.controller {
+        return None;
+    }
+    if *cost_paid <= param(ctx, "threshold") {
+        Some(Announced { instance_id: instance_id.clone(), cost_paid: *cost_paid })
+    } else {
+        None
+    }
+}
+
+/// The Radiant face's picks, drawn as the clause resolves: random enemy permanents, each costing no
+/// more than the budget left (R396), until the budget is spent or nothing fits.
+fn budget_picks(ctx: &mut EffectContext<'_>, budget: i32) -> Vec<CardInstance> {
+    let mut picked: Vec<CardInstance> = Vec::new();
+    let mut left = budget;
+    while left > 0 {
+        let fits: Vec<CardInstance> = cards_in_scope(ctx, &enemy_permanents())
+            .into_iter()
+            .filter(|card| !picked.iter().any(|taken| taken.id == card.id) && cost_now(ctx.state, card) <= left)
+            .collect();
+        let Some(card) = ctx.rng.pick(&fits).cloned() else {
+            break;
+        };
+        left -= cost_now(ctx.state, &card);
+        picked.push(card);
+    }
+    picked
+}
+
+fn exile_trap(radiant_face: bool) -> TriggerDef {
+    TriggerDef::new("exile", &[GameEventType::CardAnnounced], move |ctx, event| {
+        let Some(played) = cheap_play(ctx, event) else {
+            return vec![];
+        };
+        let countered = counter_play(json_as(json!({
+            "to": "exile",
+            "target": { "of": "instance", "instanceId": played.instance_id },
+        })));
+        if !radiant_face {
+            return vec![countered];
+        }
+        let budget = param(&*ctx, "threshold") - played.cost_paid;
+        vec![
+            countered,
+            for_each_card(ForEachCardArgs {
+                // `forEachCard`'s `cards` answers ids.
+                cards: Arc::new(move |at: &mut EffectContext<'_>| {
+                    budget_picks(at, budget).into_iter().map(|card| card.id).collect()
+                }),
+                each: Arc::new(|instance_id: &str| {
+                    exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            }),
+        ]
+    })
+    .with_when(|ctx, event| cheap_play(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let base = Script { triggers: vec![exile_trap(false)], ..Script::default() };
+
+    let radiant = Script { triggers: vec![exile_trap(true)], ..Script::default() };
+    CardScripts { base, radiant }
+}
 
 // C #10 Exile — SPEC §8.6 row 10, BUILD M9 Classic row C 10: face-down (R33); a face-down set is
 // announced to the opponent by zone and cost only (§10.5 step 3a), so their `cardAnnounced` names no
 // card and the exile then shows it; radiant: (3) or less, budget 3 minus the cost paid (R65, R396);
 // its tuned number (threshold) reads through `param()` (R386).
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,7 +157,7 @@ mod tests {
     #[test]
     fn is_a_trap_on_both_faces_whose_condition_lives_in_when_r99() {
         assert_eq!(crate::card_def(EXILE).type_, CardType::Trap);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
         assert!(radiant.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
     }

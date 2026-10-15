@@ -37,6 +37,7 @@ import {
   DECK_IMPORT_OPEN,
   DECK_LIST,
   DECK_NEW,
+  DECK_PRACTICE_ONLY,
   SYNC_STATUS,
   TRIO_CAP,
   TRIO_CAP_REASON,
@@ -50,7 +51,7 @@ import {
   trioRowId,
 } from "./testids.ts";
 import TrioEditor from "./TrioEditor.tsx";
-import { deckLabel, deckStatus, deckVerdict, nextName, trioLabel, trioVerdict } from "./workshop.ts";
+import { deckLabel, deckStatus, deckVerdict, nextName, practiceOnly, trioLabel, trioVerdict } from "./workshop.ts";
 
 /** Keep this layout breakpoint aligned with workshop.css's `@media (max-width: 1100px)`. */
 export const WORKSHOP_SPLIT_MIN_WIDTH_PX = 1101;
@@ -266,9 +267,17 @@ type DeckRowProps = {
 };
 
 function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onOpen }: DeckRowProps): ReactElement {
-  const status = deckStatus(deckVerdict(deck, catalog, collection, nameLength), collection !== null);
+  const verdict = deckVerdict(deck, catalog, collection, nameLength);
+  const status = deckStatus(verdict, collection !== null);
+  // R915005: a deck naming a custom card plays only in practice (L7), whatever else it lacks.
+  const practice = practiceOnly(verdict);
   const label = deckLabel(deck, nameLength);
-  const words = { deck: label, count: deck.cards.length, size: DECK_SIZE, status: status.label };
+  const words = {
+    deck: label,
+    count: deck.cards.length,
+    size: DECK_SIZE,
+    status: practice ? t("{status}, practice only", { status: status.label }) : status.label,
+  };
   return (
     <li>
       <button
@@ -277,6 +286,7 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         data-testid={deckRowId(deck.id)}
         data-count={String(deck.cards.length)}
         data-status={status.kind}
+        data-practice-only={practice ? "true" : undefined}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
         aria-label={
@@ -290,6 +300,11 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
           <span className="ws-chip" data-status={status.kind}>
             {status.label}
           </span>
+          {practice ? (
+            <span className="ws-chip" data-status="practice" data-testid={DECK_PRACTICE_ONLY} aria-hidden="true">
+              {t("Practice only")}
+            </span>
+          ) : null}
         </span>
         {unsynced ? <span className="ws-row-dot" aria-hidden="true" /> : null}
       </button>

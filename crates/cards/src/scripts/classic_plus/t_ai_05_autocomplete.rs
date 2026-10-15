@@ -12,7 +12,41 @@
 //! (`LAST_FACE_UP_SKIPPED_TAGS`), so this card reads it and adds the copy through §6.3's Add to hand: a
 //! new card of yours, the hand cap burning it (§2.4), its face the one played (R57).
 
+use jackioh_engine::effects::add_to_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-05";
+
+/// §8.7 Radiant: "It costs (0)."
+const RADIANT_COST: i32 = 0;
+
+fn autocomplete(ctx: &EffectContext<'_>, cost_override: Option<i32>) -> Vec<Effect> {
+    let Some(last) = last_face_up_played(&*ctx.state, opponent_of(ctx.controller)) else {
+        return vec![];
+    };
+    let mut args = json!({ "defId": last.def_id, "radiant": last.radiant });
+    // R1300: a copy of a Chinese card is Chinese.
+    if last.chinese == Some(true) {
+        args["chinese"] = json!(true);
+    }
+    if let Some(cost) = cost_override {
+        args["costOverride"] = json!(cost);
+    }
+    vec![add_to_hand(json_as(args))]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|ctx| autocomplete(ctx, None))),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|ctx| autocomplete(ctx, Some(RADIANT_COST)))),
+            ..Script::default()
+        },
+    }
+}
 
 // T-AI-5 Autocomplete — SPEC §8.7 row T-AI-5, BUILD M9 Classic+ row T-AI-5: "Adds a copy, by definition
 // and face, of the last Unit, Spell or Field Spell your opponent played face-up (a cast counts, R70),
@@ -104,7 +138,7 @@ mod tests {
             assert_eq!(js(&def.cost), json!(0));
             assert_eq!(def.type_, CardType::Spell);
             assert_eq!(js(&def.tags), json!(["AI", "Token"]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

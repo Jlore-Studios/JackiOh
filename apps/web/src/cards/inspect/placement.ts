@@ -6,8 +6,9 @@ export type Rect = { left: number; top: number; width: number; height: number };
 type PreviewSide = "right" | "left" | "above" | "below";
 
 /**
- * Which side the preview tries first. "beside" is B27's order (right, left, above, below), for a
- * card with neighbours all round, such as a minion on the board or a tile in the deck list.
+ * Which side the preview tries first. "beside" is B27's order (left, right, above, below; #912 put
+ * the left first, where #814 asked for a card's full text), for a card with neighbours all round,
+ * such as a minion on the board or a tile in the deck list.
  * "above" tries above first, then the same order: a card in a row (the hand, the resolving strip)
  * has its neighbours left and right, and a preview beside it would cover the next card the pointer
  * is on its way to, so it rises over the card instead, as Hearthstone lifts a hand card.
@@ -15,8 +16,8 @@ type PreviewSide = "right" | "left" | "above" | "below";
 export type PreviewPrefer = "beside" | "above";
 
 const ORDER: Readonly<Record<PreviewPrefer, readonly PreviewSide[]>> = {
-  beside: ["right", "left", "above", "below"],
-  above: ["above", "right", "left", "below"],
+  beside: ["left", "right", "above", "below"],
+  above: ["above", "left", "right", "below"],
 };
 
 /** Keeps `start .. start + size` at least PREVIEW_MARGIN_PX inside `0 .. extent`, top/left first. */
@@ -26,8 +27,8 @@ function clamp(start: number, size: number, extent: number): number {
 }
 
 /**
- * The first side of the anchor the preview fits on, in the order `prefer` names (B27's right,
- * left, above, below by default), and the preview's top-left corner there. Beside the anchor the
+ * The first side of the anchor the preview fits on, in the order `prefer` names (B27's left,
+ * right, above, below by default), and the preview's top-left corner there. Beside the anchor the
  * preview is centred on it vertically, above or below it is centred horizontally, and the cross
  * axis is clamped into the viewport. When no side fits, it goes below, clamped.
  */

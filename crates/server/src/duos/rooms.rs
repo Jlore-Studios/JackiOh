@@ -16,7 +16,7 @@
 //! 1v1 join). Co-op games are unranked: no rating moves and no results row is written; the result
 //! lives on the match's own row (B40).
 //!
-//! A code is no key past a block (§9.4, §12.9): to an account the host has blocked, or that has
+//! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
 //! blocked the host, the room answers as an unknown code does, to read and to join. Once joined, a
 //! room answers its host and its guest alone; anyone else reads it as unknown (a join still says it
 //! is full, S6). A host's frozen deck is checked against the catalog it was frozen under: a join
@@ -43,7 +43,7 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, lean_newest_of, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, lean_of, read_mode_choice,
 };
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, lock, ok,
@@ -114,8 +114,9 @@ fn read_difficulty(body: &Value) -> Result<Difficulty, ApiError> {
         .ok_or_else(|| bad_request(r#""difficulty" must be "easy", "medium" or "hard""#))
 }
 
-/// S6: exactly one of `deckId` (one of the caller's saved decks) and `random: true` (with the R1372
-/// `leanNewest`), read as the queue reads a Best-of-1 or an All Random choice.
+/// S6: exactly one of `deckId` (one of the caller's saved decks) and `random: true` (with its "More
+/// cards from" pick, R924000's `leanSet` or R1372's `leanNewest`), read as the queue reads a Best-of-1
+/// or an All Random choice.
 fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let deck_id = body.get("deckId").filter(|value| !value.is_null());
     let random = match body.get("random") {
@@ -125,9 +126,7 @@ fn read_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     };
     match (deck_id, random) {
         (Some(deck_id), false) => read_mode_choice(&json!({ "mode": "bo1", "deckId": deck_id })),
-        (None, true) => Ok(ModeChoiceInput::Random {
-            lean_newest: lean_newest_of(body)?,
-        }),
+        (None, true) => Ok(ModeChoiceInput::Random { lean: lean_of(body)? }),
         _ => Err(bad_request(
             r#"send exactly one of "deckId" (one of your decks) and "random": true"#,
         )),
@@ -142,7 +141,7 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
             deck,
             catalog_version: app.catalog.version.clone(),
         }),
-        FrozenChoice::Random { lean_newest } => Ok(DuosChoice::Random { lean_newest }),
+        FrozenChoice::Random { lean } => Ok(DuosChoice::Random { lean }),
         FrozenChoice::Bo3 { .. } => Err(ApiError::internal("a trio reached a co-op room")),
     }
 }
@@ -213,7 +212,7 @@ fn not_open() -> ApiError {
 }
 
 /// A room `caller` may read or join: joined, or unjoined and unexpired (B34), and its host and the
-/// caller not blocked either way (§12.9). Missing, malformed, expired and blocked codes are one
+/// caller not blocked either way (§13.9). Missing, malformed, expired and blocked codes are one
 /// answer, so a scan cannot tell "wrong" from "too late", nor a blocked caller that it is one.
 async fn room_of(app: &App, req: &Req, caller: &str) -> Result<DuosRoom, ApiError> {
     let Some(code) = code_of(req) else {
@@ -283,7 +282,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let room = room_of(app, &req, &profile.id).await?;
-    // §12.9: a joined room is its two people's; to anyone else it is as gone as an unknown code.
+    // §13.9: a joined room is its two people's; to anyone else it is as gone as an unknown code.
     let member = room.host == profile.id || room.guest.as_deref() == Some(profile.id.as_str());
     if room.guest.is_some() && !member {
         return Err(not_open());

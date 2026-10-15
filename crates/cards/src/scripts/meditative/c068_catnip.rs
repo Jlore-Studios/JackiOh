@@ -5,11 +5,45 @@
 //!   cast has resolved (R17, MD-D25, R1063), then animates; already a Unit, later Spells do nothing;
 //!   no open zone: stays face-up to fire again; hidden (R33).
 
+use jackioh_engine::effects::animate;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-068";
+
+fn catnip() -> Script {
+    Script {
+        triggers: vec![
+            TriggerDef::new("catnip-reveal", &[GameEventType::CardResolved], |_, _| {
+                vec![animate(json_as(json!({})))]
+            })
+            .with_when(|ctx, event| {
+                let GameEvent::CardResolved { player, def_id, radiant, .. } = event else {
+                    return false;
+                };
+                if *player == ctx.controller {
+                    return false;
+                }
+                if card_type_of_face(ctx.state, def_id, radiant.unwrap_or(false)) != CardType::Spell {
+                    return false;
+                }
+                !ctx.live_self().is_some_and(|me| is_animated(ctx.state, me))
+            }),
+        ],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = catnip();
+    // The Radiant face differs only in stats and Taunt, both catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #68 Catnip — SPEC §8.8 row 68, BUILD M10 row M 68.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     use crate::js;

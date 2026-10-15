@@ -39,7 +39,8 @@
 // place of the five, its other tags after it; its tags themselves are unchanged.
 //
 // Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
-// line (shortText.ts); the rules box's tooltip always carries the whole text.
+// line (shortText.ts). The whole text is the hover preview's; with hover previews off, the rules
+// box's tooltip carries it instead (#912).
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -74,7 +75,7 @@ export type CardFaceProps = {
    * Issue #814: the Summit's Ascent level as the view gives it, in a game. A Summit face with a
    * level prints its header and only the level's own line (shortText.ts); every other face, and
    * a Summit without one (the Almanac, the deck builder, the inspect overlays), prints the whole
-   * text. The rules box's tooltip always carries the whole text.
+   * text.
    */
   ascentLevel?: number | null;
 };
@@ -205,6 +206,9 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // a mark or tuned number inside it keep their offsets; RulesText drops marks outside the
   // printed words on its own, and a tuned number on a hidden line goes unmarked.
   const short = summitShortText(face.defId, face.text.full, ascentLevel);
+  // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
+  // while hover previews are off, as Card.tsx's root title does (B19).
+  const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
   const shown = short ?? face.text.full;
   const printed = printedText(face, shown);
   const names = nameTier(face.name);
@@ -289,7 +293,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
         <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
 
         {full && (
-          <span className="card-text" ref={textRef} title={face.text.full === "" ? undefined : face.text.full} data-short={short !== null ? "true" : undefined}>
+          <span className="card-text" ref={textRef} title={tooltip} data-short={short !== null ? "true" : undefined}>
             <span className="cf-text-base">
               <RulesText
                 text={shown}

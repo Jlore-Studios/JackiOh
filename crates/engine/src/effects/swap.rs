@@ -40,8 +40,6 @@ pub const SWAP_ROWS: &[Row] = &[Row::Units, Row::Backrow];
 
 /// One zone's worth of cards and where they are headed. A Stack pile travels whole (§3.2).
 struct SwapEntry {
-    #[allow(dead_code)]
-    from: ZoneSlot,
     to: ZoneSlot,
     cards: Vec<CardInstance>,
 }
@@ -128,7 +126,6 @@ fn swap_board_now(ctx: &mut EffectContext<'_>) {
                 }
                 entries.push(SwapEntry {
                     to: mirror_of(&from),
-                    from,
                     cards,
                 });
             }

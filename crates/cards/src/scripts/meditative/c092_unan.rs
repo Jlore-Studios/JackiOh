@@ -7,7 +7,30 @@
 //! goes to Unan through Unan's own Armor, each Unan catching a given hit once. Armor is catalog
 //! data; there is nothing else to run.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-092";
+
+pub fn script() -> CardScripts {
+    // Both faces catch the same way; the Radiant face's Armor is catalog data beside it.
+    let base = Script {
+        replacements: vec![ReplacementDef {
+            id: "92-lethal-guard".to_string(),
+            on: ReplacementMoment::LethalHit,
+            where_: None,
+            when: None,
+            instead: ReplacementInstead {
+                redirect: Some(InsteadRedirect::SelfCard),
+                ..Default::default()
+            },
+            then: None,
+            by: None,
+        }],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #92 Unan — SPEC §8.8 row 92, BUILD M10 row M 92: "§4.4 step 4a opens for Units as well as heroes,
 // so a fatal hit on a friendly ally goes to Unan through Unan's own Armor, each Unan catching a

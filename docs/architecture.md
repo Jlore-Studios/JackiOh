@@ -46,14 +46,14 @@ deployment decision that can be made later without touching the code.
 
 | Component | Where it runs | Stateful? | Owns |
 | --- | --- | --- | --- |
-| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server |
+| `apps/web` | Static bundle on any CDN | No | Rendering `viewFor`, composing intent, the bundled catalog; hotseat and practice run the engine and the AI there as WebAssembly (`crates/wasm`), with no server, and a practice game with custom cards and the card creator load a second module, `crates/wasm/luau`, with the card kit (SPEC §12.10, R915009) |
 | Supabase Auth | Supabase | Managed | Signup, password hashing, email verification, sessions, JWTs |
-| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320) and `game_records` (R376), Play together's tables (0036: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0037: rooms, matches, their logs; SPEC §12), RLS, the private `app` schema |
+| Supabase Postgres | Supabase | Yes (durable) | The 13 tables of BUILD M6 plus `decks`, `trios` and `series` (R250–R263, R330–R341), `tutorial_progress` (R320), `game_records` (R376) and `custom_cards` (R915008), Play together's tables (0038: friends, blocks, presence, challenges, chat, replay shares; SPEC §9.4, §9.5) and the co-op tables (0039: rooms, matches, their logs; SPEC §13), RLS, the private `app` schema |
 | Supabase Data API | Supabase | No | Read-only projections to the browser, RLS-enforced |
-| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §12.9) |
+| `jackioh-server` HTTP routes | One process (a Docker image on Render) | No | Redemption, collection reads, deck and trio saves and trio imports, custom cards (saved after the engine's validator, never run, R915008), enqueue in three modes and the empty-queue fallback to a ladder bot (R1453), room create/join, the Conquest series and its sweeper, the tutorial's account copy (R320), the ladder bots' pool (R1454), Play together's friends, blocks, presence, friend challenges, chat and replay shares (SPEC §9.4, §9.5), and co-op rooms (SPEC §13.9) |
 | `jackioh-server` match actor | The same process | **Yes (in memory)** | `GameState`, two WebSockets (one, when a ladder bot holds the other seat and the actor plays it, R1452), the turn clock, the action log, and the watchers of a friend's unranked match, each fed the friend's seat's views late (SPEC §9.5) |
-| `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §12): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
-| `crates/engine` + `crates/cards` (its Luau scripts run by `crates/luau`) | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
+| `jackioh-server` co-op actor | The same process | **Yes (in memory)** | One per co-op match (SPEC §13): a `DuosState` (two 1v1 duels and the team life between them), the two human seats' WebSockets, the AI seats it plays itself, the round clock, the co-op action log, the team pings it relays (§5.4) |
+| `crates/engine` + `crates/cards` | Linked into both of the above | No (pure) | Every rule, `reduce`, `view_for`, `fold` |
 
 ---
 
@@ -64,11 +64,11 @@ SPEC §9.1, restated as channels rather than domains:
 | Channel | Credential | What it carries |
 | --- | --- | --- |
 | Browser → Supabase Auth | publishable key (`sb_publishable_…`) | signup, login (password, an emailed link or code, an OAuth provider), email verification, an authenticator app's enrolment and codes, token refresh (R664–R666) |
-| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own tickets, own results, own tutorial progress, the `cards` projection |
+| Browser → Data API | publishable key + the user's JWT | **reads only**: own profile row, own collection, own decks and trios, own custom cards, own tickets, own results, own tutorial progress, the `cards` projection |
 | Browser → server HTTP | the user's JWT as `Authorization: Bearer` | intent: "redeem this code", "save this deck", "enqueue Conquest with this trio", "pick this deck for game 2", "import this trio", "create a room", "join ABC234", "merge this device's tutorial progress" |
 | Browser → server HTTP, no token | none | a sign-in by username: the server passes the password to Supabase Auth with the account's address, which never comes back (R1443) |
 | Browser → server WebSocket | the user's JWT in the `hello` frame | intent: one `Action` at a time; receives `viewFor` and nothing else |
-| Browser → server WebSocket `/ws/duos` | the user's JWT, as `/ws/match` | intent: one `DuosActionBody` at a time, and team pings; receives its seat's Duos view with its legal actions, and its teammate's pings (SPEC §12.6, §12.10) |
+| Browser → server WebSocket `/ws/duos` | the user's JWT, as `/ws/match` | intent: one `DuosActionBody` at a time, and team pings; receives its seat's Duos view with its legal actions, and its teammate's pings (SPEC §13.6, §13.10) |
 | Browser → server WebSocket `/ws/watch` | the user's JWT, as `/ws/match` | a `hello` naming a friend's match; receives the friend's seat's `viewFor`, `SPECTATE_DELAY_MS` late, and nothing it sends after `hello` is read (SPEC §9.5) |
 
 One rule, from SPEC §9.1: **the client sends intent, never state.** "Play instance 7 in zone 3 with
@@ -111,7 +111,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 
 | Table | Client read | Policy | Client write |
 | --- | --- | --- | --- |
-| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0032), which marks a ladder bot's profile, is in no client grant (R1452); `allow_spectators` (0036) is the watching setting, written through `PUT /api/settings` (SPEC §9.5) |
+| `profiles` | own row, but never `kind` | `id = auth.uid()` | **none** — identity is server-owned (§9.1); `kind` (0032), which marks a ladder bot's profile, is in no client grant (R1452); `allow_spectators` (0038) is the watching setting, written through `PUT /api/settings` (SPEC §9.5) |
 | `invite_codes` | **none** | no policy | none — a readable code row defeats the gate (§9.8) |
 | `code_attempts` | **none** | no policy | none |
 | `cards` | all rows | `true` | none — the catalog is static data (§9.4) |
@@ -122,6 +122,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `loadout_deck_cards` | own rows | `profile_id = auth.uid()` | none |
 | `decks` | own rows | `profile_id = auth.uid()` | **none** — the server upserts a draft by the id the client minted (R250, R256) |
 | `trios` | own rows | `profile_id = auth.uid()` | none (R252) |
+| `custom_cards` | own rows | `profile_id = auth.uid()` | **none** — the server writes a card only once the engine's validator passes it (R915008, R915001) |
 | `tickets` | own rows | `profile_id = auth.uid()` | none — enqueue freezes a deck (§9.5) |
 | `matches` | **none** | no policy | none — holds `seed` and both decks (§3.1) |
 | `match_actions` | **none** | no policy | none — append-only by trigger (§9.3) |
@@ -142,7 +143,7 @@ the policy in the third column. `service_role` bypasses RLS and is the only writ
 | `chat_reports` | rows you filed | `reporter = auth.uid()` | none |
 | `replay_shares` | rows you shared or were shared | `auth.uid() in (sharer, friend)` | none — a share opens the sharer's seat's steps through `GET /api/replays/:matchId`, never the log (SPEC §9.5) |
 | `duos_rooms` | rooms you host or joined | `auth.uid() in (host, guest)` | none |
-| `duos_matches` | **none** | no policy | none — holds the seed and, in `options`, all four decks, the AI team's included: §3.1's reason for `matches` (SPEC §12.9) |
+| `duos_matches` | **none** | no policy | none — holds the seed and, in `options`, all four decks, the AI team's included: §3.1's reason for `matches` (SPEC §13.9) |
 | `duos_match_actions` | **none** | no policy | none — the co-op log, which with the seed is every hidden card (§3.1) |
 
 Three Supabase-specific traps this schema avoids on purpose:
@@ -242,8 +243,8 @@ cannot hold a comment, and three things in them are not obvious:
   `e2e/`, `spec/`, `training/`, `scripts/` (but `scripts/build-wasm.sh`), `crates/server/` and `crates/tools/`
   (but their manifests, which cargo reads), `render.yaml`, the root docs, a crate's `tests/`, and the
   client's test files (`*.test.ts(x)`, `apps/web/src/test/`), `apps/web/scripts/` and its README. The
-  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/luau`,
-  `crates/ai` and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
+  bundle is `apps/web` plus the WASM module compiled from `crates/engine`, `crates/cards`, `crates/ai`
+  and `crates/wasm`, and `crates/cards/src/scripts/` holds the card scripts, which are compiled in, so
   the list never names a crate's `src/`. Diffing against the last build, not the previous
   commit, means a commit whose build was cancelled or failed is never skipped past. Any doubt builds:
   no previous sha, a shallow clone without it, an empty diff, a path off the list. A cancelled build
@@ -259,17 +260,16 @@ cannot hold a comment, and three things in them are not obvious:
   the script's decisions, over diffs in a throwaway repo.
 - **`render.yaml` builds a Docker image and names no command.** `runtime: docker` builds
   `crates/server/Dockerfile` with the repository root as its context, because the server crate builds
-  against the engine, cards, Luau and AI crates beside it: `rust:1.97-slim-bookworm` stages, with `g++`
-  for Luau's C++, run `cargo build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
+  against the engine, cards and AI crates beside it: `rust:1.97-slim-bookworm` stages run `cargo
+  build --release -p jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the
   workspace's manifests alone, in a layer a change to the sources does not rebuild, and a
   `debian:bookworm-slim` stage holds the one binary with CA certificates and `tini`. The catalog, the
   patch history and every migration are compiled into the binary, so nothing at run time needs Node,
   pnpm or the repository. The image's own command, `jackioh-server release`, migrates, seeds the
   catalog and serves; `render.yaml` sets no build or start command, and
   `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
-  `vercel.json`'s install step (`scripts/vercel-install.sh`) installs rustup and the
-  `wasm32-unknown-emscripten` target before `pnpm install`, because the web build compiles the WASM
-  module, and `scripts/build-wasm.sh` installs the pinned emsdk it links with when it is missing.
+  `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
+  `pnpm install`, because the web build compiles the WASM module.
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
@@ -293,7 +293,7 @@ clock's expiry is one `timeout` per seat still owing (R268). The engine stays pu
 knows what time it is.
 
 The co-op actor (§5.4) keeps clocks of its own, `crates/server/src/config.rs` constants like the rest
-(SPEC §12.3, §12.8, §12.9):
+(SPEC §13.3, §13.8, §13.9):
 
 | Clock | Value | On expiry |
 | --- | --- | --- |
@@ -397,7 +397,7 @@ and still be the only writers.
 
 ### 5.4 The co-op actor and the watch socket
 
-A co-op match (SPEC §12) has an actor of its own, `crates/server/src/duos/`, built as the match actor
+A co-op match (SPEC §13) has an actor of its own, `crates/server/src/duos/`, built as the match actor
 is. It holds a `DuosState` in memory: two plain 1v1 `GameState`s, the duels, and the team life and the
 round between them. It calls the engine only through its Duos functions (`duos_create`, `duos_begin`,
 `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_fold`) and the AI
@@ -410,7 +410,7 @@ through `jackioh_ai::duos_decide`. Its loop is §5.1's with four seats:
   changes nothing;
 - an AI seat that owes an action takes one every `DUOS_AI_STEP_DELAY_MS`, and a human seat past its
   grace is played the same way until it reconnects, its teammate told;
-- a ping (SPEC §12.10) is shape-checked, rate-limited and relayed to the teammate's socket alone, and
+- a ping (SPEC §13.10) is shape-checked, rate-limited and relayed to the teammate's socket alone, and
   never reduced, logged or put in a view;
 - a crashed actor folds its match back with `duos_fold`, and the end writes `duos_matches.result` and
   `ended_at` once and records the result for both humans, unranked.
@@ -474,7 +474,7 @@ a hard bound on log length, so that day is far off.
 `match_actions` is append-only as a **database** property: `app.deny_row_mutation()` is attached
 `before update or delete`. `collection_grants` gets the same trigger for the same reason.
 
-A co-op match is folded the same way (SPEC §12.9): `duos_matches.seed` and `options` (the four decks,
+A co-op match is folded the same way (SPEC §13.9): `duos_matches.seed` and `options` (the four decks,
 the teams' rules and the AI seats' handicaps) with `duos_match_actions` reconstruct it through
 `duos_fold`, its duel `d` seeded `{seed}:duel{d}`, and both tables stay out of every client's reach
 for §3.1's reason. A co-op replay (`GET /api/duos/matches/:matchId/replay`) sends a human seat its own
@@ -690,7 +690,8 @@ step that is not yet implemented says which BUILD task delivers it.
    `0026_catalyst_prime_acclaimed_tags.sql` → `0027_lean_newest.sql` → `0028_usernames.sql` →
    `0029_play_telemetry.sql` → `0030_meditative_set.sql` → `0031_meditative_endings.sql` →
    `0032_ladder_bots.sql` → `0033_bot_trios.sql` → `0034_account_consent.sql` →
-   `0035_replay_final_hash.sql` — and records them in `app.migrations`. Expected result: 31 tables
+   `0035_replay_final_hash.sql` → `0036_lean_set.sql` → `0037_custom_cards.sql` → `0038_social.sql` →
+   `0039_duos.sql` — and records them in `app.migrations`. Expected result: 43 tables
    in `public`, all with RLS enabled, plus the private `app` schema. On a project that already had
    loadouts, 0007 turns each into three saved decks and a trio named "My trio" (R254) and leaves the
    loadout tables where they are. 0010 only widens the `cards` tag check, so `seed-catalog` can
@@ -747,6 +748,19 @@ step that is not yet implemented says which BUILD task delivers it.
    to the terms in force on its next visit; an account already active is not asked its age.
    0035 adds the nullable `matches.final_hash`, the final state's hash a match's result records for
    its replay (R768); older matches keep none and their replays are held to their results rows.
+   0036 lets "More cards from" pick the set (R924000): `tickets.lean_set` and
+   `matches.room_lean_set` hold the pick as text, `newest` for every row 0027's boolean had on and
+   null for the rest. It only adds: 0027's columns stay, unread, for the deploy before it.
+   0037 adds `custom_cards` (R915008): an active account's custom cards, which their owner reads and
+   no client role writes, written by the server through `app.create_custom_card` (under the cap,
+   `max_custom_cards` in `app.settings`) and `app.update_custom_card` (a compare-and-set on the
+   card's version); deleting an account deletes its cards. It needs nothing else from the bring-up.
+   0038 adds Play together's eight tables (SPEC §9.4, §9.5): `friend_requests`, `friendships`,
+   `blocks`, the server-only `presence`, `challenges`, `chat_messages`, `chat_reports` and
+   `replay_shares`, each readable only by its own players, and `profiles.allow_spectators`, on by
+   default. 0039 adds the co-op tables (SPEC §13.9): `duos_rooms`, which a room's two people read but
+   its frozen deck choices, and the server-only `duos_matches` and `duos_match_actions`. Every row of
+   both goes with an account that is deleted; neither needs anything else from the bring-up.
 5. **Verify the invariants before trusting anything.** `sh crates/server/tests/sql/run.sh` runs all of
    §12's checks against a throwaway Docker Postgres, which is the fast way to confirm the migrations
    are intact before you point them at a real project. Against the project itself, in Studio's SQL

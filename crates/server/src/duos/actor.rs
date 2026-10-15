@@ -20,7 +20,7 @@
 //!    each person's disconnect grace (the 1v1's `DISCONNECT_GRACE_SECONDS`). None of them is an action
 //!    the engine sees: an expiry hands the seat to the AI, whose moves are ordinary logged actions, so
 //!    `(seed, log)` still folds the match exactly. The mulligan clock's expiry keeps each owing
-//!    person's whole hand (§12.2, R268): the AI's own mulligan never answers for a person (it may for a
+//!    person's whole hand (§13.2, R268): the AI's own mulligan never answers for a person (it may for a
 //!    seat past its grace, which the AI plays outright).
 //!  - A move the AI decided is played only while the AI still plays the seat the way it decided it:
 //!    one decided for a seat past its grace is dropped once its person is back, whatever clock has
@@ -184,7 +184,7 @@ fn fallback(legal: &[DuosActionBody]) -> Option<DuosActionBody> {
 /// Why a person's seat (a1, a2) is in the AI's hands for a while.
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Forced {
-    /// The mulligan clock (§12.2, R268): its mulligan is answered by keeping the whole hand.
+    /// The mulligan clock (§13.2, R268): its mulligan is answered by keeping the whole hand.
     KeepHand,
     /// B38: this round, its prompts are answered and its turn ended for it.
     FinishRound(i32),
@@ -783,7 +783,7 @@ impl DuosActor {
                     }
                     core.mulligan = None;
                     core.mulligan_expired = true;
-                    // §12.2, R268: each person still owing keeps the hand they were dealt.
+                    // §13.2, R268: each person still owing keeps the hand they were dealt.
                     for seat in HUMAN_SEATS {
                         if owes_mulligan(&core.state, seat) {
                             core.forced[slot(seat)] = Some(Forced::KeepHand);

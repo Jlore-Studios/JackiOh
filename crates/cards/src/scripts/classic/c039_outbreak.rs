@@ -11,8 +11,92 @@
 //! 0 with none chosen; any other card R65's cost) is stolen (§6.3, R15, an entry, R171); with no free zone it stays
 //! with them and nothing is drawn, since "otherwise" is the condition's, not the steal's. Otherwise draw one per counter (§2.4). A target gone from the field takes nothing.
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::{ForEachCardArgs, draw, for_each_card, instance_of, place_plague, steal};
 
 pub const ID: &str = "classic-039";
+
+/// "a permanent": the top of any unit pile or any backrow card, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))]
+}
+
+struct Outcome {
+    id: String,
+    steals: bool,
+    tokens: i32,
+}
+
+/// The chosen permanent if it is still on the field, and whether the steal branch holds for it: an
+/// enemy permanent with at least its cost in Plague Counters — or one this run's steal has just taken,
+/// which the draw half reads as the steal branch too (R136: this script's own `controlChanged`).
+fn outcome(ctx: &EffectContext) -> Option<Outcome> {
+    let card = instance_of(ctx, &TargetSpec::Chosen { index: None })?;
+    if card.zone.z() != ZoneName::Field {
+        return None;
+    }
+    let tokens = plague_on(&card);
+    let taken_now = ctx.events[ctx.events_from..].iter().any(|event| {
+        matches!(event, GameEvent::ControlChanged { instance_id, .. } if *instance_id == card.id)
+    });
+    let steals = taken_now || (card.controller != ctx.controller && tokens >= cost_now(ctx.state, &card));
+    Some(Outcome {
+        id: card.id.clone(),
+        steals,
+        tokens,
+    })
+}
+
+/// The first `forEachCard`'s `cards`: the chosen permanent, when the steal branch holds.
+fn stolen_ones(c: &mut EffectContext) -> Vec<String> {
+    match outcome(c) {
+        Some(read) if read.steals => vec![read.id],
+        _ => vec![],
+    }
+}
+
+/// The second `forEachCard`'s `cards`: one entry per token, each a draw of 1 — "draw a card for each
+/// Plague Counter on it".
+fn draws_owed(c: &mut EffectContext) -> Vec<String> {
+    match outcome(c) {
+        Some(read) if !read.steals => vec![read.id; usize::try_from(read.tokens).unwrap_or(0)],
+        _ => vec![],
+    }
+}
+
+fn steal_it(instance_id: &str) -> Effect {
+    steal(json_as(json!({ "instanceId": instance_id })))
+}
+
+fn draw_one(_instance_id: &str) -> Effect {
+    draw(json_as(json!({ "count": 1 })))
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![
+                place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": param(ctx, "tokens") }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(stolen_ones),
+                    each: Arc::new(steal_it),
+                }),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(draws_owed),
+                    each: Arc::new(draw_one),
+                }),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 2 tokens are its declared `tokens`, which `param` reads off the running face.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #39 Outbreak — SPEC §8.6 row 39, BUILD M9 Classic row C 39: "A declared target, any permanent
 // either side, face-down included; one placement of 1 (C #27 doubles it); then, if it is an enemy
@@ -26,10 +110,9 @@ pub const ID: &str = "classic-039";
 // The R396 cases read costs through the engine's `costNow`. A Plague Chalice played for X enters with
 // X Plague Counters (SPEC §8.6 row 87), so any placement brings it to its X; the cases that need an X card
 // played for 3 with fewer tokens than its X use C+ #69 Buff Billy, the other X permanent R396 names.
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const OUTBREAK: &str = "classic-039";
@@ -83,7 +166,7 @@ mod tests {
         fn declares_one_target_any_permanent_on_either_side_and_runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(crate::card_def(ID).id, OUTBREAK);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }]),

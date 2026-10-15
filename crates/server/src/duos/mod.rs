@@ -8,7 +8,7 @@
 //! - `actor`: the match itself: the state, the log, the clocks, the AI's seats and the pings
 //!   (B35–B40). `registry`: the live actors, and a crashed one folded back (B40).
 //! - `protocol`: every `/ws/duos` frame. `engine`: the one path to the engine's Duos API and the
-//!   decks a match is dealt. `store`: the three tables of migration 0037.
+//!   decks a match is dealt. `store`: the three tables of migration 0039.
 //!
 //! The upgrade is `actor::ws_server::handle_duos` and the routes are `app::ROUTES`' co-op block.
 //! Nothing here touches a 1v1 match: a co-op match sets no profile's in-match flag, writes no

@@ -149,6 +149,11 @@ fn deck() -> Vec<String> {
 
 /// Every playable card in the profile's collection, and one saved deck `deck_id`.
 async fn with_saved_deck(app: &Arc<App>, profile_id: &str, deck_id: &str) {
+    with_saved_cards(app, profile_id, deck_id, &deck()).await;
+}
+
+/// Every playable card in the profile's collection, and one saved deck `deck_id` of `cards`.
+async fn with_saved_cards(app: &Arc<App>, profile_id: &str, deck_id: &str, cards: &[String]) {
     let rows: Vec<Value> = playable()
         .iter()
         .map(|id| json!({ "cardId": id, "quantity": 1 }))
@@ -161,7 +166,7 @@ async fn with_saved_deck(app: &Arc<App>, profile_id: &str, deck_id: &str) {
                 "id": deck_id,
                 "profileId": profile_id,
                 "name": "co-op deck",
-                "cards": deck(),
+                "cards": cards,
                 "portrait": null,
                 "catalogVersion": jackioh_cards::catalog_version(),
                 "createdAt": AT,
@@ -383,7 +388,7 @@ mod b33_rooms {
         assert_eq!(shown["matchId"], json!(match_id));
         assert_eq!(live(&t.app, &t.host).await, json!(match_id));
         assert_eq!(live(&t.app, &t.guest).await, json!(match_id));
-        // §12.9: a live co-op game has no replay yet, for either of its people.
+        // §13.9: a live co-op game has no replay yet, for either of its people.
         for who in [&t.host, &t.guest] {
             let (status, body) = replay(&t.app, who, &match_id).await;
             assert_eq!(status, 409, "{body}");
@@ -601,7 +606,7 @@ mod b41_b42_replay_and_live {
 }
 
 // ---------------------------------------------------------------------------------------------
-// B41, §12.9, R767000 — the replay of a finished game, under the catalog it was played on
+// B41, §13.9, R767000 — the replay of a finished game, under the catalog it was played on
 // ---------------------------------------------------------------------------------------------
 
 mod b41_the_finished_replay {
@@ -743,7 +748,7 @@ mod b41_the_finished_replay {
 }
 
 // ---------------------------------------------------------------------------------------------
-// §12.9 — the retention purge takes a finished co-op game's log
+// §13.9 — the retention purge takes a finished co-op game's log
 // ---------------------------------------------------------------------------------------------
 
 mod retention {
@@ -784,7 +789,7 @@ mod retention {
 }
 
 // ---------------------------------------------------------------------------------------------
-// §12.9 — blocks, and a joined room is its two people's
+// §13.9 — blocks, and a joined room is its two people's
 // ---------------------------------------------------------------------------------------------
 
 mod room_privacy {
@@ -901,5 +906,75 @@ mod stale_catalog {
         let match_id = body["matchId"].as_str().expect("a match id");
         let (row, _) = stored(&t.app, match_id).await;
         assert_eq!(row.options.decks.a1, deck(), "the host plays the deck they froze");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R915005 — a deck with a custom card plays only in practice
+// ---------------------------------------------------------------------------------------------
+
+mod a_deck_with_a_custom_card_r915005 {
+    //! R915005: a co-op room refuses a deck that names a custom card at both doors, as the 1v1 queue
+    //! and rooms do, with the validator's L7 (`loadout_invalid`, the L7 issue as `details`), before
+    //! anything is claimed.
+    use super::*;
+
+    /// The legal deck with its first card swapped for a custom card: legal by every other rule.
+    fn custom_deck() -> Vec<String> {
+        let mut cards = deck();
+        cards[0] = "custom-0123456789abcdef0123456789abcdef".to_string();
+        cards
+    }
+
+    fn assert_l7(status: u16, refused: &Value) {
+        assert_eq!(status, 422, "{refused}");
+        assert_eq!(refused["error"]["code"], "loadout_invalid");
+        let details = refused["error"]["details"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(details.len(), 1, "{refused}");
+        assert_eq!(details[0]["rule"], "L7");
+        assert_eq!(details[0]["cardId"], json!(custom_deck()[0]));
+        assert_eq!(refused["error"]["message"], details[0]["message"]);
+    }
+
+    #[tokio::test]
+    async fn r915005_refuses_a_co_op_room_create_and_a_join_with_a_custom_card_deck_l7_and_claims_nothing() {
+        let t = three().await;
+        with_saved_cards(&t.app, &t.host.id, &uuid(900), &custom_deck()).await;
+        with_saved_cards(&t.app, &t.guest.id, &uuid(901), &custom_deck()).await;
+
+        // The host's door: no room is made.
+        let (status, refused) = create(
+            &t.app,
+            &t.host,
+            json!({ "difficulty": "easy", "deckId": uuid(900) }),
+        )
+        .await;
+        assert_l7(status, &refused);
+        assert!(fake(&t.app).lock().await.tables.duos.rooms.is_empty());
+
+        // The guest's door: the room stays open to a deck that may play, and no match starts.
+        let code = room(&t.app, &t.host).await;
+        let (status, refused) = api(
+            &t.app,
+            "POST",
+            &format!("/api/duos/rooms/{code}/join"),
+            &t.guest.token,
+            json!({ "deckId": uuid(901) }),
+        )
+        .await;
+        assert_l7(status, &refused);
+        let (status, shown) = get_room(&t.app, &t.host, &code).await;
+        assert_eq!(status, 200, "{shown}");
+        assert_eq!(shown["guest"], Value::Null, "{shown}");
+        assert_eq!(shown["matchId"], Value::Null, "{shown}");
+        assert!(live(&t.app, &t.guest).await.is_null());
+        assert!(fake(&t.app).lock().await.tables.duos.matches.is_empty());
+
+        // Control: the guest dealt at random joins the same room.
+        let (status, joined) = join(&t.app, &t.guest, &code).await;
+        assert_eq!(status, 200, "{joined}");
     }
 }

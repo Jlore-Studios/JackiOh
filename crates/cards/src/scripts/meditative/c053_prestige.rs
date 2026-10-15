@@ -10,7 +10,102 @@
 //! Radiant card of the opponent's field, hand and library, never the graveyard (MD-D8). Both faces
 //! then add {cards} AI generated cards (the R1421 AI pool).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-053";
+
+/// The base face's pick: a Radiant Unit or face-up backrow card on either side, or a Radiant card
+/// in your hand.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "backrow", "hand"], "check": "radiant" }),
+    )]
+}
+
+fn target_checks() -> IndexMap<&'static str, TargetCheck> {
+    IndexMap::from([(
+        "radiant",
+        // A Radiant card that is not a face-down backrow card: hidden information never shows
+        // (R440), so a face-down card is not a "face-up backrow card".
+        target_check(|a| {
+            let Some(candidate) = a.candidate else {
+                return false;
+            };
+            if !candidate.radiant {
+                return false;
+            }
+            if matches!(
+                candidate.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    ..
+                }
+            ) && matches!(
+                card_type_of(a.state, candidate),
+                CardType::Trap | CardType::FieldTrap
+            ) && candidate.face_up != Some(true)
+                && candidate.revealed != Some(true)
+            {
+                return false;
+            }
+            true
+        }),
+    )])
+}
+
+/// Add {cards} AI generated cards to your hand.
+fn add_ai(ctx: &EffectContext<'_>, radiant: bool) -> Effect {
+    add_random_from_catalog(json_as(json!({
+        "query": { "tags": ["AI"] },
+        "count": param(ctx, "cards"),
+        "radiant": radiant,
+    })))
+}
+
+fn prestige(radiant: bool) -> Script {
+    Script {
+        targets: targets(),
+        target_checks: target_checks(),
+        cry: Some(hook(move |ctx| {
+            vec![clear_radiant(RadiantTarget::default()), add_ai(ctx, radiant)]
+        })),
+        ..Script::default()
+    }
+}
+
+fn prestige_radiant(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // MD-D8: every Radiant card of the opponent's field, hand and library — never the
+            // graveyard, whose cards De-Radiant cannot reach.
+            let enemy = opponent_of(ctx.controller);
+            let mut effects: Vec<Effect> = permanents_on_field(ctx.state, enemy)
+                .iter()
+                .filter(|card| card.controller == enemy && card.radiant)
+                .map(|card| clear_radiant(json_as(json!({ "instanceId": card.id }))))
+                .collect();
+            for card in [OffFieldZone::Hand, OffFieldZone::Library]
+                .into_iter()
+                .flat_map(|zone| zone_cards(ctx.state, enemy, zone))
+                .filter(|card| card.radiant)
+            {
+                effects.push(clear_radiant(json_as(json!({ "instanceId": card.id }))));
+            }
+            effects.push(add_ai(ctx, radiant));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: prestige(false),
+        radiant: prestige_radiant(true),
+    }
+}
 
 // M #53 Prestige — SPEC §8.8 row 53, BUILD M10 row M 53: "De-Radiant a Radiant Unit or face-up
 // backrow card on either side, or a Radiant card in your hand (MD-D6, R90); the Radiant face
@@ -18,6 +113,7 @@ pub const ID: &str = "meditative-053";
 // (MD-D8); both faces add {cards} AI generated card(s) (R1421), a Radiant one off the Radiant face".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const PRESTIGE: &str = "meditative-053";

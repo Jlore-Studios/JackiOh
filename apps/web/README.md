@@ -190,13 +190,15 @@ routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random,
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767)
+                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        rejoin message (R897000)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers
+                        then the game), and useLiveGame, the live match or series the menus' banner offers;
+                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online game (Rejoin, on / and
                         /practice); game-banner.css draws it as the tavern's notice
@@ -216,7 +218,7 @@ A practice game offers the account's complete saved decks by name, read from `GE
 
 ## Play together and Duos
 
-Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §12) are screens over the server's answers and
+Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §13) are screens over the server's answers and
 views, and decide nothing: a friend's status, whether they may be challenged or watched, a chat
 message's mask and every refusal come from the server, shown in its own words, and a Duos board's
 legality comes from the `legal` array its socket sends (rule 7). Every screen here needs a signed-in,
@@ -259,17 +261,19 @@ The landing page offers Play together beside Play online. The replays list and t
 snapshot's `watchers`). On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
-  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §12.5);
+  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
 - the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
   where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
   count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
 - the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
   sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
-  the other view (SPEC §12.10). A Duos board deals no emote hand and draws no aim arrow.
+  the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
 
 The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
 `duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
-`/dev/duos`; a networked co-op game's state stays on the server.
+`/dev/duos`; a networked co-op game's state stays on the server. Only the normal module carries them,
+and only the dev server's build (`predev`'s `JACKIOH_WASM_DUOS=1`, crates/wasm's `duos` feature): in
+any other build each throws the reason.
 
 Test ids, mirrored in `e2e/support/testids.ts`: `landing-play-together`, `together-add-input`,
 `together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
@@ -305,6 +309,9 @@ src/practice/
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
+  sandbox.ts SandboxPanel.tsx sandbox.css
+                      a sandbox game's dev tools (R923000–R923003): the card search, the cards the
+                      human can name, and the panel that sends each tool as a `sandbox` act
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
 ```
 
@@ -339,9 +346,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, sandbox, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
+  whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
+  its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
@@ -507,7 +518,32 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
   (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
-  Duos bindings), with `tutorial/harness.ts` for tests.
+  Duos bindings, which only the normal module carries), with `tutorial/harness.ts` for tests.
+- **The Luau module** (#919, SPEC §12.10, R915009) is a second build of the engine with the card kit,
+  for custom cards: `scripts/build-wasm.sh` writes it into `src/wasm/pkg/luau/`
+  (`crates/wasm/README.md`). Only `src/wasm/luau.ts` imports it, and only `src/wasm/index.ts` imports
+  that, dynamically: `useLuauModule(on)` switches the bindings every engine call goes through, which
+  the practice worker does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it
+  for the creator without switching. A normal game never loads it (`wasm/luau.test.ts` holds that no
+  other file imports it), and the normal module refuses a game with custom cards.
+
+## Custom cards (SPEC §12)
+
+- **The creator**, `/creator` (`routes/creator.tsx`, `creator/`): the account's custom cards, read and
+  saved through `net/customCards.ts` (`/api/custom-cards`, R915008), and an editor for one. The frame is
+  `creator/FrameForm.tsx`; the script is written in the no-code builder (`creator/builder.ts` is its
+  vocabulary and the kit Luau it writes, `BuilderView.tsx` its blocks) or the code view (`CodeView.tsx`,
+  highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
+  the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
+  from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+- **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
+  under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
+  L7 (R915005), and the play lobby offers it disabled.
+- **Practice** starts a saved deck with its custom cards on the config (`customCards`), and
+  `/practice?try=<id>` (`tryPath`) deals a random deck around one card. Such a game runs in the Luau
+  module, records no card statistics, and keeps its custom cards in its save, its replay and its
+  debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
+  in the log.
 
 ## Internationalisation
 

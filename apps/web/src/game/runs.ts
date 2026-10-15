@@ -194,6 +194,7 @@ export function pileOf(
   }
   if (!IN_PILE.has(event.type) || !("instanceId" in event)) return null;
   const id = event.instanceId;
+  if (id === null) return null;
   if (id !== HIDDEN) return publicPileOf(view, id);
   if (play === undefined || play.defId === HIDDEN) return null;
   if (!Object.prototype.hasOwnProperty.call(HIDDEN_PILE_OF, play.defId)) return null;

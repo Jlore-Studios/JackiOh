@@ -1,11 +1,12 @@
 //! `jackioh_luau`: the Luau host for card scripts (#442, v0.4.0). The sandbox a script runs in (L5),
 //! the integer boundary every value crosses (L6), the lint that refuses what the sandbox cannot stop
 //! (L6, L7), one VM per thread (L8), and `load_card`, which turns a compiled script into the engine's
-//! `CardScripts`. Nothing depends on it yet: part 4 wires it into `crates/cards`. `README.md` is the
-//! contract.
+//! `CardScripts`. Since v0.5.0 (#902) no official card runs Luau: it runs custom cards' scripts in the
+//! card kit (`custom`, #913, #915). `README.md` is the contract.
 
 pub mod api;
 pub mod config;
+pub mod custom;
 pub mod hooks;
 pub mod lint;
 pub mod numbers;
@@ -130,13 +131,4 @@ pub fn run_hook(
         .iter()
         .map(|call| api::effect_of(call, site, bytecode))
         .collect()
-}
-
-/// One aura hook's entries.
-pub fn run_aura_hook<'a>(
-    site: Site,
-    bytecode: &'static [u8],
-    args: jackioh_engine::script::HookArgs<'a>,
-) -> Result<Vec<jackioh_engine::script::AuraEntry<'a>>, LuauError> {
-    vm::call_aura_hook(site, bytecode, args)
 }

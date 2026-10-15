@@ -49,7 +49,7 @@ use std::time::Duration;
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, COIN_DEF_ID, CardCost, CardDef, CreateGameArgs, DEFAULT_PORTRAIT, EMOTE_COOLDOWN_MS,
+    Action, ActionBody, COIN_DEF_ID, CardCost, CreateGameArgs, DEFAULT_PORTRAIT, EMOTE_COOLDOWN_MS,
     EMOTE_HAND_SIZE, EMOTE_IDS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GameOverReason, GameResult, PLAYER_IDS,
     Phase, PlayerId, Winner, deal_emote_hand, emote_gate, opponent_of,
 };
@@ -399,17 +399,12 @@ async fn profiles(app: &App, ids: &[&str]) -> Vec<Value> {
 
 // --- decks -------------------------------------------------------------------------------------
 
-/// TS `catalog.isToken` (`src/api/catalog.ts`): a token by flag or by tag.
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.iter().any(|tag| tag.as_str() == "Token")
-}
-
 /// TS `loadCatalog()`'s `cardIds`, tokens filtered out: every deckable §8 id, in catalog order.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .iter()
-        .filter(|(_, def)| !is_token(def))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .collect()
 }
@@ -1210,6 +1205,39 @@ mod m6_t4_the_match_actor {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r923000_refuses_a_practice_sandbox_tool_sent_by_a_client() {
+        let h = harness(Options::default()).await;
+        h.p1.receive_json(json!({
+            "type": "action",
+            "action": {
+                "type": "sandbox",
+                "op": { "kind": "setHero", "player": "p1", "health": 99 },
+                "nonce": "cheat",
+            },
+        }));
+        h.idle().await;
+
+        let last = errors(&h.p1).last().cloned().expect("an error frame");
+        assert_eq!(last["code"], json!("malformed"));
+        assert_eq!(
+            last["message"],
+            json!("\"sandbox\" is a practice tool, never an action of a match (R923000)")
+        );
+        assert_eq!(h.rows().await, Vec::<Value>::new());
+        assert_eq!(h.actor.snapshot().result, None);
+        // And no game the server makes or folds is a sandbox, which the engine would refuse it in too.
+        let decks = (vec![], vec![]);
+        assert_eq!(
+            jackioh_server::actor::engine::create_game_args("s", &decks, None, None, None).sandbox,
+            None
+        );
+        assert_eq!(
+            jackioh_server::actor::engine::fold_args("s", &decks, vec![], None, None, None).sandbox,
+            None
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn answers_a_malformed_frame_and_stays_alive() {
         let h = harness(Options::default()).await;
 
@@ -1580,7 +1608,8 @@ mod r384_activate_over_the_socket {
     use super::*;
     use jackioh_engine::ActionType;
     use jackioh_server::actor::protocol::{
-        ActionMessage, CLIENT_ACTION_TYPES, ClientMessage, SERVER_ONLY_ACTION_TYPES, parse_client_message,
+        ActionMessage, CLIENT_ACTION_TYPES, ClientMessage, PRACTICE_ONLY_ACTION_TYPES,
+        SERVER_ONLY_ACTION_TYPES, parse_client_message,
     };
 
     /// p1's turns the walk below waits through at most for the rolled power's price: Heroic Power's
@@ -1588,12 +1617,17 @@ mod r384_activate_over_the_socket {
     const TURNS_TO_AFFORD_ANY_POWER: usize = 3;
 
     #[test]
-    fn r384_every_action_type_but_the_server_only_ones_is_one_a_client_may_send() {
+    fn r384_r923000_every_action_type_but_the_server_only_and_practice_only_ones_is_one_a_client_may_send() {
         for kind in ActionType::ALL {
-            assert_ne!(
+            let lists = [
                 CLIENT_ACTION_TYPES.contains(kind),
                 SERVER_ONLY_ACTION_TYPES.contains(kind),
-                "{kind} must be either a client's action or the server's own (§10.2, R79)"
+                PRACTICE_ONLY_ACTION_TYPES.contains(kind),
+            ];
+            assert_eq!(
+                lists.iter().filter(|listed| **listed).count(),
+                1,
+                "{kind} must be a client's action, the server's own (§10.2, R79) or practice's (R923000), and one only"
             );
         }
     }

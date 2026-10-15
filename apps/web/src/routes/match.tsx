@@ -77,6 +77,8 @@ export const matchTestid = {
   connecting: "match-connecting",
   /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
+  /** The button that retries at once while the connection line says Reconnecting…. */
+  reconnect: "match-reconnect",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
   /** R768000: in a finished match's result panel, its replay from step 0. */
@@ -103,12 +105,22 @@ export function connectionWords(state: ConnectionState): string {
   }
 }
 
-/** The connection line: the words for a player, the raw state for tests. */
-function ConnectionLine({ state }: { state: ConnectionState }): ReactElement {
+/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
+function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReconnect: () => void }): ReactElement {
   return (
-    <span data-testid={matchTestid.status} data-connection={state}>
-      {connectionWords(state)}
-    </span>
+    <>
+      <span data-testid={matchTestid.status} data-connection={state}>
+        {connectionWords(state)}
+      </span>
+      {state === "reconnecting" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={matchTestid.reconnect} onClick={onReconnect}>
+            {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -343,7 +355,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
         <p className="auth-hint">
-          <ConnectionLine state={match.connection} />
+          <ConnectionLine state={match.connection} onReconnect={match.connect} />
           {DEV_ONLY ? (
             <>
               {" "}
@@ -443,7 +455,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       }
       matchStatus={
         <>
-          {t("Online match")} · <ConnectionLine state={match.connection} />
+          {t("Online match")} · <ConnectionLine state={match.connection} onReconnect={match.connect} />
           {DEV_ONLY ? (
             <>
               {" "}· {t("match")} <code>{matchId}</code> · {t("seat")} <code>{view.viewer}</code>

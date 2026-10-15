@@ -13,7 +13,7 @@ use jackioh_engine::subsystems::call_to_chaos::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, set_library, slot};
 
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
@@ -198,10 +198,6 @@ fn summoned_defs(state: &GameState, events: &[GameEvent]) -> Vec<CardDef> {
             def_of(Some(state), &def_id).clone()
         })
         .collect()
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
 }
 
 /// One field of every event of a type, as JSON.

@@ -6,9 +6,15 @@
 //! Nothing about it is special any more: Transform, Vanilla and Fuse-onto all reach it like any unit,
 //! and making it Radiant on the field swaps its stat layer in place (§5.2), keeping its damage.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-008";
 
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    let radiant = Script::default();
+    CardScripts { base, radiant }
+}
 
 // #8 Mr. Vanilla — SPEC §8.1 row 8, BUILD M4-T4 must-pass: "A 4/4 with no text: Sheepish turns it
 // into a Sheep like any unit; radiant a 12/12 with no text, and made Radiant on the field it takes the

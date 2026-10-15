@@ -40,6 +40,8 @@ use std::time::Duration;
 use indexmap::{IndexMap, IndexSet};
 use serde_json::{Value, json};
 
+use jackioh_engine::LeanPick;
+
 use crate::api::collection::caller_profile;
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
@@ -51,7 +53,8 @@ use crate::app::{App, now_ms};
 use crate::bots::fallback::{choose_bot, fallback_due, hour_of};
 use crate::config::{
     BOT_RECENT_OPPONENTS, MATCHMAKER_SWEEP_INTERVAL_SECONDS, QUEUE_READOUT_WINDOW_SECONDS,
-    QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, rating_window,
+    QUEUE_TICKET_STALE_MS, QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS,
+    rating_window,
 };
 use crate::db::store::{
     BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
@@ -131,6 +134,67 @@ pub fn e2e_seed_count() -> usize {
 
 fn forget_seed(ticket_id: &str) {
     seeds().shift_remove(ticket_id);
+}
+
+// R897000 — a queued ticket's presence
+
+/// SPEC §11 R897000: when each profile with an open ticket was last heard from, in epoch ms.
+///
+/// Every signed-in request refreshes its caller (`api::http`'s router), which a queued client
+/// already sends every `SERIES_POLL_SECONDS` from wherever it is, so a silent profile reads as
+/// gone and its ticket expires before it can seat anyone. In memory, beside `E2E_SEED_BY_TICKET`:
+/// a restart loses it, and live clients re-touch within one poll, so `enqueued_at` covers what was
+/// never heard. One per `App`, not module state: profile ids repeat across parallel tests.
+pub struct QueuePresence {
+    born: i64,
+    heard: Mutex<IndexMap<String, i64>>,
+}
+
+impl QueuePresence {
+    /// This server's start, on its clock: nothing expires before it has listened one window.
+    pub fn new() -> QueuePresence {
+        QueuePresence {
+            born: now_ms(),
+            heard: Mutex::new(IndexMap::new()),
+        }
+    }
+
+    /// The caller was heard from now: its ticket stays pairable.
+    pub fn touch(&self, profile_id: &str, now: i64) {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .insert(profile_id.to_string(), now);
+    }
+
+    /// The ticket is gone (paired, cancelled, left or expired): its entry goes with it.
+    pub fn forget(&self, profile_id: &str) {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .shift_remove(profile_id);
+    }
+
+    /// Whether the server has listened long enough to judge any ticket: one full
+    /// `QUEUE_TICKET_STALE_MS` since it started, so a restart cancels nothing on its first sweep.
+    pub fn expiry_due(&self, now: i64) -> bool {
+        now - self.born >= QUEUE_TICKET_STALE_MS
+    }
+
+    /// When this profile was last heard from, or never.
+    pub fn last_heard(&self, profile_id: &str) -> Option<i64> {
+        self.heard
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .get(profile_id)
+            .copied()
+    }
+}
+
+impl Default for QueuePresence {
+    fn default() -> QueuePresence {
+        QueuePresence::new()
+    }
 }
 
 /// The older of two tickets first: R166's "oldest first", ties on ticket id.
@@ -218,7 +282,7 @@ async fn enqueue_ticket(
     // current catalog; All Random needs no deck at all (R258).
     let frozen = freeze_choice(app, &profile.id, choice).await?;
 
-    let (mode, deck, portrait, trio, lean_newest) = match frozen {
+    let (mode, deck, portrait, trio, lean) = match frozen {
         // §9.4, §9.5: frozen. This copy lands in the ticket and later the match or series; the saved
         // deck is never read again. R642: the deck's portrait freezes with it.
         FrozenChoice::Bo1 { deck } => (
@@ -226,11 +290,11 @@ async fn enqueue_ticket(
             deck.cards.clone(),
             deck.portrait.clone(),
             None,
-            false,
+            None,
         ),
-        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), false),
-        // R1372: the player's lean waits in the ticket for the deal, as a deck would.
-        FrozenChoice::Random { lean_newest } => (QueueMode::Random, Vec::new(), None, None, lean_newest),
+        FrozenChoice::Bo3 { trio } => (QueueMode::Bo3, Vec::new(), None, Some(trio), None),
+        // R1372, R924000: the player's lean waits in the ticket for the deal, as a deck would.
+        FrozenChoice::Random { lean } => (QueueMode::Random, Vec::new(), None, None, lean),
     };
     let ticket = Ticket {
         id: new_uuid(),
@@ -240,7 +304,7 @@ async fn enqueue_ticket(
         deck,
         portrait,
         trio,
-        lean_newest,
+        lean,
         catalog_version: app.catalog.version.clone(),
         enqueued_at: now_ms(),
         status: TicketStatus::Open,
@@ -409,11 +473,11 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
 }
 
 /// The All Random deck R258 deals one seat from the match seed (`{seed}:p1-deck`, `{seed}:p2-deck`),
-/// leaning on the newest set when that seat's ticket asked (R1372).
-fn dealt_deck(seed: &str, seat: &str, lean_newest: bool) -> Vec<String> {
+/// leaning on the set that seat's ticket picked, if it picked one (R1372, R924000).
+fn dealt_deck(seed: &str, seat: &str, lean: Option<LeanPick>) -> Vec<String> {
     crate::actor::engine::deal_random_deck(
         &format!("{seed}:{seat}-deck"),
-        crate::actor::engine::lean_of(lean_newest),
+        crate::actor::engine::lean_of(lean),
     )
 }
 
@@ -426,8 +490,8 @@ fn dealt_portrait(seed: &str, seat: &str) -> Option<String> {
 /// process has already claimed, which is what makes it safe to write.
 ///
 /// Best of 1 plays the two frozen decks. All Random (R258) deals both from the match seed and seat,
-/// each leaning on the newest set exactly when its own ticket asked (R1372: a leaning ticket pairs
-/// with one that does not), and the dealt decks go into the match row so `(seed, decks, log)` replays
+/// each leaning on the set its own ticket picked, if any (R1372, R924000: a leaning ticket pairs with
+/// one that does not, or one that leans on another set), and the dealt decks go into the match row so `(seed, decks, log)` replays
 /// it. Portraits ride the same way (R642): the ticket's own for Best of 1, a uniform pick dealt from
 /// the seed for All Random.
 async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &str) -> Result<(), ApiError> {
@@ -442,7 +506,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: a.profile_id.clone(),
             player: jackioh_engine::PlayerId::P1,
             deck: if random {
-                dealt_deck(&seed, "p1", a.lean_newest)
+                dealt_deck(&seed, "p1", a.lean)
             } else {
                 a.deck.clone()
             },
@@ -456,7 +520,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
             profile_id: b.profile_id.clone(),
             player: jackioh_engine::PlayerId::P2,
             deck: if random {
-                dealt_deck(&seed, "p2", b.lean_newest)
+                dealt_deck(&seed, "p2", b.lean)
             } else {
                 b.deck.clone()
             },
@@ -583,6 +647,68 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         });
     }
 
+    // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is cancelled
+    // before pairing, so an absent player is never seated, never charged the disconnect grace and
+    // never takes a phantom ranked loss. A profile never heard from gets `enqueued_at`'s grace of
+    // one window (an old client that never touches), and a restarted server judges nothing until it
+    // has listened one window (`expiry_due`). `tickets_cancel` only closes an open ticket, so a
+    // claim that landed between the list and the cancel stands.
+    if app.queue_presence.expiry_due(now) {
+        let mut live = Vec::with_capacity(open.len());
+        let mut stale = Vec::new();
+        for ticket in open {
+            let heard = app
+                .queue_presence
+                .last_heard(&ticket.profile_id)
+                .unwrap_or(ticket.enqueued_at);
+            if now - heard > QUEUE_TICKET_STALE_MS {
+                stale.push(ticket);
+            } else {
+                live.push(ticket);
+            }
+        }
+        open = live;
+        if !stale.is_empty() {
+            // The listing read commits before the cancels write: each cancel is its own transaction.
+            tx.commit()
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            for ticket in &stale {
+                let mut cancel = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                cancel
+                    .tickets_cancel(&ticket.id, now)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                cancel
+                    .commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                forget_seed(&ticket.id);
+                app.queue_presence.forget(&ticket.profile_id);
+                tracing::info!(
+                    event = "queue.expired",
+                    profileId = %ticket.profile_id,
+                    ticketId = %ticket.id,
+                );
+            }
+            if open.is_empty() {
+                return Ok(SweepReport {
+                    made: 0,
+                    failed: Vec::new(),
+                });
+            }
+            tx = app
+                .db
+                .begin(None)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+        }
+    }
+
     // §9.5's "not in a match" holds at pairing too: a ticket left open while its owner joined a room
     // match must not become a second match, nor (R264) while they are in a series. One read each for
     // the sweep; `taken` covers the pairs this sweep makes.
@@ -692,6 +818,10 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
 
             taken.insert(a.id.clone());
             taken.insert(b.id.clone());
+            // SPEC §11 R897000: both tickets left `open`, paired or claimed; their presence goes
+            // with them, win or lose of the start that follows.
+            app.queue_presence.forget(&a.profile_id);
+            app.queue_presence.forget(&b.profile_id);
             match start_paired_match(app, a, b, &match_id).await {
                 Ok(()) => {
                     report.made += 1;
@@ -782,7 +912,10 @@ async fn pair_with_bots(
         let match_id = new_uuid();
         if ticket.mode == QueueMode::Bo3 {
             match start_bot_series(app, ticket, bot, &match_id, now).await {
-                Ok(true) => {}
+                // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+                Ok(true) => {
+                    app.queue_presence.forget(&ticket.profile_id);
+                }
                 Ok(false) => continue,
                 // One bot pairing's failed start ends that pairing, not the fallback: the ticket
                 // is marked taken so no later iteration retries it, and the loop moves on.
@@ -837,6 +970,8 @@ async fn pair_with_bots(
         }
         taken.insert(ticket.id.clone());
         busy.insert(bot.profile_id.clone());
+        // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+        app.queue_presence.forget(&ticket.profile_id);
         // One bot pairing's failed start ends that pairing, not the fallback: `start_bot_match`
         // already freed both sides, and the ticket and bot are marked taken above.
         if let Err(error) = start_bot_match(app, ticket, bot, &match_id).await {
@@ -943,7 +1078,7 @@ async fn start_bot_match(
         profile_id: ticket.profile_id.clone(),
         player: human_player,
         deck: if random {
-            dealt_deck(&seed, human_player.as_str(), ticket.lean_newest)
+            dealt_deck(&seed, human_player.as_str(), ticket.lean)
         } else {
             ticket.deck.clone()
         },
@@ -961,7 +1096,7 @@ async fn start_bot_match(
             MatchSeat {
                 profile_id: bot.profile_id.clone(),
                 player: bot_player,
-                deck: dealt_deck(&seed, bot_player.as_str(), false),
+                deck: dealt_deck(&seed, bot_player.as_str(), None),
                 portrait: dealt_portrait(&seed, bot_player.as_str()),
             }
         } else {
@@ -1179,6 +1314,8 @@ async fn dequeue_route(app: &App, req: Req) -> ApiResult {
         .map_err(|error| ApiError::internal(error.to_string()))?;
     // R143: a cancelled ticket will never be paired, so its seed is dropped with it.
     forget_seed(&ticket.id);
+    // SPEC §11 R897000: the ticket left `open`; its presence goes with it.
+    app.queue_presence.forget(&profile.id);
     tracing::info!(event = "queue.cancelled", profileId = %profile.id, ticketId = %ticket.id);
     Ok(json(200, json!({ "cancelled": true, "ticketId": ticket.id })))
 }

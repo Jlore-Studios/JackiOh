@@ -15,7 +15,8 @@
 //! tests that read them (R1441), `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442),
 //! `MIN_ACCOUNT_AGE_YEARS`, `BIRTH_YEAR_EARLIEST` and `TERMS_VERSION` for the age screen, the terms
 //! box and the legal pages (R757000, R757001), and `REPLAY_LIST_PAGE` and
-//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768).
+//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768), and
+//! `CUSTOM_CARDS_PER_ACCOUNT` for the card creator (R915008).
 
 use serde_json::{Value, json};
 
@@ -87,6 +88,10 @@ fn constants() -> Vec<(&'static str, Value)> {
             "CODE_STATUS_RECHECK_FLOOR_SECONDS",
             json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS),
         ),
+        ("CUSTOM_CARDS_PER_ACCOUNT", json!(c::CUSTOM_CARDS_PER_ACCOUNT)),
+        // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
+        // ships; QUEUE_TICKET_STALE_MS stays server-only.
+        ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
         (
             "DECK_AUTOSAVE_RETRY_SECONDS",
@@ -232,16 +237,19 @@ fn every_name_is_listed_once() {
     assert_eq!(names.len(), listed, "a constant is listed twice");
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 64 + S7's twelve.
     assert_eq!(
-        // 64 before #936, SPEC S7's twelve, the social poll and Duos co-op's eight.
+        // 64 before #936 and v0.5.0, main's two (CUSTOM_CARDS_PER_ACCOUNT, QUEUE_ENDED_AFTER_READS),
+        // SPEC S7's twelve, the social poll and Duos co-op's eight.
         listed,
-        85,
+        87,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
-         (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
+         (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), and \
+         CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), SPEC S7's twelve (#936) with the social poll \
-         (SOCIAL_POLL_MS), and Duos co-op's eight clocks and ping limits (#946)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), QUEUE_ENDED_AFTER_READS (R897000), SPEC S7's \
+         twelve (#936) with the social poll (SOCIAL_POLL_MS), and Duos co-op's eight clocks and ping \
+         limits (#946)"
     );
 }
 

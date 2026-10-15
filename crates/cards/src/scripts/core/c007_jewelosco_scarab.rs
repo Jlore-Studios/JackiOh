@@ -11,7 +11,59 @@
 //! The Cry opens a `discover` prompt (§10.6, R81); the answer re-enters `resume.chosen` with the
 //! pick in `ctx.targets`. An empty pool opens no prompt: the effect fizzles (§8 Conventions).
 
+use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-007";
+
+/// The cost bracket each face Discovers from (§8.1).
+const BASE_COST: i32 = 2;
+const RADIANT_COST: i32 = 3;
+// "It costs (1) less": a permanent `costMod` on the card the radiant face found (§8.1, R65), by the
+// declared number `discount` (R386).
+
+fn discover(cost: i32) -> Vec<Effect> {
+    vec![discover_from_catalog(json_as(json!({
+        "step": "chosen",
+        "query": { "cost": cost, "notTags": ["Token"] },
+        "count": 3
+    })))]
+}
+
+/// §10.6: a Discover's answer is the def id it picked, or nothing when the prompt never opened.
+fn picked(ctx: &mut EffectContext<'_>) -> Option<String> {
+    chosen_options(ctx).into_iter().next()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| discover(BASE_COST))),
+        resume: IndexMap::from([(
+            "chosen",
+            hook(|ctx| match picked(ctx) {
+                None => vec![],
+                Some(def_id) => vec![add_to_hand(json_as(json!({ "defId": def_id })))],
+            }),
+        )]),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|_ctx| discover(RADIANT_COST))),
+        resume: IndexMap::from([(
+            "chosen",
+            hook(|ctx| {
+                let Some(def_id) = picked(ctx) else {
+                    return vec![];
+                };
+                // A permanent `costMod`, not a `costOverride` (§8.1): R65 starts from the override in
+                // place of the printed cost, which would erase any other discount the card carries.
+                vec![add_to_hand(json_as(json!({ "defId": def_id, "costMod": -param(&*ctx, "discount") })))]
+            }),
+        )]),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #7 Jewelosco Scarab — SPEC §8.1 row 7, BUILD M4-T4 must-pass: "Discover offers 3 distinct 2-cost
 // non-token cards, never #7; radiant 3-cost pick costs 2".

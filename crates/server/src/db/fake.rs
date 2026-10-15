@@ -62,6 +62,9 @@
 //!  - `trios_upsert` refuses a slot naming a deck that is not this profile's (`unknown_deck`, the
 //!    composite foreign key) and one deck in two slots (the check constraint);
 //!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
+//!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
+//!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
+//!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
 //!  - `series_update` is compare-and-set on `version`;
 //!  - `tutorial_merge` only ever grows the lessons and keeps the newest choice (0011, R320);
 //!  - `player_settings_merge` replaces a group only with a strictly later one and caps the result's
@@ -91,7 +94,7 @@ use tokio::sync::{Mutex, MutexGuard};
 use jackioh_engine::wire::stats::{
     CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, PilotFilter, record_matches,
 };
-use jackioh_engine::wire::{PLAYER_IDS, PlayerId};
+use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::PersonaName;
@@ -102,16 +105,17 @@ use crate::config::{
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, ConsentRow, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery,
-    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase,
-    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
+    EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
+    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
-    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource,
+    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
+    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -206,6 +210,8 @@ pub struct FakeTables {
     // DeckTables
     pub decks: Vec<SavedDeck>,
     pub trios: Vec<SavedTrio>,
+    // CustomCardTables: the table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
+    pub custom_cards: Vec<SavedCustomCard>,
     pub series: Vec<SeriesRow>,
     pub matches: Vec<MatchRow>,
     pub match_actions: Vec<MatchActionRow>,
@@ -241,14 +247,14 @@ pub struct FakeTables {
     // acceptance per profile and terms version.
     pub age_checks: Vec<AgeCheckTableRow>,
     pub terms_acceptances: Vec<TermsAcceptanceTableRow>,
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0036's tables.
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- migration 0038's tables.
     pub social: SocialTables,
     // ---- Social: watching and shared replays (#939, #940) ----
-    // Migration 0036's `replay_shares` (friendships, blocks and the spectators setting are `social`'s).
+    // Migration 0038's `replay_shares` (friendships, blocks and the spectators setting are `social`'s).
     pub replay_shares: Vec<ReplayShare>,
     // ---- end Social: watching and shared replays ----
     // ---- Duos co-op (#946) ----
-    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0037). Their store methods
+    /// Fullsend SPEC S6: the co-op rooms, matches and their log (migration 0039). Their store methods
     /// are `crate::duos::store`'s.
     pub duos: crate::duos::store::DuosTables,
     // ---- end Duos co-op (#946) ----
@@ -1935,6 +1941,114 @@ pub fn trios_remove(f: &mut FakeTx<'_>, profile_id: &str, trio_id: &str) -> Resu
     Ok(true)
 }
 
+// ---------------------------------------------------------------------------
+// Custom cards on the account (R915008, migration 0037)
+// ---------------------------------------------------------------------------
+
+/// A profile's custom cards, oldest first: `created_at`, then `id`.
+pub fn custom_cards_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedCustomCard>, StoreError> {
+    call(f, "customCards.list")?;
+    let mut rows: Vec<SavedCustomCard> = f
+        .tables()
+        .custom_cards
+        .iter()
+        .filter(|row| row.profile_id == profile_id)
+        .cloned()
+        .collect();
+    rows.sort_by(|a, b| by_creation(a.created_at, &a.card.id, b.created_at, &b.card.id));
+    Ok(rows)
+}
+
+/// The profile's own card with this id, or none.
+pub fn custom_cards_get(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    card_id: &str,
+) -> Result<Option<SavedCustomCard>, StoreError> {
+    call(f, "customCards.get")?;
+    Ok(f.tables()
+        .custom_cards
+        .iter()
+        .find(|row| row.card.id == card_id && row.profile_id == profile_id)
+        .cloned())
+}
+
+/// A new card at version 1, as `app.create_custom_card` (0037) writes it: the cap first, then the
+/// id, which is unique (`custom_cards_pkey`).
+pub fn custom_cards_create(
+    f: &mut FakeTx<'_>,
+    card: &CustomCardWrite,
+    max_cards: i64,
+) -> Result<CustomCardCreateOutcome, StoreError> {
+    let max_cards = usize::try_from(max_cards).unwrap_or(0);
+    call(f, "customCards.create")?;
+    let rows = &mut f.tables().custom_cards;
+    let held = rows
+        .iter()
+        .filter(|row| row.profile_id == card.profile_id)
+        .count();
+    if held >= max_cards {
+        return Ok(CustomCardCreateOutcome::Limit);
+    }
+    if rows.iter().any(|row| row.card.id == card.id) {
+        return Err(StoreError::from(format!(
+            "custom_cards.id is unique: {}",
+            card.id
+        )));
+    }
+    rows.push(SavedCustomCard {
+        profile_id: card.profile_id.clone(),
+        card: CustomCard {
+            id: card.id.clone(),
+            version: 1,
+            frame: card.frame.clone(),
+            source: card.source.clone(),
+            builder: card.builder.clone(),
+        },
+        created_at: card.at,
+        updated_at: card.at,
+    });
+    Ok(CustomCardCreateOutcome::Created)
+}
+
+/// Replaces the profile's own card whole when its version is still `replaces`, as
+/// `app.update_custom_card` (0037) does: the version counted, `created_at` kept.
+pub fn custom_cards_update(
+    f: &mut FakeTx<'_>,
+    card: &CustomCardWrite,
+    replaces: i32,
+) -> Result<CustomCardUpdateOutcome, StoreError> {
+    call(f, "customCards.update")?;
+    let Some(row) = f
+        .tables()
+        .custom_cards
+        .iter_mut()
+        .find(|row| row.card.id == card.id && row.profile_id == card.profile_id)
+    else {
+        return Ok(CustomCardUpdateOutcome::Missing);
+    };
+    if row.card.version != replaces {
+        return Ok(CustomCardUpdateOutcome::Stale);
+    }
+    // Postgres's `int` raises past its range, as this does.
+    row.card.version = replaces
+        .checked_add(1)
+        .ok_or_else(|| StoreError::from("custom_cards.version is out of range"))?;
+    row.card.frame = card.frame.clone();
+    row.card.source = card.source.clone();
+    row.card.builder = card.builder.clone();
+    row.updated_at = card.at;
+    Ok(CustomCardUpdateOutcome::Updated)
+}
+
+/// Deletes the profile's own card. False when it has none with this id.
+pub fn custom_cards_remove(f: &mut FakeTx<'_>, profile_id: &str, card_id: &str) -> Result<bool, StoreError> {
+    call(f, "customCards.remove")?;
+    Ok(keep_only(&mut f.tables().custom_cards, |row| {
+        !(row.card.id == card_id && row.profile_id == profile_id)
+    }) == 1)
+}
+
 pub fn series_create(f: &mut FakeTx<'_>, row: &SeriesRow) -> Result<(), StoreError> {
     call(f, "series.create")?;
     if f.tables().series.iter().any(|existing| existing.id == row.id) {
@@ -2873,6 +2987,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.grants, |row| row.profile_id != profile_id);
     keep_only(&mut tables.decks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.trios, |row| row.profile_id != profile_id);
+    // 0037, R915008: a profile's custom cards cascade with it.
+    keep_only(&mut tables.custom_cards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tutorial, |row| row.profile_id != profile_id);
     keep_only(&mut tables.player_settings, |row| row.profile_id != profile_id);
     keep_only(&mut tables.last_boards, |row| row.profile_id != profile_id);
@@ -2880,7 +2996,7 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // 0034: the age check and the terms acceptances cascade with the profile.
     keep_only(&mut tables.age_checks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.terms_acceptances, |row| row.profile_id != profile_id);
-    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 0036 cascades too.
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ---- 0038 cascades too.
     remove_social_rows(tables, profile_id);
     keep_only(&mut tables.tickets, |row| row.profile_id != profile_id);
     keep_only(&mut tables.rooms, |row| {
@@ -2896,9 +3012,9 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
             }
         }
     }
-    // Social (#939, #940): migration 0036's rows cascade with the profile.
+    // Social (#939, #940): migration 0038's rows cascade with the profile.
     remove_watch_rows(tables, profile_id);
-    // Duos co-op (#946): 0037's rooms, matches and their logs cascade with either person.
+    // Duos co-op (#946): 0039's rooms, matches and their logs cascade with either person.
     crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
     true
 }
@@ -3567,7 +3683,7 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
 }
 
 // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-// SPEC S7 (migration 0036), in memory. Strict where Postgres is strict: one request per direction
+// SPEC S7 (migration 0038), in memory. Strict where Postgres is strict: one request per direction
 // and pair and never to oneself, one friendship per pair, one block per pair and direction, one open
 // challenge per challenger and friend (`challenges_open_pair_key`), a message of 1 to
 // `CHAT_MAX_CHARS` characters, one report per message and reporter; and every row goes with either
@@ -3578,7 +3694,7 @@ use crate::db::store::{
     BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, FriendshipRow,
 };
 
-/// The tables migration 0036 adds, and `profiles.allow_spectators`, which `Profile` does not carry:
+/// The tables migration 0038 adds, and `profiles.allow_spectators`, which `Profile` does not carry:
 /// held as the profiles that turned it off (the column defaults to on).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SocialTables {
@@ -3607,7 +3723,7 @@ fn joins(from: &str, to: &str, x: &str, y: &str) -> bool {
     (from == x && to == y) || (from == y && to == x)
 }
 
-/// Every social row naming the profile, as 0036's `on delete cascade` takes them; a deleted
+/// Every social row naming the profile, as 0038's `on delete cascade` takes them; a deleted
 /// message's reports go with it.
 pub fn remove_social_rows(tables: &mut FakeTables, profile_id: &str) {
     let social = &mut tables.social;
@@ -4250,7 +4366,7 @@ pub fn chat_purge(f: &mut FakeTx<'_>, before: i64) -> Result<i64, StoreError> {
 // ---- end Social ----
 // ---- Social: watching and shared replays (#939, #940) ----
 // ---------------------------------------------------------------------------
-// Watching a friend (B50) and sharing a replay with one (B52), over migration 0036's tables: strict
+// Watching a friend (B50) and sharing a replay with one (B52), over migration 0038's tables: strict
 // where Postgres is (a share names two profiles that exist, one row per match, sharer and friend).
 // ---------------------------------------------------------------------------
 
@@ -4282,7 +4398,7 @@ fn share_readable(tables: &FakeTables, share: &ReplayShare) -> Option<Option<i64
     .then_some(row.finished_at)
 }
 
-/// Migration 0036's cascade for the shares: a deleted profile's, either side (the friendships,
+/// Migration 0038's cascade for the shares: a deleted profile's, either side (the friendships,
 /// blocks and spectators setting go in `remove_social_rows`).
 fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
     keep_only(&mut tables.replay_shares, |row| {

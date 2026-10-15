@@ -1,9 +1,9 @@
 //! Writes `apps/web/src/wire/engineConfig.ts`, the engine constants the web client imports as
 //! `@jackioh/engine/config` (docs/v0.3.0/SURFACE.md §5.1): the values and two types that a file under
 //! `apps/web/src` imports from it today (SURFACE's twelve, plus `LIBRARY_CAP`, which a web test
-//! imports, R768's two replay constants, R1382's `TRIBAL_TAGS` and Duos co-op's six, #936 S1),
-//! generated from `crates/engine/src/config.rs` so the client never restates a rules number
-//! (CLAUDE.md rule 9).
+//! imports, R768's two replay constants, R1382's `TRIBAL_TAGS`, the custom cards' and the practice
+//! sandbox's limits, R915001 and R923002, and Duos co-op's six, #936 S1), generated from
+//! `crates/engine/src/config.rs` so the client never restates a rules number (CLAUDE.md rule 9).
 //!
 //! `cargo test -p jackioh-engine --test export_config` writes it; the file is committed, and CI runs
 //! this test and fails on a diff, as it does for the ts-rs types under `wire/generated/` (V20).
@@ -21,10 +21,15 @@
 
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, COIN_DEF_ID, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES,
-    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN,
-    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD,
-    GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP, MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET,
-    REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS,
+    CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_VERB_PRICES, CUSTOM_ATTACK_MAX,
+    CUSTOM_BUILDER_MAX_BYTES, CUSTOM_COST_MAX, CUSTOM_HEALTH_MAX, CUSTOM_ID_PREFIX, CUSTOM_KEYWORDS,
+    CUSTOM_KEYWORDS_MAX, CUSTOM_NAME_MAX_LENGTH, CUSTOM_PARAM_KEY_MAX_LENGTH, CUSTOM_PARAM_MAX,
+    CUSTOM_PARAMS_MAX, CUSTOM_RADIANT_STAT_MAX, CUSTOM_SOURCE_MAX_BYTES, CUSTOM_TEXT_MAX_LENGTH, DECK_SIZE,
+    DIFFICULTIES, DRAWS_PER_TURN, DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_CAP, DUOS_PASS_COST,
+    DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, LIBRARY_CAP,
+    MAX_COPIES, MAX_MANA, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS,
+    SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, TRIBAL_TAGS,
+    TURN_CAP_PLAYER_TURNS,
 };
 use serde::Serialize;
 
@@ -45,6 +50,7 @@ import type { CraftHatPrice } from \"./generated/CraftHatPrice.ts\";
 import type { CraftKeywordPrice } from \"./generated/CraftKeywordPrice.ts\";
 import type { CraftVerbPrice } from \"./generated/CraftVerbPrice.ts\";
 import type { DuosTeamRules } from \"./generated/DuosTeamRules.ts\";
+import type { KeywordKind } from \"./generated/KeywordKind.ts\";
 import type { Tag } from \"./generated/Tag.ts\";
 
 export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice, DuosTeamRules };
@@ -101,6 +107,21 @@ fn engine_config_ts() -> String {
             Some("readonly CraftVerbPrice[]"),
             CRAFT_VERB_PRICES,
         ),
+        // R915001: a custom card's frame limits, which the creator shows (the validator decides).
+        constant("CUSTOM_ATTACK_MAX", None, &CUSTOM_ATTACK_MAX),
+        constant("CUSTOM_BUILDER_MAX_BYTES", None, &CUSTOM_BUILDER_MAX_BYTES),
+        constant("CUSTOM_COST_MAX", None, &CUSTOM_COST_MAX),
+        constant("CUSTOM_HEALTH_MAX", None, &CUSTOM_HEALTH_MAX),
+        constant("CUSTOM_ID_PREFIX", None, CUSTOM_ID_PREFIX),
+        constant("CUSTOM_KEYWORDS", Some("readonly KeywordKind[]"), CUSTOM_KEYWORDS),
+        constant("CUSTOM_KEYWORDS_MAX", None, &CUSTOM_KEYWORDS_MAX),
+        constant("CUSTOM_NAME_MAX_LENGTH", None, &CUSTOM_NAME_MAX_LENGTH),
+        constant("CUSTOM_PARAMS_MAX", None, &CUSTOM_PARAMS_MAX),
+        constant("CUSTOM_PARAM_KEY_MAX_LENGTH", None, &CUSTOM_PARAM_KEY_MAX_LENGTH),
+        constant("CUSTOM_PARAM_MAX", None, &CUSTOM_PARAM_MAX),
+        constant("CUSTOM_RADIANT_STAT_MAX", None, &CUSTOM_RADIANT_STAT_MAX),
+        constant("CUSTOM_SOURCE_MAX_BYTES", None, &CUSTOM_SOURCE_MAX_BYTES),
+        constant("CUSTOM_TEXT_MAX_LENGTH", None, &CUSTOM_TEXT_MAX_LENGTH),
         constant("DECK_SIZE", None, &DECK_SIZE),
         constant("DIFFICULTIES", Some("readonly Difficulty[]"), DIFFICULTIES),
         constant("DRAWS_PER_TURN", None, &DRAWS_PER_TURN),
@@ -119,6 +140,11 @@ fn engine_config_ts() -> String {
         constant("RANDOM_ATTACK_TARGET", None, RANDOM_ATTACK_TARGET),
         constant("REPLAY_CHECKPOINT_EVERY", None, &REPLAY_CHECKPOINT_EVERY),
         constant("REPLAY_PAGE_STEPS", None, &REPLAY_PAGE_STEPS),
+        // R923002: the practice sandbox panel's bounds.
+        constant("SANDBOX_ARMOR_MAX", None, &SANDBOX_ARMOR_MAX),
+        constant("SANDBOX_DRAW_MAX", None, &SANDBOX_DRAW_MAX),
+        constant("SANDBOX_HERO_HEALTH_MAX", None, &SANDBOX_HERO_HEALTH_MAX),
+        constant("SANDBOX_MANA_MAX", None, &SANDBOX_MANA_MAX),
         constant("TRIBAL_TAGS", Some("readonly Tag[]"), TRIBAL_TAGS),
         constant("TURN_CAP_PLAYER_TURNS", None, &TURN_CAP_PLAYER_TURNS),
     ];
@@ -142,8 +168,8 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    // Thirty constants, each on its own line, the way the client and the diff check read them.
-    assert_eq!(text.matches("\nexport const ").count(), 30, "{text}");
+    // Forty-eight constants, each on its own line, the way the client and the diff check read them.
+    assert_eq!(text.matches("\nexport const ").count(), 48, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

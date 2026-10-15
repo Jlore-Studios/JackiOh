@@ -8,7 +8,22 @@
 //! Engine: `attack_joiners` (ME-ATTACKSUMMON, R1203); the count is the catalog `joiners` param (2
 //! and 2). Keywords are catalog data; there is nothing to run.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-091-1";
+
+pub fn script() -> CardScripts {
+    // Both faces summon their joiners; the Radiant face's First Strike is catalog data beside it.
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            attack_joiners: Some(true),
+            ..Default::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #91.1 Windfurious Prime — SPEC §8.8 row 91.1, BUILD M10 row M 91-1: "its controller's
 // hand-or-deck pool is Uniform; the joiners attack first (in lane order); a declared attack whose

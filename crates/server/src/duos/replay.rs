@@ -6,7 +6,7 @@
 //!
 //! Only the two people who played it may read it; anyone else, and an id no match has, get the same
 //! 404, so a match id's existence never leaks (R768's rule). As the 1v1 route answers: a match still
-//! live is 409 (§12.9: a finished co-op game); one whose log the retention purge has taken
+//! live is 409 (§13.9: a finished co-op game); one whose log the retention purge has taken
 //! (`MATCH_ACTION_RETENTION_DAYS` after it ended) is 410 `gone`; one this build cannot show is 422
 //! `replay_unavailable` with the reason in `details.reason`: `earlier_patch` for a catalog version
 //! this build neither is nor carries, `rules_changed` for a log that no longer folds to its end or

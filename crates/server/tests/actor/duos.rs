@@ -1,7 +1,7 @@
 //! B35–B42 (#936, `.fullsend/SPEC.md` S6) through `GET /ws/duos`: the hello view, applied and
 //! illegal actions, the AI seats, the disconnect takeover, the round clock, the mulligan clock, pings
 //! (relayed to the teammate only, shape-checked, rate-limited, never in a view or the replay), the
-//! end of a game and the per-match replay, which a finished game has (§12.9). Where a test reads
+//! end of a game and the per-match replay, which a finished game has (§13.9). Where a test reads
 //! what was logged while the game is live, it reads the store's log.
 //!
 //! The real router is served over in-memory pipes (`MemoryListener`, as `actor/heartbeat.rs` does,
@@ -731,7 +731,7 @@ impl Duos {
         log
     }
 
-    /// Both people concede (B11), which ends the game: its replay opens (§12.9).
+    /// Both people concede (B11), which ends the game: its replay opens (§13.9).
     async fn concede_both(&self, a1: &WsClient, a2: &WsClient) {
         for (client, nonce) in [(a1, "a1-concede"), (a2, "a2-concede")] {
             let answer = act(client, nonce, concede()).await;
@@ -1011,8 +1011,8 @@ mod b36_the_ai_seats {
     /// The first view of `round` or later `a1` has had since frame `from`, waited for up to `within`
     /// while the people play along as a person at the table does: each answers a prompt it holds
     /// (the first answer offered), else ends its turn once its legal actions hold that. A prompt a
-    /// person holds waits for that person, on a clock of its own (DUOS_PROMPT_CLOCK_MS, §12.3), and
-    /// a duel whose new active player is a person's seat gives that person the round seat (§12.3,
+    /// person holds waits for that person, on a clock of its own (DUOS_PROMPT_CLOCK_MS, §13.3), and
+    /// a duel whose new active player is a person's seat gives that person the round seat (§13.3,
     /// R456: a turn cut short as it begins): neither is a step of the AI's. `acted` counts the
     /// people's actions by the instant they were taken, so the views they caused are told apart.
     async fn round_reached(
@@ -1530,7 +1530,7 @@ mod b40_b42_the_log_the_replay_and_the_end {
         let pushed = last_view(&a1);
         assert_eq!(h.logged().await.len(), before + 1, "one row for one action");
 
-        // §12.9: the replay is the finished game's.
+        // §13.9: the replay is the finished game's.
         h.concede_both(&a1, &a2).await;
         let logged = h.logged().await.len();
         let host = h.replay(&h.host).await;
@@ -1630,7 +1630,7 @@ mod b40_b42_the_log_the_replay_and_the_end {
 }
 
 // ---------------------------------------------------------------------------------------------
-// §12.2, R268 — the mulligan clock keeps a person's hand
+// §13.2, R268 — the mulligan clock keeps a person's hand
 // ---------------------------------------------------------------------------------------------
 
 mod r268_the_mulligan_clock {

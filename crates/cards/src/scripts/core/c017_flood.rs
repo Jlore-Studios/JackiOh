@@ -18,7 +18,68 @@
 //! `destroy_all` marks every match and stops like `destroy`, so Indestructible survives (R46) and
 //! all deaths land in the one state check that follows (R59).
 
+use jackioh_engine::effects::{bounce_all, chosen_options, destroy_all, draw};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-017";
+
+/// The three options, word for word from §8. They are the card's public interface: `legal_actions`
+/// offers these strings, the client shows them and the hook below matches on them, so the
+/// declaration and the hook must never drift apart — hence one constant for both.
+const BOUNCE_ALL: &str = "bounce all units";
+const BOUNCE_ENEMY: &str = "bounce all enemy units";
+const DESTROY_ENEMY: &str = "destroy all enemy units";
+
+fn modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec![BOUNCE_ALL.to_string(), BOUNCE_ENEMY.to_string(), DESTROY_ENEMY.to_string()],
+    }]
+}
+
+/// "Bounce all units on both sides" — the base text, and radiant's first option.
+fn bounce_both_sides() -> Effect {
+    bounce_all(json_as(json!({ "side": "any" })))
+}
+
+/// The option the play carried. `why_choices_refused` (play_choices.rs) already refuses a play that
+/// names no mode for a declared one, so the fallback is unreachable in a legal game; it is the first
+/// option rather than "do nothing" because "choose one" is a mandatory choice, not an optional rider.
+fn picked_mode(ctx: &mut EffectContext<'_>) -> String {
+    chosen_options(ctx)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| BOUNCE_ALL.to_string())
+}
+
+fn chosen_effect(ctx: &mut EffectContext<'_>) -> Effect {
+    let picked = picked_mode(ctx);
+    if picked == DESTROY_ENEMY {
+        return destroy_all(json_as(json!({ "side": "enemy", "rows": ["units"] })));
+    }
+    if picked == BOUNCE_ENEMY {
+        return bounce_all(json_as(json!({ "side": "enemy" })));
+    }
+    bounce_both_sides()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![bounce_both_sides()])),
+        ..Script::default()
+    };
+    let radiant = Script {
+        modes: modes(),
+        // "; then draw 1": the draw follows whichever mode resolved, on all three of them. Its count is
+        // the declared number `draw` (R386).
+        cry: Some(hook(|ctx| {
+            let count = param(&*ctx, "draw");
+            vec![chosen_effect(ctx), draw(json_as(json!({ "count": count })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #17 Flood — SPEC §8.1 row 17, BUILD M4-T4 row 17.
 //

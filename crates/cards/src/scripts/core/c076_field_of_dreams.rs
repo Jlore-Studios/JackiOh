@@ -10,7 +10,47 @@
 //! bites: N ≤ HAND_CAP − 1 and the copies arrive into an emptied hand. `discard_hand` is deterministic;
 //! `discard_random` would shift `rng_cursor` and break replay parity (§9.3, §10.7).
 
+use jackioh_engine::effects::{add_to_hand, discard_hand, exile};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-076";
+
+/// R31: the card the hand is replaced with — #72 Reminisce, by catalog id (the catalog check holds it).
+const REMINISCE: &str = "core-072";
+
+/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. This is the only
+/// read this card makes — N, the caller's hand size at resolution — and it goes through the engine's
+/// read-only `zone_count` (engine/src/query.rs), which is what keeps BUILD M3-T1's and REVIEW B1.7's
+/// `state.players` grep over `src` clean.
+fn hand_size_of(ctx: &EffectContext<'_>) -> i32 {
+    zone_count(ctx.state, ctx.controller, OffFieldZone::Hand)
+}
+
+/// The two faces differ only in whether the copies are Radiant (§5.2, R74).
+fn field_of_dreams(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let count = hand_size_of(ctx);
+            let mut effects = Vec::new();
+            // R31: the replaced hand goes to the graveyard, where Reminisce can find it.
+            effects.push(discard_hand(json_as(json!({ "player": "self" }))));
+            for _ in 0..count {
+                effects.push(add_to_hand(json_as(json!({ "defId": REMINISCE, "radiant": radiant }))));
+            }
+            // "exile this": the spell leaves from `resolving` and never reaches the graveyard.
+            effects.push(exile(json_as(json!({ "target": { "of": "self" } }))));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: field_of_dreams(false),
+        radiant: field_of_dreams(true),
+    }
+}
 
 // #76 Field of Dreams — SPEC §8.3, R31, R4, R11, R50.
 //

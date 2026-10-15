@@ -33,6 +33,8 @@
 /together / 200
 /together/ / 200
 /stats /stats/ 200
+/creator / 200
+/creator/ / 200
 /match/:id / 200
 /match/:id/ / 200
 /series/:id / 200

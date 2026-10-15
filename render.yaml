@@ -41,11 +41,14 @@ services:
     # this instance never passes its health check and Render keeps the previous one serving. It is
     # not a `preDeployCommand` because free instances cannot run one.
     #
-    # R163 makes /api/catalog the one unauthenticated route, so it is the honest readiness probe:
-    # a 200 means the catalog really did register, not merely that a port is open. It also carries
-    # `x-deployed-commit` from RENDER_GIT_COMMIT, which deploy-watch.yml compares with the pushed
-    # commit.
-    healthCheckPath: /api/catalog
+    # Render's health check is `GET /readyz` (`crates/server/src/api/health.rs`, #861), which
+    # answers 200 only once the store answers `select 1`. So an instance whose database stops
+    # answering after boot fails its check (the pool connects lazily, so nothing else would
+    # notice). A transient failure fails one check, and a restart costs a live match nothing: it
+    # is rebuilt from `(seed, log)` (SPEC §9.5). `GET /api/catalog` still carries
+    # `x-deployed-commit`, which deploy-watch.yml compares with the push. On SIGTERM the server
+    # drains for at most `SHUTDOWN_DRAIN_SECONDS`.
+    healthCheckPath: /readyz
     envVars:
       # Still read: `E2E=1` is refused together with production (src/env.rs).
       - key: NODE_ENV

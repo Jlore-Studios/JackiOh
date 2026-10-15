@@ -156,6 +156,13 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
         decks: opening.decks.clone(),
         handicaps: Some(handicaps),
         dealt: opening.dealt.clone(),
+        // R923000, R915006: the game's setup flags and cards are the reset game's too.
+        sandbox: old.sandbox,
+        custom_cards: if old.custom_cards.is_empty() {
+            None
+        } else {
+            Some(old.custom_cards.values().cloned().collect())
+        },
         ..CreateGameOptions::default()
     };
     let mut fresh = create_game_for_reset(&options, old.next_id, resets);

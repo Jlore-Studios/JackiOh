@@ -174,6 +174,9 @@ fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel
         dealt,
         last_boards: None,
         glitch_boards: None,
+        // A co-op game is never a sandbox (R923000) and holds no custom card (R915005).
+        sandbox: None,
+        custom_cards: None,
     });
     for seat in seats {
         let team = rules[seat.team()];

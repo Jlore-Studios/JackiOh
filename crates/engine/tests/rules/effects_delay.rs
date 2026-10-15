@@ -33,6 +33,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::indestructible;
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{json_of, matches_object};
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -250,28 +251,6 @@ fn only(entries: &[DelayedEffect]) -> &DelayedEffect {
 
 fn one(cards: Vec<CardInstance>) -> CardInstance {
     cards.into_iter().next().expect("expected a card")
-}
-
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively;
-/// arrays match element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn assert_matches_object<T: serde::Serialize>(actual: &T, expected: Value) {
@@ -861,7 +840,7 @@ mod add_player_modifier_s2_2_s2_3_s6_3_cost_r30_r48_r65 {
             .map(|id| json!({ "type": "modifierChanged", "player": "p1", "modifierId": id, "added": true }))
             .collect();
         assert_eq!(
-            json_of(&events_of_type(&events, GameEventType::ModifierChanged)),
+            json_of(events_of_type(&events, GameEventType::ModifierChanged)),
             Value::Array(expected)
         );
 

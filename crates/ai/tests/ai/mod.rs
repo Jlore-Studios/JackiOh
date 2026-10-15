@@ -22,6 +22,7 @@ pub mod ranged_flying;
 pub mod redact_announce;
 pub mod redact_backrow_piles;
 pub mod redact_board_history;
+pub mod redact_custom;
 pub mod redact_fusion;
 pub mod redact_last_boards;
 pub mod redact_live_face_down;

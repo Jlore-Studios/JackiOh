@@ -12,7 +12,44 @@
 //! A hook may not roll dice itself (`ctx.rng.*` advances state), so the picks happen inside
 //! `add_random_from_catalog` (engine/src/effects/add_to_hand.rs), shared with #54 Straaza and #59.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-057";
+
+/// §5.1's KY pool: the KY tag minus tokens (automatic) minus this card (`excludeDefId`, R387).
+/// `add_random_from_catalog` already excludes the running card's own id, so naming it here repeats it.
+fn ky_pool() -> Value {
+    json!({ "tags": ["KY"], "excludeDefId": ID })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        // A spell's script is its `cry` hook (§10.9; `run_hook` in engine/src/resolve.rs).
+        // The counts are the declared numbers `cards` (3, and 2 on the Radiant face) and the Radiant
+        // face's `radiantCards` (2), R386.
+        base: Script {
+            cry: Some(hook(|ctx| {
+                vec![add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": param(&*ctx, "cards") })))]
+            })),
+            ..Script::default()
+        },
+        // "2 random plus 2 random Radiant KY cards": a restated clause replaces the base one (§8
+        // Conventions), so the radiant face adds 4 cards, not 3 + 4. The plain pair is rolled first so the
+        // radiant flag lands on exactly the last two adds.
+        radiant: Script {
+            cry: Some(hook(|ctx| {
+                let plain = param(&*ctx, "cards");
+                let radiant = param(&*ctx, "radiantCards");
+                vec![
+                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": plain }))),
+                    add_random_from_catalog(json_as(json!({ "query": ky_pool(), "count": radiant, "radiant": true }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // #57 Conjure KY (SPEC §8.3, BUILD M4-T4 row 57: pool #31, #51, #82 with repeats allowed; radiant 2
 // base + 2 radiant). The pool, every set's KY cards (R380), is asserted twice: against §5.1's query

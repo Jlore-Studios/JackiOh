@@ -130,9 +130,7 @@ pub fn create_options(row: &DuosMatch) -> DuosCreateOptions {
 fn person_deck(choice: &DuosChoice, seed: &str, seat: DuosSeat) -> Vec<String> {
     match choice {
         DuosChoice::Deck { deck, .. } => deck.cards.clone(),
-        DuosChoice::Random { lean_newest } => {
-            deal_random_deck(&format!("{seed}:{seat}-deck"), lean_of(*lean_newest))
-        }
+        DuosChoice::Random { lean } => deal_random_deck(&format!("{seed}:{seat}-deck"), lean_of(*lean)),
     }
 }
 

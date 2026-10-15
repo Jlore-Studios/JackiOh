@@ -9,10 +9,34 @@
 //! (§6.3's X row).
 //! Tunes: none (X is chosen).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-043";
 
 /// The Rock this adds (M #39.1).
 pub const ROCK: &str = "meditative-039-1";
+
+fn market(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // R348: X is at least 1 (the play validator refused 0 and above-mana); `ctx.x` is the
+            // X paid as Nerf and Buff tuned it (§6.3's X row, `tuning::x_of`), and `max(0)` keeps
+            // a tuned-down X from underflowing.
+            let x = ctx.x.max(0);
+            (0..x)
+                .map(|_| add_to_hand(json_as(json!({ "defId": ROCK, "radiant": radiant }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: market(false),
+        radiant: market(true),
+    }
+}
 
 // Meditative #43 CN Jade Market — SPEC §8.8 row 43, BUILD M10 row M 43: "X chosen with the play,
 // at least 1 and at most the current mana (R348); adds X base Auspicious Rocks, the hand cap

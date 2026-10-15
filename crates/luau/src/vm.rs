@@ -5,7 +5,11 @@
 //! that runs another card's hook: the thread's VM and `Lua::scope` both take a nested call, which
 //! draws on the budget of the call it is nested in, up to `LUAU_HOOK_DEPTH` calls deep (L5).
 
-use jackioh_engine::EffectContext;
+use std::cell::Cell;
+use std::sync::Arc;
+
+use indexmap::IndexMap;
+use jackioh_engine::{CardScripts, EffectContext};
 use mlua::chunk::ChunkMode;
 use mlua::{Function, Lua, Table, Value};
 
@@ -123,10 +127,17 @@ pub struct CardDecl {
     pub radiant: RadiantDecl,
 }
 
-/// A thread's VM: the chunk cache, then the sandbox, which drops last.
+/// A thread's VM: the chunk cache, the card kit's environment, the custom cards' scripts, then the
+/// sandbox, which drops last.
 pub(crate) struct Vm {
     /// Card id to its loaded chunk, in a Lua table, so the cache needs no interior mutability.
     pub(crate) chunks: Table,
+    /// #913: the environment a custom card's chunk runs in: `Card`, the sandbox's globals behind it,
+    /// and a `require` that refuses (the kit is all a custom card sees, K4). Read-only.
+    pub(crate) kit_env: Table,
+    /// R915002: each custom card's scripts by its chunk name (`custom::chunk_name`: id and source
+    /// digest), built once on this thread. Compiled scripts only, never game state (CLAUDE.md rule 4).
+    pub(crate) custom: Cell<IndexMap<String, Arc<CardScripts>>>,
     pub(crate) sandbox: Sandbox,
 }
 
@@ -142,21 +153,33 @@ impl Vm {
         let sandbox = new_sandbox().expect("the Luau sandbox builds");
         crate::reads::register_types(&sandbox.lua).expect("the readers register");
         let chunks = sandbox.lua.create_table().expect("the chunk cache builds");
-        Vm { chunks, sandbox }
+        let kit_env = kit_env(&sandbox).expect("the card kit loads");
+        Vm {
+            chunks,
+            kit_env,
+            custom: Cell::new(IndexMap::new()),
+            sandbox,
+        }
     }
 
-    /// The card's chunk, loaded from its bytecode the first time this thread asks.
+    /// The card's chunk, loaded from its bytecode the first time this thread asks. A custom card's
+    /// runs in the kit's environment.
     fn chunk(&self, card: &str, bytecode: &[u8]) -> mlua::Result<Function> {
         if let Some(chunk) = self.chunks.raw_get::<Option<Function>>(card)? {
             return Ok(chunk);
         }
+        let env = if jackioh_engine::custom::is_custom_id(card) {
+            self.kit_env.clone()
+        } else {
+            self.sandbox.env.clone()
+        };
         let chunk = self
             .sandbox
             .lua
             .load(bytecode)
             .set_mode(ChunkMode::Binary)
             .set_name(format!("={card}"))
-            .set_environment(self.sandbox.env.clone())
+            .set_environment(env)
             .into_function()?;
         self.chunks.raw_set(card, &chunk)?;
         Ok(chunk)
@@ -166,6 +189,82 @@ impl Vm {
     fn module(&self, card: &str, bytecode: &[u8]) -> mlua::Result<Table> {
         self.chunk(card, bytecode)?.call::<Table>(())
     }
+}
+
+/// #913: the card kit's environment: the kit runs once, as host code, in the sandbox's globals (where
+/// `require("@jackioh")` answers), and hands back `Card`; a custom card's chunk then sees `Card` and
+/// the globals, and a `require` that says why it refuses.
+fn kit_env(sandbox: &Sandbox) -> mlua::Result<Table> {
+    let lua = &sandbox.lua;
+    let bytecode = crate::compiler()
+        .compile(crate::custom::KIT_SOURCE)
+        .map_err(|error| mlua::Error::runtime(format!("the card kit does not compile: {error}")))?;
+    let kit: Table = lua
+        .load(bytecode)
+        .set_mode(ChunkMode::Binary)
+        .set_name("=kit")
+        .set_environment(sandbox.env.clone())
+        .call(())?;
+    let env = lua.create_table()?;
+    env.raw_set("Card", kit.raw_get::<Function>("Card")?)?;
+    env.raw_set(
+        "require",
+        lua.create_function(|_, _: Value| -> mlua::Result<()> {
+            Err(mlua::Error::runtime(
+                "a custom card's script requires nothing: the card kit is all it needs",
+            ))
+        })?,
+    )?;
+    let meta = lua.create_table()?;
+    meta.raw_set("__index", sandbox.env.clone())?;
+    env.set_metatable(Some(meta))?;
+    env.set_readonly(true);
+    Ok(env)
+}
+
+/// R915002: this thread's scripts for a custom card's chunk name, if built.
+pub(crate) fn cached_custom(name: &str) -> Option<Arc<CardScripts>> {
+    VM.with(|vm| {
+        let map = vm.custom.take();
+        let found = map.get(name).cloned();
+        vm.custom.set(map);
+        found
+    })
+}
+
+/// R915002: keep a custom card's scripts on this thread.
+pub(crate) fn cache_custom(name: String, scripts: Arc<CardScripts>) {
+    VM.with(|vm| {
+        let mut map = vm.custom.take();
+        map.insert(name, scripts);
+        vm.custom.set(map);
+    })
+}
+
+/// #913: whether a custom card's compiled chunk loads as a card's module: it runs (`Card { … }`'s
+/// own checks with it) and answers a table with a `base` table. The error is Luau's, which names the
+/// line. Nothing is leaked: the chunk is cached under its name as any card's is.
+pub(crate) fn check_custom_module(name: &str, bytecode: &[u8]) -> Result<(), String> {
+    VM.with(|vm| {
+        let site = Site {
+            card: "custom-check",
+            face: Face::Base,
+            hook: "load",
+        };
+        let budget = BudgetGuard::enter(&vm.sandbox.lua, site);
+        let returned = budget
+            .run(site, || vm.chunk(name, bytecode)?.call::<Value>(()))
+            .map_err(|error| error.to_string())?;
+        let shaped = match &returned {
+            Value::Table(module) => matches!(module.raw_get::<Value>(Face::Base.key()), Ok(Value::Table(_))),
+            _ => false,
+        };
+        if shaped {
+            Ok(())
+        } else {
+            Err("the script must return Card { … }".to_string())
+        }
+    })
 }
 
 /// A hook call in flight on the interrupt's budget and under the memory cap, left when the call

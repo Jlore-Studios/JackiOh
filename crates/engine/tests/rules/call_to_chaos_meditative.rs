@@ -24,7 +24,7 @@ use crate::rules::fixtures::call_to_chaos_meditative::{
     ACCLAIMED, ACCLAIMED_SPELL, ACCLAIMED_TOKEN, CN, GOLEM, JADE, MED, PRIME, chaos_med_catalog,
 };
 use crate::rules::fixtures::call_to_chaos_plus::{chaos_plus_catalog, core95, immutable, plus, trap};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, set_library, slot};
 
 fn scripts(cry: Hook) -> CardScripts {
     CardScripts {
@@ -141,10 +141,6 @@ fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> S
             Some(CHAOS_MED_EFFECTS),
         )))
     })
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
 }
 
 /// One field of every event of a type, as JSON.

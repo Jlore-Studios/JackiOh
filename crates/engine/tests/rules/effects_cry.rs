@@ -23,6 +23,7 @@ use super::fixtures::prompt_harness::{
 use super::fixtures::prompts::{
     aimer, asker, crier, grave_rewind, moder, quickdraw_of, rewind, spark, tribute_crier,
 };
+use crate::rules::fixtures::harness::json_of;
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -77,10 +78,6 @@ fn grave_unit(state: &mut GameState, player: PlayerId, def_id: &str) -> CardInst
 /// The card as it stands in the state now (TS held the live object).
 fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
-}
-
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn has_type(types: &[String], wanted: &str) -> bool {

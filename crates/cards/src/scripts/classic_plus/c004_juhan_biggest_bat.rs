@@ -3,7 +3,19 @@
 //! controller kept, still dormant, no Cry (R1), Immutable ones untouched (R23). Onto an empty zone it
 //! does nothing. Its Cry is the arrival: only a play fires it (R1).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-004";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![transform_beneath(Default::default())])),
+        ..Script::default()
+    };
+    // The Radiant face adds First Strike and doubles the stats (catalog data); its copies are Radiant as it is.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #4 Juhan Biggest Bat — SPEC §8.7 row 4, BUILD M9 Classic+ row C+ 4: "Stack; played onto your
 // occupied unit zone, every dormant card beneath becomes a copy of Juhan on its face, keeping each old
@@ -12,7 +24,7 @@ pub const ID: &str = "classicplus-004";
 // is transformed; radiant Stack, First Strike, and the copies are Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
@@ -72,7 +84,7 @@ mod tests {
         assert_eq!(kinds(&def.base.keywords), vec![KeywordKind::Stack]);
         assert_eq!(kinds(&def.radiant.keywords), vec![KeywordKind::Stack, KeywordKind::FirstStrike]);
         // TS `expect(radiant).toBe(base)`: the Radiant face is the base face's very script.
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(matches!(
             (&scripts.base.cry, &scripts.radiant.cry),
             (Some(a), Some(b)) if Arc::ptr_eq(a, b)

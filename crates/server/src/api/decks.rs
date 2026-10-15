@@ -26,6 +26,7 @@ use serde_json::{Map, Value, json};
 
 use jackioh_engine::validator;
 use jackioh_engine::wire::emotes::is_portrait_id;
+use jackioh_engine::{LeanPick, SHIPPED_SETS, SetName};
 
 use crate::api::collection::{caller_profile, owned_in};
 use crate::api::http::{
@@ -708,11 +709,11 @@ pub enum ModeChoiceInput {
     Bo3 {
         trio_id: String,
     },
-    /// R1372: `lean_newest` is the player's "More cards from the newest set" for their own seat,
-    /// written only when it is on, as the client sends it.
+    /// R1372, R924000: `lean` is the player's "More cards from" pick for their own seat, written
+    /// only when there is one, as the client sends it.
     Random {
-        #[serde(skip_serializing_if = "std::ops::Not::not")]
-        lean_newest: bool,
+        #[serde(rename = "leanSet", skip_serializing_if = "Option::is_none")]
+        lean: Option<LeanPick>,
     },
 }
 
@@ -726,34 +727,52 @@ pub enum FrozenChoice {
     Bo3 {
         trio: FrozenTrio,
     },
-    /// R258: nothing to freeze but the player's R1372 lean, which waits for the deal (written only
-    /// when it is on).
+    /// R258: nothing to freeze but the player's lean (R1372, R924000), which waits for the deal
+    /// (written only when there is one).
     Random {
-        #[serde(rename = "leanNewest", skip_serializing_if = "std::ops::Not::not")]
-        lean_newest: bool,
+        #[serde(rename = "leanSet", skip_serializing_if = "Option::is_none")]
+        lean: Option<LeanPick>,
     },
 }
 
-/// R1372: a body's `leanNewest`, the player's "More cards from the newest set" for their own seat's
-/// dealt deck. Absent or `null` is off; anything but a boolean is a 400. The set is the server's to
-/// resolve when it deals (R1371), never the client's.
-pub fn lean_newest_of(body: &Value) -> Result<bool, ApiError> {
+/// R924000: a body's `leanSet`, the player's "More cards from" pick for their own seat's dealt deck:
+/// `"newest"` or the name of a set that ships (R1420). Absent or `null` is no lean; anything else is
+/// a 400. "Newest" is the server's to resolve when it deals (R1371), never the client's.
+///
+/// A client from before the picker sends R1372's `leanNewest` instead, which reads as it always
+/// did: `true` is "newest", `false`, absent or `null` no lean, anything else a 400. A body with both
+/// is read by `leanSet`.
+pub fn lean_of(body: &Value) -> Result<Option<LeanPick>, ApiError> {
+    match body.get("leanSet") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(text)) => {
+            return LeanPick::parse(text).map(Some).ok_or_else(|| {
+                bad_request(format!(
+                    "\"leanSet\" must be \"newest\" or a set that ships ({}), got {text:?}",
+                    SHIPPED_SETS.map(SetName::as_str).join(", ")
+                ))
+            });
+        }
+        Some(_) => {
+            return Err(bad_request(
+                "\"leanSet\" must be \"newest\" or the name of a set that ships",
+            ));
+        }
+    }
     match body.get("leanNewest") {
-        None | Some(Value::Null) => Ok(false),
-        Some(Value::Bool(lean)) => Ok(*lean),
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::Bool(lean)) => Ok(lean.then_some(LeanPick::Newest)),
         Some(_) => Err(bad_request("\"leanNewest\" must be true or false")),
     }
 }
 
-/// R257: `{ mode: "bo1", deckId } | { mode: "bo3", trioId } | { mode: "random", leanNewest? }`. Only
+/// R257: `{ mode: "bo1", deckId } | { mode: "bo3", trioId } | { mode: "random", leanSet? }`. Only
 /// the fields the mode needs are read; anything malformed among them is a 400, and so is a body
 /// with no `mode` (R257's legacy `deckIndex` form is refused too).
 pub fn read_mode_choice(body: &Value) -> Result<ModeChoiceInput, ApiError> {
     let mode = body.get("mode").and_then(Value::as_str);
     match mode {
-        Some("random") => Ok(ModeChoiceInput::Random {
-            lean_newest: lean_newest_of(body)?,
-        }),
+        Some("random") => Ok(ModeChoiceInput::Random { lean: lean_of(body)? }),
         Some("bo3") => match saved_id_of(body.get("trioId")) {
             Some(trio_id) => Ok(ModeChoiceInput::Bo3 { trio_id }),
             None => Err(bad_request(
@@ -893,6 +912,45 @@ fn assert_legal(
     ))
 }
 
+/// R915005: a deck with a custom card plays only in practice, so a path that starts a game from
+/// decks it does not judge again — a rematch replays the finished match's frozen decks (§9.4) —
+/// still asks the shared validator its L7, and refuses as the queue does (`loadout_invalid`, the L7
+/// issues as `details`). L2–L6 judged those decks when they were frozen and are not asked again; L7
+/// reads no catalog and no collection, so the check hands it neither and sets their rules' verdicts
+/// aside.
+pub fn assert_no_custom_cards(decks: &[&[String]]) -> Result<(), ApiError> {
+    let mut issues: Vec<Value> = Vec::new();
+    for cards in decks {
+        let verdict = validator::validate_deck(&validator::DeckInput {
+            deck: validator::LoadoutDeck {
+                name: None,
+                cards: cards.to_vec(),
+            },
+            catalog: validator::CatalogSnapshot {
+                version: String::new(),
+                cards: Default::default(),
+                banned: None,
+            },
+            collection: Default::default(),
+        });
+        for error in verdict
+            .errors
+            .iter()
+            .filter(|error| error.rule == validator::LoadoutRule::L7)
+        {
+            issues.push(to_json(error)?);
+        }
+    }
+    let Some(first) = first_message(&issues) else {
+        return Ok(());
+    };
+    Err(ApiError::with_details(
+        ApiErrorCode::LoadoutInvalid,
+        first,
+        Value::Array(issues),
+    ))
+}
+
 /// A copy, so a frozen deck can never alias the stored one.
 fn freeze(deck: &SavedDeck) -> FrozenDeck {
     // R642: the portrait freezes with the deck, present (a saved deck always has one, or null).
@@ -909,17 +967,15 @@ fn freeze(deck: &SavedDeck) -> FrozenDeck {
 ///
 /// An empty trio slot is not skipped: the filled decks go to the validator as they are, so a trio
 /// with two decks fails L1 in the shared module's own words. All Random freezes nothing but the
-/// player's lean (R258, R1372).
+/// player's lean (R258, R1372, R924000).
 pub async fn freeze_choice(
     app: &App,
     profile_id: &str,
     choice: &ModeChoiceInput,
 ) -> Result<FrozenChoice, ApiError> {
     let (deck_id, trio_id) = match choice {
-        ModeChoiceInput::Random { lean_newest } => {
-            return Ok(FrozenChoice::Random {
-                lean_newest: *lean_newest,
-            });
+        ModeChoiceInput::Random { lean } => {
+            return Ok(FrozenChoice::Random { lean: *lean });
         }
         ModeChoiceInput::Bo1 { deck_id } => (Some(deck_id), None),
         ModeChoiceInput::Bo3 { trio_id } => (None, Some(trio_id)),

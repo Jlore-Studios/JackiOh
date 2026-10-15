@@ -1164,6 +1164,16 @@ Cypress.Commands.add("freeAccount", (account: E2EAccount) => {
 });
 
 /**
+ * R897000: stand in for a queued client. The queue cancels a ticket nobody has heard from for
+ * `QUEUE_TICKET_STALE_MS`, and a client polls `GET /api/auth/me` every `SERIES_POLL_SECONDS`; an
+ * account a spec enqueues over HTTP and leaves waiting for the rating window to widen (50 s for a
+ * gap of 320) polls through the `stayQueued` task, which ends itself once the ticket is gone.
+ */
+Cypress.Commands.add("stayQueued", (account: E2EAccount, everyMs: number) => {
+  cy.task("stayQueued", { url: server.http(), token: account.token, everyMs }, { log: false });
+});
+
+/**
  * A11: drag a card from the pool into the open deck, in the deck workshop.
  *
  * A drag is a multi-event gesture — `dragstart` on the source with a `DataTransfer`, `dragover` and
@@ -1306,6 +1316,8 @@ declare global {
       concedeAs(account: E2EAccount, matchId: string): Chainable<WsPlayerResult>;
       /** Dequeue, concede a live match and forfeit a series between games (§9.5, R261). */
       freeAccount(account: E2EAccount): Chainable<void>;
+      /** Poll as `account` every `everyMs` while its queue ticket is open, as a client does (R897000). */
+      stayQueued(account: E2EAccount, everyMs: number): Chainable<void>;
       /** Drag a pool card into the open deck in the workshop: the whole gesture, not one event (A11). */
       dragCardToDeck(catalogCardId: string): Chainable<void>;
       jackioh(): Chainable<JackiOhDevHandle>;

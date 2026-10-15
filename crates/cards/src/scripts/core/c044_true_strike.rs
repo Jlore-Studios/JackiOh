@@ -16,9 +16,32 @@
 //! the exile counter (R55), which #40 Echoes of the Forgotten and #100 Ceaseless Void read.
 //! Damage then exile in one list: the state check runs after both (R59).
 
+use jackioh_engine::effects::{damage, exile};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-044";
 
+/// The faces differ only in the declared number `damage` (R386): 4 and 9, read off the running face.
+fn true_strike() -> Script {
+    Script {
+        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))],
+        // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9). R346: the hit pierces.
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "damage");
+            vec![
+                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount, "ignoreArmor": true }))),
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = true_strike();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #44 True Strike (SPEC §8.2, §4.4, §5.1, §6.3 Exile; R63, R65, R81, R90, R346).
 // Must-pass row (BUILD M4-T4 #44): "4 damage through Armor 7; Divine Shield still blocks; exiled;
@@ -26,7 +49,7 @@ pub const ID: &str = "core-044";
 // the full hit, #56 Jilliax (Divine Shield) takes none because step 1 negates the whole instance.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::damage::{DamageArgs, DamageTarget, deal_damage};
     use jackioh_engine::layers::unit_view;
     use jackioh_engine::testkit::*;
@@ -170,7 +193,7 @@ mod tests {
 
         #[test]
         fn r81_declares_exactly_one_target_any_side_unit_or_hero_as_a_play_time_choice() {
-            let base = crate::scripts_of()[ID].clone().base;
+            let base = script().base;
             assert_eq!(
                 serde_json::to_value(&base.targets).unwrap(),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
@@ -237,7 +260,7 @@ mod tests {
 
         #[test]
         fn r81_the_radiant_face_declares_the_same_single_target() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.radiant.targets, scripts.base.targets);
         }
     }

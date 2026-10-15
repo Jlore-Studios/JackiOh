@@ -2,7 +2,21 @@
 //!   Both faces: "Deal {damage} damage to each enemy." — 3, Radiant 6.
 //! One hit each on every enemy unit on top of its pile and the enemy hero, all before the state check (R59).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-4";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![damage_all(json_as(json!({ "amount": param(&*ctx, "damage"), "side": "enemy", "heroes": true })))]
+        })),
+        ..Script::default()
+    };
+    // The Radiant face is the same text at 6, a catalog value.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #12.4 Powder Spray — SPEC §8.7 row 12.4, BUILD M9 Classic+ row C+ 12.4: "3 damage to the enemy
 // hero and to each enemy Unit, separate instances all landing before the state check (R59); Spell

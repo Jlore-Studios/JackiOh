@@ -18,7 +18,81 @@
 //! R280: the preview is the mana it would give now, off public counters (§10.8). The number is the
 //! declared `mana` (R386), read through `param`.
 
+use jackioh_engine::prelude::*;
+use jackioh_engine::effects::{after_state_check, destroy_all, gain_mana, summon};
+
 pub const ID: &str = "classic-043";
+
+/// R280: the words of the text the preview's value follows, on both faces.
+const MANA_LABEL: &str = "for each Plague Counter that was on them";
+
+/// Every Unit on the field, R68's order from `first`'s side: the tops of the unit piles (R13).
+fn units_on_field(state: &GameState, first: PlayerId) -> Vec<CardInstance> {
+    let mut units: Vec<CardInstance> = active_units_of(state, first).into_iter().cloned().collect();
+    units.extend(active_units_of(state, opponent_of(first)).into_iter().cloned());
+    units
+}
+
+/// The Plague Counters on every Unit on the field now: what the mana counts.
+fn tokens_on_units(state: &GameState, first: PlayerId) -> i32 {
+    units_on_field(state, first).iter().fold(0, |sum, unit| sum + plague_on(unit))
+}
+
+fn plague_nuke(resummons: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // Read once, before anything dies: the tokens, and the non-token Units that carry any.
+            let first = ctx.state.active;
+            let mana = tokens_on_units(ctx.state, first) * param(ctx, "mana");
+            let plagued: Vec<String> = units_on_field(ctx.state, first)
+                .into_iter()
+                .filter(|unit| plague_on(unit) > 0 && !def_of(Some(&*ctx.state), &unit.def_id).token)
+                .map(|unit| unit.id)
+                .collect();
+            vec![
+                destroy_all(json_as(json!({ "side": "any" }))),
+                after_state_check(move |after| {
+                    let mut effects = vec![gain_mana(json_as(json!({ "amount": mana })))];
+                    if resummons {
+                        effects.extend(
+                            plagued
+                                .iter()
+                                .filter(|id| {
+                                    find_instance(after.state, id.as_str())
+                                        .is_some_and(|card| card.zone.z() == ZoneName::Graveyard)
+                                })
+                                .map(|instance_id| {
+                                    summon(json_as(json!({
+                                        "instance": { "of": "instance", "instanceId": instance_id },
+                                        "player": "self",
+                                    })))
+                                }),
+                        );
+                    }
+                    effects
+                }),
+            ]
+        })),
+        // R280: the mana it would give now.
+        preview: Some(condition_hook(|c: ConditionContext| -> Vec<PreviewValue> {
+            vec![PreviewValue {
+                label: MANA_LABEL.into(),
+                value: tokens_on_units(c.state, c.controller) * param(&c, "mana"),
+                display: None,
+                ids: None,
+            }]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = plague_nuke(false);
+
+    let radiant = plague_nuke(true);
+
+    CardScripts { base, radiant }
+}
 
 // C #43 Plague Nuke — SPEC §8.6 row 43, BUILD M9 Classic row C 43: counts the Plague Counters on every
 // Unit first, destroys all Units in one state check (§4.5), then gives 1 mana per token counted, an
@@ -31,7 +105,7 @@ pub const ID: &str = "classic-043";
 // Nuke kills exiles none of them (R398, R463).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
 
     const NUKE: &str = "classic-043";
@@ -84,7 +158,7 @@ mod tests {
         fn has_a_script_per_face_each_with_a_preview() {
             crate::register_all();
             assert_eq!(crate::card_def(ID).id, NUKE);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.preview.is_some());
             assert!(scripts.radiant.preview.is_some());
         }

@@ -1,7 +1,7 @@
 # `jackioh-server`
 
 The authority for everything that is not presentation: identity, usernames (R1432–R1436) and the
-invite gate, the collection ledger, saved decks and trios, an active account's tutorial progress
+invite gate, the collection ledger, saved decks and trios, custom cards (R915008), an active account's tutorial progress
 (R320) and settings (R633), each profile's last board (R417), matchmaking in three modes, the
 Conquest series, the ranked ladder and the ladder bots it plays itself when the queue is empty
 (R1453, R1454, R1451, R1452), and the match itself: one actor per match holding the
@@ -9,7 +9,7 @@ Conquest series, the ranked ladder and the ladder bots it plays itself when the 
 each player after every change (spec §9.1–§9.5, §10.8). Every match that ends leaves a game record
 for the card statistics (§9.11, R376–R378). Play together lives here too: friends, blocks and
 presence (§9.4), friend challenges, watching a friend's game, shared replays and chat (§9.5), and
-Duos co-op, two players against an AI team this server plays, one co-op actor per match (§12).
+Duos co-op, two players against an AI team this server plays, one co-op actor per match (§13).
 
 The client sends intent and renders `view_for`; it never enforces a rule and never sees hidden
 information (CLAUDE.md rule 7). Deployment, the schema, RLS and the env contract are in
@@ -29,7 +29,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 
 | Layer | Modules | Rule |
 | --- | --- | --- |
-| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve` |
+| Boot and routes | `main.rs`, `app.rs`, `loops.rs` | the route table (`ROUTES`, in the order the router tries them), the background loops (each started through `loops::spawn_supervised`, which logs a panic as `loop.crashed` and restarts the loop), `serve`; on SIGTERM or Ctrl-C, `serve_until`'s drain (loops aborted, requests finished, actors stopped with 1001, store closed) inside `SHUTDOWN_DRAIN_SECONDS` |
 | Handlers | `api/*.rs` | `pub async fn <name>(app: &Arc<App>, req: Req) -> ApiResult`; no SQL of their own |
 | Match | `actor/match_actor.rs`, `clock.rs`, `registry.rs`, `rooms.rs`, `ws_server.rs` | state in memory; time from `tokio::time` |
 | Wire | `actor/protocol.rs`, `actor/contracts.rs` | every WebSocket frame |
@@ -38,7 +38,7 @@ a sign-in by username, which it makes with the account's address and answers wit
 | Ladder bots | `bots/persona.rs`, `seat.rs`, `fallback.rs`, `pick.rs`, `pool.rs`, `calibrate.rs` | the R645 personas ported from the web, a bot's move and think time, which waiting ticket gets which bot, its picks in a Conquest series, the pool, and the strengths' measured seed ratings (R1453, R641000, R1454, R1452, R748000) |
 | Usernames | `username/` | a username's form, the profanity filter (its blocklists compiled in) and the case-fold key (R1432–R1434) |
 | Play together | `social/` | friends, requests, blocks and presence, friend challenges, chat (masked by the usernames' filter), replay shares and the watch socket (§9.4, §9.5) |
-| Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§12) |
+| Duos co-op | `duos/` | co-op rooms, the co-op actor (a `DuosState` in memory, the AI team's seats played by `jackioh_ai::duos_decide`, the round clock, team pings) and `live_match_of` (§13) |
 | Config | `env.rs`, `config.rs` | every environment variable and every server number |
 
 There are no traits: `Db`, `Tx` and `Auth` are enums with one variant per implementation (`Pg` and
@@ -47,14 +47,14 @@ tx.commit().await?`.
 
 **The seams to the pure crates.** `actor/engine.rs` is the one path to the engine's game functions
 (`create_game`, `begin_game`, `reduce`, `legal_actions`, `view_for`, `fold`) and deals All Random's
-decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the newest set that ships
-when its player asked (`deal_random_deck(seed, lean_of(lean_newest))`, R1372); it calls
+decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
+"newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
 (`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
-`duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§12). The
+`duos_fold`) and the AI's `duos_decide` the same way, deciding nothing of its own (§13). The
 catalog and its version are compiled in from `crates/cards`.
 
 ## Running it
@@ -137,7 +137,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | --- | --- | --- | --- |
 | `POST` | `/api/auth/signin` | none | E2E mode only: a fixture account's session |
 | `POST` | `/api/auth/username-signin` | none | a username and password: the session, never the address; limited per address and per username (R1443) |
-| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), and `ageCheckOwed` and `termsOwed` (R757000, R757001) |
+| `GET` | `/api/auth/me` | user | profile status, whether a code is still needed, the current match and series, the caller's `username: { name, nextChangeAt, promptOwed }` (R1435), `ageCheckOwed` and `termsOwed` (R757000, R757001), and `queued` (R897000) |
 | `GET` | `/api/profile` | active | the account screen: who the caller is and their record |
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
@@ -151,7 +151,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256) |
 | `PUT`, `DELETE` | `/api/trios/:id` | active | trios (R252) |
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave |
+| `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
+| `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
 | `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
@@ -169,11 +171,33 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET`, `POST`, `DELETE` | `/api/challenges`, `/:id/decline`, `/api/challenges/:id` | active | challenge an online, idle friend with `POST /api/rooms`'s body plus `friendId`, making the room and the challenge (409 `busy`, `offline`, `already_challenged`); the open challenges in and out; decline, cancel; `CHALLENGE_TTL_MS` frees an unanswered one's room, and the sweeper then deletes every challenge row that old; past `CHALLENGES_PER_HOUR` an hour a challenger gets 429 |
 | `GET`, `POST` | `/api/chat/:friendId`, `/api/chat/unread`, `/api/chat/messages/:id/report` | active | a page of a conversation (`CHAT_PAGE`, newest last, marked read), a message to a friend (1 to `CHAT_MAX_CHARS` once trimmed, 422 `empty` or `too_long`, masked, `CHAT_MESSAGES_PER_MINUTE` a sender), unread counts, a report |
 | `GET`, `POST`, `DELETE` | `/api/replays/shared`, `/api/replays/:matchId/shares`, `/api/replays/:matchId/shares/:friendId` | active | the replays shared with the caller; share a finished match the caller held a seat in with a friend, and unshare it |
-| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§12.9) |
-| `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§12.9) |
+| `POST`, `GET`, `DELETE` | `/api/duos/rooms`, `/api/duos/rooms/:code`, `/api/duos/rooms/:code/join` | active | a co-op room with a difficulty and the host's deck or a random one (`201 {code}`); the room; the guest's join, which starts the match (host A1, guest A2, the AI B1 and B2; 409 `full`, `own_room`, `update_required` for a host's deck frozen under another catalog); the host's cancel before anyone joins. A room nobody joins lapses after `DUOS_ROOM_TTL_MS`; to a blocked pair, and once joined to anyone but its two people, a room reads as an unknown code (404) (§13.9) |
+| `GET` | `/api/duos/live`, `/api/duos/matches/:matchId/replay` | active | the caller's live co-op match, for the menus' way back (R765); a human seat's own Duos views of a finished co-op match, step by step, folded once on the blocking pool under the match's catalog version and kept as the 1v1 replays are, 404 to anyone else, 409 while it is live, 410 once its log is purged, 422 `replay_unavailable` (`earlier_patch`, `rules_changed`) when it cannot be folded to its recorded end, held to `REPLAY_REQUESTS_PER_MINUTE` (§13.9) |
+| `GET` | `/healthz` | none | liveness: `{ status, version }` and `x-deployed-commit`; reads nothing from the store (#861) |
+| `GET` | `/readyz` | none | readiness, render.yaml's `healthCheckPath`: the same once the store answers `select 1`, else 503 `unavailable` (`READINESS_PROBE_TIMEOUT_MS`) |
 
 Deck and trio codes are the client's business; their format versions (`DECK_CODE_VERSION`,
 `TRIO_CODE_VERSION`) are server numbers in `config.rs` (R255, R339).
+
+**Custom cards** (SPEC §12.9, R915008, migration 0037). An active account keeps up to
+`CUSTOM_CARDS_PER_ACCOUNT` (50) custom cards in `public.custom_cards`, whose row-level security lets
+only the owner read its rows; no client role writes one, and the server writes through
+`app.create_custom_card` (the cap, counted under the profile lock, against the smaller of its own
+number and `app.settings.max_custom_cards`) and `app.update_custom_card` (compare-and-set on the
+version). Each card is the engine's `CustomCard`: `POST` takes `{ frame, source, builder? }` and
+mints the id (`custom-` and 32 lowercase hex digits) at version 1; `PUT` takes `{ version, frame,
+source, builder? }`, `version` the one it replaces, and answers the card at that version and one, or
+409 `conflict` with `details.version` when another save came first; a refusal of the engine's
+validator (`custom::validate_custom_card`, R915001) is a 400 whose message is the first issue's and
+whose `details.issues` are its `CustomIssue`s; the cap is a 409 with `details.limit`; another
+profile's card answers as a missing one (404). A body is read under `API_MAX_BODY_BYTES` like every
+other, which a card at every limit fits (the router reads a body before it picks the handler, so
+there is no cap of the routes' own). **The server never compiles or runs a script**: it does not
+link `jackioh-luau` (#902 V4), and a source is text it stores; the creator checks a script with the
+browser's Luau module before it saves it. A deck naming a custom id saves as a draft (D3, R250), and
+every queue, room and rematch path refuses it with the validator's L7 (R915005): the queue and the
+rooms through `freeze_choice`, and a Best-of-1 rematch, which replays frozen decks, through
+`decks::assert_no_custom_cards`.
 
 ## WebSocket surface
 
@@ -218,7 +242,7 @@ After a result commits, `api::results` files the game in `game_records` (`api::g
 engine's `summarize_game`) under the match's mode and the compiled-in newest patch, as `source:
 "live"`; a failure is logged as `game.record.failed` and the result stands.
 
-### The co-op socket (§12)
+### The co-op socket (§13)
 
 A co-op match has its own socket, `/ws/duos`, authenticated as `/ws/match` is. The client sends
 `hello {matchId}`, `action {nonce, body}` (a `DuosActionBody`: a duel action, a pass or the team's
@@ -516,12 +540,12 @@ Migration 0033 adds `bots.trio` and `bots.trio_catalog_version`: the Conquest tr
 the bot, frozen as a ticket's is, and the catalog it was dealt for (R641000). The table stays
 server-only.
 
-Migration 0036 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
+Migration 0038 adds Play together's tables (§9.4, §9.5): `friend_requests`, `friendships` (one row
 per pair, `a < b`), `blocks`, `presence` (server-only), `challenges`, `chat_messages` (1 to 500
 characters), `chat_reports` (one per message and reporter) and `replay_shares`, each with RLS on and a
 select policy for its own players only, and `profiles.allow_spectators` (on by default). The retention
-loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0037 adds the co-op tables
-(§12.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
+loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0039 adds the co-op tables
+(§13.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
 the result) and `duos_match_actions` (the log, unique by seq and by nonce); the seed and the log are
 the server's alone, as a 1v1 match's are: a room's host and guest may read it (but its frozen deck

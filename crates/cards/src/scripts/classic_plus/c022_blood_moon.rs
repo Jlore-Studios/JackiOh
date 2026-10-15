@@ -1,7 +1,47 @@
 //! C+ #22 Blood Moon (SPEC §8.7 row 22): the "would be healed" replacement (B5 E5, E8, R413): an enemy heal
 //! becomes Pierce damage from it, for the rest of the turn; the Radiant face is a Field Trap that keeps it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-022";
+
+/// `{ id: "blood-moon", on: "healed", instead }`: the one replacement both faces declare.
+fn blood_moon(instead: ReplacementInstead) -> ReplacementDef {
+    ReplacementDef {
+        id: "blood-moon".to_string(),
+        on: ReplacementMoment::Healed,
+        where_: None,
+        when: None,
+        instead,
+        then: None,
+        by: None,
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        replacements: vec![blood_moon(ReplacementInstead {
+            damage: Some(InsteadDamage::Pierce),
+            lasting: Some(InsteadLasting::ThisTurn),
+            ..ReplacementInstead::default()
+        })],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            heal_to_damage: Some(true),
+            ..StaticFlags::default()
+        }),
+        replacements: vec![blood_moon(ReplacementInstead {
+            damage: Some(InsteadDamage::Pierce),
+            ..ReplacementInstead::default()
+        })],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #22 Blood Moon (SPEC §8.7 row 22): fires when an enemy would be healed. The triggering heal is
 // converted too (R413), and every enemy heal this turn becomes Pierce damage. The opponent learns
@@ -10,7 +50,6 @@ pub const ID: &str = "classicplus-022";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::prelude::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -101,7 +140,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.type_, CardType::Trap);
             assert_eq!(def.radiant.type_, Some(CardType::FieldTrap));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let first = scripts.base.replacements.first().expect("a replacement");
             assert!(matches_object(
                 &json!({ "on": first.on, "instead": js(&first.instead) }),

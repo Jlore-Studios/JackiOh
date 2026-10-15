@@ -12,10 +12,10 @@
 // match leaves for the card statistics (migration 0014, SPEC §9.11) and the record of how each
 // seat played it (migration 0029, R1442), the age check and the terms each account agreed to
 // (migration 0034, R757000, R757001), Play together's friends, blocks, presence, challenges, chat
-// and replay shares (migration 0036, #936; chat purged after `CHAT_RETENTION_DAYS`, B53; a challenge
+// and replay shares (migration 0038, #936; chat purged after `CHAT_RETENTION_DAYS`, B53; a challenge
 // deleted once `CHALLENGE_TTL_MS` has passed, B49; the shares between two players deleted when either
 // unfriends or blocks the other, B46, B52), who may watch a game you play (B50: your friends, and your
-// opponent's) and Duos co-op (migration 0037, SPEC S6: the teammate's view, B23; its moves kept
+// opponent's) and Duos co-op (migration 0039, SPEC S6: the teammate's view, B23; its moves kept
 // `MATCH_ACTION_RETENTION_DAYS`; either account's deletion takes the whole co-op game, refused while
 // one is live). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
 // choose. Change the date on the page whenever the text changes: with the terms' date it makes up

@@ -4,7 +4,22 @@
 //! card standing in a unit zone is a Unit and is not hit (R383); an Ivory Tower is, whatever it has fused
 //! (R418), and a Unit standing on it while its play resolves is not (R446, R653).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-005";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "any", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #5 Guy Att — SPEC §8.7 row 5, BUILD M9 Classic+ row C+ 5: "Cry destroys every backrow card you
 // control, face-down traps and Field Spells alike, an Indestructible one staying (R46); a destroyed
@@ -16,7 +31,7 @@ pub const ID: &str = "classicplus-005";
 // it is destroyed in the backrow (C+ #61 proves it again in its own file).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -72,7 +87,7 @@ mod tests {
             [Some(6), Some(8), Some(12), Some(16)]
         );
         assert_eq!(def.tags, vec![Tag::Human]);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
     }

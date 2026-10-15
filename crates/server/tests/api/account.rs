@@ -231,7 +231,7 @@ mod delete_api_account {
     }
 
     /// Duos co-op (#946): a live co-op match is refused as a live 1v1 is, so the teammate's match
-    /// is never cascaded away (migration 0037); once it has ended, the account may go.
+    /// is never cascaded away (migration 0039); once it has ended, the account may go.
     #[tokio::test]
     async fn refuses_a_player_in_a_live_co_op_match_with_409_and_deletes_nothing() {
         let setup = setup().await;

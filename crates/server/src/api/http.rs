@@ -1110,6 +1110,14 @@ async fn run_route(
         assert_active(&resolved.profile)?;
     }
 
+    // SPEC §11 R897000: every signed-in request refreshes its caller's queue presence, piggybacked
+    // here so no new route and no client change is needed: a queued client already polls
+    // `GET /api/auth/me` every `SERIES_POLL_SECONDS` from wherever it is. Only requests passing
+    // auth and the gate refresh.
+    if let Some(resolved) = &caller {
+        app.queue_presence.touch(&resolved.profile.id, now_ms());
+    }
+
     let req = Req {
         caller,
         params,

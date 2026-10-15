@@ -31,6 +31,8 @@
 //!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
 //!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
+//!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
+//!                      only by a sandbox game and never listed (R923000–R923003)
 //!
 //! After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
 //! the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
@@ -49,10 +51,11 @@ use std::ops::ControlFlow;
 use serde::{Deserialize, Serialize};
 
 use crate::combat::{
-    AttackTarget, ExertionKind, attack_targets, declare_attack, has_exertion, switch_position,
+    AttackTarget, ExertionKind, attack_targets_in, declare_attack, has_exertion_in, switch_position,
 };
 use crate::config::{MAX_MULLIGAN_SUBSETS, NONCE_HISTORY, TIMEOUT_ANSWER_CAP, TURN_CAP_PLAYER_TURNS};
 use crate::game_over::end_game;
+use crate::layers::AuraTable;
 use crate::modifiers::remove_modifier;
 use crate::play_choices::{PlayAction, graveyard_play_actions_for, play_actions_for};
 use crate::play_steps::run_play_steps;
@@ -264,13 +267,13 @@ fn activation_actions(state: &GameState, player: PlayerId, card: &CardInstance) 
 }
 
 /// §4.1 and R49: whether this unit's own switch is on offer at all.
-fn can_switch(state: &GameState, unit: &CardInstance) -> bool {
-    if !has_exertion(state, unit, ExertionKind::Switch) {
+fn can_switch(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    if !has_exertion_in(auras, unit, ExertionKind::Switch) {
         return false;
     }
     // §4.1: Spikey Pillow can never be in Defense Position, so a unit in Attack has nowhere to go.
     unit.position.unwrap_or(Position::Atk) == Position::Def
-        || flags_of(state, unit).never_defense != Some(true)
+        || flags_of(auras.state(), unit).never_defense != Some(true)
 }
 
 fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), EngineError> {
@@ -347,6 +350,8 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
             concede(sink, action.player_id);
             Ok(())
         }
+        // R923000: a practice-sandbox tool, refused outside a sandbox game (`sandbox.rs` owns the rule).
+        ActionBody::Sandbox { op } => crate::sandbox::apply_sandbox(sink, op),
         ActionBody::EndTurn => {
             end_turn(sink);
             Ok(())
@@ -836,23 +841,25 @@ pub(crate) fn each_legal_action(
     // R1200: while a Mayor acts each attack is listed once per attacker with no target — the
     // reducer draws it — so the client asks for none.
     let random = crate::random_targets::targets_random(state);
+    // #892: one aura table for every attacker's targets and switch.
+    let auras = AuraTable::new(state);
     for unit in active_units_of(state, player) {
         if random {
-            if !attack_targets(state, unit).is_empty() {
+            if !attack_targets_in(&auras, unit).is_empty() {
                 visit(ActionBody::Attack {
                     attacker_id: unit.id.clone(),
                     target_id: crate::config::RANDOM_ATTACK_TARGET.to_string(),
                 })?;
             }
         } else {
-            for target in attack_targets(state, unit) {
+            for target in attack_targets_in(&auras, unit) {
                 visit(ActionBody::Attack {
                     attacker_id: unit.id.clone(),
                     target_id: attack_target_id(&target),
                 })?;
             }
         }
-        if can_switch(state, unit) {
+        if can_switch(&auras, unit) {
             visit(ActionBody::SwitchPosition {
                 instance_id: unit.id.clone(),
             })?;
@@ -897,9 +904,4 @@ pub(crate) fn each_legal_action(
 
     visit(ActionBody::EndTurn)?;
     visit(ActionBody::Concede)
-}
-
-/// Exported for the AI policy and the client: the instance an `attack` action would move (§10.2).
-pub fn unit_for_action<'a>(state: &'a GameState, instance_id: &str) -> Option<&'a CardInstance> {
-    find_instance(state, instance_id)
 }

@@ -13,7 +13,31 @@
 //! Lucky 1, and a Degrade or an Upgrade of that number moves it (B3.4's X change) — so both faces run
 //! one hook and differ by the face's keyword and by whether the Grapes are Radiant.
 
+use jackioh_engine::effects::add_rolled_grapes;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-065";
+
+fn two_grapes(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "count": param(ctx, "grapes") });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![add_rolled_grapes(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = two_grapes(false);
+
+    let radiant = two_grapes(true);
+
+    CardScripts { base, radiant }
+}
 
 // C+ #65 Two Grapes — SPEC §8.7 row 65, BUILD M9 Classic+ row C+ 65: "Add {grapes} to your hand"
 // (exactly two, balance patch 1; each rolled on its own from `GRAPE_ODDS` in code, never in player
@@ -106,7 +130,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "grapes", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Lucky", "n": 1 }]));

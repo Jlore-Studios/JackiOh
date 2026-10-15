@@ -8,7 +8,49 @@
 //! each into a base Sheep, as Core #34 Collateral Damage reaches its neighbours before its target. The
 //! neighbours change whether or not the target does. A Spell's unlabelled one-time text is its Cry.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-024";
+
+/// §7: the Sheep Token.
+const SHEEP_TOKEN: &str = "core-t-sheep";
+
+/// R81: "a Unit", either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+fn polymorph(neighbours: bool) -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(move |_ctx| {
+            let mut effects: Vec<Effect> = Vec::new();
+            if neighbours {
+                effects.push(for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|at: &mut EffectContext<'_>| {
+                        adjacent_to(at, &json_as(json!({ "of": "chosen" })), &BoardScope::default())
+                            .into_iter()
+                            .map(|card| card.id)
+                            .collect()
+                    }),
+                    each: Arc::new(|instance_id: &str| {
+                        transform(json_as(json!({ "instanceId": instance_id, "defId": SHEEP_TOKEN })))
+                    }),
+                }));
+            }
+            effects.push(transform(json_as(json!({ "target": { "of": "chosen" }, "defId": SHEEP_TOKEN }))));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: polymorph(false),
+        radiant: polymorph(true),
+    }
+}
 
 // M #24 Polymorph — SPEC §8.8 row 24, BUILD M10 row M 24: "Declares one Unit on either side (R81) and
 // transforms it into a base Sheep Token in place (R691); an Immutable target is left alone (R23); the
@@ -75,7 +117,7 @@ mod tests {
         assert!(def.tags.is_empty());
         assert!(def.params.is_none());
         assert_eq!(js(&def.refs), json!([SHEEP]));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(face.targets.len(), 1);
             assert_eq!(js(&face.targets[0].filter)["side"], json!("any"));

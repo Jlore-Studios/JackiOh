@@ -8,7 +8,7 @@
 //!     it is its duel's round seat and has not ended (B4, B6) — never during the mulligans (B2);
 //!   - never a draw offer or answer, the duel's own concede, or the setting R82 reads (B9, B10).
 //!
-//! The wrapper applies R82 itself (B9, §12.3): a round seat left with nothing but End turn in its
+//! The wrapper applies R82 itself (B9, §13.3): a round seat left with nothing but End turn in its
 //! duel, and no pass it may make, is ended for it.
 
 use std::ops::ControlFlow;
@@ -194,7 +194,7 @@ pub(super) fn why_pass_refused(
 /// B9, R82: whether the wrapper ends `duel`'s round seat now — a round seat that has not ended, in
 /// its main phase with no prompt open, whose duel offers it nothing but End turn, concede and the
 /// draw offers, and which has no pass it may make: a card it could still pass keeps it in the round
-/// (§12.3).
+/// (§13.3).
 pub(super) fn auto_end_due(state: &DuosState, duel: usize) -> bool {
     if state.result.is_some() || state.round == 0 || state.ended[duel] {
         return false;

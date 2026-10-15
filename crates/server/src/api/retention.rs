@@ -11,7 +11,7 @@
 //!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53;
 //!    `social::chat::purge`, its own transaction after the others).
 //!  - a finished co-op match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a
-//!    1v1 match's (§12.9; `duos::purge_expired_logs`, its own transaction). Its row, the seed, the
+//!    1v1 match's (§13.9; `duos::purge_expired_logs`, its own transaction). Its row, the seed, the
 //!    decks and the result, is kept, as a 1v1 match's is.
 //!
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every

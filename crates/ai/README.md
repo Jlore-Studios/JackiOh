@@ -2,7 +2,7 @@
 
 The computer opponent of practice games (spec §9.9). It plays one seat of an ordinary engine game:
 it reads a state, returns one `ActionBody`, and the caller reduces it. It also plays the AI team of a
-Duos game, both seats, on the server (§12.7, [Duos](#duos-127) below). The design is
+Duos game, both seats, on the server (§13.7, [Duos](#duos-137) below). The design is
 `docs/polish/3-ai.md`; this file is the contract the WASM module, the tools and the training lanes
 rely on.
 
@@ -94,7 +94,7 @@ earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 `play_match(&MatchConfig, &mut MatchHooks) -> MatchRecord` plays one whole game between two
 controllers (the AI, `greedy_action` or `random_action`, §10.7's random policy) and returns its log,
-hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate`, `AI_GATE`) are
+hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate_games`, `AI_GATE`) are
 three matchups whose subject alternates seats, every game folded back to its hash. A run of n games
 needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count.
 
@@ -127,10 +127,10 @@ deals a live game (R258), both seats AI on the spec's resources at `AI_BUDGET`, 
 record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`dev_record_id`).
 `cargo jackioh stats --out <file>` writes a run; `jackioh-server stats-import <file>` loads it.
 
-## Duos (§12.7)
+## Duos (§13.7)
 
 `src/duos.rs` plays a seat of a Duos game (`jackioh_engine::duos`): one AI plays both seats of team B,
-and any human seat the server hands it after a disconnect (§12.8).
+and any human seat the server hands it after a disconnect (§13.8).
 
 ```rust
 pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosActionBody>;
@@ -147,7 +147,7 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
   the seat can pay the pass; with `pass_cost` 0 also a card the teammate can afford next turn and the
   seat cannot; never more than the passes left or the teammate's free hand slots.
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
-  `determinize` (R185), and its teammate's own state, which a team shares (§12.6). An opponent's
+  `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
 - The tiers are `duos_ai_team(difficulty)` for the team (Easy the humans' rules, Medium free passing,
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's

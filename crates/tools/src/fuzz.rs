@@ -71,8 +71,8 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
-    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, Tag,
-    begin_game, create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
+    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
+    create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
 };
 use rayon::prelude::*;
 
@@ -229,7 +229,7 @@ static EXCLUDED_IDS: LazyLock<IndexSet<&'static str>> =
 pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .filter(|id| !EXCLUDED_IDS.contains(id.as_str()))
         .collect();
@@ -532,6 +532,7 @@ fn check_replay(seed: u32, run: &GameRun) -> Result<(), FuzzFailure> {
         dealt: None,
         last_boards: None,
         glitch_boards: None,
+        ..Default::default()
     });
 
     if let Some(first) = replayed.errors.first() {
@@ -1102,7 +1103,7 @@ impl Wave {
 static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .collect();
     pool.sort();
@@ -1266,6 +1267,7 @@ fn play_seed(seed: u32) -> Outcome {
             dealt: None,
             last_boards: None,
             glitch_boards: None,
+            ..Default::default()
         });
         if !replayed.errors.is_empty() {
             return Err(format!(

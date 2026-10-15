@@ -59,12 +59,13 @@ import {
 } from "@jackioh/engine";
 import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
-import { DEFAULT_PORTRAIT, newestShippedSet, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
 import type { PracticeReplay, PracticeReplaySetup, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
+import { randomDeckLean } from "./protocol.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
@@ -93,8 +94,21 @@ export type PracticeCoreEnv = {
   saves?: PracticeSaveStore;
 };
 
-/** `handle` never throws: anything that goes wrong comes back as `"failed"`. */
-export type PracticeCore = { handle(request: PracticeRequest): PracticeResponse };
+/**
+ * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` is what the
+ * worker asks first (R915009): whether `request` runs on the Luau module (a game with custom cards,
+ * started, resumed or replayed), on the normal one, or on whichever is in use (`null`), so it can
+ * switch before the synchronous `handle`.
+ */
+export type PracticeCore = {
+  handle(request: PracticeRequest): PracticeResponse;
+  needsLuau(request: PracticeRequest): boolean | null;
+};
+
+/** R915006: whether a game's setup carries custom cards. */
+export function hasCustomCards(config: PracticeStartConfig): boolean {
+  return config.customCards !== undefined && config.customCards.length > 0;
+}
 
 type PracticeGame = {
   config: PracticeStartConfig;
@@ -123,8 +137,9 @@ type PracticeGame = {
 /** R188: the action types the AI never takes on its own, even as a fallback. */
 function isForbiddenAiAction(action: ActionBody): boolean {
   // MD-D29, R1127: the persona's emote is no AI decision — it arrives on its own request, and the
-  // random policy never emotes, so the gate answers it, never the search.
-  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote") return true;
+  // random policy never emotes, so the gate answers it, never the search. R923000: the sandbox's tools
+  // are the human's alone (`legalActions` never lists one, and this gate holds it twice).
+  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote" || action.type === "sandbox") return true;
   return action.type === "answerDraw" && action.accept;
 }
 
@@ -135,19 +150,21 @@ function messageOf(cause: unknown): string {
 /**
  * The human's deck: a random draw at the spec's own size, a named preset's list, or a saved
  * loadout deck. `createGame` checks a preset or a saved deck like any other (§2.6): the engine's
- * ruling, printed as given. R1373: a random deck the player asked to lean on the newest set leans on
- * the newest set that ships (R1371), resolved here, where the deck is dealt; the AI's own deck never
- * leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
+ * ruling, printed as given. R1373, R924000: a random deck the player asked to lean on a set leans on
+ * it, "newest" being the newest set that ships (R1371), resolved here, where the deck is dealt; the
+ * AI's own deck never leans. A player's random deck is dealt from every set: neither the AI's shadow ban nor its soft gate
  * (R1390) applies.
  */
 function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
   switch (choice.kind) {
-    case "random":
+    case "random": {
+      const lean = randomDeckLean(choice);
       return buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE, {
         banned: [],
         gatedSets: [],
-        ...(choice.leanNewest === true ? { leanSet: newestShippedSet() } : {}),
+        ...(lean === null ? {} : { leanSet: leanSetOf(lean) }),
       });
+    }
     case "preset": {
       const preset = presetById(choice.id);
       if (preset === undefined) throw new Error(`unknown preset deck "${choice.id}"`);
@@ -155,6 +172,12 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
     }
     case "saved":
       return [...choice.cards];
+    case "try":
+      // #920: the creator's "Try it": the custom card and a random deck around it.
+      return [
+        choice.card,
+        ...buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE - 1, { banned: [], gatedSets: [] }),
+      ];
   }
 }
 
@@ -183,7 +206,9 @@ function decksAndHandicap(config: PracticeStartConfig): { humanDeck: string[]; a
  * library from itself. A lesson plays its fixed decks, whatever `deck` says.
  */
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
-  return config.lesson === undefined && config.deck.kind === "random" ? [config.humanSeat] : [];
+  // R433: the human was dealt a random deck, or (#920's "Try it") a random deck around their custom card.
+  const dealt = config.deck.kind === "random" || config.deck.kind === "try";
+  return config.lesson === undefined && dealt ? [config.humanSeat] : [];
 }
 
 function startGame(config: PracticeStartConfig): PracticeGame {
@@ -191,8 +216,9 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   const { humanDeck, aiDeck, handicap } = decksAndHandicap(config);
   const decks: [string[], string[]] = config.humanSeat === "p1" ? [humanDeck, aiDeck] : [aiDeck, humanDeck];
   const handicaps: Partial<Record<PlayerId, Handicap>> = { [aiSeat]: { ...handicap } };
-  // R508: the human's last board, on a free game only; the AI's seat never has one.
-  const board = config.lesson === undefined ? (config.lastBoard ?? []) : [];
+  // R508: the human's last board, on a free game only; the AI's seat never has one. R923000: a sandbox
+  // game brings none.
+  const board = config.lesson === undefined && config.sandbox !== true ? (config.lastBoard ?? []) : [];
   const lastBoards: [LastBoardCard[], LastBoardCard[]] | undefined =
     board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
   const dealt = dealtSeats(config);
@@ -205,6 +231,10 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     handicaps,
     ...(lastBoards === undefined ? {} : { lastBoards }),
     ...(dealt.length === 0 ? {} : { dealt }),
+    // R923000: the one game whose dev tools the engine takes.
+    ...(config.sandbox === true ? { sandbox: true } : {}),
+    // R915006: the custom cards the human's deck names, which only the Luau module runs (R915009).
+    ...(hasCustomCards(config) ? { customCards: config.customCards } : {}),
   });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
@@ -283,8 +313,10 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
   // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
   const human = humanSeatNow(game);
   const result = game.state.result;
-  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none.
-  const keepsBoard = result !== null && result.reason !== "voided" && game.config.lesson === undefined;
+  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none,
+  // and R923000: a sandbox game, whose board its tools built, leaves none either.
+  const keepsBoard =
+    result !== null && result.reason !== "voided" && game.config.lesson === undefined && game.config.sandbox !== true;
   return {
     view: viewFor(game.state, human),
     legal: legalActions(game.state, human),
@@ -318,8 +350,9 @@ function saveOf(game: PracticeGame): PracticeSave | null {
 function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): PracticeGame {
   if (save === null) throw new Error("no practice game is saved on this device");
   // The page names the game it remembers; a save of any other game is not the one it asked for.
-  const { seed, humanSeat, difficulty } = save.config;
-  if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty) {
+  // R923000: a sandbox game is the page's only when it remembers a sandbox, whose panel it then shows.
+  const { seed, humanSeat, difficulty, sandbox } = save.config;
+  if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty || sandbox !== asked.sandbox) {
     throw new Error("the saved practice game is not the one the page remembers");
   }
   if (save.catalog !== CATALOG_VERSION) {
@@ -351,6 +384,8 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
     handicaps: dealt.handicaps,
     ...(dealt.lastBoards === undefined ? {} : { lastBoards: dealt.lastBoards }),
     ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
+    ...(replay.config.sandbox === true ? { sandbox: true } : {}),
+    ...(hasCustomCards(replay.config) ? { customCards: replay.config.customCards } : {}),
     log: replay.log,
   };
 }
@@ -541,6 +576,8 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       ...(active.config.lesson === undefined ? {} : { lesson: active.config.lesson }),
       ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
       ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
+      ...(active.config.sandbox === true ? { sandbox: true } : {}),
+      ...(hasCustomCards(active.config) ? { customCards: JSON.parse(JSON.stringify(active.config.customCards)) as CustomCard[] } : {}),
     };
   }
 
@@ -606,6 +643,23 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         return handleUnsafe(request);
       } catch (cause) {
         return { id: request.id, type: "failed", message: messageOf(cause) };
+      }
+    },
+    needsLuau(request: PracticeRequest): boolean | null {
+      switch (request.type) {
+        case "start":
+          return hasCustomCards(request.config);
+        case "resume": {
+          // The save, not the page's memory, says what the game carries.
+          const save = env.saves?.read() ?? null;
+          return save === null ? false : hasCustomCards(save.config);
+        }
+        case "replay": {
+          const kept = env.saves?.readReplays().find((replay) => replay.summary.game === request.game);
+          return kept === undefined ? null : hasCustomCards(kept.config);
+        }
+        default:
+          return null;
       }
     },
   };

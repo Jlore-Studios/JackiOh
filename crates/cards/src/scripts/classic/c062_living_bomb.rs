@@ -11,14 +11,57 @@
 //! Hooks queue at R62's start-of-turn trigger point in R68's order: `startOfTurn` on own turn (base),
 //! `startOfOpponentTurn` on opponent's turn, queued after the active player's own hooks.
 
+use jackioh_engine::effects::destroy;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-062";
+
+/// R400: one destroy for each permanent `player` controls with a Plague Counter on it, in R68's order.
+fn destroy_plagued(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<Effect> {
+    permanents_on_field(ctx.state, player)
+        .iter()
+        .filter(|card| card.controller == player && plague_on(card) > 0)
+        .map(|card| destroy(json_as(json!({ "target": { "of": "instance", "instanceId": card.id } }))))
+        .collect()
+}
+
+fn at_your_turn() -> Hook {
+    hook(|ctx| {
+        let player = ctx.controller;
+        destroy_plagued(ctx, player)
+    })
+}
+
+fn at_opponents_turn() -> Hook {
+    hook(|ctx| {
+        let player = opponent_of(ctx.controller);
+        destroy_plagued(ctx, player)
+    })
+}
+
+pub fn script() -> CardScripts {
+    let at_opponents_turn = at_opponents_turn();
+
+    let base = Script {
+        start_of_turn: Some(at_your_turn()),
+        start_of_opponent_turn: Some(at_opponents_turn.clone()),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        start_of_opponent_turn: Some(at_opponents_turn),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #62 Living Bomb (SPEC §8.6 row 62): at the start of each player's turn, in R68's order,
 // destroy every permanent that player controls with a Plague Counter (R400; Indestructible stays,
 // R46; tokens cleared on leave, R78). Radiant: only at the start of opponent's turn.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
     use std::sync::Arc;
@@ -93,7 +136,7 @@ mod tests {
             let def = js(&crate::card_def(ID));
             assert_eq!(def["id"], BOMB);
             assert!(def.get("params").is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.start_of_turn.is_some());
             assert!(scripts.base.start_of_opponent_turn.is_some());
             assert!(scripts.radiant.start_of_turn.is_none());

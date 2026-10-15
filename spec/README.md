@@ -19,7 +19,8 @@ One note per top-level section, its subsections inside:
 - [[§9]] [09-architecture.md](09-architecture.md): trust, topology, accounts and friends, matchmaking and Play together (challenges, watching a friend, shared replays, chat), abuse, the practice AI, the tutorial, card statistics, the ranked ladder.
 - [[§10]] [10-engine-guide.md](10-engine-guide.md): the engine: state, actions, events, layers, playing a card, prompts, randomness, the view, card scripts, the client's rendering and audio.
 - [[§11]] [11-rulings.md](11-rulings.md): where the rulings came from; the rulings themselves are the notes in [rulings/](rulings/).
-- [[§12]] [12-duos.md](12-duos.md): Duos, two players against an AI team in two duels side by side: seats and pairing, setup, rounds, the shared life pool, passing, what each seat sees, the AI team, leaving, co-op rooms and pings.
+- [[§12]] [12-custom-cards.md](12-custom-cards.md): custom cards: the frame, the card kit, where they play, their replays, the AI against them, the account, the Luau module, the creator.
+- [[§13]] [13-duos.md](13-duos.md): Duos, two players against an AI team in two duels side by side: seats and pairing, setup, rounds, the shared life pool, passing, what each seat sees, the AI team, leaving, co-op rooms and pings.
 - [INDEX.md](INDEX.md): every ruling on one line: its id, title, note and the tests that prove it.
 
 ## Note format

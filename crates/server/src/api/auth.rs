@@ -281,7 +281,7 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
             ACCOUNT_DELETION_IN_SERIES_MESSAGE,
         ));
     }
-    // Duos co-op (#946): a live co-op match is refused as a live 1v1 is; 0037's keys would
+    // Duos co-op (#946): a live co-op match is refused as a live 1v1 is; 0039's keys would
     // otherwise cascade it away from under the teammate.
     if crate::duos::live_match_of(app, &profile.id).await?.is_some() {
         return Err(ApiError::new(
@@ -312,6 +312,9 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let series = tx.series_active_for(&profile.id).await?;
     let consent = tx.consent_get(&profile.id).await?;
+    // SPEC §11 R897000: whether this profile holds an open queue ticket, so a client whose ticket
+    // expired stops waiting with a rejoin message. Its own row only, like `currentMatchId`.
+    let open = tx.tickets_open_for_profile(&profile.id).await?;
     tx.commit().await?;
     let needs_invite_code = matches!(profile.status, crate::db::store::ProfileStatus::Pending);
     Ok(json(
@@ -334,6 +337,7 @@ pub async fn get_me(app: &Arc<App>, req: Req) -> ApiResult {
             // still authenticates and the actor still stamps the seat from the token (§9.3).
             "currentMatchId": profile.in_match_id,
             "currentSeriesId": series.map(|series| series.id),
+            "queued": open.is_some(),
             // The address this account is tied to, so a player can see WHICH account they are signed
             // in as. Read from the auth provider's user (the same place §9.4 step 1 reads
             // `emailVerified` from), never from the token's user_metadata, which is user-editable.

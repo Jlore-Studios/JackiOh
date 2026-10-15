@@ -35,8 +35,8 @@ use crate::actor::registry::AttachError;
 use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
 use crate::app::{App, browser_origins};
 use crate::config::{
-    DEFAULT_TRUSTED_PROXY_HOPS, WS_IDLE_TIMEOUT_SECONDS, WS_MAX_CONNECTIONS_PER_ADDRESS,
-    WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
+    DEFAULT_TRUSTED_PROXY_HOPS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
+    WS_MAX_CONNECTIONS_PER_ADDRESS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
 use crate::db::store::MatchStatus;
 
@@ -70,6 +70,9 @@ const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
 /// RFC 6455's normal closure.
 const CLOSE_NORMAL: u16 = 1000;
+
+/// RFC 6455's "going away": the server is shutting down (#861).
+const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// How long a socket the server closed waits for the peer's half of the closing handshake before
 /// the connection is dropped.
@@ -643,6 +646,34 @@ fn register_client(app: usize, socket: &Socket) {
 fn unregister_client(app: usize, socket: &Socket) {
     if let Some(entry) = lock(&UPGRADES).get_mut(&app) {
         entry.clients.retain(|client| client != socket);
+    }
+}
+
+/// Closes the sockets no actor closed, such as one mid-upgrade (#861's drain). The lock is
+/// released before any close (a close calls into the actor). Does nothing on a socket that is
+/// already closed.
+pub fn close_all(app: &App) {
+    let clients: Vec<Socket> = lock(&UPGRADES)
+        .get(&app_key(app))
+        .map(|entry| entry.clients.clone())
+        .unwrap_or_default();
+    for socket in clients {
+        socket.close(Some(CLOSE_GOING_AWAY), Some("the server is shutting down"));
+    }
+}
+
+fn holds_sockets(app: usize) -> bool {
+    lock(&UPGRADES)
+        .get(&app)
+        .is_some_and(|entry| !entry.clients.is_empty())
+}
+
+/// Resolves once every socket's pump has ended and its upgrade task has unregistered it (#861's
+/// drain). That happens after the peer answers the close, or after `CLOSE_HANDSHAKE_TIMEOUT`.
+pub async fn all_closed(app: &App) {
+    let poll = Duration::from_millis(u64::try_from(SHUTDOWN_SOCKETS_POLL_MS).unwrap_or(1));
+    while holds_sockets(app_key(app)) {
+        tokio::time::sleep(poll).await;
     }
 }
 

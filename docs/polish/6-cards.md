@@ -267,7 +267,6 @@ export function CardArt(props: CardArtProps): ReactElement;
 
 ```ts
 // model.ts
-export type FaceLayout = "full" | "compact" | "minion";
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
   /** What the gem shows: the view's live number whenever there is one, "X" for an X card, else the printed price. */
@@ -1013,8 +1012,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   the radiant clause, by first appearance; then the face's keywords not yet listed. On a radiant
   face those are the printed texts (B7), so radiant #56 explains Charge and Indestructible and
   never Rush or Divine Shield. Nothing is rendered when the list is empty (jsdom).
-- **B27.** `placePreview(anchor, viewport, size, prefer = "beside")` returns the right side when
-  the preview fits there, else left, else above, else below. With `prefer: "above"` it tries above
+- **B27.** `placePreview(anchor, viewport, size, prefer = "beside")` returns the left side when
+  the preview fits there, else right, else above, else below (#912 put the left first, where #814
+  asked for a card's full text on hover). With `prefer: "above"` it tries above
   first, then the same order: a full face in a row (the hand, the resolving strip, a prompt
   option) asks for it, so the preview rises over the card instead of covering the neighbour the
   pointer is heading for. `left` and `top` are clamped so the box stays `PREVIEW_MARGIN_PX` (8)

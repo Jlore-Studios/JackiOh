@@ -11,13 +11,75 @@
 //! to their controllers' hands (R747): a full hand burns it (R4, R317), a unit token ceases to exist
 //! (R11), and no view of theirs names a bounced face-down card (R97). R195: the hand glow uses the same test.
 
+use jackioh_engine::effects::{ForEachCardArgs, bounce, cards_in_scope, for_each_card, sacrifice};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-022";
+
+/// "{threshold} or more mana": the one test both the Cry and the glow make.
+fn enough_mana(ctx: &impl ParamContext, mana: i32) -> bool {
+    mana >= param(ctx, "threshold")
+}
+
+/// The mana its controller had as the play began (§10.5 step 1), or, for a Cry not played now, now.
+fn mana_when_played(ctx: &EffectContext<'_>) -> i32 {
+    ctx.mana_before_play
+        .unwrap_or_else(|| unspent_mana_of(&*ctx.state, ctx.controller))
+}
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(self_) = ctx.live_self().cloned() else {
+        return vec![];
+    };
+    // R685: midlane is computed from the lane count, never hardcoded, through the engine helper (M3-T1).
+    let lane = slot_of(&*ctx.state, &self_).map_or(-1, |slot| slot.lane);
+    let in_midlane = midlane_lanes_of(&*ctx.state, ctx.controller).contains(&lane)
+        && matches!(self_.zone, Zone::Field { row: Row::Units, .. });
+    let bounces = param(&*ctx, "bounces");
+    let mana = mana_when_played(ctx);
+    let mut effects = Vec::new();
+    if in_midlane {
+        effects.push(sacrifice(json_as(json!({ "target": { "of": "self" } }))));
+    }
+    if enough_mana(&*ctx, mana) {
+        effects.push(for_each_card(ForEachCardArgs {
+            // R60: different cards, drawn as the Cry reaches this clause.
+            cards: Arc::new(move |c: &mut EffectContext<'_>| -> Vec<String> {
+                let scope: BoardScope = json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }));
+                let permanents = cards_in_scope(c, &scope);
+                c.sink
+                    .rng
+                    .shuffle(&permanents)
+                    .into_iter()
+                    .take(bounces.max(0) as usize)
+                    .map(|card| card.id)
+                    .collect()
+            }),
+            each: Arc::new(|instance_id: &str| {
+                bounce(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+            }),
+        }));
+    }
+    effects
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        // R195: in hand, whether playing it now would bounce.
+        condition_met: Some(condition_hook(|ctx| {
+            ctx.zone == ConditionZone::Hand && enough_mana(&ctx, unspent_mana_of(ctx.state, ctx.controller))
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face is the base text on doubled stats (docs/radiant-audit.md).
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #22 Mid Runner — SPEC §8.6 row 22, BUILD M9 Classic row C 22: both checks may pass in one Cry;
 // `conditionMet` answers in hand whether your mana is 4 or more now (R195); radiant 4/2 returns 3;
 // its tuned numbers (mana threshold, bounces) read through `param()` (R386).
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,12 +122,11 @@ mod tests {
 
     mod c_n22_mid_runner {
         use super::*;
-        use std::sync::Arc;
 
         #[test]
         fn runs_one_script_on_both_faces_and_midlane_of_5_lanes_is_lane_3_r685() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, RUNNER);
             // The Radiant face is the base script itself.
             assert!(Arc::ptr_eq(

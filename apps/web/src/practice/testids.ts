@@ -19,6 +19,15 @@ export const practiceTestid = {
   deckCurve: "practice-deck-curve",
   /** In the preview: one row per card of the chosen deck. */
   deckCard: (defId: string): string => `practice-deck-card-${defId}`,
+  /**
+   * R915005: under the preview, why a saved deck that names custom cards cannot start (one is gone,
+   * or they are still loading or could not be read); Start is off while it shows. role="status".
+   */
+  customBlocked: "practice-custom-blocked",
+  /** #921: `?try=<custom id>` while the account's custom cards are read, before the game starts. */
+  tryLoading: "practice-try-loading",
+  /** #921: on the setup, after `?try=` named no custom card of the account's; role="status". */
+  tryMissing: "practice-try-missing",
   start: "practice-start",
   loading: "practice-loading",
   error: "practice-error",
@@ -61,4 +70,37 @@ export const practiceTestid = {
   modifiersPanel: "practice-modifiers-panel",
   /** In the HUD once the game is over: the outcome, which reopens the result dialog. */
   outcome: "practice-outcome",
+  /** R923000: on the setup, a checkbox: the game is a sandbox with dev tools. */
+  sandbox: "practice-sandbox",
+  /** R923000: a sandbox game's dev tools panel, and the button that shows and hides it. */
+  sandboxPanel: "practice-sandbox-panel",
+  sandboxToggle: "practice-sandbox-toggle",
+  /** A checkbox: hold the AI's next step while the board is arranged. */
+  sandboxHold: "practice-sandbox-hold",
+  /** The card search's `<input>`, its Radiant checkbox, and one button per card found. */
+  sandboxSearch: "practice-sandbox-search",
+  sandboxRadiant: "practice-sandbox-radiant",
+  sandboxResult: (defId: string): string => `practice-sandbox-result-${defId}`,
+  /** Spawn: whose (`you` or `opponent`), where (`hand`, `units:<lane>`, `backrow:<lane>`, `graveyard`, `libraryTop`), and the button. */
+  sandboxSpawnSeat: "practice-sandbox-spawn-seat",
+  sandboxSpawnWhere: "practice-sandbox-spawn-where",
+  sandboxSpawn: "practice-sandbox-spawn",
+  /** A hero's health and Armor. */
+  sandboxHeroSeat: "practice-sandbox-hero-seat",
+  sandboxHealth: "practice-sandbox-health",
+  sandboxArmor: "practice-sandbox-armor",
+  sandboxSetHero: "practice-sandbox-set-hero",
+  /** A player's current and maximum mana. */
+  sandboxManaSeat: "practice-sandbox-mana-seat",
+  sandboxManaCurrent: "practice-sandbox-mana-current",
+  sandboxManaMax: "practice-sandbox-mana-max",
+  sandboxSetMana: "practice-sandbox-set-mana",
+  /** A draw. */
+  sandboxDrawSeat: "practice-sandbox-draw-seat",
+  sandboxDrawCount: "practice-sandbox-draw-count",
+  sandboxDraw: "practice-sandbox-draw",
+  /** A card the human can see, and the two tools that take it. */
+  sandboxTarget: "practice-sandbox-target",
+  sandboxDestroy: "practice-sandbox-destroy",
+  sandboxRemove: "practice-sandbox-remove",
 } as const;

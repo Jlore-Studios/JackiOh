@@ -15,7 +15,61 @@
 //!
 //! Its new controller asks again from their side, so it settles with the cheaper board.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-030";
+
+/// M #30.1 Love Bomb, the token the "Otherwise" clause shuffles (§7).
+const LOVE_BOMB: &str = "meditative-030-1";
+
+/// Whether the opponent's most expensive permanent beats the controller's (R901, MD-B5), on the
+/// Radiant face only when their deck is also larger.
+fn opponent_outbids(state: &GameState, controller: PlayerId, needs_larger_deck: bool) -> bool {
+    let foe = opponent_of(controller);
+    let (Some(theirs), Some(ours)) =
+        (highest_permanent_cost(state, foe), highest_permanent_cost(state, controller))
+    else {
+        return false;
+    };
+    if theirs <= ours {
+        return false;
+    }
+    if needs_larger_deck
+        && zone_count(state, foe, OffFieldZone::Library)
+            <= zone_count(state, controller, OffFieldZone::Library)
+    {
+        return false;
+    }
+    true
+}
+
+fn kitten(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |ctx| {
+            let Some(me) = ctx.live_self() else {
+                return vec![];
+            };
+            let (id, controller) = (me.id.clone(), me.controller);
+            if opponent_outbids(ctx.state, controller, radiant) {
+                return vec![give_control(json_as(json!({ "instanceId": id })))];
+            }
+            vec![shuffle_into(json_as(json!({
+                "defId": LOVE_BOMB,
+                "count": 1,
+                "player": "self",
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: kitten(false),
+        radiant: kitten(true),
+    }
+}
 
 // M #30 Fickle E-Kitten — SPEC §8.8 row 30, BUILD M10 row M 30: "At its controller's start of
 // turn: with the opponent's highest field cost strictly above yours (tops of piles and backrow, X
@@ -26,6 +80,7 @@ pub const ID: &str = "meditative-030";
 // only when their deck is also larger, and the Love Bomb is Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -38,8 +93,6 @@ mod tests {
     const MOON: &str = "classicplus-022"; // (1) Trap, set face-down.
     const CHALICE: &str = "classic-087"; // (X) Field Spell.
     const FILLER: &str = "core-005";
-    /// M #30.1 Love Bomb, the token the "Otherwise" clause shuffles (§7).
-    const LOVE_BOMB: &str = "meditative-030-1";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])
