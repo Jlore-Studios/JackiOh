@@ -133,12 +133,17 @@ pub async fn send(app: &Arc<App>, req: Req) -> ApiResult {
             app.social.chat.retry_after_ms(&key, now),
         ));
     }
+    // A conversation reads in the order it was written: a message sent in the same millisecond as
+    // the newest one before it is stamped a millisecond after it, since the id that breaks a tie
+    // between equal times is random.
+    let newest = tx.chat_page(&me, &friend_id, None, 1).await?;
+    let created_at = newest.first().map_or(now, |row| now.max(row.created_at + 1));
     let row = ChatMessageRow {
         id: new_uuid(),
         from_profile: me.clone(),
         to_profile: friend_id.clone(),
         body: mask_blocked_words(body),
-        created_at: now,
+        created_at,
         read_at: None,
     };
     tx.chat_insert(&row).await?;
