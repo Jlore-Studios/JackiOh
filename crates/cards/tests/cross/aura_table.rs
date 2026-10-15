@@ -1,8 +1,8 @@
-//! #892: `layers::AuraTable` over the shipped auras — Jlockeed's Weapons (core-014) and Siphon Squad
-//! (classic-088), kept in Rust, Big D-fender (core-001), Spikey Pillow (core-065-1) and Suppressive
-//! Aura (core-046) — reads every unit as `layers::unit_view` reads it alone: a Vanilla'd source projects
-//! nothing (§6.1, §6.3), a card dormant under a Stack takes no aura (§3.2, R13), and a face-down Field
-//! Trap's aura is live (R403).
+//! #892: `layers::AuraTable` over the shipped auras — Jlockeed's Weapons (core-014), Spikey Pillow
+//! (core-065-1) and Siphon Squad (classic-088), kept in Rust, and Big D-fender (core-001) and
+//! Suppressive Aura (core-046), in Luau — reads every unit as `layers::unit_view` reads it alone, from
+//! both sides' units and backrows: a Vanilla'd source projects nothing (§6.1, §6.3) and a card dormant
+//! under a Stack takes no aura (§3.2, R13).
 
 use jackioh_engine::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -71,8 +71,16 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         all
     };
     let expected: Vec<(&str, CardInstance, UnitView)> = vec![
-        ("p1 lane 1 Mr. Vanilla", unit_at(&s, P1, 1), view(7, 3, armed(&[]), 0, Position::Atk)),
-        ("p1 lane 2 Big D-fender", unit_at(&s, P1, 2), view(3, 6, armed(&[]), 0, Position::Atk)),
+        (
+            "p1 lane 1 Mr. Vanilla",
+            unit_at(&s, P1, 1),
+            view(7, 3, armed(&[]), 0, Position::Atk),
+        ),
+        (
+            "p1 lane 2 Big D-fender",
+            unit_at(&s, P1, 2),
+            view(3, 6, armed(&[]), 0, Position::Atk),
+        ),
         (
             "p1 lane 3 Midrange Menace",
             unit_at(&s, P1, 3),
@@ -95,12 +103,30 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
             unit_at(&s, P1, 4),
             view(6, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
         ),
-        ("p1 dormant Mr. Vanilla", dormant, view(4, 4, vec![], 0, Position::Atk)),
-        ("p2 lane 1 Spikey Pillow", unit_at(&s, P2, 1), view(0, 1, vec![], 0, Position::Atk)),
-        ("p2 lane 2 Mr. Vanilla", unit_at(&s, P2, 2), view(0, 3, vec![], 0, Position::Atk)),
+        (
+            "p1 dormant Mr. Vanilla",
+            dormant,
+            view(4, 4, vec![], 0, Position::Atk),
+        ),
+        (
+            "p2 lane 1 Spikey Pillow",
+            unit_at(&s, P2, 1),
+            view(0, 1, vec![], 0, Position::Atk),
+        ),
+        (
+            "p2 lane 2 Mr. Vanilla",
+            unit_at(&s, P2, 2),
+            view(0, 3, vec![], 0, Position::Atk),
+        ),
     ];
+    let table = AuraTable::new(state);
     for (what, card, want) in &expected {
         let single = layers::unit_view(state, card);
+        assert_eq!(
+            table.unit_view(card),
+            single,
+            "{what} through a table and read alone"
+        );
         assert_eq!(&single, want, "{what} read alone");
     }
     assert_eq!(layers::unclamped_attack(state, &unit_at(&s, P2, 1)), -7);

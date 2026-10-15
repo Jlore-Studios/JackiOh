@@ -159,8 +159,16 @@ fn a_table_reads_every_unit_as_a_single_read_does_across_sources_dormant_carried
     .expect("the carried plain body");
     let stack = || vec![Keyword::Stack];
     let expected: Vec<(&str, CardInstance, UnitView)> = vec![
-        ("p1 lane 1 plain", unit_at(&s, P1, 1), view(4, 3, stack(), 0, Position::Atk)),
-        ("p1 lane 2 stacker", unit_at(&s, P1, 2), view(6, 7, stack(), 0, Position::Atk)),
+        (
+            "p1 lane 1 plain",
+            unit_at(&s, P1, 1),
+            view(4, 3, stack(), 0, Position::Atk),
+        ),
+        (
+            "p1 lane 2 stacker",
+            unit_at(&s, P1, 2),
+            view(6, 7, stack(), 0, Position::Atk),
+        ),
         ("p1 dormant plain", dormant, view(3, 3, vec![], 0, Position::Atk)),
         (
             "p1 lane 3 taunter",
@@ -178,13 +186,31 @@ fn a_table_reads_every_unit_as_a_single_read_does_across_sources_dormant_carried
                 Position::Def,
             ),
         ),
-        ("p1 lane 4 big_dfender", unit_at(&s, P1, 4), view(1, 8, stack(), 0, Position::Atk)),
+        (
+            "p1 lane 4 big_dfender",
+            unit_at(&s, P1, 4),
+            view(1, 8, stack(), 0, Position::Atk),
+        ),
         ("p1 carried plain", carried, view(4, 3, stack(), 0, Position::Atk)),
-        ("p2 lane 1 spikey_pillow", unit_at(&s, P2, 1), view(0, 2, vec![], 0, Position::Atk)),
-        ("p2 lane 2 plain", unit_at(&s, P2, 2), view(2, 3, vec![], 0, Position::Atk)),
+        (
+            "p2 lane 1 spikey_pillow",
+            unit_at(&s, P2, 1),
+            view(0, 2, vec![], 0, Position::Atk),
+        ),
+        (
+            "p2 lane 2 plain",
+            unit_at(&s, P2, 2),
+            view(2, 3, vec![], 0, Position::Atk),
+        ),
     ];
+    let table = AuraTable::new(state);
     for (what, card, want) in &expected {
         let single = layers::unit_view(state, card);
+        assert_eq!(
+            table.unit_view(card),
+            single,
+            "{what} through a table and read alone"
+        );
         assert_eq!(&single, want, "{what} read alone");
     }
 }
@@ -199,12 +225,26 @@ fn the_last_set_attack_in_aura_order_holds_through_a_table() {
         json!({ "field": [plain.id], "backrow": [SET_TWO, SET_FIVE] }),
     );
     let state = s.state();
+    let table = AuraTable::new(state);
     // p2's backrow comes last in aura order, and its lane 2 last within it: a reordered side or lane
     // would leave a set-two holding.
     for player in [P1, P2] {
         let card = unit_at(&s, player, 1);
-        assert_eq!(layers::unit_view(state, &card).attack, 5, "{player:?}'s plain read alone");
-        assert_eq!(layers::unclamped_attack(state, &card), 5, "{player:?}'s plain unclamped");
+        assert_eq!(
+            table.unit_view(&card).attack,
+            5,
+            "{player:?}'s plain through a table"
+        );
+        assert_eq!(
+            layers::unit_view(state, &card).attack,
+            5,
+            "{player:?}'s plain read alone"
+        );
+        assert_eq!(
+            layers::unclamped_attack(state, &card),
+            5,
+            "{player:?}'s plain unclamped"
+        );
     }
 }
 
@@ -222,6 +262,24 @@ fn each_aura_hook_runs_once_per_table_legal_actions_and_view_for() {
     let state = s.state();
     let wall = unit_at(&s, P2, 2).id;
 
+    // One counted source acts (the other is Vanilla'd), so each sweep below asks one hook.
+    calls.store(0, SeqCst);
+    let table = AuraTable::new(state);
+    assert_eq!(calls.load(SeqCst), 1, "building a table");
+    for lane in 1..=3 {
+        let unit = unit_at(&s, P1, lane);
+        assert_eq!(
+            table.unit_view(&unit),
+            layers::unit_view(state, &unit),
+            "lane {lane}"
+        );
+        assert_eq!(
+            attack_targets_in(&table, &unit),
+            attack_targets(state, &unit),
+            "lane {lane}'s targets"
+        );
+    }
+
     calls.store(0, SeqCst);
     let attacks: Vec<String> = legal_actions(state, P1)
         .into_iter()
@@ -230,14 +288,21 @@ fn each_aura_hook_runs_once_per_table_legal_actions_and_view_for() {
             _ => None,
         })
         .collect();
-    eprintln!("legal_actions: {} hook calls", calls.load(SeqCst));
+    assert_eq!(calls.load(SeqCst), 1, "legal_actions");
     assert_eq!(attacks, vec![wall.clone(), wall.clone(), wall.clone()]);
 
     calls.store(0, SeqCst);
     view_for(state, P1);
-    eprintln!("view_for: {} hook calls", calls.load(SeqCst));
+    assert_eq!(calls.load(SeqCst), 1, "view_for");
 
     calls.store(0, SeqCst);
     layers::unit_view(state, &unit_at(&s, P1, 1));
     assert_eq!(calls.load(SeqCst), 1, "one single read");
+
+    calls.store(0, SeqCst);
+    let per_read = AuraTable::per_read(state);
+    assert_eq!(calls.load(SeqCst), 0, "building a per-read table");
+    per_read.unit_view(&unit_at(&s, P1, 1));
+    per_read.unit_view(&unit_at(&s, P1, 2));
+    assert_eq!(calls.load(SeqCst), 2, "two reads through a per-read table");
 }
