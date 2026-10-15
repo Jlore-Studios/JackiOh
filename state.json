@@ -7384,6 +7384,8 @@
       "run_id": "38801344637",
       "started_at": "2026-10-15T20:22:57Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
