@@ -29,10 +29,11 @@
 # bundle, so a module a player loads can preview nothing. Cargo keeps both builds, so switching costs
 # one compile each the first time only.
 #
-# JACKIOH_WASM_DUOS: 1 (the default) builds crates/wasm's `duos` feature, #936's Duos bindings, which
-# only `/dev/duos` calls and only a development build serves; 0 builds stubs in their place, as
-# apps/web's `prebuild` (the production bundle) and `pretest` (the unit tests' module, which
-# apps/web/src/wasm/size.test.ts weighs for #442 L12) do. Switching relinks the bindings crate only.
+# JACKIOH_WASM_DUOS: 0 (the default) builds stubs in place of crates/wasm's `duos` feature, #936's
+# Duos bindings; 1 builds them, as apps/web's `predev` does, since only `/dev/duos` calls them and
+# only the dev server serves it. A networked co-op game needs none (the server plays it), so every
+# module CI builds and apps/web/src/wasm/size.test.ts weighs for #442 L12 (`build:e2e`'s, `test`'s,
+# the production bundle's) leaves them out. Switching relinks the bindings crate only.
 
 set -eu
 
@@ -108,11 +109,11 @@ case "${JACKIOH_WASM_PREVIEW:-1}" in
     exit 1
     ;;
 esac
-case "${JACKIOH_WASM_DUOS:-1}" in
+case "${JACKIOH_WASM_DUOS:-0}" in
   1) FEATURES="${FEATURES:+$FEATURES,}duos" ;;
   0) ;;
   *)
-    echo "build-wasm: JACKIOH_WASM_DUOS is 1 (the default) or 0, not \"$JACKIOH_WASM_DUOS\"" >&2
+    echo "build-wasm: JACKIOH_WASM_DUOS is 0 (the default) or 1, not \"$JACKIOH_WASM_DUOS\"" >&2
     exit 1
     ;;
 esac

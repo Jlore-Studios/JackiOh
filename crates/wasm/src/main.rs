@@ -568,9 +568,8 @@ fn preview(sets: &[engine::SetName]) -> Result<(), String> {
 //
 // Only the `duos` feature builds them: `/dev/duos` is the one caller, and a development build's
 // alone (production serves it a 404), so `scripts/build-wasm.sh` turns the feature on for the dev
-// server and the e2e client and off for the production bundle and the unit tests' module
-// (`JACKIOH_WASM_DUOS=0`), keeping them out of the module a player loads and the one #442 L12
-// weighs. Without it each binding is a stub that fails with the reason, as `preview_sets` does
+// server only (`JACKIOH_WASM_DUOS=1`, apps/web's `predev`), keeping them out of every other module:
+// the one a player loads, the e2e client CI builds and the one #442 L12 weighs. Without it each binding is a stub that fails with the reason, as `preview_sets` does
 // without `preview`, so the module exports the same functions either way.
 
 #[cfg(feature = "duos")]
