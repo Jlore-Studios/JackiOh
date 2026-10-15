@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { KEYWORD_KINDS } from "@jackioh/shared";
+import { KEYWORD_KINDS, type PlayerView, type PreviewValue } from "@jackioh/shared";
 
 import Board from "./Board.tsx";
 import { SAND_FEEL } from "./SandSurface.tsx";
@@ -475,5 +475,82 @@ describe("Board", () => {
     rerender(<Board view={{ ...view, you: { ...view.you, credit: { available: 4, owed: [] } } }} />);
     expect(screen.getByTestId("credit-you")).toHaveAttribute("data-used", "none");
     expect(screen.getByTestId("credit-you")).not.toHaveTextContent("used");
+  });
+});
+
+/** The sorted testids of every element the board marks `data-counted` (#991). */
+function countedIn(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll('[data-counted="true"]'))
+    .map((element) => element.getAttribute("data-testid") ?? "")
+    .sort();
+}
+
+/** The view with its first hand card carrying `preview` (#991), and that card's instance id. */
+function withHandPreview(view: PlayerView, preview: PreviewValue[] | undefined): { view: PlayerView; handId: string } {
+  const hand = view.you.hand;
+  if (!Array.isArray(hand)) throw new Error("the fixture's own hand is cards");
+  const [first, ...rest] = hand;
+  if (first === undefined) throw new Error("the fixture's own hand has a card");
+  return { view: { ...view, you: { ...view.you, hand: [{ ...first, preview }, ...rest] } }, handId: first.instanceId };
+}
+
+/** Two field units on both sides of the board: an opponent's and one of yours. */
+function twoUnits(view: PlayerView): [string, string] {
+  const theirs = view.opponent.units[0]?.instanceId;
+  const yours = view.you.units[1]?.instanceId;
+  if (theirs === undefined || yours === undefined) throw new Error("the fixture's units are there");
+  return [theirs, yours];
+}
+
+describe("the cards a hand card's preview counts (#991)", () => {
+  it("#991 rings exactly the two units the hovered hand card's preview names, and nothing once the pointer leaves", () => {
+    const [a, b] = twoUnits(fullBoardView());
+    const { view, handId } = withHandPreview(fullBoardView(), [{ label: "all permanents", value: 2, ids: [a, b] }]);
+    const { container } = render(<Board view={view} />);
+    expect(countedIn(container)).toEqual([]);
+
+    const handCard = screen.getByTestId(testid.handCard(handId));
+    fireEvent.pointerEnter(handCard, { pointerType: "mouse" });
+    expect(countedIn(container)).toEqual([testid.card(a), testid.card(b)].sort());
+
+    fireEvent.pointerLeave(handCard, { pointerType: "mouse" });
+    expect(countedIn(container)).toEqual([]);
+  });
+
+  it("#991 rings them while the hand card is selected, with no pointer on it", () => {
+    const [a, b] = twoUnits(fullBoardView());
+    const { view, handId } = withHandPreview(fullBoardView(), [{ label: "all permanents", value: 2, ids: [a, b] }]);
+    const { container } = render(
+      <Board view={view} highlight={highlightOf([testid.handCard(handId)], [testid.handCard(handId)])} />,
+    );
+    expect(countedIn(container)).toEqual([testid.card(a), testid.card(b)].sort());
+  });
+
+  it("#991 rings nothing when the preview's ids are absent or empty", () => {
+    const previews: PreviewValue[][] = [
+      [{ label: "cards in your exile", value: 3 }],
+      [{ label: "only your opponent's", value: 0, ids: [] }],
+    ];
+    for (const preview of previews) {
+      const { view, handId } = withHandPreview(fullBoardView(), preview);
+      const selected = testid.handCard(handId);
+      const { container, unmount } = render(<Board view={view} highlight={highlightOf([selected], [selected])} />);
+      fireEvent.pointerEnter(screen.getByTestId(selected), { pointerType: "mouse" });
+      expect(countedIn(container)).toEqual([]);
+      unmount();
+    }
+  });
+
+  it("#991 never rings a card the viewer cannot read", () => {
+    const [a] = twoUnits(fullBoardView());
+    const { view, handId } = withHandPreview(fullBoardView(), [
+      { label: "all permanents", value: 2, ids: [a, "hidden-trap"] },
+    ]);
+    const { container } = render(<Board view={view} />);
+    fireEvent.pointerEnter(screen.getByTestId(testid.handCard(handId)), { pointerType: "mouse" });
+
+    expect(countedIn(container)).toEqual([testid.card(a)]);
+    expect(container.querySelectorAll('[data-face-down="true"][data-counted]')).toHaveLength(0);
+    expect(screen.queryByTestId(testid.card("hidden-trap"))).toBeNull();
   });
 });

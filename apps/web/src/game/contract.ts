@@ -184,6 +184,13 @@ export type Highlight = {
    * attacking alone. Absent means nothing reads yellow from the drag layer.
    */
   condition?: ReadonlySet<string>;
+  /**
+   * #991, R583: the cards the hovered or selected hand card's preview counts, as `card-<id>` testids:
+   * its values' `ids` off the view (R1447 keeps them to cards the viewer reads), which Board.tsx adds
+   * for the field alone (`countedTestids`, glow.ts). Never from `legalActions`; no click reads it.
+   * Absent means nothing is ringed.
+   */
+  counted?: ReadonlySet<string>;
 };
 
 export const NO_HIGHLIGHT: Highlight = { legal: new Set(), selected: new Set() };
