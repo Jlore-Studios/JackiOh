@@ -13894,11 +13894,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T18:29:37Z",
-    "last_run": "2026-10-15T18:29:37Z",
-    "provider": "claude-3",
+    "idle_since": "2026-10-15T17:52:34Z",
+    "last_run": "2026-10-15T15:20:19Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38785714508",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
