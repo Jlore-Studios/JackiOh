@@ -6796,6 +6796,13 @@
     "976": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T17:20:41Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "hard's 'the AI's search (crates/ai/src/)': the change sits in the deck builder's weight gate, not the search, and the issue settles the design; the rest is a ruling, docs and two tests"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
