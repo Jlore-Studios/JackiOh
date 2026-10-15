@@ -29,9 +29,9 @@ use jackioh_engine::{
 };
 
 use crate::candidates::candidate_actions_in;
-use crate::config::{AI_EVAL, AI_REPLY};
+use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
-use crate::simulate::{LineStatus, line_status, simulate, static_score, surcharge_nodes};
+use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
 
 struct Side {
@@ -257,7 +257,8 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
 
 /// The opponent's reply to a line that handed it the turn: from `state` (the opponent's main phase,
 /// or a prompt on the way there) it plays by the rule in this file's header and ends its turn.
-/// Prompts on either side are answered with their first legal answer. `hidden` holds the ids of the
+/// Prompts on either side get their answerer's best of its first AI_SEARCH.max_auto_answer_options
+/// answers (`best_auto_answer`), the seat's own off-turn prompts too. `hidden` holds the ids of the
 /// cards the opponent held unseen when the decision began (`hidden_card_ids` of the decision's
 /// determinization, TS's default); any other card in its hand is one it may play. Returns the state
 /// at the seat's next main phase or prompt, or where the game ended; `None` when the counter refused
@@ -280,13 +281,8 @@ pub fn simulate_reply(
                 return Some(current);
             }
             let answerer = pending.player_id;
-            let Some(answer) = legal_actions(&current, answerer).into_iter().next() else {
-                return Some(current);
-            };
-            if !counter.take() {
-                return None;
-            }
-            let Some(next) = reduce_for(&current, answerer, &answer, counter) else {
+            let options = AI_SEARCH.max_auto_answer_options.max(1) as usize;
+            let Ok(next) = best_auto_answer(&current, answerer, options, counter, "reply")? else {
                 return Some(current);
             };
             current = next;

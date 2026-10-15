@@ -1,6 +1,7 @@
 //! Simulation through the real reducer (docs/polish/3-ai.md, SPEC §9.9). Every `reduce` call the AI
 //! makes goes through `simulate` and costs one node of the decision's counter, the opponent's
-//! auto-answers included, so budgets are counted in engine calls and a decision is deterministic.
+//! auto-answers included (every answer `best_auto_answer` tries), so budgets are counted in engine
+//! calls and a decision is deterministic.
 //!
 //! Port of `packages/ai/src/simulate.ts`. A TS counter is one object every part of a decision shares
 //! (a sub-counter holds its parent while the parent is spent elsewhere too), so the counters keep
@@ -267,15 +268,106 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
     }
 }
 
+/// One auto-answer (#891): of the first `options` answers `answerer`'s prompt lists (legal_actions
+/// less Concede, which ends the game rather than answering), the one whose result `evaluate` likes
+/// best from the answerer's own seat, so a world does not assume the answerer takes option zero. The
+/// score reads the determinization only, as everything here does (R185). Each answer tried is one
+/// node (nonce `${prefix}:${counter.used}`); strictly greater wins, so ties keep legal_actions order,
+/// and a lone answer is committed unscored. A throw or a refusal is a failed simulation and the next
+/// answer is tried; `Some(Err)` when none is left. `None` when the counter refuses a node.
+pub(crate) fn best_auto_answer(
+    state: &GameState,
+    answerer: PlayerId,
+    options: usize,
+    counter: &dyn NodeCounter,
+    prefix: &str,
+) -> Option<SimStep> {
+    let answers: Vec<ActionBody> = legal_actions(state, answerer)
+        .into_iter()
+        .filter(|answer| !matches!(answer, ActionBody::Concede))
+        .take(options)
+        .collect();
+    if answers.is_empty() {
+        note_sim_error(counter);
+        return Some(Err("the prompt has no answer".to_string()));
+    }
+    let scored = answers.len() > 1;
+    let mut best: Option<(GameState, f64)> = None;
+    let mut failure = String::new();
+    for answer in answers {
+        if !counter.take() {
+            return None;
+        }
+        let action = Action::new(answer, answerer, format!("{prefix}:{}", counter.used()));
+        let next = match catch_unwind(AssertUnwindSafe(|| reduce(state, &action))) {
+            Ok(next) => next,
+            Err(payload) => {
+                note_sim_error(counter);
+                failure = panic_message(payload.as_ref());
+                continue;
+            }
+        };
+        if let Some(error) = next.error {
+            note_sim_error(counter);
+            failure = error;
+            continue;
+        }
+        let score = if scored {
+            let swing = if next.state.active == answerer {
+                NextSwing::Seat
+            } else {
+                NextSwing::Enemy
+            };
+            evaluate(&next.state, answerer, swing, &AI_EVAL)
+        } else {
+            0.0
+        };
+        if best.as_ref().is_none_or(|(_, best_score)| score > *best_score) {
+            best = Some((next.state, score));
+        }
+    }
+    Some(best.map(|(state, _)| state).ok_or(failure))
+}
+
 /// One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
-/// of the other seat is open, answer it with the first entry of legalActions (each answer one more
-/// node, at most AI_SEARCH.maxAutoAnswers). A throw or a refusal is `{ ok: false }`. Returns null
+/// of the other seat is open, answer it with the answerer's best of its first
+/// AI_SEARCH.max_auto_answer_options answers (`best_auto_answer`: each answer tried one more node, at
+/// most AI_SEARCH.maxAutoAnswers prompts). A throw or a refusal is `{ ok: false }`. Returns null
 /// without touching anything when the counter refuses a node.
 pub fn simulate(
     state: &GameState,
     seat: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
+) -> Option<SimStep> {
+    simulate_answering(
+        state,
+        seat,
+        action,
+        counter,
+        AI_SEARCH.max_auto_answer_options.max(1) as usize,
+    )
+}
+
+/// `simulate` as it stood before #891, for the greedy baseline: every prompt of the other seat gets
+/// the first entry of legalActions, one node each, and nothing is scored with AI_EVAL, so the
+/// yardstick the gates measure the AI against stays put (docs/polish/3-ai.md, "A baseline that
+/// stays put").
+pub fn simulate_first_answers(
+    state: &GameState,
+    seat: PlayerId,
+    action: &ActionBody,
+    counter: &dyn NodeCounter,
+) -> Option<SimStep> {
+    simulate_answering(state, seat, action, counter, 1)
+}
+
+fn simulate_answering(
+    state: &GameState,
+    seat: PlayerId,
+    action: &ActionBody,
+    counter: &dyn NodeCounter,
+    options: usize,
 ) -> Option<SimStep> {
     if !counter.take() {
         return None;
@@ -316,22 +408,10 @@ pub fn simulate(
                 note_sim_error(counter);
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
-            let Some(reply) = legal_actions(&current, other).into_iter().next() else {
-                note_sim_error(counter);
-                return Some(Err("the opponent's prompt has no answer".to_string()));
+            current = match best_auto_answer(&current, other, options, counter, "sim")? {
+                Ok(next) => next,
+                Err(error) => return Some(Err(error)),
             };
-            if !counter.take() {
-                return None;
-            }
-            let next = reduce(
-                &current,
-                &Action::new(reply, other, format!("sim:{}", counter.used())),
-            );
-            if let Some(error) = next.error {
-                note_sim_error(counter);
-                return Some(Err(error));
-            }
-            current = next.state;
             answered += 1;
         }
         Some(Ok(current))
