@@ -100,6 +100,51 @@ measured list.
 | A learned move ordering (a policy prior over the root's candidates) | not tried | a follow-up once positions exist: the same data, labelled with the action the search chose |
 | A bigger `AI_BUDGET` | a person's call; no lane may raise it | duel `msP95` reads about 690 ms on the loaded box (s63a) against `AI_GATE.max_decision_ms` 1500, but generation 9's bans are all `timeout` |
 
+## How much data and compute
+
+Is 100,000 games enough for a game this complex? Not to learn the game from nothing, and the plan
+does not ask that of it.
+
+- **What is learned.** The network does not learn to play. The search, the lethal solver and the
+  determinization stay as they are. The network starts as the hand eval (D4's skip connection) and
+  learns only a correction to it. That is a far smaller job than an AI from scratch.
+- **Two anchors.** AlphaZero learned chess from nothing over 44 million self-play games, played on
+  5,000 TPUs: out of reach, and not this job. TD-Gammon reached expert backgammon, a game of chance
+  like this one, with a network of about 200 inputs and 40 to 160 hidden units. It trained on
+  300,000 to 1.5 million self-play games on early-1990s hardware. That is the scale this plan sits
+  at.
+- **What counts is games, not positions.** A game's 70 or so positions share one outcome, so
+  100,000 games are about 100,000 independent labels. With them:
+  - a card is in about 10,000 decks and on the board in a few thousand games;
+  - that is enough to fit one worth per card and zone (a win rate over 3,000 games has a standard
+    error of about 1 point);
+  - it is not enough for a 200,000-weight network, nor for interactions between particular pairs of
+    cards.
+
+  So the first network is small: about 50,000 weights, a first layer 16 wide over D5's inputs. It
+  grows only as the data does.
+- **Measure, do not guess.** Milestone 2 fits on 10,000, 30,000 and 100,000 games and plots the
+  held-out loss against the data. If the curve is flat by 100,000, data is not the limit: more
+  compute will not help, and the features or the model must change. If it is still falling, export
+  more before the screen.
+- **Where the compute goes.** Almost all of it goes into playing the games, which is the engine on
+  a CPU. Fitting a network this size takes minutes, so a GPU would not speed up the bottleneck.
+
+| Games | vCPU-hours (measured: 9.6 vCPU-seconds a game, wall time) | 20 hosted runners | AWS on demand (about $0.05 a vCPU-hour) |
+|---|---|---|---|
+| 100,000 | about 270 | under 4 h, one dispatch | about $13 |
+| 1 million (TD-Gammon's scale) | about 2,700 | about a day and a half: six 6-hour dispatches | about $135; spot is less |
+| 10 million | about 27,000 | about two weeks without a break, past any fair use of free CI | about $1,350; spot is less |
+
+Up to a million games is free on hosted runners or cheap on AWS. Ten million is where a person
+would have to pay for compute, and the learning curve says whether it is worth that.
+
+**Better labels before more games.** Offline TD(λ) runs on the logs already stored (D4's D), so
+it needs no new games and lowers the labels' noise. Its targets blend the outcome with the network's
+own prediction a few positions later. A bigger search as the teacher (D4's C) helps little in this
+game. The beam's horizon is the seat's turn and the opponent's reply whatever the budget, so a
+6,000-node search sees an engine's later turns no better than a 600-node one.
+
 ## The decisions
 
 Each decision lists its options and a recommendation. The ones a person must make are gathered at
@@ -177,10 +222,10 @@ no longer reaches it. A big engine change means a new export, as A would need an
 |---|---|---|---|
 | **A. The game's outcome** (the issue) | 1, ½ or 0 for the seat | free with every game | noisy; one label shared by about 16 turns' positions |
 | **B. A, plus the hand eval as an input and a skip connection** | as A; the output is `a·hand + net(x)` | the network starts as the hand eval and learns only what it misses; worst case is no change | none worth the name |
-| **C. A deeper search's score** (distillation) | what a 10× budget search scores the position | teaches the 600-node search what 6,000 nodes see; less noisy than outcomes | each label costs a big search; ten times the export |
-| **D. Bootstrapped (TD(λ))** | outcome blended with the next position's prediction | less variance than A | needs the network in the loop; a second iteration |
+| **C. A deeper search's score** (distillation) | what a 10× budget search scores the position | a label per position, less noisy than outcomes | each label costs a big search; the beam's horizon is the same whatever its budget (How much data and compute), so it teaches little about an engine's later turns |
+| **D. Bootstrapped (offline TD(λ))** | outcome blended with the network's own prediction a few positions later | less variance than A; runs on the stored logs with no new games | a few fit-and-relabel passes instead of one fit |
 
-**Recommendation: B first. C is the follow-up if B's screen reads positive but small.**
+**Recommendation: B first. D is the follow-up if the learning curve says the labels are the limit.**
 
 ### D5. The network's shape
 
@@ -190,7 +235,7 @@ so inference must cost microseconds.
 | Option | Inputs | Cost per call | Learns per-card worth |
 |---|---|---|---|
 | **A. A dense MLP over aggregates** (the issue's list: health, armor, unit stats, hand and library sizes, mana, the hand eval's terms) | about 100 to 200 numbers | about 15k multiply-adds | no: a card is its stats |
-| **B. A sparse accumulator, chess's NNUE shape:** A's dense inputs plus one binary feature per (card id, zone, side) | about 3,000 inputs, 40 to 80 active | the active columns summed (adds only), then a small dense head: a few µs | yes |
+| **B. A sparse accumulator, chess's NNUE shape:** A's dense inputs plus one binary feature per (card id, zone, side) | about 3,000 inputs, 40 to 80 active; a first layer 16 wide (about 50,000 weights) at 100,000 games, wider only as the data grows | the active columns summed (adds only), then a small dense head: a few µs | yes |
 | **C. A set network:** a small MLP per unit (its card's embedding, its stats, its keywords), pooled per side, then a head | per unit | about 10× B's | yes, and per-unit interactions |
 
 **Recommendation: B.** It is the smallest shape that can learn what the hand eval cannot see. C is
@@ -219,10 +264,10 @@ rests on. IEEE 754 makes `+`, `×` and comparisons exact on every target, and Ru
 reassociates or fuses them. ReLU is written as a comparison rather than `f64::max`, so a signed
 zero cannot differ.
 
-| Option | Extra work | Weights in the WASM bundle (B's shape, about 200k weights) |
+| Option | Extra work | Weights in the WASM bundle (B's shape: about 50k weights at first, 200k at most) |
 |---|---|---|
-| **A. Integers** (the issue) | quantisation, a Python integer reference, per-layer shifts, a loss check (milestone 3) | about 200 KB as i8 |
-| **B. `f64` with ReLU** | none | about 1.6 MB raw, more as JSON text |
+| **A. Integers** (the issue) | quantisation, a Python integer reference, per-layer shifts, a loss check (milestone 3) | 50 to 200 KB as i8 |
+| **B. `f64` with ReLU** | none | 0.4 to 1.6 MB raw, more as JSON text |
 | **C. B to screen natively, A to ship** | the quantisation only once a screen has shown a gain | as A |
 
 **Recommendation: C.** The first screen runs native against native, where parity is not in
@@ -276,6 +321,8 @@ The issue's seven milestones, with strength measured before the shipping work:
    a probability, and D5's network with D4's skip connection. Split held-out data by deal.
    - Compare log loss and calibration overall and by turn band (turns 4 to 10 are where the
      snowballs are).
+   - Plot the learning curve: the network fitted on 10,000, 30,000 and 100,000 games (How much data
+     and compute). Export more first if it is still falling.
    - Print the hand eval's worst-misjudged cards.
    - Go on if the network beats both baselines clearly in the midgame.
 3. **A native screen (Rust).** A float inference behind `AI_EVAL_KIND` in `crates/ai/src/config.rs`
@@ -298,6 +345,7 @@ Milestones 1, 3 and 4 are Rust; 2 is Python; 6's workflow is `.github/`.
 | Item | Compute | Money |
 |---|---|---|
 | Milestone 1's export, 100,000 games (about 7 million decision positions) | under 4 h of 20 hosted runners, or about 17 h of a 16-core machine | none on hosted runners |
+| Scaling to a million games, if the learning curve asks for it | about a day and a half of hosted runners | none on hosted runners; about $135 on AWS |
 | A fit | minutes of CPU | none |
 | Milestone 3's screen | 800 games: about 32 minutes on a 4-vCPU runner (measured above), hours on the loaded box | none on hosted runners |
 | A bigger training box (optional; helps the lanes whatever happens here) | `m7i.xlarge` or `m7i.2xlarge` | about $150 or $290 a month on demand (#383), paid plan needed |
