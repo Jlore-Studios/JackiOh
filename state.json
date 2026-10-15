@@ -6533,6 +6533,14 @@
           "claude": "strong"
         }
       }
+    },
+    "966": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-15T05:01:34Z",
+      "issue": 898,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
