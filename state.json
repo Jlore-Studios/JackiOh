@@ -6906,6 +6906,7 @@
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-15T01:55:48Z",
+      "interruptions": 1,
       "issue": 890,
       "kind": "revise",
       "pending_request": false,
