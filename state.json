@@ -6540,6 +6540,13 @@
     "961": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T14:35:38Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "fails easy on several lines at once (engine wire type and view_for in crates/engine/src, the spec note \u00a710.8, and the web app); not hard, since no rule, resolution loop or AI changes and only a read-only view field is added"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
