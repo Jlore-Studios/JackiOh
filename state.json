@@ -6508,30 +6508,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-14T19:20:40Z",
+      "feedback_since": "2026-10-15T00:11:07Z",
       "forced": false,
       "interruptions": 0,
       "issue": 882,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The core shard command, and the identical ci.yml block the PR asks a person to paste, does not select the three `history::tests::r767000_*` unit tests now on main, so once the shards land those R767000 tests run in no CI job.",
-          "evidence": "The branch was built on d2623ca45, but the base it merges into is 23a2ee02e. On that base, `crates/cards/src/lib.rs` has `mod history;` and `crates/cards/src/history.rs:151-204` has `#[cfg(test)] mod tests` with `r767000_a_kept_script_covers_its_version_and_those_before_back_to_the_previous`, `r767000_the_build_carries_every_shipped_version_but_its_own` and `r767000_a_kept_script_runs_only_in_its_fold`. Their paths start `history::tests::`, which matches none of `scripts::core::`, `scripts::classic::`, `scripts::classic_plus::`, `scripts::meditative::`, `tests::the_catalog_round_trips_through_card_defs` or `tests::the_catalog_version_is_the_newest_patch`. The builder's count of 5884 tests summing exactly came from the old base, where history.rs did not exist. `spec check` only checks that the test names exist, so nothing would catch R767000 losing its CI coverage. A filter that cannot miss a new module would fix it, e.g. a core shard of `-- --skip scripts::classic:: --skip scripts::classic_plus:: --skip scripts::meditative::`.",
-          "severity": "blocking",
-          "where": "crates/cards/README.md:285"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-14T23:23:15Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38658484134",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-15T00:11:07Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
