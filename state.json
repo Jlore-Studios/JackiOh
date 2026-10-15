@@ -6982,9 +6982,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-15T06:04:43Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38690229717",
-    "what": "revise #958 on muse"
+    "at": "2026-10-15T06:44:13Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38694139231",
+    "what": "suggestions on muse"
   },
   "last_sweep": {
     "at": "2026-10-15T06:43:01Z",
@@ -13454,11 +13454,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T06:10:42Z",
-    "last_run": "2026-10-14T17:13:24Z",
-    "provider": null,
+    "idle_since": "2026-10-15T06:44:13Z",
+    "last_run": "2026-10-15T06:44:13Z",
+    "provider": "muse",
     "requested": false,
-    "run_id": null,
+    "run_id": "38694139231",
     "taken_asks": []
   },
   "usage": {
