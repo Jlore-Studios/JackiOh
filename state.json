@@ -13969,11 +13969,11 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T19:04:26Z",
-    "last_run": "2026-10-15T19:04:26Z",
-    "provider": "claude-1",
+    "idle_since": "2026-10-15T17:52:34Z",
+    "last_run": "2026-10-15T15:20:19Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38790761463",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
