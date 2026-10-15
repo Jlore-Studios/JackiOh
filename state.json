@@ -6562,7 +6562,7 @@
     "927": {
       "action": "revise",
       "asks": [],
-      "ci_fixed_head": "360d238ec19051a7eeec8ecd64a18d409e5837e1",
+      "ci_fixed_head": "8f9fa837ee832a99ea185c05d7849179327419e2",
       "ci_fixes": 2,
       "ci_reruns": {
         "360d238ec19051a7eeec8ecd64a18d409e5837e1": 1,
@@ -6579,7 +6579,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-14T22:26:16Z",
+      "feedback_since": "2026-10-14T23:42:08Z",
       "forced": false,
       "interruptions": 0,
       "issue": 897,
@@ -6595,11 +6595,11 @@
       "round_tier": "medium",
       "run_id": "38655608671",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-10-14T23:42:08Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 2,
+      "verdict_rounds": 3,
       "votes": {
         "approvals": [
           "muse",
