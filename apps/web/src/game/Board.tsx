@@ -16,6 +16,9 @@
 // below in this order. A phone has no room for the log beside the field, so board.css hides it
 // there and shows `log-toggle` instead, which opens it over the top of the board
 // (`data-log="open"`) until it is pressed again.
+//
+// While a hand card of yours is hovered or selected, the field rings the cards its preview names
+// (#991, SPEC §10.10).
 
 import { useContext, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type ReactNode } from "react";
 
@@ -47,7 +50,7 @@ import SandSurface from "./SandSurface.tsx";
 import { BurnNotice, PileNotice, noticesFrom, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
-import { glowAttr, hasMovesLeft } from "./glow.ts";
+import { countedTestids, glowAttr, hasMovesLeft } from "./glow.ts";
 import { revealedOpponentHand } from "./reveal.ts";
 import { CardListPreview, CardListSheet, useInspectTrigger, type CardListEntry, type InspectOverlayState } from "../cards/index.ts";
 import { SettingsButton, useSetting } from "../settings/index.ts";
@@ -581,6 +584,10 @@ export default function Board({
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
   const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
+  // #991, R583: the hand card under the pointer, whose preview's ids the field rings.
+  const [hovered, setHovered] = useState<string | null>(null);
+  const counted = countedTestids(view, highlight, hovered);
+  const fieldHighlight: Highlight = counted.size === 0 ? highlight : { ...highlight, counted };
   const actionsRemain = hasMovesLeft(highlight);
   const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
@@ -642,7 +649,7 @@ export default function Board({
                   side={slot.side}
                   row={slot.row}
                   lane={lane}
-                  highlight={highlight}
+                  highlight={fieldHighlight}
                   animating={animating}
                   onClick={onClick}
                   pops={pops}
@@ -653,7 +660,7 @@ export default function Board({
         </div>
 
         <Seat view={view} side="you" highlight={highlight} animating={animating} onClick={onClick} onControl={onControl} pops={pops} notices={notices} emotes={emotes} />
-        <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} notice={burnNotice("you")} />
+        <Hand side="you" hand={yourHand} cap={view.you.handCap} touchHold={touchHold} highlight={highlight} animating={animating} onClick={onClick} onHover={setHovered} notice={burnNotice("you")} />
 
         <div className="control-bar" aria-label={t("Controls")}>
           {boardRail === undefined ? null : <div className="board-rail">{boardRail}</div>}
