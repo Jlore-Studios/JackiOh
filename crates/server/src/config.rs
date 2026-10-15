@@ -185,7 +185,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
 /// holds it to). Changing either page's text changes its date and so this, and every account is
 /// asked to agree again.
-pub const TERMS_VERSION: &str = "2026-10-13/2026-10-15";
+pub const TERMS_VERSION: &str = "2026-10-15/2026-10-15";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -797,6 +797,16 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
+
+/// SPEC §11 R978000: how many computed per-patch reports (one per patch, `?source=` and `?pilot=`)
+/// the server keeps in memory at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping another
+/// drops the one kept longest ago. Room for every patch in `patches.json` (30 at v0.3.7b) under all
+/// three pilots, with as many again to grow into.
+pub const CARD_STATS_KEPT_REPORTS: usize = 256;
+
+/// SPEC §11 R654: how many co-played cards a card's drill-down (`GET /api/stats/cards/:id`) lists,
+/// most games first.
+pub const CARD_STATS_CO_PLAYED_TOP: usize = 10;
 
 /// Cache-Control max-age in seconds for public player statistics endpoints.
 pub const PLAYER_STATS_CACHE_TTL_SECONDS: i64 = 60;
