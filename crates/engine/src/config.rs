@@ -954,6 +954,12 @@ pub const GRADE_A_DAMAGE: i32 = 8;
 /// R77: Craft a Card fuses "two or three cards", and #85 fuses two. Fewer is not a fusion
 /// (`subsystems::fuse`).
 pub const FUSE_MIN_INGREDIENTS: usize = 2;
+/// R874000: the most cards one fusion holds, each fused ingredient counting the cards it was fused
+/// from (`subsystems::fuse::fused_card_count`). Meditative #95 fuses a hand into one card and two
+/// copies of it (R1242), so a hand of those three fused again holds three times as many, and nothing
+/// else stops that growth; a fusion past this is not made, as R28 caps a Call to Chaos chain. A full
+/// hand (`HAND_CAP`) fused once, then again with its two copies and seven more cards, holds 37.
+pub const FUSED_CARDS_CAP: usize = 64;
 
 /// §8 #99: "the result costs 0 and goes to your hand", as a `costOverride` per R65 (`subsystems::fuse`).
 pub const CRAFTED_CARD_COST: i32 = 0;
