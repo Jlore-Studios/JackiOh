@@ -6537,6 +6537,9 @@
         }
       }
     },
+    "962": {
+      "suggestion": true
+    },
     "966": {
       "action": "revise",
       "asks": [],
