@@ -31,6 +31,12 @@ services:
     # into AWS's 2600:1f16::/34, us-east-2). Same region = the shortest hop for every query.
     region: ohio
     branch: main
+    # Render builds nothing on its own (#985): deploy-watch.yml asks Render's API to deploy each push to
+    # main that changes what the image is built from (the server, engine, cards and AI crates, the
+    # workspace manifests and this file), naming its commit. Auto-deploy on top of that built every
+    # push a second time, web-only and docs-only ones included, and ran the workspace out of build
+    # pipeline minutes on 2026-10-15. Quoted, so YAML reads the word and not a boolean.
+    autoDeployTrigger: "off"
     # No buildCommand and no startCommand: the image's own command, `jackioh-server release`, is the
     # start. `release` migrates (the ledger, the checksums, one advisory lock per file), seeds the
     # catalog at the compiled-in catalog version, then serves, before every boot, so a deploy that
