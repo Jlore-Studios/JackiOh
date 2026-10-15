@@ -7213,6 +7213,13 @@
     "990": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T19:27:15Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Never-easy list names visual polish, and this bottom-screen layout work is judged partly by pixels jsdom cannot see."
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
