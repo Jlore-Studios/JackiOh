@@ -6611,6 +6611,7 @@
     "964": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-15T14:42:08Z",
         "difficulty": "hard",
