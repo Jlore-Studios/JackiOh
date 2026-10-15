@@ -446,6 +446,31 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
   (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`), with `tutorial/harness.ts` for tests.
+- **The Luau module** (#919, SPEC §12.10, R915009) is a second build of the engine with the card kit,
+  for custom cards: `scripts/build-wasm.sh` writes it into `src/wasm/pkg/luau/`
+  (`crates/wasm/README.md`). Only `src/wasm/luau.ts` imports it, and only `src/wasm/index.ts` imports
+  that, dynamically: `useLuauModule(on)` switches the bindings every engine call goes through, which
+  the practice worker does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it
+  for the creator without switching. A normal game never loads it (`wasm/luau.test.ts` holds that no
+  other file imports it), and the normal module refuses a game with custom cards.
+
+## Custom cards (SPEC §12)
+
+- **The creator**, `/creator` (`routes/creator.tsx`, `creator/`): the account's custom cards, read and
+  saved through `net/customCards.ts` (`/api/custom-cards`, R915008), and an editor for one. The frame is
+  `creator/FrameForm.tsx`; the script is written in the no-code builder (`creator/builder.ts` is its
+  vocabulary and the kit Luau it writes, `BuilderView.tsx` its blocks) or the code view (`CodeView.tsx`,
+  highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
+  the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
+  from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+- **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
+  under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
+  L7 (R915005), and the play lobby offers it disabled.
+- **Practice** starts a saved deck with its custom cards on the config (`customCards`), and
+  `/practice?try=<id>` (`tryPath`) deals a random deck around one card. Such a game runs in the Luau
+  module, records no card statistics, and keeps its custom cards in its save, its replay and its
+  debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
+  in the log.
 
 ## Internationalisation
 
