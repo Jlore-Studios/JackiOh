@@ -7260,6 +7260,17 @@
       "taken_asks": []
     },
     "992": {
+      "asks": [
+        "c:6200556824"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-10-15T19:30:31Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "993": {
