@@ -122,9 +122,9 @@ if ! $PSQL -d jackioh -f /tmp/14b_profiles_before_usernames.sql; then
   failed=1
 fi
 
-echo "--- migrations 0028-0035 ---"
+echo "--- migrations 0028-0036 ---"
 for f in 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios \
-         0034_account_consent 0035_replay_final_hash; do
+         0034_account_consent 0035_replay_final_hash 0036_moderation_switch_grant; do
   apply_migration "$f"
 done
 
@@ -132,7 +132,7 @@ done
 # check ever ran against. Refuse it rather than pass without it.
 for f in "$MIGRATIONS"/*.sql; do
   name=$(basename "$f" .sql)
-  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards 0018_player_settings 0019_hero_portraits 0020_plague_tag 0021_player_stats 0022_ranked_ladder 0023_rematch 0024_glitch_boards 0025_patch_retcon 0026_catalyst_prime_acclaimed_tags 0027_lean_newest 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios 0034_account_consent 0035_replay_final_hash " in
+  case " 0001_profiles_and_invites 0002_collection 0003_loadouts 0004_matches 0005_service_role_reads_auth_users 0006_redeem_ip_lock 0007_decks_and_trios 0008_queue_modes 0009_series 0010_jlockeed_tag 0011_tutorial_progress 0012_account_deletion 0013_retention_purge 0014_game_records 0015_classic_sets_tags 0016_catalog_growth_grants 0017_last_boards 0018_player_settings 0019_hero_portraits 0020_plague_tag 0021_player_stats 0022_ranked_ladder 0023_rematch 0024_glitch_boards 0025_patch_retcon 0026_catalyst_prime_acclaimed_tags 0027_lean_newest 0028_usernames 0029_play_telemetry 0030_meditative_set 0031_meditative_endings 0032_ladder_bots 0033_bot_trios 0034_account_consent 0035_replay_final_hash 0036_moderation_switch_grant " in
     *" $name "*) ;;
     *) echo "!!! migration $name is not applied by this script; add it above"; failed=1 ;;
   esac
