@@ -196,3 +196,24 @@ describe("outcomes on both seats", () => {
     expect(region?.textContent).toBe("");
   });
 });
+
+describe("the Offer draw control", () => {
+  it("R36 while a declined offer blocks the viewer, it names their turns left and sends nothing", () => {
+    const onAction = renderGame(view({ drawOfferBlockedTurns: 2 }), [{ type: "endTurn" }, { type: "concede" }]);
+    const control = screen.getByTestId("offer-draw");
+    expect(control).toHaveTextContent("Draw blocked (2)");
+    expect(control).toHaveAttribute("title", "Offer draw blocked (2 of your turns left)");
+    expect(control).toBeDisabled();
+    fireEvent.click(control);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("R36 with no block it reads Offer draw, has no tooltip and sends the listed offerDraw", () => {
+    const onAction = renderGame(view(), [{ type: "endTurn" }, { type: "offerDraw" }, { type: "concede" }]);
+    const control = screen.getByTestId("offer-draw");
+    expect(control).toHaveTextContent("Offer draw");
+    expect(control).not.toHaveAttribute("title");
+    fireEvent.click(control);
+    expect(onAction).toHaveBeenCalledWith({ type: "offerDraw" });
+  });
+});

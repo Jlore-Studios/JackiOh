@@ -81,6 +81,7 @@ animation table's `drawOffered` and `drawAnswered` rows play on), inside an alwa
 - afterwards, `draw-outcome` with `data-outcome`: "You declined the draw" / "Your opponent declined
   the draw" for the rest of that turn, "Draw accepted" (the result reads "Game drawn by
   agreement."), and "The draw offer expired" through the turn after an unanswered offer lapsed.
+- the offerer, after a decline: while `view.drawOfferBlockedTurns` is set (the viewer's own block, R36, never the opponent's), the `offer-draw` control reads "Draw blocked (N)", with "Offer draw blocked (N of your turns left)" as its tooltip; it is dark because `legal` lists no `offerDraw`, never because of the count.
 - Sound (`audio/cues.ts`): the answering seat hears an urgent notify (a doorbell, `urgent: true`);
   the offerer hears `cancel` on a decline, and an acceptance is sounded by the `gameOver` that
   follows. That is online: in hotseat the offer and the answer each hand the device over, and a
