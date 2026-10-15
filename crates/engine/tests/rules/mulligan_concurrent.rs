@@ -8,6 +8,7 @@
 //!  - R268: a timed-out mulligan keeps the whole hand, and only the timing-out seat's.
 //!  - R269: a draw offer stands until it is answered or its offerer's turn ends, both seats see it,
 //!    and one that lapses blocks nothing.
+//!  - R36: a declined offer's block shows on its offerer's view alone, as the turns it still covers.
 //!
 //! Port of `packages/engine/test/mulligan-concurrent.test.ts`.
 
@@ -610,5 +611,58 @@ mod r269_a_draw_offer_s_lifetime {
                 reason: GameOverReason::DrawAccepted
             })
         );
+    }
+
+    #[test]
+    fn r36_a_declined_offer_names_its_offerer_s_blocked_turns_on_their_view_alone_until_the_block_lifts() {
+        let mut state = playing("r36-view");
+        // R82 must not end a turn by itself: the test ends each one.
+        for seat in SEATS {
+            state.players[seat].auto_end_turn = Some(false);
+        }
+        assert_eq!(state.active, P1);
+        for seat in SEATS {
+            assert_eq!(view_for(&state, seat).draw_offer_blocked_turns, None);
+        }
+
+        state = act(&state, input(json!({ "type": "offerDraw", "playerId": "p1" })));
+        state = act(
+            &state,
+            input(json!({ "type": "answerDraw", "accept": false, "playerId": "p2" })),
+        );
+
+        // Now (the decline's own turn, not counted), then after each turn end: each count holds through
+        // the opponent's turn and p1's next one, and the block is gone once p1's last blocked turn ends.
+        let mut expected = vec![Some(DRAW_OFFER_BLOCK_TURNS)];
+        for left in (1..=DRAW_OFFER_BLOCK_TURNS).rev() {
+            expected.extend([Some(left), Some(left)]);
+        }
+        expected.extend([None, None]);
+        for (at, blocked) in expected.into_iter().enumerate() {
+            if at > 0 {
+                let active = state.active;
+                state = act(&state, input(json!({ "type": "endTurn", "playerId": active })));
+            }
+            assert_eq!(
+                view_for(&state, P1).draw_offer_blocked_turns,
+                blocked,
+                "checkpoint {at}"
+            );
+            // CLAUDE.md rule 7, BUILD M3-T6's stringify check: p2's view names nothing of p1's block.
+            let theirs = serde_json::to_string(&view_for(&state, P2)).expect("a PlayerView serialises");
+            assert!(
+                !theirs.contains("drawOfferBlockedTurns"),
+                "checkpoint {at}: {theirs}"
+            );
+            // R36 still decides: on p1's turn the offer is refused exactly while the view counts a block.
+            if state.active == P1 {
+                assert_eq!(
+                    legal_actions(&state, P1).contains(&ActionBody::OfferDraw),
+                    blocked.is_none(),
+                    "checkpoint {at}"
+                );
+            }
+        }
+        assert_eq!(state.active, P1);
     }
 }

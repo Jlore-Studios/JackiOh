@@ -67,7 +67,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::registered_catalog;
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::VIEW_EVENT_LIMIT;
+use crate::config::{DRAW_OFFER_BLOCK_TURNS, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -1269,6 +1269,18 @@ fn draw_offer_view(state: &GameState) -> Option<DrawOfferView> {
     standing_draw_offer(state).map(|by| DrawOfferView { by })
 }
 
+/// R36: the turns of the viewer's own that a declined offer still blocks — counted from the
+/// viewer's turn under way, or from their next one while the opponent's runs, through the last
+/// before `blocked_until`. The decline's own turn is not counted (its one offer is spent), so the
+/// count starts at DRAW_OFFER_BLOCK_TURNS. The viewer's own only; `None` when nothing blocks them.
+fn draw_offer_blocked_turns(state: &GameState, viewer: PlayerId) -> Option<i32> {
+    let side = &state.players[viewer];
+    let blocked_until = side.draw_offer.blocked_until?;
+    let from = side.turns_started + i32::from(state.active != viewer);
+    let left = (blocked_until - from).min(DRAW_OFFER_BLOCK_TURNS);
+    (left > 0).then_some(left)
+}
+
 // ---------------------------------------------------------------------------
 // Events (§10.10)
 // ---------------------------------------------------------------------------
@@ -2235,6 +2247,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         clock_ms,
         mulligan: mulligan_view(state, player_id),
         draw_offer: draw_offer_view(state),
+        // R36: the viewer's own block only, so the opponent's view never names it.
+        draw_offer_blocked_turns: draw_offer_blocked_turns(state, player_id),
         // R345: the viewer's own preference, and only when it is off, so every other view is unchanged.
         auto_end_turn: if state.players[player_id].auto_end_turn == Some(false) {
             Some(false)
