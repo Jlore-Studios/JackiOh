@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { badgeWords, divisionNumeral, rankWords, tierName } from "./rank.ts";
+import { badgeWords, divisionNumeral, rankShortWords, rankWords, tierName, tierShortName } from "./rank.ts";
 
 describe("rank words", () => {
   it("names every tier in a player's words", () => {
@@ -25,6 +25,19 @@ describe("rank words", () => {
       rankWords({ tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }),
     ).toBe("Normal Grape III · 1/3 pips");
     expect(rankWords({ tier: "jlorious", position: 12 })).toBe("Jlorious #12");
+  });
+
+  it("shortens tiers for a phone's rank line, without Grape", () => {
+    expect(tierShortName("golden")).toBe("Golden");
+    expect(tierShortName("rotten")).toBe("Rotten");
+  });
+
+  it("says the same rank short, without placements or pips words", () => {
+    expect(rankShortWords({ tier: "raisin", placementsPlayed: 2, placementGames: 5 })).toBe("Raisin 2/5");
+    expect(
+      rankShortWords({ tier: "normal", division: 3, pips: 1, pipsPerDivision: 3, floor: "rotten" }),
+    ).toBe("Normal III 1/3");
+    expect(rankShortWords({ tier: "jlorious", position: 12 })).toBe("Jlorious #12");
   });
 
   it("says a season's badge with its season", () => {
