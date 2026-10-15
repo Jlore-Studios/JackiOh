@@ -2,7 +2,9 @@
 //
 // `/terms`. `TERMS_LAST_UPDATED` and the privacy policy's date make up `TERMS_VERSION`
 // (crates/server/src/config.rs), the version each account agrees to (R757001), so a change to the
-// text changes the date, and the version with it, and every account is asked to agree again.
+// text changes the date, and the version with it, and every account is asked to agree again. A
+// second change on a day the page already changed keeps the date and gives the version a letter
+// (R970001); `privacy.test.tsx` fails on any change to the words until the version moves.
 
 import type { ReactElement } from "react";
 
@@ -82,14 +84,42 @@ export default function TermsRoute(): ReactElement {
         <section aria-labelledby="terms-submit">
           <h3 id="terms-submit">What you submit</h3>
           <p>
-            Other players see the username you choose. By choosing it, you let us store it and show it to other
-            players for as long as your account exists. Don&rsquo;t choose a name that infringes someone
-            else&rsquo;s rights. We remove content that infringes, and close the accounts of players who
-            repeatedly infringe; see{" "}
+            You keep whatever rights you have in what you submit. By submitting it, you let us store it, and
+            show it to the people named below, for as long as we keep it (the{" "}
+            <a href={paths.privacy} onClick={followInApp(paths.privacy)}>
+              Privacy Policy
+            </a>{" "}
+            says how long):
+          </p>
+          <ul>
+            <li>Your username, which other players see.</li>
+            <li>
+              Your chat messages, which the friend you send them to sees, and the reason you give when you
+              report one, which only we see.
+            </li>
+            <li>Your custom cards (their names, text and scripts) and the names of your decks, which only you see.</li>
+            <li>The replays you share, which the friends you share them with see.</li>
+          </ul>
+          <p>
+            Don&rsquo;t submit anything that infringes someone else&rsquo;s rights. We remove content that
+            infringes, and close the accounts of players who repeatedly infringe; see{" "}
             <a href={paths.copyright} onClick={followInApp(paths.copyright)}>
               Copyright
             </a>{" "}
             for how to report it.
+          </p>
+        </section>
+        <section aria-labelledby="terms-chat">
+          <h3 id="terms-chat">Chat</h3>
+          <p>
+            Be respectful in chat. Don&rsquo;t harass, threaten or bully anyone, use hate speech, send spam,
+            or share anyone&rsquo;s personal details, such as an address, a phone number or an email address,
+            your own included.
+          </p>
+          <p>
+            Before a message is stored, we replace each word on our filter list with asterisks. You can report
+            any message a friend sends you. We review reports, and abuse in chat can get an account suspended or
+            banned.
           </p>
         </section>
         <section aria-labelledby="terms-ranked">

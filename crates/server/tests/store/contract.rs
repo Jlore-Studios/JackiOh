@@ -6379,7 +6379,8 @@ mod social {
     use super::*;
     use jackioh_engine::config::DUOS_HUMAN_TEAM;
     use jackioh_server::db::store::{
-        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, ReplayShare,
+        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow, FriendRequestRow,
+        ReplayShare,
     };
     use jackioh_server::duos::store::DuosMatch;
 
@@ -6756,7 +6757,42 @@ mod social {
             "no such message"
         );
 
+        // #970: the operator's list, oldest report first, each with the message it reports.
+        let later: ChatReportRow = from(json!({
+            "id": id(),
+            "messageId": m4.id,
+            "reporter": c.id,
+            "reason": "spam",
+            "createdAt": now + 1_000,
+        }));
+        assert!(q!(harness, t => t.chat_report(&later)));
+        let listed = |rows: Vec<ChatReportListing>| -> Vec<(ChatMessageRow, String, String, i64)> {
+            rows.into_iter()
+                .map(|row| {
+                    (
+                        row.message,
+                        row.report.reporter,
+                        row.report.reason,
+                        row.report.created_at,
+                    )
+                })
+                .collect()
+        };
+        let m1_read = must(q!(harness, t => t.chat_get(&m1.id)), "m1");
+        assert_eq!(
+            listed(q!(harness, t => t.chat_reports_all())),
+            vec![
+                (m1_read, b.id.clone(), "rude".to_string(), now),
+                (m4.clone(), c.id.clone(), "spam".to_string(), now + 1_000),
+            ]
+        );
+
         assert_eq!(q!(harness, t => t.chat_purge(m2.created_at + 1)), 2);
+        assert_eq!(
+            listed(q!(harness, t => t.chat_reports_all())),
+            vec![(m4.clone(), c.id.clone(), "spam".to_string(), now + 1_000)],
+            "a report goes with its message"
+        );
         assert!(q!(harness, t => t.chat_get(&m1.id)).is_none());
         assert_eq!(
             ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, None, 10))),

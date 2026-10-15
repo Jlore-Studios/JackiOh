@@ -1,6 +1,7 @@
 //! Presence and status (SPEC S7, B47): `POST /api/presence` is the heartbeat a signed-in client
 //! sends every `PRESENCE_HEARTBEAT_MS`, and `standings` is what a friend's row says of where they
-//! are.
+//! are. A heartbeat from an account that owes agreement to the terms in force records nothing
+//! (R970002): the Privacy Policy that names it is what the account has not agreed to yet.
 //!
 //! A friend is `inMatch` while a live 1v1 match holds them (the in-match flag §9.5 sets and every
 //! ending clears, which `GET /api/auth/me` reads as `currentMatchId`), while they are between the
@@ -24,6 +25,7 @@ use indexmap::IndexMap;
 use serde::Serialize;
 
 use crate::api::collection::caller_profile;
+use crate::api::consent::terms_owed;
 use crate::api::http::{ApiResult, Req, now_ms};
 use crate::app::App;
 use crate::config::{PRESENCE_TTL_MS, SPECTATORS_PER_MATCH};
@@ -58,11 +60,14 @@ impl Standing {
     };
 }
 
-/// `POST /api/presence`: the caller is here now (B47). 204.
+/// `POST /api/presence`: the caller is here now (B47), unless it owes agreement to the terms in
+/// force, when nothing is recorded until it agrees (R970002). 204 either way.
 pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
     let mut tx = app.db.begin(Some(&me)).await?;
-    tx.presence_touch(&me, now_ms()).await?;
+    if !terms_owed(&tx.consent_get(&me).await?) {
+        tx.presence_touch(&me, now_ms()).await?;
+    }
     tx.commit().await?;
     Ok(no_content())
 }

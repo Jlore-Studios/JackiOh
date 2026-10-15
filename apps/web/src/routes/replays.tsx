@@ -5,10 +5,16 @@
 //
 // It holds no log, seed or state (CLAUDE.md rule 7): a row is what the practice worker or the server
 // answers, and the player reads steps through a `ReplaySource`.
+//
+// NOT GATED, BUT ASKED (R970000). The practice half needs no account, so the route renders outside
+// `<Gated>`; an account that owes the age check or the terms in force (R757000, R757001) sees, in place
+// of its online half, a way to the consent screen, and its online games, "Shared with me" and every
+// "Share with a friend" wait until it answers there.
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 
+import ConsentPrompt from "../auth/ConsentPrompt.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
@@ -39,6 +45,8 @@ export const replaysTestid = {
   more: "replays-more",
   /** #936 B59: Play together's list of the replays friends shared. */
   sharedWithMe: "replays-shared-with-me",
+  /** R970000: the account owes the consent screen before its online games. */
+  consent: "replays-consent",
 } as const;
 
 type Listed<Row> =
@@ -87,7 +95,14 @@ function unavailableText(reason: PracticeReplayListing["unavailable"]): string |
 export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory?: () => PracticeHost }): ReactElement {
   useLocale();
   const account = useAccount();
-  const token = account.kind === "ready" ? account.token : null;
+  /** R970000: the profile that answered the consent screen here, which the next read may not show yet. */
+  const [answeredBy, setAnsweredBy] = useState<string | null>(null);
+  const [agreeing, setAgreeing] = useState(false);
+  const consentOwed =
+    account.kind === "ready" &&
+    (account.me.ageCheckOwed === true || account.me.termsOwed === true) &&
+    answeredBy !== account.me.profile.id;
+  const token = account.kind === "ready" && !consentOwed ? account.token : null;
   const [practice, setPractice] = useState<Listed<PracticeReplayListing>>({ kind: "loading" });
   const [online, setOnline] = useState<Listed<OnlineReplayListing>>({ kind: "loading" });
   const [lookup, setLookup] = useState<CardLookup | null>(null);
@@ -153,6 +168,19 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId });
   };
 
+  if (agreeing && consentOwed) {
+    return (
+      <ConsentPrompt
+        token={account.token}
+        me={account.me}
+        onAnswered={() => {
+          setAnsweredBy(account.me.profile.id);
+          setAgreeing(false);
+        }}
+      />
+    );
+  }
+
   if (open !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
@@ -212,6 +240,14 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
           </p>
         ) : null}
         {account.kind === "error" ? <p role="alert">{account.message}</p> : null}
+        {consentOwed ? (
+          <p data-testid={replaysTestid.consent}>
+            {t("Agree to the Terms and the Privacy Policy to see your online games.")}{" "}
+            <button type="button" onClick={() => setAgreeing(true)}>
+              {t("Continue")}
+            </button>
+          </p>
+        ) : null}
         {token === null ? null : (
           // #936 B59: the replays friends shared with this account are listed on Play together.
           <p>
