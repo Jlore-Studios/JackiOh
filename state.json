@@ -13310,7 +13310,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": "2026-10-15T02:53:43Z",
+    "idle_since": null,
     "last_run": "2026-10-15T02:53:43Z",
     "provider": "devin",
     "requested": false,
