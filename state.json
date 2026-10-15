@@ -7606,11 +7606,8 @@
       "run_id": "38805271083",
       "started_at": "2026-10-15T20:51:51Z",
       "stop_requested": false,
-      "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
-        "`claude-7` (claude, opus) rejected it: `task`: The issue requires that `cargo jackioh gate` (smoke) passes and does not regress against main, but nobody ran the gate on this branch or on "
-      ],
-      "strikes": 2,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 1
