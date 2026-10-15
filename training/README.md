@@ -187,7 +187,12 @@ games against the parent (`TRAINING_IMPROVE.games`, 400; `TRAINING_UNBAN.games`,
   same decks, shuffles and first seat in both. Its 200 deals are the lane's hold-out set (R850001):
   named for the committed AI and read only by it, never by a screen;
 - each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
-  generation 9) minus its own AI's shadow ban, with no handicap (Easy both);
+  generation 9) minus its own AI's shadow ban, with no handicap (Easy both). Both seats are dealt
+  by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
+  builder's `shape` option, off), so the gate's decks are drawn as practice's and the daily gates'
+  are (R976000). Until issue #976 the builder shaped every seat whose ban list was this build's
+  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Both AIs
+  still mulligan by `mulligan_keep_shaped`, which is part of how the AI plays;
 - the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
 
 | Lane | vs parent | Shadow bans |

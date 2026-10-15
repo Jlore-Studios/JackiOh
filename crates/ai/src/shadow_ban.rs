@@ -663,8 +663,8 @@ pub const UNBANNED_PREFER_BY: f64 = 3.0;
 /// holds anyway) is treated as having.
 pub const DEALT_Q_PRIOR: f64 = 0.6685;
 /// `(q / DEALT_Q_PRIOR) ^ DEAL_SHAPE_K`, capped at `DEAL_SHAPE_CAP`: the deck
-/// builder's per-card weight multiplier when it deals a seat this AI's own
-/// shadow ban applies to (deck.rs's `shape` gate).
+/// builder's per-card weight multiplier when a deal asks for it
+/// (`AiDeckOptions::shape`, R976000), which no deal does today.
 pub const DEAL_SHAPE_K: f64 = 20.0;
 pub const DEAL_SHAPE_CAP: f64 = 12.0;
 /// The mulligan keeps at most one card costing `keep_max_cost + 1`, and only
@@ -952,9 +952,10 @@ pub fn dealt_quality(id: &str) -> f64 {
     lookup(DEALT_Q, id).unwrap_or(DEALT_Q_PRIOR)
 }
 
-/// The weight `build_ai_deck` deals `id` at in a seat under this AI's own
-/// shadow ban: the measured quality ratio sharpened and capped, with the lane's
-/// unbans preferred another `UNBANNED_PREFER_BY` on top.
+/// The weight `build_ai_deck` deals `id` at when a deal asks for shaping
+/// (`AiDeckOptions::shape`, R976000), and the one `mulligan_keep_shaped` reads:
+/// the measured quality ratio sharpened and capped, with the lane's unbans
+/// preferred another `UNBANNED_PREFER_BY` on top.
 pub fn shaped_weight(id: &str) -> f64 {
     let mut weight = (dealt_quality(id) / DEALT_Q_PRIOR)
         .powf(DEAL_SHAPE_K)
