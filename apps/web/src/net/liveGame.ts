@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { getMe, type MeResponse, type QueueMode } from "./api.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
@@ -144,6 +144,10 @@ export function useQueued(): QueueMode | null {
  * `SERIES_POLL_SECONDS`, and once it names a game, forget the queue, announce the pairing for
  * `MATCH_FOUND_NAV_DELAY_MS` and take the player there. Returns the game being announced, or null.
  * A session that has ended is out of the queue as far as this tab can follow it.
+ *
+ * R897000: a queue the server no longer holds ends the follow too: `QUEUE_ENDED_AFTER_READS`
+ * reads in a row saying `queued` is false forget the queue, so an expired ticket stops the wait
+ * instead of waiting for a pairing that never comes.
  */
 export function useQueueFollow(path: string, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const queued = useQueued();
@@ -151,6 +155,8 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
   const reader = useRef(read);
   reader.current = read;
   const watching = queued !== null && path !== paths.play && found === null;
+  /** R897000: consecutive reads saying the ticket is gone. */
+  const endedReads = useRef(0);
 
   useEffect(() => {
     if (!watching) return;
@@ -165,13 +171,30 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
         (answer) => {
           if (cancelled) return;
           if (answer.kind !== "ok") {
-            if (answer.kind === "signedOut") forgetQueued();
+            if (answer.kind === "signedOut") {
+              endedReads.current = 0;
+              forgetQueued();
+            }
             return;
           }
           const game = liveGameOf(answer.value);
-          if (game === null) return;
-          forgetQueued();
-          setFound(game);
+          if (game !== null) {
+            endedReads.current = 0;
+            forgetQueued();
+            setFound(game);
+            return;
+          }
+          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait,
+          // and a failed read leaves the count alone.
+          if (answer.value.queued === false) {
+            endedReads.current += 1;
+            if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
+              endedReads.current = 0;
+              forgetQueued();
+            }
+          } else {
+            endedReads.current = 0;
+          }
         },
         () => undefined,
       );
