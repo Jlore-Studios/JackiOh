@@ -100,9 +100,9 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts   # e
 cargo jackioh catalog check        # catalog.json's shape and census: 370 cards and 80 tokens across Core, Classic, Classic+ and Meditative
 cargo jackioh patches check        # every catalog change claimed by exactly one pending fragment
 cargo jackioh spec check           # rule 3: ruling notes vs proving tests vs R-ids cited in code
-cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave
+cargo jackioh fuzz --seeds 200     # CI's fuzz gate: random-policy games with replay hashing; --handicap for the handicapped wave, --duos for co-op games (§12)
 cargo jackioh golden check         # the golden traces from the TypeScript engine, replayed (cargo test replays them too)
-cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's)
+cargo jackioh gate                 # the AI's quality gates at smoke size; --full at full size (the daily run's); --duos for the co-op AI team's (§12.7)
 cargo jackioh sweep                # the shadow-ban sweep (R186); copy its SHADOW_BAN rows into crates/ai/src/shadow_ban.rs by hand
 cargo jackioh stats                # an AI development run for the card statistics (R378); --out writes it
 cargo jackioh catalog-version      # the catalog version this checkout compiles in
