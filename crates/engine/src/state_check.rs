@@ -41,7 +41,9 @@ use crate::config::{BACKROW_ZONES, STATE_CHECK_PASS_CAP, UNIT_ZONES};
 use crate::prompts::{ListStatus, ResumePlan, SELF_KEY, run_resumable_list};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{EngineSink, HookArgs};
-use crate::state::{CardInstance, GameState, Resume, WorkItem, find_instance, find_instance_mut};
+use crate::state::{
+    CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
+};
 use crate::wire::{
     AttackHealth, GameEvent, GameOverReason, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Position, Row,
     Winner, ZoneName, ZoneRef, has_keyword,
@@ -854,11 +856,7 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
         return;
     }
     // R68's walk: the active player's side, then the opponent's; units, then the backrow; lane 1 up.
-    let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    };
+    let order = active_first(sink.state);
     let mut ordered: Vec<CardInstance> = Vec::new();
     for player in order {
         for row in [Row::Units, Row::Backrow] {
@@ -881,15 +879,11 @@ pub fn sacrifice_together(sink: &mut EngineSink<'_>, cards: &[CardInstance]) {
 }
 
 /// MD-D31, R1124: §4.5 step 1 exiles the units damage marked ahead of deaths — in R68's order,
-/// the active player's units first. The move is §6.3 Exile's (`effects::move_::exile_card`): to the
+/// the active player's units first. The move is §6.3 Exile's (`zones::exile_to_pile`): to the
 /// exile pile (a unit token ceases to exist instead, R11), the exile counter fed (R55), `exiled`
 /// reported. No Death, no Reborn, no `destroyed` (R461), even when the hit was lethal.
 fn exile_marked(sink: &mut EngineSink<'_>) {
-    let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    };
+    let order = active_first(sink.state);
     let mut marked: Vec<CardInstance> = Vec::new();
     for player in order {
         marked.extend(
@@ -905,17 +899,7 @@ fn exile_marked(sink: &mut EngineSink<'_>) {
         if live.marked_exiled != Some(true) {
             continue;
         }
-        let mut card = live;
-        let moved =
-            crate::zones::move_to_zone(sink.state, &mut card, OffFieldZone::Exile, Default::default());
-        if matches!(moved, MoveResult::Moved) {
-            sink.state.counters.exiled += 1;
-        }
-        sink.events.push(GameEvent::Exiled {
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-            owner: card.owner,
-        });
+        crate::zones::exile_to_pile(sink, live);
     }
 }
 
@@ -1005,11 +989,7 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             return;
         }
 
-        let order: [PlayerId; 2] = if sink.state.active == PlayerId::P1 {
-            [PlayerId::P1, PlayerId::P2]
-        } else {
-            [PlayerId::P2, PlayerId::P1]
-        };
+        let order = active_first(sink.state);
         let units: Vec<CardInstance> = order
             .iter()
             .flat_map(|player| units_of(sink.state, *player))

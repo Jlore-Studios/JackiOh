@@ -114,14 +114,6 @@ export function allCardIds(): string[] {
   return Array.from({ length: CORE_CARD_COUNT }, (_, index) => cardId(index + 1));
 }
 
-/** Throws on a typo so fixtures cannot drift from the catalog. */
-export function idOf(name: string): string {
-  for (const [index, cardName] of Object.entries(CARD_NAMES)) {
-    if (cardName === name) return cardId(Number(index));
-  }
-  throw new Error(`no SPEC §8 card named "${name}"`);
-}
-
 // Tokens
 
 /**
@@ -152,13 +144,6 @@ export function tokenId(index: string): string {
   return `core-${index.toLowerCase()}`;
 }
 
-export function idOfToken(name: string): string {
-  for (const [index, tokenName] of Object.entries(TOKEN_NAMES)) {
-    if (tokenName === name) return tokenId(index);
-  }
-  throw new Error(`no Token card named "${name}"`);
-}
-
 /** M8 names these cards directly. */
 export const CARDS = {
   bigDfender: cardId(1),
@@ -183,17 +168,4 @@ export const CARDS = {
   zoomerbinOomen: cardId(67),
   pocketChaos: cardId(87),
   myPawn: cardId(96),
-} as const;
-
-/** M8 names these tokens directly; L3 keeps them out of decks. */
-export const TOKENS = {
-  kysEmptyNotebook: tokenId("51.1"),
-  spikeyPillow: tokenId("65.1"),
-  cnVirus: tokenId("90.1"),
-  comboFodder: tokenId("93.1"),
-  chaosGolem: tokenId("95.1"),
-  rushToken: tokenId("T-rush"),
-  sheepToken: tokenId("T-sheep"),
-  felinorToken: tokenId("T-felinor"),
-  breadToken: tokenId("T-bread"),
 } as const;

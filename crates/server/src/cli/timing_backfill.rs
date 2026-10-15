@@ -19,10 +19,11 @@
 
 use std::panic::AssertUnwindSafe;
 
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 
 use crate::actor::registry::dealt_for;
 use crate::actor::telemetry::{LIVE_PILOTS, replay};
+use crate::cli::{connect_one, database_url};
 use crate::db::store::{Db, PlayTelemetry, StoreError};
 use crate::env::quoted;
 
@@ -91,17 +92,9 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
         bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
     }
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
     // One connection: this process folds one match at a time and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let outcome = backfill(&db).await;
     db.close().await;
     let outcome = outcome?;

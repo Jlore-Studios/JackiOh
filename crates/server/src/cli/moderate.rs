@@ -33,10 +33,9 @@
 
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
-use sqlx::postgres::PgPoolOptions;
 
-use crate::api::codes::code_hash;
-use crate::api::crypto::canonical_invite_code;
+use crate::api::crypto::{canonical_invite_code, hashes_for_pepper};
+use crate::cli::connect_one;
 use crate::db::store::{Db, ProfileStatus};
 use crate::env::{load_env, quoted};
 
@@ -166,7 +165,7 @@ pub async fn revoke_code(db: &Db, pepper: &str, plain: &str) -> anyhow::Result<S
     let Some(canonical) = canonical_invite_code(plain) else {
         bail!("not an invite code {}", quoted(plain));
     };
-    let hash = code_hash(pepper, &canonical);
+    let hash = hashes_for_pepper(pepper).code(&canonical);
     let mut tx = db.begin(None).await?;
     if tx.codes_find_by_hash(&hash).await?.is_none() {
         bail!("unknown code {}", quoted(&canonical));
@@ -203,18 +202,14 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let env = load_env(&source).map_err(|error| anyhow!("{error}"))?;
 
     // One connection: this process runs a single lever and exits.
-    let pool = PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&env.database_url)
-        .await?;
-    let db = Db::Pg(pool.clone());
+    let db = connect_one(&env.database_url).await?;
     let outcome = match &command {
         ModerateCommand::Ban { profile_id } => ban_profile(&db, profile_id).await,
         ModerateCommand::Unban { profile_id } => unban_profile(&db, profile_id).await,
         ModerateCommand::RevokeCode { code } => revoke_code(&db, &env.code_pepper, code).await,
         ModerateCommand::Redemption { enabled } => set_redemption(&db, *enabled).await,
     };
-    pool.close().await;
+    db.close().await;
     let line = outcome?;
     println!("{line}");
     Ok(())

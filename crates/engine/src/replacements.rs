@@ -52,7 +52,8 @@ use crate::config::{DAMAGE_REDIRECT_CAP, LIBRARY_CAP};
 use crate::damage::{DamageArgs, DamageTarget};
 use crate::script::{EffectContext, EngineSink, InsteadLasting, InsteadTo};
 use crate::state::{
-    CardInstance, GameState, ModifierExpiry, ModifierKind, Resume, find_instance, find_instance_mut,
+    CardInstance, GameState, ModifierExpiry, ModifierKind, Resume, active_first, find_instance,
+    find_instance_mut,
 };
 use crate::wire::{CardType, GameEvent, PlayerId, RedirectWhat, Row, Zone, ZoneName, opponent_of};
 use crate::zones::GraveyardRedirect;
@@ -133,14 +134,6 @@ fn live(state: &GameState, card: &CardInstance) -> CardInstance {
         .unwrap_or_else(|| card.clone())
 }
 
-fn sides_of(state: &GameState) -> [PlayerId; 2] {
-    if state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    }
-}
-
 fn add_candidate(
     out: &mut Vec<Candidate>,
     seen: &mut IndexSet<String>,
@@ -166,7 +159,7 @@ fn add_candidate(
 fn candidates(state: &GameState, about: Option<&CardInstance>) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
     let mut seen: IndexSet<String> = IndexSet::new();
-    for player in sides_of(state) {
+    for player in active_first(state) {
         for card in crate::zones::active_units_of(state, player) {
             add_candidate(&mut out, &mut seen, card, player, CandidateZone::Field);
         }
@@ -518,7 +511,7 @@ pub fn healing_replaced(sink: &mut EngineSink<'_>, target: &DamageTarget, amount
         DamageTarget::Unit { instance } => instance.controller,
     };
 
-    for player in sides_of(sink.state) {
+    for player in active_first(sink.state) {
         if player == healed {
             continue;
         }

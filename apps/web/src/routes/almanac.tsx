@@ -10,7 +10,7 @@
 // (deckbuilder.css) in the tavern, with the corner's Back and the settings gear; almanac.css holds
 // only what the browse pane needs without the deck editor's grid around it.
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 
 import catalogJson from "@jackioh/cards/catalog.json";
 import type { CardDef, CardDefs } from "@jackioh/shared";
@@ -23,12 +23,11 @@ import {
   DEFAULT_FILTER,
   DEFAULT_SORT,
   almanacPool,
-  type CardWinRateInfo,
   type PoolFilter,
   type PoolSort,
 } from "../game/deckbuilder/filters.ts";
+import { useCardWinRates } from "../game/deckbuilder/useCardWinRates.ts";
 import { useLocale, t } from "../i18n/i18n.ts";
-import { getCardStats } from "../net/api.ts";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -66,26 +65,7 @@ export default function AlmanacRoute(): ReactElement {
   const [filter, setFilter] = useState<PoolFilter>(DEFAULT_FILTER);
   const [sort, setSort] = useState<PoolSort>(DEFAULT_SORT);
   const [detailCardId, setDetailCardId] = useState<string | null>(null);
-  const [winRates, setWinRates] = useState<Map<string, CardWinRateInfo> | null>(null);
-
-  useEffect(() => {
-    if (sort.key === "winRate" && winRates === null) {
-      let cancelled = false;
-      getCardStats()
-        .then((res) => {
-          if (cancelled) return;
-          const map = new Map<string, CardWinRateInfo>();
-          for (const card of res.cards) {
-            map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
-          }
-          setWinRates(map);
-        })
-        .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [sort.key, winRates]);
+  const winRates = useCardWinRates(sort.key);
 
   const pool = useMemo(
     () => almanacPool(ALMANAC_CATALOG, filter, sort, winRates ?? undefined),

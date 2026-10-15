@@ -813,8 +813,3 @@ pub fn drain_work(sink: &mut EngineSink<'_>) -> bool {
     }
     panic!("owed work did not drain in {MAX_WORK_STEPS} steps (§9.3)");
 }
-
-/// `drain_work` for a caller that does not read the result.
-pub fn run_work(sink: &mut EngineSink<'_>) {
-    drain_work(sink);
-}

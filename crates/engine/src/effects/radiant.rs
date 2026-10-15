@@ -9,8 +9,7 @@ use indexmap::IndexSet;
 use serde::{Deserialize, Serialize};
 
 use crate::catalog::def_of;
-use crate::damage::DamageTarget;
-use crate::effects::targets::{PlayerSpec, TargetSpec, instance_on_its_stay, player_of, resolve_target};
+use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of};
 use crate::faces::card_type_of;
 use crate::rng::Rng;
 use crate::script::{Effect, EffectContext};
@@ -39,18 +38,6 @@ pub enum RadiantZone {
     Hand,
     Library,
     Field,
-}
-
-fn instance_of(ctx: &EffectContext<'_>, args: &RadiantTarget) -> Option<CardInstance> {
-    // R174: a card named by id is aimed at the stay it had when the run began (`instance_on_its_stay`).
-    if let Some(instance_id) = &args.instance_id {
-        return instance_on_its_stay(ctx, instance_id);
-    }
-    let spec = args.target.clone().unwrap_or(TargetSpec::Chosen { index: None });
-    match resolve_target(ctx, &spec) {
-        Some(DamageTarget::Unit { instance }) => Some(instance),
-        _ => None,
-    }
 }
 
 /// R97, R177: whether some player may not read this card where it sits — a hand is its owner's alone
@@ -165,21 +152,16 @@ fn pool_of(ctx: &EffectContext<'_>, player: PlayerId, zones: &[RadiantZone]) -> 
     pool
 }
 
-/// `setRadiant`'s argument is a `RadiantTarget` (default the first chosen selection).
-pub type SetRadiantArgs = RadiantTarget;
-
 /// §6.3 Make Radiant: one named card, with no effect when it is already Radiant.
 pub fn set_radiant(args: RadiantTarget) -> Effect {
     Effect::new("setRadiant", move |ctx| {
-        let Some(card) = instance_of(ctx, &args) else {
+        let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
+        else {
             return;
         };
         make_radiant(ctx, &card);
     })
 }
-
-/// `clearRadiant`'s argument is a `RadiantTarget` too (default the first chosen selection).
-pub type ClearRadiantArgs = RadiantTarget;
 
 /// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed. A card
 /// that is not Radiant is untouched; otherwise the flag is cleared and `deradianted` reports it.
@@ -188,7 +170,8 @@ pub type ClearRadiantArgs = RadiantTarget;
 /// Cry fires. A fused card returns to its fused base form (R77), since the face is the flag.
 pub fn clear_radiant(args: RadiantTarget) -> Effect {
     Effect::new("clearRadiant", move |ctx| {
-        let Some(card) = instance_of(ctx, &args) else {
+        let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
+        else {
             return;
         };
         let card = find_instance(ctx.state, &card.id)

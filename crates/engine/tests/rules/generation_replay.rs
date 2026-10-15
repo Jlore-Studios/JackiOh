@@ -11,7 +11,7 @@ use crate::rules::fixtures::generation::{
     big_body, body, charger, crawler, deck_fusion, dusting, fuse_a, fuse_b, fuser, juhan, lab, mutate,
     outbreak, pile_on, plague_book, quiet_trap, register_generation, scatter, slime, slop, toxins,
 };
-use crate::rules::fixtures::harness::setup_catalog;
+use crate::rules::fixtures::harness::{round_trip, setup_catalog};
 
 fn deck() -> Vec<String> {
     [
@@ -55,11 +55,6 @@ struct Played {
     state: GameState,
     log: Vec<Action>,
     reached: Reached,
-}
-
-/// `JSON.parse(JSON.stringify(state))`.
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
 }
 
 fn play(seed: &str) -> Played {

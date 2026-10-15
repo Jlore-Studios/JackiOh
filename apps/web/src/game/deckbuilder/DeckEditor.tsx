@@ -19,9 +19,9 @@ import CardBrowser, { type BrowserDetail } from "./CardBrowser.tsx";
 import { encodeDeckCode } from "./deckCode.ts";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
-import { visiblePool, type CardWinRateInfo, type PoolFilter, type PoolSort } from "./filters.ts";
-import { getCardStats } from "../../net/api.ts";
+import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
+import { useCardWinRates } from "./useCardWinRates.ts";
 import {
   DB_DETAIL_ADD,
   DECK_CODE_OUTPUT,
@@ -165,26 +165,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
     return clashing;
   }, [deck.cards, holders]);
 
-  const [winRates, setWinRates] = useState<Map<string, CardWinRateInfo> | null>(null);
-
-  useEffect(() => {
-    if (sort.key === "winRate" && winRates === null) {
-      let cancelled = false;
-      getCardStats()
-        .then((res) => {
-          if (cancelled) return;
-          const map = new Map<string, CardWinRateInfo>();
-          for (const card of res.cards) {
-            map.set(card.id, { winRate: card.winRate, hasEnoughGames: card.hasEnoughGames });
-          }
-          setWinRates(map);
-        })
-        .catch(() => {});
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [sort.key, winRates]);
+  const winRates = useCardWinRates(sort.key);
 
   const pool = useMemo(
     () => visiblePool(catalog, collection, filter, sort, winRates ?? undefined),

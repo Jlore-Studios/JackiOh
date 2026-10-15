@@ -59,7 +59,9 @@ use serde_json::{Value, json};
 use crate::config::{BACKROW_ZONES, CAST_ON_DRAW_CHAIN_CAP, LIBRARY_CAP, UNIT_ZONES};
 use crate::resolve::HookName;
 use crate::script::{EngineSink, Script, TriggerDef};
-use crate::state::{CardInstance, DispatchItem, GameState, QueuedTrigger, Resume, find_instance};
+use crate::state::{
+    CardInstance, DispatchItem, GameState, QueuedTrigger, Resume, active_first, find_instance,
+};
 use crate::stays::LaterMoves;
 use crate::traps::{
     ImmediateDispatch, arrived_during_play, is_trap_type, is_trap_window_event, offer_event_to_traps,
@@ -134,14 +136,6 @@ pub const LANE_WATCH: &str = "@laneWatch";
 /// (Derived from config's numbers, as TS derived it here; CLAUDE.md rule 9.)
 pub const SETTLE_PASS_CAP: usize =
     (LIBRARY_CAP * CAST_ON_DRAW_CHAIN_CAP * (UNIT_ZONES + BACKROW_ZONES)) as usize * PLAYER_IDS.len();
-
-fn sides_of(state: &GameState) -> [PlayerId; 2] {
-    if state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    }
-}
 
 // ---------------------------------------------------------------------------
 // 1. The registry.
@@ -301,7 +295,7 @@ pub fn trigger_holders_of(state: &GameState, player: PlayerId) -> Vec<TriggerHol
 /// holders it keeps: most dispatches are answered by a handful of the board's cards.
 fn holders_where(state: &GameState, keep: impl Fn(&CardInstance, TriggerZone) -> bool) -> Vec<TriggerHolder> {
     let mut out: Vec<TriggerHolder> = Vec::new();
-    for player in sides_of(state) {
+    for player in active_first(state) {
         for (card, zone) in holder_sites(state, player) {
             if keep(card, zone) {
                 out.push(holder_of(state, card, zone, player));
@@ -345,7 +339,7 @@ pub fn holders_answering(state: &GameState, event_type: GameEventType) -> Vec<Tr
 /// library or graveyard card, and no card `keep` turns away, to find it.
 pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bool) -> Vec<TriggerHolder> {
     let mut out: Vec<TriggerHolder> = Vec::new();
-    for player in sides_of(state) {
+    for player in active_first(state) {
         for card in crate::zones::active_units_of(state, player) {
             if keep(card) {
                 out.push(holder_of(state, card, TriggerZone::Field, player));
@@ -366,7 +360,7 @@ pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bo
 /// opponent's. Unfiltered — a card with no script keeps its place, so a caller can read the order
 /// itself — so filter with `triggers_on_event` or `trigger_holders_with_hook`.
 pub fn cards_in_trigger_order(state: &GameState) -> Vec<TriggerHolder> {
-    sides_of(state)
+    active_first(state)
         .into_iter()
         .flat_map(|player| trigger_holders_of(state, player))
         .collect()

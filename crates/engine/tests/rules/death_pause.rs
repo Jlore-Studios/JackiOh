@@ -24,7 +24,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::work::owed_work;
 use jackioh_engine::zones::card_at;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, json_of, new_game, put, round_trip, slot};
 
 // Fixtures.
 
@@ -264,10 +264,6 @@ fn game(seed: &str) -> GameState {
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
 
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
 fn act_result(state: &GameState, body: Value) -> ReduceResult {
     let nonce = NONCE.fetch_add(1, Ordering::Relaxed) + 1;
     let mut action = body;
@@ -335,10 +331,6 @@ fn answer(state: &GameState) -> ReduceResult {
         panic!("{error}");
     }
     result
-}
-
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).expect("a state survives JSON")
 }
 
 /// Plain data: nothing JSON would drop.

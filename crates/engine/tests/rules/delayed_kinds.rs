@@ -20,7 +20,9 @@ use jackioh_engine::zones::{
 };
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, setup_catalog, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, setup_catalog, slot,
+};
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, contract, contract_ask, doom, doom_all, hurrah, later, log_card, notes, reminder,
     turn_catalog,
@@ -34,23 +36,6 @@ fn register() {
 }
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// Every key the expected object names matches, recursively.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
-}
 
 /// `reduce` with a fresh nonce; `body` carries its `playerId`.
 fn act(state: &GameState, body: Value) -> ReduceResult {

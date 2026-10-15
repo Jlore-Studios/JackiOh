@@ -935,6 +935,11 @@ pub struct CardDef {
 }
 
 impl CardDef {
+    /// §5.1: a token, by the printed flag or by the tag. §2.6 L3 bans both spellings from a deck.
+    pub fn is_token(&self) -> bool {
+        self.token || self.tags.contains(&Tag::Token)
+    }
+
     /// `def[face]`.
     pub fn face(&self, face: FaceKind) -> &CardFace {
         match face {

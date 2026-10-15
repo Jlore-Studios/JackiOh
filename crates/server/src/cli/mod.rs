@@ -20,3 +20,28 @@ pub mod seed_accounts;
 pub mod seed_catalog;
 pub mod timing_backfill;
 pub mod timing_fit;
+
+use anyhow::{anyhow, bail};
+
+use crate::db::store::Db;
+
+/// The store's connection string, `DATABASE_URL`, which every command that reads or writes the
+/// store takes from the environment.
+pub fn database_url() -> anyhow::Result<String> {
+    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
+    if connection_string.is_empty() {
+        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
+    }
+    Ok(connection_string)
+}
+
+/// One connection, wrapped as the `Db` every store call takes: a command runs its queries one
+/// after another and exits.
+pub async fn connect_one(connection_string: &str) -> anyhow::Result<Db> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect(connection_string)
+        .await
+        .map_err(|error| anyhow!("{error}"))?;
+    Ok(Db::Pg(pool))
+}

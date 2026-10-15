@@ -13,13 +13,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use hmac::{Hmac, KeyInit, Mac};
 use serde_json::{Value, json};
-use sha2::Sha256;
 
 use crate::api::consent::consent_owed;
 use crate::api::crypto::{
-    canonical_invite_code, format_code, is_well_formed_code, normalize_code, random_code,
+    canonical_invite_code, format_code, hashes_for_pepper, is_well_formed_code, normalize_code, random_code,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json, lock, rate_limited};
 use crate::app::App;
@@ -93,20 +91,6 @@ fn identical_code_error() -> ApiError {
     ApiError::new(ApiErrorCode::InvalidCode, REDEMPTION_IDENTICAL_ERROR)
 }
 
-/// §9.4: codes are stored hashed — a keyed SHA-256 (HMAC) of the normalized code under the
-/// `${CODE_PEPPER}:code` pepper, hex. Separate code and IP domains keep their hashes apart.
-pub(crate) fn code_hash(code_pepper: &str, plain: &str) -> String {
-    let key = format!("{code_pepper}:code");
-    let mut mac = <Hmac<Sha256> as KeyInit>::new_from_slice(key.as_bytes())
-        .unwrap_or_else(|error| panic!("an HMAC key of any length: {error}"));
-    mac.update(normalize_code(plain).as_bytes());
-    mac.finalize()
-        .into_bytes()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 // Minting
 
 /// The two things minting touches, rather than the whole `App`, so `cli/mint_code.rs` needs only
@@ -165,7 +149,7 @@ pub async fn mint_invite_code(deps: MintDeps<'_>, input: MintInput) -> Result<Mi
 
     let code = InviteCode {
         id: uuid::Uuid::new_v4().to_string(),
-        code_hash: code_hash(deps.code_pepper, &plain),
+        code_hash: hashes_for_pepper(deps.code_pepper).code(&plain),
         max_uses: i64::from(max_uses),
         uses: 0,
         revoked: false,
@@ -298,8 +282,10 @@ pub async fn redeem_code(app: &App, input: RedeemInput<'_>) -> Result<RedeemOutc
     // code's length in R104's alphabet, nothing dropped or mapped; input over `CODE_INPUT_MAX_LENGTH`
     // is not read. A code that could never exist travels as `None`, not refused early: §9.4 logs the
     // attempt (step 4) before the lookup (step 5), so a malformed code must cost the same row.
-    let code_hash =
-        canonical_invite_code(input.plain_code).map(|canonical| code_hash(&app.env.code_pepper, &canonical));
+    // The hash is `crypto::Hashes::code`'s: a keyed SHA-256 (HMAC) of the normalized code under the
+    // `${CODE_PEPPER}:code` pepper, hex, the domain the IP hashes are kept apart from.
+    let code_hash = canonical_invite_code(input.plain_code)
+        .map(|canonical| hashes_for_pepper(&app.env.code_pepper).code(&canonical));
 
     // §9.4: "Redemption is one server-side transaction." This is it.
     let mut tx = app.db.begin(Some(&profile.id)).await?;

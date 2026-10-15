@@ -15,7 +15,7 @@ use crate::rules::fixtures::generation::{
     Run, act, answer, asker, asker_answers, body, cheap_unit, clear_asker_answers, deck_spell, field_trap,
     frozen, hand_card, pile_on, plain_trap, playing, pricy_unit, replayed, x_unit,
 };
-use crate::rules::fixtures::harness::{events_of_type, put, set_library, sink_for, slot};
+use crate::rules::fixtures::harness::{events_of_type, matches_object, put, set_library, sink_for, slot};
 
 fn run(sink: &mut EngineSink<'_>, effects: Vec<Effect>) {
     let mut ctx = make_context(
@@ -71,24 +71,6 @@ fn unit_ids(side: &PlayerState) -> Vec<Option<String>> {
 
 fn args<T: serde::de::DeserializeOwned>(literal: Value) -> T {
     json_as(literal)
-}
-
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively; an
-/// array matches element by element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn face_down_marker() -> BackrowView {

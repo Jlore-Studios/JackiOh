@@ -281,12 +281,6 @@ pub fn game_config(matchup: Matchup, n: i32, budget: SearchBudget, series: &str)
     }
 }
 
-/// Plays games 1..seeds; each is folded with its handicaps to fill replay_hash/replay_errors.
-pub fn run_gate(matchup: Matchup, seeds: i32, budget: SearchBudget) -> GateReport {
-    let numbers: Vec<i32> = (1..=seeds.max(0)).collect();
-    run_gate_games(matchup, &numbers, budget)
-}
-
 /// Plays the listed games of a matchup (1-based, as `game_config` numbers them), each folded with its
 /// handicaps to fill replay_hash/replay_errors. CI plays a gate in shards, each one every k-th game
 /// (`gate_shard_games`), and holds the wins of all of them together against `gate_needed`.

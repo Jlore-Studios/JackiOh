@@ -11,7 +11,7 @@ use std::collections::BTreeSet;
 use jackioh_engine::effects::{cast, cast_new, cast_random, damage, heal};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, put, round_trip, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     DISCOVER_POOL, RANDOM_POOL, ask_target, cast_field, cast_trap, discover_spell, grave_spell, in_graveyard,
     jogg_box, mode_spell, named_caster, pb_act, pb_playing, pb_reduce, solarius, target_spell, their_choice,
@@ -186,11 +186,6 @@ fn run(state: &mut GameState, effects: Vec<Effect>, self_id: Option<&str>) -> Ve
 /// TS `only` (fixtures/playPipelineB): the first item, which must exist.
 fn only<T>(items: impl IntoIterator<Item = T>) -> T {
     items.into_iter().next().expect("expected at least one item")
-}
-
-/// `JSON.parse(JSON.stringify(state))`, the round trip a paused state must survive (§9.3).
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).unwrap()).unwrap()
 }
 
 /// TS `{ ...action, playerId }`: a legal action body as the literal `pb_act` takes.

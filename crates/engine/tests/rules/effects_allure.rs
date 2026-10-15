@@ -20,16 +20,12 @@ use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
 use crate::rules::fixtures::jade::{JADE_SCRIPTS, jade_allure, jade_catalog};
 use crate::rules::fixtures::scripts::{FIXTURE_SCRIPTS, fixture_catalog};
 
 /// TS's module-level `let nonce = 0`: every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
 
 /// `reduce` with a fresh nonce; `body` is the TS `ActionInput` literal (its `playerId` included).
 fn act(state: &GameState, body: Value) -> ReduceResult {

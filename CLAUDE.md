@@ -86,6 +86,11 @@ trap backrow. This file binds every agent, not only Claude.
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
     red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
+13. Never delete or disable anything called from outside this codebase without asking a person first: a
+    webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
+    or a person or another service calls (`/api/catalog` is Render's health check), or a `cargo jackioh`,
+    server or harness subcommand that a workflow, a deploy or a person runs. That nothing in the tree calls
+    it is no proof it is dead (#900).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 

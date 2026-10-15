@@ -17,7 +17,9 @@ use jackioh_engine::effects::{choose_mode, damage};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, json_of, matches_object, new_game, put, sink_for, slot,
+};
 
 // The handlers the engine registers, registered here too
 
@@ -335,10 +337,6 @@ fn answer(state: &mut GameState, option: &str) -> Vec<GameEvent> {
     })
 }
 
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 fn amounts(events: &[GameEvent]) -> Vec<i64> {
     events_of_type(events, GameEventType::Damage)
         .into_iter()
@@ -364,18 +362,6 @@ fn unserializable<T: Serialize + DeserializeOwned + PartialEq>(value: &T, path: 
 
 fn revive(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state revives from its JSON")
-}
-
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn panics_with(run: impl FnOnce(), text: &str) {
