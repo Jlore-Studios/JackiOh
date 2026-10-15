@@ -4,17 +4,16 @@ Issue #466 proposes a small neural network, trained in Python on self-play and r
 `crates/ai`, to replace or blend with the hand-written evaluation (`crates/ai/src/evaluate.rs`, SPEC
 §9.9 "Evaluation"). This note is its planning pass of 2026-10-15. It sets out what changed since
 the issue was written, whether the network can beat today's AI, and each design decision with its
-options and a recommendation. Then it gives a re-ordered set of milestones and the calls that are
-a person's.
+options and a recommendation. Then it lists the seven parts, each a sub-issue of #466, and the
+calls that are a person's.
 
-Nothing here is built yet. A decision taken here becomes a sub-issue when its milestone starts
-(#466, "Who builds it"). Rulings the build needs take numbers from #466's block, R466000 to
+Nothing here is built yet. Each part is a sub-issue of #466, #1006 to #1012 (The parts). Rulings the build needs take numbers from #466's block, R466000 to
 R466999 (`docs/issues-and-patches.md`).
 
 ## Where things stand
 
 - **The blockers are closed.** #306 closed on 2026-10-08. #443 merged as #501: `analysis/` is a uv
-  project on Python 3.13 with every dependency pinned in `uv.lock`, the conventions milestone 2
+  project on Python 3.13 with every dependency pinned in `uv.lock`, the conventions part 4
   follows.
 - **The bars moved.** The issue quotes #306's 85 of 100 against the parent. Since #850 (R850000,
   R850001) the improve lane promotes on **220 of 400 paired games** on 200 hold-out deals, and
@@ -36,7 +35,7 @@ R466999 (`docs/issues-and-patches.md`).
     baseline eval's stat/cost proxies already track script power closely enough".
 - **The lane's notes name this issue as the next step.** Session 63: "the fitted nonlinear evaluator
   is blocked on the positions-recording pipeline (tools, outside the lane)". That pipeline is
-  milestone 1.
+  part 1 (#1006).
 - **The training box is full.** It is one `m7i-flex.large` (2 vCPUs) running three lanes. On
   2026-10-15 a 400-game screen took about 91 minutes at load 6 (s63a). Another (s61) projected about
   5 hours at load 9 to 10 and was killed. The disk filled at 30 GB of `target/`.
@@ -80,9 +79,9 @@ fitted to outcomes is also noisy: one label per game, shared by every position o
 better AUC need not mean better play. What matters is ranking the beam's sibling lines at one
 decision, not telling won games from lost ones (s15 shows that gap).
 
-**So the plan measures playing strength early and cheaply.** The issue's order puts the first game
-against the parent at milestone 5, after quantisation and WASM parity. The order below plays a
-native screen on the dev set right after the first fit (milestone 3 below). It stops there if
+**So the plan measures playing strength early and cheaply.** #466's first order put the first
+game against the parent after quantisation and WASM parity. The parts below play a native screen
+on the dev set right after the first fit (part 5, #1010). It stops there if
 `edgeLow ≤ 0` on 800 paired games.
 
 **It pays off even if the network does not ship.** The position data ranks where the hand eval is
@@ -123,7 +122,7 @@ does not ask that of it.
 
   So the first network is small: about 50,000 weights, a first layer 16 wide over D5's inputs. It
   grows only as the data does.
-- **Measure, do not guess.** Milestone 2 fits on 10,000, 30,000 and 100,000 games and plots the
+- **Measure, do not guess.** Part 4 (#1009) fits on 10,000, 30,000 and 100,000 games and plots the
   held-out loss against the data. If the curve is flat by 100,000, data is not the limit: more
   compute will not help, and the features or the model must change. If it is still falling, export
   more before the screen.
@@ -166,12 +165,12 @@ A useful first dataset is about **100,000 games**. Each card then appears in abo
 | **A. The training box as it is** | under 450 (at most 1 of its 2 cores is spare) | over 9 days | none | already set up | full: it would slow both lanes' screens further (s61, s63a) |
 | **B. A bigger AWS box**, or one spot box per export | about 3,000 on 8 vCPUs | about 33 h | about $0.40/h for an `m7i.2xlarge` on demand (about $13 for the export); spot is less | the training lanes live there; a bigger box also speeds their screens (#383) | AWS's Free plan refuses anything above 2 vCPUs, so it needs the paid plan; about $192 of credits as of 10-06; a person's setup |
 | **C. GitHub-hosted runners**, a `workflow_dispatch` matrix like `super.yml`'s fuzz shards | about 30,000 on 20 jobs × 4 vCPUs | under 4 h | free for a public repository | the export is embarrassingly parallel and reproducible from seeds; artifacts carry the files; nothing to administer; `ci-duration.yml` does not watch it | a `.github/` change, a person's; one export is bounded by artifact size and retention (90 days at most); GitHub's terms limit Actions to work on the project itself, which training the project's own shipped AI falls under, by our reading |
-| **D. A person's own machine** | about 6,000 on 16 cores | about 17 h | none | fastest to start; best for milestone 2's exploring | not repeatable by anyone else; nothing scheduled |
+| **D. A person's own machine**, by hand or as a self-hosted runner (#1008) | about 6,000 on 16 cores | about 17 h | none | fastest to start; as a runner (label `jackioh-selfplay-local`) C's workflow dispatches to it, so its runs are logged and repeatable | its own setup and disk (`target/` grows past 30 GB); safe on this public repository only while "Require approval for all external contributors" stays on, as for the night box (`bot/machine/README.md`) |
 | **E. #383's k3s training pool** | on demand | — | about $170 a month for the whole plan | the long-term home if training grows | 10 to 14 days of a person's build work, not started |
 
-**Recommendation: C for the exports, D for development, and keep the training box for the lanes.**
-One dispatched run of under four hours gives what the box's spare core would take one to three
-weeks to play, at no cost. Logs are the stored form (D3), so a run's artifact holds a few hundred
+**Recommendation: C and D together, through one workflow (#1007), and keep the training box for
+the lanes.** A dispatch picks GitHub's runners or the local one (#1008). One dispatched run of
+under four hours gives what the box's spare core would take one to three weeks to play, at no cost. Logs are the stored form (D3), so a run's artifact holds a few hundred
 MB compressed, not tens of GB. B is the right second step if the lanes later retrain the network on
 every patch. Upgrading the box would also cure the lanes' starved screens, which is worth it
 whatever #466 decides.
@@ -189,7 +188,7 @@ the "fishing" that `improve.md` forbids: retrain, re-gate, keep the lucky read.
 | **B. The improve lane runs it.** `improve.md` learns the recipe; Devin chooses features and sizes | Devin on the box | Devin's cost after 10-16; the box's CPU; a lane may change `crates/ai/**` only, so it can retrain but never change the exporter or the trainer |
 | **C. Both.** The script is the only way a network is made; the lane, or a person's session, proposes changes to features or model shape as screened stack commits, each run through the same script | A for every retrain, B or a person for design | two places to read for what happened |
 
-**Recommendation: A through milestone 5, then C.** The pipeline is mechanical. A run is
+**Recommendation: A until a network has passed its screens (parts 4 to 6), then C (#1012).** The pipeline is mechanical. A run is
 reproducible from its seeds, and the gate's seeds name the committed tree, so a scripted retrain
 cannot fish as long as it gates only after a passing dev screen. An LLM earns its cost on *what to
 try next*. Put `features.rs` in `crates/ai` and make the exporter and trainer read the feature
@@ -266,13 +265,13 @@ zero cannot differ.
 
 | Option | Extra work | Weights in the WASM bundle (B's shape: about 50k weights at first, 200k at most) |
 |---|---|---|
-| **A. Integers** (the issue) | quantisation, a Python integer reference, per-layer shifts, a loss check (milestone 3) | 50 to 200 KB as i8 |
+| **A. Integers** (the issue) | quantisation, a Python integer reference, per-layer shifts, a loss check (part 6) | 50 to 200 KB as i8 |
 | **B. `f64` with ReLU** | none | 0.4 to 1.6 MB raw, more as JSON text |
 | **C. B to screen natively, A to ship** | the quantisation only once a screen has shown a gain | as A |
 
 **Recommendation: C.** The first screen runs native against native, where parity is not in
 question, so it needs no quantisation. Quantise only a network worth shipping. Integers then keep
-the browser's download small, and milestone 4's parity fixture proves agreement either way. The
+the browser's download small, and part 6's parity fixture (#1011) proves agreement either way. The
 weights go in as text (`include_str!`, rule 4). i8 stored as base64 in a JSON field keeps that
 small.
 
@@ -302,64 +301,41 @@ The weights record `FEATURES_VERSION` and the catalog version they were trained 
 the cards' dense stats are read live, and only their learned extra worth is stale. The gather lane
 already plays every patch, so retraining per patch is cheap (D1, D3).
 
-## Milestones, re-ordered
+## The parts
 
-The issue's seven milestones, with strength measured before the shipping work:
+Issue #466 tracks them, one sub-issue each, in build order. Strength is measured (parts 4 and 5)
+before any shipping work (part 6):
 
-1. **Features and the log export (Rust, `crates/ai` and `crates/tools`).** `crates/ai/src/features.rs`
-   with `FEATURES_VERSION` (D5's dense and sparse inputs). `cargo jackioh selfplay --games N --out
-   <dir>` writes logs (the development run's deals, R258). Its seeds are never the gate's (the
-   arena's `is_gate_seed_base` refuses them, R850001) nor the dev set's, so a screen never plays a
-   deal the network was trained on. `cargo jackioh positions <logs> --out <file>` writes features. The tests:
-   - states that differ only in hidden cards give equal features (R185);
-   - the same seed gives the same file;
-   - a log's positions equal those of the game that played it.
-
-   Measure games per core-hour here and on a hosted runner. Difficulty: hard (AI work, never easy
-   for the night bot).
-2. **An offline fit (Python, `training/ml/`).** Fit a logistic model, the hand eval calibrated to
-   a probability, and D5's network with D4's skip connection. Split held-out data by deal.
-   - Compare log loss and calibration overall and by turn band (turns 4 to 10 are where the
-     snowballs are).
-   - Plot the learning curve: the network fitted on 10,000, 30,000 and 100,000 games (How much data
-     and compute). Export more first if it is still falling.
-   - Print the hand eval's worst-misjudged cards.
-   - Go on if the network beats both baselines clearly in the midgame.
-3. **A native screen (Rust).** A float inference behind `AI_EVAL_KIND` in `crates/ai/src/config.rs`
-   (one line turns it off), at D6's option B. Run `arena --a self --b bin:<control> --set improve-dev
-   --games 800`, decided in advance. Go on only if `edgeLow > 0`; otherwise post the numbers on #466
-   and try D4's C or D5's C, or stop.
-4. **Ship-ready inference.** Quantise (D7). Add the parity fixture of feature vectors and expected
-   outputs, reproduced natively and in the WASM build. Check that the perf gate
-   (`AI_GATE.max_decision_ms`) and `msP95` under 2,000 still hold.
-5. **The gate's dry run** (`promote --lane improve --dry-run` on a clean commit) and longer arena
-   runs. Post the win rates on #466.
-6. **Retraining as routine** (D2's C). `training/ml/retrain.sh`, and the dispatched export workflow
-   (D1's C). `improve.md` learns how to use them.
-7. **A promotion through the gate:** an `AI gen N (improve): …` pull request, re-verified by CI.
-
-Milestones 1, 3 and 4 are Rust; 2 is Python; 6's workflow is `.github/`.
+| Part | Issue | What | Who | Blocked by |
+|---|---|---|---|---|
+| 1 | #1006 | Features and the log export: `crates/ai/src/features.rs` with `FEATURES_VERSION`, `cargo jackioh selfplay` (logs, on seeds that are neither the gate's nor the dev set's, R850001), `cargo jackioh positions` (logs to features, each game's hash checked) | decide later; hard | nothing |
+| 2 | #1007 | A dispatched export workflow: a sharded `selfplay` matrix on GitHub's runners or the local runner (D1) | people (`.github/`) | #1006 |
+| 3 | #1008 | A local self-hosted runner for the exports, label `jackioh-selfplay-local` | people (a machine) | nothing; its first run needs #1006 and #1007 |
+| 4 | #1009 | The first 100,000 games and an offline fit in `training/ml/`: the calibrated hand eval, a linear fit and D5's network; the learning curve; the hand eval's most misjudged cards. **Go/no-go 1** | decide later; hard | #1006 |
+| 5 | #1010 | `learned.rs` in `f64` behind `AI_EVAL_KIND` (D6's B, 1v1 only) and an 800-game native screen on `improve-dev`. **Go/no-go 2**: `edgeLow > 0` | decide later; hard | #1009 |
+| 6 | #1011 | Integer inference (D7), the parity fixture natively and in the WASM build, the perf gate and `msP95` under 2,000 | decide later; hard | #1010 |
+| 7 | #1012 | `training/ml/retrain.sh` with no LLM inside it (D2), `improve.md`, the gate's dry run, and the promotion: `AI gen N (improve): …` | decide later; hard | #1011 |
 
 ## Rough cost
 
 | Item | Compute | Money |
 |---|---|---|
-| Milestone 1's export, 100,000 games (about 7 million decision positions) | under 4 h of 20 hosted runners, or about 17 h of a 16-core machine | none on hosted runners |
+| Part 4's first export, 100,000 games (about 7 million decision positions) | under 4 h of 20 hosted runners, or about 17 h of a 16-core local runner | none |
 | Scaling to a million games, if the learning curve asks for it | about a day and a half of hosted runners | none on hosted runners; about $135 on AWS |
 | A fit | minutes of CPU | none |
-| Milestone 3's screen | 800 games: about 32 minutes on a 4-vCPU runner (measured above), hours on the loaded box | none on hosted runners |
+| Part 5's screen | 800 games: about 32 minutes on a 4-vCPU runner (measured above), hours on the loaded box | none on hosted runners |
 | A bigger training box (optional; helps the lanes whatever happens here) | `m7i.xlarge` or `m7i.2xlarge` | about $150 or $290 a month on demand (#383), paid plan needed |
 | Devin, if the lane supervises retraining after 10-16 | per session | Devin's plan, 6× to 12× credits |
 
 ## A person's calls
 
-1. **Compute (D1).** Hosted runners for exports means adding a dispatched workflow under
-   `.github/`. A bigger AWS box means the paid plan.
-2. **Supervision (D2).** Whether the improve lane takes retraining over at milestone 6, given
-   Devin's cost after 2026-10-16.
+1. **Compute (D1).** The export workflow (#1007, `.github/`) and the local runner (#1008, a
+   machine) are people's. A bigger AWS box means the paid plan.
+2. **Supervision (D2).** Whether the improve lane takes retraining over in #1012, given Devin's
+   cost after 2026-10-16.
 3. **The tutorial (D9).** Only if the lesson tests reject the network: whether the tutorial may keep
    the hand eval, which changes R290.
 4. **The bars.** #466 leaves them to a person. Since #850 they are 220 of 400 paired games, about a
    55% true win rate, low enough that a learned evaluation's first real gain can pass.
-5. **Who builds milestone 1.** The night bot at `difficulty:hard` (a sub-issue labelled
-   `bot:build`), or a session a person watches. #466 itself is labelled `human`.
+5. **Who builds the code parts** (#1006, #1009 to #1012): label one `bot:build` for the night bot
+   (`difficulty:hard`, so Opus only), or run it in a session a person watches. None is queued.
