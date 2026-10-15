@@ -6868,9 +6868,10 @@
     "what": "revise #955 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-15T01:39:19Z",
+    "at": "2026-10-15T01:45:25Z",
     "notes": [
-      "CI on #896: #896: queued a CI fix"
+      "CI on #896: #896: queued a CI fix",
+      "started a night run, as a lane was free: a suggestion survey is due, for `devin`"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
