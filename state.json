@@ -6974,6 +6974,14 @@
       "started_at": "2026-10-15T05:43:19Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "960": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-15T05:00:00Z",
+      "issue": 884,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
