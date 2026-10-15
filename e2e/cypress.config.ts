@@ -7,6 +7,12 @@ import { jackiohAliases } from "../apps/web/vite.config.ts";
 import { registerTasks } from "./support/tasks/index.ts";
 
 export default defineConfig({
+  // Chrome 155 (runner image ubuntu24/20261012) on Cypress 16's native network path drops some of
+  // the browser's requests and sockets to the E2E server, while every request the Node side makes
+  // (cy.request, the wsPlayer task) lands. `forceHttp1` sends Chrome back through Cypress's proxy,
+  // the Node path those already take. Cypress deprecates it ("will be removed in a future
+  // version"): drop it once native interception holds up on the runner's Chrome.
+  forceHttp1: true,
   // The layout BUILD §1 fixes: e2e/cypress/e2e/*.cy.ts, e2e/fixtures/decks/*.json, e2e/support/.
   e2e: {
     baseUrl: process.env.E2E_BASE_URL ?? "http://localhost:5173",
