@@ -6664,6 +6664,9 @@
       "taken_asks": []
     },
     "951": {
+      "ci_reruns": {
+        "22b506b7ecaf0a225bf8e509c34c6423da8e9ee9": 1
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-14T23:21:06Z",
