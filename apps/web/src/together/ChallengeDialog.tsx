@@ -13,9 +13,9 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getDecks, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
+import { withSession } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createChallenge, type PlayerRef } from "../net/social.ts";
-import { withSession } from "../net/gate.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { followChallenge } from "./follow.ts";
 import { attempt, messageOf } from "./session.ts";

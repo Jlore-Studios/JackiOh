@@ -20,12 +20,12 @@ import { MATCH_FOUND_NAV_DELAY_MS } from "@jackioh/server-config";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { getMe } from "../net/api.ts";
+import { withSession } from "../net/gate.ts";
 import { liveGameOf, type LiveGame } from "../net/liveGame.ts";
 import { currentPath, navigate, paths } from "../net/navigate.ts";
 import { roomLinkPath } from "../net/roomLink.ts";
 import { readSession } from "../net/session.ts";
 import { declineChallenge, getChallenges, type Challenge } from "../net/social.ts";
-import { withSession } from "../net/gate.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";

@@ -18,6 +18,7 @@ import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
+import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { parseServerFrame } from "../game/net.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
@@ -27,7 +28,6 @@ import { readSession } from "../net/session.ts";
 import { getFriends } from "../net/social.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { useCatalogLookup } from "./catalog.ts";
-import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { usePolled } from "./session.ts";
 import { watchTestid } from "./testids.ts";

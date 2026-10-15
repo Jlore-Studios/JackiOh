@@ -17,8 +17,8 @@ import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
-import { navigate } from "../net/navigate.ts";
 import { withSession } from "../net/gate.ts";
+import { navigate } from "../net/navigate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,

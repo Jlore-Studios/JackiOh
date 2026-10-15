@@ -56,7 +56,7 @@ function storeRoom(code: string | null): void {
   }
 }
 
-/** A refusal (B33's `full` and `own_room`, B34's unknown code, …) in the server's own words, never reworded here. */
+/** A refusal (B33's `full` and `own_room`, B34's unknown code, …) in the server's own words. */
 function refusalWords(cause: unknown): string {
   return cause instanceof Error ? t(cause.message) : String(cause);
 }

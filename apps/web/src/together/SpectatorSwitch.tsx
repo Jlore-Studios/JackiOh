@@ -14,8 +14,8 @@ import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 
 import { t, useLocale } from "../i18n/i18n.ts";
 import { apiRequest, getPlayerSettings, type PlayerSettingsAccountCopy } from "../net/api.ts";
-import { readSession } from "../net/session.ts";
 import { withSession } from "../net/gate.ts";
+import { readSession } from "../net/session.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { messageOf } from "./session.ts";
 import { SPECTATORS_SETTING_TESTID } from "./testids.ts";
