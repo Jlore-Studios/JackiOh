@@ -15,8 +15,9 @@ import { SPECTATE_DELAY_MS } from "@jackioh/server-config";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { apiRequest, getPlayerSettings, type PlayerSettingsAccountCopy } from "../net/api.ts";
 import { readSession } from "../net/session.ts";
-import { MS_PER_SECOND } from "./config.ts";
-import { messageOf, withToken } from "./session.ts";
+import { withSession } from "../net/gate.ts";
+import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { messageOf } from "./session.ts";
 import { SPECTATORS_SETTING_TESTID } from "./testids.ts";
 
 import "../settings/settings.css";
@@ -40,7 +41,7 @@ export function SpectatorSwitch(): ReactElement | null {
   useEffect(() => {
     if (readSession() === null) return;
     let cancelled = false;
-    withToken(getPlayerSettings).then(
+    withSession(getPlayerSettings).then(
       (settings) => {
         if (!cancelled && typeof settings.allowSpectators === "boolean") setAllowed(settings.allowSpectators);
       },
@@ -57,7 +58,7 @@ export function SpectatorSwitch(): ReactElement | null {
     setAllowed(next);
     setBusy(true);
     setError(null);
-    withToken((token) => putAllowSpectators(token, next))
+    withSession((token) => putAllowSpectators(token, next))
       .then(
         (answer) => {
           if (typeof answer.settings.allowSpectators === "boolean") setAllowed(answer.settings.allowSpectators);

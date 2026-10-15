@@ -9,10 +9,9 @@
 //! at most `PRESENCE_TTL_MS` old; else `offline`. A ladder bot never beats, so it reads as a person
 //! who is away, and in a match as a person in one (R1452).
 //!
-//! `watchable` (B50) is true only for a friend in a live 1v1 match that is not ranked, who allows
-//! spectators (`profiles.allow_spectators`). The watcher cap (`SPECTATORS_PER_MATCH`) is the watch
-//! socket's to enforce (`/ws/watch`, B50): the count lives with the watchers, so a full match still
-//! reads as watchable here and its hello is refused.
+//! `watchable` (B50) is `social::watch::watchable`: the viewer may watch the friend's live 1v1
+//! match, which is not ranked, whose friend allows spectators (`profiles.allow_spectators`) and has
+//! fewer than `SPECTATORS_PER_MATCH` watchers. The watch socket judges it again at its hello.
 
 use std::sync::Arc;
 
@@ -23,8 +22,9 @@ use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, now_ms};
 use crate::app::App;
 use crate::config::PRESENCE_TTL_MS;
-use crate::db::store::{MatchStatus, Profile};
+use crate::db::store::Profile;
 use crate::social::no_content;
+use crate::social::watch::watchable;
 
 /// S7's `Friend.status`.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,10 +62,14 @@ pub async fn heartbeat(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(no_content())
 }
 
-/// B47, B50: each profile's standing, by profile id, read from the profiles as given (their
-/// in-match flag), the series that are not over, their heartbeats, the live matches holding them
-/// and, last and outside any transaction, the Duos co-op matches.
-pub(crate) async fn standings(app: &App, profiles: &[Profile]) -> Result<IndexMap<String, Standing>, ApiError> {
+/// B47, B50: each profile's standing as `viewer_id` sees it, by profile id, read from the profiles
+/// as given (their in-match flag), the series that are not over, their heartbeats and, outside any
+/// transaction, whether `viewer_id` may watch the 1v1 match holding them and the Duos co-op matches.
+pub(crate) async fn standings(
+    app: &App,
+    viewer_id: &str,
+    profiles: &[Profile],
+) -> Result<IndexMap<String, Standing>, ApiError> {
     if profiles.is_empty() {
         return Ok(IndexMap::new());
     }
@@ -80,19 +84,6 @@ pub(crate) async fn standings(app: &App, profiles: &[Profile]) -> Result<IndexMa
         .into_iter()
         .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
         .collect();
-    // B50: whether each in-match profile's 1v1 match may be watched.
-    let mut watchable: IndexMap<String, bool> = IndexMap::new();
-    for profile in profiles {
-        let Some(match_id) = profile.in_match_id.as_deref() else {
-            continue;
-        };
-        let unranked_live = tx
-            .matches_get(match_id)
-            .await?
-            .is_some_and(|row| row.status == MatchStatus::Live && row.ranked != Some(true));
-        let allowed = unranked_live && tx.profiles_allows_spectators(&profile.id).await?;
-        watchable.insert(profile.id.clone(), allowed);
-    }
     tx.commit().await?;
 
     let mut standings = IndexMap::new();
@@ -101,7 +92,7 @@ pub(crate) async fn standings(app: &App, profiles: &[Profile]) -> Result<IndexMa
             Standing {
                 status: Status::InMatch,
                 match_id: Some(match_id.clone()),
-                watchable: watchable.get(&profile.id).copied().unwrap_or(false),
+                watchable: watchable(app, viewer_id, profile).await?,
             }
         } else if in_series.contains(&profile.id) {
             Standing {
@@ -116,7 +107,10 @@ pub(crate) async fn standings(app: &App, profiles: &[Profile]) -> Result<IndexMa
                 match_id: Some(duos_match),
                 watchable: false,
             }
-        } else if seen.get(&profile.id).is_some_and(|at| now - at <= PRESENCE_TTL_MS) {
+        } else if seen
+            .get(&profile.id)
+            .is_some_and(|at| now - at <= PRESENCE_TTL_MS)
+        {
             Standing {
                 status: Status::Online,
                 match_id: None,

@@ -155,16 +155,18 @@ export function TeammateStrip({ view, link }: { view: DuosView; link: TeammateLi
     >
       <span className="duos-teammate__name">
         {t("Teammate")} · {seatLabel(seat)}
-      </span>
+      </span>{" "}
+      {/* The spaces between the strip's parts are for its text (a screen reader's, a copy's); its flex
+          layout draws none of them. */}
       <span className="duos-teammate__hp">
         {life === undefined ? null : life.spent ? t("On the pool") : t("{health} health", { health: life.own })}
-      </span>
+      </span>{" "}
       <span className="duos-teammate__mana">
         {t("{current}/{max} mana", { current: side.mana.current, max: side.mana.max })}
-      </span>
+      </span>{" "}
       <span className="duos-teammate__hand">
         {hand === 1 ? t("1 card in hand") : t("{count} cards in hand", { count: hand })}
-      </span>
+      </span>{" "}
       <span className="duos-teammate__turn" data-state={ended ? "ended" : theirTurn ? "playing" : "waiting"}>
         {ended ? t("Ended their turn") : theirTurn ? t("Playing") : t("Waiting")}
       </span>

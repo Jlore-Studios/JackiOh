@@ -20,24 +20,26 @@ import { PING_RATE_LIMIT, PING_RATE_WINDOW_MS, PING_SHOW_MS } from "@jackioh/ser
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
-import { nextNonce, socketUrlFor, type SocketFactory, type SocketLike } from "../game/net.ts";
-import { matchSocketUrl } from "../net/api.ts";
+import {
+  RECONNECT_DELAYS_MS,
+  RECONNECT_JITTER,
+  REFUSAL_CLOSE_CODES,
+  VOIDED_CLOSE_CODE,
+  nextNonce,
+  socketUrlFor,
+  type SocketFactory,
+  type SocketLike,
+} from "../game/net.ts";
+import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
 import { readSession } from "../net/session.ts";
-import {
-  DUOS_PINGS_KEPT,
-  DUOS_RECONNECT_DELAYS_MS,
-  DUOS_RECONNECT_JITTER,
-  DUOS_REFUSAL_CLOSE_CODES,
-  DUOS_VOIDED_CLOSE_CODE,
-} from "./config.ts";
+import { DUOS_PINGS_KEPT } from "./config.ts";
 import { isDuosSeat, isPingKind, parsePingTarget } from "./pings.ts";
 
 /** `WebSocket.OPEN`, spelled out so this module needs no DOM constant at runtime. */
 const OPEN = 1;
 
-/** The `/ws/match` path the configured socket URL ends in, and the Duos path beside it (S6). */
-const MATCH_PATH = /\/ws\/match\/?$/u;
+/** The Duos socket's path, beside `/ws/match` (S6). */
 const DUOS_PATH = "/ws/duos";
 
 /**
@@ -45,13 +47,7 @@ const DUOS_PATH = "/ws/duos";
  * configured URL with its path swapped, so one environment variable still names the server.
  */
 export function duosSocketUrl(base: string = matchSocketUrl()): string {
-  try {
-    const url = new URL(base);
-    url.pathname = MATCH_PATH.test(url.pathname) ? url.pathname.replace(MATCH_PATH, DUOS_PATH) : DUOS_PATH;
-    return url.toString();
-  } catch {
-    return MATCH_PATH.test(base) ? base.replace(MATCH_PATH, DUOS_PATH) : `${base.replace(/\/+$/u, "")}${DUOS_PATH}`;
-  }
+  return serverSocketUrl(DUOS_PATH, base);
 }
 
 // Frames (S6), parsed shallowly: the server shapes the view, the client only checks it is there.
@@ -234,14 +230,14 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
 
   function scheduleRetry(): void {
     if (stopped || pendingRetry !== null) return;
-    const step = DUOS_RECONNECT_DELAYS_MS[Math.min(retry, DUOS_RECONNECT_DELAYS_MS.length - 1)] ?? 0;
+    const step = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 0;
     retry += 1;
     pendingRetry = setTimeout(
       () => {
         pendingRetry = null;
         open();
       },
-      Math.floor(step * (1 + DUOS_RECONNECT_JITTER * Math.random())),
+      Math.floor(step * (1 + RECONNECT_JITTER * Math.random())),
     );
   }
 
@@ -316,11 +312,11 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
-      if (stopped || event.code === DUOS_VOIDED_CLOSE_CODE) {
+      if (stopped || event.code === VOIDED_CLOSE_CODE) {
         patch({ connection: "closed" });
         return;
       }
-      if (DUOS_REFUSAL_CLOSE_CODES.includes(event.code)) {
+      if (REFUSAL_CLOSE_CODES.includes(event.code)) {
         patch({
           connection: "refused",
           error: event.reason.length > 0 ? event.reason : "the server refused this co-op socket",

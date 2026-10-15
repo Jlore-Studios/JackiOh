@@ -106,7 +106,9 @@ pub fn create_options(row: &DuosMatch) -> DuosCreateOptions {
 fn person_deck(choice: &DuosChoice, seed: &str, seat: DuosSeat) -> Vec<String> {
     match choice {
         DuosChoice::Deck { deck } => deck.cards.clone(),
-        DuosChoice::Random { lean_newest } => deal_random_deck(&format!("{seed}:{seat}-deck"), lean_of(*lean_newest)),
+        DuosChoice::Random { lean_newest } => {
+            deal_random_deck(&format!("{seed}:{seat}-deck"), lean_of(*lean_newest))
+        }
     }
 }
 
@@ -165,7 +167,11 @@ pub fn match_options(
 
 /// B41: `seat`'s view after each step of the match: the game as it began (all four mulligans open),
 /// then after each logged action. A refused action ends the steps where the fold would stop (B24).
-pub fn steps_for(options: &DuosCreateOptions, log: &[DuosAction], seat: DuosSeat) -> Result<Vec<DuosView>, String> {
+pub fn steps_for(
+    options: &DuosCreateOptions,
+    log: &[DuosAction],
+    seat: DuosSeat,
+) -> Result<Vec<DuosView>, String> {
     let mut state = create_and_begin(options)?;
     let mut steps = Vec::with_capacity(log.len() + 1);
     steps.push(view(&state, seat));

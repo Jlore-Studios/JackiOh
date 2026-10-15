@@ -4,8 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{DUOS_HUMAN_TEAM, HUMAN_HANDICAP, Handicap, SETUP_TURN};
-use crate::state::{CreateGameOptions, DuosLife, EngineError, GameState, create_game};
+use crate::config::{DUOS_HUMAN_TEAM, Handicap, SETUP_TURN};
+use crate::state::{CreateGameOptions, DuosLife, EngineError, GameState, PlayerState, create_game};
 use crate::wire::{
     DUOS_DUELS, DuosCreateOptions, DuosEvent, DuosResult, DuosSeat, DuosTeamRules, PLAYER_IDS, PerPlayerOpt,
     PerTeam, PlayerId,
@@ -102,13 +102,13 @@ pub fn duos_duel_seed(seed: &str, duel: usize) -> String {
     format!("{seed}:duel{duel}")
 }
 
-/// A Duos game at setup (B1, B12): two `create_game`s with the seats' decks and handicaps, each
-/// player's R82 automatic turn end off (the wrapper ends turns, B9), each hero at its team's own
-/// HP and each seat holding its team's pool. `duos_begin` deals.
+/// A Duos game at setup (B1, B12): two `create_game`s with the seats' decks and handicaps (each as
+/// given, B30), each player's R82 automatic turn end off (the wrapper ends turns, B9), each hero at
+/// its team's own HP and each seat holding its team's pool. `duos_begin` deals.
 ///
-/// Own HP rides the seat's handicap as R290's `heroHealth`, so a Glitch reset (R676), which deals
-/// again with the handicaps the seats hold, keeps it. Panics as `create_game` does on a deck or
-/// handicap it refuses.
+/// A Glitch reset (R676) deals a duel again without any of this; the wrapper puts it back on the
+/// next step (`reduce::sync_pools`, `duos_seat`). Panics as `create_game` does on a deck or handicap
+/// it refuses.
 pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
     let rules = options
         .teams
@@ -144,16 +144,11 @@ fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel
     let seats = PLAYER_IDS.map(|player| DuosSeat::of(duel, player));
     let mut handicaps: PerPlayerOpt<Handicap> = PerPlayerOpt::default();
     for seat in seats {
-        let given = options
+        *handicaps.slot(seat.player()) = options
             .handicaps
             .as_ref()
             .and_then(|handicaps| handicaps.get(seat))
-            .copied()
-            .unwrap_or(HUMAN_HANDICAP);
-        *handicaps.slot(seat.player()) = Some(Handicap {
-            hero_health: Some(rules[seat.team()].own_health),
-            ..given
-        });
+            .copied();
     }
     let dealt: Option<Vec<PlayerId>> = options.dealt.as_ref().and_then(|dealt| {
         let here: Vec<PlayerId> = dealt
@@ -177,14 +172,19 @@ fn create_duel(options: &DuosCreateOptions, rules: &PerTeam<DuosTeamRules>, duel
     });
     for seat in seats {
         let team = rules[seat.team()];
-        let side = &mut game.players[seat.player()];
-        side.auto_end_turn = Some(false);
-        side.hero.health = team.own_health;
-        side.duos = Some(DuosLife {
-            pool: team.pool_health,
-            pool_cap: team.pool_health,
-            spent: false,
-        });
+        duos_seat(&mut game.players[seat.player()], &team, team.pool_health);
     }
     game
+}
+
+/// B9, B12: what makes a duel's side a Duos seat — R82's automatic turn end off, the hero at its
+/// team's own HP, unspent, and the team's pool, `pool` of `rules.pool_health`.
+pub(super) fn duos_seat(side: &mut PlayerState, rules: &DuosTeamRules, pool: i32) {
+    side.auto_end_turn = Some(false);
+    side.hero.health = rules.own_health;
+    side.duos = Some(DuosLife {
+        pool,
+        pool_cap: rules.pool_health,
+        spent: false,
+    });
 }

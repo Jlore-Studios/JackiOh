@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0035) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0037) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -5647,7 +5647,10 @@ fn chat_message_of(row: &PgRow) -> Result<ChatMessageRow, StoreError> {
 
 // friends (B43–B45)
 
-pub async fn friends_requests_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<Vec<FriendRequestRow>, StoreError> {
+pub async fn friends_requests_of(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Vec<FriendRequestRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(Vec::new());
     }
@@ -5664,7 +5667,10 @@ pub async fn friends_requests_of(t: &mut PgTx<'_>, profile_id: &str) -> Result<V
     rows.iter().map(friend_request_of).collect()
 }
 
-pub async fn friends_request_get(t: &mut PgTx<'_>, request_id: &str) -> Result<Option<FriendRequestRow>, StoreError> {
+pub async fn friends_request_get(
+    t: &mut PgTx<'_>,
+    request_id: &str,
+) -> Result<Option<FriendRequestRow>, StoreError> {
     if !is_uuid(request_id) {
         return Ok(None);
     }
@@ -5955,11 +5961,12 @@ pub async fn presence_last_seen(
         return Ok(IndexMap::new());
     }
     run_as(t, None).await?;
-    let rows = sqlx::query("select profile_id, last_seen from public.presence where profile_id = any($1::uuid[])")
-        .bind(ids.clone())
-        .fetch_all(&mut **t)
-        .await
-        .map_err(db_error)?;
+    let rows =
+        sqlx::query("select profile_id, last_seen from public.presence where profile_id = any($1::uuid[])")
+            .bind(ids.clone())
+            .fetch_all(&mut **t)
+            .await
+            .map_err(db_error)?;
     let mut seen: IndexMap<String, i64> = IndexMap::new();
     for row in &rows {
         seen.insert(uuid_text(row, "profile_id")?, ms_of(get(row, "last_seen")?));
@@ -5981,7 +5988,7 @@ pub async fn profiles_find(t: &mut PgTx<'_>, profile_id: &str) -> Result<Option<
 
 pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     if !is_uuid(profile_id) {
-        return Ok(true);
+        return Ok(false);
     }
     run_as(t, Some(profile_id)).await?;
     let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
@@ -5991,7 +5998,7 @@ pub async fn profiles_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> R
         .map_err(db_error)?;
     match row {
         Some(row) => get(&row, "allow_spectators"),
-        None => Ok(true),
+        None => Ok(false),
     }
 }
 
@@ -6059,7 +6066,10 @@ pub async fn challenges_create(t: &mut PgTx<'_>, row: &ChallengeRow, now: i64) -
     Ok(done.rows_affected() == 1)
 }
 
-pub async fn challenges_get(t: &mut PgTx<'_>, challenge_id: &str) -> Result<Option<ChallengeRow>, StoreError> {
+pub async fn challenges_get(
+    t: &mut PgTx<'_>,
+    challenge_id: &str,
+) -> Result<Option<ChallengeRow>, StoreError> {
     if !is_uuid(challenge_id) {
         return Ok(None);
     }
@@ -6431,63 +6441,6 @@ macro_rules! readable_share {
                              where (k.blocker = s.sharer and k.blocked = s.friend)
                                 or (k.blocker = s.friend and k.blocked = s.sharer))"
     };
-}
-
-pub async fn watch_friends_unblocked(t: &mut PgTx<'_>, a: &str, b: &str) -> Result<bool, StoreError> {
-    if a == b || !is_uuid(a) || !is_uuid(b) {
-        return Ok(false);
-    }
-    run_as(t, Some(a)).await?;
-    let row = sqlx::query(
-        "select exists (select 1 from public.friendships f
-                         where f.a = least($1::uuid, $2::uuid) and f.b = greatest($1::uuid, $2::uuid))
-            and not exists (select 1 from public.blocks k
-                             where (k.blocker = $1::uuid and k.blocked = $2::uuid)
-                                or (k.blocker = $2::uuid and k.blocked = $1::uuid)) as ok",
-    )
-    .bind(a)
-    .bind(b)
-    .fetch_one(&mut **t)
-    .await
-    .map_err(db_error)?;
-    get(&row, "ok")
-}
-
-pub async fn watch_allows_spectators(t: &mut PgTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(false);
-    }
-    run_as(t, Some(profile_id)).await?;
-    let row = sqlx::query("select allow_spectators from public.profiles where id = $1::uuid")
-        .bind(profile_id)
-        .fetch_optional(&mut **t)
-        .await
-        .map_err(db_error)?;
-    match row {
-        Some(row) => get(&row, "allow_spectators"),
-        None => Ok(false),
-    }
-}
-
-pub async fn watch_set_allows_spectators(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    if !is_uuid(profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set allow_spectators = $2::boolean where id = $1::uuid")
-        .bind(profile_id)
-        .bind(allow)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    if done.rows_affected() == 0 {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    Ok(())
 }
 
 pub async fn shares_put(t: &mut PgTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {

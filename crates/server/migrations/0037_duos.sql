@@ -28,13 +28,13 @@
 -- reconstructs every library and the AI team's hands, and the log replays
 -- them, so no client role may read public.duos_matches or
 -- public.duos_match_actions at all, as none may read public.matches or
--- public.match_actions: no grant. A room holds nothing hidden but the frozen
--- choices, so its host and guest may read its other columns. RLS is on and
--- every table has a select policy for the people its row names (S6), the
--- second line of defence should a grant ever be added; the server
--- (service_role, BYPASSRLS) is the only reader of the rest and the only
--- writer of anything. A client learns about its co-op match only through the
--- server's routes and `duos_view_for` over /ws/duos.
+-- public.match_actions: no grant and no policy (RLS on with no policy denies
+-- every row, should a grant ever be added). A room holds nothing hidden but
+-- the frozen choices, so its host and guest may read its other columns (the
+-- one select policy here, S6). The server (service_role, BYPASSRLS) is the
+-- only reader of the rest and the only writer of anything. A client learns
+-- about its co-op match only through the server's routes and
+-- `duos_view_for` over /ws/duos.
 --
 -- Account deletion (0012's rule: deleting an account must never be refused
 -- by a foreign key): a room goes with either person (S6), and a co-op match
@@ -44,7 +44,7 @@
 --
 -- Apply order: ... -> 0035 -> 0036 -> 0037 (this file).
 -- Safe to re-apply: create-if-not-exists, drop-and-add of two constraints,
--- drop-and-create of the policies, comment-on, revoke and grant.
+-- drop-and-create of the policy, comment-on, revoke and grant.
 -- ============================================================================
 
 
@@ -133,7 +133,8 @@ alter table public.duos_matches
 
 
 -- ----------------------------------------------------------------------------
--- 3. Row-level security: the people a row names may read it (S6).
+-- 3. Row-level security: a room's people may read it; a match and its log
+--    are server-only (TRUST BOUNDARY), so they get no policy at all.
 -- ----------------------------------------------------------------------------
 alter table public.duos_rooms enable row level security;
 alter table public.duos_matches enable row level security;
@@ -145,24 +146,6 @@ create policy duos_rooms_select_member
   for select
   to authenticated
   using (host = app.current_profile_id() or guest = app.current_profile_id());
-
-drop policy if exists duos_matches_select_member on public.duos_matches;
-create policy duos_matches_select_member
-  on public.duos_matches
-  for select
-  to authenticated
-  using (a1 = app.current_profile_id() or a2 = app.current_profile_id());
-
-drop policy if exists duos_match_actions_select_member on public.duos_match_actions;
-create policy duos_match_actions_select_member
-  on public.duos_match_actions
-  for select
-  to authenticated
-  using (exists (
-    select 1 from public.duos_matches m
-     where m.id = duos_match_actions.match_id
-       and (m.a1 = app.current_profile_id() or m.a2 = app.current_profile_id())
-  ));
 
 -- Supabase grants every new table to the client roles; take that back, then
 -- grant a room's people its columns but the frozen choices. No client role

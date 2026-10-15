@@ -43,7 +43,7 @@ begin
   raise notice 'OK (CHECK 1): all % public tables have RLS enabled', total;
 end $$;
 
-\echo '=== CHECK 2: the 31 tables of migrations 0001-0035 ==='
+\echo '=== CHECK 2: the 42 tables of migrations 0001-0037 ==='
 select count(*) as public_tables from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind = 'r';
@@ -59,15 +59,20 @@ declare
   -- (0017, R565), player_settings (0018, R633), player_stats (0021, R654), the ranked ladder's
   -- seasons/season_ranks/bot_ratings/rated_games (0022, R603-R612) and the play telemetry's
   -- action_timings/emote_events/match_signals (0029, R1442), the ladder bots' bots (0032, R1454)
-  -- and the age_checks/terms_acceptances of consent (0034, R757000, R757001).
+  -- and the age_checks/terms_acceptances of consent (0034, R757000, R757001), and the
+  -- friend_requests, friendships, blocks, presence, challenges, chat_messages, chat_reports and
+  -- replay_shares of Play together (0036, #936) and its Duos co-op's duos_rooms, duos_matches and
+  -- duos_match_actions (0037, #946).
   -- 0005, 0006, 0008, 0010, 0012, 0013, 0015, 0016, 0019, 0020, 0023, 0024, 0025, 0026, 0027, 0028,
   -- 0030, 0031, 0033 and 0035 add no table. The three loadout tables stay after 0007, unread and
   -- unwritten (R254), so they are still expected here.
   expected constant text[] := array[
-    'action_timings', 'age_checks', 'bot_ratings', 'bots', 'cards', 'code_attempts', 'collection', 'collection_grants',
-    'decks', 'emote_events', 'game_records', 'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks',
-    'loadouts', 'match_actions', 'match_signals', 'matches', 'player_settings', 'player_stats', 'profiles',
-    'rated_games', 'results', 'season_ranks', 'seasons', 'series', 'terms_acceptances', 'tickets', 'trios',
+    'action_timings', 'age_checks', 'blocks', 'bot_ratings', 'bots', 'cards', 'challenges', 'chat_messages',
+    'chat_reports', 'code_attempts', 'collection', 'collection_grants', 'decks', 'duos_match_actions',
+    'duos_matches', 'duos_rooms', 'emote_events', 'friend_requests', 'friendships', 'game_records',
+    'invite_codes', 'last_boards', 'loadout_deck_cards', 'loadout_decks', 'loadouts', 'match_actions',
+    'match_signals', 'matches', 'player_settings', 'player_stats', 'presence', 'profiles', 'rated_games',
+    'replay_shares', 'results', 'season_ranks', 'seasons', 'series', 'terms_acceptances', 'tickets', 'trios',
     'tutorial_progress'];
   actual  text[];
   missing text[];

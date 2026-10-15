@@ -164,7 +164,10 @@ mod tests {
         assert_eq!(iso(1_760_445_296_789), "2025-10-14T12:34:56.789Z");
         assert_eq!(parse_iso("2025-10-14T12:34:56.789Z"), Some(1_760_445_296_789));
         assert_eq!(parse_iso(&iso(1_760_445_296_789)), Some(1_760_445_296_789));
-        assert_eq!(parse_iso("2025-10-14T14:34:56.789+02:00"), Some(1_760_445_296_789));
+        assert_eq!(
+            parse_iso("2025-10-14T14:34:56.789+02:00"),
+            Some(1_760_445_296_789)
+        );
         assert_eq!(parse_iso("yesterday"), None);
         assert_eq!(parse_iso("1760445296789"), None);
     }

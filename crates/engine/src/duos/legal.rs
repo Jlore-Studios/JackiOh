@@ -7,9 +7,14 @@
 //!   - a main-phase action (a play, an attack, a switch, an activation, an emote, End turn) only while
 //!     it is its duel's round seat and has not ended (B4, B6) — never during the mulligans (B2);
 //!   - never a draw offer or answer, the duel's own concede, or the setting R82 reads (B9, B10).
+//!
+//! The wrapper applies R82 itself (B9, §12.3): a round seat left with nothing but End turn in its
+//! duel, and no pass it may make, is ended for it.
+
+use std::ops::ControlFlow;
 
 use crate::query::hand_cap_of;
-use crate::reduce::legal_actions;
+use crate::reduce::{each_legal_action, legal_actions};
 use crate::state::EngineError;
 use crate::wire::{ActionBody, ActionType, DUOS_SEATS, DuosActionBody, DuosSeat, Phase};
 
@@ -186,7 +191,8 @@ pub(super) fn why_pass_refused(
 
 /// B9, R82: whether the wrapper ends `duel`'s round seat now — a round seat that has not ended, in
 /// its main phase with no prompt open, whose duel offers it nothing but End turn, concede and the
-/// draw offers. Only its duel's actions count: a pass it could still make keeps nothing open (B9).
+/// draw offers, and which has no pass it may make: a card it could still pass keeps it in the round
+/// (§12.3).
 pub(super) fn auto_end_due(state: &DuosState, duel: usize) -> bool {
     if state.result.is_some() || state.round == 0 || state.ended[duel] {
         return false;
@@ -195,7 +201,21 @@ pub(super) fn auto_end_due(state: &DuosState, duel: usize) -> bool {
     if may_act_in_main_phase(state, seat).is_err() {
         return false;
     }
-    legal_actions(&state.duels[duel], seat.player())
+    let game = &state.duels[duel];
+    let may_pass = game.players[seat.player()]
+        .hand
         .iter()
-        .all(|action| NOTHING_LEFT.contains(&action.action_type()))
+        .any(|card| why_pass_refused(state, seat, &card.id).is_ok());
+    if may_pass {
+        return false;
+    }
+    // As the 1v1 `auto_end_due` asks it: the walk stops at the first action that is something to do.
+    let walk = each_legal_action(game, seat.player(), &mut |action| {
+        if NOTHING_LEFT.contains(&action.action_type()) {
+            ControlFlow::Continue(())
+        } else {
+            ControlFlow::Break(())
+        }
+    });
+    walk.is_continue()
 }

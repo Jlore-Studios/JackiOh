@@ -19,9 +19,15 @@ begin
     if not (select relrowsecurity from pg_class where oid = ('public.' || t)::regclass) then
       raise exception 'FAIL (S6): row-level security is off on public.%', t;
     end if;
-    if not exists (select 1 from pg_policies
+    -- Only a room is read by its people; a match and its log are server-only (TRUST BOUNDARY):
+    -- no policy, so RLS denies every row even should a grant ever be added.
+    if t = 'duos_rooms' and not exists (select 1 from pg_policies
                     where schemaname = 'public' and tablename = t and cmd = 'SELECT') then
       raise exception 'FAIL (S6): public.% has no select policy for the people its rows name', t;
+    end if;
+    if t <> 'duos_rooms' and exists (select 1 from pg_policies
+                where schemaname = 'public' and tablename = t) then
+      raise exception 'FAIL (S6): public.% has a policy; a co-op match and its log are server-only', t;
     end if;
     if exists (select 1 from pg_policies
                 where schemaname = 'public' and tablename = t and cmd <> 'SELECT') then
@@ -56,7 +62,7 @@ begin
   exception
     when unique_violation then null;
   end;
-  raise notice 'OK (S6, B40): RLS on with select-only policies, the difficulty checked, seq and nonce unique per match';
+  raise notice 'OK (S6, B40): RLS on, a select policy on rooms only, the difficulty checked, seq and nonce unique per match';
 end $$;
 rollback;
 

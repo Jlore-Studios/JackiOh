@@ -96,7 +96,8 @@ seat, a nonce and a `DuosActionBody`) through them:
 - **The round** (§12.3). A seat takes its duel's main-phase actions only while it is that duel's
   round seat and has not ended. A round seat's `endTurn` is held until the other duel's round seat has
   ended too; then `endTurn` is applied to duel 0, then duel 1, and the next round opens. A duel's
-  players carry `auto_end_turn = Some(false)` and the wrapper applies R82 itself. Draw offers, their
+  players carry `auto_end_turn = Some(false)` and the wrapper applies R82 itself: a round seat left
+  with nothing but `endTurn` in its duel and no pass it may make is ended for it. Draw offers, their
   answers and a duel's own `concede` are refused; `Concede` is the team's, offered and confirmed.
 - **The shared life** (§12.4). A duel side's `PlayerState.duos` (`DuosLife`: `pool`, `pool_cap`,
   `spent`) is absent outside Duos and skipped when absent, so a 1v1 state serializes, hashes and

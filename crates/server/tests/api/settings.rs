@@ -191,7 +191,11 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
     async fn r633_reads_an_account_with_no_settings_yet_as_none_and_writes_land_on_the_callers_own_row_only()
     {
         let f = setup().await;
-        assert_eq!(settings_of(get(&f.app, TOKEN).await), json!({ "groups": {} }));
+        // #936 S7: the answer gains `allowSpectators`, on until the account turns it off.
+        assert_eq!(
+            settings_of(get(&f.app, TOKEN).await),
+            json!({ "groups": {}, "allowSpectators": true })
+        );
 
         // A body naming another profile changes nothing about whose row is written: the profile is the
         // verified token's, never a field of the request.
@@ -205,11 +209,11 @@ mod r633_the_routes_an_active_account_and_only_about_itself {
         );
         assert_eq!(
             settings_of(get(&f.app, TOKEN).await),
-            json!({ "groups": { "audio": { "at": 5, "values": { "master": 0.5 } } } })
+            json!({ "groups": { "audio": { "at": 5, "values": { "master": 0.5 } } }, "allowSpectators": true })
         );
         assert_eq!(
             settings_of(get(&f.app, OTHER_TOKEN).await),
-            json!({ "groups": {} })
+            json!({ "groups": {}, "allowSpectators": true })
         );
         assert_eq!(stored(&f).await, std::slice::from_ref(&f.profile));
     }

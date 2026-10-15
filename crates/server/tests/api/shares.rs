@@ -332,8 +332,15 @@ mod b52_sharing_a_replay {
         assert_eq!(shared[0]["sharer"]["profileId"], json!(w.a.id));
         assert_eq!(shared[0]["sharer"]["username"], json!(w.a.name));
         assert!(shared[0]["createdAt"].is_string(), "{}", shared[0]);
-        assert!(shared[0]["endedAt"].is_string(), "a finished match has ended: {}", shared[0]);
-        assert!(w.shared_with(&w.a).await.is_empty(), "the sharer is not shared with");
+        assert!(
+            shared[0]["endedAt"].is_string(),
+            "a finished match has ended: {}",
+            shared[0]
+        );
+        assert!(
+            w.shared_with(&w.a).await.is_empty(),
+            "the sharer is not shared with"
+        );
     }
 
     #[tokio::test]

@@ -17,6 +17,11 @@ default = []
 # tests, the e2e client) and apps/web's `prebuild` turns it off for the production bundle
 # (`JACKIOH_WASM_PREVIEW=0`), so a module a player loads can preview nothing.
 preview = ["jackioh-engine/testkit"]
+# #936's Duos bindings (`duos_create`, …), for `/dev/duos` alone, which only a development build
+# serves: scripts/build-wasm.sh turns it on by default (the dev server, the e2e client) and apps/web's
+# `prebuild` and `pretest` turn it off (`JACKIOH_WASM_DUOS=0`), so neither the module a player loads
+# nor the one #442 L12 weighs carries them. Without it each binding fails with the reason.
+duos = []
 
 [dependencies]
 jackioh-engine = { workspace = true }

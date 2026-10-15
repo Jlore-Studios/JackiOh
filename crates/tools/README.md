@@ -12,7 +12,7 @@ rule 4), and it hands them the clock as a callback where they need one.
 
 | Command | Module | Does |
 | --- | --- | --- |
-| `fuzz [--from N] [--seeds N] [--handicap]` | `fuzz.rs` | random-policy games (spec §10.7) from every non-token card of every set, the I1–I4 invariants checked each step and every game folded back to its live hash; seeds 1–1,000 by default, `--handicap` rotates one seat through Medium and Hard. CI plays `--seeds 200`, the daily run 10,000 of each |
+| `fuzz [--from N] [--seeds N] [--handicap]`, `fuzz --duos [--from N] [--seeds N]` | `fuzz.rs`, `duos_fuzz.rs` | random-policy games (spec §10.7) from every non-token card of every set, the I1–I4 invariants checked each step and every game folded back to its live hash; seeds 1–1,000 by default, `--handicap` rotates one seat through Medium and Hard. CI plays `--seeds 200`, the daily run 10,000 of each. `--duos`: random-policy Duos co-op games (§12, #936 B25), each ended inside its bound and `duos_fold`ed back to its live `duos_hash`; 200 seeds by default |
 | `replay` | `replay.rs` | reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?}` on stdin and prints `{"hash", "errors"}`: e2e specs 01 and 13 check the browser's hash with it |
 | `trace [matchup] [n] [full]` | `trace.rs` | one AI gate game, turn by turn |
 | `think [--file F] [--at K] [--seat p1\|p2] [--budget gate\|full] [--json]` | `think.rs` | one saved position (`{seed, decks, log, …}` as `replay` reads it, e.g. e2e spec 13's `PracticeDebug`) through the AI's eyes: folds `log[..K]` (K counts raw entries, rejects too; default the whole log) and prints the seat's view of the board (default the seat the game waits on; `trace` and `think` share `board.rs`'s printers), its hand, the legal-action count, `evaluate`, and `decide`'s `reason`, planned line in words and `stats`. Nothing the seat cannot see is printed (R185). The decision is from the stream a gate match starts the seat's AI on, so it repeats exactly; a tier is the handicaps the input carries, so there is no `--tier` |
@@ -21,7 +21,7 @@ rule 4), and it hands them the clock as a callback where they need one.
 | `catalog-version` | `catalog.rs` | the newest version in `crates/cards/patches/patches.json` |
 | `patches <version> [date] "<title>" [--source …] [--notes …] [--cards …]` | `patches.rs` | claim a card patch as `crates/cards/patches/pending/<version>.json` (R388, R646); its `player` note, written by hand, is kept when it runs again (R724001) |
 | `patches check`, `patches ship` | `patches.rs` | every catalog change claimed by exactly one fragment, every fragment and shipped patch holding a player note players can read (R724001), and every older shipped version carried for replays, its snapshot's cards in order, each with a script (R767000); after a merge, promote the fragments in ship order with their notes and bump the catalog version |
-| `gate [--full] [--shard k/K] [--out dir]`, `gate merge [dir]` | `gate.rs` | the AI's three quality gates and its perf gate (spec §9.9, `crates/ai/README.md`) |
+| `gate [--full] [--shard k/K] [--out dir]`, `gate merge [dir]`, `gate --duos [--games N]` | `gate.rs`, `duos_gate.rs` | the AI's three quality gates and its perf gate (spec §9.9, `crates/ai/README.md`); with `--duos` the Duos gate (§12.7, #936 B32): the Easy AI team against a random-policy team, exit 1 under `DUOS_GATE_WIN_FLOOR` of `DUOS_GATE_GAMES_SMOKE` games |
 | `sweep [ids…] [--json] [--pass2 files] [--report files]` | `sweep.rs` | R186's two-pass shadow-ban sweep; prints the `SHADOW_BAN` and `SHADOW_WATCH` rows to copy into `crates/ai/src/shadow_ban.rs` |
 | `stats [--games N] [--from N] [--patch v] [--series s] [--out file]` | `stats.rs` | R378's development run for the card statistics |
 | `stats report <file>… [--source live\|dev\|all] [--mode m] [--patch v] [--pilot p] [--card id] [--json]` | `stats.rs` | R377's card win rates over record files (one `GameRecord` per line: `stats --out`, `jackioh-server stats-export`, the training lanes' `~/training-out/<lane>/*.jsonl`) with no database; `stats-cards`' flags and defaults (live games unless `--source` says otherwise, their human seats unless `--pilot` says otherwise, R1451), its table or its `--json`; a line that is not a record is an error naming its file and line. The figures `analysis/` computes over the same files are held to these |
@@ -42,6 +42,7 @@ cargo jackioh --help
 cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check
 cargo jackioh fuzz --seeds 200
 cargo jackioh fuzz --from 700 --seeds 1        # replay the one seed a failure names
+cargo jackioh fuzz --duos --seeds 200          # Duos co-op games (#936 B25)
 cargo jackioh golden check
 cargo test -p jackioh-tools                    # the tools' own tests
 ```

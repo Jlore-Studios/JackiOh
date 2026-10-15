@@ -11,13 +11,14 @@
 // A friend row offers (B56): Challenge while the friend is online and not in a game; Watch while the
 // server says the game is `watchable`; Chat always; Remove and Block, each asking once.
 
-import { useEffect, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useId, useState, type FormEvent, type ReactElement } from "react";
 
 import Username from "../auth/Username.tsx";
 import { CoopPanel } from "../duos/CoopPanel.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { navigate } from "../net/navigate.ts";
+import { withSession } from "../net/gate.ts";
 import {
   acceptFriendRequest,
   blockPlayer,
@@ -44,7 +45,7 @@ import { useCatalogLookup } from "./catalog.ts";
 import { ChallengeDialog } from "./ChallengeDialog.tsx";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
-import { attempt, messageOf, unreadCountsOf, usePolled, withToken } from "./session.ts";
+import { attempt, messageOf, unreadCountsOf, usePolled } from "./session.ts";
 import { SpectatorSwitch } from "./SpectatorSwitch.tsx";
 import { togetherTestid } from "./testids.ts";
 import { watchLink } from "./watchLink.ts";
@@ -138,6 +139,7 @@ type FriendRowProps = {
 /** One friend (B56): status, and what can be done with them now. */
 function FriendRow({ friend, unread, busy, onChallenge, onChat, onRemove, onBlock }: FriendRowProps): ReactElement {
   const [asking, setAsking] = useState<"remove" | "block" | null>(null);
+  const questionId = useId();
   const canChallenge = friend.status === "online";
   const canWatch = friend.watchable && friend.matchId !== null;
   return (
@@ -203,8 +205,9 @@ function FriendRow({ friend, unread, busy, onChallenge, onChat, onRemove, onBloc
           </button>
         </span>
       ) : (
-        <span className="together-row__actions" role="group" aria-label={t("Are you sure?")}>
-          <span className="together-row__question">
+        // An inline question, not a modal: the row asks once before it removes or blocks (B56).
+        <span className="together-row__actions" role="alertdialog" aria-labelledby={questionId}>
+          <span className="together-row__question" id={questionId}>
             {asking === "remove" ? (
               <Named text={t("Remove {name} from your friends?")} name={friend.username} />
             ) : (
@@ -335,7 +338,7 @@ export function TogetherRoute(): ReactElement {
       <CatalogContext.Provider value={lookup}>
         <OpenedReplay
           key={watching.matchId}
-          load={() => withToken((token) => openOnlineMatchReplay(token, watching.matchId))}
+          load={() => withSession((token) => openOnlineMatchReplay(token, watching.matchId))}
           onLeave={() => {
             setWatching(null);
           }}

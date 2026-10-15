@@ -15,9 +15,10 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import { getDecks, type ModeChoice, type QueueMode, type SavedDeck, type SavedTrio } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { createChallenge, type PlayerRef } from "../net/social.ts";
+import { withSession } from "../net/gate.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { followChallenge } from "./follow.ts";
-import { attempt, messageOf, withToken } from "./session.ts";
+import { attempt, messageOf } from "./session.ts";
 import { challengeModeTestid, togetherTestid } from "./testids.ts";
 import { CHALLENGE_MODES, MODE_WORDS, Named } from "./words.tsx";
 
@@ -66,7 +67,7 @@ export function ChallengeDialog({
 
   useEffect(() => {
     let cancelled = false;
-    withToken(getDecks).then(
+    withSession(getDecks).then(
       (answer) => {
         if (cancelled) return;
         setSaved({ decks: answer.decks, trios: answer.trios });

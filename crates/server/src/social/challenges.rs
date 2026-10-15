@@ -72,7 +72,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
         return refused(409, "already_challenged", "You've already challenged them.");
     }
     // B48: an online, idle friend.
-    let status = standings(app, std::slice::from_ref(&friend))
+    let status = standings(app, &me, std::slice::from_ref(&friend))
         .await?
         .get(&friend.id)
         .map(|standing| standing.status);
@@ -110,7 +110,9 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
             "mode": challenge.mode,
         }),
     );
-    Ok(created(json!({ "challengeId": challenge.id, "roomCode": challenge.room_code })))
+    Ok(created(
+        json!({ "challengeId": challenge.id, "roomCode": challenge.room_code }),
+    ))
 }
 
 /// `GET /api/challenges` (B48, B57): `200 {incoming, outgoing}`, open and not lapsed, oldest first.
@@ -159,7 +161,10 @@ pub async fn decline(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `DELETE /api/challenges/:id` (B49): its challenger cancels it. 204, or 404.
 pub async fn cancel(app: &Arc<App>, req: Req) -> ApiResult {
-    close(app, req, ChallengeState::Cancelled, |row, me| row.from_profile == me).await
+    close(app, req, ChallengeState::Cancelled, |row, me| {
+        row.from_profile == me
+    })
+    .await
 }
 
 /// Moves the challenge `:id` to `state` when `mine` says the caller holds the side that may, and

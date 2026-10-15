@@ -21,13 +21,14 @@ import { CatalogContext } from "../game/catalog.ts";
 import { parseServerFrame } from "../game/net.ts";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { Loading, ShellPanel } from "../main.tsx";
-import { matchSocketUrl } from "../net/api.ts";
+import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import { paths } from "../net/navigate.ts";
 import { readSession } from "../net/session.ts";
 import { getFriends } from "../net/social.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { useCatalogLookup } from "./catalog.ts";
-import { MS_PER_SECOND, WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
+import { MS_PER_SECOND } from "../game/clockConstants.ts";
+import { WATCH_RECONNECT_ATTEMPTS, WATCH_RECONNECT_MS } from "./config.ts";
 import { usePolled } from "./session.ts";
 import { watchTestid } from "./testids.ts";
 import { Named } from "./words.tsx";
@@ -45,19 +46,8 @@ const IGNORE = (): void => undefined;
 
 /** The watch socket's address beside the match socket's, its credentials in the query as `/ws/match` takes them. */
 export function watchSocketUrl(token: string, matchId: string, friendId: string, base: string = matchSocketUrl()): string {
-  try {
-    const url = new URL(base);
-    url.pathname = WATCH_PATH;
-    url.search = "";
-    url.searchParams.set("token", token);
-    url.searchParams.set("matchId", matchId);
-    url.searchParams.set("friendId", friendId);
-    return url.toString();
-  } catch {
-    // A relative test address still needs its path and query.
-    const query = new URLSearchParams({ token, matchId, friendId }).toString();
-    return `${base.replace(/\/ws\/match\/?(\?.*)?$/u, WATCH_PATH)}?${query}`;
-  }
+  const query = new URLSearchParams({ token, matchId, friendId }).toString();
+  return `${serverSocketUrl(WATCH_PATH, base).replace(/\?.*$/u, "")}?${query}`;
 }
 
 /** The newest delayed view of the friend's seat, and how the socket stands. */

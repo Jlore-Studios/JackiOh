@@ -130,7 +130,12 @@ fn acting_round_seat(state: &DuosState, seat: DuosSeat) -> bool {
 }
 
 fn is_end_turn(body: &DuosActionBody) -> bool {
-    matches!(body, DuosActionBody::Duel { body: ActionBody::EndTurn })
+    matches!(
+        body,
+        DuosActionBody::Duel {
+            body: ActionBody::EndTurn
+        }
+    )
 }
 
 fn is_answer(body: &DuosActionBody) -> bool {
@@ -192,9 +197,7 @@ enum Mode {
 fn owes(state: &DuosState, seat: DuosSeat, mode: &Mode) -> bool {
     match mode {
         Mode::Full => engine::seats_to_act(state).contains(&seat),
-        Mode::FinishRound => {
-            owes_answer(state, seat) || engine::legal(state, seat).iter().any(is_end_turn)
-        }
+        Mode::FinishRound => owes_answer(state, seat) || engine::legal(state, seat).iter().any(is_end_turn),
         Mode::AnswerPrompt(choice) => held_prompt(state, seat).as_deref() == Some(choice.as_str()),
     }
 }
@@ -426,7 +429,9 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
     let next_seq = log.iter().fold(0, |highest, entry| highest.max(entry.seq)) + 1;
     let acks: IndexMap<String, (DuosSeat, i64)> = log
         .iter()
-        .filter_map(|entry| seat_of_logged(&entry.action).map(|seat| (entry.nonce.clone(), (seat, entry.seq))))
+        .filter_map(|entry| {
+            seat_of_logged(&entry.action).map(|seat| (entry.nonce.clone(), (seat, entry.seq)))
+        })
         .collect();
     let finished = row.ended_at.is_some();
     let core = Core {
@@ -555,7 +560,9 @@ impl DuosActor {
     /// B35: the seat's view and its own legal actions, off one state. The engine never reads a clock
     /// (R79), so the own duel's `clockMs` is filled in here with the deadline the seat plays against.
     fn push_view(&self, core: &Core, seat: DuosSeat) {
-        let Some(socket) = self.socket_for(core, seat) else { return };
+        let Some(socket) = self.socket_for(core, seat) else {
+            return;
+        };
         let mut view: DuosView = engine::view(&core.state, seat);
         let now = now_ms();
         view.own.clock_ms = self
@@ -625,10 +632,8 @@ impl DuosActor {
         if core.grace[index].is_some() || core.ai_playing[index] || core.finished {
             return;
         }
-        core.grace[index] = Some(self.countdown(DISCONNECT_GRACE_MS, move |timer| Expiry::Grace {
-            seat,
-            timer,
-        }));
+        core.grace[index] =
+            Some(self.countdown(DISCONNECT_GRACE_MS, move |timer| Expiry::Grace { seat, timer }));
     }
 
     /// Brings the mulligan, round and prompt clocks up to date with the state. Each is armed once for
@@ -638,7 +643,8 @@ impl DuosActor {
 
         if !over && core.state.round == 0 {
             if core.mulligan.is_none() && !core.mulligan_expired {
-                core.mulligan = Some(self.countdown(DUOS_MULLIGAN_CLOCK_MS, |timer| Expiry::Mulligan { timer }));
+                core.mulligan =
+                    Some(self.countdown(DUOS_MULLIGAN_CLOCK_MS, |timer| Expiry::Mulligan { timer }));
             }
         } else {
             core.mulligan = None;
@@ -646,17 +652,13 @@ impl DuosActor {
 
         // B38: a round with a person among its round seats runs the round clock.
         let round = core.state.round;
-        let with_people = !over
-            && round >= 1
-            && core
-                .state
-                .round_seats
-                .iter()
-                .any(|seat| human(*seat).is_some());
+        let with_people =
+            !over && round >= 1 && core.state.round_seats.iter().any(|seat| human(*seat).is_some());
         if with_people {
             let armed = core.round_clock.as_ref().is_some_and(|(held, _)| *held == round);
             if !armed && core.round_expired != Some(round) {
-                let countdown = self.countdown(DUOS_ROUND_CLOCK_MS, move |timer| Expiry::Round { round, timer });
+                let countdown =
+                    self.countdown(DUOS_ROUND_CLOCK_MS, move |timer| Expiry::Round { round, timer });
                 core.round_clock = Some((round, countdown));
             }
         } else {
@@ -667,7 +669,11 @@ impl DuosActor {
         // ended). Inside one, the round clock covers it, and its expiry answers it (B38).
         for seat in HUMAN_SEATS {
             let Some(index) = human(seat) else { continue };
-            let held = if over { None } else { held_prompt(&core.state, seat) };
+            let held = if over {
+                None
+            } else {
+                held_prompt(&core.state, seat)
+            };
             let covered = acting_round_seat(&core.state, seat);
             match held {
                 Some(choice) if !covered => {
@@ -907,8 +913,8 @@ impl DuosActor {
                 .duels
                 .get(usize::from(target.duel))
                 .map(|duel| duel.players[target.side].hand.len());
-            let shown = target.side == seat.player()
-                && target.index.zip(size).is_some_and(|(at, size)| at < size);
+            let shown =
+                target.side == seat.player() && target.index.zip(size).is_some_and(|(at, size)| at < size);
             if !shown {
                 return;
             }
@@ -917,10 +923,7 @@ impl DuosActor {
         }
         let now = now_ms();
         let window = &mut core.pings[index];
-        while window
-            .front()
-            .is_some_and(|at| *at <= now - PING_RATE_WINDOW_MS)
-        {
+        while window.front().is_some_and(|at| *at <= now - PING_RATE_WINDOW_MS) {
             window.pop_front();
         }
         if window.len() >= PING_RATE_LIMIT {
@@ -952,7 +955,11 @@ impl DuosActor {
                 return if *owner == seat {
                     ack_message(&nonce, *seq)
                 } else {
-                    error_message(SocketErrorCode::Malformed, "that nonce is already taken", Some(&nonce))
+                    error_message(
+                        SocketErrorCode::Malformed,
+                        "that nonce is already taken",
+                        Some(&nonce),
+                    )
                 };
             }
             if core.finished || core.state.result.is_some() {
@@ -1369,7 +1376,11 @@ impl DuosActor {
     /// Applies one action for `seat` through the path a socket's takes, and answers its ack or error.
     pub async fn submit(&self, seat: DuosSeat, nonce: String, body: DuosActionBody) -> DuosServerMessage {
         let (reply, answer) = oneshot::channel();
-        let failed = error_message(SocketErrorCode::Internal, "the match is not running", Some(&nonce));
+        let failed = error_message(
+            SocketErrorCode::Internal,
+            "the match is not running",
+            Some(&nonce),
+        );
         self.enqueue(Task::Submit {
             seat,
             nonce,
@@ -1425,7 +1436,9 @@ impl DuosActor {
     /// Whether either person holds an open socket.
     pub fn has_open_socket(&self) -> bool {
         let core = self.lock();
-        HUMAN_SEATS.into_iter().any(|seat| self.socket_for(&core, seat).is_some())
+        HUMAN_SEATS
+            .into_iter()
+            .any(|seat| self.socket_for(&core, seat).is_some())
     }
 
     /// Drops the actor: its clocks stop, its sockets go, its log stays.

@@ -13,13 +13,12 @@
 //!   caller.
 //! - `POST /api/chat/messages/:id/report` `{reason}`: its recipient reports a message, once (a
 //!   second report by the same player changes nothing). 204; 404 for anyone else.
-//! - The purge (`run_purge`) deletes every message older than `CHAT_RETENTION_DAYS`, its reports
-//!   with it, at boot and then on the retention purge's interval (`api::retention`).
+//! - The purge (`purge`) deletes every message older than `CHAT_RETENTION_DAYS`, its reports with
+//!   it, each time the retention loop runs (`api::retention::run_purge`: at boot, then hourly).
 //!
 //! No log line carries a message's body or a reason.
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use caseless::default_case_fold_str;
 use serde::Serialize;
@@ -29,11 +28,11 @@ use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
 use crate::api::collection::caller_profile;
 use crate::api::http::{
-    ApiResult, Req, account_key, bad_request, log_info, log_warn, now_ms, ok, rate_limited, str, to_json,
+    ApiResult, Req, account_key, bad_request, log_info, now_ms, ok, rate_limited, str, to_json,
 };
 use crate::api::queue::new_uuid;
 use crate::app::App;
-use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS};
+use crate::config::{CHAT_MAX_CHARS, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use crate::db::store::{ChatMessageRow, ChatReportRow, StoreError};
 use crate::social::friends::are_friends;
 use crate::social::{MS_PER_DAY, created, iso, no_content, not_found, param, parse_iso, refused};
@@ -74,7 +73,9 @@ pub async fn get_messages(app: &Arc<App>, req: Req) -> ApiResult {
     let friend_id = param(&req, "friendId");
     let before = match req.query.get("before").map(|text| text.trim()) {
         None | Some("") => None,
-        Some(text) => Some(parse_iso(text).ok_or_else(|| bad_request("\"before\" must be an ISO-8601 time"))?),
+        Some(text) => {
+            Some(parse_iso(text).ok_or_else(|| bad_request("\"before\" must be an ISO-8601 time"))?)
+        }
     };
     let now = now_ms();
 
@@ -201,30 +202,14 @@ pub async fn report(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(no_content())
 }
 
-/// B53: deletes every message older than `CHAT_RETENTION_DAYS`; answers how many went.
+/// B53: deletes every message older than `CHAT_RETENTION_DAYS`; answers how many went. The retention
+/// loop runs it (`api::retention::run_purge`).
 pub async fn purge(app: &App) -> Result<i64, StoreError> {
     let before = now_ms() - CHAT_RETENTION_DAYS * MS_PER_DAY;
     let mut tx = app.db.begin(None).await?;
     let purged = tx.chat_purge(before).await?;
     tx.commit().await?;
     Ok(purged)
-}
-
-/// The chat's retention purge: once now, then on the retention purge's own interval
-/// (`RETENTION_PURGE_INTERVAL_SECONDS`). A failure is logged and the next run tries again. Never
-/// returns; `app.rs` spawns it beside `api::retention::run_purge`.
-pub async fn run_purge(app: Arc<App>) {
-    loop {
-        match purge(&app).await {
-            Ok(0) => {}
-            Ok(purged) => log_info("chat.purged", json!({ "messages": purged })),
-            Err(error) => log_warn("chat.purge_failed", json!({ "message": error.to_string() })),
-        }
-        tokio::time::sleep(Duration::from_secs(
-            u64::try_from(RETENTION_PURGE_INTERVAL_SECONDS).unwrap_or(0),
-        ))
-        .await;
-    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -342,11 +327,15 @@ mod tests {
 
     /// A word the token list holds, read off the list itself so the test names no word.
     fn a_token_word() -> &'static str {
-        words(BLOCKLIST_TOKEN).next().expect("the token list holds a word")
+        words(BLOCKLIST_TOKEN)
+            .next()
+            .expect("the token list holds a word")
     }
 
     fn an_anywhere_word() -> &'static str {
-        words(BLOCKLIST_ANYWHERE).next().expect("the anywhere list holds a word")
+        words(BLOCKLIST_ANYWHERE)
+            .next()
+            .expect("the anywhere list holds a word")
     }
 
     fn stars(word: &str) -> String {
@@ -357,7 +346,10 @@ mod tests {
     fn b53_masks_a_listed_word_a_star_per_character_and_keeps_the_rest() {
         let word = a_token_word();
         let text = format!("well, {word}! good game");
-        assert_eq!(mask_blocked_words(&text), format!("well, {}! good game", stars(word)));
+        assert_eq!(
+            mask_blocked_words(&text),
+            format!("well, {}! good game", stars(word))
+        );
         let upper = word.to_uppercase();
         assert_eq!(mask_blocked_words(&upper), stars(&upper));
     }
@@ -371,7 +363,10 @@ mod tests {
 
     #[test]
     fn b53_leaves_clean_text_and_bare_numbers_alone() {
-        assert_eq!(mask_blocked_words("good game, well played"), "good game, well played");
+        assert_eq!(
+            mask_blocked_words("good game, well played"),
+            "good game, well played"
+        );
         assert_eq!(mask_blocked_words("gg 455 0 1 3"), "gg 455 0 1 3");
         assert_eq!(mask_blocked_words(""), "");
     }

@@ -22,9 +22,8 @@ import {
   getDuosRoom,
   joinDuosRoom,
 } from "../net/duos.ts";
-import { callWithRenewal } from "../net/gate.ts";
+import { withSession } from "../net/gate.ts";
 import { navigate, paths } from "../net/navigate.ts";
-import { readSession } from "../net/session.ts";
 import { sendChat, type Friend } from "../net/social.ts";
 import { followInApp } from "../routes/nav.tsx";
 import { COOP_ROOM_KEY, COOP_ROOM_POLL_MS } from "./config.ts";
@@ -57,14 +56,8 @@ function storeRoom(code: string | null): void {
   }
 }
 
-/** A refusal in a player's words: S6's codes named, anything else the server's own sentence. */
+/** A refusal (B33's `full` and `own_room`, B34's unknown code, …) in the server's own words, never reworded here. */
 function refusalWords(cause: unknown): string {
-  if (cause instanceof ApiRequestError) {
-    if (cause.code === "full") return t("That room is already full.");
-    if (cause.code === "own_room") return t("That is your own room: share its code with a friend instead.");
-    if (cause.status === 404) return t("No co-op room has that code. It may have expired.");
-    return t(cause.message);
-  }
   return cause instanceof Error ? t(cause.message) : String(cause);
 }
 
@@ -72,12 +65,10 @@ function refusalWords(cause: unknown): string {
 function useSavedDecks(): readonly SavedDeck[] {
   const [decks, setDecks] = useState<readonly SavedDeck[]>([]);
   useEffect(() => {
-    const session = readSession();
-    if (session === null) return undefined;
     let cancelled = false;
-    callWithRenewal(session.accessToken, getDecks).then(
-      (outcome) => {
-        if (!cancelled && outcome.kind === "ok") setDecks(outcome.value.decks);
+    withSession(getDecks).then(
+      (answer) => {
+        if (!cancelled) setDecks(answer.decks);
       },
       () => undefined,
     );
@@ -98,7 +89,9 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
   const [leanNewest, setLeanNewest] = useState(false);
   const [room, setRoom] = useState<string | null>(readStoredRoom);
   const [joinCode, setJoinCode] = useState("");
-  const [invitee, setInvitee] = useState("");
+  const [picked, setPicked] = useState("");
+  // The friend the invite goes to: the one picked, else the first listed, so one friend needs no pick.
+  const invitee = friends.some((each) => each.profileId === picked) ? picked : (friends[0]?.profileId ?? "");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -295,10 +288,10 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
               disabled={busy || friends.length === 0}
               aria-label={t("Friend to invite")}
               onChange={(event) => {
-                setInvitee(event.target.value);
+                setPicked(event.target.value);
               }}
             >
-              <option value="">{friends.length === 0 ? t("No friends to invite yet") : t("Choose a friend")}</option>
+              {friends.length === 0 ? <option value="">{t("No friends to invite yet")}</option> : null}
               {friends.map((friend) => (
                 <option key={friend.profileId} value={friend.profileId}>
                   {friend.username}
@@ -306,7 +299,7 @@ export function CoopPanel({ friends }: { friends: readonly Friend[] }): ReactEle
               ))}
             </select>
             <button type="button" data-testid={duosTestid.coopInvite} disabled={busy || invitee === ""} onClick={invite}>
-              {t("Send the code")}
+              {t("Invite")}
             </button>
             <button type="button" data-testid={duosTestid.coopCancel} disabled={busy} onClick={cancel}>
               {t("Close the room")}

@@ -14,7 +14,7 @@
 // board in its container, at the box of the element the board draws for the spot (`spots.ts`),
 // re-measured every frame while any is up, since cards move as the board animates.
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import type { PlayerView } from "@jackioh/shared";
 
@@ -41,8 +41,13 @@ export type PassOffer = {
 export type PingMarker = { key: string; spot: BoardSpot; ping: PingKind; from: DuosSeat; mine: boolean };
 
 export type CardActionsProps = {
-  /** The element the board is drawn in; the bar and the markers are positioned inside it. */
-  container: RefObject<HTMLDivElement | null>;
+  /**
+   * The element the board is drawn in, once it is mounted; the bar and the markers are positioned
+   * inside it. An element, not a ref: a parent's ref is attached after its children's layout effects
+   * run, so a ref read there on the first render would be empty and a ping already up would wait a
+   * frame for its marker.
+   */
+  container: HTMLDivElement | null;
   /** The view the board is showing, and the duel it is of. */
   view: PlayerView;
   duel: 0 | 1;
@@ -89,7 +94,7 @@ function byTestid(id: string): string {
  * The boxes of the elements `idsKey` names ("|"-joined testids), relative to `container`, kept
  * current every animation frame while there are any.
  */
-function useBoxes(container: RefObject<HTMLDivElement | null>, idsKey: string): ReadonlyMap<string, Box> {
+function useBoxes(host: HTMLDivElement | null, idsKey: string): ReadonlyMap<string, Box> {
   const [boxes, setBoxes] = useState<ReadonlyMap<string, Box>>(NO_BOXES);
   useLayoutEffect(() => {
     if (idsKey === "") {
@@ -101,7 +106,6 @@ function useBoxes(container: RefObject<HTMLDivElement | null>, idsKey: string): 
     let frame: number | null = null;
     const measure = (): void => {
       if (!live) return;
-      const host = container.current;
       if (host !== null) {
         const origin = host.getBoundingClientRect();
         const next = new Map<string, Box>();
@@ -121,7 +125,7 @@ function useBoxes(container: RefObject<HTMLDivElement | null>, idsKey: string): 
       live = false;
       if (frame !== null && typeof cancelAnimationFrame === "function") cancelAnimationFrame(frame);
     };
-  }, [container, idsKey]);
+  }, [host, idsKey]);
   return boxes;
 }
 
@@ -140,7 +144,7 @@ export function CardActions({
   const clearTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    const host = container.current;
+    const host = container;
     if (host === null) return undefined;
     const cancelClear = (): void => {
       if (clearTimer.current === null) return;

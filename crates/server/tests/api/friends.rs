@@ -130,10 +130,7 @@ async fn request(app: &Arc<App>, from: &Account, username: &str) -> (u16, Value)
 async fn requested(app: &Arc<App>, from: &Account, to: &Account) -> String {
     let (status, body) = request(app, from, &to.name).await;
     assert_eq!(status, 201, "{body}");
-    body["requestId"]
-        .as_str()
-        .expect("a request id")
-        .to_string()
+    body["requestId"].as_str().expect("a request id").to_string()
 }
 
 async fn accept(app: &Arc<App>, who: &Account, request_id: &str) -> (u16, Value) {
@@ -640,7 +637,11 @@ mod b46_blocks {
 
         let blocker = lists(&app, &ada).await;
         assert_eq!(len(&blocker["friends"]), 0, "{blocker}");
-        assert_eq!(profile_ids(&blocker["blocked"]), vec![bea.id.clone()], "{blocker}");
+        assert_eq!(
+            profile_ids(&blocker["blocked"]),
+            vec![bea.id.clone()],
+            "{blocker}"
+        );
         assert_player_ref(&blocker["blocked"][0], &bea);
         let blocked = lists(&app, &bea).await;
         assert_eq!(len(&blocked["friends"]), 0, "{blocked}");
@@ -724,10 +725,16 @@ mod b47_status {
         befriend(&app, &ada, &bea).await;
 
         heartbeat(&app, &bea).await;
-        assert_eq!(friend_entry(&lists(&app, &ada).await, &bea.id)["status"], "online");
+        assert_eq!(
+            friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
+            "online"
+        );
 
         advance(millis(PRESENCE_TTL_MS) - 1).await;
-        assert_eq!(friend_entry(&lists(&app, &ada).await, &bea.id)["status"], "online");
+        assert_eq!(
+            friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
+            "online"
+        );
 
         advance(2).await;
         let friend = friend_entry(&lists(&app, &ada).await, &bea.id);
@@ -735,7 +742,10 @@ mod b47_status {
 
         // Another heartbeat brings them back.
         heartbeat(&app, &bea).await;
-        assert_eq!(friend_entry(&lists(&app, &ada).await, &bea.id)["status"], "online");
+        assert_eq!(
+            friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
+            "online"
+        );
     }
 
     #[tokio::test]

@@ -14,16 +14,16 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
-import type { ActionBody, CardDefs } from "@jackioh/shared";
+import type { ActionBody } from "@jackioh/shared";
 
-import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
+import { CatalogContext } from "../game/catalog.ts";
 import { MS_PER_SECOND } from "../game/clockConstants.ts";
 import { installDevHandle, viewDerivedState } from "../game/net.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
-import { getCatalog } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
+import { useCatalogLookup } from "../together/catalog.ts";
 import { DUOS_CLOCK_TICK_MS } from "./config.ts";
 import { DuosChromeContext, type DuosChrome } from "./context.ts";
 import { DuosBoard } from "./DuosBoard.tsx";
@@ -47,24 +47,6 @@ function connectionWords(state: DuosConnection): string {
     case "closed":
       return t("Disconnected");
   }
-}
-
-/** `GET /api/catalog`, once; with none the board shows def ids, never a guessed name. */
-function useCatalog(): CardDefs | null {
-  const [defs, setDefs] = useState<CardDefs | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    getCatalog().then(
-      (response) => {
-        if (!cancelled) setDefs(response.defs);
-      },
-      () => undefined,
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return defs;
 }
 
 function monotonic(): number {
@@ -108,8 +90,8 @@ function RoundClock({ clock }: { clock: DuosClockReading | null }): ReactElement
 export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
   const locale = useLocale();
   const match = useDuosMatch({ matchId });
-  const defs = useCatalog();
-  const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
+  // `GET /api/catalog`, once; with none the board shows def ids, never a guessed name.
+  const lookup = useCatalogLookup();
 
   // BUILD M5-T3's `window.__jackioh` outside production: the own duel's view-derived state, which is
   // what the shared Cypress commands read (`cy.keepMulligans` waits on it), and a dispatch of a duel

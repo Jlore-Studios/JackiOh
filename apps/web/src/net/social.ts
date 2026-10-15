@@ -10,9 +10,8 @@
 // token: each reads the tab's session (`net/session.ts`) and renews it once on a 401 (R194,
 // `callWithRenewal`). No session, or a session that has ended, is the 401 a signed-out request gets.
 
-import { ApiRequestError, apiRequest, type RequestOptions } from "./api.ts";
-import { callWithRenewal } from "./gate.ts";
-import { readSession } from "./session.ts";
+import { apiRequest, type RequestOptions } from "./api.ts";
+import { withSession } from "./gate.ts";
 
 /** Another player as the social routes name one: the id for requests and keys, the username to show (R1436). */
 export type PlayerRef = { profileId: string; username: string };
@@ -41,17 +40,9 @@ export type ChatMessage = { id: string; from: string; to: string; body: string; 
 
 export type SharedReplay = { matchId: string; sharer: PlayerRef; createdAt: string; endedAt: string | null };
 
-/** What a request with no session behind it gets: the refusal the server gives a missing token. */
-const SIGNED_OUT = { code: "unauthorized", message: "Sign in to continue." } as const;
-
-/** One social request as the signed-in account, renewed once on a 401. */
-async function social<T>(path: string, options: Omit<RequestOptions, "token"> = {}): Promise<T> {
-  const session = readSession();
-  if (session === null) throw new ApiRequestError(401, SIGNED_OUT);
-  const answer = await callWithRenewal(session.accessToken, (token) => apiRequest<T>(path, { ...options, token }));
-  if (answer.kind === "ok") return answer.value;
-  // The session ended, or the tab now belongs to another account: nothing is sent again as it.
-  throw new ApiRequestError(401, SIGNED_OUT);
+/** One social request as the signed-in account, renewed once on a 401 (`withSession`). */
+function social<T>(path: string, options: Omit<RequestOptions, "token"> = {}): Promise<T> {
+  return withSession((token) => apiRequest<T>(path, { ...options, token }));
 }
 
 const part = encodeURIComponent;

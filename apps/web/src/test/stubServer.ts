@@ -101,3 +101,16 @@ export function must<T>(value: T | null | undefined, what: string): T {
 export function showsNumber(text: string | null | undefined, n: number): boolean {
   return new RegExp(`(^|[^0-9])${String(n)}([^0-9]|$)`).test(text ?? "");
 }
+
+/**
+ * A text matcher for words the page draws across elements. A username is its base and its tag in
+ * elements of their own (`auth/Username.tsx`, R1436), so `getByText(/Ann#2/)`, which reads only an
+ * element's own text nodes, never finds one. This matches the innermost elements whose whole text
+ * holds `text`.
+ */
+export function wholeText(text: string): (content: string, element: Element | null) => boolean {
+  return (_content, element) =>
+    element !== null &&
+    (element.textContent ?? "").includes(text) &&
+    !Array.from(element.children).some((child) => (child.textContent ?? "").includes(text));
+}

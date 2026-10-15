@@ -37,7 +37,9 @@ use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
     FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, lean_newest_of, read_mode_choice,
 };
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, lock, ok};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, lock, ok,
+};
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, ROOM_CODE_LENGTH};
@@ -65,7 +67,8 @@ struct HeldSeed {
 /// SPEC §11 R143, as `actor/rooms.rs` keeps it for a 1v1 room: a seeded end-to-end room's seed waits
 /// here, by code, until its join (a room row carries no seed). `seed_override_of` refuses the field
 /// outside end-to-end mode, so a production process keeps this map empty.
-static E2E_SEED_BY_ROOM: LazyLock<Mutex<IndexMap<String, HeldSeed>>> = LazyLock::new(|| Mutex::new(IndexMap::new()));
+static E2E_SEED_BY_ROOM: LazyLock<Mutex<IndexMap<String, HeldSeed>>> =
+    LazyLock::new(|| Mutex::new(IndexMap::new()));
 
 fn remember_seed(code: &str, seed: &str, expires_at: i64, now: i64) {
     let mut held = lock(&E2E_SEED_BY_ROOM);
@@ -158,7 +161,9 @@ async fn assert_host_free(app: &App, host: &str) -> Result<(), ApiError> {
         let series = t.series_active_for(host).await?;
         (profile, series)
     })?;
-    let busy = profile.as_ref().is_none_or(|profile| profile.in_match_id.is_some())
+    let busy = profile
+        .as_ref()
+        .is_none_or(|profile| profile.in_match_id.is_some())
         || series.is_some()
         || live_match_of(app, host).await?.is_some();
     if busy {
@@ -172,10 +177,7 @@ async fn assert_host_free(app: &App, host: &str) -> Result<(), ApiError> {
 
 /// S6's 409: the error body every route answers with, under S6's code.
 fn refusal(status: u16, code: &str, message: &str) -> Response {
-    json_response(
-        status,
-        json!({ "error": { "code": code, "message": message } }),
-    )
+    json_response(status, json!({ "error": { "code": code, "message": message } }))
 }
 
 /// 204, no body.
@@ -261,7 +263,9 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
 pub async fn get_room(app: &Arc<App>, req: Req) -> ApiResult {
     caller_profile(&req)?;
     let room = room_of(app, &req).await?;
-    let ids: Vec<String> = std::iter::once(room.host.clone()).chain(room.guest.clone()).collect();
+    let ids: Vec<String> = std::iter::once(room.host.clone())
+        .chain(room.guest.clone())
+        .collect();
     let profiles = one_tx!(app.db, |t| t.profiles_get_many(&ids).await?)?;
     // R1436: a player is shown by profile id and username, as every other read shows one.
     let player = |id: &str| {
@@ -321,9 +325,11 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
         ended_at: None,
         result: None,
     };
-    let state = catch_unwind(AssertUnwindSafe(|| engine::create_and_begin(&engine::create_options(&row))))
-        .map_err(|payload| ApiError::internal(panic_text(payload)))?
-        .map_err(ApiError::internal)?;
+    let state = catch_unwind(AssertUnwindSafe(|| {
+        engine::create_and_begin(&engine::create_options(&row))
+    }))
+    .map_err(|payload| ApiError::internal(panic_text(payload)))?
+    .map_err(ApiError::internal)?;
 
     // B33's single claim and the match row, in one transaction: the loser of a race writes nothing.
     let claimed = one_tx!(app.db, |t| {

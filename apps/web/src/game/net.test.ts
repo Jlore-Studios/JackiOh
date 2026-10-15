@@ -289,6 +289,17 @@ describe("server frames", () => {
     h.socket().deliver({ type: "view", view: baseView({ turn: 4 }) });
     expect(h.client.snapshot().view?.turn).toBe(4);
   });
+
+  it("#936 B51 a `watchers` frame sets how many friends watch, 0 until one arrives", () => {
+    const h = connected();
+    expect(h.client.snapshot().watchers).toBe(0);
+    h.socket().deliver({ type: "watchers", count: 2 });
+    expect(h.client.snapshot().watchers).toBe(2);
+    h.socket().deliver({ type: "watchers", count: 0 });
+    expect(h.client.snapshot().watchers).toBe(0);
+    expect(parseServerFrame(JSON.stringify({ type: "watchers", count: -1 }))).toBeNull();
+    expect(parseServerFrame(JSON.stringify({ type: "watchers" }))).toBeNull();
+  });
 });
 
 describe("parseServerFrame", () => {

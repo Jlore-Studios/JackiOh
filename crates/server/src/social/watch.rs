@@ -31,6 +31,7 @@ use crate::api::http::assert_active;
 use crate::app::App;
 use crate::config::{MALFORMED_FRAMES_PER_WINDOW, SPECTATORS_PER_MATCH};
 use crate::db::store::{MatchPhase, MatchStatus, Profile, StoreError, Tx};
+use crate::social::friends::are_friends;
 
 /// The one message every refusal after sign-in carries (R148's way).
 const NOT_ALLOWED: &str = "you may not watch this match";
@@ -126,7 +127,10 @@ pub fn handle_watch_socket<'a>(
 
 /// Why a watch socket was not handed to the actor.
 enum WatchFailure {
-    Refused { code: u16, message: String },
+    Refused {
+        code: u16,
+        message: String,
+    },
     Threw(String),
     /// The socket went first; there is no one to answer.
     Gone,
@@ -182,7 +186,13 @@ async fn admit(
     }
     match app
         .matches
-        .attach_watcher(app, &hello.match_id, &hello.friend_id, &watcher.id, socket.clone())
+        .attach_watcher(
+            app,
+            &hello.match_id,
+            &hello.friend_id,
+            &watcher.id,
+            socket.clone(),
+        )
         .await
     {
         Ok(()) => Ok(()),
@@ -276,7 +286,7 @@ async fn watchable_in(
     friend_id: &str,
     match_id: &str,
 ) -> Result<bool, StoreError> {
-    if viewer_id == friend_id || !tx.watch_friends_unblocked(viewer_id, friend_id).await? {
+    if !are_friends(tx, viewer_id, friend_id).await? {
         return Ok(false);
     }
     // `matches_seats` first: it reads any id, where `matches_get` is handed match ids only.
@@ -291,10 +301,11 @@ async fn watchable_in(
         return Ok(false);
     };
     let seated = |id: &str| row.players.0 == id || row.players.1 == id;
-    if row.status != MatchStatus::Live || row.ranked == Some(true) || !seated(friend_id) || seated(viewer_id) {
+    if row.status != MatchStatus::Live || row.ranked == Some(true) || !seated(friend_id) || seated(viewer_id)
+    {
         return Ok(false);
     }
-    tx.watch_allows_spectators(friend_id).await
+    tx.profiles_allows_spectators(friend_id).await
 }
 
 #[cfg(test)]

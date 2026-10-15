@@ -185,7 +185,7 @@ pub async fn get_settings(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     let row = tx.player_settings_get(&profile.id).await?;
     // Social (#939): S7's `allowSpectators` rides beside the groups.
-    let allow_spectators = tx.watch_allows_spectators(&profile.id).await?;
+    let allow_spectators = tx.profiles_allows_spectators(&profile.id).await?;
     tx.commit().await?;
     ok_of(&settings_answer(settings_view(row.as_ref()), allow_spectators))
 }
@@ -221,9 +221,9 @@ pub async fn put_settings(app: &Arc<App>, req: Req) -> ApiResult {
         .await?;
     // Social (#939): written with the groups it came with, and only when they were merged.
     if let (PlayerSettingsMergeOutcome::Merged { .. }, Some(allow)) = (&outcome, allow_spectators) {
-        tx.watch_set_allows_spectators(&profile.id, allow).await?;
+        tx.profiles_set_allow_spectators(&profile.id, allow).await?;
     }
-    let allowed = tx.watch_allows_spectators(&profile.id).await?;
+    let allowed = tx.profiles_allows_spectators(&profile.id).await?;
     tx.commit().await?;
     let settings = match outcome {
         PlayerSettingsMergeOutcome::Limit => {
@@ -269,7 +269,7 @@ fn allow_spectators_of(body: &Value) -> Result<Option<bool>, ApiError> {
 /// account's settings answered as `GET` answers them.
 async fn put_allow_spectators(app: &Arc<App>, profile_id: &str, allow: bool) -> ApiResult {
     let mut tx = app.db.begin(Some(profile_id)).await?;
-    tx.watch_set_allows_spectators(profile_id, allow).await?;
+    tx.profiles_set_allow_spectators(profile_id, allow).await?;
     let row = tx.player_settings_get(profile_id).await?;
     tx.commit().await?;
     log_info(

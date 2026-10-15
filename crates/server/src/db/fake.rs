@@ -2898,6 +2898,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     }
     // Social (#939, #940): migration 0036's rows cascade with the profile.
     remove_watch_rows(tables, profile_id);
+    // Duos co-op (#946): 0037's rooms, matches and their logs cascade with either person.
+    crate::duos::store::remove_duos_rows(&mut tables.duos, profile_id);
     true
 }
 
@@ -3612,8 +3614,12 @@ pub fn remove_social_rows(tables: &mut FakeTables, profile_id: &str) {
     keep_only(&mut social.friend_requests, |row| {
         row.from_profile != profile_id && row.to_profile != profile_id
     });
-    keep_only(&mut social.friendships, |row| row.a != profile_id && row.b != profile_id);
-    keep_only(&mut social.blocks, |row| row.blocker != profile_id && row.blocked != profile_id);
+    keep_only(&mut social.friendships, |row| {
+        row.a != profile_id && row.b != profile_id
+    });
+    keep_only(&mut social.blocks, |row| {
+        row.blocker != profile_id && row.blocked != profile_id
+    });
     social.presence.shift_remove(profile_id);
     keep_only(&mut social.challenges, |row| {
         row.from_profile != profile_id && row.to_profile != profile_id
@@ -3633,7 +3639,10 @@ pub fn remove_social_rows(tables: &mut FakeTables, profile_id: &str) {
 
 // friends (B43–B45)
 
-pub fn friends_requests_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<FriendRequestRow>, StoreError> {
+pub fn friends_requests_of(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+) -> Result<Vec<FriendRequestRow>, StoreError> {
     call(f, "friends.requestsOf")?;
     let mut rows: Vec<FriendRequestRow> = f
         .tables()
@@ -3647,7 +3656,10 @@ pub fn friends_requests_of(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<F
     Ok(rows)
 }
 
-pub fn friends_request_get(f: &mut FakeTx<'_>, request_id: &str) -> Result<Option<FriendRequestRow>, StoreError> {
+pub fn friends_request_get(
+    f: &mut FakeTx<'_>,
+    request_id: &str,
+) -> Result<Option<FriendRequestRow>, StoreError> {
     call(f, "friends.requestGet")?;
     Ok(f.tables()
         .social
@@ -3682,7 +3694,10 @@ pub fn friends_request_create(f: &mut FakeTx<'_>, row: &FriendRequestRow) -> Res
     }
     let requests = &mut f.tables().social.friend_requests;
     if requests.iter().any(|existing| existing.id == row.id) {
-        return Err(StoreError::from(format!("friend_requests.id is unique: {}", row.id)));
+        return Err(StoreError::from(format!(
+            "friend_requests.id is unique: {}",
+            row.id
+        )));
     }
     if requests
         .iter()
@@ -3766,7 +3781,9 @@ pub fn friends_make(f: &mut FakeTx<'_>, x: &str, y: &str, at: i64) -> Result<Fri
 pub fn friends_remove(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<bool, StoreError> {
     call(f, "friends.remove")?;
     let (a, b) = friend_pair(x, y);
-    Ok(keep_only(&mut f.tables().social.friendships, |row| !(row.a == a && row.b == b)) > 0)
+    Ok(keep_only(&mut f.tables().social.friendships, |row| {
+        !(row.a == a && row.b == b)
+    }) > 0)
 }
 
 // blocks (B46)
@@ -3859,10 +3876,18 @@ pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Prof
 
 pub fn profiles_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
     call(f, "profiles.allowsSpectators")?;
-    Ok(!f.tables().social.spectators_refused.contains(profile_id))
+    let tables = f.tables();
+    if !tables.profiles.iter().any(|row| row.id == profile_id) {
+        return Ok(false);
+    }
+    Ok(!tables.social.spectators_refused.contains(profile_id))
 }
 
-pub fn profiles_set_allow_spectators(f: &mut FakeTx<'_>, profile_id: &str, allow: bool) -> Result<(), StoreError> {
+pub fn profiles_set_allow_spectators(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    allow: bool,
+) -> Result<(), StoreError> {
     call(f, "profiles.setAllowSpectators")?;
     if !f.tables().profiles.iter().any(|row| row.id == profile_id) {
         return Err(StoreError::from(format!("no profile {profile_id}")));
@@ -3913,7 +3938,11 @@ pub fn challenges_get(f: &mut FakeTx<'_>, challenge_id: &str) -> Result<Option<C
         .cloned())
 }
 
-pub fn challenges_open_of(f: &mut FakeTx<'_>, profile_id: &str, now: i64) -> Result<Vec<ChallengeRow>, StoreError> {
+pub fn challenges_open_of(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    now: i64,
+) -> Result<Vec<ChallengeRow>, StoreError> {
     call(f, "challenges.openOf")?;
     let mut rows: Vec<ChallengeRow> = f
         .tables()
@@ -3983,7 +4012,12 @@ pub fn challenges_close_between(
     Ok(closed)
 }
 
-pub fn challenges_accept_room(f: &mut FakeTx<'_>, code: &str, guest: &str, now: i64) -> Result<bool, StoreError> {
+pub fn challenges_accept_room(
+    f: &mut FakeTx<'_>,
+    code: &str,
+    guest: &str,
+    now: i64,
+) -> Result<bool, StoreError> {
     call(f, "challenges.acceptRoom")?;
     let mut accepted = false;
     for row in f.tables().social.challenges.iter_mut() {
@@ -4034,7 +4068,10 @@ pub fn chat_insert(f: &mut FakeTx<'_>, row: &ChatMessageRow) -> Result<(), Store
     }
     let messages = &mut f.tables().social.chat_messages;
     if messages.iter().any(|existing| existing.id == row.id) {
-        return Err(StoreError::from(format!("chat_messages.id is unique: {}", row.id)));
+        return Err(StoreError::from(format!(
+            "chat_messages.id is unique: {}",
+            row.id
+        )));
     }
     messages.push(row.clone());
     Ok(())
@@ -4105,7 +4142,11 @@ pub fn chat_unread(f: &mut FakeTx<'_>, profile_id: &str) -> Result<IndexMap<Stri
 pub fn chat_report(f: &mut FakeTx<'_>, row: &ChatReportRow) -> Result<bool, StoreError> {
     call(f, "chat.report")?;
     let social = &mut f.tables().social;
-    if !social.chat_messages.iter().any(|message| message.id == row.message_id) {
+    if !social
+        .chat_messages
+        .iter()
+        .any(|message| message.id == row.message_id)
+    {
         return Err(StoreError::from(format!(
             "chat_reports_message_id_fkey: no message {}",
             row.message_id
@@ -4164,8 +4205,10 @@ fn friends_unblocked_in(tables: &FakeTables, a: &str, b: &str) -> bool {
 fn share_readable(tables: &FakeTables, share: &ReplayShare) -> Option<Option<i64>> {
     let row = tables.matches.iter().find(|row| row.id == share.match_id)?;
     let seated = row.players.0 == share.sharer || row.players.1 == share.sharer;
-    (row.status == MatchStatus::Finished && seated && friends_unblocked_in(tables, &share.sharer, &share.friend))
-        .then_some(row.finished_at)
+    (row.status == MatchStatus::Finished
+        && seated
+        && friends_unblocked_in(tables, &share.sharer, &share.friend))
+    .then_some(row.finished_at)
 }
 
 /// Migration 0036's cascade for the shares: a deleted profile's, either side (the friendships,
@@ -4174,38 +4217,6 @@ fn remove_watch_rows(tables: &mut FakeTables, profile_id: &str) {
     keep_only(&mut tables.replay_shares, |row| {
         row.sharer != profile_id && row.friend != profile_id
     });
-}
-
-pub fn watch_friends_unblocked(f: &mut FakeTx<'_>, a: &str, b: &str) -> Result<bool, StoreError> {
-    call(f, "watch.friendsUnblocked")?;
-    Ok(friends_unblocked_in(f.tables(), a, b))
-}
-
-pub fn watch_allows_spectators(f: &mut FakeTx<'_>, profile_id: &str) -> Result<bool, StoreError> {
-    call(f, "watch.allowsSpectators")?;
-    let tables = f.tables();
-    if !tables.profiles.iter().any(|row| row.id == profile_id) {
-        return Ok(false);
-    }
-    Ok(!tables.social.spectators_refused.contains(profile_id))
-}
-
-pub fn watch_set_allows_spectators(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    allow: bool,
-) -> Result<(), StoreError> {
-    call(f, "watch.setAllowsSpectators")?;
-    let tables = f.tables();
-    if !tables.profiles.iter().any(|row| row.id == profile_id) {
-        return Err(StoreError::from(format!("no profile {profile_id}")));
-    }
-    if allow {
-        tables.social.spectators_refused.shift_remove(profile_id);
-    } else {
-        tables.social.spectators_refused.insert(profile_id.to_string());
-    }
-    Ok(())
 }
 
 pub fn shares_put(f: &mut FakeTx<'_>, share: &ReplayShare) -> Result<(), StoreError> {
@@ -4241,11 +4252,7 @@ pub fn shares_remove(
     Ok(())
 }
 
-pub fn shares_sharers(
-    f: &mut FakeTx<'_>,
-    match_id: &str,
-    friend: &str,
-) -> Result<Vec<String>, StoreError> {
+pub fn shares_sharers(f: &mut FakeTx<'_>, match_id: &str, friend: &str) -> Result<Vec<String>, StoreError> {
     call(f, "shares.sharers")?;
     let tables: &FakeTables = f.tables();
     let mut shares: Vec<&ReplayShare> = tables
@@ -4274,9 +4281,8 @@ pub fn shares_for(f: &mut FakeTx<'_>, friend: &str) -> Result<Vec<SharedReplayRo
             })
         })
         .collect();
-    shared.sort_by(|a, b| {
-        (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer))
-    });
+    shared
+        .sort_by(|a, b| (b.created_at, &b.match_id, &b.sharer).cmp(&(a.created_at, &a.match_id, &a.sharer)));
     Ok(shared)
 }
 // ---- end Social: watching and shared replays ----

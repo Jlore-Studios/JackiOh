@@ -83,6 +83,8 @@ export const matchTestid = {
   watchReplay: "match-watch-replay",
   /** R768000: in a finished match's result panel, its last turn's GIF. */
   shareLastTurn: "match-share-last-turn",
+  /** #936 B51: how many friends watch this match (`data-count`), shown while any do. */
+  watchers: "match-watchers",
 } as const;
 
 /** A connection state in a player's words, for the match bar and the wait before the board. */
@@ -468,6 +470,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
               {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
               <Username name={ranks.seats.p2.username} />
               {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
+            </p>
+          ) : null}
+          {/* #936 B51: the server's `watchers {count}` frame, while anyone is watching. */}
+          {match.watchers > 0 ? (
+            <p className="match-watchers" data-testid={matchTestid.watchers} data-count={match.watchers} role="status">
+              {match.watchers === 1
+                ? t("A friend is watching")
+                : t("{count} friends are watching", { count: match.watchers })}
             </p>
           ) : null}
         </>

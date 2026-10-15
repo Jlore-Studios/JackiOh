@@ -190,7 +190,8 @@ impl Pair {
     async fn none_listed(&self) -> bool {
         let mine = listed(&self.app, &self.challenger).await;
         let theirs = listed(&self.app, &self.friend).await;
-        len(&mine["incoming"]) + len(&mine["outgoing"]) + len(&theirs["incoming"]) + len(&theirs["outgoing"]) == 0
+        len(&mine["incoming"]) + len(&mine["outgoing"]) + len(&theirs["incoming"]) + len(&theirs["outgoing"])
+            == 0
     }
 }
 
@@ -281,7 +282,8 @@ mod b48_a_challenge_to_an_online_idle_friend {
             json!({}),
             json!({ "mode": "nonsense" }),
         ] {
-            let (room_status, room_body) = api(&p.app, "POST", "/api/rooms", &outsider.token, room.clone()).await;
+            let (room_status, room_body) =
+                api(&p.app, "POST", "/api/rooms", &outsider.token, room.clone()).await;
             assert!(room_status >= 400, "POST /api/rooms took {room}: {room_body}");
 
             let (status, body) = challenge(&p.app, &p.challenger, with_friend(room.clone(), &p.friend)).await;
@@ -389,7 +391,10 @@ mod b49_accept_decline_cancel_and_expiry {
         assert_eq!(status, 200, "{friends}");
         let challenger = friends["friends"]
             .as_array()
-            .and_then(|list| list.iter().find(|entry| entry["profileId"] == p.challenger.id.as_str()))
+            .and_then(|list| {
+                list.iter()
+                    .find(|entry| entry["profileId"] == p.challenger.id.as_str())
+            })
             .cloned()
             .expect("the challenger is a friend");
         assert_eq!(challenger["status"], "inMatch", "{challenger}");
@@ -442,7 +447,11 @@ mod b49_accept_decline_cancel_and_expiry {
 
         advance(millis(CHALLENGE_TTL_MS) - 1).await;
         let theirs = listed(&p.app, &p.friend).await;
-        assert_eq!(len(&theirs["incoming"]), 1, "still open just before its TTL: {theirs}");
+        assert_eq!(
+            len(&theirs["incoming"]),
+            1,
+            "still open just before its TTL: {theirs}"
+        );
         assert_eq!(theirs["incoming"][0]["challengeId"], json!(challenge_id));
 
         advance(2).await;

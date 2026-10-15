@@ -255,6 +255,23 @@ export async function callWithRenewal<T>(token: string, call: (token: string) =>
   }
 }
 
+/** What a call made with no usable session gets: the refusal the server gives a missing token. */
+const SIGNED_OUT = { code: "unauthorized", message: "Sign in to continue." } as const;
+
+/**
+ * `call` as the tab's signed-in account (#936: the social and Duos wrappers, whose S8 signatures
+ * take no token): the session is read when it is called, so a renewal made meanwhile is the one
+ * sent, and a 401 renews once (`callWithRenewal`). No session, or one that ended or moved to another
+ * account, is thrown as the 401 `ApiRequestError` a signed-out request gets.
+ */
+export async function withSession<T>(call: (token: string) => Promise<T>): Promise<T> {
+  const session = readSession();
+  if (session === null) throw new ApiRequestError(401, SIGNED_OUT);
+  const answer = await callWithRenewal(session.accessToken, call);
+  if (answer.kind === "ok") return answer.value;
+  throw new ApiRequestError(401, SIGNED_OUT);
+}
+
 /** Two tokens of the same provider session (a renewal rotated it), when both name one. */
 function sameSession(a: string, b: string): boolean {
   const first = sessionIdFromToken(a);

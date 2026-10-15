@@ -18,9 +18,9 @@
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 
+use jackioh_engine::PlayerId;
 use jackioh_engine::config::{BACKROW_ZONES, UNIT_ZONES};
 use jackioh_engine::wire::{DuosActionBody, DuosSeat, DuosView};
-use jackioh_engine::PlayerId;
 
 use crate::actor::protocol::{
     ClientMessage, MAX_FRAME_BYTES, MAX_NONCE_LENGTH, MalformedMessage, SERVER_NONCE_PREFIX, SocketErrorCode,
@@ -151,13 +151,21 @@ fn parse_target(value: &Value) -> Option<PingTarget> {
     let zones = |count: i32| usize::try_from(count).unwrap_or(0);
     let (at, lane, index) = match record.get("at")?.as_str()? {
         "hero" => (PingAt::Hero, None, None),
-        "unit" => (PingAt::Unit, Some(index_under(record.get("lane"), zones(UNIT_ZONES))?), None),
+        "unit" => (
+            PingAt::Unit,
+            Some(index_under(record.get("lane"), zones(UNIT_ZONES))?),
+            None,
+        ),
         "backrow" => (
             PingAt::Backrow,
             Some(index_under(record.get("lane"), zones(BACKROW_ZONES))?),
             None,
         ),
-        "hand" => (PingAt::Hand, None, Some(index_under(record.get("index"), usize::MAX)?)),
+        "hand" => (
+            PingAt::Hand,
+            None,
+            Some(index_under(record.get("index"), usize::MAX)?),
+        ),
         _ => return None,
     };
     Some(PingTarget {
@@ -245,7 +253,11 @@ pub fn parse_duos_message(text: &str) -> Result<DuosClientMessage, MalformedMess
             Ok(DuosClientMessage::Action { nonce, body })
         }
         Some("ping") => {
-            let Some(ping) = parsed.get("ping").and_then(Value::as_str).and_then(PingKind::parse) else {
+            let Some(ping) = parsed
+                .get("ping")
+                .and_then(Value::as_str)
+                .and_then(PingKind::parse)
+            else {
                 return Err(malformed(
                     r#""ping" must be "thumbsUp", "thumbsDown", "portal", "careful" or "killThis""#,
                 ));
@@ -361,19 +373,30 @@ mod tests {
         );
         assert!(matches!(
             &end_turn,
-            Ok(DuosClientMessage::Action { body: DuosActionBody::Duel { body: ActionBody::EndTurn }, .. })
+            Ok(DuosClientMessage::Action {
+                body: DuosActionBody::Duel {
+                    body: ActionBody::EndTurn
+                },
+                ..
+            })
         ));
     }
 
     #[test]
     fn a_server_nonce_and_a_server_only_duel_action_are_malformed() {
-        assert!(parse_duos_message(r#"{"type":"action","nonce":"srv-1","body":{"kind":"concede"}}"#).is_err());
         assert!(
-            parse_duos_message(
-                r#"{"type":"action","nonce":"n3","body":{"kind":"duel","body":{"type":"timeout"}}}"#
-            )
-            .is_err()
+            parse_duos_message(r#"{"type":"action","nonce":"srv-1","body":{"kind":"concede"}}"#).is_err()
         );
+        // R79, R1127: every server-only 1v1 body, as a client would smuggle it into a duel.
+        for body in [
+            r#"{"type":"timeout"}"#,
+            r#"{"type":"disconnectExpired","player":"p2"}"#,
+            r#"{"type":"ceilingReached"}"#,
+            r#"{"type":"emote","emote":"hello"}"#,
+        ] {
+            let frame = format!(r#"{{"type":"action","nonce":"n3","body":{{"kind":"duel","body":{body}}}}}"#);
+            assert!(parse_duos_message(&frame).is_err(), "{frame}");
+        }
     }
 
     #[test]
@@ -381,7 +404,13 @@ mod tests {
         let hero = parse_duos_message(
             r#"{"type":"ping","ping":"careful","target":{"duel":1,"at":"hero","side":"p2"}}"#,
         );
-        assert!(matches!(hero, Ok(DuosClientMessage::Ping { ping: PingKind::Careful, .. })));
+        assert!(matches!(
+            hero,
+            Ok(DuosClientMessage::Ping {
+                ping: PingKind::Careful,
+                ..
+            })
+        ));
         for bad in [
             r#"{"type":"ping","ping":"wave","target":{"duel":0,"at":"hero","side":"p1"}}"#,
             r#"{"type":"ping","ping":"portal","target":{"duel":2,"at":"hero","side":"p1"}}"#,

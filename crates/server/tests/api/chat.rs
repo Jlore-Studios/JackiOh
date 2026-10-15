@@ -15,9 +15,7 @@ use serde_json::{Value, json};
 
 use jackioh_server::api::retention::run_purge;
 use jackioh_server::app::App;
-use jackioh_server::config::{
-    CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS,
-};
+use jackioh_server::config::{CHAT_MAX_CHARS, CHAT_MESSAGES_PER_MINUTE, CHAT_PAGE, CHAT_RETENTION_DAYS};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::Db;
 
@@ -289,7 +287,10 @@ mod b53_sending {
         let text = masked["body"].as_str().expect("a body");
         assert!(!text.to_lowercase().contains("bitch"), "{text}");
         assert!(text.contains('*'), "{text}");
-        assert!(text.starts_with("you are a "), "only the blocked word is masked: {text}");
+        assert!(
+            text.starts_with("you are a "),
+            "only the blocked word is masked: {text}"
+        );
         assert_eq!(clean["body"], "well played");
         // What the friend reads is what was stored.
         let read = page(&app, &bea, &ada, None).await;
@@ -307,7 +308,10 @@ mod b53_sending {
 
         let (status, body) = send(&app, &ada, &bea, "one too many").await;
         assert_eq!(status, 429, "{body}");
-        assert_eq!(unread_from(&app, &bea, &ada).await, i64::try_from(limit).expect("a count"));
+        assert_eq!(
+            unread_from(&app, &bea, &ada).await,
+            i64::try_from(limit).expect("a count")
+        );
         // The allowance is the sender's: Bea may still answer.
         assert_eq!(send(&app, &bea, &ada, "slow down").await.0, 201);
 

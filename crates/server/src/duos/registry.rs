@@ -58,8 +58,11 @@ pub struct DuosRegistry {
     rebuilding: Mutex<IndexMap<String, Rebuild>>,
 }
 
-/// Every running app's registry, beside a weak handle on its app.
-static REGISTRIES: LazyLock<Mutex<Vec<(Weak<App>, Arc<DuosRegistry>)>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+/// One running app's registry, beside a weak handle on its app.
+type Held = (Weak<App>, Arc<DuosRegistry>);
+
+/// Every running app's registry.
+static REGISTRIES: LazyLock<Mutex<Vec<Held>>> = LazyLock::new(|| Mutex::new(Vec::new()));
 
 /// The co-op registry of `app`, made on first use. A registry whose app is gone is dropped here.
 pub fn registry(app: &Arc<App>) -> Arc<DuosRegistry> {

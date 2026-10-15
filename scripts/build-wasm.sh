@@ -28,6 +28,11 @@
 # before it ships (#552); 0 builds it without, as apps/web's `prebuild` does for the production
 # bundle, so a module a player loads can preview nothing. Cargo keeps both builds, so switching costs
 # one compile each the first time only.
+#
+# JACKIOH_WASM_DUOS: 1 (the default) builds crates/wasm's `duos` feature, #936's Duos bindings, which
+# only `/dev/duos` calls and only a development build serves; 0 builds stubs in their place, as
+# apps/web's `prebuild` (the production bundle) and `pretest` (the unit tests' module, which
+# apps/web/src/wasm/size.test.ts weighs for #442 L12) do. Switching relinks the bindings crate only.
 
 set -eu
 
@@ -94,14 +99,28 @@ export PATH="$EMSDK_DIR:$EMSDK_DIR/upstream/emscripten:$NODE_BIN:$PATH"
 export CC_wasm32_unknown_emscripten="emcc"
 export CXX_wasm32_unknown_emscripten="em++"
 
+FEATURES=""
 case "${JACKIOH_WASM_PREVIEW:-1}" in
-  1) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features preview ;;
-  0) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" ;;
+  1) FEATURES="preview" ;;
+  0) ;;
   *)
     echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
     exit 1
     ;;
 esac
+case "${JACKIOH_WASM_DUOS:-1}" in
+  1) FEATURES="${FEATURES:+$FEATURES,}duos" ;;
+  0) ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_DUOS is 1 (the default) or 0, not \"$JACKIOH_WASM_DUOS\"" >&2
+    exit 1
+    ;;
+esac
+if [ -n "$FEATURES" ]; then
+  cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features "$FEATURES"
+else
+  cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
+fi
 mkdir -p "$OUT_DIR"
 cp "$MODULE_JS" "$OUT_DIR/jackioh_wasm.js"
 cp "$MODULE_WASM" "$OUT_DIR/jackioh_wasm.wasm"

@@ -2490,12 +2490,12 @@ impl Tx<'_> {
     }
 
     /// B50: whether friends may watch `profile_id`'s live unranked games: true unless they turned
-    /// it off, and true for an id no profile holds (a read that finds no profile decides nothing).
+    /// it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile holds.
     pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
         dispatch!(self, profiles_allows_spectators(profile_id))
     }
 
-    /// B50: `PUT /api/settings`' `allowSpectators`.
+    /// B50: `PUT /api/settings`' `allowSpectators`. An unknown profile is an error.
     pub async fn profiles_set_allow_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
         dispatch!(self, profiles_set_allow_spectators(profile_id, allow))
     }
@@ -2521,7 +2521,11 @@ impl Tx<'_> {
     }
 
     /// B49: the open challenge, not lapsed by `now`, that opened the room `code`, if any.
-    pub async fn challenges_open_for_room(&mut self, code: &str, now: i64) -> StoreResult<Option<ChallengeRow>> {
+    pub async fn challenges_open_for_room(
+        &mut self,
+        code: &str,
+        now: i64,
+    ) -> StoreResult<Option<ChallengeRow>> {
         dispatch!(self, challenges_open_for_room(code, now))
     }
 
@@ -2640,22 +2644,6 @@ pub struct SharedReplayRow {
 }
 
 impl Tx<'_> {
-    /// B50, B52: whether `a` and `b` are friends (a `friendships` row) and neither has blocked the
-    /// other (`blocks`, either way). False for one profile twice.
-    pub async fn watch_friends_unblocked(&mut self, a: &str, b: &str) -> StoreResult<bool> {
-        dispatch!(self, watch_friends_unblocked(a, b))
-    }
-
-    /// S7: the profile's `allow_spectators` (true until it is turned off); false for no profile.
-    pub async fn watch_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
-        dispatch!(self, watch_allows_spectators(profile_id))
-    }
-
-    /// S7: sets the profile's `allow_spectators`. An unknown profile is an error.
-    pub async fn watch_set_allows_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
-        dispatch!(self, watch_set_allows_spectators(profile_id, allow))
-    }
-
     /// B52: records a share; one already held is left as it was (its first `created_at`).
     pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<()> {
         dispatch!(self, shares_put(share))

@@ -7,7 +7,7 @@
 //! Then the settle, in order, until nothing moves (`DUOS_SETTLE_CAP` is its backstop):
 //!   1. the judge: a team's pool at 0 or less, or a duel's own ending, ends the game (B16);
 //!   2. round 1 opens once all four mulligans have resolved and both duels' first turns have begun (B2);
-//!   3. a round seat with nothing left but End turn is ended (B9, R82's rule);
+//!   3. a round seat with nothing left but End turn, and no pass it may make, is ended (B9, R82's rule);
 //!   4. once both round seats have ended, End turn reaches duel 0, then duel 1 (B5) — each under a
 //!      nonce of its own (`round_end_nonce`), so a fold replays it exactly;
 //!   5. once both duels' turns have moved on, the next round opens with each duel's new active player
@@ -18,7 +18,7 @@
 use crate::config::{DUOS_SETTLE_CAP, SETUP_TURN};
 use crate::mana::mana_event;
 use crate::reduce::{begin_game, reduce};
-use crate::state::{DuosLife, EngineError, GameState};
+use crate::state::{EngineError, GameState};
 use crate::wire::{
     Action, ActionBody, DUOS_DUELS, DUOS_REASON_CEILING, DUOS_REASON_CONCEDE, DUOS_REASON_DUEL_RESULT,
     DUOS_REASON_POOL_EMPTIED, DUOS_REASON_TURN_CAP, DuosAction, DuosActionBody, DuosEvent, DuosOutcome,
@@ -26,7 +26,7 @@ use crate::wire::{
 };
 
 use super::legal::{auto_end_due, why_duel_refused, why_pass_refused};
-use super::state::{DuosReduceResult, DuosState};
+use super::state::{DuosReduceResult, DuosState, duos_seat};
 
 /// The nonce the settle runs under after `duos_begin`, which has no action of its own.
 const BEGIN_NONCE: &str = "duos-begin";
@@ -298,7 +298,8 @@ fn duel_changed(state: &mut DuosState, duel: usize) {
 
 /// B15: each team's pool as duel `from` left it, copied to the team's seat in every other duel, and
 /// to that hero's health while it is spent (a spent hero's health reads the pool, B13). A seat that
-/// has lost its Duos life — a Glitch reset deals a duel again (R676) — takes it back, unspent.
+/// has lost its Duos life — a Glitch reset deals a duel again (R676) — is made a Duos seat again: its
+/// own HP back at the start, unspent, on its team's pool, and R82 off (`duos_seat`).
 fn sync_pools(state: &mut DuosState, from: usize) {
     for &team in Team::ALL {
         let player = team.player();
@@ -306,7 +307,7 @@ fn sync_pools(state: &mut DuosState, from: usize) {
             state.teams[team].pool = life.pool;
         }
         let pool = state.teams[team].pool;
-        let pool_cap = state.teams[team].rules.pool_health;
+        let rules = state.teams[team].rules;
         for (duel, game) in state.duels.iter_mut().enumerate() {
             let side = &mut game.players[player];
             match side.duos.as_mut() {
@@ -317,13 +318,7 @@ fn sync_pools(state: &mut DuosState, from: usize) {
                     }
                 }
                 Some(_) => {}
-                None => {
-                    side.duos = Some(DuosLife {
-                        pool,
-                        pool_cap,
-                        spent: false,
-                    });
-                }
+                None => duos_seat(side, &rules, pool),
             }
         }
     }

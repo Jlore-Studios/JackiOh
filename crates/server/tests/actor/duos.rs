@@ -507,6 +507,14 @@ fn keep_whole_hand(frame: &Value) -> Option<Value> {
         .max_by_key(|entry| entry["body"]["keep"].as_array().map_or(0, Vec::len))
 }
 
+/// Whether a duel's `PlayerView` shows its viewer's mulligan answered: still in the mulligan with
+/// `youReady`, or past it. B1: each duel is a normal 1v1 setup, so a duel whose two players have
+/// answered leaves its mulligan at once; B2 holds back only main-phase actions until all four have.
+fn mulligan_answered(player_view: &Value) -> bool {
+    player_view["mulligan"]["youReady"] == json!(true)
+        || (player_view["phase"].is_string() && player_view["phase"] != "mulligan")
+}
+
 fn last_view(client: &WsClient) -> Value {
     client
         .of_type("view")
@@ -606,7 +614,12 @@ impl Duos {
                     && frame["view"]["teammate"]["mulligan"]["opponentReady"] == true
             })
             .await
-            .unwrap_or_else(|| panic!("the AI seats never answered their mulligans: {:?}", human.frames()));
+            .unwrap_or_else(|| {
+                panic!(
+                    "the AI seats never answered their mulligans: {:?}",
+                    human.frames()
+                )
+            });
         settle().await;
         at
     }
@@ -642,8 +655,7 @@ impl Duos {
     }
 
     async fn steps(&self, who: &Account) -> Vec<Value> {
-        self.replay(who)
-            .await["steps"]
+        self.replay(who).await["steps"]
             .as_array()
             .cloned()
             .expect("a replay's steps")
@@ -714,7 +726,11 @@ mod b35_the_socket {
 
             let enemy = &view["enemy"];
             assert_eq!(enemy["pool"], json!(rules.pool_health), "{difficulty}: {enemy}");
-            assert_eq!(enemy["poolCap"], json!(rules.pool_health), "{difficulty}: {enemy}");
+            assert_eq!(
+                enemy["poolCap"],
+                json!(rules.pool_health),
+                "{difficulty}: {enemy}"
+            );
             assert_eq!(enemy["passCost"], json!(rules.pass_cost), "{difficulty}: {enemy}");
             for side in enemy["sides"].as_array().expect("the enemy's sides") {
                 assert_eq!(side["own"], json!(rules.own_health), "{difficulty}: {enemy}");
@@ -748,11 +764,17 @@ mod b35_the_socket {
         let theirs = a2.of_type_since(a2_from, "view");
         let mine = mine.last().expect("A1 got a fresh view");
         let theirs = theirs.last().expect("A2 got a fresh view");
-        assert_eq!(mine["view"]["own"]["mulligan"]["youReady"], json!(true), "{mine}");
-        assert!(!legal(mine).iter().any(|entry| is_duel(entry, "mulligan")), "{mine}");
+        assert!(mulligan_answered(&mine["view"]["own"]), "{mine}");
+        assert!(
+            !legal(mine).iter().any(|entry| is_duel(entry, "mulligan")),
+            "{mine}"
+        );
         // A2 sees its teammate's duel from the teammate's seat: A1 has answered.
-        assert_eq!(theirs["view"]["teammate"]["mulligan"]["youReady"], json!(true), "{theirs}");
-        assert!(legal(theirs).iter().any(|entry| is_duel(entry, "mulligan")), "A2 still owes its own: {theirs}");
+        assert!(mulligan_answered(&theirs["view"]["teammate"]), "{theirs}");
+        assert!(
+            legal(theirs).iter().any(|entry| is_duel(entry, "mulligan")),
+            "A2 still owes its own: {theirs}"
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -768,7 +790,10 @@ mod b35_the_socket {
             // B2: no main-phase action before the round opens.
             ("early-end", duel(json!({ "type": "endTurn" }))),
             // B19: a pass names a card in the passer's hand.
-            ("ghost-pass", json!({ "kind": "pass", "instanceId": "no-such-card" })),
+            (
+                "ghost-pass",
+                json!({ "kind": "pass", "instanceId": "no-such-card" }),
+            ),
         ] {
             let answer = act(&a1, nonce, body).await;
             assert_eq!(answer["type"], "error", "{nonce}: {answer}");
@@ -778,9 +803,14 @@ mod b35_the_socket {
 
         settle().await;
         assert!(a1.of_type_since(a1_from, "ack").is_empty());
-        assert!(a2.of_type_since(a2_from, "view").is_empty(), "nothing changed for the teammate");
         assert!(
-            legal(&last_view(&a1)).iter().any(|entry| is_duel(entry, "mulligan")),
+            a2.of_type_since(a2_from, "view").is_empty(),
+            "nothing changed for the teammate"
+        );
+        assert!(
+            legal(&last_view(&a1))
+                .iter()
+                .any(|entry| is_duel(entry, "mulligan")),
             "A1 still owes its mulligan"
         );
         assert_eq!(h.steps(&h.host).await.len(), steps, "nothing was logged");
@@ -797,7 +827,10 @@ mod b35_the_socket {
         for (nonce, body) in [
             ("duel-concede", duel(json!({ "type": "concede" }))),
             ("draw-offer", duel(json!({ "type": "offerDraw" }))),
-            ("draw-answer", duel(json!({ "type": "answerDraw", "accept": true }))),
+            (
+                "draw-answer",
+                duel(json!({ "type": "answerDraw", "accept": true })),
+            ),
         ] {
             let answer = act(&a1, nonce, body).await;
             assert_eq!(answer["type"], "error", "{nonce}: {answer}");
@@ -820,7 +853,8 @@ mod b35_the_socket {
         let (a1_from, a2_from) = (a1.received(), a2.received());
 
         a1.send_text("this is not json").await;
-        a1.send_json(json!({ "type": "action", "nonce": "no-body" })).await;
+        a1.send_json(json!({ "type": "action", "nonce": "no-body" }))
+            .await;
         a1.send_json(json!({ "type": "teleport" })).await;
         settle().await;
 
@@ -842,7 +876,9 @@ mod b35_the_socket {
         host.send_json(hello(&uuid(999))).await;
 
         for client in [&outsider, &host] {
-            let view = client.wait_for(0, PROMPTLY, |frame| frame["type"] == "view").await;
+            let view = client
+                .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+                .await;
             assert!(view.is_none(), "{:?}", client.frames());
         }
     }
@@ -856,7 +892,8 @@ mod b36_the_ai_seats {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn b36_the_ai_seats_answer_their_own_mulligans_before_the_mulligan_clock_and_leave_the_humans_theirs() {
+    async fn b36_the_ai_seats_answer_their_own_mulligans_before_the_mulligan_clock_and_leave_the_humans_theirs()
+     {
         let h = duos("easy").await;
         let started = Instant::now();
         let a1 = h.seat(&h.host).await;
@@ -866,7 +903,10 @@ mod b36_the_ai_seats {
         assert!(at < started + ms(DUOS_MULLIGAN_CLOCK_MS));
         let frame = last_view(&a1);
         assert_eq!(frame["view"]["round"], json!(0), "{frame}");
-        assert!(legal(&frame).iter().any(|entry| is_duel(entry, "mulligan")), "{frame}");
+        assert!(
+            legal(&frame).iter().any(|entry| is_duel(entry, "mulligan")),
+            "{frame}"
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -916,7 +956,8 @@ mod b37_the_disconnect_takeover {
     use super::*;
 
     #[tokio::test(start_paused = true)]
-    async fn b37_a_human_gone_past_the_grace_is_played_by_the_ai_shown_to_the_teammate_and_handed_back_on_reconnect() {
+    async fn b37_a_human_gone_past_the_grace_is_played_by_the_ai_shown_to_the_teammate_and_handed_back_on_reconnect()
+     {
         let h = duos("easy").await;
         let a1 = h.seat(&h.host).await;
         let a2 = h.seat(&h.guest).await;
@@ -935,8 +976,15 @@ mod b37_the_disconnect_takeover {
 
         assert!(taken_at >= dropped + grace, "not before the grace has run");
         assert_eq!(taken["connected"], json!(false), "{taken}");
-        for frame in a2.frames()[from..taken_index].iter().filter(|frame| frame["type"] == "teammate") {
-            assert_eq!(frame["aiPlaying"], json!(false), "the AI took over early: {frame}");
+        for frame in a2.frames()[from..taken_index]
+            .iter()
+            .filter(|frame| frame["type"] == "teammate")
+        {
+            assert_eq!(
+                frame["aiPlaying"],
+                json!(false),
+                "the AI took over early: {frame}"
+            );
         }
         // The team never loses to a disconnect.
         assert!(last_view(&a2)["view"]["result"].is_null());
@@ -1014,7 +1062,10 @@ mod b38_the_round_clock {
 
         assert!(r2_at <= r1_at + clock + slack);
         if both_open {
-            assert!(r2_at >= r1_at + clock, "the round closed before its clock ran out");
+            assert!(
+                r2_at >= r1_at + clock,
+                "the round closed before its clock ran out"
+            );
         }
     }
 
@@ -1039,7 +1090,11 @@ mod b38_the_round_clock {
             })
             .await;
 
-        assert!(clock.is_some(), "no clock frame named {deadline}: {:?}", a1.of_type_since(from, "clock"));
+        assert!(
+            clock.is_some(),
+            "no clock frame named {deadline}: {:?}",
+            a1.of_type_since(from, "clock")
+        );
     }
 }
 
@@ -1066,8 +1121,14 @@ mod b39_pings {
         a1.send_json(ping("thumbsUp", target.clone())).await;
         settle().await;
 
-        assert_eq!(a2.of_type_since(a2_from, "ping"), vec![relayed("a1", "thumbsUp", &target)]);
-        assert!(a1.of_type_since(a1_from, "ping").is_empty(), "the sender gets no echo");
+        assert_eq!(
+            a2.of_type_since(a2_from, "ping"),
+            vec![relayed("a1", "thumbsUp", &target)]
+        );
+        assert!(
+            a1.of_type_since(a1_from, "ping").is_empty(),
+            "the sender gets no echo"
+        );
         assert!(a1.of_type_since(a1_from, "error").is_empty());
 
         // And the other way, A2's own hand named in its own duel.
@@ -1075,7 +1136,10 @@ mod b39_pings {
         let a1_from = a1.received();
         a2.send_json(ping("careful", back.clone())).await;
         settle().await;
-        assert_eq!(a1.of_type_since(a1_from, "ping"), vec![relayed("a2", "careful", &back)]);
+        assert_eq!(
+            a1.of_type_since(a1_from, "ping"),
+            vec![relayed("a2", "careful", &back)]
+        );
     }
 
     #[tokio::test(start_paused = true)]
@@ -1089,10 +1153,22 @@ mod b39_pings {
         let last_lane = int(UNIT_ZONES) - 1;
         let pings = [
             ("thumbsUp", at_hero(0, "p1")),
-            ("thumbsDown", json!({ "duel": 1, "at": "unit", "side": "p2", "lane": 0 })),
-            ("portal", json!({ "duel": 0, "at": "backrow", "side": "p1", "lane": last_lane })),
-            ("careful", json!({ "duel": 0, "at": "hand", "side": "p1", "index": own_hand - 1 })),
-            ("killThis", json!({ "duel": 1, "at": "unit", "side": "p2", "lane": last_lane })),
+            (
+                "thumbsDown",
+                json!({ "duel": 1, "at": "unit", "side": "p2", "lane": 0 }),
+            ),
+            (
+                "portal",
+                json!({ "duel": 0, "at": "backrow", "side": "p1", "lane": last_lane }),
+            ),
+            (
+                "careful",
+                json!({ "duel": 0, "at": "hand", "side": "p1", "index": own_hand - 1 }),
+            ),
+            (
+                "killThis",
+                json!({ "duel": 1, "at": "unit", "side": "p2", "lane": last_lane }),
+            ),
         ];
         assert!(pings.len() <= count(PING_RATE_LIMIT));
         let a2_from = a2.received();
@@ -1125,14 +1201,24 @@ mod b39_pings {
             ping("thumbsUp", at_hero(0, "p3")),
             ping("thumbsUp", json!({ "duel": 0, "at": "graveyard", "side": "p1" })),
             ping("thumbsUp", json!({ "duel": 0, "at": "unit", "side": "p1" })),
-            ping("thumbsUp", json!({ "duel": 0, "at": "unit", "side": "p1", "lane": zones })),
-            ping("thumbsUp", json!({ "duel": 0, "at": "backrow", "side": "p2", "lane": -1 })),
+            ping(
+                "thumbsUp",
+                json!({ "duel": 0, "at": "unit", "side": "p1", "lane": zones }),
+            ),
+            ping(
+                "thumbsUp",
+                json!({ "duel": 0, "at": "backrow", "side": "p2", "lane": -1 }),
+            ),
         ] {
             a1.send_json(bad).await;
         }
         settle().await;
 
-        assert!(a2.of_type_since(a2_from, "ping").is_empty(), "{:?}", a2.of_type_since(a2_from, "ping"));
+        assert!(
+            a2.of_type_since(a2_from, "ping").is_empty(),
+            "{:?}",
+            a2.of_type_since(a2_from, "ping")
+        );
         assert!(a1.of_type_since(a1_from, "ping").is_empty());
         assert!(a2.of_type_since(a2_from, "view").is_empty());
 
@@ -1188,7 +1274,11 @@ mod b39_pings {
             a1.send_json(ping("killThis", target)).await;
         }
         settle().await;
-        assert!(a2.of_type_since(a2_from, "ping").is_empty(), "{:?}", a2.of_type_since(a2_from, "ping"));
+        assert!(
+            a2.of_type_since(a2_from, "ping").is_empty(),
+            "{:?}",
+            a2.of_type_since(a2_from, "ping")
+        );
 
         tokio::time::sleep(ms(PING_RATE_WINDOW_MS) + Duration::from_millis(1)).await;
         let kept = [
@@ -1199,7 +1289,10 @@ mod b39_pings {
             a1.send_json(ping("portal", target.clone())).await;
         }
         settle().await;
-        let expected: Vec<Value> = kept.iter().map(|target| relayed("a1", "portal", target)).collect();
+        let expected: Vec<Value> = kept
+            .iter()
+            .map(|target| relayed("a1", "portal", target))
+            .collect();
         assert_eq!(a2.of_type_since(a2_from, "ping"), expected);
     }
 
@@ -1219,10 +1312,24 @@ mod b39_pings {
         }
         settle().await;
 
-        assert_eq!(a2.of_type_since(a2_from, "ping").len(), 2, "the pings were relayed");
-        assert_eq!(a1.of_type_since(a1_from, "ping").len(), 2, "the pings were relayed");
-        assert!(a1.of_type_since(a1_from, "view").is_empty(), "a ping pushes no view");
-        assert!(a2.of_type_since(a2_from, "view").is_empty(), "a ping pushes no view");
+        assert_eq!(
+            a2.of_type_since(a2_from, "ping").len(),
+            2,
+            "the pings were relayed"
+        );
+        assert_eq!(
+            a1.of_type_since(a1_from, "ping").len(),
+            2,
+            "the pings were relayed"
+        );
+        assert!(
+            a1.of_type_since(a1_from, "view").is_empty(),
+            "a ping pushes no view"
+        );
+        assert!(
+            a2.of_type_since(a2_from, "view").is_empty(),
+            "a ping pushes no view"
+        );
         assert!(a1.of_type_since(a1_from, "ack").is_empty(), "a ping is no action");
         let steps = h.steps(&h.host).await;
         assert_eq!(steps.len(), host_steps, "a ping is never logged");
@@ -1258,18 +1365,27 @@ mod b40_b42_the_log_the_replay_and_the_end {
 
         let host_after = h.steps(&h.host).await;
         let guest_after = h.steps(&h.guest).await;
-        assert_eq!(host_after.len(), host_before["steps"].as_array().map_or(0, Vec::len) + 1);
-        assert_eq!(guest_after.len(), guest_before["steps"].as_array().map_or(0, Vec::len) + 1);
+        assert_eq!(
+            host_after.len(),
+            host_before["steps"].as_array().map_or(0, Vec::len) + 1
+        );
+        assert_eq!(
+            guest_after.len(),
+            guest_before["steps"].as_array().map_or(0, Vec::len) + 1
+        );
         assert!(host_after.iter().all(|step| step["seat"] == "a1"));
         assert!(guest_after.iter().all(|step| step["seat"] == "a2"));
         let last = host_after.last().expect("a step");
         let pushed = last_view(&a1);
-        assert_eq!(last["own"]["you"]["hand"], pushed["view"]["own"]["you"]["hand"], "{last}");
-        assert_eq!(last["own"]["mulligan"]["youReady"], json!(true), "{last}");
+        assert_eq!(
+            last["own"]["you"]["hand"], pushed["view"]["own"]["you"]["hand"],
+            "{last}"
+        );
+        assert!(mulligan_answered(&last["own"]), "{last}");
         assert_eq!(last["round"], pushed["view"]["round"]);
         // A2's step shows its own duel, not A1's.
         let theirs = guest_after.last().expect("a step");
-        assert_eq!(theirs["teammate"]["mulligan"]["youReady"], json!(true), "{theirs}");
+        assert!(mulligan_answered(&theirs["teammate"]), "{theirs}");
     }
 
     #[tokio::test(start_paused = true)]
@@ -1290,7 +1406,10 @@ mod b40_b42_the_log_the_replay_and_the_end {
             })
             .await
             .unwrap_or_else(|| panic!("A2 never saw A1's offer: {:?}", a2.frames()));
-        assert!(offered["view"]["result"].is_null(), "an offer alone ends nothing: {offered}");
+        assert!(
+            offered["view"]["result"].is_null(),
+            "an offer alone ends nothing: {offered}"
+        );
 
         let a1_from = a1.received();
         let agreed = act(&a2, "a2-concede", concede()).await;

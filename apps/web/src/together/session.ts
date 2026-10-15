@@ -1,24 +1,10 @@
-// What Play together's screens share besides `net/social.ts`: a call made with the tab's session for
-// the routes that take a token (decks, replays, settings), a refusal in its own words, and a read that
-// keeps itself fresh.
+// What Play together's screens share besides `net/social.ts`: a refusal in its own words and a read
+// that keeps itself fresh. A route that takes a token (decks, replays, settings) is called with the
+// tab's session through `net/gate.ts`'s `withSession`, as the social and Duos wrappers are.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiRequestError } from "../net/api.ts";
-import { callWithRenewal } from "../net/gate.ts";
-import { readSession } from "../net/session.ts";
-
-/** The refusal a request with no session behind it gets, as `net/social.ts` throws it. */
-const SIGNED_OUT = { code: "unauthorized", message: "Sign in to continue." } as const;
-
-/** `call` with the tab's session token, renewed once on a 401 (R194). No session is the sign-in refusal. */
-export async function withToken<T>(call: (token: string) => Promise<T>): Promise<T> {
-  const session = readSession();
-  if (session === null) throw new ApiRequestError(401, SIGNED_OUT);
-  const answer = await callWithRenewal(session.accessToken, call);
-  if (answer.kind === "ok") return answer.value;
-  throw new ApiRequestError(401, SIGNED_OUT);
-}
 
 /** A refusal's sentence: the server's own for `ApiRequestError`, the transport's plain one otherwise. */
 export function messageOf(cause: unknown): string {

@@ -4,28 +4,15 @@
 //
 // THE TOKEN. These wrappers take none (S8's signatures): each reads the tab's session when it is
 // called (`net/session.ts`), so a renewal the gate made meanwhile is the one sent, and a 401 renews
-// once and retries (`callWithRenewal`, R194) as a screen's own request does. No session, or one that
+// once and retries (`withSession`, R194) as a screen’s own request does. No session, or one that
 // cannot be renewed, is a 401 refusal like any other.
 
 import type { Difficulty } from "@jackioh/engine/config";
 
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
-import { ApiRequestError, apiRequest } from "./api.ts";
-import { callWithRenewal } from "./gate.ts";
-import { readSession } from "./session.ts";
-
-/** What a signed-out (or switched) caller is refused with, in a player's words. */
-const SIGNED_OUT = "Sign in again to play together.";
-
-/** `call` with the session's bearer, renewed once on a 401 (R194); no usable session is a 401. */
-async function authed<T>(call: (token: string) => Promise<T>): Promise<T> {
-  const session = readSession();
-  if (session === null) throw new ApiRequestError(401, { code: "unauthorized", message: SIGNED_OUT });
-  const outcome = await callWithRenewal(session.accessToken, call);
-  if (outcome.kind === "ok") return outcome.value;
-  throw new ApiRequestError(401, { code: "unauthorized", message: SIGNED_OUT });
-}
+import { apiRequest } from "./api.ts";
+import { withSession } from "./gate.ts";
 
 // ---------------------------------------------------------------------------------------------
 // Rooms and matches (S6)
@@ -50,12 +37,12 @@ export function createDuosRoom(body: {
   random?: boolean;
   leanNewest?: boolean;
 }): Promise<{ code: string }> {
-  return authed((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
+  return withSession((token) => apiRequest<{ code: string }>("/api/duos/rooms", { method: "POST", token, body }));
 }
 
 /** `GET /api/duos/rooms/:code`: 404 once the room expired (DUOS_ROOM_TTL_MS) or was cancelled. */
 export function getDuosRoom(code: string): Promise<DuosRoom> {
-  return authed((token) => apiRequest<DuosRoom>(`/api/duos/rooms/${encodeURIComponent(code)}`, { token }));
+  return withSession((token) => apiRequest<DuosRoom>(`/api/duos/rooms/${encodeURIComponent(code)}`, { token }));
 }
 
 /** `POST /api/duos/rooms/:code/join`: the match it starts, or 404, or 409 `full` / `own_room`. */
@@ -63,24 +50,24 @@ export function joinDuosRoom(
   code: string,
   body: { deckId?: string; random?: boolean; leanNewest?: boolean },
 ): Promise<{ matchId: string }> {
-  return authed((token) =>
+  return withSession((token) =>
     apiRequest<{ matchId: string }>(`/api/duos/rooms/${encodeURIComponent(code)}/join`, { method: "POST", token, body }),
   );
 }
 
 /** `DELETE /api/duos/rooms/:code`: the host takes back a room nobody has joined (204). */
 export async function cancelDuosRoom(code: string): Promise<void> {
-  await authed((token) => apiRequest<null>(`/api/duos/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token }));
+  await withSession((token) => apiRequest<null>(`/api/duos/rooms/${encodeURIComponent(code)}`, { method: "DELETE", token }));
 }
 
 /** `GET /api/duos/live` (B42): the caller's live co-op match, or null. */
 export function getDuosLive(): Promise<{ matchId: string | null }> {
-  return authed((token) => apiRequest<{ matchId: string | null }>("/api/duos/live", { token }));
+  return withSession((token) => apiRequest<{ matchId: string | null }>("/api/duos/live", { token }));
 }
 
 /** `GET /api/duos/matches/:matchId/replay` (B41): the caller's seat's view after each step; 404 to anyone else. */
 export function getDuosReplay(matchId: string): Promise<{ seat: DuosSeat; steps: DuosView[] }> {
-  return authed((token) =>
+  return withSession((token) =>
     apiRequest<{ seat: DuosSeat; steps: DuosView[] }>(`/api/duos/matches/${encodeURIComponent(matchId)}/replay`, {
       token,
     }),

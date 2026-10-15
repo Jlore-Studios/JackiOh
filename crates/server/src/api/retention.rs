@@ -8,6 +8,8 @@
 //!  - a finished match's action log `MATCH_ACTION_RETENTION_DAYS` after the match ended. Only a live
 //!    match is replayed from its log; the result row, and so the rating history, is kept.
 //!  - a finished match's play telemetry `PLAY_TELEMETRY_RETENTION_DAYS` after the match ended (R1442).
+//!  - a chat message, with its reports, `CHAT_RETENTION_DAYS` after it was sent (SPEC S7, B53;
+//!    `social::chat::purge`, its own transaction after the others).
 //!
 //! `app.rs` spawns `run_purge`, which runs it at boot and then every
 //! `RETENTION_PURGE_INTERVAL_SECONDS`, next to the match reaper. In Postgres it is one call to
@@ -62,6 +64,12 @@ pub async fn run_purge(app: Arc<App>) {
                 }
             }
             Err(error) => log_warn("retention.purge_failed", json!({ "message": error.to_string() })),
+        }
+        // Play together (#941): B53's chat retention, apart, so one failure never holds the other.
+        match crate::social::chat::purge(&app).await {
+            Ok(0) => {}
+            Ok(purged) => log_info("chat.purged", json!({ "messages": purged })),
+            Err(error) => log_warn("chat.purge_failed", json!({ "message": error.to_string() })),
         }
         tokio::time::sleep(Duration::from_secs(RETENTION_PURGE_INTERVAL_SECONDS as u64)).await;
     }

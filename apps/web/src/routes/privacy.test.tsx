@@ -59,7 +59,7 @@ describe("the privacy policy", () => {
   it("shows the date it was last updated", () => {
     render(<PrivacyRoute />);
     expect(screen.getByTestId(privacyTestid.updated)).toHaveTextContent(`Last updated ${PRIVACY_LAST_UPDATED}`);
-    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-13");
+    expect(PRIVACY_LAST_UPDATED).toBe("2026-10-14");
   });
 
   it("R757000 the policy names the minimum age and what is kept of the check, and holds no owner slot", () => {

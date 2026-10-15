@@ -11,7 +11,7 @@ import { CHAT_POLL_MS } from "@jackioh/server-config";
 
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { ChatMessage, Friend, PlayerRef } from "../net/social.ts";
-import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { ChatPanel } from "./ChatPanel.tsx";
 import { InMatchChat } from "./InMatchChat.tsx";
 
@@ -303,7 +303,7 @@ describe("B58 the in-match chat toggle", () => {
     render(<InMatchChat />);
     expect(screen.queryByTestId("chat-input")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /chat/i }));
-    const ann = await screen.findByText(/Ann#2/, undefined, SLOW);
+    const ann = await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
     fireEvent.click(ann.closest("button") ?? ann);
     expect(await screen.findByTestId("chat-input", undefined, SLOW)).toBeInTheDocument();
     await waitFor(() => {
@@ -315,8 +315,8 @@ describe("B58 the in-match chat toggle", () => {
     serveFriends();
     render(<InMatchChat />);
     fireEvent.click(screen.getByRole("button", { name: /chat/i }));
-    await screen.findByText(/Ann#2/, undefined, SLOW);
-    expect(screen.queryByText(/Cy#4/)).toBeNull();
+    await screen.findByText(wholeText("Ann#2"), undefined, SLOW);
+    expect(screen.queryByText(wholeText("Cy#4"))).toBeNull();
   });
 
   it("B58 closed, the toggle shows no conversation and reads none", async () => {

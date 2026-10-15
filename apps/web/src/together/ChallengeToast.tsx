@@ -25,10 +25,11 @@ import { currentPath, navigate, paths } from "../net/navigate.ts";
 import { roomLinkPath } from "../net/roomLink.ts";
 import { readSession } from "../net/session.ts";
 import { declineChallenge, getChallenges, type Challenge } from "../net/social.ts";
+import { withSession } from "../net/gate.ts";
 import { QueueFound } from "../routes/GameBanner.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { followingChallenge, stopFollowingChallenge } from "./follow.ts";
-import { isRefusedSession, messageOf, withToken } from "./session.ts";
+import { isRefusedSession, messageOf } from "./session.ts";
 import { challengeToastTestid } from "./testids.ts";
 import { MODE_WORDS, Named } from "./words.tsx";
 
@@ -71,7 +72,7 @@ export function ChallengeToast(): ReactElement {
     let refused: string | null = null;
 
     const follow = (): void => {
-      withToken(getMe).then(
+      withSession(getMe).then(
         (me) => {
           if (cancelled) return;
           const game = liveGameOf(me);

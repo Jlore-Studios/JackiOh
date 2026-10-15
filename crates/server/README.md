@@ -142,7 +142,7 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `GET` | `/api/username/preview?name=…` | active | the exact username a save would give, tag included, or why it is refused (R1432–R1435) |
 | `PUT` | `/api/username` | active | save the previewed username; 409 with a fresh preview when the outcome changed (R1434, R1435) |
 | `POST` | `/api/username/skip` | active | answer the username prompt by keeping `Player#n` (R1435) |
-| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match or series |
+| `DELETE` | `/api/account` | user | delete the caller's account and every row only it owns; 409 in a live match, series or co-op match |
 | `POST` | `/api/account/consent` | user | `{ termsVersion, birthYear?, birthMonth? }`: the age screen's answer (an account under `MIN_ACCOUNT_AGE_YEARS` is deleted, 403 `under_age`) and agreement to `TERMS_VERSION` (409 `update_required` for any other); stores only that the age check passed, never the birth date (R757000, R757001) |
 | `GET` | `/api/catalog` | none | `{ version, defs }`, the bytes the client ships (R163); `x-deployed-commit` |
 | `POST` | `/api/codes/redeem` | user | §9.4's six-step redemption; first 403 `consent_owed` for an account owing the age check or the terms, costing no attempt (R757000, R757001) |
@@ -517,7 +517,8 @@ loop deletes chat messages older than `CHAT_RETENTION_DAYS`. Migration 0037 adds
 (§12.9): `duos_rooms` (the code, host, guest, difficulty, each side's deck choice, the match once it
 starts, and its expiry), `duos_matches` (the seed, both humans, the difficulty, the create options,
 the result) and `duos_match_actions` (the log, unique by seq and by nonce); the seed and the log are
-the server's alone, as a 1v1 match's are.
+the server's alone, as a 1v1 match's are: a room's host and guest may read it (but its frozen deck
+choices), and no client role reads a co-op match or its log (no grant, no policy).
 
 ## Tests
 

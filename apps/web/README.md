@@ -251,7 +251,9 @@ duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' 
 ```
 
 The landing page offers Play together beside Play online. The replays list and the replay player offer
-"Share with a friend". On the Duos board:
+"Share with a friend". The match board's rail says how many friends are watching while any are
+(`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
+snapshot's `watchers`). On the Duos board:
 
 - the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
   only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §12.5);

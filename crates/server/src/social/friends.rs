@@ -24,7 +24,9 @@ use serde_json::json;
 
 use crate::actor::rooms::release_room;
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiResult, Req, account_key, bad_request, log_info, now_ms, rate_limited, str, to_json};
+use crate::api::http::{
+    ApiResult, Req, account_key, bad_request, log_info, now_ms, rate_limited, str, to_json,
+};
 use crate::api::queue::new_uuid;
 use crate::app::App;
 use crate::config::MAX_FRIENDS;
@@ -106,11 +108,18 @@ pub async fn get_friends(app: &Arc<App>, req: Req) -> ApiResult {
 
     let mut friend_profiles: Vec<(Profile, i64)> = friendships
         .iter()
-        .filter_map(|row| profiles.get(row.other(&me)).map(|profile| (profile.clone(), row.since)))
+        .filter_map(|row| {
+            profiles
+                .get(row.other(&me))
+                .map(|profile| (profile.clone(), row.since))
+        })
         .collect();
     friend_profiles.sort_by(|a, b| by_name(&a.0, &b.0));
-    let listed: Vec<Profile> = friend_profiles.iter().map(|(profile, _)| profile.clone()).collect();
-    let standing = standings(app, &listed).await?;
+    let listed: Vec<Profile> = friend_profiles
+        .iter()
+        .map(|(profile, _)| profile.clone())
+        .collect();
+    let standing = standings(app, &me, &listed).await?;
     let friends: Vec<Friend> = friend_profiles
         .iter()
         .map(|(profile, since)| Friend::of(profile, *since, standing.get(&profile.id)))
@@ -251,7 +260,7 @@ pub async fn accept_request(app: &Arc<App>, req: Req) -> ApiResult {
         "friends.added",
         json!({ "profileId": me, "friendProfileId": sender.id, "mutual": false }),
     );
-    let standing = standings(app, std::slice::from_ref(&sender)).await?;
+    let standing = standings(app, &me, std::slice::from_ref(&sender)).await?;
     let friend = Friend::of(&sender, friendship.since, standing.get(&sender.id));
     Ok(crate::api::http::ok(json!({ "friend": to_json(&friend)? })))
 }

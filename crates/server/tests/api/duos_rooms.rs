@@ -163,7 +163,7 @@ async fn with_saved_deck(app: &Arc<App>, profile_id: &str, deck_id: &str) {
         )
         .await
         .expect("decks.upsert"));
-    assert_eq!(serde_json::to_value(&outcome).expect("an outcome"), "created");
+    assert_eq!(serde_json::to_value(outcome).expect("an outcome"), "created");
 }
 
 async fn create(app: &Arc<App>, host: &Account, body: Value) -> (u16, Value) {
@@ -189,7 +189,14 @@ async fn join(app: &Arc<App>, who: &Account, code: &str) -> (u16, Value) {
 }
 
 async fn get_room(app: &Arc<App>, who: &Account, code: &str) -> (u16, Value) {
-    api(app, "GET", &format!("/api/duos/rooms/{code}"), &who.token, Value::Null).await
+    api(
+        app,
+        "GET",
+        &format!("/api/duos/rooms/{code}"),
+        &who.token,
+        Value::Null,
+    )
+    .await
 }
 
 async fn live(app: &Arc<App>, who: &Account) -> Value {
@@ -282,7 +289,8 @@ mod b33_rooms {
     }
 
     #[tokio::test]
-    async fn b33_b41_b42_a_join_starts_the_match_with_the_host_as_a1_and_the_guest_as_a2_and_both_learn_its_id() {
+    async fn b33_b41_b42_a_join_starts_the_match_with_the_host_as_a1_and_the_guest_as_a2_and_both_learn_its_id()
+     {
         let t = three().await;
         let code = room(&t.app, &t.host).await;
 
@@ -317,7 +325,10 @@ mod b33_rooms {
         assert_eq!(status, 409, "{body}");
         assert!(code_is(&body, "full"), "{body}");
         assert!(live(&t.app, &t.third).await.is_null());
-        assert_eq!(get_room(&t.app, &t.host, &code).await.1["guest"]["profileId"], json!(t.guest.id));
+        assert_eq!(
+            get_room(&t.app, &t.host, &code).await.1["guest"]["profileId"],
+            json!(t.guest.id)
+        );
         assert_eq!(live(&t.app, &t.guest).await, json!(match_id));
     }
 
@@ -366,7 +377,12 @@ mod b33_rooms {
         let t = three().await;
         with_saved_deck(&t.app, &t.host.id, &uuid(800)).await;
 
-        let (status, body) = create(&t.app, &t.host, json!({ "difficulty": "medium", "deckId": uuid(800) })).await;
+        let (status, body) = create(
+            &t.app,
+            &t.host,
+            json!({ "difficulty": "medium", "deckId": uuid(800) }),
+        )
+        .await;
 
         assert_eq!(status, 201, "{body}");
         let code = body["code"].as_str().expect("a room code").to_string();
@@ -423,7 +439,14 @@ mod b34_expiry_and_delete {
         let t = three().await;
         let code = room(&t.app, &t.host).await;
 
-        let (status, body) = api(&t.app, "DELETE", &format!("/api/duos/rooms/{code}"), &t.host.token, Value::Null).await;
+        let (status, body) = api(
+            &t.app,
+            "DELETE",
+            &format!("/api/duos/rooms/{code}"),
+            &t.host.token,
+            Value::Null,
+        )
+        .await;
 
         assert_eq!(status, 204, "{body}");
         assert_eq!(get_room(&t.app, &t.guest, &code).await.0, 404);
@@ -436,7 +459,14 @@ mod b34_expiry_and_delete {
         let t = three().await;
         let code = room(&t.app, &t.host).await;
 
-        let (status, _) = api(&t.app, "DELETE", &format!("/api/duos/rooms/{code}"), &t.third.token, Value::Null).await;
+        let (status, _) = api(
+            &t.app,
+            "DELETE",
+            &format!("/api/duos/rooms/{code}"),
+            &t.third.token,
+            Value::Null,
+        )
+        .await;
 
         assert_ne!(status, 204);
         let (status, shown) = get_room(&t.app, &t.guest, &code).await;
@@ -449,7 +479,14 @@ mod b34_expiry_and_delete {
         let t = three().await;
         let (code, match_id) = t.started().await;
 
-        let (status, _) = api(&t.app, "DELETE", &format!("/api/duos/rooms/{code}"), &t.host.token, Value::Null).await;
+        let (status, _) = api(
+            &t.app,
+            "DELETE",
+            &format!("/api/duos/rooms/{code}"),
+            &t.host.token,
+            Value::Null,
+        )
+        .await;
 
         assert_ne!(status, 500);
         assert_eq!(live(&t.app, &t.host).await, json!(match_id));

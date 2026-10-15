@@ -214,6 +214,13 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
   useLocale();
   const chrome = useContext(DuosChromeContext);
   const container = useRef<HTMLDivElement>(null);
+  // The same element as state, for the card bar: set as it mounts, so a ping already up is marked on
+  // the first render rather than a frame later (CardActions.tsx).
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  const attach = useCallback((element: HTMLDivElement | null) => {
+    container.current = element;
+    setHost(element);
+  }, []);
   const portal = useRef<HTMLButtonElement>(null);
   const [showing, setShowing] = useState<Showing>("own");
   const [boardAfterResult, setBoardAfterResult] = useState(false);
@@ -346,7 +353,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
   return (
     <div
       className="duos-board"
-      ref={container}
+      ref={attach}
       data-testid={duosTestid.board}
       data-seat={seat}
       data-showing={showing}
@@ -354,7 +361,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
     >
       {showing === "own" ? (
         <Game
-          key="own"
+          key="board-own"
           view={view.own}
           legal={duelLegal}
           onAction={sendDuel}
@@ -367,7 +374,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
         />
       ) : (
         <Game
-          key="teammate"
+          key="board-teammate"
           view={view.teammate}
           legal={NOTHING}
           onAction={ignore}
@@ -379,8 +386,8 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
         />
       )}
       <CardActions
-        key={showing}
-        container={container}
+        key={`actions-${showing}`}
+        container={host}
         view={shownView}
         duel={shownDuel}
         enabled={!over}

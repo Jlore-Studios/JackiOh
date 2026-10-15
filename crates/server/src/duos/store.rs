@@ -14,11 +14,11 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use jackioh_engine::Handicap;
 use jackioh_engine::config::Difficulty;
 use jackioh_engine::wire::{DuosAction, DuosActionBody, DuosSeat, DuosTeamRules};
-use jackioh_engine::Handicap;
 
-use crate::db::store::{FrozenDeck, StoreError, StoreResult, Tx};
+use crate::db::store::{FrozenDeck, StoreResult, Tx};
 
 // ---------------------------------------------------------------------------
 // The rows
@@ -242,7 +242,12 @@ impl Tx<'_> {
 
     /// B40: writes the result and `ended_at` once. False when the match already has them (or there is
     /// no such match): the first write stands.
-    pub async fn duos_matches_finish(&mut self, match_id: &str, result: &Value, at: i64) -> StoreResult<bool> {
+    pub async fn duos_matches_finish(
+        &mut self,
+        match_id: &str,
+        result: &Value,
+        at: i64,
+    ) -> StoreResult<bool> {
         duos_dispatch!(self, matches_finish(match_id, result, at))
     }
 
@@ -258,14 +263,30 @@ impl Tx<'_> {
     }
 }
 
+/// Migration 0037's `on delete cascade`, in the fake (`db::fake::remove_profile_rows`): a deleted
+/// profile's rooms (host or guest) and co-op matches (either seat) go, each match with its log.
+pub fn remove_duos_rows(tables: &mut DuosTables, profile_id: &str) {
+    tables
+        .rooms
+        .retain(|room| room.host != profile_id && room.guest.as_deref() != Some(profile_id));
+    let gone: Vec<String> = tables
+        .matches
+        .iter()
+        .filter(|row| row.a1 == profile_id || row.a2 == profile_id)
+        .map(|row| row.id.clone())
+        .collect();
+    tables.matches.retain(|row| !gone.contains(&row.id));
+    tables.actions.retain(|row| !gone.contains(&row.match_id));
+}
+
 // ---------------------------------------------------------------------------
 // Postgres (migration 0037)
 // ---------------------------------------------------------------------------
 
 mod pg {
     use serde_json::Value;
-    use sqlx::postgres::PgRow;
     use sqlx::Row;
+    use sqlx::postgres::PgRow;
     use time::OffsetDateTime;
     use uuid::Uuid;
 
@@ -329,7 +350,9 @@ mod pg {
             guest: uuid_or_null(row, "guest")?,
             difficulty: difficulty_of(&row.try_get::<String, _>("difficulty")?)?,
             host_choice: serde_json::from_value(row.try_get::<Value, _>("host_choice")?)?,
-            guest_choice: guest_choice.map(serde_json::from_value::<DuosChoice>).transpose()?,
+            guest_choice: guest_choice
+                .map(serde_json::from_value::<DuosChoice>)
+                .transpose()?,
             match_id: uuid_or_null(row, "match_id")?,
             created_at: ms_of(row.try_get("created_at")?),
             expires_at: ms_of(row.try_get("expires_at")?),
@@ -509,11 +532,10 @@ mod pg {
 
     pub async fn matches_live(t: &mut PgTx<'_>) -> Result<Vec<String>, StoreError> {
         run_as(t, None).await?;
-        let rows = sqlx::query(
-            "select id from public.duos_matches where ended_at is null order by created_at, id",
-        )
-        .fetch_all(&mut **t)
-        .await?;
+        let rows =
+            sqlx::query("select id from public.duos_matches where ended_at is null order by created_at, id")
+                .fetch_all(&mut **t)
+                .await?;
         rows.iter().map(|row| uuid_text(row, "id")).collect()
     }
 
@@ -680,7 +702,11 @@ mod fake {
         Ok(tables.rooms.len() != before)
     }
 
-    pub fn rooms_reap(f: &mut FakeTx<'_>, unjoined_before: i64, joined_before: i64) -> Result<u64, StoreError> {
+    pub fn rooms_reap(
+        f: &mut FakeTx<'_>,
+        unjoined_before: i64,
+        joined_before: i64,
+    ) -> Result<u64, StoreError> {
         let tables = call(f, "duos.rooms.reap")?;
         let before = tables.rooms.len();
         tables.rooms.retain(|room| match room.guest {
@@ -720,12 +746,21 @@ mod fake {
 
     pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<String>, StoreError> {
         let tables = call(f, "duos.matches.live")?;
-        let mut live: Vec<&DuosMatch> = tables.matches.iter().filter(|row| row.ended_at.is_none()).collect();
+        let mut live: Vec<&DuosMatch> = tables
+            .matches
+            .iter()
+            .filter(|row| row.ended_at.is_none())
+            .collect();
         live.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id)));
         Ok(live.into_iter().map(|row| row.id.clone()).collect())
     }
 
-    pub fn matches_finish(f: &mut FakeTx<'_>, match_id: &str, result: &Value, at: i64) -> Result<bool, StoreError> {
+    pub fn matches_finish(
+        f: &mut FakeTx<'_>,
+        match_id: &str,
+        result: &Value,
+        at: i64,
+    ) -> Result<bool, StoreError> {
         let tables = call(f, "duos.matches.finish")?;
         let Some(row) = tables
             .matches
@@ -749,7 +784,12 @@ mod fake {
             )));
         }
         let mine = |held: &&DuosActionRow| held.match_id == row.match_id;
-        if let Some(held) = tables.actions.iter().filter(mine).find(|held| held.seq == row.seq) {
+        if let Some(held) = tables
+            .actions
+            .iter()
+            .filter(mine)
+            .find(|held| held.seq == row.seq)
+        {
             if held.nonce == row.nonce {
                 return Ok(());
             }
@@ -758,7 +798,12 @@ mod fake {
                 row.seq
             )));
         }
-        if tables.actions.iter().filter(mine).any(|held| held.nonce == row.nonce) {
+        if tables
+            .actions
+            .iter()
+            .filter(mine)
+            .any(|held| held.nonce == row.nonce)
+        {
             return Err(StoreError::SeqClash(format!(
                 "duos_match_actions: nonce {} is logged at another seq",
                 row.nonce
@@ -787,7 +832,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::db::store::Db;
+    use crate::db::store::{Db, StoreError};
 
     fn room(code: &str, host: &str, expires_at: i64) -> DuosRoom {
         DuosRoom {
@@ -849,14 +894,29 @@ mod tests {
     async fn b33_a_room_is_claimed_once_and_never_by_its_host() {
         let db = Db::fake();
         let mut t = db.begin(None).await.expect("a transaction");
-        assert_eq!(t.duos_rooms_create(&room("ABCDEF", "host", 1_000)).await.ok(), Some(true));
-        assert_eq!(t.duos_rooms_create(&room("ABCDEF", "other", 1_000)).await.ok(), Some(false));
+        assert_eq!(
+            t.duos_rooms_create(&room("ABCDEF", "host", 1_000)).await.ok(),
+            Some(true)
+        );
+        assert_eq!(
+            t.duos_rooms_create(&room("ABCDEF", "other", 1_000)).await.ok(),
+            Some(false)
+        );
         let choice = DuosChoice::Random { lean_newest: true };
-        let by_host = t.duos_rooms_claim("ABCDEF", "host", &choice, "m1", 10).await.expect("a claim");
+        let by_host = t
+            .duos_rooms_claim("ABCDEF", "host", &choice, "m1", 10)
+            .await
+            .expect("a claim");
         assert!(by_host.is_none());
-        let by_guest = t.duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 10).await.expect("a claim");
+        let by_guest = t
+            .duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 10)
+            .await
+            .expect("a claim");
         assert_eq!(by_guest.and_then(|room| room.match_id), Some("m1".to_string()));
-        let by_third = t.duos_rooms_claim("ABCDEF", "third", &choice, "m2", 10).await.expect("a claim");
+        let by_third = t
+            .duos_rooms_claim("ABCDEF", "third", &choice, "m2", 10)
+            .await
+            .expect("a claim");
         assert!(by_third.is_none());
         // B34: a joined room is not the host's to free.
         assert_eq!(t.duos_rooms_delete("ABCDEF", "host").await.ok(), Some(false));
@@ -866,10 +926,17 @@ mod tests {
     async fn b34_an_expired_room_is_not_claimed_and_is_reaped() {
         let db = Db::fake();
         let mut t = db.begin(None).await.expect("a transaction");
-        t.duos_rooms_create(&room("ABCDEF", "host", 100)).await.expect("a room");
-        t.duos_rooms_create(&room("GHJKLM", "host", 500)).await.expect("a room");
+        t.duos_rooms_create(&room("ABCDEF", "host", 100))
+            .await
+            .expect("a room");
+        t.duos_rooms_create(&room("GHJKLM", "host", 500))
+            .await
+            .expect("a room");
         let choice = DuosChoice::Random { lean_newest: false };
-        let late = t.duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 100).await.expect("a claim");
+        let late = t
+            .duos_rooms_claim("ABCDEF", "guest", &choice, "m1", 100)
+            .await
+            .expect("a claim");
         assert!(late.is_none());
         assert_eq!(t.duos_rooms_reap(200, 200).await.ok(), Some(1));
         assert!(t.duos_rooms_get("ABCDEF").await.expect("a read").is_none());
@@ -881,10 +948,19 @@ mod tests {
     async fn b40_the_log_answers_a_nonce_at_its_own_seq_and_refuses_any_other_clash() {
         let db = Db::fake();
         let mut t = db.begin(None).await.expect("a transaction");
-        assert!(t.duos_actions_append(&row("m1", 1, "n1")).await.is_err(), "no match, no row");
-        t.duos_matches_create(&duos_match("m1", "p1", "p2", 0)).await.expect("a match");
-        t.duos_actions_append(&row("m1", 1, "n1")).await.expect("the first row");
-        t.duos_actions_append(&row("m1", 1, "n1")).await.expect("the same row again");
+        assert!(
+            t.duos_actions_append(&row("m1", 1, "n1")).await.is_err(),
+            "no match, no row"
+        );
+        t.duos_matches_create(&duos_match("m1", "p1", "p2", 0))
+            .await
+            .expect("a match");
+        t.duos_actions_append(&row("m1", 1, "n1"))
+            .await
+            .expect("the first row");
+        t.duos_actions_append(&row("m1", 1, "n1"))
+            .await
+            .expect("the same row again");
         assert!(matches!(
             t.duos_actions_append(&row("m1", 1, "n2")).await,
             Err(StoreError::SeqClash(_))
@@ -893,7 +969,9 @@ mod tests {
             t.duos_actions_append(&row("m1", 2, "n1")).await,
             Err(StoreError::SeqClash(_))
         ));
-        t.duos_actions_append(&row("m1", 2, "n2")).await.expect("the second row");
+        t.duos_actions_append(&row("m1", 2, "n2"))
+            .await
+            .expect("the second row");
         let log = t.duos_actions("m1").await.expect("the log");
         assert_eq!(log.iter().map(|entry| entry.seq).collect::<Vec<_>>(), vec![1, 2]);
         assert_eq!(seat_of_logged(&log[0].action), Some(DuosSeat::A1));
@@ -903,17 +981,41 @@ mod tests {
     async fn b42_a_result_is_written_once_and_ends_the_live_match() {
         let db = Db::fake();
         let mut t = db.begin(None).await.expect("a transaction");
-        t.duos_matches_create(&duos_match("m1", "p1", "p2", 1)).await.expect("a match");
-        t.duos_matches_create(&duos_match("m2", "p3", "p1", 2)).await.expect("a match");
-        assert!(t.duos_matches_create(&duos_match("m1", "p1", "p2", 3)).await.is_err());
-        assert_eq!(t.duos_matches_live_for("p1").await.ok(), Some(Some("m2".to_string())));
+        t.duos_matches_create(&duos_match("m1", "p1", "p2", 1))
+            .await
+            .expect("a match");
+        t.duos_matches_create(&duos_match("m2", "p3", "p1", 2))
+            .await
+            .expect("a match");
+        assert!(
+            t.duos_matches_create(&duos_match("m1", "p1", "p2", 3))
+                .await
+                .is_err()
+        );
+        assert_eq!(
+            t.duos_matches_live_for("p1").await.ok(),
+            Some(Some("m2".to_string()))
+        );
         let result = json!({ "outcome": "win", "winner": "a", "reason": "poolEmptied" });
         assert_eq!(t.duos_matches_finish("m2", &result, 10).await.ok(), Some(true));
-        assert_eq!(t.duos_matches_finish("m2", &json!({}), 11).await.ok(), Some(false));
-        assert_eq!(t.duos_matches_live_for("p1").await.ok(), Some(Some("m1".to_string())));
+        assert_eq!(
+            t.duos_matches_finish("m2", &json!({}), 11).await.ok(),
+            Some(false)
+        );
+        assert_eq!(
+            t.duos_matches_live_for("p1").await.ok(),
+            Some(Some("m1".to_string()))
+        );
         assert_eq!(t.duos_matches_live().await.ok(), Some(vec!["m1".to_string()]));
-        let finished = t.duos_matches_get("m2").await.expect("a read").expect("the match");
+        let finished = t
+            .duos_matches_get("m2")
+            .await
+            .expect("a read")
+            .expect("the match");
         assert_eq!((finished.ended_at, finished.result), (Some(10), Some(result)));
-        assert_eq!(t.duos_matches_live_for("p2").await.ok(), Some(Some("m1".to_string())));
+        assert_eq!(
+            t.duos_matches_live_for("p2").await.ok(),
+            Some(Some("m1".to_string()))
+        );
     }
 }

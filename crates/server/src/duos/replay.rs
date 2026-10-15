@@ -18,7 +18,9 @@ use jackioh_engine::wire::{DuosAction, DuosSeat, DuosView};
 use crate::actor::contracts::one_tx;
 use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, account_key, log_warn, now_ms, ok_of, rate_limited};
+use crate::api::http::{
+    ApiError, ApiErrorCode, ApiResult, Req, account_key, log_warn, now_ms, ok_of, rate_limited,
+};
 use crate::app::App;
 use crate::duos::engine;
 use crate::duos::store::action_of;

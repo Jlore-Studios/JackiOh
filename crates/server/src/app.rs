@@ -889,9 +889,8 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper);
     loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge);
     // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
-    // SPEC S7: B53's chat purge beside the retention purge, on its interval, and B49's sweep that
-    // marks lapsed challenges expired.
-    loops::spawn_supervised("chat.purge", app.clone(), crate::social::chat::run_purge);
+    // SPEC S7: B49's sweep that marks lapsed challenges expired. (B53's chat purge runs inside
+    // `retention.purge`.)
     loops::spawn_supervised(
         "challenges.sweeper",
         app.clone(),

@@ -63,7 +63,14 @@ async fn befriend(app: &Arc<App>, a: &Account, b: &Account) {
 }
 
 async fn block(app: &Arc<App>, who: &Account, whom: &Account) {
-    let (status, body) = api(app, "POST", "/api/blocks", &who.token, json!({ "profileId": whom.id })).await;
+    let (status, body) = api(
+        app,
+        "POST",
+        "/api/blocks",
+        &who.token,
+        json!({ "profileId": whom.id }),
+    )
+    .await;
     assert_eq!(status, 204, "{body}");
 }
 
@@ -200,7 +207,9 @@ fn watcher_counts(socket: &FakeSocket) -> Vec<Value> {
 /// `forbidden`, then the socket closes, and no view ever arrived.
 async fn assert_forbidden(client: &WsClient) {
     let refusal = client
-        .wait_for(0, PROMPTLY, |frame| frame["type"] == "error" && frame["code"] == "forbidden")
+        .wait_for(0, PROMPTLY, |frame| {
+            frame["type"] == "error" && frame["code"] == "forbidden"
+        })
         .await;
     assert!(refusal.is_some(), "no forbidden: {:?}", client.frames());
     assert!(
@@ -236,10 +245,18 @@ mod b50_watching_a_friend {
             .await
             .unwrap_or_else(|| panic!("the watcher never saw the turn begin: {:?}", watcher.frames()));
 
-        assert!(at >= acted + delay, "shown {:?} after the state, before the delay", at - acted);
+        assert!(
+            at >= acted + delay,
+            "shown {:?} after the state, before the delay",
+            at - acted
+        );
         assert_eq!(frame["legal"], json!([]), "{frame}");
         assert_eq!(frame["view"]["viewer"], "p1", "the friend's seat: {frame}");
-        assert_eq!(hand_ids(&frame["view"]), hand_ids(&friends_view), "the friend's own hand");
+        assert_eq!(
+            hand_ids(&frame["view"]),
+            hand_ids(&friends_view),
+            "the friend's own hand"
+        );
         for view in watcher.of_type("view") {
             assert_eq!(view["legal"], json!([]), "{view}");
             assert_eq!(view["view"]["viewer"], "p1", "{view}");
@@ -362,7 +379,9 @@ mod b50_watching_a_friend {
                 "body": { "kind": "duel", "body": { "type": "endTurn" } },
             }))
             .await;
-        watcher.send_json(json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id })).await;
+        watcher
+            .send_json(json!({ "type": "hello", "matchId": w.match_id, "friendId": w.friend.id }))
+            .await;
         watcher.send_text("not json").await;
         settle().await;
 
@@ -371,7 +390,11 @@ mod b50_watching_a_friend {
             assert!(socket.of_type("ack").is_empty(), "{:?}", socket.messages());
         }
         assert!(watcher.of_type("ack").is_empty(), "{:?}", watcher.frames());
-        assert!(watcher.of_type("error").is_empty(), "ignored, not answered: {:?}", watcher.frames());
+        assert!(
+            watcher.of_type("error").is_empty(),
+            "ignored, not answered: {:?}",
+            watcher.frames()
+        );
         // The friend's own end of turn still lands: the reducer was there all along.
         w.p1.receive_json(json!({ "type": "action", "action": { "type": "endTurn", "nonce": "f-end" } }));
         settle().await;

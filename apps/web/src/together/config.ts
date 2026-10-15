@@ -14,6 +14,3 @@ export const SOCIAL_POLL_MS = CHAT_POLL_MS;
 /** The watch socket (B50): how long after an unexpected close it opens again, and how often it tries. */
 export const WATCH_RECONNECT_MS = 2_000;
 export const WATCH_RECONNECT_ATTEMPTS = 5;
-
-/** Unit conversion, not configuration. */
-export const MS_PER_SECOND = 1000;

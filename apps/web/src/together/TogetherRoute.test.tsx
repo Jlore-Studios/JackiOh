@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { Friend, FriendRequest, PlayerRef, SharedReplay } from "../net/social.ts";
-import { must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
+import { must, refusal, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import { TogetherRoute } from "./TogetherRoute.tsx";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
@@ -196,13 +196,9 @@ function offers(row: HTMLElement, testid: string): boolean {
   return control.getAttribute("aria-disabled") !== "true";
 }
 
-function escaped(text: string): RegExp {
-  return new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-}
-
 /** The one button named `name` nearest an element whose own text holds `text`. */
 function buttonNear(text: string, name: RegExp): HTMLElement {
-  for (const anchor of screen.getAllByText(escaped(text))) {
+  for (const anchor of screen.getAllByText(wholeText(text))) {
     let node: HTMLElement | null = anchor;
     for (let depth = 0; node !== null && depth < 6; depth += 1) {
       const found = within(node).queryAllByRole("button", { name });
@@ -220,7 +216,7 @@ function buttonNear(text: string, name: RegExp): HTMLElement {
  */
 function controlNear(text: string): HTMLElement {
   const foreign = `[data-testid="${TESTID.friendRow}"], [data-testid^="together-request-"], [data-testid^="coop-"]`;
-  for (const anchor of screen.getAllByText(escaped(text))) {
+  for (const anchor of screen.getAllByText(wholeText(text))) {
     let node: HTMLElement | null = anchor;
     for (let depth = 0; node !== null && depth < 6; depth += 1) {
       if (node.matches("button, a[href]")) return node;
@@ -583,7 +579,7 @@ describe("B59 Shared with me", () => {
   it("B59 lists the replays friends shared under Shared with me, each naming its sharer", async () => {
     await renderPage(world(ONLY_CY));
     expect(await screen.findByText(/shared with me/i, undefined, SLOW)).toBeInTheDocument();
-    expect((await screen.findAllByText(/Ann#2/, undefined, SLOW)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(wholeText("Ann#2"), undefined, SLOW)).length).toBeGreaterThan(0);
   });
 
   it("B59 reads the list from GET /api/replays/shared", async () => {
@@ -595,7 +591,7 @@ describe("B59 Shared with me", () => {
 
   it("B59 opening a shared replay asks for that match's replay (or goes to it)", async () => {
     const server = await renderPage(world(ONLY_CY));
-    await screen.findAllByText(/Ann#2/, undefined, SLOW);
+    await screen.findAllByText(wholeText("Ann#2"), undefined, SLOW);
     const open = controlNear(SHARED.sharer.username);
     const href = open.closest("a")?.getAttribute("href") ?? null;
     if (href !== null && href.includes(SHARED.matchId)) return;
@@ -615,7 +611,7 @@ describe("B59 Shared with me", () => {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     });
-    expect(screen.queryAllByText(/Ann#2/)).toHaveLength(0);
+    expect(screen.queryAllByText(wholeText("Ann#2"))).toHaveLength(0);
     expect(server.calls.some((call) => call.path.startsWith("/api/replays/m-"))).toBe(false);
   });
 });

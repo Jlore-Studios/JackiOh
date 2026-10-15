@@ -101,7 +101,8 @@ fn side_set(side: &mut PlayerState, value: i32) {
         return;
     };
     if life.spent {
-        // While spent the hero's health is the pool, so setting it sets the pool, within its cap.
+        // While spent the hero's health is the pool, so setting it sets the pool, within its cap; a
+        // value of 0 or less empties it (B16 then ends the game).
         life.pool = value.min(life.pool_cap);
         side.hero.health = life.pool;
         return;
@@ -188,5 +189,19 @@ mod tests {
         assert_eq!(side.hero.health, 17);
         side_set(&mut side, 40);
         assert_eq!(side.hero.health, 20);
+    }
+
+    #[test]
+    fn setting_a_spent_heros_health_sets_the_pool_capped_and_zero_or_less_empties_it() {
+        let mut side = duos_side(5, 20);
+        side_loses(&mut side, 9);
+        assert_eq!(side.duos.map(|life| (life.pool, life.spent)), Some((16, true)));
+        side_set(&mut side, 18);
+        assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (18, Some(18)));
+        side_set(&mut side, 99);
+        assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (20, Some(20)));
+        side_set(&mut side, 0);
+        assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (0, Some(0)));
+        assert!(side.duos.unwrap().spent, "spent for the game");
     }
 }

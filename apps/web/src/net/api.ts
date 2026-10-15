@@ -37,6 +37,24 @@ export function matchSocketUrl(): string {
   return typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_WS_URL;
 }
 
+/** The `/ws/match` path the configured socket URL ends in. */
+const MATCH_SOCKET_PATH = /\/ws\/match\/?$/u;
+
+/**
+ * A socket on the same server as `/ws/match` (#936: `/ws/duos`, `/ws/watch`): the configured URL
+ * with its path swapped for `path`, so one environment variable still names the server.
+ */
+export function serverSocketUrl(path: string, base: string = matchSocketUrl()): string {
+  try {
+    const url = new URL(base);
+    url.pathname = MATCH_SOCKET_PATH.test(url.pathname) ? url.pathname.replace(MATCH_SOCKET_PATH, path) : path;
+    return url.toString();
+  } catch {
+    // A relative test address.
+    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${base.replace(/\/+$/u, "")}${path}`;
+  }
+}
+
 /** `crates/server/src/api/http.rs` `ApiErrorCode`, as the client sees it: an opaque string. */
 export type ApiErrorBody = { code: string; message: string; details?: unknown };
 
