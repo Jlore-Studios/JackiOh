@@ -13,7 +13,7 @@ use std::time::Duration;
 use serde_json::{Value, json};
 
 use jackioh_server::app::App;
-use jackioh_server::config::{FRIEND_REQUESTS_PER_HOUR, MAX_FRIENDS, PRESENCE_TTL_MS};
+use jackioh_server::config::{FRIEND_REQUESTS_PER_HOUR, MAX_FRIENDS, PRESENCE_TTL_MS, TERMS_VERSION};
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{Db, StartMatchInput};
 
@@ -741,6 +741,44 @@ mod b47_status {
         assert_eq!(friend["status"], "offline", "{friend}");
 
         // Another heartbeat brings them back.
+        heartbeat(&app, &bea).await;
+        assert_eq!(
+            friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
+            "online"
+        );
+    }
+
+    #[tokio::test]
+    async fn r970002_a_heartbeat_records_nothing_while_the_account_owes_the_terms() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let bea = account(&app, 2, "Bea").await;
+        befriend(&app, &ada, &bea).await;
+        // The terms changed since Bea agreed: she holds no agreement to the version in force.
+        fake(&app)
+            .lock()
+            .await
+            .tables
+            .terms_acceptances
+            .retain(|row| row.profile_id != bea.id);
+
+        heartbeat(&app, &bea).await;
+        assert_eq!(
+            friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
+            "offline"
+        );
+        assert!(fake(&app).lock().await.tables.social.presence.is_empty());
+
+        // Once she agrees, her next beat counts.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/account/consent",
+            &bea.token,
+            json!({ "termsVersion": TERMS_VERSION }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
         heartbeat(&app, &bea).await;
         assert_eq!(
             friend_entry(&lists(&app, &ada).await, &bea.id)["status"],
