@@ -90,8 +90,8 @@ describe("public/_redirects", () => {
 
   it("serves every screen in the route table, with or without a trailing slash: its emitted page or a rewrite", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/replays.
-      .filter(([name]) => name !== "hotseat" && name !== "devReplays")
+      // Production serves a genuine 404 at /dev/hotseat (and /dev/replays, the replay list's old home).
+      .filter(([name]) => name !== "hotseat")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     for (const path of fixed) {
       expect(served(path), path).toBe(true);

@@ -1,9 +1,10 @@
 // `resume.ts` holds only page setup; worker-side logs name hidden AI cards (SPEC §9.9, R668; rule 7).
 // R768 retains finished games for replay. Unavailable storage is no save; failed writes never end play.
 
+import type { Handicap } from "@jackioh/engine/config";
 import type { Action, PlayerId } from "@jackioh/shared";
 
-import type { PracticeReplaySummary, PracticeStartConfig } from "./protocol.ts";
+import type { LastBoardCard, PracticeReplaySummary, PracticeStartConfig } from "./protocol.ts";
 
 /** R668: worker-only start state, action log, AI cursor, catalog version and state hash for resuming. */
 export type PracticeSave = {
@@ -15,9 +16,22 @@ export type PracticeSave = {
 };
 
 /** R768: a finished free game kept for its replay. Worker-side only: the log names the AI's hidden cards. */
+/**
+ * R767000: the setup a kept game was dealt, as `createGame` had it, so a game played on an older
+ * catalog version folds under that version without dealing it again from this build's catalog.
+ */
+export type PracticeReplaySetup = {
+  decks: [string[], string[]];
+  handicaps: Partial<Record<PlayerId, Handicap>>;
+  lastBoards?: [LastBoardCard[], LastBoardCard[]];
+  dealt?: PlayerId[];
+};
+
 export type PracticeReplay = {
   catalog: string;
   config: PracticeStartConfig;
+  /** R767000: absent on a game kept before setups were (it folds only on its own catalog version). */
+  setup?: PracticeReplaySetup;
   log: Action[];
   hash: string;
   /** R677: the seat the human played when the game ended. */

@@ -250,7 +250,9 @@ def _comments(ctx: Context, since: datetime) -> list[str]:
             body = str(comment.get("body") or "")
             if login in (ctx.cfg.bot_login.lower(), events.ACTIONS_BOT) or events._is_own(body):
                 return None
-            if not _asks(ctx, body) or not _trusted(ctx, comment):
+            # A bare `approve` or `reject` is a request too (#929); review comments carry no votes.
+            vote = "" if review_comment else commands.vote(body, ctx.cfg.bot_login)[0]
+            if (not vote and not _asks(ctx, body)) or not _trusted(ctx, comment):
                 return None
             key = f"{'rc' if review_comment else 'c'}:{comment['id']}"
             if events.claimed(ctx, key) or events.answered(ctx, int(comment["id"]),

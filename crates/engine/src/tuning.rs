@@ -38,11 +38,6 @@ pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::SpellDamage,
 ];
 
-/// B3.4 rule 3: the numbered keywords a script declares as data rather than as a `Keyword`, read by
-/// their owners through `tuned_count` under these keys: Echo (`echo.rs`), Activate (B3.2's
-/// `ActivationDecl.uses`), Tribute (`staticFlags.tribute`, where less is better).
-pub const FLAG_NUMBERED_KEYS: &[&str] = &["Echo", "Activate", "Tribute"];
-
 /// B3.4, R386: the value a card's numbered keyword or X has now — its printed value (or the value KY's
 /// Constant set outright, `tuning.set`) moved by the card's tuning steps for `key`. A number the card
 /// does not print (0) is never tuned into existence. Never below `TUNED_FLOOR` (`tuned_count_with_min`

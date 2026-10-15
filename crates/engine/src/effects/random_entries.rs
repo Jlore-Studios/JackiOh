@@ -12,13 +12,13 @@
 //! the same effects again and rolls nothing a second time. The announcement heads the part, so a
 //! resumed part, which goes on after what it had already run, never announces it again (R436).
 //!
-//! Port pattern: `subsystems/call_to_chaos.rs` (`roll_chaos_effects`, `announce_roll`, `call_to_chaos`).
+//! Port pattern: `subsystems/call_to_chaos.rs` (`roll_chaos_effects`, `announce_chaos`, `call_to_chaos`).
 
 use serde_json::json;
 
 use crate::resolve::lazy_part;
 use crate::script::{Effect, EffectPart, Memo};
-use crate::wire::GameEvent;
+use crate::subsystems::call_to_chaos::announce_chaos;
 
 /// One entry of a pick-N list: the clause as the card prints it (what the roll names to both
 /// players) and the effects it resolves into.
@@ -33,24 +33,6 @@ pub struct RandomEntry {
 pub struct DoRandomEntriesArgs {
     pub entries: Vec<RandomEntry>,
     pub count: i32,
-}
-
-/// R436: tell both players what was picked, before any of it resolves — the picked clauses by
-/// their printed labels, in the order they resolve.
-fn announce_pick(labels: Vec<String>) -> Effect {
-    Effect::new("doRandomEntries:announce", move |ctx| {
-        let (instance_id, def_id) = match ctx.live_self() {
-            Some(card) => (card.id.clone(), card.def_id.clone()),
-            None => (String::new(), ctx.def_id.clone().unwrap_or_default()),
-        };
-        let player = ctx.controller;
-        ctx.sink.events.push(GameEvent::ChaosRolled {
-            player,
-            instance_id,
-            def_id,
-            effects: labels.clone(),
-        });
-    })
 }
 
 /// A roll kept across a pause (`EffectPart.memo`), read back defensively: it came through JSON.
@@ -91,7 +73,9 @@ pub fn do_random_entries(args: DoRandomEntriesArgs) -> Effect {
                 }
             }
         };
-        let mut effects = vec![announce_pick(
+        // R436: what was picked, announced before any of it resolves.
+        let mut effects = vec![announce_chaos(
+            "doRandomEntries:announce",
             picked
                 .iter()
                 .map(|index| args.entries[*index].label.clone())

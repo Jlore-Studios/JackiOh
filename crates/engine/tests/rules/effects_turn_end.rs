@@ -16,6 +16,7 @@ use serde::Serialize;
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot};
 use super::fixtures::turn as turn_fx;
+use crate::rules::fixtures::harness::{matches_object, round_trip};
 
 fn register() {
     register_catalog(turn_fx::turn_catalog(registered_catalog().clone()));
@@ -122,10 +123,6 @@ fn answer(state: &GameState) -> Acted {
     )
 }
 
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("serialises")).expect("parses back")
-}
-
 fn types_of(events: &[GameEvent]) -> Vec<GameEventType> {
     events.iter().map(GameEvent::event_type).collect()
 }
@@ -207,24 +204,6 @@ fn first_cut_in(events: &[GameEvent]) -> Value {
 
 fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
-}
-
-/// Every key `expected` names is in `actual` with a matching value (objects recursively, arrays
-/// element by element); `actual` may carry more.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 mod b5_e10_end_your_turn_r456 {

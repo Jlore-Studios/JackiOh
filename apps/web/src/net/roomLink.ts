@@ -8,6 +8,7 @@ import { ROOM_CODE_FORMAT } from "@jackioh/server-config";
 import { t } from "../i18n/i18n.ts";
 import type { QueueMode } from "./api.ts";
 import { currentPath, paths } from "./navigate.ts";
+import { sessionStorageOrNull } from "./storage.ts";
 
 const ROOM_PARAM = "room";
 const MODE_PARAM = "mode";
@@ -42,14 +43,6 @@ export function roomLinkOf(search: string): RoomLink | null {
   return { code, mode: isQueueMode(mode) ? mode : null };
 }
 
-function tabStorage(): Storage | null {
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
-
 /** Before routing, adopt only a `/play` link and remove its room parameters without touching others. */
 export function adoptRoomLink(): boolean {
   if (typeof window === "undefined") return false;
@@ -66,7 +59,7 @@ export function adoptRoomLink(): boolean {
   }
   if (link === null) return false;
   try {
-    tabStorage()?.setItem(ROOM_LINK_STORAGE_KEY, JSON.stringify(link));
+    sessionStorageOrNull()?.setItem(ROOM_LINK_STORAGE_KEY, JSON.stringify(link));
   } catch {
     // Blocked or full storage: the link serves this page load but not a trip through sign-in.
   }
@@ -77,7 +70,7 @@ export function adoptRoomLink(): boolean {
 export function readRoomLink(): RoomLink | null {
   adoptRoomLink();
   try {
-    const raw = tabStorage()?.getItem(ROOM_LINK_STORAGE_KEY) ?? null;
+    const raw = sessionStorageOrNull()?.getItem(ROOM_LINK_STORAGE_KEY) ?? null;
     if (raw === null) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
@@ -92,7 +85,7 @@ export function readRoomLink(): RoomLink | null {
 
 export function forgetRoomLink(): void {
   try {
-    tabStorage()?.removeItem(ROOM_LINK_STORAGE_KEY);
+    sessionStorageOrNull()?.removeItem(ROOM_LINK_STORAGE_KEY);
   } catch {
     // Blocked storage held nothing to forget.
   }

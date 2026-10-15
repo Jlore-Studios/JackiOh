@@ -3,6 +3,8 @@
 // Storage is untrusted, so failed access uses in-memory or default settings.
 
 import { useSyncExternalStore } from "react";
+import { isRecord } from "../wire/json.ts";
+import { localStorageOrNull } from "../net/storage.ts";
 
 export type Settings = {
   dragToPlay: boolean;
@@ -51,10 +53,6 @@ const subscriptions = new Set<() => void>();
 
 let storageListening = false;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** Tolerant storage parser: invalid values use defaults and never throw. */
 export function parseSettings(raw: unknown): Settings {
   const next: Settings = { ...DEFAULT_SETTINGS };
@@ -78,17 +76,9 @@ export function parseSettings(raw: unknown): Settings {
   }
 }
 
-function storageOrNull(): Storage | null {
-  try {
-    return window.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function loadStored(): Settings {
   try {
-    const storage = storageOrNull();
+    const storage = localStorageOrNull();
     if (storage === null) return DEFAULT_SETTINGS;
     const raw = storage.getItem(SETTINGS_STORAGE_KEY);
     if (raw === null) return DEFAULT_SETTINGS;
@@ -100,7 +90,7 @@ function loadStored(): Settings {
 
 function persist(settings: Settings): void {
   try {
-    storageOrNull()?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    localStorageOrNull()?.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch {
     // Keep in-memory settings when storage fails.
   }

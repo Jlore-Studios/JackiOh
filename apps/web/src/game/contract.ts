@@ -23,9 +23,6 @@ import type { EmoteShow } from "../emotes/session.ts";
 /** Viewer-relative sides. `viewFor` already orients the view, so the DOM says "you"/"opponent". */
 export type Side = "you" | "opponent";
 
-export const UNIT_LANES = 5;
-export const BACKROW_LANES = 5;
-
 /**
  * A "Choose one" menu (a card's modes, on a play or in a prompt) renders as a Discover pop-up
  * while it offers this many options or fewer; more options keep the plain mode list.
@@ -45,7 +42,6 @@ export const X_CARD_LIMIT = 4;
  * the client's zone testids must too or nothing the engine blesses would ever light up.
  */
 export const LANES: readonly number[] = [1, 2, 3, 4, 5];
-export const ROWS: readonly Row[] = ["units", "backrow"];
 
 /** `SideView.units` / `.backrow` / `.locks` / `.reserved` are 0-based arrays over 1-based lanes. */
 export function laneIndex(lane: number): number {

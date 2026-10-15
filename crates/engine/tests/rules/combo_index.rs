@@ -13,7 +13,7 @@ use jackioh_engine::subsystems::combo_index::{
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, json_of, new_game, put, slot};
 
 fn def(name: &str, index: i32, type_: &str, extra: Value) -> CardDef {
     let mut out = json!({
@@ -148,10 +148,6 @@ const STEP_KINDS: [&str; 5] = [
     "setRadiantRandom",
     "damage",
 ];
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
-}
 
 fn card<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     find_instance(state, id).unwrap_or_else(|| panic!("no card {id}"))

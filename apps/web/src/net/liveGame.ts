@@ -4,11 +4,12 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
+import { MATCH_FOUND_NAV_DELAY_MS, QUEUE_ENDED_AFTER_READS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import { getMe, type MeResponse, type QueueMode } from "./api.ts";
 import { callWithRenewal, type Account } from "./gate.ts";
 import { navigate, paths } from "./navigate.ts";
 import { readSession } from "./session.ts";
+import { sessionStorageOrNull } from "./storage.ts";
 
 /** Unit conversion, not configuration. */
 const MS_PER_SECOND = 1000;
@@ -85,18 +86,10 @@ const QUEUE_CHANGED = "jackioh:queue-changed";
 
 const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
 
-function tabStorage(): Storage | null {
-  try {
-    return window.sessionStorage;
-  } catch {
-    return null;
-  }
-}
-
 /** The mode this tab is queued in, or null. */
 export function readQueued(): QueueMode | null {
   try {
-    const raw = tabStorage()?.getItem(QUEUE_STORAGE_KEY) ?? null;
+    const raw = sessionStorageOrNull()?.getItem(QUEUE_STORAGE_KEY) ?? null;
     return (QUEUE_MODES as readonly (string | null)[]).includes(raw) ? (raw as QueueMode) : null;
   } catch {
     return null;
@@ -110,7 +103,7 @@ function changed(): void {
 /** R765: remember this tab's queue so a pairing can follow it. */
 export function rememberQueued(mode: QueueMode): void {
   try {
-    tabStorage()?.setItem(QUEUE_STORAGE_KEY, mode);
+    sessionStorageOrNull()?.setItem(QUEUE_STORAGE_KEY, mode);
   } catch {
     // Blocked storage: only `/play` follows the queue (R765).
   }
@@ -120,7 +113,7 @@ export function rememberQueued(mode: QueueMode): void {
 /** Forget a left or paired queue. */
 export function forgetQueued(): void {
   try {
-    tabStorage()?.removeItem(QUEUE_STORAGE_KEY);
+    sessionStorageOrNull()?.removeItem(QUEUE_STORAGE_KEY);
   } catch {
     // Blocked storage has nothing to forget.
   }
@@ -144,6 +137,10 @@ export function useQueued(): QueueMode | null {
  * `SERIES_POLL_SECONDS`, and once it names a game, forget the queue, announce the pairing for
  * `MATCH_FOUND_NAV_DELAY_MS` and take the player there. Returns the game being announced, or null.
  * A session that has ended is out of the queue as far as this tab can follow it.
+ *
+ * R897000: a queue the server no longer holds ends the follow too: `QUEUE_ENDED_AFTER_READS`
+ * reads in a row saying `queued` is false forget the queue, so an expired ticket stops the wait
+ * instead of waiting for a pairing that never comes.
  */
 export function useQueueFollow(path: string, read: (token: string) => Promise<MeResponse> = getMe): LiveGame | null {
   const queued = useQueued();
@@ -151,6 +148,8 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
   const reader = useRef(read);
   reader.current = read;
   const watching = queued !== null && path !== paths.play && found === null;
+  /** R897000: consecutive reads saying the ticket is gone. */
+  const endedReads = useRef(0);
 
   useEffect(() => {
     if (!watching) return;
@@ -165,13 +164,30 @@ export function useQueueFollow(path: string, read: (token: string) => Promise<Me
         (answer) => {
           if (cancelled) return;
           if (answer.kind !== "ok") {
-            if (answer.kind === "signedOut") forgetQueued();
+            if (answer.kind === "signedOut") {
+              endedReads.current = 0;
+              forgetQueued();
+            }
             return;
           }
           const game = liveGameOf(answer.value);
-          if (game === null) return;
-          forgetQueued();
-          setFound(game);
+          if (game !== null) {
+            endedReads.current = 0;
+            forgetQueued();
+            setFound(game);
+            return;
+          }
+          // Explicit `false` only: `undefined` (an older server, or a test stub) never ends a wait,
+          // and a failed read leaves the count alone.
+          if (answer.value.queued === false) {
+            endedReads.current += 1;
+            if (endedReads.current >= QUEUE_ENDED_AFTER_READS) {
+              endedReads.current = 0;
+              forgetQueued();
+            }
+          } else {
+            endedReads.current = 0;
+          }
         },
         () => undefined,
       );

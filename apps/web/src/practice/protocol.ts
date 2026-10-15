@@ -76,6 +76,12 @@ export type PracticeSnapshot = {
    * the field as the human saw it, the AI's face-down cards left out). Absent otherwise.
    */
   lastBoard?: LastBoardCard[];
+  /**
+   * R768000: once a free game is over and kept on this device, the number it was kept under and its
+   * step count, which the result screen's "Watch the replay" opens. Absent before then, and for a
+   * lesson or a game Glitch voided, which are not kept.
+   */
+  replay?: Pick<PracticeReplaySummary, "game" | "steps">;
 };
 
 /** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */

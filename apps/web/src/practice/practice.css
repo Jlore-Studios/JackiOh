@@ -1170,6 +1170,22 @@
   font-weight: 650;
 }
 
+/* R768000: a kept game's replay and its last turn's GIF, a row beneath the main actions. */
+.practice-result__replay {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.practice-result__replay > * {
+  flex: 1 1 0;
+}
+
+.practice .practice-result__replay .practice-result__secondary {
+  min-height: 44px;
+  font-size: 14px;
+}
+
 .practice .practice-result__view {
   align-self: center;
   min-height: 44px;
@@ -1606,7 +1622,8 @@
 }
 
 @media (max-width: 420px) {
-  .practice-result__actions {
+  .practice-result__actions,
+  .practice-result__replay {
     flex-direction: column;
   }
 

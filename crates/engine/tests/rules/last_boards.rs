@@ -2,8 +2,6 @@
 //! R417, R564), driven through a Portal, the smallest script with C+ #29's two faces. The real
 //! card's test covers the same cases again with the real catalog.
 
-use serde::Serialize;
-
 use jackioh_engine::subsystems::last_boards::{
     freeze_last_boards, last_board_candidates, last_board_for, rebuildable_from_id,
 };
@@ -11,7 +9,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{put, slot};
+use crate::rules::fixtures::harness::{json_of, matches_object, put, slot};
 use crate::rules::fixtures::last_boards::{
     FIELD_TRAP, LB_DECKS, PORTAL, PORTAL_RADIANT_CARDS, TRAP, act, portal_game, register_last_boards,
 };
@@ -70,26 +68,8 @@ fn answer_with(state: &GameState, log: &mut Vec<Action>, option: &str) -> GameSt
     )
 }
 
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 fn revive(state: &GameState) -> GameState {
     serde_json::from_value(json_of(state)).expect("a state revives from its JSON")
-}
-
-/// Every key the expected object names matches, recursively; an array matches element for element
-/// and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 mod b5_e30_last_boards_as_a_create_game_input_r417 {

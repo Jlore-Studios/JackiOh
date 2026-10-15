@@ -11,8 +11,6 @@ export type { CardFlavour } from "../cards/flavour.ts";
 /** JSON widening is trusted only after `cargo jackioh catalog check` proves the catalog values. */
 export const CATALOG: CardDefs = catalogJson as unknown as CardDefs;
 
-export const CATALOG_IDS: readonly string[] = Object.keys(CATALOG);
-
 function newestVersion(patches: unknown): string {
   if (!Array.isArray(patches)) throw new Error("crates/cards/patches/patches.json is not a list of patches");
   const last: unknown = patches.at(-1);

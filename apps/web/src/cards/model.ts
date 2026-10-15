@@ -78,7 +78,6 @@ import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { radiantMarks, type TextRange } from "./radiantDiff.ts";
 import { faceTuning, filledText, type FaceTuning, type TunedRange } from "./tuning.ts";
 
-export type FaceLayout = "full" | "compact" | "minion";
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
   /**

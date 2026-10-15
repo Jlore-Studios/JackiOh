@@ -23,6 +23,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::cli::card_stats::{flag, one_of};
+use crate::cli::{connect_one, database_url};
 use crate::db::store::{Db, GameRecordQuery, StoreError};
 use crate::env::quoted;
 
@@ -100,18 +101,10 @@ pub async fn export_records(db: &Db, options: &ExportOptions) -> anyhow::Result<
 /// `stats-export`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_export_args(&args)?;
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
 
     // One connection: this process runs one read and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let outcome = export_records(&db, &options).await;
     db.close().await;
     let written = outcome?;

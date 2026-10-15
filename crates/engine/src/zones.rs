@@ -4,7 +4,7 @@
 //! Port of `packages/engine/src/zones.ts`. How TS's live objects map onto Rust ownership:
 //!
 //! - A reader returns references into the state (`card_at` → `Option<&CardInstance>`,
-//!   `active_units_of` → `Vec<&CardInstance>`); `card_at_mut` and `pile_at_mut` are their mutable twins.
+//!   `active_units_of` → `Vec<&CardInstance>`); `pile_at_mut` is `pile_at`'s mutable twin.
 //! - A mover that takes a card off its zone (`move_to_zone`, `remove_from_any_zone`, `cease_to_exist`)
 //!   takes it as `&mut CardInstance`: the value is first brought up to date with the card under its id
 //!   in the state, then updated exactly as TS updated the live object, so the caller holds the card as
@@ -231,19 +231,6 @@ pub fn card_at(state: &GameState, slot: impl Into<ZoneSlot>) -> Option<&CardInst
     lane_index(slot.lane)
         .and_then(|index| state.players[slot.player].backrow.get(index))
         .and_then(Option::as_ref)
-}
-
-/// `card_at`, mutably.
-pub fn card_at_mut(state: &mut GameState, slot: impl Into<ZoneSlot>) -> Option<&mut CardInstance> {
-    let slot = slot.into();
-    if slot.row == Row::Units {
-        return pile_at_mut(state, slot).and_then(|pile| pile.first_mut());
-    }
-    let index = lane_index(slot.lane)?;
-    state.players[slot.player]
-        .backrow
-        .get_mut(index)
-        .and_then(Option::as_mut)
 }
 
 pub fn is_empty(state: &GameState, slot: impl Into<ZoneSlot>) -> bool {
@@ -1271,6 +1258,27 @@ pub enum GraveyardRedirect {
     Exile,
     /// `{ to: "library", position: "bottom" }`.
     LibraryBottom,
+}
+
+/// One card to the exile pile, the step every exile shares (§6.3 Exile): a card that reaches the pile
+/// feeds the game exile counter (R55), a unit token ceases to exist instead and is not counted (R11),
+/// and the `exiled` event reports the card leaving either way. §6.3's Exile row gives no Death
+/// trigger, so nothing is dispatched here.
+pub fn exile_to_pile(sink: &mut EngineSink<'_>, mut card: CardInstance) {
+    if move_to_zone(
+        sink.state,
+        &mut card,
+        OffFieldZone::Exile,
+        MoveToZoneOptions::default(),
+    ) == MoveResult::Moved
+    {
+        sink.state.counters.exiled += 1;
+    }
+    sink.events.push(GameEvent::Exiled {
+        instance_id: card.id,
+        def_id: card.def_id,
+        owner: card.owner,
+    });
 }
 
 /// B5 E5: the event a move toward a graveyard reports once the card has landed, wherever that was —

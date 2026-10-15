@@ -208,8 +208,16 @@ without `ID`, an `ID` the catalog lacks, two files claiming one id, a file outsi
 file name that is not a Rust identifier, or a catalog id with no file. It also compiles in
 `CATALOG_VERSION`, the newest entry of `patches/patches.json`.
 
-`register_all()` hands the catalog and every script to the engine, once per process; the WASM
-module, the server and the tools call it at start. A card test calls `crate::register_all()` first.
+`register_all()` hands the catalog and every script to the engine, once per process, and where the
+older shipped catalogs are found (`register_shipped`); the WASM module, the server and the tools
+call it at start. A card test calls `crate::register_all()` first.
+
+R767000: `build.rs` also writes `$OUT_DIR/history.json`, how each shipped version but the newest
+differs from `catalog.json`, and `src/history.rs` rebuilds a version's catalog from it the first
+time a replay of a game played on it asks (`shipped_catalog`, `carried_versions`). Its scripts are
+the build's own, except a script kept for that version in `KEPT_SCRIPTS` (§6). The browser's
+module (a `wasm32` target) carries only the versions from `build.rs`'s `BROWSER_CARRIED_FROM` on:
+it folds only practice games, and one folds on a carried version only with the setup it kept.
 
 ## 5. Tests
 
@@ -261,6 +269,13 @@ Every change to card data is a patch, and every patch is kept.
   the version from `patches.json` at compile time; `cargo jackioh catalog-version` prints it.
 - A version is opaque (R105): nothing parses or orders one, and the order of patches is
   `patches.json`'s. A snapshot keeps a card's data, not its script.
+- Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
+  from its snapshot, its scripts the build's own. A patch that changes what a card's script does,
+  not only a number its definition holds, keeps the script it replaces in `src/history.rs`'s
+  `KEPT_SCRIPTS` as `(ID, the newest shipped version that ran it, a fn building that card's
+  scripts)`; without one, a replay that script changes is refused by its final hash.
+  `cargo jackioh patches check` proves every carried version holds its snapshot's cards, in order,
+  each with a script.
 
 ## 7. Flavour (R660)
 

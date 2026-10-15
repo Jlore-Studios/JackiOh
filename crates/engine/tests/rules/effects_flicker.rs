@@ -12,7 +12,7 @@ use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{plain, stacker};
 use crate::rules::fixtures::field::{act, act_result, blink, flush, playing, spatula, tesla, watcher};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, matches_object, put, slot};
 
 fn by_id<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {
     match find_instance(state, id) {
@@ -83,24 +83,6 @@ fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
             .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
             .collect(),
         other => panic!("expected a list of events, got {other}"),
-    }
-}
-
-/// vitest's `toMatchObject`: every key `expected` names holds a matching value in `actual` (objects
-/// recursively, arrays element by element and of the same length), other keys of `actual` ignored.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
     }
 }
 

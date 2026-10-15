@@ -239,12 +239,7 @@ async fn write_catalog(
 
 /// The connection string, the version, the catalog, one transaction, one line.
 pub async fn run(args: Vec<String>) -> Result<()> {
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        return Err(anyhow!(
-            "DATABASE_URL is not set (see docs/architecture.md, env-var contract)."
-        ));
-    }
+    let connection_string = super::database_url()?;
     let configured = std::env::var("CATALOG_VERSION").unwrap_or_default();
 
     let (catalog_version, entries) = match args.first() {

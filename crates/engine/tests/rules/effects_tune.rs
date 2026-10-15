@@ -16,6 +16,7 @@ use serde::Serialize;
 use super::fixtures::combat as combat_fx;
 use super::fixtures::harness::{events_of_type, in_hand, put, set_library, slot};
 use super::fixtures::instance_data as instance_fx;
+use crate::rules::fixtures::harness::matches_object;
 
 fn game(seed: &str) -> GameState {
     let mut state = instance_fx::instance_game(seed, None);
@@ -195,24 +196,6 @@ fn has_rush(keywords: &[Keyword]) -> bool {
 
 fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
-}
-
-/// TS `toMatchObject`: every key `expected` names is in `actual` with a matching value (objects
-/// recursively, arrays element by element); `actual` may carry more.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// The viewer's own hand in a view, as JSON entries (TS asserted it is a list).

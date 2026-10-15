@@ -46,7 +46,7 @@ use jackioh_server::bots::signals::{RematchPlan, rematch_plan};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, BOT_FALLBACK_MIN_SECONDS, BOT_RECENT_OPPONENTS, BOT_REMATCH_DELAY_MAX_MS,
     BOT_REMATCH_FIT, BOT_REMATCH_LINGER_MAX_MS, BOT_SEED_RATINGS, JLORIOUS_SIZE, MAX_FAIR_GAP,
-    RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
+    QUEUE_TICKET_STALE_MS, RANK_PLACEMENT_GAMES, RATING_WINDOW_FULL_AFTER_SECONDS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, FrozenTrio, NewBot, SeriesStatus, StoreError, Ticket};
@@ -476,6 +476,42 @@ async fn r1453_no_bot_before_the_fallback_time() {
     // Once it is due, the next sweep pairs it.
     tokio::time::advance(std::time::Duration::from_millis(1_000)).await;
     assert!(fallback_due(&early, now_ms()));
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+    assert_eq!(seated(&app, &[&bot]).await, vec![bot.clone()]);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r897000_a_stale_ticket_seats_no_ladder_bot() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let waiting = ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    // PREMISE: past its fallback time, so without presence the bot would seat it at once.
+    assert!(fallback_due(&waiting, now_ms()));
+    // Unheard from for a full window: the sweep cancels it before the fallback runs.
+    tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
+    let held = q!(app, tickets_get(&waiting.id)).expect("the ticket");
+    assert_eq!(
+        serde_json::to_value(&held).expect("a ticket")["status"],
+        "cancelled"
+    );
+    assert!(matches(&app).await.is_empty());
+    assert!(seated(&app, &[&bot]).await.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn r897000_a_touched_ticket_still_meets_its_bot_past_the_fallback() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let waiting = ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    assert!(fallback_due(&waiting, now_ms()));
+    // Heard from now: live, though fallback-due and older than one window.
+    tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+    app.queue_presence.touch(&person, now_ms());
+
     assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
     assert_eq!(seated(&app, &[&bot]).await, vec![bot.clone()]);
 }

@@ -12,6 +12,14 @@ export const REPLAY_PLAY_GAP_MS = 700;
 /** How many steps past the shown one are fetched ahead, so Play never waits on a page: one page's worth. */
 export const REPLAY_PREFETCH_STEPS = REPLAY_PAGE_STEPS;
 
+/**
+ * R768000: a finished match's result is written just after its last view is sent, so its replay can
+ * answer "not finished" for a moment. Opening it from the result panel asks again this many times in
+ * all, this many milliseconds apart.
+ */
+export const REPLAY_OPEN_ATTEMPTS = 5;
+export const REPLAY_OPEN_RETRY_MS = 1000;
+
 // Sharing a replay as a GIF (#513, R513000). The export is drawn on the client from a clip's views
 // alone, so its numbers are the client's own.
 

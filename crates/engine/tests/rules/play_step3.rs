@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, slot};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
 /// Unique across the tests, which run on parallel threads.
@@ -101,24 +101,6 @@ fn first_field(events: &[GameEvent], kind: &str, field: &str) -> Value {
 /// One field of each event, as JSON.
 fn pluck(events: &[Value], field: &str) -> Vec<Value> {
     events.iter().map(|event| event[field].clone()).collect()
-}
-
-/// Every key `expected` names matches, objects by subset, arrays element by
-/// element and of the same length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn pending_id(state: &GameState) -> String {
