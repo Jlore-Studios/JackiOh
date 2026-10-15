@@ -133,8 +133,8 @@ fn main() {
         panic!("the card registry is broken:\n  {}", problems.join("\n  "));
     }
 
-    let out = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR")).join("registry.rs");
-    std::fs::write(&out, render(&files, &by_id)).expect("write registry.rs");
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR"));
+    std::fs::write(out_dir.join("registry.rs"), render(&files, &by_id)).expect("write registry.rs");
     let catalog_text =
         std::fs::read_to_string(&catalog_path).unwrap_or_else(|e| panic!("{}: {e}", catalog_path.display()));
     std::fs::write(out_dir.join("catalog.json"), compact_json(&catalog_text)).expect("write catalog.json");
