@@ -547,13 +547,15 @@ describe("B14: the radiant face", () => {
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn");
+    // Patch v0.3.9 adds "Paid (3): Equip." to both faces, below the keyword line.
+    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
       "Taunt",
       "Lifesteal",
       "Divine Shield",
       "Reborn",
+      "Equip",
     ]);
     cleanup();
     expect(one(catalogFace("core-025", true), ".card-text").textContent).toBe("Armor 7, Reborn");
@@ -670,7 +672,8 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-008", true, "s"],
       ["core-t-felinor", true, "s"],
       ["core-052", false, "l"],
-      ["core-052", true, "xl"],
+      // Patch v0.3.9 shortened Silly Silas's Radiant text by a tier.
+      ["core-052", true, "l"],
       ["core-051", false, "l"],
       ["core-051", true, "xl"],
       ["core-093", false, "xxl"],

@@ -567,8 +567,8 @@ describe("with the real engine", () => {
 
   it("R265 p2 answers first after a manual hand-over: the device goes to p1, and p1's answer starts the game", () => {
     // Re-pinned for v0.3.5: with the Meditative set in the random decks, the old seed dealt p1 a turn
-    // with nothing to play, which R82 ends by itself.
-    const seed = "hotseat-r265-p2-first-a";
+    // with nothing to play, which R82 ends by itself; and again for v0.3.9, whose costs did the same.
+    const seed = "hotseat-r265-p2-first-b";
     const live = real(seed);
     live.setSeat("p2");
     live.dispatch(keepAll(live.view()));
