@@ -656,6 +656,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         register_cards();
         // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
+        // Re-dealt for patch v0.3.10 (#831), whose costs move the builder's curve: the same seeds stop
+        // at the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -678,11 +680,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-078",
                     "core-012",
                     "core-007",
-                    "core-053",
+                    "core-052",
                     "classicplus-002",
-                    "classicplus-031",
-                    "core-073",
-                    "classicplus-007",
+                    "classicplus-033",
+                    "core-077",
+                    "classicplus-011",
                 ],
             ),
             (
@@ -703,14 +705,14 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-053",
                     "classic-001",
                     "classic-082",
-                    "classicplus-036",
-                    "core-025",
-                    "classic-049",
+                    "classicplus-037",
+                    "core-030",
+                    "classic-047",
                     "classicplus-067",
                     "classic-004",
                     "classicplus-066",
-                    "core-038",
-                    "core-059",
+                    "core-026",
+                    "core-047",
                 ],
             ),
             (
@@ -739,16 +741,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-055",
                     "classicplus-007",
                     "classic-076",
-                    "classic-021",
+                    "classic-018",
                     "classicplus-001",
-                    "classic-061",
-                    "classicplus-005",
-                    "classicplus-044",
-                    "core-026",
-                    "classic-014",
-                    "core-095",
-                    "core-094",
-                    "classicplus-017",
+                    "classic-059",
+                    "classicplus-004",
+                    "classicplus-038",
+                    "core-027",
+                    "classic-009",
+                    "classic-006",
+                    "classic-004",
+                    "classicplus-003",
                 ],
             ),
             (
@@ -770,13 +772,13 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-059",
                     "classicplus-034",
                     "core-001",
-                    "core-070",
+                    "core-072",
                     "core-067",
-                    "core-074",
-                    "classicplus-059",
-                    "core-097",
-                    "classic-061",
-                    "classicplus-012",
+                    "core-081",
+                    "classicplus-061",
+                    "core-055",
+                    "classic-064",
+                    "classicplus-023",
                 ],
             ),
         ];
@@ -1507,5 +1509,85 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
                 assert!(held <= most, "{at}: {held} Quickdraw cards in {deck:?}");
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R976000: shaping is an option, never a ban list's match
+// ---------------------------------------------------------------------------------------------
+
+mod r976000_shaping_is_an_option {
+    use jackioh_ai::shaped_weight;
+
+    use super::*;
+
+    /// The mean `shaped_weight` of a deck's cards.
+    fn mean_shaped(deck: &[String]) -> f64 {
+        deck.iter().map(|id| shaped_weight(id)).sum::<f64>() / deck.len() as f64
+    }
+
+    #[test]
+    fn r976000_a_seat_under_this_ais_own_shadow_ban_is_shaped_only_when_the_option_asks() {
+        register_cards();
+        let easy = AI_DIFFICULTY.easy;
+        // The options an arena seat for this AI carried before the fix: its own list under a mana cap.
+        let own = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS });
+        let asked = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS, "shape": true });
+        // The daily gates' and practice's options.
+        let plain = json!({ "manaCap": easy.mana_cap });
+        let deal = |literal: &Value, seed: &str| {
+            build_ai_deck(
+                &mut create_rng(seed, 0),
+                easy.deck_size,
+                &options(literal.clone()),
+            )
+        };
+        let (mut differing, mut own_mean, mut asked_mean) = (0, 0.0, 0.0);
+        for n in 1..=SEEDS {
+            let seed = format!("r976000:own:{n}");
+            let (unasked, shaped) = (deal(&own, &seed), deal(&asked, &seed));
+            assert_eq!(
+                unasked,
+                deal(&plain, &seed),
+                "seed {n}: a matching ban list alone shaped the deal"
+            );
+            assert!(
+                shaped.iter().all(|id| !is_shadow_banned(id)),
+                "seed {n}: shaping dealt a banned card: {shaped:?}"
+            );
+            differing += usize::from(shaped != unasked);
+            own_mean += mean_shaped(&unasked);
+            asked_mean += mean_shaped(&shaped);
+        }
+        assert!(differing > 0, "the option shaped no deal in {SEEDS} seeds");
+        assert!(
+            asked_mean > own_mean,
+            "shaped decks hold no more shaped weight ({asked_mean}) than unshaped ones ({own_mean})"
+        );
+    }
+
+    #[test]
+    fn r976000_the_option_shapes_whatever_the_ban_list_and_is_absent_unless_set() {
+        register_cards();
+        let plain = options(json!({ "banned": [], "gatedSets": [] }));
+        let asked = options(json!({ "banned": [], "gatedSets": [], "shape": true }));
+        let shaped_somewhere = (1..=50).any(|n| {
+            let seed = format!("r976000:any:{n}");
+            build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &asked)
+                != build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &plain)
+        });
+        assert!(
+            shaped_somewhere,
+            "`shape` changed no deal under an empty ban list"
+        );
+        assert!(!AiDeckOptions::default().shape);
+        assert_eq!(
+            serde_json::to_value(AiDeckOptions::default()).ok(),
+            Some(json!({}))
+        );
+        assert_eq!(
+            serde_json::to_value(options(json!({ "shape": true }))).ok(),
+            Some(json!({ "shape": true }))
+        );
     }
 }

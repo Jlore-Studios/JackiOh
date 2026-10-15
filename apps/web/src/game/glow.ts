@@ -6,9 +6,10 @@
 // `conditionActive: true` on the card's view (R195, CLAUDE.md rule 7). Neither is decided here;
 // these helpers only turn a set membership or a view flag into an attribute value, and return
 // `undefined` so React omits the attribute rather than writing "false". `highlights.css` paints
-// them.
+// them. A third mark, `data-counted="true"`, rings the cards a hand card's preview names (#991, R583),
+// read off the view like the yellow.
 
-import type { CardView } from "@jackioh/shared";
+import type { CardView, PlayerView } from "@jackioh/shared";
 
 import { testid, type Highlight } from "./contract.ts";
 
@@ -36,6 +37,31 @@ export function conditionTargetAttr(
 ): "true" | undefined {
   if (highlight === undefined || testId === undefined) return undefined;
   return highlight.condition?.has(testId) === true ? "true" : undefined;
+}
+
+/**
+ * #991, R583: the testids (`card-<id>`) of the cards a hand card's preview counts, every value's
+ * `ids` (C+ #44, #45's Radiant "highlight targets"), for the viewer's hand card under the pointer
+ * (`hovered`), else the one `highlight.selected` holds. The engine lists only cards the viewer may
+ * read (R1447) and a back has no testid, so nothing hidden is marked. Nothing is decided here.
+ */
+export function countedTestids(view: PlayerView, highlight: Highlight, hovered: string | null): ReadonlySet<string> {
+  const counted = new Set<string>();
+  const hand = view.you.hand;
+  if (!Array.isArray(hand)) return counted;
+  const card =
+    hand.find((entry) => entry.instanceId === hovered) ??
+    hand.find((entry) => highlight.selected.has(testid.handCard(entry.instanceId)));
+  for (const value of card?.preview ?? []) {
+    for (const id of value.ids ?? []) counted.add(testid.card(id));
+  }
+  return counted;
+}
+
+/** #991: `data-counted`: "true" when `testId` is in `highlight.counted`; undefined otherwise. */
+export function countedAttr(highlight: Highlight | undefined, testId: string | undefined): "true" | undefined {
+  if (highlight === undefined || testId === undefined) return undefined;
+  return highlight.counted?.has(testId) === true ? "true" : undefined;
 }
 
 /**

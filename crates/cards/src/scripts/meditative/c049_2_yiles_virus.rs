@@ -1,4 +1,4 @@
-//! M #49.2 Yile's Virus (SPEC §8.8 row 49.2): (2) Unit, CN, Acclaimed, Token (printed Mythic),
+//! M #49.2 Yile's Virus (SPEC §8.8 row 49.2): (2) Unit, CN, Token (printed Mythic),
 //! 0/8 → 0/16, Can't attack.
 //!
 //! "Can't attack. Can't be in Defense Position. Activate: Destroy this. Death: Discard

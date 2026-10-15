@@ -26,6 +26,7 @@ import { baseView, card, emptySide, unit } from "../test/fixtures.ts";
 import { must, showsNumber } from "../test/stubServer.ts";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
+import { DuosChromeContext, type DuosChrome } from "./context.ts";
 import { DuosBoard, type DuosBoardProps } from "./DuosBoard.tsx";
 
 type ReceivedPing = DuosBoardProps["pings"][number];
@@ -162,6 +163,9 @@ function duosView(options: ViewOptions = {}): DuosView {
   };
 }
 
+/** Team B's win by concede: a1's team (team A) lost. */
+const CONCEDED: DuosView["result"] = { outcome: "win", winner: "b", reason: "concede" };
+
 const END_TURN: DuosActionBody = { kind: "duel", body: { type: "endTurn" } };
 const PASS_H1: DuosActionBody = { kind: "pass", instanceId: "h1" };
 
@@ -175,13 +179,15 @@ type Board = {
   rerender: (over: Partial<DuosBoardProps>) => void;
 };
 
-function renderBoard(over: Partial<DuosBoardProps> = {}): Board {
+function renderBoard(over: Partial<DuosBoardProps> = {}, chrome: DuosChrome | null = null): Board {
   const onAction = vi.fn<(body: DuosActionBody) => void>();
   const onPing = vi.fn<(ping: PingKind, target: PingTarget) => void>();
   const base: DuosBoardProps = { view: duosView(), legal: [], onAction, pings: [], onPing, error: null };
   const tree = (props: DuosBoardProps) => (
     <CatalogContext.Provider value={LOOKUP}>
-      <DuosBoard {...props} />
+      <DuosChromeContext.Provider value={chrome}>
+        <DuosBoard {...props} />
+      </DuosChromeContext.Provider>
     </CatalogContext.Provider>
   );
   let current: DuosBoardProps = { ...base, ...over };
@@ -608,5 +614,60 @@ describe("B64 received pings", () => {
     expect(screen.queryByTestId(ID.pingMarker)).toBeNull();
     board.rerender({ pings: [ping(ON_E1)] });
     expect(screen.getByTestId(ID.pingMarker)).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// #965: the result panel's replay door, and the board's replay mode
+// ---------------------------------------------------------------------------------------------
+
+describe("#965 the replay door and the board's replay mode", () => {
+  const OVER: DuosView = { ...duosView(), result: CONCEDED };
+
+  it("#965 the result panel offers Watch the replay when the route hangs it on the board, and it calls it", () => {
+    const onWatchReplay = vi.fn<() => void>();
+    renderBoard({ view: OVER }, { onWatchReplay });
+    fireEvent.click(screen.getByTestId("duos-result-replay"));
+    expect(onWatchReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it("#965 no replay door without one, as on /dev/duos", () => {
+    renderBoard({ view: OVER });
+    expect(screen.getByTestId("duos-result")).toBeInTheDocument();
+    expect(screen.queryByTestId("duos-result-replay")).toBeNull();
+  });
+
+  it("#965 replay mode offers nothing live, even with moves in legal", () => {
+    const board = renderBoard({
+      replay: true,
+      view: duosView({ ended: [true, false] }),
+      legal: [END_TURN, PASS_H1, { kind: "concede" }],
+    });
+    expect(screen.getByTestId("game")).toHaveAttribute("data-replay", "true");
+    const endTurn = screen.queryByTestId(testid.endTurn);
+    if (endTurn !== null) {
+      expect(endTurn).toBeDisabled();
+      fireEvent.click(endTurn);
+    }
+    expect(screen.queryByTestId("duos-concede")).toBeNull();
+    expect(document.body).not.toHaveTextContent(/waiting for your teammate/i);
+    const h1 = screen.getByTestId(testid.handCard("h1"));
+    expect(reveal(h1, ID.pingWheel)).toBeNull();
+    expect(reveal(h1, ID.pass)).toBeNull();
+    expect(board.onAction).not.toHaveBeenCalled();
+    expect(board.onPing).not.toHaveBeenCalled();
+  });
+
+  it("#965 replay mode draws no result panel over the last step; the rail names the team's result", () => {
+    renderBoard({ replay: true, view: OVER }, { onWatchReplay: vi.fn<() => void>() });
+    expect(screen.queryByTestId("duos-result")).toBeNull();
+    expect(screen.getByTestId("duos-round")).toHaveTextContent("Your team lost");
+  });
+
+  it("#965 the portal still shows the teammate's duel in replay mode", () => {
+    renderBoard({ replay: true });
+    flipPortal();
+    expect(screen.getByTestId(testid.handCard("t1"))).toBeInTheDocument();
+    expect(screen.queryByTestId(testid.handCard("h1"))).toBeNull();
   });
 });

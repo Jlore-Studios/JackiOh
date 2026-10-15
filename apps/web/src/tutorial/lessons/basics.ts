@@ -1,7 +1,9 @@
 // Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/basics.ts is the coach.
 // Deck order determines this seed's deal (`scripts/lesson-deal.ts basics`); changing it changes the
 // scripted opening. The human gets units for turns 1–4, while Lesson 1's AI gets plain units only
-// (R291): The Coin and Archivist first, then Moths to the Flame.
+// (R291): The Coin and Archivist first, then Moths to the Flame. Patch v0.3.10 gave Moths Pierce, and
+// the AI then played it, in Defense Position, at once: Moths now sits where Gary the Gambler did, a
+// draw later, and Gary where Big D-fender did.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -36,18 +38,18 @@ export const lesson: TutorialLesson = {
     "core-032", // Prem Panther, Rare
   ],
   aiDeck: [
-    "core-001", // Big D-fender, Common
+    "core-004", // Gary the Gambler, Common
     "core-025", // 4-mana 7/7, Common
     "core-077", // Professor Curvature, Rare
     "core-054", // Straaza, Common
     "core-008", // Mr. Vanilla, Common
-    "core-004", // Gary the Gambler, Common
+    "core-009", // Moths to the Flame, Rare
     "core-022", // Carnivorous Cube, Epic
     "core-012", // Duplicating Felinors, Rare
     "core-061", // Prejudiced Postdoc, Rare
     "core-030", // Archivist, Rare
     "core-037", // Gravedigger, Rare
-    "core-009", // Moths to the Flame, Rare
+    "core-001", // Big D-fender, Common
   ],
   retryTip: "Play a unit every turn, trade only when your unit survives the hit, and send everything else at the enemy hero.",
 };

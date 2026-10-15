@@ -8,12 +8,18 @@ line only after that review.
 ## 1. DMCA agent and `/copyright`
 
 - Register a designated agent with the U.S. Copyright Office's DMCA directory
-  (copyright.gov/dmca-directory, $6). The contact is public: use a role address if you do not want a
-  personal one.
+  (copyright.gov/dmca-directory, $6). The contact is public. The agent needs a street address (a post
+  office box only with the Office's waiver) and a telephone number, as well as the email.
+- The site's contact email, for legal notices, data requests and questions, is `CONTACT_EMAIL` in
+  `apps/web/src/routes/SiteFooter.tsx`. The footer, `/terms`, `/privacy`, `/copyright`,
+  `/accessibility` and `apps/web/public/.well-known/security.txt` name it. Register the agent with
+  the same email, or change all of them together. Changing it changes the Terms' and the Privacy
+  Policy's text, so follow section 4.
 - The registration lapses after three years. Put a renewal reminder in the calendar for a month
   before it does.
-- Put the registered name, postal address, email and telephone number into `/copyright`, in place
-  of the paragraph marked `data-owner-slot="dmca-agent"` in `apps/web/src/routes/copyright.tsx`.
+- Put the registered name, postal address and telephone number into `/copyright`, in place of the
+  paragraph marked `data-owner-slot="dmca-agent"` in `apps/web/src/routes/copyright.tsx` (the email
+  is already there).
   Change `COPYRIGHT_LAST_UPDATED` in the same file, and re-quote the page's text in
   `apps/web/static-pages.ts` (`PAGE_TEXT`; `src/static-pages.test.ts` fails until they match).
 - The page is linked from the footer (`SiteFooter.tsx`) and from `/terms`.

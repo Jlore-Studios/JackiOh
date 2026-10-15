@@ -1,14 +1,15 @@
 //! M #88 The True Sheep (SPEC §8.8 row 88). (4) Unit, Epic, 1/1 → 2/2.
 //!
-//! Base:    "Worth {worth|Tribute|Tributes}. Cry: Discover a card with Tribute to replace this with."
-//! Radiant: "Worth {worth|Tribute|Tributes}. Cry: Discover a Radiant card with Tribute to replace
-//!          this with."
+//! Base:    "Worth {worth|Tribute|Tributes}. Cry: Discover a card with Tribute. It costs ({setCost})."
+//! Radiant: "Worth {worth|Tribute|Tributes}. Cry: Discover a Radiant card with Tribute. It costs
+//!          ({setCost})."
 //! Engine:  "Its Tribute worth (§6.3 Tribute, the Sheep Token's and C #82 Sheeople's static flag) is 5,
 //!          counted toward a Tribute X only (R101). The Cry Discovers over the non-token cards of
 //!          every set with a Tribute X play cost (R380; R1221's `tribute` catalog query, a script
 //!          flag, so the pool keeps up with every new Tribute card), three different options shown to
 //!          the chooser only (§6.3 Discover), Radiant on the Radiant face, the pick to your hand (MD-E12,
-//!          R1222: the Sheep stays on the field). Tunes: worth 5 ↑ (Radiant 500; step 1)."
+//!          R1222: the Sheep stays on the field), costing (1) (Radiant (0)) since patch v0.3.10 (#831), a
+//!          `costOverride`. Tunes: worth 5 ↑ (Radiant 500; step 1); setCost 1 ↓ (Radiant 0)."
 //!
 //! The worth is the static flag `playChoices.tributeValueOf` reads through the declared `worth`
 //! (R386), toward a play's Tribute X only. The Discover names the pool by query, never by ids, so no
@@ -67,7 +68,11 @@ fn sheep(radiant: bool) -> Script {
                 let Some(picked) = chosen_options(ctx).into_iter().next() else {
                     return vec![];
                 };
-                vec![add_to_hand(json_as(json!({ "defId": picked, "radiant": radiant })))]
+                vec![add_to_hand(json_as(json!({
+                    "defId": picked,
+                    "radiant": radiant,
+                    "costOverride": param(ctx, "setCost"),
+                })))]
             }),
         )]),
         ..Script::default()
@@ -83,8 +88,9 @@ pub fn script() -> CardScripts {
 
 // M #88 The True Sheep — SPEC §8.8 row 88, BUILD M10 row M 88: "Cry (played or cast): Discovers one
 // of three different non-token cards with a Tribute cost to your hand (R1221, R1222), shown to you
-// only; the Sheep stays on the field; as a Tribute it pays a whole Tribute 2 or 3 alone, a set of
-// one (R101); worth reads through `param()`; radiant 2/2, worth 500, the Discovered card Radiant".
+// only, costing (1) (patch v0.3.10); the Sheep stays on the field; as a Tribute it pays a whole Tribute 2 or 3 alone, a set of
+// one (R101); worth reads through `param()`; radiant 2/2, worth 500, the Discovered card Radiant and
+// costing (0)".
 #[cfg(test)]
 mod tests {
     use super::{ID, OFFERED};
@@ -212,6 +218,30 @@ mod tests {
             }
 
             #[test]
+            fn r1222_the_pick_costs_1() {
+                // Patch v0.3.10 (#831): "It costs (1)", a `costOverride` read through `param()`.
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = holding("sheep-costs", false);
+                s.play(ID, json!({ "zone": 1 }));
+                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                s.answer(json!(picked));
+                let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
+                assert_eq!(pick.cost_override, Some(1));
+            }
+
+            #[test]
+            fn r386_its_set_cost_reads_through_param() {
+                let _preview = preview_sets(&[SetName::Meditative]);
+                let mut s = holding("sheep-costs", false);
+                step_param(s.card_mut(ID), "setCost", -1);
+                s.play(ID, json!({ "zone": 1 }));
+                let picked = option_ids(&open(s.state())).into_iter().next().expect("three options");
+                s.answer(json!(picked));
+                let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
+                assert_eq!(pick.cost_override, Some(0));
+            }
+
+            #[test]
             fn worth_5_pays_boom_big_maxs_tribute_3_alone() {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = crate::scenario(json!({
@@ -250,6 +280,7 @@ mod tests {
                 s.answer(json!(picked));
                 let pick = s.hand(P1).into_iter().find(|card| card.def_id == picked).expect("the pick");
                 assert!(pick.radiant);
+                assert_eq!(pick.cost_override, Some(0));
                 let entry = registered_entry(ID).expect("registered");
                 assert_eq!(flags(&entry.radiant).tribute_worth, Some(500));
                 let stats = s.stats(ID);

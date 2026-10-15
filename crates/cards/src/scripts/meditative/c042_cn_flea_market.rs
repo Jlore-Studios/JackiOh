@@ -1,4 +1,5 @@
-//! Meditative #42 CN Flea Market (SPEC §8.8 row 42, ME-MARKET, R1000–R1002). (0) Spell, CN, Legendary.
+//! Meditative #42 CN Flea Market (SPEC §8.8 row 42, ME-MARKET, R1000–R1002, R831002). (1) Spell, CN,
+//! Legendary ((0) before patch v0.3.10).
 //!
 //!   Base:    "Open a night market. You have {yuan} yuan to buy its cards."
 //!   Radiant: "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards
@@ -8,8 +9,9 @@
 //! as the Spell resolves, the yuan prices, the `market` prompt that reopens after each deal until the
 //! caster leaves, and the barter the Radiant face opens (it reads the face that cast it). This file
 //! hands it the shelves: three different random CN cards (never this one, R387), two Auspicious Rocks
-//! (M #39.1) and one random AI generated card (the ten C+ #78 names, read off their AI tag). The yuan
-//! is the declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
+//! (M #39.1) and one random AI generated card (the ten C+ #78 names, read off their AI tag). Each lot
+//! is sold on its base face or, at its Radiant price, its Radiant face (patch v0.3.10, R831002). The
+//! yuan is the declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
 //!
 //! Voice audio is owed: the `card-audio.json5` entry is written, and a person with macOS renders it
 //! (`docs/ADDING_CARDS.md` §7).
@@ -54,8 +56,9 @@ pub fn script() -> CardScripts {
 //
 // BUILD M10 row M 42: "Rolls one stall as it resolves (3 different CN cards, 2 Auspicious Rocks and 1
 // AI generated card; R1000), priced 10 yuan a printed mana plus 5 a rarity rank; a `market` prompt
-// offers only the lots within the yuan left, none while the hand is full, and Leave; each buy adds the
-// card on its base face at its printed cost and reopens the prompt (R113); … unspent yuan is gone on
+// offers only the lots within the yuan left, none while the hand is full, and Leave; each lot is offered
+// on its base face and on its Radiant face at twice the price (R831002); each buy adds the card on the
+// face it was sold on at its printed cost and reopens the prompt (R113); … unspent yuan is gone on
 // Leave; the opponent sees only an open prompt and hidden cards arriving; a timeout leaves (R1002);
 // yuan reads through `param()`; radiant 80 yuan, and one barter per hand card that exiles it and adds
 // its price, doubled if it is Radiant (R1001)".
@@ -277,6 +280,50 @@ mod tests {
         }
 
         #[test]
+        fn r831002_every_lot_is_also_sold_on_its_radiant_face_at_its_radiant_price_when_the_yuan_covers_it() {
+            for n in 0..10 {
+                let s = opened(&format!("market-radiant-lots-{n}"), false, &[]);
+                let open = pending(&s);
+                let budget = open.budget.expect("a budget");
+                for lot in stall(&s) {
+                    let price = subsystems::yuan_price(&crate::card_def(&lot), true);
+                    assert_eq!(price, YUAN_RADIANT_MULTIPLIER * subsystems::yuan_price(&crate::card_def(&lot), false));
+                    let key = format!("mode:{lot}{}", subsystems::MARKET_RADIANT_SUFFIX);
+                    let option = open.options.iter().find(|option| option.key == key);
+                    assert_eq!(option.is_some(), price <= budget, "{lot} at {price} with {budget} left");
+                    if let Some(option) = option {
+                        assert_eq!(option.cost, Some(price));
+                        assert_eq!(option.radiant, Some(true));
+                    }
+                }
+                // The base faces carry no Radiant mark.
+                assert!(
+                    open.options
+                        .iter()
+                        .filter(|option| option.key.starts_with("mode:") && !option.key.ends_with(":radiant"))
+                        .all(|option| option.radiant.is_none())
+                );
+            }
+        }
+
+        #[test]
+        fn r831002_a_rock_bought_radiant_arrives_radiant_for_20_yuan_and_the_second_is_still_sold_both_ways() {
+            let mut s = opened("market-radiant-rock", false, &[]);
+            assert_eq!(cost_of(&s, &format!("mode:{ROCK}:radiant")), Some(20));
+            s.answer(json!([format!("mode:{ROCK}:radiant")]));
+            let rock = s
+                .hand(P1)
+                .into_iter()
+                .find(|card| card.def_id == ROCK)
+                .expect("the Rock arrived");
+            assert!(rock.radiant, "on its Radiant face");
+            assert_eq!(rock.cost_override, None, "at its printed cost");
+            assert_eq!(pending(&s).budget, Some(30));
+            assert_eq!(cost_of(&s, &format!("mode:{ROCK}")), Some(10));
+            assert_eq!(cost_of(&s, &format!("mode:{ROCK}:radiant")), Some(20));
+        }
+
+        #[test]
         fn r113_each_buy_adds_its_card_at_its_printed_cost_and_reopens_the_prompt() {
             let mut s = opened("market-buys", false, &[]);
             for budget in [40, 30] {
@@ -405,16 +452,19 @@ mod tests {
         }
 
         #[test]
-        fn r1000_the_radiant_market_still_sells_base_face_cards() {
+        fn r1000_r831002_the_radiant_market_sells_both_faces_too() {
             let mut s = opened("market-radiant-buy", true, &[]);
             s.answer(json!([format!("mode:{ROCK}")]));
-            let rock = s
+            assert_eq!(pending(&s).budget, Some(70));
+            s.answer(json!([format!("mode:{ROCK}:radiant")]));
+            assert_eq!(pending(&s).budget, Some(50));
+            let rocks: Vec<bool> = s
                 .hand(P1)
                 .into_iter()
-                .find(|card| card.def_id == ROCK)
-                .expect("the Rock arrived");
-            assert!(!rock.radiant, "a bought card is on its base face on either face");
-            assert_eq!(pending(&s).budget, Some(70));
+                .filter(|card| card.def_id == ROCK)
+                .map(|card| card.radiant)
+                .collect();
+            assert_eq!(rocks, [false, true]);
         }
 
         #[test]

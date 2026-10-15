@@ -1,48 +1,85 @@
 //! C #74 Corpse Plantation (SPEC §8.6 row 74). (2) Field Spell, Epic.
-//!   Base:    "Activate: Place {tokens|Plague Counter|Plague Counters} on this.
-//!             You may play Units from your graveyard, paying with Plague Counters from this: each counter
-//!             pays (1), and each such play spends at least 1 counter." — 2 tokens; Radiant: 4.
-//!   Engine:  Play from graveyard (§6.3) for Units while on field. Token payment spends at least 1 counter,
-//!            rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
+//!   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on this.
+//!             Activate: You may play a Unit from your graveyard, paying with Plague Counters as mana. You
+//!             must spend at least 1 Plague Counter." — 2 tokens; Radiant: 4.
+//!   Engine:  Play from graveyard (§6.3) for a Unit, armed by the Activate. Token payment spends at least 1
+//!            counter, rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
 //!
-//! Activate ability once per turn (R384) places {tokens} (R386). Graveyard play permission is a play
-//! (Cry fires, counts as played; not R70 cast); spent tokens are removed; other cards' tokens pay;
-//! R78 clears them on leave.
+//! Patch v0.3.10 (#831): the Cry places {tokens} (R386; the once-a-turn Activate did before), and the
+//! Activate (R384) arms the graveyard permission for one play that turn (R831015): it remembers the
+//! turn, the permission holds only while that is this turn, and the play from the graveyard it allowed
+//! spends it. That play is a play (Cry fires, counts as played; not R70 cast); spent tokens are removed;
+//! other cards' tokens pay; R78 clears them on leave.
 
-use jackioh_engine::effects::place_plague;
+use jackioh_engine::effects::{place_plague, remember};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-074";
 
+/// Patch v0.3.10 (#831): the Activate arms one play from the graveyard this turn (R831015), the turn it
+/// was armed on remembered here; the play that uses it, or the turn's end, disarms it.
+const ARMED: &str = "armed";
+
+/// Whether a remembered turn is this very turn.
+fn is_this_turn(state: &GameState, value: Option<&Value>) -> bool {
+    value.and_then(Value::as_i64) == Some(i64::from(state.turn))
+}
+
+/// Activate, once per turn (R384): arm the graveyard permission below for one play.
 fn plant() -> ActivationDecl {
     ActivationDecl {
         id: "plant".to_string(),
-        label: "Place Plague Counters on this".to_string(),
+        label: "Play a Unit from your graveyard".to_string(),
         uses: ActivationUses::Count(1),
         cost: None,
         targets: Vec::new(),
         modes: Vec::new(),
         can_activate: None,
         has: None,
-        run: hook(|ctx| {
-            vec![place_plague(json_as(json!({
-                "target": { "of": "self" },
-                "amount": param(&*ctx, "tokens"),
-            })))]
-        }),
+        run: hook(|ctx| vec![remember(json_as(json!({ "key": ARMED, "value": ctx.state.turn })))]),
     }
+}
+
+/// The play from your graveyard that the arming allowed spends it. A field trigger's `when` is not read
+/// (only a trap's reveal condition is), so `run` asks it.
+fn spent() -> TriggerDef {
+    TriggerDef::new("plantation-spent", &[GameEventType::CardPlayed], |ctx, event| {
+        let GameEvent::CardPlayed { player, from, .. } = event else {
+            return vec![];
+        };
+        if *player != ctx.controller || *from != Some(PlayedFrom::Graveyard) {
+            return vec![];
+        }
+        if !is_this_turn(ctx.state, recalled(ctx, ARMED).as_ref()) {
+            return vec![];
+        }
+        vec![remember(json_as(json!({ "key": ARMED, "value": 0 })))]
+    })
 }
 
 pub fn script() -> CardScripts {
     let base = Script {
+        // Cry: place the declared `tokens` on this (R386); a Field Spell's Cry fires as it is played or
+        // cast (R1).
+        cry: Some(hook(|ctx| {
+            vec![place_plague(json_as(json!({
+                "target": { "of": "self" },
+                "amount": param(&*ctx, "tokens"),
+            })))]
+        })),
         activations: vec![plant()],
-        graveyard_play: Some(read_hook(|_args| {
+        // A Unit from your graveyard, paid with Plague Counters (§6.3 Play), while armed.
+        graveyard_play: Some(read_hook(|args| {
+            if !is_this_turn(args.state, args.self_.memory.get(ARMED)) {
+                return vec![];
+            }
             vec![GraveyardPlayPermission {
                 units: Some(true),
                 plague: Some(true),
                 ..GraveyardPlayPermission::default()
             }]
         })),
+        triggers: vec![spent()],
         ..Script::default()
     };
     CardScripts {
@@ -64,7 +101,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const PLANTATION: &str = "classic-074";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place a Plague Counter on another permanent.
+    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place a Plague Counter on a permanent (a prompt).
     const SLIME: &str = "classic-027"; // (0) Unit 1/1.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt.
     const MR_TOKEN: &str = "core-015"; // (1) Unit 1/1: Cry: Summon a Rush Token.
@@ -152,8 +189,20 @@ mod tests {
             .collect()
     }
 
-    /// The Plantation already standing with `tokens` on it, and a graveyard of Units and a Spell.
+    /// Its Activate, arming one play from the graveyard this turn (R831015).
+    fn arm(s: &mut Scenario) {
+        s.activate(PLANTATION, json!({}));
+    }
+
+    /// The Plantation already standing with `tokens` on it and armed, and a graveyard of Units and a Spell.
     fn standing(tokens: i32, graveyard: &[&str], mana: Option<i32>) -> Scenario {
+        let mut s = standing_unarmed(tokens, graveyard, mana);
+        arm(&mut s);
+        s
+    }
+
+    /// The same, its Activate not used.
+    fn standing_unarmed(tokens: i32, graveyard: &[&str], mana: Option<i32>) -> Scenario {
         let counters = if tokens > 0 { json!({ "plague": tokens }) } else { json!({}) };
         let mut p1 = json!({
             "hand": [ANCHOR],
@@ -175,15 +224,18 @@ mod tests {
             js(&def.params),
             json!([{ "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }])
         );
-        let s = standing(0, &GRAVEYARD, None);
         let scripts = script();
         let grant = scripts.base.graveyard_play.as_ref().expect("a graveyard permission");
-        let answer = grant(HookArgs {
-            state: s.state(),
-            self_: s.card(PLANTATION),
-            radiant: false,
-        });
-        assert_eq!(js(&answer), json!([{ "units": true, "plague": true }]));
+        let answer = |s: &Scenario| {
+            js(&grant(HookArgs {
+                state: s.state(),
+                self_: s.card(PLANTATION),
+                radiant: false,
+            }))
+        };
+        // R831015: nothing until its Activate arms it, then Units paid with its tokens.
+        assert_eq!(answer(&standing_unarmed(0, &GRAVEYARD, None)), json!([]));
+        assert_eq!(answer(&standing(0, &GRAVEYARD, None)), json!([{ "units": true, "plague": true }]));
         // The Radiant face is the base face, every hook the same one.
         assert!(Arc::ptr_eq(
             grant,
@@ -196,23 +248,59 @@ mod tests {
     mod base {
         use super::*;
 
-        /// Activate: one placement of 2 Plague Counters on itself, once per turn
+        /// Cry: one placement of 2 Plague Counters on itself; the Activate places none, once per turn
         #[test]
-        fn activate_one_placement_of_2_plague_counters_on_itself_once_per_turn() {
+        fn its_cry_places_2_plague_counters_on_itself_and_its_activate_is_once_per_turn() {
             let mut s = scenario(json!({ "p1": { "hand": [PLANTATION, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
 
             s.play(PLANTATION, json!({}));
 
             let plantation = s.card(PLANTATION).clone();
-            assert!(plantation.counters.plague.is_none());
-            s.activate(&plantation, json!({}));
-
-            assert_eq!(s.card(PLANTATION).counters.plague, Some(2));
+            assert_eq!(plantation.counters.plague, Some(2));
             assert_eq!(
                 counter_changes(s.events()),
                 vec![json!({ "type": "counterChanged", "instanceId": plantation.id, "counter": "plague", "value": 2, "placed": 2 })]
             );
+            s.activate(&plantation, json!({}));
+            assert_eq!(s.card(PLANTATION).counters.plague, Some(2));
             s.expect_refused(|s| s.activate(&plantation, json!({})));
+        }
+
+        /// R831015 unarmed, it offers nothing from the graveyard
+        #[test]
+        fn r831015_unarmed_it_offers_nothing_from_the_graveyard() {
+            let s = standing_unarmed(2, &GRAVEYARD, None);
+            assert!(graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            let plantation = s.card(PLANTATION).id.clone();
+            let menace = s.card(MENACE).id.clone();
+            assert!(
+                send(s.state(), json!({ "instanceId": menace, "plague": { "from": plantation, "tokens": 1 } }))
+                    .error
+                    .is_some()
+            );
+        }
+
+        /// R831015 one Activate arms one play: after it, nothing more is offered that turn
+        #[test]
+        fn r831015_one_activate_arms_one_play_from_the_graveyard() {
+            let s = standing(3, &[MR_TOKEN, VANILLA], None);
+            assert!(!graveyard_plays(s.state(), s.card(VANILLA)).is_empty());
+
+            let after = play_from_graveyard(s.state(), s.card(MR_TOKEN), s.card(PLANTATION), 1, None);
+
+            assert_eq!(tokens_on(&after.state, s.card(PLANTATION)), 2);
+            assert!(graveyard_plays(&after.state, s.card(VANILLA)).is_empty());
+        }
+
+        /// R831015 the arming ends with the turn, and its next Activate arms it again
+        #[test]
+        fn r831015_the_arming_ends_with_the_turn() {
+            let mut s = standing(2, &[MENACE], None);
+            s.end_turn();
+            s.end_turn();
+            assert!(graveyard_plays(s.state(), s.card(MENACE)).is_empty());
+            arm(&mut s);
+            assert!(!graveyard_plays(s.state(), s.card(MENACE)).is_empty());
         }
 
         /// while it has tokens, legalActions offers each graveyard Unit with 1 up to min(tokens, price) tokens paying, and no Spell
@@ -276,22 +364,20 @@ mod tests {
 
         /// R81 its choices are as from hand: a Plague Crawler from the graveyard declares its target and places on it
         #[test]
-        fn r81_its_choices_are_as_from_hand_a_plague_crawler_from_the_graveyard_declares_its_target_and_places_on_it() {
-            let s = scenario(json!({
+        fn r81_its_choices_are_as_from_hand_a_plague_crawler_from_the_graveyard_asks_for_its_permanent_and_places_on_it() {
+            let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "backrow": [{ "def": PLANTATION, "counters": { "plague": 1 } }], "graveyard": [CRAWLER] },
                 "p2": { "hand": [ANCHOR], "field": [VANILLA] },
             }));
+            arm(&mut s);
             let vanilla = s.card(VANILLA).clone();
 
-            let after = play_from_graveyard(
-                s.state(),
-                s.card(CRAWLER),
-                s.card(PLANTATION),
-                1,
-                Some(json!([{ "pick": "instance", "instanceId": vanilla.id }])),
-            );
+            let after = play_from_graveyard(s.state(), s.card(CRAWLER), s.card(PLANTATION), 1, None);
 
-            assert_eq!(tokens_on(&after.state, &vanilla), 1);
+            // Its Cry asks for its permanent as it resolves (R831016), as from hand.
+            *s.state_mut() = after.state;
+            s.answer(json!(vanilla.id));
+            assert_eq!(tokens_on(s.state(), &vanilla), 1);
         }
 
         /// a (0) Cost Unit can't use it
@@ -353,7 +439,8 @@ mod tests {
 
             assert_eq!(tokens_on(&after.state, s.card(PLANTATION)), 0);
             assert!(graveyard_plays(&after.state, s.card(VANILLA)).is_empty());
-            let zero = standing(0, &[VANILLA], None);
+            let mut zero = standing_unarmed(0, &[VANILLA], None);
+            arm(&mut zero);
             assert!(graveyard_plays(zero.state(), zero.card(VANILLA)).is_empty());
         }
 
@@ -365,8 +452,10 @@ mod tests {
                 "p2": { "hand": [ANCHOR] },
             }));
             let plantation = s.card(PLANTATION).clone();
+            arm(&mut s);
 
-            s.play(CRAWLER, json!({ "targets": [{ "pick": "instance", "instanceId": plantation.id }] }));
+            s.play(CRAWLER, json!({}));
+            s.answer(json!(plantation.id));
 
             assert_eq!(s.card(&plantation).counters.plague, Some(3));
             assert_eq!(token_options(s.state(), s.card(MENACE)), vec![Some(1), Some(2), Some(3)]);
@@ -393,7 +482,7 @@ mod tests {
         /// §3 with your unit row full nothing is offered, and the play is refused
         #[test]
         fn s3_with_your_unit_row_full_nothing_is_offered_and_the_play_is_refused() {
-            let s = scenario(json!({
+            let mut s = scenario(json!({
                 "p1": {
                     "hand": [ANCHOR],
                     "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
@@ -402,6 +491,7 @@ mod tests {
                 },
                 "p2": { "hand": [ANCHOR] },
             }));
+            arm(&mut s);
             let mr_token = s.card(MR_TOKEN).clone();
 
             assert!(graveyard_plays(s.state(), &mr_token).is_empty());
@@ -416,10 +506,11 @@ mod tests {
         /// only your own graveyard: the opponent's Units are not offered
         #[test]
         fn only_your_own_graveyard_the_opponents_units_are_not_offered() {
-            let s = scenario(json!({
+            let mut s = scenario(json!({
                 "p1": { "hand": [ANCHOR], "backrow": [{ "def": PLANTATION, "counters": { "plague": 2 } }] },
                 "p2": { "hand": [ANCHOR], "graveyard": [MENACE] },
             }));
+            arm(&mut s);
 
             let menace = s.card(MENACE).id.clone();
             assert!(
@@ -436,8 +527,6 @@ mod tests {
             step_param(s.card_mut(PLANTATION), "tokens", 1);
 
             s.play(PLANTATION, json!({}));
-            let plantation = s.card(PLANTATION).clone();
-            s.activate(&plantation, json!({}));
 
             assert_eq!(s.card(PLANTATION).counters.plague, Some(3));
         }
@@ -447,9 +536,9 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// Activate: one placement of 4 on itself, and a 3 Cost Unit may be paid wholly in tokens
+        /// Cry: one placement of 4 on itself, and once armed a 3 Cost Unit may be paid wholly in tokens
         #[test]
-        fn activate_one_placement_of_4_on_itself_and_a_3_cost_unit_may_be_paid_wholly_in_tokens() {
+        fn its_cry_places_4_on_itself_and_a_3_cost_unit_may_be_paid_wholly_in_tokens() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": PLANTATION, "radiant": true }, ANCHOR], "graveyard": [MENACE], "mana": 2 },
                 "p2": { "hand": [ANCHOR] },
@@ -475,8 +564,6 @@ mod tests {
             step_param(s.card_mut(PLANTATION), "tokens", -1);
 
             s.play(PLANTATION, json!({}));
-            let plantation = s.card(PLANTATION).clone();
-            s.activate(&plantation, json!({}));
 
             assert_eq!(s.card(PLANTATION).counters.plague, Some(3));
         }

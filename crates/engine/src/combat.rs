@@ -1077,7 +1077,7 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// trap window — and only then step 5's combat and state check.
 ///
 /// R1202: an attack Windfast would make, its substitute makes instead (`attack_summon`): the
-/// exertion below is Windfast's, spent before the pick, and no `attackDeclared` of its own is ever
+/// exertion below is Windfast's, spent before the substitute is drawn, and no `attackDeclared` of its own is ever
 /// emitted for it.
 ///
 /// Step 4 in full: "Declaring the attack has now spent the attacker's exertion, before any damage.
@@ -1137,10 +1137,9 @@ pub fn declare_attack(
         }
     }
 
-    // R1202: the attack Windfast would make, a Unit summoned from its controller's hand makes
-    // instead. Asked parks the attack behind the hand pick; the pick's answer declares it.
-    match crate::attack_summon::replace_attacker(sink, &attacker, &target, false) {
-        crate::attack_summon::Replaced::Asked => return Ok(()),
+    // R1202, R831006: the attack Windfast would make, a random Unit summoned from its controller's
+    // hand makes instead.
+    match crate::attack_summon::replace_attacker(sink, &attacker) {
         crate::attack_summon::Replaced::By(unit) => {
             let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
             return declare_instead(sink, &unit, &target, Some(&attacker.id), bounce);
@@ -1298,15 +1297,13 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
 
     // R1202: a forced attack Windfast would make, its substitute makes instead.
     let since = crate::stays::exit_mark(sink.state);
-    let (attacker, instead_of, bounce) =
-        match crate::attack_summon::replace_attacker(sink, &attacker, &target, true) {
-            crate::attack_summon::Replaced::Asked => return,
-            crate::attack_summon::Replaced::By(unit) => {
-                let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
-                (*unit, Some(attacker.id.clone()), bounce)
-            }
-            crate::attack_summon::Replaced::No => (attacker, None, false),
-        };
+    let (attacker, instead_of, bounce) = match crate::attack_summon::replace_attacker(sink, &attacker) {
+        crate::attack_summon::Replaced::By(unit) => {
+            let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
+            (*unit, Some(attacker.id.clone()), bounce)
+        }
+        crate::attack_summon::Replaced::No => (attacker, None, false),
+    };
 
     // R1203: the Prime's joiners attack first, then its own combat.
     if crate::scripts::flags_of(sink.state, &attacker).attack_joiners == Some(true) {

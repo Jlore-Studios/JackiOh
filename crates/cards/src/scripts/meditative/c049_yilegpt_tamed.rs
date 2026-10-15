@@ -1,4 +1,4 @@
-//! M #49 YileGPT Tamed (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Mythic, 2/6 → 4/12.
+//! M #49 YileGPT Tamed (SPEC §8.8 row 49): (2) Unit, CN, Acclaimed, Catalyst, Mythic, 2/6 → 4/12.
 //!
 //! Base:    "Cry: Summon a Yile's Virus for your opponent across from this.
 //!           Death: Put a YileGPT Unleashed on the bottom of your deck."
@@ -154,7 +154,8 @@ mod tests {
                         "library": [FILLER, FILLER],
                     },
                     "p2": {
-                        "field": [{ "def": BIGOT, "lane": 1 }],
+                        // Bigot at its old 6/1 (it prints 4/1 since patch v0.3.10).
+                        "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
                     },
@@ -187,8 +188,8 @@ mod tests {
                 assert_eq!(virus.def_id, VIRUS);
                 assert!(virus.radiant);
 
-                // The Radiant Tamed is 4/12: a Radiant Bigot (12/2) kills it where a base one
-                // (6/1) would not.
+                // The Radiant Tamed is 4/12: a Radiant Bigot set to 12/2 (it prints 8/2 since patch
+                // v0.3.10) kills it where a 6/1 would not.
                 let mut s = scenario(json!({
                     "seed": "tamed-radiant-death",
                     "p1": {
@@ -196,7 +197,7 @@ mod tests {
                         "library": [FILLER, FILLER],
                     },
                     "p2": {
-                        "field": [{ "def": BIGOT, "radiant": true, "lane": 1 }],
+                        "field": [{ "def": BIGOT, "radiant": true, "lane": 1, "statsOverride": { "attack": 12, "health": 2 } }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
                     },

@@ -59,6 +59,13 @@ conditionActive?: true,
  */
 counteredOnPlay?: true, 
 /**
+ * #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
+ * dropped some of the choice combinations they are built from, so the list is a slice whose first
+ * plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
+ * the opponent's cards.
+ */
+choicesTruncated?: true, 
+/**
  * R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
  * `preview` hook returns — the label the formula as the running face prints it, the value what it
  * would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a

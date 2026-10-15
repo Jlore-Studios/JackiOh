@@ -89,6 +89,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub countered_on_play: Option<bool>,
+    /// #992, R90, §10.8: `legalActions` lists plays of this card in the viewer's own hand and R90's bound
+    /// dropped some of the choice combinations they are built from, so the list is a slice whose first
+    /// plays offer every pick. Present, and `true`, only then; absent otherwise, never `false`, never on
+    /// the opponent's cards.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub choices_truncated: Option<bool>,
     /// R280, §10.8: what the card's formula comes to now, one entry per labelled number its script's
     /// `preview` hook returns — the label the formula as the running face prints it, the value what it
     /// would come to if the card resolved now. Only on a card view the viewer may read: its own hand, a
@@ -1182,6 +1189,13 @@ pub struct PlayerView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub draw_offer: Option<DrawOfferView>,
+    /// §2.5, R36: while a declined offer still keeps the viewer from offering a draw, how many of
+    /// their own turns it covers — the one under way when it is theirs, then the coming ones; the
+    /// turn of the decline itself is not counted. Only ever the viewer's own block, never the
+    /// opponent's (CLAUDE.md rule 7). Absent when nothing blocks them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub draw_offer_blocked_turns: Option<i32>,
     /// R345: `false` when the viewer has turned R82's automatic turn end off for themselves. Absent
     /// means on, the rule's default. Only ever the viewer's own preference, never the opponent's.
     /// Only ever `Some(false)`.

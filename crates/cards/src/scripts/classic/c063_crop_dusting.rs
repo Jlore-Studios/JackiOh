@@ -1,4 +1,4 @@
-//! C #63 Crop Dusting (SPEC §8.6 row 63). (2) Trap, Common.
+//! C #63 Crop Dusting (SPEC §8.6 row 63). (1) Trap, Common.
 //!   Base:    "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each
 //!            permanent. Draw {draw}." — 1 counter, draw 1
 //!   Radiant: the same text — 3 counters, draw 3

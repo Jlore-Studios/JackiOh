@@ -34,17 +34,19 @@ function yuan(amount: number): string {
 }
 
 /**
- * One lot on the stall: the card as it will arrive (its base face), its name and its price. Like a
- * Discover's card option (Prompt.tsx), the face opens the hover preview and, on a phone, the
+ * One lot on the stall: the card as it will arrive (on the face it is sold on), its name and its
+ * price. Like a Discover's card option (Prompt.tsx), the face opens the hover preview and, on a phone, the
  * long-press sheet, so a lot can be read before it is bought: the click a long-press ends with is
  * swallowed (`useInspectTrigger`), and only a tap buys (#552).
  */
 function Lot(props: { option: PendingOption; onPick: () => void }) {
   useLocale();
   const defId = props.option.defId ?? "";
-  const info = useCardInfo(defId, false);
+  // R831002: every lot is also sold on its Radiant face, at its Radiant price.
+  const radiant = props.option.radiant === true;
+  const info = useCardInfo(defId, radiant);
   const price = props.option.cost ?? 0;
-  const face = faceModel({ defId, def: info.def, name: info.name, radiant: false, chinese: false, inPlay: {} });
+  const face = faceModel({ defId, def: info.def, name: info.name, radiant, chinese: false, inPlay: {} });
   const caption = drawnInChinese(props.option.chinese === true) ? chineseName(defId, info.name, info.def) : props.option.label;
   const testId = `prompt-option-${props.option.key}`;
   // Lines of code is a hidden stat in matches.

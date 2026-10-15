@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 
 import { formatDay, t } from "../i18n/i18n.ts";
-import { CONTACT_URL } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -14,7 +14,7 @@ export const accessibilityTestid = {
   updated: "accessibility-updated",
 } as const;
 
-export const ACCESSIBILITY_LAST_UPDATED = "2026-10-13";
+export const ACCESSIBILITY_LAST_UPDATED = "2026-10-15";
 
 export default function AccessibilityRoute(): ReactElement {
   // Split around the link, so the sentence is one entry and English reads as it always did.
@@ -68,6 +68,7 @@ export default function AccessibilityRoute(): ReactElement {
           <h3 id="a11y-gaps">{t("Known gaps")}</h3>
           <ul>
             <li>{t("A card shown as a button, on the home page, in the Almanac’s card pool and in a game’s prompts, is named by a short summary that names the card, not by all the text on its face.")}</li>
+            <li>{t("In the deck builder, a card in the pool is named by the same short summary, and a card in the open deck by what pressing it does, “Remove” and the card’s name, not by the cost shown beside it.")}</li>
             <li>{t("Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where it goes does the same, by click or by Enter on each.")}</li>
             <li>{t("With a mouse, the card names in the game log are closer together than 24 pixels; on a touch screen each line is 44 pixels tall.")}</li>
             <li>{t("Colour contrast is checked only where the tool can measure it, so text over card art and gradients has not been checked.")}</li>
@@ -78,7 +79,7 @@ export default function AccessibilityRoute(): ReactElement {
           <h3 id="a11y-help">{t("Report an issue")}</h3>
           <p>
             {helpBefore}
-            <a href={CONTACT_URL}>{t("contact us on GitHub")}</a>
+            <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>
             {helpAfter}
           </p>
         </section>

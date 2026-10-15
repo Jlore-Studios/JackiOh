@@ -206,7 +206,7 @@ mod tests {
                     rewards(difficulty).iter().map(|reward| format!("{difficulty}: {}", reward.label)).collect();
                 assert!(labels.contains(&label_of(&s, difficulty)));
             }
-            assert_eq!(label_of(&s, "Hard"), "Hard: KY's Gift, which costs (0)");
+            assert_eq!(label_of(&s, "Hard"), "Hard: KY's Gift");
         }
 
         #[test]
@@ -460,10 +460,11 @@ mod tests {
         }
 
         #[test]
-        fn r420_hard_kys_gift_which_costs_0() {
+        fn r420_hard_kys_gift_at_its_printed_4() {
+            // Patch v0.3.10 (#831): no longer at (0).
             let mut s = cast("kys-test-gift", false, &[FILLER]);
             take(&mut s, "Hard", true);
-            assert_eq!(gained(&s), vec![json!({ "defId": GIFT, "radiant": false, "costOverride": 0 })]);
+            assert_eq!(gained(&s), vec![json!({ "defId": GIFT, "radiant": false })]);
         }
 
         #[test]
@@ -480,7 +481,7 @@ mod tests {
         fn r420_radiant_every_reward_card_is_radiant() {
             let mut gift = cast("kys-test-radiant-gift", true, &[FILLER]);
             take(&mut gift, "Hard", true);
-            assert_eq!(gained(&gift), vec![json!({ "defId": GIFT, "radiant": true, "costOverride": 0 })]);
+            assert_eq!(gained(&gift), vec![json!({ "defId": GIFT, "radiant": true })]);
             let mut coins = rolled("Easy", "coins", true, &[FILLER], "");
             take(&mut coins, "Easy", true);
             let radiant: Vec<Value> = gained(&coins).iter().map(|card| card["radiant"].clone()).collect();

@@ -229,7 +229,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
     const jilliax = face("core-056", true);
-    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn");
+    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip.");
     expect(marksOf("core-056")).toEqual(["Reborn"]);
     expect(marksOf("core-025")).toEqual(["Reborn"]);
     expect(marksOf("core-019")).toEqual(["Immutable"]);
@@ -256,11 +256,12 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // one." Balance patch 1 gives Classic #28's base face the same minimum price as its Radiant
     // face, so its Radiant face is its base text less the exile replacement. Meditative #89 Jlarna's
     // Radiant face is its base text less the end-of-turn Tribute (R1225); #22.1 Fortify Mind's is its
-    // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021)
-    // (radiantDiff.test.ts names all eight).
+    // base text less the discard penalty (R862), and #48 Tranquility's less "End the turn." (R1021),
+    // as is Classic #29 Book of Vital Kill's since patch v0.3.10 (radiantDiff.test.ts names all nine).
     const pureDeletions = new Set([
       "core-055",
       "classic-028",
+      "classic-029",
       "classic-060",
       "classicplus-005",
       "classicplus-034",
@@ -468,7 +469,7 @@ describe("a face in play is the card as the view says it stands; the collection'
   });
 
   it("R243 a hand Unit at its printed stats reads base, on the radiant face too", () => {
-    const f = face("core-089", true, { inPlay: { handStats: { attack: 6, health: 6 } } });
+    const f = face("core-089", true, { inPlay: { handStats: { attack: 4, health: 4 } } });
     expect(f.stats).toMatchObject({ attackTone: "base", healthTone: "base" });
   });
 

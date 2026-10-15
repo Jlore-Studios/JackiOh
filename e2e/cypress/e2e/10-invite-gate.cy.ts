@@ -12,7 +12,15 @@ import {
   REDEMPTION_RESPONSE_FLOOR_MS,
 } from "../../../apps/web/src/wire/serverConfig.ts";
 import { CARD_NAMES, cardId } from "../../support/cards.ts";
-import { accounts, constants, inviteCodes, routes, seedFor, server } from "../../support/config.ts";
+import {
+  E2E_RESEED_PATH,
+  accounts,
+  constants,
+  inviteCodes,
+  routes,
+  seedFor,
+  server,
+} from "../../support/config.ts";
 import {
   INVITE_CODE_INPUT,
   INVITE_ERROR,
@@ -61,6 +69,8 @@ type CollectionBody = {
   catalogVersion: string;
   entries: { cardId: string; quantity: number }[];
 };
+
+type ReseedBody = { profiles: Record<string, string>; grantedCards: number; codes: string[] };
 
 function redeem(code: string): Cypress.Chainable<Cypress.Response<RedeemBody>> {
   return cy.request<RedeemBody>({
@@ -127,6 +137,19 @@ describe("10 invite gate — a pending account", () => {
     ]) {
       expectWellFormedInviteCode(code);
     }
+    // R144: the server puts back the account this file activates and the code it spends, so the
+    // file passes run after run against one server, with no restart.
+    cy.request<ReseedBody>({ method: "POST", url: api(E2E_RESEED_PATH) }).should((response) => {
+      expect(response.status, "R144: an E2E server reseeds on demand").to.eq(200);
+      expect(response.body.codes, "the good, expired and exhausted codes; never the missing one").to.deep.eq([
+        "good",
+        "expired",
+        "exhausted",
+      ]);
+      expect(Object.keys(response.body.profiles).length, "every fixture account").to.eq(
+        Object.keys(accounts).length,
+      );
+    });
   });
 
   it("the code screen is shown, and a pending account can reach nothing else", () => {
@@ -178,7 +201,15 @@ describe("10 invite gate — a pending account", () => {
     }
 
     visitAs(pendingToken(), routes.deckbuilder());
-    cy.location("pathname").should("eq", routes.invite());
+    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), which the requests above
+    // just answered as pending. When it never comes, say which panel held the page: still checking
+    // (the read never answered), the gate's error (it failed), or no app at all.
+    cy.window().should((win) => {
+      const shown = win.document.body.innerText.replace(/\s+/gu, " ").slice(0, 400);
+      expect(win.location.pathname, `the gate sends a pending account to /invite; the page shows: ${shown}`).to.eq(
+        routes.invite(),
+      );
+    });
 
     visitAs(pendingToken(), routes.invite());
     cy.location("pathname").should("eq", routes.invite());

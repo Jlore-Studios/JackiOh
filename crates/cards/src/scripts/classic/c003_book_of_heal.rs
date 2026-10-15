@@ -54,7 +54,8 @@ mod tests {
 
     const BOOK: &str = "classic-003";
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt; Radiant 18/18.
-    // Classic+ #26 Tommy Tempo, Radiant 18/18 Taunt: a big body no Immutable keeps a Spell off (R781001).
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10 since patch
+    // v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005"; // a card that keeps a hand from auto-ending the turn (§2.5).
 
@@ -121,7 +122,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK, FILLER] },
-                    "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "damage": 12 }] },
+                    "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 }, "damage": 12 }] },
                 }));
 
                 let targets = at(&s, P2, 1);
@@ -209,7 +210,7 @@ mod tests {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": BOOK, "radiant": true }, FILLER],
-                        "field": [{ "def": TEMPO, "radiant": true, "damage": 17 }, { "def": MENACE, "damage": 8 }],
+                        "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 }, "damage": 17 }, { "def": MENACE, "damage": 8 }],
                     },
                     "p2": { "hand": [FILLER] },
                 }));

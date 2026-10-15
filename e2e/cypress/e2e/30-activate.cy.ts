@@ -1,6 +1,7 @@
 // BUILD M9-T12 `30-activate.cy.ts`: C #81 Thrive and C #21 Turtinator activation (R384, R510).
-// Read player 1's DOM only (CLAUDE.md rule 7). Thrive is once per turn; each Turtinator use
-// Tributes another Unit (R683).
+// Read player 1's DOM only (CLAUDE.md rule 7). Both are once per turn (Turtinator since patch v0.3.10);
+// Thrive's third mode makes a card in hand cheaper (R831009), and a Turtinator use Tributes another
+// Unit (R683).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -24,7 +25,7 @@ const SEED = seedFor("30-activate-353");
 const HERO_HEALTH = 30;
 /** SPEC §8.6: #8 Mr. Vanilla's Attack. */
 const VANILLA_ATTACK = 4;
-const THRIVE_MODES = ["heal", "draw", "mana"] as const;
+const THRIVE_MODES = ["heal", "draw", "reduce"] as const;
 const OPPONENT_HERO = "hero:p2";
 
 function ensureSeat(player: PlayerId): void {
@@ -38,7 +39,7 @@ function manaIs(current: number): void {
 }
 
 describe("BUILD M9 30: Activate controls (R384, R510)", () => {
-  it("R384: once per turn on The Power to Thrive, a Tribute each time on Turtinator's Activate ♾️", () => {
+  it("R384 R831009: once per turn on The Power to Thrive and on Turtinator, a Tribute paying Turtinator's", () => {
     cy.seedGame({ seed: SEED, a: "30-activate-a", b: "30-quiet-b" });
 
     cy.advanceToTurn(3);
@@ -56,18 +57,24 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       cy.get(control).click();
       cy.waitForPrompt("discover");
       for (const mode of THRIVE_MODES) cy.get(promptOf("discover")).find(ts(promptOptionId(mode))).should("exist");
-      cy.get(promptOf("discover")).find(ts(promptOptionId("mana"))).click();
-      cy.expectAnimating("activated");
+      cy.get(promptOf("discover")).find(ts(promptOptionId("reduce"))).click();
+      // R831009: the hand card is chosen as the activation resolves.
+      cy.waitForPrompt("hand");
+      // An engine prompt is answered in its picker, by PendingOption.key (`instance:<id>`), not on the hand.
+      cy.handCardByName("Mr. Vanilla").then((vanilla) => {
+        cy.answerPrompt("hand", { options: [`instance:${vanilla}`] });
+      });
       cy.settled();
-      manaIs(1);
+      manaIs(0);
 
       cy.get(ts(activateUsesId(thrive))).should("have.text", "0");
       cy.get(control).should("have.attr", "data-legal", "false");
       cy.get(control).invoke("attr", "title").should("contain", "—");
       cy.get(control).click();
       cy.get(PROMPT).should("not.exist");
-      manaIs(1);
+      manaIs(0);
 
+      // Mr. Vanilla costs (0) now.
       cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
       manaIs(0);
 
@@ -83,7 +90,7 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
         const control = ts(activateId(turtinator));
         cy.get(ts(cardId(turtinator))).find(control).should("exist");
         cy.get(control).should("have.attr", "data-legal", "true");
-        cy.get(ts(activateUsesId(turtinator))).should("have.text", "∞");
+        cy.get(ts(activateUsesId(turtinator))).should("have.text", "1");
 
         // R683: Turtinator cannot Tribute itself.
         cy.get(control).click();
@@ -96,10 +103,11 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
         cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
         cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH - VANILLA_ATTACK)).should("exist");
 
-        // No other Unit remains to pay the Tribute.
-        cy.get(ts(activateUsesId(turtinator))).should("have.text", "∞");
+        // Once a turn (patch v0.3.10; Activate ♾️ before).
+        cy.get(ts(activateUsesId(turtinator))).should("have.text", "0");
         cy.get(control).should("have.attr", "data-legal", "false");
-        cy.get(control).invoke("attr", "title").should("contain", "Tribute");
+        // The control capitalises the engine's refusal (ActivateControl.tsx, `capitalised`).
+        cy.get(control).invoke("attr", "title").should("contain", "That ability has already been used this turn");
         cy.get(control).click();
         cy.get(PROMPT).should("not.exist");
         cy.get(ts(cardId(turtinator))).should("exist");

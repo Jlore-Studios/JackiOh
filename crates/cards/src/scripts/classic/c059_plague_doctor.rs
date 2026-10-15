@@ -1,14 +1,14 @@
 //! C #59 Plague Doctor (SPEC §8.6 row 59). (1) Unit, Human, Common, 2/3 → 4/6.
-//!   Base:    "Cry: Deal damage equal to the number of Plague Counters on the field."
-//!   Radiant: "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the
-//!            number of Plague Counters on the field." — 2 tokens
+//!   Both faces: "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to
+//!            the number of Plague Counters on the field." — 1 token (Radiant 2)
 //!   Engine:  "A declared target (R81); one hit of N, N = every Plague Counter on both sides, counted as it
-//!            resolves, after the Radiant's own placement (N = 0 is no hit, R63). A `preview` (R280)
-//!            shows N. Tunes: Radiant tokens 2 ↑."
+//!            resolves, after the Cry's own placement (N = 0 is no hit, R63). A `preview` (R280) shows N.
+//!            Tunes: tokens 1 ↑ (Radiant 2)." The base face places since patch v0.3.10 (#831), as the
+//!            Radiant face did alone before.
 //!
 //! The target is declared with the play (R81): a Unit (the top of a unit pile, either side) or a hero. N
-//! is every Plague Counter on the field, both sides, face-down cards included, as the Cry resolves; on
-//! the Radiant face the Cry first places {tokens} on the Doctor itself (`placePlague`, times the Doctor's
+//! is every Plague Counter on the field, both sides, face-down cards included, as the Cry resolves; the
+//! Cry first places {tokens} on the Doctor itself (`placePlague`, times the Doctor's
 //! own multiplier), and N counts those too. One hit of N; N = 0 is no hit at all (R63).
 //!
 //! The Cry builds its list once, so N is read as it begins and the Radiant's own placement is added to
@@ -17,8 +17,7 @@
 //!
 //! R280: the preview is N, from `damageNow`, the same function the Cry deals with. Plague Counters are
 //! public on every permanent, a face-down one's included (§10.8), so the number reveals nothing. The
-//! number is the declared `tokens` (R386), read through `param`; the base face declares it but never
-//! reads it.
+//! number is the declared `tokens` (R386), read through `param` on both faces.
 
 use jackioh_engine::effects::{damage, place_plague};
 use jackioh_engine::prelude::*;
@@ -49,18 +48,18 @@ fn tokens_on_field(read: &Read) -> i32 {
     permanents_on_field(read.state, read.controller).iter().fold(0, |sum, card| sum + plague_on(card))
 }
 
-/// The Plague Counters the Radiant face's own placement puts on the Doctor: the declared number times its
-/// own multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once
-/// played. A preview is asked only of a Doctor acting on the field or in a hand (R13), and its Cry runs
+/// The Plague Counters the Cry's own placement puts on the Doctor: the declared number times its own
+/// multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once played.
+/// Both faces place since patch v0.3.10 (#831), the Radiant face alone before. A preview is asked only of a Doctor acting on the field or in a hand (R13), and its Cry runs
 /// as it arrives on top of its zone, so the Doctor always carries the placement.
 fn tokens_it_places(read: &Read) -> i32 {
     match read.self_ {
-        Some(self_) if read.radiant => (read.tokens)().max(0) * plague_multiplier_of(read.state, self_),
-        _ => 0,
+        Some(self_) => (read.tokens)().max(0) * plague_multiplier_of(read.state, self_),
+        None => 0,
     }
 }
 
-/// N: every Plague Counter on the field, plus the Radiant face's own placement, as the Cry resolves now.
+/// N: every Plague Counter on the field, plus the Cry's own placement, as the Cry resolves now.
 pub fn damage_now(read: &Read) -> i32 {
     tokens_on_field(read) + tokens_it_places(read)
 }
@@ -76,9 +75,6 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         tokens: &|| param(ctx, "tokens"),
     });
     let hit = if amount > 0 { vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))] } else { vec![] };
-    if !ctx.radiant {
-        return hit;
-    }
     let mut effects = vec![place_plague(json_as(json!({ "target": { "of": "self" }, "amount": param(ctx, "tokens") })))];
     effects.extend(hit);
     effects
@@ -103,12 +99,12 @@ pub fn script() -> CardScripts {
         ..Script::default()
     };
 
-    // The Radiant face's placement is `ctx.radiant`'s branch; its 2 is the declared `tokens`.
+    // The placement is the declared `tokens`: 1 on the base face, 2 on the Radiant face.
     CardScripts { radiant: base.clone(), base }
 }
 
-// C #59 Plague Doctor, SPEC §8.6 row 59: N = 0 is no hit (R63); the preview is N (R280), which on the
-// Radiant face includes its own placement; its tuned number (radiant tokens) reads through `param()` (R386).
+// C #59 Plague Doctor, SPEC §8.6 row 59: N = 0 is no hit (R63); the preview is N (R280), which includes
+// its own placement; its tuned number (tokens) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
     use super::{script, ID};
@@ -165,7 +161,7 @@ mod tests {
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
             );
-            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }]));
+            assert_eq!(def["params"], json!([{ "key": "tokens", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }]));
             // The Radiant face is the same declaration and the same hooks.
             assert_eq!(js(&scripts.radiant.targets), js(&scripts.base.targets));
             assert_eq!(scripts.radiant.cry.is_some(), scripts.base.cry.is_some());
@@ -176,7 +172,8 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_a_2_3_its_cry_deals_one_hit_of_n_every_plague_counter_on_both_sides_face_down_cards_included() {
+            fn is_a_2_3_its_cry_places_1_on_itself_then_deals_one_hit_of_n_every_plague_counter_on_both_sides_face_down_cards_included()
+            {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -195,12 +192,19 @@ mod tests {
                 s.play(DOCTOR, json!({ "targets": at(&menace) }));
 
                 s.expect_stats(DOCTOR, json!({ "attack": 2, "health": 3 }));
-                assert_eq!(hits(&s, &menace), vec![json!(7)]);
-                s.expect_stats(&menace, json!({ "health": 2 }));
-                // Nothing places or removes a token.
+                assert_eq!(s.card(DOCTOR).counters.plague, Some(1));
+                assert_eq!(hits(&s, &menace), vec![json!(8)]);
+                s.expect_stats(&menace, json!({ "health": 1 }));
+                // Its own placement is the one token the Cry moves, before the hit.
+                let doctor = s.card(DOCTOR).id.clone();
                 assert_eq!(
-                    s.events().iter().map(js).filter(|event| event["type"] == "counterChanged").collect::<Vec<Value>>(),
-                    Vec::<Value>::new(),
+                    s.events()
+                        .iter()
+                        .map(js)
+                        .filter(|event| event["type"] == "counterChanged" || event["type"] == "damage")
+                        .map(|event| (event["type"].clone(), event["instanceId"].clone()))
+                        .collect::<Vec<(Value, Value)>>(),
+                    vec![(json!("counterChanged"), json!(doctor)), (json!("damage"), Value::Null)],
                 );
             }
 
@@ -219,8 +223,9 @@ mod tests {
                 s.play(&first, json!({ "targets": enemy_hero() }));
                 s.play(&second, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
 
-                s.expect_health(PlayerId::P2, 17);
-                s.expect_health(PlayerId::P1, 17);
+                // 3 + its own 1, then 3 + 1 + the second Doctor's own 1.
+                s.expect_health(PlayerId::P2, 16);
+                s.expect_health(PlayerId::P1, 15);
             }
 
             #[test]
@@ -269,15 +274,15 @@ mod tests {
             }
 
             #[test]
-            fn r63_n_0_is_no_hit_with_no_plague_counter_on_the_field_nothing_is_dealt() {
+            fn with_no_other_token_on_the_field_it_still_deals_1_its_own() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE], "health": 20 } }));
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
                 s.expect_in_zone(DOCTOR, "field");
-                assert_eq!(all_hits(&s), 0);
-                s.expect_health(PlayerId::P2, 20);
+                assert_eq!(all_hits(&s), 1);
+                s.expect_health(PlayerId::P2, 19);
             }
 
             #[test]
@@ -294,7 +299,8 @@ mod tests {
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
-                s.expect_health(PlayerId::P2, 19);
+                // The pile's top's 1 and the Doctor's own; the 4 beneath are not on the field.
+                s.expect_health(PlayerId::P2, 18);
             }
 
             #[test]
@@ -303,11 +309,12 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": ["classic-053", DOCTOR, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [MENACE], "health": 20 } }));
                 assert_eq!(s.state().players.p2.hero.health, 20);
                 let menace = s.card(MENACE).id.clone();
-                s.play("classic-053", json!({ "targets": at(&menace) }));
+                s.play("classic-053", json!({}));
+                s.answer(json!(menace));
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
-                s.expect_health(PlayerId::P2, 19);
+                s.expect_health(PlayerId::P2, 18);
             }
 
             #[test]
@@ -320,20 +327,20 @@ mod tests {
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
-                s.expect_health(PlayerId::P2, 18);
+                s.expect_health(PlayerId::P2, 17);
                 assert!(!js(&s.view(PlayerId::P1)).to_string().contains(PAWN));
             }
 
             #[test]
-            fn r386_the_base_face_never_reads_its_tokens_an_upgrade_of_them_changes_nothing() {
+            fn r386_an_upgrade_of_its_tokens_places_2_on_itself_and_deals_2_more_than_the_field_held() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [DOCTOR, ANCHOR], "field": [{ "def": VANILLA, "counters": { "plague": 1 } }] }, "p2": { "hand": [ANCHOR], "health": 20 } }));
                 step_param(s.card_mut(DOCTOR), "tokens", 1);
 
                 s.play(DOCTOR, json!({ "targets": enemy_hero() }));
 
-                s.expect_health(PlayerId::P2, 19);
-                assert!(s.card(DOCTOR).counters.plague.is_none());
+                s.expect_health(PlayerId::P2, 17);
+                assert_eq!(s.card(DOCTOR).counters.plague, Some(2));
             }
         }
 

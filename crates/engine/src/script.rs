@@ -587,8 +587,8 @@ pub struct StaticFlags {
     /// random from the legal ones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random_targets: Option<bool>,
-    /// Meditative #91 Windfast (ME-ATTACKSUMMON, R1202): when this would attack, a Unit summoned
-    /// from its controller's hand makes that attack instead.
+    /// Meditative #91 Windfast (ME-ATTACKSUMMON, R1202, R831006): when this would attack, a random
+    /// Unit summoned from its controller's hand makes that attack instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attack_from_hand: Option<bool>,
     /// Meditative #91 Windfast's base face (ME-ATTACKSUMMON, R1202): the summoned substitute is
@@ -851,6 +851,17 @@ pub fn would_counter_hook(
     Arc::new(f)
 }
 
+/// R831008, `Script.mode_allowed`: whether this player may choose this option of the card's own
+/// declared modes now.
+pub type ModeAllowedHook = Arc<dyn Fn(&GameState, PlayerId, &str) -> bool + Send + Sync>;
+
+/// Builds a `ModeAllowedHook`.
+pub fn mode_allowed_hook(
+    f: impl Fn(&GameState, PlayerId, &str) -> bool + Send + Sync + 'static,
+) -> ModeAllowedHook {
+    Arc::new(f)
+}
+
 /// `ActivationDecl.has`: whether the card has this ability now.
 pub type HasHook = Arc<dyn for<'a> Fn(HookArgs<'a>) -> bool + Send + Sync>;
 
@@ -890,6 +901,10 @@ pub struct Script {
     /// The play-time choices this card declares (R81).
     pub targets: Vec<TargetDecl>,
     pub modes: Vec<ModeDecl>,
+    /// R831008: which options of the card's own declared modes may be chosen now — a pure read of
+    /// the board, asked by `legalActions`, the play's refusal and a cast's own pick alike
+    /// (Meditative #98 Showdown: only an empty lane). Absent allows every option.
+    pub mode_allowed: Option<ModeAllowedHook>,
     /// R865: the card's declared modes are kept secret — filed as a secret record, not carried on the
     /// play's events, and blanked from an in-flight play the other seat reads.
     pub secret_modes: bool,

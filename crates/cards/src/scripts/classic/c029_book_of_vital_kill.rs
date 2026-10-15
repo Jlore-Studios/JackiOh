@@ -1,25 +1,22 @@
 //! C #29 Book of Vital Kill (SPEC §8.6 row 29, §6.3 Set health; R18, R81, R317). Spell, Book, cost 1,
 //! Epic.
-//!   Base:    "Set a hero's health to 13."
-//!   Radiant: "Set a hero's health to 13. Add a Book of Flame to your hand."
+//!   Base:    "Set health of a hero to 13.\nEnd the turn."
+//!   Radiant: "Set health of a hero to 13."
 //!   Engine:  "Set health (§6.3) on either hero, a declared target (R81): no pipeline, not damage and
-//!            not a heal, like R18's lose health. Radiant adds C #16's base face; hand cap applies."
+//!            not a heal, like R18's lose health." Patch v0.3.10 (#831): the base face then ends the
+//!            turn (§2.2, as C+ #26 Tommy Tempo's cast on draw does), and the Radiant face no longer
+//!            adds a Book of Flame: its edge is the turn it leaves you.
 //!
 //! The target is declared (R81): one hero, either side. `setHealth` emits `healthSet` and runs no §4.4
 //! step, so Armor, hit caps, Lifesteal and every "takes damage" or "is healed" trigger never see it.
 //! The entry declares no `params`: a Degrade has nothing to move, as 13 is good or bad depending on
 //! whose hero it is.
-//! The Radiant Book of Flame is C #16's base face (R57's radiant flag off), added through §2.4's
-//! pipeline: a full hand burns it (R4, R317); in hand it follows R97.
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-029";
 
 const VITAL_HEALTH: i32 = 13;
-
-/// C #16 Book of Flame, which the Radiant face adds on its base face.
-const BOOK_OF_FLAME: &str = "classic-016";
 
 fn set_vital_health() -> Effect {
     set_health(json_as(json!({ "to": { "of": "chosen" }, "value": VITAL_HEALTH })))
@@ -30,18 +27,13 @@ pub fn script() -> CardScripts {
 
     let base = Script {
         targets: targets.clone(),
-        cry: Some(hook(|_ctx| vec![set_vital_health()])),
+        cry: Some(hook(|_ctx| vec![set_vital_health(), end_turn(json_as(json!({})))])),
         ..Script::default()
     };
 
     let radiant = Script {
         targets,
-        cry: Some(hook(|_ctx| {
-            vec![
-                set_vital_health(),
-                add_to_hand(json_as(json!({ "defId": BOOK_OF_FLAME }))),
-            ]
-        })),
+        cry: Some(hook(|_ctx| vec![set_vital_health()])),
         ..Script::default()
     };
 
@@ -50,8 +42,8 @@ pub fn script() -> CardScripts {
 
 // C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: a declared hero target, either
 // side, set to 13 from above or below with Armor unchanged: not damage and not a heal, so hit caps, C #75,
-// Lifesteal, C #52's lethal window and Fed Fauci's tokens never see it; `healthSet` is public; radiant:
-// also add a Book of Flame (C #16, base face), burned at a full hand (R317), unnamed to the opponent (R97).
+// Lifesteal, C #52's lethal window and Fed Fauci's tokens never see it; `healthSet` is public; the base
+// face then ends the turn, the Radiant face does not (patch v0.3.10).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,9 +53,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const VITAL: &str = "classic-029";
-    const FLAME: &str = "classic-016"; // C #16 Book of Flame, (1) Spell: "Deal {damage} damage."
     const GAMBIT: &str = "classic-052"; // C #52 Final Gambit, (2) Trap: a hit that would bring your hero to 0 or less.
-    const TWINSPELL: &str = "core-079"; // (2) Field Spell: "Your next Spell gains Echo +1."
     const FAUCI: &str = "core-091"; // (2) Unit: "Whenever this takes damage, place a Plague Counter on this."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
     const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at a time."
@@ -106,7 +96,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER], "field": [VANILLA] },
-                    "p2": { "hand": [FILLER], "field": [VANILLA] },
+                    "p2": { "hand": [FILLER], "library": [FILLER], "field": [VANILLA] },
                 }));
                 let book = s.card(VITAL).clone();
                 let targets: Vec<Option<Vec<Selection>>> = legal_actions(s.state(), P1)
@@ -132,7 +122,7 @@ mod tests {
             #[test]
             fn sets_the_enemy_hero_s_health_down_to_13_from_above() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "health": 30 } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 30 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
                 s.expect_health(P1, 30);
@@ -142,7 +132,7 @@ mod tests {
             #[test]
             fn sets_your_own_hero_s_health_up_to_13_from_below_not_a_heal() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER], "health": 4 }, "p2": { "hand": [FILLER] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER], "health": 4 }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P1);
                 s.expect_health(P1, 13);
                 assert!(events_of(&s, GameEventType::Healed).is_empty());
@@ -151,7 +141,7 @@ mod tests {
             #[test]
             fn a_hero_above_its_starting_health_comes_down_to_13_too() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "health": 45 } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 45 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
             }
@@ -159,7 +149,7 @@ mod tests {
             #[test]
             fn a_hero_at_13_stays_at_13() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "health": 13 } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 13 } }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
                 assert_eq!(events_of(&s, GameEventType::HealthSet).len(), 1);
@@ -170,7 +160,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
-                    "p2": { "hand": [FILLER], "health": 30, "armor": 5 },
+                    "p2": { "hand": [FILLER], "library": [FILLER], "health": 30, "armor": 5 },
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -185,7 +175,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
-                    "p2": { "hand": [FILLER], "field": [FAUCI], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 30 },
+                    "p2": { "hand": [FILLER], "library": [FILLER], "field": [FAUCI], "backrow": [{ "def": GAMBIT, "faceUp": false }], "health": 30 },
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -202,7 +192,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [VITAL, FILLER] },
-                    "p2": { "hand": [FILLER], "backrow": [ANTI_ONESHOT], "health": 30 },
+                    "p2": { "hand": [FILLER], "library": [FILLER], "backrow": [ANTI_ONESHOT], "health": 30 },
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
@@ -212,7 +202,7 @@ mod tests {
             #[test]
             fn r97_healthset_is_public_both_players_read_it_naming_the_book_as_its_source() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 let book = s.card(VITAL).clone();
                 play_at(&mut s, P2);
                 let expected = json!([{ "type": "healthSet", "player": "p2", "health": 13, "sourceId": book.id }]);
@@ -230,9 +220,19 @@ mod tests {
             #[test]
             fn the_base_face_adds_nothing_to_the_hand() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER] } }));
                 play_at(&mut s, P2);
                 assert_eq!(defs_of(&s.hand(P1)), vec![FILLER]);
+            }
+
+            #[test]
+            fn then_ends_the_turn_so_the_opponent_is_up() {
+                crate::register_all();
+                let mut s = scenario(json!({ "p1": { "hand": [VITAL, FILLER] }, "p2": { "hand": [FILLER], "library": [FILLER], "health": 30 } }));
+                play_at(&mut s, P2);
+                s.expect_health(P2, 13);
+                assert_eq!(events_of(&s, GameEventType::TurnEnded).len(), 1);
+                assert_eq!(s.state().active, P2);
             }
         }
 
@@ -240,7 +240,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn sets_the_chosen_hero_s_health_to_13_and_adds_a_book_of_flame_on_its_base_face_to_your_hand() {
+            fn sets_the_chosen_hero_s_health_to_13_adds_nothing_and_leaves_the_turn_going() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VITAL, "radiant": true }, FILLER] },
@@ -248,14 +248,13 @@ mod tests {
                 }));
                 play_at(&mut s, P2);
                 s.expect_health(P2, 13);
-                let flame = s.hand(P1).into_iter().find(|card| card.def_id == FLAME);
-                assert!(flame.is_some());
-                assert_eq!(flame.as_ref().map(|card| card.radiant), Some(false));
-                assert_eq!(flame.as_ref().map(|card| card.owner), Some(P1));
+                assert_eq!(defs_of(&s.hand(P1)), vec![FILLER]);
+                assert!(events_of(&s, GameEventType::TurnEnded).is_empty());
+                assert_eq!(s.state().active, P1);
             }
 
             #[test]
-            fn sets_your_own_hero_too_and_still_adds_the_book_of_flame() {
+            fn sets_your_own_hero_too() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [{ "def": VITAL, "radiant": true }, FILLER], "health": 2 },
@@ -263,65 +262,13 @@ mod tests {
                 }));
                 play_at(&mut s, P1);
                 s.expect_health(P1, 13);
-                assert_eq!(defs_of(&s.hand(P1)), vec![FILLER, FLAME]);
+                assert_eq!(s.state().active, P1);
             }
 
             #[test]
-            fn r97_the_opponent_s_view_never_names_the_book_of_flame_once_it_is_in_your_hand() {
+            fn names_no_card_since_patch_v0_3_10() {
                 crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": { "hand": [{ "def": VITAL, "radiant": true }, FILLER] },
-                    "p2": { "hand": [FILLER] },
-                }));
-                play_at(&mut s, P2);
-                let flame = s
-                    .hand(P1)
-                    .into_iter()
-                    .find(|card| card.def_id == FLAME)
-                    .expect("the Book of Flame should be in p1's hand");
-                let theirs = serde_json::to_string(&s.view(P2)).expect("views serialise");
-                assert!(!theirs.contains(&format!("\"{}\"", flame.id)));
-                assert!(!theirs.contains(FLAME));
-                // Its owner reads it.
-                let mine = serde_json::to_string(&s.view(P1)).expect("views serialise");
-                assert!(mine.contains(&format!("\"{}\"", flame.id)));
-            }
-
-            #[test]
-            fn r317_a_full_hand_burns_the_book_of_flame_into_your_graveyard_and_both_players_read_which() {
-                crate::register_all();
-                // A Radiant Twinspell's Echo +2 resolves the Book three times: 8 cards left in hand, then three
-                // Flames — the first two fill the hand to 10 and the third burns.
-                let mut hand = vec![
-                    json!({ "def": TWINSPELL, "radiant": true }),
-                    json!({ "def": VITAL, "radiant": true }),
-                ];
-                hand.extend((0..8).map(|_| json!(FILLER)));
-                let mut s = scenario(json!({ "p1": { "hand": hand }, "p2": { "hand": [FILLER] } }));
-                s.play(TWINSPELL, json!({}));
-                play_at(&mut s, P2);
-                // §6.2 Echo: each repeat asks its target afresh.
-                for _repeat in 0..2 {
-                    assert_eq!(s.state().pending.as_ref().map(|pending| pending.kind), Some(PromptKind::Target));
-                    s.answer(json!([{ "pick": "hero", "player": "p2" }]));
-                }
-                assert!(s.state().pending.is_none());
-                assert_eq!(s.hand(P1).len(), 10);
-                assert_eq!(s.hand(P1).iter().filter(|card| card.def_id == FLAME).count(), 2);
-                let burned = events_of(&s, GameEventType::Burned);
-                assert_eq!(burned.len(), 1);
-                let burned_flame = s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == FLAME);
-                assert!(burned_flame.is_some());
-                for viewer in [P1, P2] {
-                    let view = s.view(viewer);
-                    let seen: Vec<&GameEvent> = view
-                        .events
-                        .iter()
-                        .filter(|event| event.event_type() == GameEventType::Burned)
-                        .collect();
-                    assert_eq!(seen.len(), 1);
-                    assert!(serde_json::to_string(&seen).expect("events serialise").contains(FLAME));
-                }
+                assert!(crate::card_def(VITAL).refs.is_none());
             }
         }
     }

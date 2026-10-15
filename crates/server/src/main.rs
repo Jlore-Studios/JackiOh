@@ -45,6 +45,8 @@ enum Command {
     StatsExport(Rest),
     /// Watch for clusters of accounts sharing an IP hash (SPEC §9.8): an advisory report, nothing changed.
     InviteClusters(Rest),
+    /// Ban, unban, revoke a code, pause redemption: the operator's abuse levers (SPEC §9.4).
+    Moderate(Rest),
     /// Fold the action logs still held into the play telemetry's action timings (R1442).
     TimingBackfill(Rest),
     /// Print log-normal fits of human think times to paste into config (R1442).
@@ -78,6 +80,7 @@ async fn main() -> ExitCode {
         Command::StatsImport(rest) => cli::import_dev_records::run(rest.args).await,
         Command::StatsExport(rest) => cli::export_records::run(rest.args).await,
         Command::InviteClusters(rest) => cli::invite_clusters::run(rest.args).await,
+        Command::Moderate(rest) => cli::moderate::run(rest.args).await,
         Command::TimingBackfill(rest) => cli::timing_backfill::run(rest.args).await,
         Command::TimingFit(rest) => cli::timing_fit::run(rest.args).await,
         Command::BotCalibrate(rest) => cli::bot_calibrate::run(rest.args).await,

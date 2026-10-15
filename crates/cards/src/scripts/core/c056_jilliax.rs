@@ -1,7 +1,11 @@
-//! #56 Jilliax (SPEC §8.3): 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield" / radiant "Rush,
-//! Taunt, Lifesteal, Divine Shield, Reborn". Engine cell: "Keywords only".
+//! #56 Jilliax (SPEC §8.3): (2), Paid (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield / Paid
+//! (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Paid (3): Equip.".
 //!
-//! Both faces are empty scripts on purpose. §10.4's keyword layer reads the printed keywords off the
+//! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
+//! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
+//! offers the Equip play only at that price and the refusal reads the same stamp (R831013).
+//!
+//! Its four printed keywords need no script. §10.4's keyword layer reads the printed keywords off the
 //! running face of the def (`face_of` in engine/src/layers.rs), and each keyword is a rule the engine
 //! owns (§6.1): Rush (`why_cannot_declare`, §4.1, §4.2 step 1), Taunt (`taunt_wall`, §4.2 step 3),
 //! Lifesteal (§4.4 step 8), Divine Shield (damage pipeline step 1), Reborn. Re-stating any would be a
@@ -17,10 +21,21 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-056";
 
+/// "Paid (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
+/// price (R831013).
+fn paid_equip(args: HookArgs<'_>) -> Vec<Keyword> {
+    if args.self_.embiggened == Some(true) { vec![Keyword::Equip] } else { Vec::new() }
+}
+
 pub fn script() -> CardScripts {
+    let base = Script {
+        conditional_keywords: Some(read_hook(paid_equip)),
+        ..Script::default()
+    };
+    // One script: the Radiant face adds Reborn to the printed list, and pays for Equip the same way.
     CardScripts {
-        base: Script::default(),
-        radiant: Script::default(),
+        radiant: base.clone(),
+        base,
     }
 }
 
@@ -234,6 +249,95 @@ mod tests {
             }));
 
             g.expect_refused_with(|g| g.attack("core-025", "core-008"), "Taunt unit must be attacked first");
+        }
+    }
+
+    mod r831013_paid_3_equip {
+        use super::*;
+
+        const JILLIAX: &str = "core-056";
+        const VANILLA: &str = "core-008"; // (1) 4/4 Unit with no hooks: an Equip host.
+
+        /// p1 holds Jilliax (Radiant on `radiant`) with a Vanilla of theirs on the field in lane 1.
+        fn holding(radiant: bool) -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "p1": {
+                    "mana": 10,
+                    "hand": [{ "def": JILLIAX, "radiant": radiant }, ANCHOR],
+                    "field": [{ "def": VANILLA, "lane": 1 }],
+                },
+            }))
+        }
+
+        /// Every `play` of Jilliax `legalActions` lists, as (embiggen, equip).
+        fn offered(s: &Scenario) -> Vec<(Option<bool>, Option<bool>)> {
+            let id = s.card(JILLIAX).id.clone();
+            legal_actions(s.state(), PlayerId::P1)
+                .into_iter()
+                .filter_map(|action| match action {
+                    ActionBody::Play { instance_id, embiggen, equip, .. } if instance_id == id => Some((embiggen, equip)),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        #[test]
+        fn r831013_costs_2_or_3_paid_and_equip_is_offered_only_at_3() {
+            for radiant in [false, true] {
+                let s = holding(radiant);
+                let offered = offered(&s);
+                assert!(offered.contains(&(Some(false), None)), "radiant {radiant}: the (2) play");
+                assert!(offered.contains(&(Some(true), None)), "radiant {radiant}: the (3) play into a zone");
+                assert!(offered.contains(&(Some(true), Some(true))), "radiant {radiant}: the (3) Equip play");
+                assert!(!offered.contains(&(Some(false), Some(true))), "radiant {radiant}: no Equip at (2)");
+            }
+        }
+
+        #[test]
+        fn r831013_at_2_an_equip_play_is_refused() {
+            for radiant in [false, true] {
+                let mut s = holding(radiant);
+                s.expect_refused_with(
+                    |s| s.play(JILLIAX, json!({ "zone": 1, "equip": true, "embiggen": false })),
+                    "is not Equip",
+                );
+                s.expect_refused_with(|s| s.play(JILLIAX, json!({ "zone": 1, "equip": true })), "is not Equip");
+            }
+        }
+
+        #[test]
+        fn r831013_r1086_paid_3_it_equips_onto_your_unit_and_fuses_its_keywords_into_it() {
+            for radiant in [false, true] {
+                let mut s = holding(radiant);
+                s.play(JILLIAX, json!({ "zone": 1, "equip": true, "embiggen": true }));
+                assert_eq!(s.state().players.p1.mana.current, 10 - 3, "radiant {radiant}: it paid (3)");
+                let host = s.unit(PlayerId::P1, 1).expect("the fused host");
+                assert!(s.unit(PlayerId::P1, 2).is_none(), "radiant {radiant}: no second Unit");
+                let kinds = keyword_kinds(&s, PlayerId::P1, 1);
+                for kind in ["Divine Shield", "Lifesteal", "Rush", "Taunt"] {
+                    assert!(kinds.contains(&kind.to_string()), "radiant {radiant}: the host has {kind}");
+                }
+                // R77: the fusion wears the face the kept host wears — a plain host takes Jilliax's
+                // base 3/2 whichever face was played.
+                let stats = s.stats(host.id.as_str());
+                assert_eq!((stats.attack, stats.health), (4 + 3, 4 + 2), "radiant {radiant}");
+            }
+        }
+
+        #[test]
+        fn r831013_paid_2_into_a_zone_it_has_no_equip_and_paid_3_it_wears_the_keyword() {
+            for radiant in [false, true] {
+                let mut plain = holding(radiant);
+                plain.play(JILLIAX, json!({ "zone": 2 }));
+                assert_eq!(plain.state().players.p1.mana.current, 10 - 2);
+                assert!(!keyword_kinds(&plain, PlayerId::P1, 2).contains(&"Equip".to_string()));
+
+                let mut paid = holding(radiant);
+                paid.play(JILLIAX, json!({ "zone": 2, "embiggen": true }));
+                assert_eq!(paid.state().players.p1.mana.current, 10 - 3);
+                assert!(keyword_kinds(&paid, PlayerId::P1, 2).contains(&"Equip".to_string()));
+            }
         }
     }
 }

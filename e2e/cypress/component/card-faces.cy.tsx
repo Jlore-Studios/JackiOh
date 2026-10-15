@@ -159,7 +159,7 @@ function fitProblems(doc: Document, def: CardDef, box: FitBox, radiant: boolean)
 }
 
 describe("B15: every catalog face fits its name and rules text at 270 px and 170 px", () => {
-  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95, #98, three Classic and Classic+ faces and eleven Meditative ones)", () => {
+  it("B15 the premise: the clamp allowance covers exactly the longest texts (Core's #93, #95 and #98, Classic+ #62 and #73, and five Meditative cards)", () => {
     const long = DEFS.flatMap((def) =>
       FACES.filter((face) => printedLength(def, face.radiant) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`),
     );
@@ -169,8 +169,9 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
     // the Meditative set, and its wordiest faces cross it too: #8 Reach the Summit's Ascent ladder,
     // #22 Mind Games and its #22.1 Fortify Mind, #49.1 YileGPT Unleashed and #95 Call to Chaos
     // (meditative-faces.cy.tsx measures the set's faces at the inspect sizes); #65 Keymaster Keenus's
-    // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text. Each fits at 270
-    // px, #8 in the longest layout.
+    // and #45 Knowledge Breaker's Radiant faces left it with their patch v0.3.7 text, and C+ #62 KY's
+    // Papaya joined it with v0.3.10's Discover text (#967). Each fits at 270 px, #8 in the longest
+    // layout.
     expect(long).to.have.members([
       "meditative-008 base",
       "meditative-008 radiant",
@@ -188,7 +189,8 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
       "core-095 radiant",
       "core-098 base",
       "core-098 radiant",
-      "classic-078 radiant",
+      "classicplus-062 base",
+      "classicplus-062 radiant",
       "classicplus-073 base",
       "classicplus-073 radiant",
     ]);
@@ -669,7 +671,7 @@ describe("faces in play fit their boxes (SPEC §10.10)", () => {
         pending: pendingFor(
           "discover",
           ["7", "42", "100"].map((n) => ({ key: `mode:${n}`, label: n })),
-          { prompt: "KY's Trial: Discover a number from 1 to 100" },
+          { prompt: "KY's Trial: Discover a number" },
         ),
       });
       cy.mount(

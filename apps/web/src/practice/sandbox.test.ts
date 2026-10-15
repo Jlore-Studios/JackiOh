@@ -3,8 +3,9 @@
 import { describe, expect, it } from "vitest";
 
 import { registeredCatalog } from "@jackioh/engine";
-import { setShips } from "@jackioh/shared";
+import { setShips, type CustomCard } from "@jackioh/shared";
 
+import { customDefsOf } from "../creator/useCustomCards.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, fullBoardView, unit } from "../test/fixtures.ts";
 import { SANDBOX_RESULTS_MAX } from "./config.ts";
 import { sandboxAction, searchCards, spawnableDefs, visibleCards } from "./sandbox.ts";
@@ -53,6 +54,27 @@ describe("R923001 the sandbox's card search", () => {
     expect(unitThrees.every((def) => threes.includes(def))).toBe(true);
     expect(threes.filter((def) => def.type === "Unit").every((def) => unitThrees.includes(def))).toBe(true);
     expect(searchCards(pool, "no-card-is-called-this", pool.length)).toEqual([]);
+  });
+});
+
+/** A 1-cost 1/2 Unit with no script, as a game carries it (R915006). */
+const IMP: CustomCard = {
+  id: "custom-ember-imp",
+  version: 1,
+  frame: { name: "Ember Imp", type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
+  source: "",
+};
+
+describe("R962000 a sandbox game's own custom cards", () => {
+  const defs = registeredCatalog();
+
+  it("R962000 lead the cards a spawn may make, and only the game's own open an unshipped set", () => {
+    const pool = spawnableDefs(defs, customDefsOf([IMP]));
+    expect(pool.map((def) => def.id)).toEqual([IMP.id, ...spawnableDefs(defs).map((def) => def.id)]);
+    expect(pool.filter((def) => !setShips(def.set)).map((def) => def.id)).toEqual([IMP.id]);
+    expect(searchCards(pool, "")[0]?.id, "an empty search shows it first").toBe(IMP.id);
+    expect(searchCards(pool, "ember imp")[0]?.id).toBe(IMP.id);
+    expect(searchCards(spawnableDefs(defs), IMP.id), "a game without it never offers it").toEqual([]);
   });
 });
 

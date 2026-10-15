@@ -16,11 +16,15 @@
  * either plain colour. Nothing here keys off `data-legal`: a legal element without glow gets no
  * colour. A selected element (`data-selected="true"`) is left to board.css's own selection styling,
  * which stays on top of both glows.
+ *
+ * A third mark, the counted ring (`data-counted="true"`, #991), is an outline, so it never touches the
+ * box-shadow contract above.
  */
 
 :root {
   --glow-ready: #4ade80;
   --glow-condition: #facc15;
+  --glow-counted: #c084fc;
 }
 
 /* Green: anything the board marks ready. The element-specific selectors outrank a board.css rule
@@ -123,4 +127,12 @@
   box-shadow:
     0 0 0 2px var(--glow-condition),
     0 0 10px 2px color-mix(in srgb, var(--glow-condition) 45%, transparent);
+}
+
+/* #991, R583: a card the hovered or selected hand card's preview counts (`data-counted`, Board.tsx).
+   An outline, not a box-shadow: the two glows and board.css's selection own the box-shadow, so the
+   ring sits outside them and replaces neither. It never moves, so reduced motion needs nothing. */
+.card[data-counted="true"] {
+  outline: 3px solid var(--glow-counted);
+  outline-offset: 2px;
 }

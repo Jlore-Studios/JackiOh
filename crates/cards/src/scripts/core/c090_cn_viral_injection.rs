@@ -518,9 +518,10 @@ mod tests {
         }
 
         #[test]
-        fn s4_4_step_2_r63_armor_absorbs_the_1_damage_no_damage_event_fires_and_the_copies_still_land() {
+        fn s4_4_step_2_its_pierce_goes_through_armor_2_the_1_damage_lands_and_the_copies_still_land() {
             crate::register_all();
-            // What "Going Long (#84) reduces it" means for the pipeline: the two clauses are independent.
+            // Pierce (patch v0.3.10) skips §4.4 step 2's Armor, so Going Long (#84) no longer reduces it;
+            // the two clauses stay independent.
             let mut s = scenario(json!({
                 "seed": "core-090-1-armor",
                 "p1": { "hand": [VIRUS, "core-005"], "library": filler(3), "armor": 2 },
@@ -529,8 +530,8 @@ mod tests {
 
             s.play(VIRUS, json!({}));
 
-            s.expect_health(P1, 30);
-            assert_eq!(damage_to(&s, "hero-p1"), Vec::<i32>::new());
+            s.expect_health(P1, 29);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
 
             s.end_turn();
 
@@ -735,7 +736,7 @@ mod tests {
         }
 
         #[test]
-        fn s4_4_the_radiant_2_is_one_damage_instance_1_armor_leaves_1_and_the_copies_still_land() {
+        fn s4_4_the_radiant_2_is_one_damage_instance_its_pierce_goes_through_armor_1_and_the_copies_still_land() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "core-090-1-radiant-armor",
@@ -745,8 +746,8 @@ mod tests {
 
             s.play(VIRUS, json!({}));
 
-            s.expect_health(P1, 29);
-            assert_eq!(damage_to(&s, "hero-p1"), vec![1]);
+            s.expect_health(P1, 28);
+            assert_eq!(damage_to(&s, "hero-p1"), vec![2]);
 
             s.end_turn();
 

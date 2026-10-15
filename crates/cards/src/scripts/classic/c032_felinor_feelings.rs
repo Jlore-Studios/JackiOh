@@ -1,4 +1,4 @@
-//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 0, Rare.
+//! C #32 Felinor Feelings (SPEC §8.6 row 32). Spell, Felinor, cost 1, Rare.
 //!   Base:    "Steal an enemy permanent in a lane where you control a (1) Cost Unit."
 //!   Radiant: "Summon a Felinor Token. Then steal an enemy permanent in a lane where you control a (1)
 //!             Cost Unit."

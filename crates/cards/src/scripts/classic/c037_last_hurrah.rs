@@ -165,7 +165,12 @@ mod tests {
             #[test]
             fn s2_4_a_draw_limit_stops_the_rest_those_draws_do_not_happen_at_all() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }), false);
+                // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve and limits its draws.
+                let mut s = setup(
+                    json!({ "hand": [{ "def": HURRAH, "costMod": 1 }, "core-010"] }),
+                    json!({ "backrow": [{ "def": PALANTIR, "faceUp": true }] }),
+                    false,
+                );
 
                 s.play(HURRAH, json!({}));
 

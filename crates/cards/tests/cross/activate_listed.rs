@@ -31,6 +31,7 @@ const POWER_TO_THRIVE: &str = "classic-081";
 const LOCKDOWN: &str = "classic-084";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
+const KYS_GIFT: &str = "classicplus-042-1";
 const BROTHER_PING: &str = "classicplus-076-1";
 const WISHING_WELL: &str = "meditative-097-2";
 const SCHOOL: &str = "meditative-097-3";
@@ -45,7 +46,7 @@ const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 25] = [
+const ACTIVATE_CARDS: [&str; 26] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -59,6 +60,7 @@ const ACTIVATE_CARDS: [&str; 25] = [
     LOCKDOWN,
     FUSION_LAB,
     DOCTORS_ORDERS,
+    KYS_GIFT,
     BROTHER_PING,
     WISHING_WELL,
     SCHOOL,
@@ -547,23 +549,28 @@ mod c_n42_transmutable_toxins {
 mod c_n74_corpse_plantation {
     use super::*;
 
-    fn plants(radiant: bool, tokens: i32) {
+    /// The Activate arms one play from the graveyard this turn (patch v0.3.10; its Cry places the
+    /// counters now), remembering the turn it was armed on.
+    fn arms(radiant: bool) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(CORPSE_PLANTATION, radiant)], "hand": [STOCKPILE] },
             "p2": { "hand": [FILLER] },
         }));
         activate_listed(&mut s, CORPSE_PLANTATION, any);
-        assert_eq!(s.card(CORPSE_PLANTATION).counters.plague, Some(tokens));
+        let turn = s.state().turn;
+        assert_eq!(s.card(CORPSE_PLANTATION).memory.get("armed"), Some(&json!(turn)));
+        let id = s.card(CORPSE_PLANTATION).id.clone();
+        assert!(listed(&s, &id).is_empty(), "once per turn");
     }
 
     #[test]
-    fn r384_base_places_2_plague_counters_on_itself() {
-        plants(false, 2);
+    fn r384_base_arms_a_graveyard_play_once_a_turn() {
+        arms(false);
     }
 
     #[test]
-    fn r384_radiant_places_4_plague_counters_on_itself() {
-        plants(true, 4);
+    fn r384_radiant_arms_a_graveyard_play_once_a_turn() {
+        arms(true);
     }
 }
 
@@ -594,45 +601,56 @@ mod c_n78_mutate_spell {
         activate_listed(&mut s, MUTATE_SPELL, at(well.clone()));
         assert_eq!(s.hand(P1).len(), hand + 2);
         assert_eq!(s.card(&well).counters.plague.unwrap_or(0), 0);
-        // Activate ♾️: listed again while a permanent has a counter.
+        // Activate, once a turn (patch v0.3.10): not listed again, though the enemy has a counter.
+        let id = s.card(MUTATE_SPELL).id.clone();
+        assert!(listed(&s, &id).is_empty(), "once per turn");
+        let mut s = mutate(false);
         activate_listed(&mut s, MUTATE_SPELL, at(enemy.clone()));
         s.expect_in_zone(&enemy, "exile");
     }
 
     #[test]
-    fn r384_radiant_a_counter_off_your_backrow_card_draws_4() {
+    fn r384_radiant_a_counter_off_your_backrow_card_draws_4_then_off_an_enemy_unit_exiles_it() {
         let mut s = mutate(true);
         let well = s.card(MANA_WELL).id.clone();
+        let enemy = s.card(VANILLA).id.clone();
         let hand = s.hand(P1).len();
         activate_listed(&mut s, MUTATE_SPELL, at(well));
         assert_eq!(s.hand(P1).len(), hand + 4);
+        // Activate ♾️: listed again while a permanent has a counter.
+        activate_listed(&mut s, MUTATE_SPELL, at(enemy.clone()));
+        s.expect_in_zone(&enemy, "exile");
     }
 }
 
 mod c_n81_the_power_to_thrive {
     use super::*;
 
-    fn gains(radiant: bool, mana: i32) {
+    /// The third mode, a card of your hand costing less (patch v0.3.10; it gained mana before).
+    fn reduces(radiant: bool, discount: i32) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(POWER_TO_THRIVE, radiant)], "hand": [STOCKPILE], "mana": 3 },
             "p2": { "hand": [FILLER] },
         }));
         activate_listed(&mut s, POWER_TO_THRIVE, |action| {
-            modes_of(action) == vec!["mana".to_string()]
+            modes_of(action) == vec!["reduce".to_string()]
         });
-        s.expect_mana(P1, 3 + mana);
+        let stockpile = s.card(STOCKPILE).id.clone();
+        s.answer(json!(stockpile));
+        assert_eq!(s.card(&stockpile).cost_mod, -discount);
+        s.expect_mana(P1, 3);
         let id = s.card(POWER_TO_THRIVE).id.clone();
         assert!(listed(&s, &id).is_empty(), "once per turn");
     }
 
     #[test]
-    fn r384_base_the_mana_mode_gains_1() {
-        gains(false, 1);
+    fn r384_base_the_reduce_mode_takes_1_off() {
+        reduces(false, 1);
     }
 
     #[test]
-    fn r384_radiant_the_mana_mode_gains_2() {
-        gains(true, 2);
+    fn r384_radiant_the_reduce_mode_takes_2_off() {
+        reduces(true, 2);
     }
 }
 
@@ -729,6 +747,40 @@ mod c_n60_doctors_orders {
     #[test]
     fn r384_radiant_adds_a_radiant_all_purpose_apple() {
         adds_an_apple(true);
+    }
+}
+
+mod c_n42_1_kys_gift {
+    use super::*;
+
+    /// Patch v0.3.10 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
+    /// its controller the declared mana and adds the four cards, which cost (0).
+    fn opens(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(KYS_GIFT, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [MENACE, FILLER], "library": [X, X] },
+        }));
+        let before = s.state().players.p1.mana.current;
+        activate_listed(&mut s, KYS_GIFT, any);
+        let mana = if radiant { 2 } else { 1 };
+        assert_eq!(s.state().players.p1.mana.current, before + mana);
+        let added: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.cost_override == Some(0))
+            .collect();
+        assert_eq!(added.len(), 4);
+        assert!(added.iter().all(|card| card.radiant == radiant));
+    }
+
+    #[test]
+    fn r384_base_gains_mana_and_adds_four_cards_at_0() {
+        opens(false);
+    }
+
+    #[test]
+    fn r384_radiant_adds_four_radiant_cards_at_0() {
+        opens(true);
     }
 }
 
@@ -890,21 +942,33 @@ mod m_n97_4_mega_church {
 mod m_n97_6_university {
     use super::*;
 
+    /// The University beside one Vanilla: it Buffs its other permanents, never itself (patch v0.3.10).
+    fn campus(radiant: bool) -> Scenario {
+        scenario(json!({
+            "p1": { "field": [on(UNIVERSITY, radiant), VANILLA], "hand": [FILLER], "library": [X, X] },
+            "p2": { "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
     #[test]
-    fn r384_base_activate_buffs_it_twice_once_a_turn() {
-        let mut s = building(UNIVERSITY, false);
+    fn r384_base_activate_buffs_the_other_permanent_twice_once_a_turn() {
+        let mut s = campus(false);
         let id = s.card(UNIVERSITY).id.clone();
+        let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &id), 2);
+        assert_eq!(upgrades_of(&events, &other), 2);
+        assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 
     #[test]
-    fn r384_radiant_activate_buffs_it_five_times_once_a_turn() {
-        let mut s = building(UNIVERSITY, true);
+    fn r384_radiant_activate_buffs_the_other_permanent_five_times_once_a_turn() {
+        let mut s = campus(true);
         let id = s.card(UNIVERSITY).id.clone();
+        let other = s.card(VANILLA).id.clone();
         let events = activate_listed(&mut s, UNIVERSITY, any);
-        assert_eq!(upgrades_of(&events, &id), 5);
+        assert_eq!(upgrades_of(&events, &other), 5);
+        assert_eq!(upgrades_of(&events, &id), 0);
         assert!(listed(&s, &id).is_empty(), "Activate is once per turn");
     }
 }
@@ -1158,6 +1222,27 @@ mod m_n75_ever_growing_tree {
         (s, id)
     }
 
+    /// Activates the Tree as `legalActions` lists it and takes the first of the two Field Spells it
+    /// offers (patch v0.3.10); the events of the pick.
+    fn grow(s: &mut Scenario) -> Vec<GameEvent> {
+        activate_listed(s, EVER_GROWING_TREE, any);
+        let offered: Vec<String> = s
+            .state()
+            .pending
+            .as_ref()
+            .expect("the Tree's choice")
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Mode { option } => Some(option.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(offered.len(), 2);
+        s.answer(json!(offered[0]));
+        s.last_events().to_vec()
+    }
+
     /// The Tree's def id now: a fusion of a picked Field Spell and the Tree.
     fn grown(s: &Scenario, id: &str) -> String {
         find_instance(s.state(), id)
@@ -1167,9 +1252,9 @@ mod m_n75_ever_growing_tree {
     }
 
     #[test]
-    fn r384_base_activate_fuses_a_random_field_spell_into_it_once_a_turn() {
+    fn r384_base_activate_fuses_a_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(false);
-        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        let events = grow(&mut s);
         assert!(
             events
                 .iter()
@@ -1181,9 +1266,9 @@ mod m_n75_ever_growing_tree {
     }
 
     #[test]
-    fn r384_radiant_activate_fuses_a_radiant_field_spell_into_it_once_a_turn() {
+    fn r384_radiant_activate_fuses_a_radiant_field_spell_it_offers_into_it_once_a_turn() {
         let (mut s, id) = planted(true);
-        let events = activate_listed(&mut s, EVER_GROWING_TREE, any);
+        let events = grow(&mut s);
         assert!(
             events
                 .iter()

@@ -45,7 +45,7 @@ pub fn script() -> CardScripts {
 // #14 Jlockeed's Weapons (SPEC §8.1, BUILD M4-T4 row 14): "Allies +4 attack, Rush, First Strike
 // while present; later summons get it; gone when destroyed; radiant +10". The keywords are tested
 // through the rules: Rush (§4.1) as a fresh unit attacking, First Strike (§4.3 step 1) as the ally
-// killing Bigot (6/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
+// killing Bigot (4/1) unharmed. Bigot is seeded on the field, so its Cry never fires (R1).
 // CROSS-CARD DEPENDENCY: the removal test plays #36 Magic Jammed on the ally Field Spell (its target
 // is unnarrowed, §8 Conventions), the only in-game way a test can take a Field Spell off the board.
 #[cfg(test)]
@@ -75,8 +75,8 @@ mod tests {
 
                 // Mr. Vanilla is printed 4/4.
                 s.expect_stats("core-008", json!({ "attack": 8, "health": 4, "maxHealth": 4 }));
-                // "Your units": the enemy's Bigot (6/1) is untouched.
-                s.expect_stats("core-002", json!({ "attack": 6, "health": 1, "maxHealth": 1 }));
+                // "Your units": the enemy's Bigot (4/1) is untouched.
+                s.expect_stats("core-002", json!({ "attack": 4, "health": 1, "maxHealth": 1 }));
             }
 
             #[test]
@@ -91,7 +91,7 @@ mod tests {
                 s.attack("core-008", "core-002");
 
                 s.expect_in_zone(&bigot, "graveyard");
-                // Without the granted First Strike the exchange is simultaneous and Bigot's 6 kills the
+                // Without the granted First Strike the exchange is simultaneous and Bigot's 4 kills the
                 // ally.
                 s.expect_stats("core-008", json!({ "health": 4 }));
             }
@@ -141,7 +141,7 @@ mod tests {
                 s.expect_in_zone(&weapons, "graveyard");
                 s.expect_stats("core-008", json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
                 // The keywords went with it: the ally is summoning-sick-free but has no First Strike, so
-                // Bigot's 6 now kills it in the simultaneous step.
+                // Bigot's 4 now kills it in the simultaneous step.
                 let ally = s.card("core-008").clone();
                 s.attack("core-008", "core-002");
                 s.expect_in_zone(&ally, "graveyard");

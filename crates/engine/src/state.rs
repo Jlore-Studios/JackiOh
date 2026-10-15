@@ -453,6 +453,9 @@ pub enum ModifierKind {
         amount: i32,
     },
     QuickstrikerDamage,
+    /// R831005 (Meditative #53 Prestige, patch v0.3.10): the next card this player plays becomes Radiant
+    /// as it is played (a cast counts, R70), and that play spends it; expiry `thisTurn`.
+    RadiantNextPlay,
     // ---- v0.2.0 modifier kinds, by workstream: play pipeline (E15 costs, E39 stamping, Devil's Pact) ----
     // play pipeline B (E15, E39; R455). A price rule on this player's cards (`cost_rules.rs`): Classic #2's
     // "your next Trap or Field Spell costs (2) less" or "costs (0)" (until used, spent by the play it

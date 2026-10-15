@@ -39,6 +39,9 @@ export const server = {
   ws: () => env("wsUrl", "ws://localhost:8787/ws/match"),
 };
 
+/** R144: the `E2E=1` server's reseed (`POST`, no token): the fixture accounts and invite codes as a boot leaves them. */
+export const E2E_RESEED_PATH = "/api/e2e/reseed";
+
 /** A10: specs seed the session key before load; it must survive spec 05's mid-match reload. */
 export const SESSION_STORAGE_KEY = "jackioh.e2e.session";
 

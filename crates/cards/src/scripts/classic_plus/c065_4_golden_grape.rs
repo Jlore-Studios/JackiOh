@@ -153,7 +153,7 @@ mod tests {
             }));
             let targets = pick(&s, FELINORS);
             s.play(GOLDEN, json!({ "targets": targets }));
-            s.expect_stats(FELINORS, json!({ "attack": 6, "maxHealth": 9, "health": 7 }));
+            s.expect_stats(FELINORS, json!({ "attack": 6, "maxHealth": 8, "health": 6 }));
             assert!(!has_event(s.last_events(), "summoned"));
         }
 

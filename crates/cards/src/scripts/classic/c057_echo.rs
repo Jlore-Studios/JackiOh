@@ -62,7 +62,6 @@ mod tests {
     const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw: take 1 damage.
     const MENACE: &str = "core-019"; // (3) Unit 9/9
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
-    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a Book, Tribute this to steal it (mandatory, no prompt).
     const PILE_ON: &str = "classic-060"; // (5) Spell: Recruit every permanent in your deck; to the bottom of the deck, not the GY.
     /// Pile On with C+ #39 Book Worm fused in, as R179 names it: a Spell, its first ingredient's type.
     const FUSED_PILE_ON: &str = "t-1:classic-060+classicplus-039";
@@ -300,26 +299,23 @@ mod tests {
             }
 
             #[test]
-            fn r546_it_keeps_its_own_name_cost_type_and_tags_copying_a_book_makes_no_book_play_and_c_4_palantir_does_not_ask() {
+            fn r546_it_keeps_its_own_name_cost_type_and_tags_and_copying_a_book_makes_no_book_play() {
                 crate::register_all();
-                // p2's own Book: Palantir answers only the opponent's Books, so it resolves.
                 let mut s = scenario(json!({
                     "active": "p2",
                     "p1": { "hand": [ECHO, VANILLA] },
-                    "p2": { "hand": [WILDFIRE, VANILLA], "backrow": [PALANTIR] },
+                    "p2": { "hand": [WILDFIRE, VANILLA] },
                 }));
                 s.play(WILDFIRE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
                 assert!(s.state().pending.is_none());
-                s.expect_in_zone(PALANTIR, "field");
                 let card = own_view(&s, PlayerId::P1).expect("Echo in p1's hand view");
                 assert_eq!(card["defId"], ECHO);
                 assert_eq!(card["cost"], 1);
                 assert_eq!(card["copies"]["defId"], WILDFIRE);
                 s.end_turn();
-                // p1's Echo copies the resolved Book: the copy is no Book play, so Palantir does not answer.
+                // p1's Echo copies the resolved Book: the copy is no Book play.
                 s.play(ECHO, json!({ "targets": at_p2() }));
                 assert!(s.state().pending.is_none());
-                s.expect_in_zone(PALANTIR, "field");
                 let played = s
                     .last_events()
                     .iter()

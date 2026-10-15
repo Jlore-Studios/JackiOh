@@ -1057,7 +1057,10 @@ export function selectionForOption(option: PendingOption): Selection {
   if (option.player !== undefined) return { pick: "hero", player: option.player };
   if (option.key === "none" || option.key.startsWith("none:")) return { pick: "none" };
   // Everything else is a mode option: a Discover def id, a "Choose one" mode, a direction, or an
-  // X / embiggen value, none of which `Selection` has a member for beyond `{ pick: "mode" }`.
+  // X / embiggen value, none of which `Selection` has a member for beyond `{ pick: "mode" }`. The engine
+  // keys one `mode:<option>`, its stored string, which can differ from its def id: a night market's
+  // Radiant lot (R831002) names its card with a suffix.
+  if (option.key.startsWith("mode:")) return { pick: "mode", option: withoutPickPrefix(option.key) };
   return { pick: "mode", option: option.defId ?? withoutPickPrefix(option.key) };
 }
 

@@ -159,10 +159,10 @@ pnpm --dir e2e test:component                  # component/pixel specs, no serve
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it
 ```
 
-The server reseeds its fixture accounts and invite codes at boot (R144) and spec 10 uses them up, so restart
-it before re-running spec 10. `vite dev` reloads the page whenever `apps/web/src` changes, restarting a
-hotseat game at turn 0, so serve a built client while you edit; a plain `build` strips `window.__jackioh` and
-every spec fails. `e2e/README.md` has the rest.
+The server reseeds its fixture accounts and invite codes at boot and on `POST /api/e2e/reseed` (R144), which
+spec 10 calls first, so spec 10 re-runs with no restart. `vite dev` reloads the page whenever `apps/web/src`
+changes, restarting a hotseat game at turn 0, so serve a built client while you edit; a plain `build` strips
+`window.__jackioh` and every spec fails. `e2e/README.md` has the rest.
 
 ### CI
 

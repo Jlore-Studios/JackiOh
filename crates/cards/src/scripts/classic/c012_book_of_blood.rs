@@ -58,7 +58,8 @@ mod tests {
     const SHIELDED: &str = "core-003"; // Right-house defender 1/1 Taunt, Divine Shield, Reborn.
     const POINTMASTER: &str = "core-020"; // (2) Unit 7/1 First Strike.
     const ROCK: &str = "core-066"; // The Rock 10/10 Indestructible.
-    // Classic+ #26 Tommy Tempo, Radiant 18/18 Taunt: a big body no Immutable keeps a Spell off (R781001).
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10 since patch
+    // v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const TEMPO: &str = "classicplus-026";
     const FILLER: &str = "core-005";
 
@@ -223,7 +224,7 @@ mod tests {
         fn deals_10_in_one_hit_and_heals_your_hero_10() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 20 },
-                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true }] },
+                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
             }));
 
             let targets = at(&s, P2, 1);
@@ -251,7 +252,7 @@ mod tests {
         fn r386_an_upgrade_steps_the_radiant_10_to_11() {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": BOOK, "radiant": true }, FILLER], "health": 10 },
-                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true }] },
+                "p2": { "hand": [FILLER], "field": [{ "def": TEMPO, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
             }));
             step_param(s.card_mut(BOOK), "damage", 1);
 

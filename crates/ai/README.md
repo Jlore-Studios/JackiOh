@@ -12,7 +12,8 @@ Pure and seeded like the engine (CLAUDE.md rule 4): its `Cargo.toml` depends on 
 `serde_json` and `indexmap` only, and its `clippy.toml` is the engine's (no clock, no I/O, no
 environment, no threads, no `HashMap`, no `RefCell`). Every random draw comes from an `Rng` the
 caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`, `SweepOptions`'s
-`now`). A node counter keeps its tallies in `Cell`, which the lint allows.
+`now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
+(R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
 module, the `jackioh` tools, and this crate's tests (dev-dependency).
@@ -68,7 +69,7 @@ is the same budget, so both measure the AI that ships. The same state, seed and 
 same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM binding's deadline),
 which ends the search early with the best line found.
 
-## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000)
+## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
@@ -82,7 +83,11 @@ thread previews, and a lean on a gated set leans on the newest ungated set that 
 A player's random deck passes `Some(vec![])` beside `banned: Some(vec![])`; an `include` still forces a
 gated card in by name. Emptying the list lifts the gate and deals every deck as before it, which issue
 #732 did once it had measured the AI on the Meditative set, the list's one set until then: the list is
-empty, and gating a set that ships before the AI is trained on it is listing it there.
+empty, and gating a set that ships before the AI is trained on it is listing it there. `shape`
+(R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
+`src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
+practice, the quality gates and both seats of an arena or a promotion deal unshaped. The mulligan still
+reads `shaped_weight` (`mulligan_keep_shaped`).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand: run
 `cargo jackioh sweep` and copy the printed rows and header line into the file. The ban governs AI deck
@@ -149,6 +154,10 @@ pub fn duos_gate(games: usize, seed: &str) -> DuosGateReport;   // { games, wins
 - It knows what its team knows and nothing more: its own duel through `decide`'s `redact` and
   `determinize` (R185), and its teammate's own state, which a team shares (§13.6). An opponent's
   hidden card never changes a decision.
+- A seat's life is the engine's `effective_life` (own HP and the team's pool while unspent, §13.4)
+  everywhere the AI reads one: the evaluation, `ready_gap`, the reply's `reply_face_value` and the My
+  Pawn surcharge. The hero value and `closing` are anchored at `starting_life` (`DUOS_OWN_HEALTH` plus
+  the pool's cap). A 1v1 seat reads its hero's health and `HERO_HEALTH`, as before (R964000).
 - The tiers are `duos_ai_team(difficulty)` for the team (Easy the humans' rules, Medium free passing,
   Hard free passing and a `DUOS_POOL_HEALTH_HARD` pool) and `AI_DIFFICULTY` for each AI seat's
   handicap, which the caller sets in `DuosCreateOptions`; nothing here reads a difficulty. The AI

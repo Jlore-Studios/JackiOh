@@ -2282,6 +2282,21 @@ pub async fn codes_claim(t: &mut PgTx<'_>, code_id: &str, now: i64) -> Result<bo
     Ok(done.rows_affected() == 1)
 }
 
+/// The operator's lever onto §9.4 step 5: marks the code carrying `code_hash` revoked, so the
+/// next redemption rejects it exactly as an exhausted one. True when a live row was newly
+/// revoked; false for an unknown hash or a row already revoked.
+pub async fn codes_revoke_by_hash(t: &mut PgTx<'_>, code_hash: &str) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    let done = sqlx::query(
+        "update public.invite_codes set revoked_at = now() where code_hash = $1::text and revoked_at is null",
+    )
+    .bind(code_hash)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
 /// §9.4 step 4: "log the attempt either way". `CodeAttempt.reason` has no column in
 /// `public.code_attempts` — see KNOWN DIVERGENCES (attempt reason).
 pub async fn codes_log_attempt(t: &mut PgTx<'_>, attempt: &CodeAttempt) -> Result<(), StoreError> {
@@ -2402,6 +2417,28 @@ pub async fn codes_count_failures(t: &mut PgTx<'_>, since: i64) -> Result<i64, S
     .await
     .map_err(db_error)?;
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
+}
+
+/// The operator's lever onto §9.4's database-side kill switch: flips
+/// `app.settings.redemption_enabled` and answers the previous value, so the caller prints what
+/// changed. A missing row is a store error: migration 0001 seeds it, so its absence means the
+/// database was never migrated.
+pub async fn redemption_set_enabled(t: &mut PgTx<'_>, enabled: bool) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select value from app.settings where key = 'redemption_enabled'")
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
+    let Some(row) = row else {
+        return Err(StoreError::from("app.settings has no redemption_enabled row"));
+    };
+    let previous: bool = json_col(&row, "value")?;
+    sqlx::query("update app.settings set value = to_jsonb($1::boolean) where key = 'redemption_enabled'")
+        .bind(enabled)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(previous)
 }
 
 // ---------------------------------------------------------------------------

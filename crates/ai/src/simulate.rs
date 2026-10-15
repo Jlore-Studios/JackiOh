@@ -13,8 +13,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, find_instance,
-    legal_actions, opponent_of, owed_mana_of, reduce, unit_view,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, TurnLog, active_units_of,
+    effective_life, find_instance, legal_actions, max_mana_for, opponent_of, owed_mana_of, reduce, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -250,9 +250,10 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             let defender = opponent_of(actor);
             // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
             // surcharge reads the same gate approximately — the unit's attack against the hero's
-            // health — so a chip attack at an armed board is not charged the playout's price.
+            // life (`effective_life`, as the trap's lethal judge reads it, R964000) — so a chip
+            // attack at an armed board is not charged the playout's price.
             let lethalish = find_instance(state, attacker_id)
-                .is_some_and(|unit| unit_view(state, unit).attack >= state.players[defender].hero.health);
+                .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()
@@ -479,26 +480,58 @@ pub fn terminal_score(state: &GameState, seat: PlayerId, root_turn: i32, counter
     static_score(state, seat, root_turn)
 }
 
-/// What a backrow card or an own hand card is, for `search_signature`: its id, its definition (a
-/// Transform or a discovered card keeps the id), its Radiant face, and its cost changes.
+/// `items` sorted and joined by commas: a part of `search_signature` that two orders of the same moves
+/// must sign alike.
+fn sorted(items: impl Iterator<Item = String>) -> String {
+    let mut items: Vec<String> = items.collect();
+    items.sort();
+    items.join(",")
+}
+
+/// What rides a card through its zones and changes how it plays later (#898): its memory, keys sorted
+/// so the order a script wrote them in splits nothing, and its tuning (B3.4, R386). Each only when it
+/// holds something, so a card without them signs as before.
+fn rides_signature(card: &CardInstance) -> String {
+    let mut signature = String::new();
+    if !card.memory.is_empty() {
+        let memory = sorted(card.memory.iter().map(|(key, value)| format!("{key}={value}")));
+        signature.push_str(&format!(";m{memory}"));
+    }
+    if let Some(tuning) = &card.tuning {
+        signature.push_str(&format!(";t{tuning:?}"));
+    }
+    signature
+}
+
+/// What a card off the field is, for `search_signature` (a backrow card, an own hand card, a card in a
+/// graveyard, an exile or a backrow pile): its id, its definition (a Transform or a discovered card
+/// keeps the id), its Radiant face, its cost changes, its enchantments (B5 E39) and what else rides it
+/// (`rides_signature`). The enchantments only when there are some, so a card without them signs as
+/// before (#898).
 fn card_signature(card: &CardInstance) -> String {
+    let enchantments = match &card.enchantments {
+        Some(enchantments) if !enchantments.is_empty() => format!(";e{enchantments:?}"),
+        _ => String::new(),
+    };
     format!(
-        "{}={}{}{}/{:?}",
+        "{}={}{}{}/{:?}{}{enchantments}",
         card.id,
         card.def_id,
         if card.radiant { "*" } else { "" },
         card.cost_mod,
         card.cost_override,
+        rides_signature(card),
     )
 }
 
 /// What changes how an active unit plays beyond its id, damage, buffs, exertion and position: its
 /// definition and Radiant face, a Vanilla, its stats and keywords through the layers (§10.4), its stat
-/// and armor overrides, a spent Divine Shield, and its counters and enchantments.
+/// and armor overrides, a spent Divine Shield, its counters and enchantments, and its memory and
+/// tuning (`rides_signature`, #898).
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },
@@ -512,15 +545,114 @@ fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
         u8::from(unit.divine_shield_spent == Some(true)),
         unit.counters,
         unit.enchantments,
+        rides_signature(unit),
     )
+}
+
+/// One side's parts of `search_signature` beyond its units and backrow (#898): its mana maximum and
+/// riders, its zone Locks, its modifiers, this turn's log, its fatigue, Jade, extra turns and hand cap,
+/// its graveyard and exile, and its backrow piles. Each is pushed only when it is not the default, as
+/// R1224's debt is, so a position that has none of them signs as before; and each is kept free of the
+/// order the moves came in (sorted, the engine's sequence ids left out), so two orders of the same
+/// moves still sign alike for the beam's duplicate check.
+fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>) {
+    let side = &state.players[player];
+    let mana = &side.mana;
+    if mana.max != max_mana_for(side) || mana.next_turn_mod != 0 || mana.perm_mod != 0 {
+        parts.push(format!(
+            "M{player}{}/{}/{}",
+            mana.max, mana.next_turn_mod, mana.perm_mod
+        ));
+    }
+    if side
+        .locks
+        .units
+        .iter()
+        .chain(&side.locks.backrow)
+        .any(|locked| *locked)
+    {
+        parts.push(format!(
+            "L{player}{:?}/{:?}",
+            side.locks.units, side.locks.backrow
+        ));
+    }
+    if !side.mods.is_empty() {
+        let mods = sorted(
+            side.mods
+                .iter()
+                .map(|modifier| format!("{:?}{:?}", modifier.expiry, modifier.kind)),
+        );
+        parts.push(format!("X{player}{mods}"));
+    }
+    // The log's counts, not `unspentAtEnd`: the close of the other player's last turn stays in their
+    // log all through the seat's turn (`turn.rs`), the same in every position a search compares.
+    let log = &side.turn_log;
+    let quiet = TurnLog {
+        unspent_at_end: log.unspent_at_end,
+        ..TurnLog::default()
+    };
+    if *log != quiet {
+        let mut costs = log.costs_paid.clone().unwrap_or_default();
+        costs.sort_unstable();
+        parts.push(format!(
+            "T{player}{}:{}:{costs:?}:{}:{:?}/{:?}/{:?}",
+            log.cards_played,
+            sorted(log.played_ids.iter().cloned()),
+            sorted(
+                log.played_by_type
+                    .iter()
+                    .flatten()
+                    .map(|(kind, count)| format!("{kind:?}{count}"))
+            ),
+            log.mana_borrowed,
+            log.borrowed_parts,
+            log.mana_locked,
+        ));
+    }
+    if side.fatigue_count != 0 {
+        parts.push(format!("F{player}{}", side.fatigue_count));
+    }
+    if let Some(jade) = side.jade {
+        parts.push(format!("J{player}{jade}"));
+    }
+    if let Some(extra) = side.extra_turns {
+        parts.push(format!("E{player}{extra}"));
+    }
+    if let Some(cap) = side.hand_cap {
+        parts.push(format!("C{player}{cap}"));
+    }
+    if !side.graveyard.is_empty() {
+        parts.push(format!(
+            "G{player}{}",
+            sorted(side.graveyard.iter().map(card_signature))
+        ));
+    }
+    if !side.exile.is_empty() {
+        parts.push(format!(
+            "Y{player}{}",
+            sorted(side.exile.iter().map(card_signature))
+        ));
+    }
+    if let Some(piles) = &side.backrow_piles
+        && piles.iter().any(|pile| !pile.is_empty())
+    {
+        let piles = piles
+            .iter()
+            .map(|pile| pile.iter().map(card_signature).collect::<Vec<_>>().join(","))
+            .collect::<Vec<_>>()
+            .join("/");
+        parts.push(format!("P{player}{piles}"));
+    }
 }
 
 /// A cheap identity for a position inside one turn, for the lethal solver's visited set and the
 /// beam's duplicate check: both heroes, the open prompt whole, both library sizes, every active unit's
 /// id, damage, buffs, exertion and position and what else changes how it plays (`unit_play_signature`),
 /// every backrow card (`card_signature`, and whether it is face up), the seat's hand (`card_signature`)
-/// and mana, and the enemy hand size. A unit's lane is left out, so the two lanes `candidate_actions`
-/// keeps for one play stay one position.
+/// and mana, and the enemy hand size; then, each only when it is not the default, both sides' other
+/// state (`push_side_parts`), the seat's debt (R1224), and the game's delayed effects and marks (#898).
+/// A unit's lane is left out, so the two lanes `candidate_actions` keeps for one play stay one
+/// position.
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let opp = opponent_of(seat);
     let mut parts: Vec<String> = vec![
@@ -577,6 +709,7 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
             .collect::<Vec<_>>()
             .join(",");
         parts.push(format!("b{backrow}"));
+        push_side_parts(state, player, &mut parts);
     }
     parts.push(format!(
         "H{}",
@@ -592,6 +725,27 @@ pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     let owed = owed_mana_of(state, seat);
     if owed > 0 {
         parts.push(format!("d{owed}"));
+    }
+    // #898: the game's delayed effects and marks, by the same rule — only when there are some, sorted,
+    // and without the sequence ids the engine names them by.
+    if !state.delayed.is_empty() {
+        let delayed = sorted(state.delayed.iter().map(|entry| {
+            format!(
+                "{}{:?}{:?}{:?}{:?}{:?}",
+                entry.owner, entry.at, entry.not_before, entry.resume, entry.watch, entry.hand_watch
+            )
+        }));
+        parts.push(format!("D{delayed}"));
+    }
+    if let Some(marks) = &state.marks
+        && !marks.is_empty()
+    {
+        let marks = sorted(
+            marks
+                .iter()
+                .map(|mark| format!("{}:{}:{}", mark.instance_id, mark.mark, mark.color)),
+        );
+        parts.push(format!("K{marks}"));
     }
     parts.join("|")
 }

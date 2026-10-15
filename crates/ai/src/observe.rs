@@ -18,9 +18,9 @@ use std::cmp::Ordering;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
-    PendingChoice, PlayerId, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
-    announced_face_down_to, effective_cost, find_def, find_instance, find_instance_mut, handicap_of,
-    mulligan_prompt_for, unclamped_attack, unit_view,
+    PendingChoice, PlayerId, Resume, SETUP_WORK, Selection, active_units_of, announced_face_down_to,
+    effective_cost, find_def, find_instance, find_instance_mut, handicap_of, mulligan_prompt_for,
+    unclamped_attack, unit_view,
 };
 use jackioh_engine::{CostOptions, subsystems};
 use serde_json::Value;
@@ -463,24 +463,28 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         if !hidden.contains(&card.id) {
             continue;
         }
-        let shown_cost = if !matches!(
-            card.zone,
-            Zone::Field {
-                row: Row::Backrow,
-                ..
-            }
-        ) {
+        // R447: only the card a backrow zone shows, its top, shows its cost; a card buried under a
+        // backrow pile (B5 E21) shows nothing of itself, so its placeholder keeps no price.
+        let shown_cost = if !matches!(place, Place::Backrow(_)) {
             None
         } else if card.def_id == HIDDEN_DEF_ID {
             card.cost_override
         } else {
             Some(effective_cost(&next, card, CostOptions::default()))
         };
+        // R471: Plague Counters are public wherever they sit, a face-down backrow card's included,
+        // so its placeholder keeps the count the view shows (patch v0.3.10, #831, found them dropped).
+        let plague = if matches!(place, Place::Backrow(_)) {
+            card.counters.plague
+        } else {
+            None
+        };
         if let Some(card) = card_at_mut(&mut next, player, place) {
             to_placeholder(card);
             if let Some(shown) = shown_cost {
                 card.cost_override = Some(shown);
             }
+            card.counters.plague = plague;
         }
     }
 

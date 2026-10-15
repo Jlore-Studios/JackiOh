@@ -117,10 +117,15 @@ function sent(
     : { body, paid: undefined, embiggened: undefined };
 }
 
-/** Finishes a play whose price is picked: a Field Spell still takes its zone, clicked on the board. */
-function placeIfAsked(): void {
+/** The row a permanent of this definition goes in: a Unit's (Core #56 Jilliax) or the backrow. */
+function rowOf(def: CardDef): "units" | "backrow" {
+  return def.type === "Unit" ? "units" : "backrow";
+}
+
+/** Finishes a play whose price is picked: a permanent still takes its zone, clicked on the board. */
+function placeIfAsked(def: CardDef): void {
   if (screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind") === "zone") {
-    fireEvent.click(el(testid.zone("you", "backrow", 1)));
+    fireEvent.click(el(testid.zone("you", rowOf(def), 1)));
   }
 }
 
@@ -166,7 +171,7 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
           expect(onAction).not.toHaveBeenCalled();
 
           fireEvent.click(el(`prompt-option-${String(form)}`));
-          placeIfAsked();
+          placeIfAsked(def);
           const { body, paid, embiggened } = sent(state, legal, onAction);
           expect(body).toEqual(expect.objectContaining({ type: "play", instanceId: cardId, embiggen: form }));
           expect(paid).toBe(form ? embiggen : base);
@@ -183,7 +188,7 @@ describe("#492 R81 every Embiggen card asks for its price when both are affordab
         fireEvent.click(el(testid.handCard(cardId)));
         expect(screen.queryByTestId("prompt-option-true")).toBeNull();
         expect(screen.queryByTestId("prompt-modal")?.getAttribute("data-prompt-kind")).not.toBe("embiggen");
-        placeIfAsked();
+        placeIfAsked(def);
         const { body, paid } = sent(state, legal, onAction);
         expect(body).toEqual(expect.objectContaining({ type: "play", instanceId: cardId, embiggen: false }));
         expect(paid).toBe(base);
@@ -255,7 +260,7 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
         expect(gem).toHaveAttribute("data-tone", tone);
 
         fireEvent.click(el("prompt-option-true"));
-        placeIfAsked();
+        placeIfAsked(def);
         const { paid, embiggened: was } = sent(state, legal, onAction);
         expect(paid).toBe(price);
         expect(was).toBe(true);
@@ -307,8 +312,8 @@ describe("#492 R81 dragging an Embiggen card asks for its price too", () => {
       const { state, cardId } = board(def.id, false, embiggen);
       const { legal, onAction } = render492(state);
       const zoned = plays(legal, cardId).some((play) => play.zone !== undefined);
-      // A Field Spell lands in a zone it may take; a Spell anywhere on the board.
-      drag(el(testid.handCard(cardId)), el(zoned ? testid.zone("you", "backrow", 2) : "board"));
+      // A permanent lands in a zone it may take; a Spell anywhere on the board.
+      drag(el(testid.handCard(cardId)), el(zoned ? testid.zone("you", rowOf(def), 2) : "board"));
 
       expect(onAction).not.toHaveBeenCalled();
       expect(el("prompt-modal")).toHaveAttribute("data-prompt-kind", "embiggen");
@@ -319,7 +324,7 @@ describe("#492 R81 dragging an Embiggen card asks for its price too", () => {
           type: "play",
           instanceId: cardId,
           embiggen: true,
-          ...(zoned ? { zone: { row: "backrow", lane: 2 } } : {}),
+          ...(zoned ? { zone: { row: rowOf(def), lane: 2 } } : {}),
         }),
       );
       expect(paid).toBe(embiggen);
@@ -329,7 +334,7 @@ describe("#492 R81 dragging an Embiggen card asks for its price too", () => {
       const { state, cardId } = board(def.id, false, embiggen - 1);
       const { legal, onAction } = render492(state);
       const zoned = plays(legal, cardId).some((play) => play.zone !== undefined);
-      drag(el(testid.handCard(cardId)), el(zoned ? testid.zone("you", "backrow", 2) : "board"));
+      drag(el(testid.handCard(cardId)), el(zoned ? testid.zone("you", rowOf(def), 2) : "board"));
 
       expect(screen.queryByTestId("prompt-modal")).toBeNull();
       const { body, paid } = sent(state, legal, onAction);

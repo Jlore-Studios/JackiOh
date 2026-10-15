@@ -24,8 +24,10 @@
 //! Pass 2 needs every slice's pass 1 first, because the at-risk list it boosts is the whole sweep's.
 //! A slice writes each line as it lands, so one cut short keeps what it finished: rerun the rest.
 //! Tooling, so it may read the clock (`Instant`, for decision timing), read files and write to the
-//! console; `crates/ai` stays pure and receives the clock as `now`.
+//! console; `crates/ai` stays pure and receives the clock as `now`, and R977000's re-timer, which times
+//! again a decision the clock found slow against the perf gate's yardstick, as `retime` (`still_slow`).
 
+use std::cell::Cell;
 use std::io::Write as _;
 use std::time::Instant;
 
@@ -34,13 +36,14 @@ use indexmap::IndexSet;
 use serde_json::Value;
 
 use jackioh_ai::{
-    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_WATCH, SweepFlag, SweepOptions, SweepPass2, SweepResult,
-    SweepStats, at_risk_ids, pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
+    AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_WATCH, SlowDecision, SweepFlag, SweepOptions, SweepPass2,
+    SweepResult, SweepStats, at_risk_ids, pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card,
+    sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 
 use crate::arena::utc_date;
-use crate::gate::{MS_PER_SECOND, literal};
+use crate::gate::{MS_PER_SECOND, literal, time_decision, yardstick_ms};
 
 /// The mean evaluate change per play, and each card's seconds, printed to this many decimals.
 const DECIMALS: usize = 1;
@@ -141,6 +144,7 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
         stats.plays.to_string(),
         stats.errors.to_string(),
         stats.timeouts.to_string(),
+        stats.raw_timeouts.to_string(),
         mean_delta(stats),
     ]
     .map(|cell| format!(" {} ", cell.replace('|', "\\|")));
@@ -148,8 +152,8 @@ fn row(stats: &SweepStats, tier: &str, flags: &str) -> String {
 }
 
 const TABLE_HEAD: [&str; 2] = [
-    "| id | name | tier | flags | drawn/games | affordable turns | plays | errors | timeouts | mean eval delta |",
-    "|---|---|---|---|---|---|---|---|---|---|",
+    "| id | name | tier | flags | drawn/games | affordable turns | plays | errors | timeouts | raw timeouts | mean eval delta |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
 ];
 
 fn timed<T>(label: &str, run: impl FnOnce() -> T, describe: impl FnOnce(&T) -> String) -> T {
@@ -166,9 +170,32 @@ fn milliseconds_since(origin: Instant) -> impl Fn() -> f64 {
     move || origin.elapsed().as_secs_f64() * MS_PER_SECOND
 }
 
+/// R977000: whether a decision the sweep's clock found slow is still slower than
+/// AI_SWEEP.decisionMs timed by the perf gate's method (`gate::time_decision`). The yardstick's
+/// first run warms the caches and is no measurement, as in the perf gate (`warmed`). A yardstick
+/// that cannot run keeps the clock's verdict.
+fn still_slow(slow: &SlowDecision<'_>, warmed: &Cell<bool>) -> bool {
+    let limit = f64::from(AI_SWEEP.decision_ms);
+    if !warmed.replace(true)
+        && let Err(error) = yardstick_ms()
+    {
+        eprintln!("[ai:sweep] the yardstick: {error:#}");
+        return true;
+    }
+    match time_decision(slow.state, slow.seat, slow.rng, slow.budget, limit) {
+        Ok(timing) => timing.ms > limit,
+        Err(error) => {
+            eprintln!("[ai:sweep] re-timing a slow decision: {error:#}");
+            true
+        }
+    }
+}
+
 /// Each result is also handed to `emit` as it lands, so a slice cut short keeps what it finished.
 fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult> {
     let now = milliseconds_since(Instant::now());
+    let warmed = Cell::new(false);
+    let retime = |slow: &SlowDecision<'_>| still_slow(slow, &warmed);
     let mut results: Vec<SweepResult> = Vec::new();
     for (index, id) in ids.iter().enumerate() {
         for tier in AI_SWEEP.tiers.iter().copied() {
@@ -180,6 +207,7 @@ fn pass1(ids: &[String], mut emit: impl FnMut(&SweepResult)) -> Vec<SweepResult>
                         &SweepOptions {
                             seeds: None,
                             now: Some(&now),
+                            retime: Some(&retime),
                             tier: Some(tier),
                         },
                     )
@@ -208,6 +236,8 @@ fn pass2(
     mut emit: impl FnMut(&SweepPass2),
 ) -> Vec<SweepPass2> {
     let now = milliseconds_since(Instant::now());
+    let warmed = Cell::new(false);
+    let retime = |slow: &SlowDecision<'_>| still_slow(slow, &warmed);
     let mut results: Vec<SweepPass2> = Vec::new();
     for (index, id) in ids.iter().enumerate() {
         for tier in AI_SWEEP.tiers.iter().copied() {
@@ -221,6 +251,7 @@ fn pass2(
                         &SweepOptions {
                             seeds: None,
                             now: Some(&now),
+                            retime: Some(&retime),
                             tier: Some(tier),
                         },
                     )
@@ -616,6 +647,21 @@ mod tests {
         let line = row(&stats, "easy", "a|b");
         assert!(line.starts_with("| core-011 | "), "{line}");
         assert!(line.contains(" a\\|b "), "{line}");
-        assert!(line.ends_with(" | 5/8 | 4 | 0 | 0 | 0 | n/a |"), "{line}");
+        assert!(line.ends_with(" | 5/8 | 4 | 0 | 0 | 0 | 0 | n/a |"), "{line}");
+    }
+
+    #[test]
+    fn r977000_a_row_shows_the_raw_timeouts_beside_the_timeouts() {
+        jackioh_cards::register_all();
+        let stats: SweepStats = serde_json::from_value(serde_json::json!({
+            "defId": "core-011", "games": 8, "drawnGames": 5, "affordableTurns": 4, "plays": 2,
+            "errors": 0, "timeouts": 1, "rawTimeouts": 3, "evalDeltaSum": 0, "evalDeltaCount": 0
+        }))
+        .unwrap();
+        let line = row(&stats, "easy", "timeout");
+        assert!(line.ends_with(" | 5/8 | 4 | 2 | 0 | 1 | 3 | n/a |"), "{line}");
+        assert!(TABLE_HEAD[0].contains("| errors | timeouts | raw timeouts |"));
+        let bars = line.matches('|').count();
+        assert!(TABLE_HEAD.iter().all(|head| head.matches('|').count() == bars));
     }
 }

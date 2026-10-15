@@ -5,6 +5,11 @@
 // no backrow or material beyond lesson 3. GIGA Glowy Jelly Bean is deliberately uncast: the tutorial
 // AI reaches at most 4 mana (cap 3 and The Coin).
 // Prem Panther draws only after attacking and surviving (R426), so it stays below the scripted deal.
+// Patch v0.3.10 gave Jilliax a (3) price at which it is Equip, and the AI paid it to equip a token on
+// its 3 mana: Jilliax now sits where Mr. Vanilla did, past the turns the coach teaches Taunt on.
+// Gary the Gambler holds Me and Mr Token's place (#898): once the AI judged Taunts by their Armor per
+// hit, it raced the Rush Token at the hero of a beginner who ignores the coach and won, and tokens are
+// lesson 3's anyway.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -42,15 +47,15 @@ export const lesson: TutorialLesson = {
     "core-003", // Right-house defender
     "core-037", // Gravedigger
     "core-029", // GIGA Glowy Jelly Bean: costs (6), above the AI's 3 (+ The Coin), so it is never cast
-    "core-015", // Me and Mr Token
-    "core-008", // Mr. Vanilla
+    "core-004", // Gary the Gambler
+    "core-056", // Jilliax
     "core-035", // Lunar Eclipse
     "core-030", // Archivist
     "core-077", // Professor Curvature
     "core-045", // Deft Duelist
     "core-005", // Stockpile
     "core-001", // Big D-fender
-    "core-056", // Jilliax
+    "core-008", // Mr. Vanilla
   ],
   retryTip: "Break a Divine Shield with a small hit before a big one, and clear Taunts with spells, so your units can reach the hero.",
 };

@@ -1,0 +1,20 @@
+{
+  "id": "43-counted-a",
+  "spec": "43-preview-counted.cy.ts",
+  "description": "Player 1's deck for spec 43 (#991, SPEC §10.10, R280, R583, R1447). C+ #44 Simplicity Audit is in it because its Radiant preview names the permanents it would exile now (R583). #8 Mr. Vanilla (1 mana, fewer lines of code than the Audit) is the one permanent it will count. #26 Glowy Jelly Bean (3 mana) makes the Audit Radiant in hand. #19 Midrange Menace, #25 4-mana 7/7 and #53 Reno cost 3 or more and do nothing from a hand. The handicap (R180) gives an opening hand of 3 + 2 = 5, and player 1's turn-1 draw makes 6: the whole deck on any seed. 1 + 5 mana under a cap of 6 is 6 mana on turn 1. Vanilla and the Bean cost 4, and the 2 left keep the 2-mana Audit playable, so the turn does not end by itself (R82).",
+  "cards": [
+    "classicplus-044",
+    "core-008",
+    "core-026",
+    "core-019",
+    "core-025",
+    "core-053"
+  ],
+  "handicap": {
+    "deckSize": 6,
+    "manaBonus": 5,
+    "manaCap": 6,
+    "extraOpeningCards": 2,
+    "extraDrawsPerTurn": 0
+  }
+}

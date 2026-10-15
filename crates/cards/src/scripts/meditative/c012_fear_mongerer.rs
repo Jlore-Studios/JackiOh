@@ -1,5 +1,5 @@
 //! Meditative #12 Fear Mongerer (SPEC §8.8 row 12; docs/meditative-set.md M6 #12; ME-TRIG (c); R824).
-//! (2) Unit, Human, Epic, 6/8 → 12/16.
+//! (2) Unit, Human, Epic, 5/7 → 10/14.
 //!   Base:    "Cry: Trigger your End of turn effects."
 //!   Radiant: "Cry: Trigger your End of turn effects {times|time|times}." (times 2)
 //!
@@ -35,8 +35,8 @@ pub fn script() -> CardScripts {
 // cards and return Spells in your graveyard), after the Cry's list and in R68's order, and the
 // turn goes on (R824); they run again at the real end of turn; the trap window and delayed
 // effects do not run; M 8 or M 21 in your graveyard returns to hand now and can be played again;
-// under M 9 each hook runs twice; M 13 grows by one per run; radiant 12/16 and two rounds, each
-// settled before the next, times read through `param()`".
+// under M 9 each hook runs twice; M 13 grows by one per run; radiant 10/14 (12/16 before patch
+// v0.3.10) and two rounds, each settled before the next, times read through `param()`".
 //
 // Core #13 Jlockeed Shredder-10 (end of turn: 2 to the enemy hero) is the hook it triggers;
 // Core #23 Reoccurring Dream stands in for M 8, the graveyard return; Core #39 Recycling
@@ -90,15 +90,15 @@ mod tests {
     }
 
     #[test]
-    fn is_a_2_cost_epic_human_6_8_unit_crying_end_of_turn_effects() {
+    fn is_a_2_cost_epic_human_5_7_unit_crying_end_of_turn_effects() {
         crate::register_all();
         let def = crate::card_def(ID);
         assert_eq!(def.cost, CardCost::Fixed(2));
         assert_eq!(def.type_, CardType::Unit);
         assert_eq!(def.rarity, Rarity::Epic);
         assert_eq!(crate::js(&def.tags), json!(["Human"]));
-        assert_eq!((def.base.attack, def.base.health), (Some(6), Some(8)));
-        assert_eq!((def.radiant.attack, def.radiant.health), (Some(12), Some(16)));
+        assert_eq!((def.base.attack, def.base.health), (Some(5), Some(7)));
+        assert_eq!((def.radiant.attack, def.radiant.health), (Some(10), Some(14)));
         assert_eq!(
             crate::js(&def.params),
             json!([{ "key": "times", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])

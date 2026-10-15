@@ -1,17 +1,18 @@
-//! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, B7). (2) Field Trap, Mythic.
-//!   Base:    "Every {plays|card|cards} your opponent plays, the last one is fused into this after it
-//!            resolves, and this gains +{brittleGain} Brittle." (Brittle 2, balance patch 1)
-//!   Radiant: "Every {plays|card|cards} your opponent plays, a Radiant copy of the last one is fused
-//!            into this, and this gains +{brittleGain} Brittle." (Brittle 4)
+//! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, B7). (2) Field Trap, Mythic, 0/1 → 0/2.
+//!   Base:    "Animated, Brittle 2 / Every {plays|card|cards} your opponent plays, fuse a copy of the
+//!            last into this and gain +{brittleGain} Brittle." (balance patch 1; patch v0.3.10)
+//!   Radiant: "Animated, Brittle 4 / Every {plays|card|cards} your opponent plays, fuse a Radiant copy
+//!            of the last into this and gain +{brittleGain} Brittle."
 //!   Engine:  A Field Trap (R425), so it is not consumed when it fires. No Brittle while unrevealed
 //!            (R687); it turns face-up at its first activation (R33), its play count read by its
 //!            controller alone until then (a card destroyed unrevealed reads public, R97). It counts the
 //!            opponent's plays since it was set (casts count, R70; a countered card never played). On
-//!            each even count, once that card resolves (§10.5 step 7), the card, if it still exists, is
-//!            fused into this (Fuse, §6.3, R77, R102): this is the kept instance and stays a Field Trap,
-//!            and the opponent's card ceases to exist (the Radiant fuses in a Radiant copy instead and
-//!            leaves the card where it is). The fused texts work for you where they can, a fused Cry
-//!            never runs, and this gains +1 Brittle.
+//!            each even count, once that card resolves (§10.5 step 7), a copy of its definition is fused
+//!            into this (Fuse, §6.3, R77, R102; a Radiant copy on the Radiant face): this is the kept
+//!            instance and stays a Field Trap, and the opponent's card is never consumed, wherever it
+//!            went (R831011). The fused texts work for you where they can, a fused Cry never runs, this
+//!            gains +1 Brittle, and then, Animated (§6), it animates into its lane's unit zone as the
+//!            last step of its firing (a 0/1 plus what it fused, R77).
 //!
 //! All of it is `subsystems/twice_forward.rs`' trap trigger; Brittle tunes through B3.4's X change.
 
@@ -112,11 +113,22 @@ mod tests {
         set_then_their_turn(false, json!({}), json!({}), |_| {})
     }
 
+    /// The trap p1 set in backrow lane 2 — or, once it has fired, the Unit it animated into in that
+    /// lane's unit zone (R831011).
     fn trap_of(s: &Scenario) -> CardInstance {
-        match s.backrow(P1, 2) {
+        match s.backrow(P1, 2).or_else(|| s.unit(P1, 2)) {
             Some(card) => card,
-            None => panic!("no trap in p1's backrow lane 2"),
+            None => panic!("no trap in p1's lane 2"),
         }
+    }
+
+    /// The ingredient record a fused definition keeps for this definition.
+    fn part_of(s: &Scenario, fused_id: &str, def_id: &str) -> Option<Value> {
+        def_of(Some(s.state()), fused_id)
+            .ingredients
+            .as_ref()
+            .and_then(|parts| parts.iter().find(|part| part.def_id == def_id))
+            .map(js)
     }
 
     fn plays_of(s: &Scenario) -> i32 {
@@ -146,14 +158,16 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_mythic_field_trap_printing_brittle_2_radiant_4_declaring_every_2_min_2_and_brittle_gained_1() {
+        fn r831011_is_a_2_mythic_animated_field_trap_0_1_brittle_2_radiant_0_2_brittle_4_declaring_every_2_min_2_and_brittle_gained_1() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.type_, CardType::FieldTrap);
             assert_eq!(js(&def.cost), json!(2));
             assert_eq!(def.rarity, Rarity::Mythic);
-            assert_eq!(js(&def.base.keywords), json!([{ "kind": "Brittle", "n": 2 }]));
-            assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Brittle", "n": 4 }]));
+            assert_eq!(js(&def.base.keywords), json!([{ "kind": "Animated" }, { "kind": "Brittle", "n": 2 }]));
+            assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Animated" }, { "kind": "Brittle", "n": 4 }]));
+            assert_eq!((js(&def.base)["attack"].clone(), js(&def.base)["health"].clone()), (json!(0), json!(1)));
+            assert_eq!((js(&def.radiant)["attack"].clone(), js(&def.radiant)["health"].clone()), (json!(0), json!(2)));
             assert_eq!(
                 js(&def.params),
                 json!([
@@ -227,38 +241,55 @@ mod tests {
             }
 
             #[test]
-            fn r425_r77_r687_the_2nd_a_unit_is_fused_into_this_after_it_resolves_still_a_field_trap_the_unit_gone_revealed_with_brittle_2_plus_1_face_up_r33()
+            fn r425_r77_r831011_the_2nd_a_copy_of_a_unit_is_fused_in_after_it_resolves_the_unit_stays_and_this_animates_revealed_with_brittle_2_plus_1_face_up_r33()
              {
                 let mut s = their_turn();
                 s.play(RAPID, json!({}));
                 let unit = s.card(VANILLA).clone();
                 s.play(VANILLA, json!({ "zone": 1 }));
                 let trap = trap_of(&s);
-                assert!(s.unit(P2, 1).is_none());
-                s.expect_in_zone(&unit, "gone");
+                // The Vanilla is never consumed: it stands where it was played.
+                assert_eq!(s.unit(P2, 1).map(|card| card.id), Some(unit.id.clone()));
                 assert_eq!(def_of(Some(s.state()), &trap.def_id).type_, CardType::FieldTrap);
-                assert_eq!(js(&trap.zone), json!({ "z": "field", "row": "backrow", "lane": 2, "player": "p1" }));
+                assert_eq!(part_of(&s, &trap.def_id, VANILLA), Some(json!({ "defId": VANILLA })));
+                // Animated: it moved from its backrow zone into the unit zone of its lane.
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(js(&trap.zone), json!({ "z": "field", "row": "units", "lane": 2, "player": "p1" }));
                 assert_eq!(active_brittle_count(&trap), Some(3));
                 assert_eq!(trap.face_up, Some(true));
-                s.expect_events(json!(["cardResolved", "trapFired", "fused"]));
+                s.expect_events(json!(["cardResolved", "trapFired", "fused", "animated"]));
                 assert!(view_text(&s, P2).contains(&trap.def_id));
             }
 
             #[test]
-            fn r425_a_spell_is_fused_from_its_owners_graveyard() {
+            fn r831011_a_copy_of_a_spell_is_fused_in_the_spell_staying_in_its_owners_graveyard() {
                 let mut s = their_turn();
                 s.play(RAPID, json!({})).play(STOCKPILE, json!({}));
-                assert!(!s.pile(P2, "graveyard").iter().any(|card| card.def_id == STOCKPILE));
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == STOCKPILE));
                 assert_eq!(fused_events(&s), 1);
                 assert_eq!(active_brittle_count(&trap_of(&s)), Some(3));
             }
 
             #[test]
-            fn r425_a_trap_is_fused_from_its_owners_backrow() {
+            fn r831011_a_copy_of_a_trap_is_fused_in_the_trap_staying_set_in_its_owners_backrow() {
                 let mut s = set_then_their_turn(false, json!({}), json!({ "hand": [RAPID, BEAR, VANILLA] }), |_| {});
                 s.play(RAPID, json!({})).play(BEAR, json!({ "zone": 1 }));
-                assert!(s.backrow(P2, 1).is_none());
+                assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(BEAR.to_string()));
                 assert_eq!(fused_events(&s), 1);
+            }
+
+            #[test]
+            fn r831011_the_base_face_fuses_a_copy_of_the_base_definition_a_radiant_card_played_comes_in_plain() {
+                let mut s = set_then_their_turn(
+                    false,
+                    json!({}),
+                    json!({ "hand": [RAPID, { "def": VANILLA, "radiant": true }, STOCKPILE] }),
+                    |_| {},
+                );
+                s.play(RAPID, json!({})).play(VANILLA, json!({ "zone": 1 }));
+                assert_eq!(s.unit(P2, 1).map(|card| card.radiant), Some(true));
+                let trap = trap_of(&s);
+                assert_eq!(part_of(&s, &trap.def_id, VANILLA), Some(json!({ "defId": VANILLA })));
             }
 
             #[test]
@@ -279,19 +310,22 @@ mod tests {
                 let trap = trap_of(&s);
                 assert_eq!(trap.face_up, Some(true));
                 assert_eq!(active_brittle_count(&trap), Some(3));
-                s.expect_events(json!(["cardResolved", "trapFired"]));
+                // It still animates, the last step of its firing.
+                s.expect_events(json!(["cardResolved", "trapFired", "animated"]));
             }
 
             #[test]
-            fn r687_r589_r425_with_nothing_left_to_fuse_a_spell_that_exiles_itself_it_reveals_and_still_gains_plus_1_brittle_unfired()
+            fn r687_r589_r831011_a_spell_that_exiles_itself_still_has_a_copy_fused_in_and_it_reveals_with_brittle_2_plus_1()
              {
                 let mut s =
                     set_then_their_turn(false, json!({}), json!({ "hand": [RAPID, TRUE_STRIKE, VANILLA] }), |_| {});
                 s.play(RAPID, json!({}));
                 s.play(TRUE_STRIKE, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+                // R589's "if it still exists" is gone with the consumed card: the exiled Spell stays
+                // exiled, and a copy of it is fused in all the same.
                 s.expect_in_zone(TRUE_STRIKE, "exile");
-                assert_eq!(fused_events(&s), 0);
-                // No Brittle sits on an unrevealed card: the gain reveals it first, then lands on the started 2.
+                assert_eq!(fused_events(&s), 1);
+                // No Brittle sits on an unrevealed card: the fire reveals it first, then the gain lands on the started 2.
                 assert_eq!(active_brittle_count(&trap_of(&s)), Some(3));
                 assert_eq!(trap_of(&s).face_up, Some(true));
                 assert!(view_text(&s, P2).contains(&trap_of(&s).id));
@@ -354,8 +388,9 @@ mod tests {
                     ingredient_ids(&s, &trap_of(&s).def_id),
                     Some(vec![HINDER.to_string(), FORWARD.to_string()])
                 );
+                // Both rest in p2's graveyard: a copy of the Hinder was fused in, never the card.
                 let graveyard: Vec<String> = s.pile(P2, "graveyard").iter().map(|card| card.def_id.clone()).collect();
-                assert_eq!(graveyard, vec![STOCKPILE]);
+                assert_eq!(graveyard, vec![HINDER, STOCKPILE]);
             }
 
             #[test]
@@ -388,7 +423,7 @@ mod tests {
                 let mut s =
                     set_then_their_turn(false, json!({}), json!({ "hand": [RAPID, SHREDDER, VANILLA] }), |_| {});
                 s.play(VANILLA, json!({ "zone": 1 })).play(SHREDDER, json!({ "zone": 2 }));
-                assert!(s.unit(P2, 2).is_none());
+                assert_eq!(s.unit(P2, 2).map(|unit| unit.def_id), Some(SHREDDER.to_string()));
                 s.end_turn();
                 let health = s.state().players.p2.hero.health;
                 s.end_turn();
@@ -407,7 +442,7 @@ mod tests {
                 );
                 let before = s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack;
                 s.play(RAPID, json!({})).play(TIGER_DOJO, json!({ "zone": 1 }));
-                assert!(s.backrow(P2, 1).is_none());
+                assert_eq!(s.backrow(P2, 1).map(|card| card.def_id), Some(TIGER_DOJO.to_string()));
                 assert_eq!(s.stats(id_or_empty(s.unit(P1, 1)).as_str()).attack, before + 4);
             }
 

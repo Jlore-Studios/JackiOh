@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName};
+use crate::wire::catalog_types::{CardType, Keyword, PlayerId, PromptKind, Row, Zone, ZoneName, ZoneRef};
 use crate::wire::emotes::EmoteId;
 use crate::wire::string_union;
 
@@ -860,6 +860,12 @@ pub enum GameEvent {
         def_id: String,
         message: String,
     },
+    /// R831003: C+ #62 KY's Papaya drew its curve for `player`: the zones it passes through, one per
+    /// lane at most, in lane order, before the cards there are exiled. Public: board positions only.
+    CurveDrawn {
+        player: PlayerId,
+        cells: Vec<ZoneRef>,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -988,6 +994,7 @@ string_union! {
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
         ScriptFailed = "scriptFailed",
+        CurveDrawn = "curveDrawn",
     }
 }
 
@@ -1153,6 +1160,7 @@ impl GameEvent {
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
             GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
+            GameEvent::CurveDrawn { .. } => GameEventType::CurveDrawn,
         }
     }
 }
@@ -1223,8 +1231,9 @@ mod tests {
         assert_eq!(over.event_type().as_str(), "gameOver");
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
-        // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004).
-        assert_eq!(GAME_EVENT_TYPES.len(), 77);
+        // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004);
+        // and #831's patch one more, `curveDrawn` (R831003).
+        assert_eq!(GAME_EVENT_TYPES.len(), 78);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

@@ -1,11 +1,11 @@
 //! M #51 Devin Bot (SPEC §8.8 row 51, R1080): (2) Unit, Legendary, 1/1 → 2/2.
 //!
-//! Base:    "Reborn\nCry: Fill your board with random 1/1 Units."
-//! Radiant: "Reborn\nCry: Fill your board with random Radiant 1/1 Units."
+//! Base:    "Cry: Fill your board with random 1/1 Units."
+//! Radiant: "Cry: Fill your board with random Radiant 1/1 Units."
 //! Engine: `fill_board_random` with `{ type: Unit, stats: {1, 1}, withTokens: true }` (R1080): every
 //! empty, unlocked unit zone, left to right, gets its own pick from the match rng, repeats allowed,
 //! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
-//! Summons fire no Cry (R1), and Reborn's return does not fire the Cry again.
+//! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.10.
 
 use jackioh_engine::prelude::*;
 
@@ -34,10 +34,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "Reborn; Cry (played or cast, R1): each
-// empty, unlocked unit zone of yours, left to right, gets its own random Unit whose printed base
-// face is 1/1, tokens included, never Devin Bot (R1080); a full board draws no random number
-// (R129); Reborn's return does not fire the Cry; radiant 2/2 and the 1/1s are Radiant".
+// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "No Reborn (patch v0.3.10); Cry (played or
+// cast, R1): each empty, unlocked unit zone of yours, left to right, gets its own random Unit whose
+// printed base face is 1/1, tokens included, never Devin Bot (R1080); a full board draws no random
+// number (R129); it dies for good; radiant 2/2 and the 1/1s are Radiant".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,7 +128,7 @@ mod tests {
             }
 
             #[test]
-            fn reborn_it_returns_once_after_it_dies() {
+            fn has_no_reborn_since_patch_v0_3_10_so_it_dies_for_good() {
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board(
                     "devin-reborn-keyword",
@@ -137,12 +137,12 @@ mod tests {
                 s.play(BOT, json!({}));
                 let me = s.card(BOT).id.clone();
                 let keywords = serde_json::to_string(&s.stats(me.as_str()).keywords).expect("JSON");
-                assert!(keywords.contains("Reborn"), "{keywords}");
+                assert!(!keywords.contains("Reborn"), "{keywords}");
                 s.end_turn();
                 s.play(ECLIPSE, eclipse(&me));
-                // It came back into its own zone, lane 5.
-                let back = s.unit(P1, 5).expect("returned");
-                assert_eq!(back.def_id, BOT);
+                // Nothing comes back into its zone, lane 5.
+                assert!(s.unit(P1, 5).is_none());
+                s.expect_in_zone(&me, "graveyard");
             }
 
             #[test]
@@ -263,7 +263,7 @@ mod tests {
             }
 
             #[test]
-            fn reborn_s_return_fires_no_cry() {
+            fn its_death_brings_nothing_back_and_fires_no_cry() {
                 crate::register_all();
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = scenario(json!({
@@ -281,23 +281,16 @@ mod tests {
                 let mut before: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 before.sort();
                 assert_eq!(before.len(), 5);
-                // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill (no shield on
-                // the Bot to pop). Reborn returns it into its own reserved zone with no Cry — a
-                // return is a summon, not a play (R1) — so the four survivors keep their ids and
-                // the only new id is the returned body.
+                // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill. With no Reborn
+                // (patch v0.3.10) the four it summoned stay and nothing new arrives.
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
                 s.play(ECLIPSE, eclipse(&me));
                 let mut after: Vec<String> = units_of(&s, P1).iter().map(|unit| unit.id.clone()).collect();
                 after.sort();
-                assert_eq!(after.len(), 5);
-                let survivor: Vec<String> = before.into_iter().filter(|id| id != &me).collect();
-                for id in &survivor {
-                    assert!(after.contains(id), "survivor {id} is still there");
-                }
-                let returned: Vec<String> = after.into_iter().filter(|id| !survivor.contains(id)).collect();
-                assert_eq!(returned.len(), 1);
-                assert_eq!(s.card(returned[0].as_str()).def_id, BOT);
+                let survivors: Vec<String> = before.into_iter().filter(|id| id != &me).collect();
+                assert_eq!(after, survivors);
+                s.expect_in_zone(&me, "graveyard");
             }
         }
 

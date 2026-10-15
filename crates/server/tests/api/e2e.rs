@@ -19,6 +19,7 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{HeaderMap, Request};
 use hmac::{Hmac, KeyInit, Mac};
+use indexmap::IndexMap;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
@@ -30,8 +31,8 @@ use jackioh_server::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use jackioh_server::api::cors::is_origin_allowed;
 use jackioh_server::api::crypto::normalize_code;
 use jackioh_server::api::e2e::{
-    E2E_ACCOUNTS, E2E_INVITE_CODES, E2EAccount, E2EInviteCodes, E2ESeedOptions, seed_e2e_fixtures,
-    seed_e2e_fixtures_with,
+    E2E_ACCOUNTS, E2E_INVITE_CODES, E2E_RESEED_PATH, E2EAccount, E2EInviteCodes, E2ESeedOptions,
+    seed_e2e_fixtures, seed_e2e_fixtures_with,
 };
 use jackioh_server::api::queue::e2e_seed_count;
 use jackioh_server::app::{self, App, now_ms};
@@ -173,6 +174,29 @@ fn pending() -> &'static E2EAccount {
 
 fn p1() -> &'static E2EAccount {
     account("e2e-p1")
+}
+
+/// A production deployment's environment: complete, `NODE_ENV=production`, no `E2E` (the shape of
+/// `catalog.rs`'s `valid_env`).
+fn production_source() -> IndexMap<String, String> {
+    let mut source = IndexMap::new();
+    for (name, value) in [
+        ("SUPABASE_URL", "https://project.supabase.test"),
+        (
+            "SUPABASE_SECRET_KEY",
+            "sb_secret_0123456789abcdefghijklmnopqrstuv",
+        ),
+        (
+            "DATABASE_URL",
+            "postgres://postgres:postgres@localhost:5432/jackioh",
+        ),
+        ("CODE_PEPPER", "a-pepper-of-at-least-thirty-two-characters"),
+        ("PUBLIC_ORIGINS", "https://play.jackioh.test"),
+        ("NODE_ENV", "production"),
+    ] {
+        source.insert(name.to_string(), value.to_string());
+    }
+    source
 }
 
 /// TS `store.grantsFor(profileId)`.
@@ -765,6 +789,112 @@ mod the_fixture_auth_provider {
         for code in codes {
             assert!(source.contains(&format!("\"{code}\"")), "the {code} invite code");
         }
+        assert!(
+            source.contains(&format!("\"{E2E_RESEED_PATH}\"")),
+            "the reseed's path"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// R144, on demand (POST /api/e2e/reseed)
+// ---------------------------------------------------------------------------
+
+mod r144_the_reseed_on_demand {
+    use super::*;
+
+    async fn good_code_uses(app: &App) -> Value {
+        json_of(&store!(
+            app.db,
+            codes_find_by_hash(&hashes(app).code(E2E_INVITE_CODES.good))
+        ))["uses"]
+            .clone()
+    }
+
+    async fn pending_status(app: &App) -> Value {
+        json_of(&store!(app.db, profiles_get_by_user_id(pending().user_id)))["status"].clone()
+    }
+
+    /// The route answers as a path nobody serves and reseeds nothing: the pending account, which the
+    /// test activates first as spec 10's redemption would, stays active.
+    async fn assert_no_reseed(app: &Arc<App>) {
+        let id = id_of(&json_of(&store!(
+            app.db,
+            profiles_get_by_user_id(pending().user_id)
+        )));
+        set_status(&app.db, &id, "active").await;
+
+        let (status, _headers, body) = call(app, "POST", E2E_RESEED_PATH, None, Value::Null).await;
+        let (_, _, unknown) = call(app, "POST", "/api/e2e/no-such-route", None, Value::Null).await;
+
+        assert_eq!(status, 404);
+        assert_eq!(body, unknown, "the same answer as a path nobody serves");
+        assert_eq!(body["error"]["code"], json!("not_found"));
+        assert_eq!(pending_status(app).await, json!("active"), "nothing was reseeded");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r144_post_api_e2e_reseed_makes_a_spent_code_good_again_and_names_what_it_reseeded() {
+        let app = harness().await;
+        seed_e2e_fixtures(&app).await.expect("the reseed at boot");
+
+        let (status, body) = redeem(&app, E2E_INVITE_CODES.good).await;
+        assert_eq!(status, 200);
+        assert_eq!(body, json!({ "status": "active", "needsInviteCode": false }));
+        assert_eq!(good_code_uses(&app).await, json!(1));
+        assert_eq!(pending_status(&app).await, json!("active"));
+
+        let (status, _headers, body) = call(&app, "POST", E2E_RESEED_PATH, None, Value::Null).await;
+        assert_eq!(status, 200);
+        assert_eq!(body["codes"], json!(["good", "expired", "exhausted"]));
+        assert_eq!(body["grantedCards"], json!(PLAYABLE.len()));
+        let reseeded: Vec<&str> = body["profiles"]
+            .as_object()
+            .expect("the profiles")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            reseeded,
+            E2E_ACCOUNTS
+                .iter()
+                .map(|fixture| fixture.user_id)
+                .collect::<Vec<_>>()
+        );
+
+        assert_eq!(good_code_uses(&app).await, json!(0));
+        assert_eq!(pending_status(&app).await, json!("pending"));
+        let (status, body) = redeem(&app, E2E_INVITE_CODES.good).await;
+        assert_eq!(status, 200);
+        assert_eq!(body, json!({ "status": "active", "needsInviteCode": false }));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r144_with_e2e_unset_post_api_e2e_reseed_is_no_route_and_reseeds_nothing() {
+        let mut app = bare_app().await;
+        app.env.e2e = false;
+        assert_no_reseed(&Arc::new(app)).await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r144_a_production_boot_refuses_e2e_and_serves_no_reseed() {
+        let mut with_e2e = production_source();
+        with_e2e.insert("E2E".to_string(), "1".to_string());
+        let refused = app::load_server_env(&with_e2e).expect_err("E2E with NODE_ENV=production");
+        assert!(
+            refused
+                .to_string()
+                .contains("must not be set together with NODE_ENV=production"),
+            "{refused}"
+        );
+
+        let env = app::load_server_env(&production_source()).expect("a production environment");
+        assert!(!env.e2e);
+        assert_no_reseed(&Arc::new(App {
+            env,
+            ..bare_app().await
+        }))
+        .await;
     }
 }
 

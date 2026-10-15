@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// SPEC §8.7 row 8: degrades {cards} different changeable cards in opponent's deck (R60,
+// SPEC §8.7 row 8: degrades {cards} (5, patch v0.3.10; 4 before) different changeable cards in opponent's deck (R60,
 // R386), all of them when fewer, none when none and then no random number is drawn (R129);
 // padded with `none` cues (R569, R440).
 // Degraded events stay unread while in deck (R177, R311).
@@ -145,7 +145,7 @@ mod tests {
         assert_eq!(def.cost, CardCost::Fixed(2));
         assert_eq!(
             def.params.unwrap_or_default().iter().map(|p| (p.key.clone(), p.base, p.radiant)).collect::<Vec<_>>(),
-            vec![("cards".to_string(), 4, 4), ("draw".to_string(), 1, 1)]
+            vec![("cards".to_string(), 5, 5), ("draw".to_string(), 1, 1)]
         );
         let scripts = script();
         assert!(scripts.base.cry.is_some());
@@ -156,7 +156,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r60_r386_degrades_4_different_cards_of_the_opponent_s_deck_one_change_each_then_you_draw_1() {
+        fn r60_r386_degrades_5_different_cards_of_the_opponent_s_deck_one_change_each_then_you_draw_1() {
             crate::register_all();
             let mut s = setup(vanillas(8), false, None, two_stockpiles());
             let hand = s.hand(P1).len();
@@ -164,9 +164,9 @@ mod tests {
             s.play(STORM, json!({}));
 
             let done = changed(s.events());
-            assert_eq!(done.len(), 4);
-            assert_eq!(cues(s.events()).len(), 4);
-            assert_eq!(done.iter().map(cue_id).collect::<IndexSet<_>>().len(), 4);
+            assert_eq!(done.len(), 5);
+            assert_eq!(cues(s.events()).len(), 5);
+            assert_eq!(done.iter().map(cue_id).collect::<IndexSet<_>>().len(), 5);
             let deck = s.pile(P2, "library");
             let mut tuned: Vec<String> = deck.iter().filter(|card| was_changed(card)).map(|card| card.id.clone()).collect();
             tuned.sort();
@@ -190,20 +190,25 @@ mod tests {
 
                 let deck = s.pile(P2, "library");
                 assert!(!deck.iter().filter(|card| card.def_id != VANILLA).any(was_changed));
-                assert_eq!(deck.iter().filter(|card| was_changed(card)).count(), 4);
-                assert_eq!(cues(s.events()).len(), 4);
+                assert_eq!(deck.iter().filter(|card| was_changed(card)).count(), 5);
+                assert_eq!(cues(s.events()).len(), 5);
             }
         }
 
         #[test]
-        fn r569_r440_a_deck_with_3_changeable_cards_degrades_all_3_and_a_none_cue_keeps_the_count_at_4() {
+        fn r569_r440_a_deck_with_3_changeable_cards_degrades_all_3_and_none_cues_keep_the_count_at_5() {
             crate::register_all();
-            let mut s = setup(json!([immutable(), VANILLA, NETHER, VANILLA, VANILLA]), false, None, two_stockpiles());
+            let mut s = setup(
+                json!([immutable(), VANILLA, NETHER, VANILLA, VANILLA, NETHER]),
+                false,
+                None,
+                two_stockpiles(),
+            );
 
             s.play(STORM, json!({}));
 
             assert_eq!(changed(s.events()).len(), 3);
-            assert_eq!(cues(s.events()).len(), 4);
+            assert_eq!(cues(s.events()).len(), 5);
             assert!(s.pile(P2, "library").iter().filter(|card| card.def_id == VANILLA).all(was_changed));
         }
 
@@ -259,14 +264,14 @@ mod tests {
         #[test]
         fn r177_r311_the_degraded_cues_stay_unread_by_both_players_and_the_opponent_s_library_list_does_not_change() {
             crate::register_all();
-            let mut s = setup(vanillas(5), false, None, two_stockpiles());
+            let mut s = setup(vanillas(6), false, None, two_stockpiles());
             let list_before = serde_json::to_string(&s.view(P2).you.own_library).unwrap();
 
             s.play(STORM, json!({}));
 
             for viewer in [P1, P2] {
                 let seen = cues(&s.view(viewer).events);
-                assert_eq!(seen.len(), 4);
+                assert_eq!(seen.len(), 5);
                 for cue in &seen {
                     let GameEvent::Degraded { instance_id, def_id, .. } = cue else {
                         panic!("a degraded cue");
@@ -281,7 +286,7 @@ mod tests {
         #[test]
         fn r682_the_draw_s_cast_asks_nothing_and_the_degrades_are_still_made_once() {
             crate::register_all();
-            let mut s = setup(vanillas(5), false, None, json!([HINDER, STOCKPILE]));
+            let mut s = setup(vanillas(6), false, None, json!([HINDER, STOCKPILE]));
 
             s.play(STORM, json!({}));
 
@@ -296,8 +301,8 @@ mod tests {
             // were made once, and answering nothing makes none again.
             assert_eq!(s.card(HINDER).zone.z(), ZoneName::Graveyard);
             assert_eq!(s.card(STOCKPILE).zone.z(), ZoneName::Hand);
-            assert_eq!(changed(s.events()).len(), 4);
-            assert_eq!(s.state().players.p2.library.iter().filter(|card| was_changed(card)).count(), 4);
+            assert_eq!(changed(s.events()).len(), 5);
+            assert_eq!(s.state().players.p2.library.iter().filter(|card| was_changed(card)).count(), 5);
         }
 
         #[test]
@@ -306,7 +311,7 @@ mod tests {
             let mut s = setup(vanillas(8), false, None, two_stockpiles());
             step_param(s.card_mut(STORM), "cards", 1);
             s.play(STORM, json!({}));
-            assert_eq!(changed(s.events()).len(), 5);
+            assert_eq!(changed(s.events()).len(), 6);
 
             let mut t = setup(json!([VANILLA]), false, None, json!([STOCKPILE, STOCKPILE, STOCKPILE]));
             let hand = t.hand(P1).len();

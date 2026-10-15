@@ -1,4 +1,4 @@
-//! M #57 Clip-Farming Critikal (SPEC §8.8 row 57, R1081): (1) Unit, Common, 5/1 → 10/2.
+//! M #57 Clip-Farming Critikal (SPEC §8.8 row 57, R1081): (1) Unit, Common, 4/1 → 8/2.
 //!
 //! Base:    "Combo: Return the card you played before this to hand."
 //! Radiant: "Combo: Return the card you played before this to hand. Make it Radiant."
@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
 // card this turn, that previous play (a cast counting, R70) returns from your graveyard or exile
 // to your hand, or is Bounced from your side of the field (R1081); a unit token vanishes; a card
 // in a deck or a hand, one that has ceased to exist, or one on the opponent's side, nothing;
-// played first, nothing; the hand cap burns it; radiant 10/2 and the returned card is made
+// played first, nothing; the hand cap burns it; radiant 8/2 (10/2 before patch v0.3.10) and the returned card is made
 // Radiant".
 #[cfg(test)]
 mod tests {
@@ -209,11 +209,11 @@ mod tests {
             use super::*;
 
             #[test]
-            fn stats_are_10_2() {
+            fn stats_are_8_2() {
                 crate::register_all();
                 let def = crate::card_def(CRITIKAL);
-                assert_eq!((def.base.attack, def.base.health), (Some(5), Some(1)));
-                assert_eq!((def.radiant.attack, def.radiant.health), (Some(10), Some(2)));
+                assert_eq!((def.base.attack, def.base.health), (Some(4), Some(1)));
+                assert_eq!((def.radiant.attack, def.radiant.health), (Some(8), Some(2)));
             }
 
             #[test]

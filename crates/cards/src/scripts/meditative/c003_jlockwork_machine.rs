@@ -1,13 +1,13 @@
 //! M #3 Jlockwork Machine (SPEC §8.8 row 3, §10.5 step 4, R70, R117, R386): (3) Unit, Rare, 10/10 → 20/20.
 //!
-//! Base:    "Whenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
+//! Base:    "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
 //! Radiant: "Rush\nWhenever your opponent plays a card, exile the top {exiles|card|cards} of your deck."
 //! Engine: a trigger on `cardPlayed` by the opponent (§10.5 step 4: a cast is a play, R70; a Trap set
 //! face-down is a play too; a countered card was never played, §6.3 Counter), exiling the top cards of
 //! its controller's library by C+ #12.6 Frozen Wastes' pattern: `for_each_card` over the library's top
 //! (index 0) and `exile` of each. A short deck exiles what it has; an empty one exiles nothing and causes
-//! no fatigue (Exile is no draw, §6.3). It answers at step 4, before the played card resolves. Rush is
-//! catalog data, so the Radiant face's script is the base's.
+//! no fatigue (Exile is no draw, §6.3). It answers at step 4, before the played card resolves. Rush (on both
+//! faces since patch v0.3.10) is catalog data, so the Radiant face's script is the base's.
 
 use jackioh_engine::prelude::*;
 

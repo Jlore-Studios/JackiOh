@@ -83,6 +83,8 @@ export const DAMAGE_POP = ".damage-pop";
 export const HEAL_POP = ".heal-pop";
 export const LOSS_POP = ".loss-pop";
 export const RADIANT = ".radiant";
+/** #991: a field card the hovered or selected hand card's preview counts (apps/web/src/game/glow.ts `countedAttr`). */
+export const COUNTED = '[data-counted="true"]';
 
 export function switchPositionId(instanceId: string): string {
   return `switch-${instanceId}`;
@@ -728,6 +730,8 @@ export const REPLAY_FORWARD_STEP = "replay-forward-step";
 export const REPLAY_BACK_STEP = "replay-back-step";
 export const REPLAY_READOUT = "replay-readout";
 export const REPLAY_BACK = "replay-back";
+export const REPLAY_END = "replay-end";
+export const REPLAY_SCRUBBER = "replay-scrubber";
 export const REPLAY_GIF_TOGGLE = "replay-gif";
 export const REPLAY_GIF_SHARE = "replay-gif-share";
 export const REPLAYS_ROOT = "replays";
@@ -855,6 +859,8 @@ export const DUOS_WAITING = "duos-waiting";
 export const DUOS_CONCEDE = "duos-concede";
 export const DUOS_CONCEDE_STATUS = "duos-concede-status";
 export const DUOS_RESULT = "duos-result";
+export const DUOS_RESULT_REPLAY = "duos-result-replay";
+export const DUOS_REPLAY = "duos-replay";
 export const DUOS_LIFE_STRIP = "duos-life-strip";
 
 export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {

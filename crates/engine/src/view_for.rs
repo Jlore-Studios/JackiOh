@@ -45,7 +45,9 @@
 //!     hand, the top of a unit pile and a backrow card face-up to the viewer — and on no other
 //!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
 //!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
-//!     only, beside the normal price `cost` already is.
+//!     only, beside the normal price `cost` already is. #992, R90: a fifth, `choicesTruncated`, on the
+//!     viewer's own hand cards only, while `legal_actions` lists plays of the card whose choice
+//!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`).
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!
@@ -67,7 +69,7 @@ use crate::announce::announced_face_down_to;
 use crate::catalog::registered_catalog;
 use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
-use crate::config::VIEW_EVENT_LIMIT;
+use crate::config::{DRAW_OFFER_BLOCK_TURNS, VIEW_EVENT_LIMIT};
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
 use crate::counter_warning::countered_hand_cards;
 use crate::damage::hero_armor_of;
@@ -79,7 +81,7 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
-use crate::play_choices::embiggen_play_cost;
+use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated};
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
 use crate::setup::{mulligan_prompt_for, returned_awaiting_shuffle};
@@ -293,6 +295,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         power: None,
         condition_active: None,
         countered_on_play: None,
+        choices_truncated: None,
         preview: None,
         type_: None,
         brittle: None,
@@ -413,6 +416,14 @@ fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance
 fn with_counter_warning(mut view: CardView, countered: bool) -> CardView {
     if countered {
         view.countered_on_play = Some(true);
+    }
+    view
+}
+
+/// #992, R90: the bound's mark, `true` or absent like the warning above.
+fn with_choices_truncated(mut view: CardView, truncated: bool) -> CardView {
+    if truncated {
+        view.choices_truncated = Some(true);
     }
     view
 }
@@ -811,6 +822,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::QuickstrikerDamage => {
             "Your cards gain \"Combo X: X damage to the enemy hero\"".to_string()
         }
+        // R831005: Meditative #53 Prestige.
+        ModifierKind::RadiantNextPlay => "The next card you play becomes Radiant".to_string(),
         // B5 E10, R456: how much of the turn is left.
         ModifierKind::TurnEnds { actions_left, .. } => {
             if *actions_left == 0 {
@@ -990,15 +1003,18 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             side.hand
                 .iter()
                 .map(|card| {
-                    with_preview(
-                        with_counter_warning(
-                            with_condition(
-                                with_embiggen_cost(hand_card_view(state, card), state, card),
-                                condition_active(state, card, viewer, ConditionZone::Hand),
+                    with_choices_truncated(
+                        with_preview(
+                            with_counter_warning(
+                                with_condition(
+                                    with_embiggen_cost(hand_card_view(state, card), state, card),
+                                    condition_active(state, card, viewer, ConditionZone::Hand),
+                                ),
+                                countered.contains(&card.id),
                             ),
-                            countered.contains(&card.id),
+                            preview_of(state, card, viewer, ConditionZone::Hand),
                         ),
-                        preview_of(state, card, viewer, ConditionZone::Hand),
+                        hand_play_choices_truncated(state, viewer, card),
                     )
                 })
                 .collect(),
@@ -1179,8 +1195,12 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             base
         }
         Selection::Mode { option } => {
-            // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id.
-            if let Some(def) = find_def_in(state, option) {
+            // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id; a
+            // night market's Radiant lot names its card with a suffix (R831002).
+            let id = option
+                .strip_suffix(crate::subsystems::MARKET_RADIANT_SUFFIX)
+                .unwrap_or(option);
+            if let Some(def) = find_def_in(state, id) {
                 base.def_id = Some(def.id.clone());
             }
             base
@@ -1261,6 +1281,18 @@ fn mulligan_view(state: &GameState, viewer: PlayerId) -> Option<MulliganView> {
 /// R269: the standing draw offer, public to both seats; absent when none.
 fn draw_offer_view(state: &GameState) -> Option<DrawOfferView> {
     standing_draw_offer(state).map(|by| DrawOfferView { by })
+}
+
+/// R36: the turns of the viewer's own that a declined offer still blocks — counted from the
+/// viewer's turn under way, or from their next one while the opponent's runs, through the last
+/// before `blocked_until`. The decline's own turn is not counted (its one offer is spent), so the
+/// count starts at DRAW_OFFER_BLOCK_TURNS. The viewer's own only; `None` when nothing blocks them.
+fn draw_offer_blocked_turns(state: &GameState, viewer: PlayerId) -> Option<i32> {
+    let side = &state.players[viewer];
+    let blocked_until = side.draw_offer.blocked_until?;
+    let from = side.turns_started + i32::from(state.active != viewer);
+    let left = (blocked_until - from).min(DRAW_OFFER_BLOCK_TURNS);
+    (left > 0).then_some(left)
 }
 
 // ---------------------------------------------------------------------------
@@ -1905,7 +1937,9 @@ fn redact_event(
         // are public once they happen.
         | GameEventType::SecretChosen
         | GameEventType::SecretRevealed
-        | GameEventType::Predicted => event.clone(),
+        | GameEventType::Predicted
+        // R831003: the curve is board positions only.
+        | GameEventType::CurveDrawn => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 
@@ -2227,6 +2261,8 @@ pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Opt
         clock_ms,
         mulligan: mulligan_view(state, player_id),
         draw_offer: draw_offer_view(state),
+        // R36: the viewer's own block only, so the opponent's view never names it.
+        draw_offer_blocked_turns: draw_offer_blocked_turns(state, player_id),
         // R345: the viewer's own preference, and only when it is off, so every other view is unchanged.
         auto_end_turn: if state.players[player_id].auto_end_turn == Some(false) {
             Some(false)

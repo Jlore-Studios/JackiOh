@@ -1,4 +1,4 @@
-//! C+ #32.2 Brawl (SPEC §8.7 row 32.2; §6.1, §6.3 Destroy, R46, R59, R60, R81, R129). (2) Spell token,
+//! C+ #32.2 Brawl (SPEC §8.7 row 32.2; §6.1, §6.3 Destroy, R46, R59, R60, R81, R129). (3) Spell token,
 //! printed Epic.
 //!   Base:    "Destroy all Units but one chosen at random."
 //!   Radiant: "Destroy all Units but one of your choice."

@@ -394,7 +394,7 @@ mod tests {
                 let walls = s.pile(P2, "library").len()
                     + s.hand(P2).iter().filter(|card| card.def_id == WALL).count();
                 assert_eq!(walls, 3);
-                s.expect_stats(&taotie, json!({ "attack": 22, "health": 25 }));
+                s.expect_stats(&taotie, json!({ "attack": 22, "health": 24 }));
             }
 
             #[test]
@@ -416,9 +416,9 @@ mod tests {
                 assert_eq!(after.id, before.id);
                 // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
                 // the fusion's radiant form, the sum of the radiant forms: 16 + 6 + 6 attack and
-                // 16 + 9 + 9 health (a Radiant Duplicating Felinors is 6/9).
+                // 16 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
                 assert!(after.radiant);
-                s.expect_stats(&after, json!({ "attack": 28, "health": 34 }));
+                s.expect_stats(&after, json!({ "attack": 28, "health": 32 }));
             }
         }
     }

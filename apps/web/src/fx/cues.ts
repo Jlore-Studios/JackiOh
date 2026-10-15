@@ -970,6 +970,24 @@ const rewind: Recipe = (event, p) => {
   return cues;
 };
 
+/**
+ * C+ #62 KY's Papaya (R831003): the curve drawn across the board, an arcane bolt from each cell it
+ * passes through to the next in lane order, and a ring at each cell as the line reaches it.
+ */
+const curve: Recipe = (event, p) => {
+  if (event.type !== "curveDrawn") return [];
+  const cells = event.cells.map((cell) => anchor(testid.zone(sideOf(p.view, cell.player), cell.row, cell.lane)));
+  const step = Math.floor(p.D / Math.max(1, cells.length));
+  const cues: FxCue[] = cells.map((cell, i) => ring(p.D, "arcane", cell, i * step));
+  for (let i = 1; i < cells.length; i += 1) {
+    const from = cells[i - 1];
+    const to = cells[i];
+    if (from === undefined || to === undefined) continue;
+    cues.push({ ...projectile(p.env.intensity, "arcane", from, to, step), delayMs: (i - 1) * step });
+  }
+  return cues;
+};
+
 /* ------------------------------------------------------------------------------------------- *
  * Issue #124: the runner's new entry shapes (game/runs.ts), each planned as one
  * ------------------------------------------------------------------------------------------- */
@@ -1170,6 +1188,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   rewind,
   // R1363: a hit the Armor took whole, a full shield over the target (shield.ts).
   armor,
+  curve,
 };
 
 /* ------------------------------------------------------------------------------------------- *

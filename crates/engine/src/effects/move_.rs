@@ -258,6 +258,9 @@ pub struct CostFilter {
     /// An exact current cost.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost: Option<i32>,
+    /// R831014: a current cost of at most this (Core #42 Eugenics' "cost (2) or less").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_cost: Option<i32>,
     /// R66: X-cost cards are exempt, since R65 reads one out of play as 0 and it is nobody's number.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exempt_x_cost: Option<bool>,
@@ -271,6 +274,11 @@ fn matches_cost(ctx: &EffectContext<'_>, card: &CardInstance, filter: &CostFilte
     let cost = effective_cost(ctx.state, card, Default::default());
     if let Some(wanted) = filter.cost
         && cost != wanted
+    {
+        return false;
+    }
+    if let Some(most) = filter.max_cost
+        && cost > most
     {
         return false;
     }

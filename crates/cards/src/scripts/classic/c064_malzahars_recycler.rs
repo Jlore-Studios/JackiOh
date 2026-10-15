@@ -1,4 +1,4 @@
-//! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (2) Field Spell, Rare.
+//! C #64 Malzahar's Recycler (SPEC §8.6 row 64). (1) Field Spell, Rare.
 //!   Base:    "End of turn: Discard 2 random cards. / Whenever you discard cards, draw that many."
 //!   Radiant: "End of turn: Discard 2 random cards. / Whenever you discard cards, draw your deck."
 //!   Engine:  The end-of-turn discard (§6.2's hook) is 2 random cards of the hand (R682), all of a
@@ -156,11 +156,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
+        fn is_a_1_field_spell_with_an_end_of_turn_discard_and_a_discard_trigger_no_tuned_numbers() {
             crate::register_all();
             let def = js(&crate::card_def(ID));
             assert_eq!(def["type"], "Field Spell");
-            assert_eq!(def["cost"], 2);
+            assert_eq!(def["cost"], 1);
             assert!(def["params"].is_null());
             let scripts = script();
             assert!(scripts.base.end_of_turn.is_some());

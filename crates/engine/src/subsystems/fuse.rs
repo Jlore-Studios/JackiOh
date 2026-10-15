@@ -52,15 +52,15 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::config::{
-    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
+    CRAFTED_CARD_COST, FUSE_COST_CAP, FUSE_MIN_INGREDIENTS, FUSED_CARDS_CAP, FUSED_ID_CAP, TRIGGER_EXTRA_NONE,
 };
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod,
-    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TuneMultiplier,
-    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, read_hook, target_check,
-    would_counter_hook,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
+    SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
+    TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook,
+    mode_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -445,6 +445,24 @@ pub fn fused_ingredient_specs(state: &GameState, def_id: &str) -> Option<Vec<Fus
     } else {
         None
     }
+}
+
+/// R874000: the cards a definition holds: one for a card that is no fusion, and for a fusion its
+/// ingredients' (`CardDef.ingredients`, R468), each counted the same way. It stops once past
+/// `FUSED_CARDS_CAP`, the most `fuse` makes, so a fusion of fusions is walked no further than that.
+pub fn fused_card_count(state: &GameState, def_id: &str) -> usize {
+    let Some(specs) = crate::catalog::find_def(Some(state), def_id).and_then(|def| def.ingredients.as_ref())
+    else {
+        return 1;
+    };
+    let mut count = 0;
+    for spec in specs {
+        count += fused_card_count(state, &spec.def_id);
+        if count > FUSED_CARDS_CAP {
+            break;
+        }
+    }
+    count.max(1)
 }
 
 /// E36: a fused definition's lines of code are its ingredients' sum, absent when none has any.
@@ -1170,6 +1188,7 @@ fn combine_objects(records: &[Script]) -> Script {
         static_flags: combine_static_flags(records),
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
+        mode_allowed: fused_mode_allowed(records),
         // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
         secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
@@ -1199,6 +1218,21 @@ fn combine_objects(records: &[Script]) -> Script {
         turn_hook_extra: None,
         cry_death_extra: None,
     }
+}
+
+/// R831008: a fusion allows a mode option only when every ingredient's check allows it; a check
+/// allows every option it does not know (Meditative #98 Showdown's reads only its `lane-N`).
+fn fused_mode_allowed(records: &[Script]) -> Option<ModeAllowedHook> {
+    let checks: Vec<ModeAllowedHook> = records
+        .iter()
+        .filter_map(|record| record.mode_allowed.clone())
+        .collect();
+    if checks.is_empty() {
+        return None;
+    }
+    Some(mode_allowed_hook(move |state, player, option| {
+        checks.iter().all(|check| check(state, player, option))
+    }))
 }
 
 /// MD-D4, R1120: a fusion carries every ingredient's combat-only attack modifiers — attacks added,
@@ -2072,6 +2106,14 @@ pub fn fuse(sink: &mut EngineSink<'_>, args: FuseArgs) -> Option<CardInstance> {
     }
 
     let state: &GameState = sink.state;
+    // R874000: a fusion past FUSED_CARDS_CAP cards is not made, before any of it is built.
+    let held: usize = ingredients
+        .iter()
+        .map(|card| fused_card_count(state, &card.def_id))
+        .sum();
+    if held > FUSED_CARDS_CAP {
+        return None;
+    }
     let defs: Vec<CardDef> = ingredients
         .iter()
         .map(|card| crate::catalog::def_of(Some(state), &card.def_id).clone())

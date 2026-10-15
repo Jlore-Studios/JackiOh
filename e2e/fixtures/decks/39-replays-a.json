@@ -1,0 +1,27 @@
+{
+  "id": "39-replays-a",
+  "spec": "39-replays.cy.ts",
+  "description": "Seat 1 (the browser player, who concedes) of spec 39's Best-of-1 room. The spec concedes once both mulligans are in, so no card is ever played; any legal deck does. These are 06-room-a's twenty, a deck a room match already plays (spec 06).",
+  "cards": [
+    "core-001",
+    "core-003",
+    "core-005",
+    "core-008",
+    "core-009",
+    "core-010",
+    "core-019",
+    "core-020",
+    "core-025",
+    "core-030",
+    "core-047",
+    "core-048",
+    "core-053",
+    "core-056",
+    "core-066",
+    "core-072",
+    "core-073",
+    "core-077",
+    "core-079",
+    "core-086"
+  ]
+}

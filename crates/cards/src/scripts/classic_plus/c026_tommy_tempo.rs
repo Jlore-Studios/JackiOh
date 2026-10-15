@@ -1,9 +1,27 @@
-//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt, cast on draw; that cast ends your turn (Radiant: after
-//! {actions} more action, R415). No open zone: to the hand uncast (R560). Played from hand: a plain Unit.
+//! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 5/5 → 10/10. Taunt, cast on draw;
+//! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
+//! uncast (R560). Patch v0.3.10 (#831): 5/5 (9/9 before), and "Cry: Lose all your mana. Gain
+//! +{per}/+{per} for each mana lost": played or cast on draw (R1), it loses the mana left once its price
+//! is paid, all of it on a free cast, and grows by it (R831010; Radiant +2/+2 a mana).
 
+use jackioh_engine::effects::{buff, gain_mana};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-026";
+
+/// Patch v0.3.10 (#831): "Lose all your mana. Gain +{per}/+{per} for each mana lost", the mana left
+/// once the play's price is paid, on a cast on draw too (R831010).
+fn tempo(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let lost = unspent_mana_of(&*ctx.state, ctx.controller);
+    if lost <= 0 {
+        return vec![];
+    }
+    let gain = lost * param(ctx, "per");
+    vec![
+        gain_mana(json_as(json!({ "amount": -lost }))),
+        buff(json_as(json!({ "target": { "of": "self" }, "attack": gain, "health": gain }))),
+    ]
+}
 
 fn cast_on_draw(ctx: &EffectContext<'_>) -> bool {
     ctx.self_.as_ref().is_some_and(|me| is_cast_on_draw(&*ctx.state, me))
@@ -16,11 +34,11 @@ pub fn script() -> CardScripts {
             ..StaticFlags::default()
         }),
         cry: Some(hook(|ctx| {
+            let mut effects = tempo(ctx);
             if cast_on_draw(ctx) {
-                vec![end_turn(json_as(json!({})))]
-            } else {
-                Vec::new()
+                effects.push(end_turn(json_as(json!({}))));
             }
+            effects
         })),
         ..Script::default()
     };
@@ -31,11 +49,11 @@ pub fn script() -> CardScripts {
             ..StaticFlags::default()
         }),
         cry: Some(hook(|ctx| {
+            let mut effects = tempo(ctx);
             if cast_on_draw(ctx) {
-                vec![end_turn_after_actions(json_as(json!({ "actions": param(&*ctx, "actions") })))]
-            } else {
-                Vec::new()
+                effects.push(end_turn_after_actions(json_as(json!({ "actions": param(&*ctx, "actions") }))));
             }
+            effects
         })),
         ..Script::default()
     };
@@ -45,8 +63,8 @@ pub fn script() -> CardScripts {
 
 // C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
 // leftmost open unit zone, then your turn ends once the drawing effect's list resolves, as if you had
-// pressed End turn. Drawn on the opponent's turn only the summon happens; played from a hand it is a
-// plain Unit. With no open zone it goes to hand uncast (R560), as R58's cap sends one. Radiant allows
+// pressed End turn. Drawn on the opponent's turn only the summon (and its Cry) happens; played from a
+// hand it ends nothing. Its Cry eats the mana left and grows by it (R831010). With no open zone it goes to hand uncast (R560), as R58's cap sends one. Radiant allows
 // one more main-phase action before the turn ends (R415).
 #[cfg(test)]
 mod tests {
@@ -63,7 +81,9 @@ mod tests {
     const PANTHER: &str = "core-032"; // Prem Panther: after it attacks and survives, draw 2 for each Unit it destroyed
     const MOTHS: &str = "core-009"; // Moths to the Flame: start of turn, every enemy Unit attacks this
     const NOSE: &str = "classic-015"; // Nose Hunter: "Activate: Discard a random card. …"
-    const SCARAB: &str = "core-007"; // Jewelosco Scarab: Cry: Discover a (2) Cost card (a prompt)
+    const FREE: &str = "core-010"; // Rapid Replenish, a (0) Spell: an action Tommy's Cry leaves the mana for
+    const THRIVE: &str = "classic-081"; // The Power to Thrive: "Activate: … or reduce the Cost of a card in
+                                        // your hand", which asks for the card (a prompt)
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
 
     fn spread(defaults: Value, overrides: &Value) -> Value {
@@ -132,9 +152,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_3_9_9_taunt_human_unit_that_casts_itself_on_draw_on_both_faces() {
+        fn is_a_3_5_5_taunt_human_unit_radiant_10_10_that_casts_itself_on_draw_on_both_faces() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(3));
+            assert_eq!(
+                [def.base.attack, def.base.health, def.radiant.attack, def.radiant.health],
+                [Some(5), Some(5), Some(10), Some(10)]
+            );
             assert_eq!(def.base.keywords, vec![Keyword::Taunt]);
             let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
@@ -164,6 +188,51 @@ mod tests {
                 assert_eq!(s.state().active, P2);
                 let tommy = tommy_id.unwrap_or_default();
                 assert!(s.stats(&tommy).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Taunt));
+            }
+
+            #[test]
+            fn r831010_cast_on_draw_at_your_start_of_turn_it_loses_the_4_refreshed_mana_and_is_a_9_9() {
+                let mut s = drawn_at_start(false, json!({}));
+                s.end_turn();
+                let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
+                s.expect_stats(&tommy, json!({ "attack": 9, "health": 9 }));
+                assert_eq!(s.state().players[P1].mana.current, 0);
+            }
+
+            #[test]
+            fn r831010_played_from_a_hand_it_loses_what_its_price_left_1_and_is_a_6_6() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [TOMMY, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(TOMMY, json!({}));
+                s.expect_mana(P1, 0);
+                s.expect_stats(TOMMY, json!({ "attack": 6, "health": 6 }));
+            }
+
+            #[test]
+            fn r831010_with_no_mana_left_it_stays_a_5_5_and_nothing_is_lost() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [TOMMY, FILLER], "library": DECK, "mana": 3 },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(TOMMY, json!({}));
+                s.expect_mana(P1, 0);
+                s.expect_stats(TOMMY, json!({ "attack": 5, "health": 5 }));
+            }
+
+            #[test]
+            fn r386_its_per_reads_through_param() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [TOMMY, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                step_param(s.card_mut(TOMMY), "per", 1);
+                s.play(TOMMY, json!({}));
+                s.expect_stats(TOMMY, json!({ "attack": 7, "health": 7 }));
             }
 
             #[test]
@@ -203,6 +272,9 @@ mod tests {
                 assert_eq!(s.card(&menace).damage, 0);
                 assert_eq!(s.state().active, P2);
                 s.expect_health(P1, 22);
+                // R831010: the 3 mana Stockpile left are lost and grow it to 8/8.
+                let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
+                s.expect_stats(&tommy, json!({ "attack": 8, "health": 8 }));
             }
 
             #[test]
@@ -245,6 +317,8 @@ mod tests {
                 assert!(!cut_short(&s));
                 assert_eq!(s.state().active, P1);
                 assert_eq!(s.state().phase, Phase::Main);
+                // No Cry, so no mana lost.
+                s.expect_mana(P1, 4);
             }
 
             #[test]
@@ -261,17 +335,17 @@ mod tests {
             }
 
             #[test]
-            fn played_from_a_hand_it_is_a_plain_unit_and_ends_nothing() {
+            fn played_from_a_hand_it_ends_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [TOMMY, FILLER], "library": DECK },
+                    "p1": { "hand": [TOMMY, FREE], "library": DECK },
                     "p2": { "hand": [FILLER], "library": DECK },
                 }));
                 s.play(TOMMY, json!({}));
                 assert!(tommy_on_field(&s).is_some());
                 assert!(!cut_short(&s));
                 assert!(!has_turn_ends(&s, P1));
-                s.play(FILLER, json!({}));
+                s.play(FREE, json!({}));
                 assert_eq!(s.state().active, P1);
             }
 
@@ -292,13 +366,15 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r415_drawn_at_the_start_of_your_turn_you_take_one_more_action_and_the_turn_ends_once_it_resolves() {
-                let mut s = drawn_at_start(true, json!({}));
+            fn r415_r831010_drawn_at_the_start_of_your_turn_you_take_one_more_action_and_the_turn_ends_once_it_resolves() {
+                let mut s = drawn_at_start(true, json!({ "hand": [FREE] }));
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
+                // A 10/10 that ate the 4 refreshed mana at +2/+2 each.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
                 s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
-                s.play(FILLER, json!({}));
+                s.expect_mana(P1, 0);
+                s.play(FREE, json!({}));
                 assert!(cut_short(&s));
                 assert_eq!(s.state().active, P2);
             }
@@ -313,6 +389,7 @@ mod tests {
                     "p2": { "hand": [FILLER, FILLER], "library": DECK, "field": [{ "def": MOTHS, "lane": 3, "damage": 10 }] },
                 }));
                 s.end_turn();
+                // A 10/10 that ate p1's 4 unspent mana at +2/+2 each.
                 let tommy = tommy_on_field(&s).map(|unit| unit.id).unwrap_or_default();
                 s.expect_stats(&tommy, json!({ "attack": 18, "health": 18 }));
                 assert!(!has_turn_ends(&s, P1));
@@ -324,16 +401,17 @@ mod tests {
 
             #[test]
             fn r113_r415_the_one_action_asks_a_question_the_turn_ends_once_it_is_answered_after_a_json_round_trip() {
-                let mut s = drawn_at_start(true, json!({ "hand": [SCARAB, FILLER] }));
+                // The action is a free activation, Tommy's Cry having taken the mana.
+                let mut s = drawn_at_start(true, json!({ "hand": [FILLER], "backrow": [THRIVE] }));
                 s.end_turn();
-                s.play(SCARAB, json!({}));
+                s.activate(THRIVE, json!({ "modes": ["reduce"] }));
                 let pending = s.state().pending.clone();
                 assert_eq!(pending.as_ref().map(|prompt| prompt.player_id), Some(P1));
                 assert_eq!(s.state().active, P1);
                 let thawed = round_trip(s.state());
                 assert_eq!(&thawed, s.state());
-                let pending = pending.expect("no Discover");
-                let choice = pending.options.first().map(|option| option.selection.clone()).expect("no Discover");
+                let pending = pending.expect("no hand prompt");
+                let choice = pending.options.first().map(|option| option.selection.clone()).expect("no hand prompt");
                 let action = Action::new(
                     ActionBody::Answer { choice_id: pending.id.clone(), selection: vec![choice] },
                     P1,
@@ -389,14 +467,28 @@ mod tests {
 
             #[test]
             fn r386_the_action_count_reads_through_param_an_upgrade_leaves_two_actions() {
-                let mut s = drawn_at_start(true, json!({ "hand": [FILLER, FILLER] }));
+                let mut s = drawn_at_start(true, json!({ "hand": [FREE, FREE] }));
                 let tommy = s.state().players[P1].library.first().map(|card| card.id.clone()).expect("setup");
                 step_param(find_instance_mut(s.state_mut(), &tommy).expect("setup"), "actions", 1);
                 s.end_turn();
-                s.play(FILLER, json!({}));
+                let first = s.hand(P1).into_iter().find(|card| card.def_id == FREE).map(|card| card.id).expect("setup");
+                s.play(&first, json!({}));
                 assert_eq!(s.state().active, P1);
-                s.play(FILLER, json!({}));
+                let second = s.hand(P1).into_iter().find(|card| card.def_id == FREE).map(|card| card.id).expect("setup");
+                s.play(&second, json!({}));
                 assert_eq!(s.state().active, P2);
+            }
+
+            #[test]
+            fn r831010_played_from_a_hand_it_gains_2_2_for_each_mana_lost() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "p1": { "hand": [{ "def": TOMMY, "radiant": true }, FILLER], "library": DECK },
+                    "p2": { "hand": [FILLER], "library": DECK },
+                }));
+                s.play(TOMMY, json!({}));
+                s.expect_mana(P1, 0);
+                s.expect_stats(TOMMY, json!({ "attack": 12, "health": 12 }));
             }
 
             #[test]

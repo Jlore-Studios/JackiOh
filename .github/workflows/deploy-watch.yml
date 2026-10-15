@@ -1,7 +1,7 @@
 # Watches Render's deploy of each push to main and reports a deploy that never arrives.
 #
-# Render deploys crates/server from main on every push and, when a deploy fails, keeps the previous
-# one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
+# Render deploys crates/server from main when this workflow asks it to and, when a deploy fails, keeps
+# the previous one serving, so a failure is silent from GitHub's side. The 0013 outage was exactly that: main
 # moved to catalog v0.2.0 while the live server, unable to migrate, stayed on core-1. This polls
 # the live server's one unauthenticated route, GET /api/catalog (R163), until it serves the catalog
 # version render.yaml names AND reports running the pushed commit (its `x-deployed-commit` header,
@@ -13,6 +13,15 @@
 # The issue says which of those it is, and the run that finds the server live closes it again.
 # Before it polls, it asks Render to deploy the push through the service's deploy hook (the
 # RENDER_DEPLOY_HOOK_URL secret), so a deploy no longer waits on Render's GitHub integration.
+#
+# It is the only thing that starts a deploy (#985). render.yaml's autoDeployTrigger is "off", and the
+# watch runs only for a push that changes what the image is built from: the crates the server
+# compiles (server, engine, cards, ai; their tests and Markdown aside), the workspace manifests,
+# render.yaml, and this file and its poll action. Every push used to be built twice, by Render's
+# auto-deploy and by this request, web-only and docs-only pushes too; that ran the workspace out of
+# build pipeline minutes on 2026-10-15, with 386 pushes since Oct 1, of which 157 changed the server.
+# A push it skips leaves the live server on the last commit that did, which runs the same image.
+# Actions, Run workflow deploys and watches main's head on demand.
 #
 # The wait is up to WINDOWS × WINDOW_SECONDS (about 18 minutes: Render's build and boot, plus a
 # free instance waking), split into windows that each run as a job of their own, every one under
@@ -28,6 +37,21 @@ name: deploy watch
 on:
   push:
     branches: [main]
+    # What crates/server/Dockerfile builds `jackioh-server` from (its COPY lines: the manifests and
+    # crates/; `-p jackioh-server` compiles these four crates and nothing else of the workspace), and
+    # what this watch reads. Keep it in step with the server's dependencies.
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - render.yaml
+      - crates/server/**
+      - crates/engine/**
+      - crates/cards/**
+      - crates/ai/**
+      - "!crates/*/tests/**"
+      - "!crates/**/*.md"
+      - .github/workflows/deploy-watch.yml
+      - .github/actions/poll-live/**
   workflow_dispatch:
 
 concurrency:

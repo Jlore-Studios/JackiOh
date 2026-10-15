@@ -1,33 +1,44 @@
 //! The AI's static evaluation (SPEC §9.9): hero health (concave, so the last points weigh most),
 //! hero armor, board stats and keywords through §10.4's layers (a Defense-Position unit's attack at
-//! a discount), cards in hand, library, the enemy's face damage next turn against our health and the
-//! reverse, and, late in the game, the turn cap. Patch v0.2.0's mechanics through the engine's own
-//! readers: a unit the engine bars from attacking (E35) counts no attack, Spell Damage (E6) and Immune
-//! to Spells are worth something, a Brittle count (B3.3) discounts its card, an Animated backrow card
-//! (B3.1) is partly a unit already, and an own hand card's `costMod` (B3.4, R65) moves its worth. It
-//! reads only what the seat may know or what a determinization sampled, and nothing here reads a
-//! handicap or a difficulty (R180).
+//! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
+//! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
+//! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
+//! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
+//! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
+//! card's `costMod` (B3.4, R65) moves its worth. It reads only what the seat may know or what a
+//! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::{
     AttackTarget, CardInstance, CardType, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
-    cannot_attack, card_keywords, credit_lapsing, find_def, has_keyword, hero_armor_of, owed_mana_of,
-    own_cost, query_cost, subsystems, unit_view,
+    cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword, hero_armor_of,
+    owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems, takes_strike_back, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::EvalWeights;
 
-/// A hero's health, concave: heroHealth × sqrt(h × HERO_HEALTH), so 30 health is worth 30.
-fn hero_value(health: i32, w: &EvalWeights) -> f64 {
+/// The life `player` started the game with, where the hero value and `closing` are anchored (R964000):
+/// HERO_HEALTH in a 1v1 game; in a Duos duel the seat's own HP and its team's pool at its cap (§13.4;
+/// every team's own HP is DUOS_OWN_HEALTH, §13.7). Both teams' life is public (§13.6).
+pub fn starting_life(state: &GameState, player: PlayerId) -> i32 {
+    match state.players[player].duos {
+        Some(life) => DUOS_OWN_HEALTH + life.pool_cap,
+        None => HERO_HEALTH,
+    }
+}
+
+/// A hero's life (`effective_life`, R964000), concave: heroHealth × sqrt(h × start), `start` its
+/// `starting_life`, so a full hero is worth its life: 30 in a 1v1 game.
+fn hero_value(health: i32, start: i32, w: &EvalWeights) -> f64 {
     if health <= 0 {
         return -w.win;
     }
-    w.hero_health * (f64::from(health) * f64::from(HERO_HEALTH)).sqrt()
+    w.hero_health * (f64::from(health) * f64::from(start)).sqrt()
 }
 
 /// §10.8, R33: whether `seat` may read this backrow card. A placeholder never is.
@@ -138,9 +149,10 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift) * brittle_share(card, w)
 }
 
-/// A hero's side of the ledger: its concave health and its armor.
+/// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
 fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
-    hero_value(state.players[player].hero.health, w) + w.hero_armor * f64::from(hero_armor_of(state, player))
+    hero_value(effective_life(state, player), starting_life(state, player), w)
+        + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
 /// Everything on one side but the hero: the board, the backrow, the hand and the library.
@@ -205,10 +217,10 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
 /// The face damage `attacker`'s board could deal the other hero next turn: units with attack > 0,
 /// position ATK, no "Can't attack" and no E35 status barring attacks, sorted ascending by attack.
-/// Taunt units on the defending side soak up the smallest attackers they bind first
-/// (`damage_past_taunts`); each Taunt costs health + armor, plus one extra attacker if it has Divine
-/// Shield. Each remaining attacker's attack goes through `subsystems::projected_hero_damage` (armor
-/// and the Anti-oneshot cap, per hit), and the results are summed.
+/// Taunt units on the defending side soak up the smallest attackers they bind first, one §4.4 hit at
+/// a time (`damage_past_taunts`). Each remaining attacker's attack goes through
+/// `subsystems::projected_hero_damage` (armor and the Anti-oneshot cap, per hit), and the results are
+/// summed.
 pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     let mut attacks: Vec<(&CardInstance, i32)> = Vec::new();
     for unit in active_units_of(state, attacker) {
@@ -227,13 +239,23 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
     damage_past_taunts(state, attacker.opponent(), &attacks)
 }
 
+/// §4.5 step 4: a Reborn unit comes back at 1 health.
+const REBORN_HEALTH: i32 = 1;
+
 /// What `attacks` (one entry per attack: the attacker and its attack) deal `defender`'s hero once its
-/// Taunt units have soaked up the smallest attackers they bind, as `face_threat` counts it: each Taunt
-/// costs health + armor, plus one extra attacker if it has Divine Shield, and one its attackers cannot
-/// kill holds them all. §4.2 step 3: a Taunt binds only the attackers that may attack it, asked of the
-/// engine's own `attack_restriction` (what its Taunt wall reads), so a Flying Taunt in Attack Position
-/// holds no ground attacker (R783002) and a landed one, in Defense Position, holds every attacker
-/// (R783003). Every remaining hit goes through `subsystems::projected_hero_damage`.
+/// Taunt units have soaked up the smallest attackers they bind, as `face_threat` counts it. §4.2 step
+/// 3: a Taunt binds only the attackers that may attack it, asked of the engine's own
+/// `attack_restriction` (what its Taunt wall reads), so a Flying Taunt in Attack Position holds no
+/// ground attacker (R783002) and a landed one, in Defense Position, holds every attacker (R783003).
+///
+/// Each bound attacker, smallest first, is one §4.4 hit on the Taunt (#898): an attacker its First
+/// Strike destroys first lands nothing (§4.3 step 1, `falls_to_first_strike`); a Divine Shield takes
+/// the first hit whole (step 1); the Taunt's Armor comes off each hit, unless it pierces (step 2,
+/// R346), and a hit the Armor takes whole does nothing (R1361); Poisonous destroys with any damage
+/// dealt (step 7); and what a Trample hit lands beyond the Taunt's health reaches the hero (step 9,
+/// R63). A Taunt its attackers cannot destroy holds them all, and a destroyed Reborn Taunt comes back
+/// and binds the attackers left (§4.5 step 4, `reborn_body`). Lane strike (R94), combat-only bonuses
+/// (R1120) and Cleave stay out. Every remaining hit goes through `subsystems::projected_hero_damage`.
 pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&CardInstance, i32)]) -> i32 {
     let mut free: Vec<(&CardInstance, i32)> = attacks.to_vec();
     free.sort_by_key(|(_, attack)| *attack);
@@ -244,35 +266,112 @@ pub fn damage_past_taunts(state: &GameState, defender: PlayerId, attacks: &[(&Ca
         .collect();
     taunts.sort_by_key(|(_, view)| view.health + view.armor);
 
-    for (unit, taunt) in &taunts {
-        let target = AttackTarget::Unit {
-            instance: (*unit).clone(),
-        };
-        let (bound, mut unbound): (Vec<_>, Vec<_>) = free
-            .into_iter()
-            .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
-        let mut bound = bound.into_iter();
-        if has_keyword(&taunt.keywords, KeywordKind::DivineShield) {
-            bound.next();
-        }
-        let cost = taunt.health.max(0) + taunt.armor;
-        let mut soaked = 0;
-        while soaked < cost {
-            let Some((_, attack)) = bound.next() else {
-                break;
+    let mut total = 0;
+    for (unit, view) in taunts {
+        let mut standing = Some((unit.clone(), view));
+        while let Some((taunt, view)) = standing.take() {
+            let target = AttackTarget::Unit {
+                instance: taunt.clone(),
             };
-            soaked += attack;
+            let (bound, mut unbound): (Vec<_>, Vec<_>) = free
+                .into_iter()
+                .partition(|(attacker, _)| attack_restriction(state, attacker, &target).is_ok());
+            let mut bound = bound.into_iter();
+            let mut shield = has_keyword(&view.keywords, KeywordKind::DivineShield);
+            let mut health = view.health;
+            let mut poisoned = false;
+            while health > 0 && !poisoned {
+                let Some((attacker, attack)) = bound.next() else {
+                    break;
+                };
+                // §4.3 step 1: an attacker the Taunt's First Strike destroys lands nothing.
+                if falls_to_first_strike(state, attacker, &taunt, &view) {
+                    continue;
+                }
+                // §4.4 step 1: the shield takes the whole hit.
+                if shield {
+                    shield = false;
+                    continue;
+                }
+                // Step 2: the Taunt's Armor comes off each hit, unless it pierces (R346); a hit it takes
+                // whole is no damage instance at all (R1361).
+                let pierce = pierces(state, Some(attacker), None);
+                let dealt = if pierce {
+                    attack
+                } else {
+                    (attack - view.armor).max(0)
+                };
+                if dealt <= 0 {
+                    continue;
+                }
+                let keywords = unit_view(state, attacker).keywords;
+                // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
+                if has_keyword(&keywords, KeywordKind::Trample) && dealt > health {
+                    total += subsystems::projected_hero_damage(state, defender, dealt - health, pierce);
+                }
+                // Step 7: Poisonous destroys with any damage dealt.
+                poisoned = has_keyword(&keywords, KeywordKind::Poisonous);
+                health -= dealt;
+            }
+            unbound.extend(bound);
+            unbound.sort_by_key(|(_, attack)| *attack);
+            free = unbound;
+            // §4.5 step 4: a destroyed Reborn Taunt comes back and binds what is left.
+            if (health <= 0 || poisoned) && has_keyword(&view.keywords, KeywordKind::Reborn) {
+                standing = reborn_body(state, &taunt);
+            }
         }
-        unbound.extend(bound);
-        unbound.sort_by_key(|(_, attack)| *attack);
-        free = unbound;
     }
 
-    let mut total = 0;
     for (_, hit) in &free {
         total += subsystems::projected_hero_damage(state, defender, *hit, false);
     }
     total
+}
+
+/// §4.3 step 1 and R93, as the engine's own projection reads it (`subsystems::lethal`'s
+/// `falls_to_first_strike`, private there): a Taunt with First Strike, against an attacker without
+/// it, strikes first, and an attacker that falls there never lands its hit. The strike back runs the
+/// §4.4 steps that can stop it — Divine Shield, Armor (which a Pierce Taunt skips, R346),
+/// Indestructible and the zero rule — and a Poisonous Taunt destroys with any damage at all. A Ranged
+/// attacker takes no strike back from a Taunt that is not Ranged, so it never falls there (R783000).
+fn falls_to_first_strike(
+    state: &GameState,
+    attacker: &CardInstance,
+    taunt: &CardInstance,
+    view: &UnitView,
+) -> bool {
+    if view.attack <= 0
+        || !has_keyword(&view.keywords, KeywordKind::FirstStrike)
+        || !takes_strike_back(state, attacker, taunt)
+    {
+        return false;
+    }
+    let mine = unit_view(state, attacker);
+    if has_keyword(&mine.keywords, KeywordKind::FirstStrike)
+        || has_keyword(&mine.keywords, KeywordKind::DivineShield)
+        || has_keyword(&mine.keywords, KeywordKind::Indestructible)
+    {
+        return false;
+    }
+    let dealt = if pierces(state, Some(taunt), None) {
+        view.attack
+    } else {
+        (view.attack - mine.armor).max(0)
+    };
+    dealt > 0 && (has_keyword(&view.keywords, KeywordKind::Poisonous) || dealt >= mine.health)
+}
+
+/// §4.5 step 4: the body a destroyed Reborn Taunt comes back as, a reset instance (R78) without
+/// Reborn at `REBORN_HEALTH`, and its view — or nothing when the body has no Taunt. A printed Divine
+/// Shield comes back with it; a granted Taunt, or Defense Position's, is gone.
+fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
+    let mut body = taunt.clone();
+    reset_instance(&mut body);
+    body.reborn_spent = Some(true);
+    body.damage = (unit_view(state, &body).max_health - REBORN_HEALTH).max(0);
+    let view = unit_view(state, &body);
+    has_keyword(&view.keywords, KeywordKind::Taunt).then_some((body, view))
 }
 
 /// Who swings next, for the threat and pressure terms: "enemy" (the default) reads a state as the end
@@ -303,15 +402,19 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
 
     let enemy_damage = face_threat(state, opp);
     let our_damage = face_threat(state, seat);
+    // §13.4, R964000: a hero's life is `effective_life`, own HP and the team's pool in a Duos duel,
+    // the hero's health in a 1v1 game.
+    let seat_life = effective_life(state, seat);
+    let opp_life = effective_life(state, opp);
     let seat_first = next == NextSwing::Seat;
     let threat_share = if seat_first { w.answerable_threat } else { 1.0 };
     let threat = threat_share
-        * (if enemy_damage >= state.players[seat].hero.health {
+        * (if enemy_damage >= seat_life {
             w.lethal_threat
         } else {
             w.threat_per_damage * f64::from(enemy_damage)
         });
-    let pressure = if our_damage >= state.players[opp].hero.health {
+    let pressure = if our_damage >= opp_life {
         if seat_first {
             w.lethal_on_board
         } else {
@@ -325,9 +428,9 @@ pub fn evaluate(state: &GameState, seat: PlayerId, next: NextSwing, w: &EvalWeig
     // on the enemy hero is worth more than the concave hero value alone says.
     let span = (f64::from(TURN_CAP_PLAYER_TURNS) - w.closing_from).max(1.0);
     let progress = ((f64::from(state.turn) - w.closing_from).max(0.0) / span).min(1.0);
-    let closing = w.closing_weight * progress * f64::from(HERO_HEALTH - state.players[opp].hero.health);
+    let closing = w.closing_weight * progress * f64::from(starting_life(state, opp) - opp_life);
 
-    let race = w.enemy_health * f64::from(state.players[opp].hero.health);
+    let race = w.enemy_health * f64::from(opp_life);
 
     let board = material(state, seat, seat, w) - material(state, opp, seat, w);
 

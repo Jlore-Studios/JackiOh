@@ -511,7 +511,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
 describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
   const inHand = (defId: string): string => `[data-testid^="hand-card-"][data-def-id="${defId}"]`;
 
-  it("R247 Heroic Power prints its rolled power, Call to Chaos reads ???, and KY's Trial Discovers three numbers", () => {
+  it("R247 R831004 Heroic Power prints its rolled power, Call to Chaos reads ???, and KY's Trial Discovers a set, then three numbers", () => {
     cy.seedGame({ seed: LIVE_SEED, a: LIVE_DECK_A, b: LIVE_DECK_B });
     cy.jackioh().then((handle) => {
       if (handle.seat !== "p1") cy.handOver();
@@ -532,12 +532,23 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
     cy.get(`${inHand("core-095")} .card-text`).should("have.text", "???");
 
     cy.playByName("KY's Trial");
+    // R831004: three sets first, each with its mark; the names below are Core's, so Core when offered.
+    // The engine asks a `mode` prompt, which the board draws as a Discover pop-up, since it offers
+    // DISCOVER_OPTION_LIMIT options or fewer (Prompt.tsx; `boardKind` in support/playthrough.ts).
     cy.get(promptOf("discover"), { timeout: timeouts.view }).should("be.visible");
-    cy.get(`${promptOf("discover")} [data-number]`)
+    cy.get(`${promptOf("discover")} [data-set]`).should("have.length", 3);
+    cy.get(promptOf("discover")).then(($sets) => {
+      const core = $sets.find('[data-set="Core"]');
+      const chosen = core.length > 0 ? core : $sets.find("[data-set]").first();
+      cy.wrap(chosen.attr("data-set") ?? "").as("trialSet");
+      cy.wrap(chosen).click();
+    });
+    // The numbers follow in the same pop-up, so wait on them, not on the pop-up.
+    cy.get(`${promptOf("discover")} [data-number]`, { timeout: timeouts.view })
       .should("have.length", 3)
       .each(($option) => {
         const n = $option.attr("data-number") ?? "";
-        expect(Number(n), "a number from 1 to 100").to.be.within(1, 100);
+        expect(Number(n), "a number of the set").to.be.at.least(1);
         expect($option.find(".cf").length, `number ${n} draws no card face`).to.eq(0);
         const value = $option.find(".prompt-number-value");
         expect(value.text()).to.eq(n);
@@ -549,15 +560,22 @@ describe("17 — cards in play show what they are now (SPEC §10.10)", () => {
           expect(inner.right, `number ${n} inside its option`).to.be.at.most(outer.right);
         }
       });
-    cy.get(`${promptOf("discover")} [data-number]`)
-      .first()
-      .invoke("attr", "data-number")
-      .then((picked) => {
-        const name = CARD_NAMES[Number(picked)];
-        expect(name, `SPEC §8 names #${String(picked)}`).to.not.eq(undefined);
-        cy.get(promptOf("discover")).should("not.contain.text", name ?? "");
-        cy.answerPrompt("discover", { first: 1 });
-        cy.get(`[data-testid^="hand-card-"][data-radiant="true"]`).should("contain.text", name ?? "");
-      });
+    cy.get<string>("@trialSet").then((set) => {
+      cy.get(`${promptOf("discover")} [data-number]`)
+        .first()
+        .invoke("attr", "data-number")
+        .then((picked) => {
+          if (set !== "Core") {
+            cy.answerPrompt("discover", { first: 1 });
+            cy.get(`[data-testid^="hand-card-"][data-radiant="true"]`).should("exist");
+            return;
+          }
+          const name = CARD_NAMES[Number(picked)];
+          expect(name, `SPEC §8 names #${String(picked)}`).to.not.eq(undefined);
+          cy.get(promptOf("discover")).should("not.contain.text", name ?? "");
+          cy.answerPrompt("discover", { first: 1 });
+          cy.get(`[data-testid^="hand-card-"][data-radiant="true"]`).should("contain.text", name ?? "");
+        });
+    });
   });
 });

@@ -19,6 +19,7 @@
 #   rust_ai
 #   rust_ai_slow_a
 #   rust_ai_slow_b
+#   rust_luau
 #   rust_tools_wasm
 #   web                `web (typecheck, eslint)` and `web (unit k/3)`
 #   e2e                `e2e smoke`
@@ -58,7 +59,7 @@
 #    group runs when the change is in a crate it tests or in any crate those build on. The engine or
 #    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
 #    runs its three groups (ai, ai slow a and ai slow b), server and tools, wasm; the server runs
-#    server; tools, wasm and luau run tools, wasm.
+#    server; tools and wasm run tools, wasm; luau runs luau and tools, wasm (the tools build on it).
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
@@ -102,8 +103,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm web e2e"
-RUST="rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_luau rust_tools_wasm web e2e"
+RUST="rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_luau rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
@@ -195,7 +196,8 @@ for file in $files; do
     crates/engine/* | crates/cards/*) on $RUST ;;
     crates/ai/*) on rust_ai rust_ai_slow_a rust_ai_slow_b rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
-    crates/tools/* | crates/wasm/* | crates/luau/*) on rust_tools_wasm ;;
+    crates/luau/*) on rust_luau rust_tools_wasm ;;
+    crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
     crates/*)
       echo "ci-scope: $file is in no crate the map knows, running every Rust group" >&2
       on $RUST

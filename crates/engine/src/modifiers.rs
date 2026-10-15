@@ -96,7 +96,7 @@ pub fn move_sourced_modifiers(sink: &mut EngineSink<'_>, source_id: &str, from: 
 /// R209: a modifier a permanent installed and still owns (`sourceId`, #79 Twinspell's "the next
 /// Spell you play gains Echo") is that permanent's lasting effect (§5.1), so it lasts while the
 /// permanent stays on the field and ends when it leaves — destroyed (#36, #88), bounced (#52's
-/// radiant crossing, a Locked rotation or swap), exiled (#34, #100), eaten (#22), replaced (#83) or
+/// radiant crossing, a rotation onto a reserved zone, a Locked swap), exiled (#34, #100), eaten (#22), replaced (#83) or
 /// fused away (#85). A card that later stands on the field under the same id is a new arrival that
 /// installs its own (R174). The state check runs this, since it follows every action and every whole
 /// effect (§4.5, R59), and each removal is reported like any other (R169).

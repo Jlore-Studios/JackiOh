@@ -1320,3 +1320,65 @@ mod section_9_4_the_gate_around_everything_else {
         assert_eq!(allowed.status, 200);
     }
 }
+
+// Issue #887: the operator's levers, driven through the CLI's own operation functions against the
+// HTTP routes they act on.
+mod moderate_levers {
+    use super::*;
+    use jackioh_server::cli::moderate::{ban_profile, revoke_code, unban_profile};
+
+    #[tokio::test(start_paused = true)]
+    async fn unban_restores_a_banned_profile_to_active() {
+        let server = code_server().await;
+        let caller = pending_caller(&server, "lever-unbanned").await;
+        let minted = mint(&server, None, None).await;
+
+        assert_eq!(
+            ban_profile(&server.app.db, &caller.profile_id)
+                .await
+                .expect("the ban lands"),
+            format!("banned {}", caller.profile_id)
+        );
+        let refused = redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(refused.status, 403);
+        assert_eq!(refused.error_code(), "account_banned");
+
+        assert_eq!(
+            unban_profile(&server.app.db, &caller.profile_id)
+                .await
+                .expect("the unban lands"),
+            format!("unbanned {}", caller.profile_id)
+        );
+        // Active again: redemption is now the already-active conflict, proving the status is back.
+        let again = redeem(&server, &caller.token, &minted.formatted, DEFAULT_IP).await;
+        assert_eq!(again.status, 409);
+        assert_eq!(again.error_code(), "conflict");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn revoked_through_the_lever_redeems_identically_to_an_exhausted_code() {
+        let server = code_server().await;
+        let exhausted = mint(&server, None, None).await;
+        let revoked = mint(&server, None, None).await;
+
+        // Exhaust one code by redeeming it.
+        let first = pending_caller(&server, "lever-first").await;
+        let ok = redeem(&server, &first.token, &exhausted.formatted, DEFAULT_IP).await;
+        assert_eq!(ok.status, 200);
+
+        // Revoke the other through the operator's lever.
+        revoke_code(&server.app.db, &server.app.env.code_pepper, &revoked.formatted)
+            .await
+            .expect("the revoke lands");
+
+        // Each redeems with a fresh pending caller: equal status and byte-equal bodies. Timing
+        // equality holds by construction (one `identical_code_error` plus the shared `pad_to`
+        // floor, sampled by the `r107` test).
+        let second = pending_caller(&server, "lever-second").await;
+        let third = pending_caller(&server, "lever-third").await;
+        let from_exhausted = redeem(&server, &second.token, &exhausted.formatted, DEFAULT_IP).await;
+        let from_revoked = redeem(&server, &third.token, &revoked.formatted, DEFAULT_IP).await;
+        assert_eq!(from_exhausted.status, from_revoked.status);
+        assert_eq!(from_exhausted.text, from_revoked.text);
+    }
+}

@@ -1,11 +1,11 @@
 //! M #102 Catboy Maid SSR+ (SPEC §8.8 row 102): (1) Unit, CN, Felinor, Common, 1/1 → 2/2. The
 //! designer's #99.
 //!
-//! Base:    "Lucky 1\nCry: Draw 1-2. Add 1-4 to your Jade Counter."
-//! Radiant: "Lucky 2\nCry: Draw 1-2. Add 1-10 to your Jade Counter."
+//! Base:    "Lucky 1\nCry: Draw 1-2. Add 1-3 to your Jade Counter."
+//! Radiant: "Lucky 2\nCry: Draw 1-2. Add 1-6 to your Jade Counter."
 //! Engine (MD-G3, R1439):
 //! - **Two rolls:** the Cry rolls how many cards to draw, 1 or 2, as C+ #53 Book of Tokens rolls its
-//!   count, then how much to add, uniform over 1–4 (1–10 on the Radiant face). Each is its own
+//!   count, then how much to add, uniform over 1–3 (1–6 on the Radiant face). Each is its own
 //!   `rng.lucky` roll, higher better, with the card's Lucky as it stands (printed, as a Nerf or a
 //!   Buff has moved it, plus any given, R386, R1438: `lucky_on`) and its controller's Luck (R987).
 //! - **The draws** are §2.4's: the hand cap burns the extra card and an empty deck deals fatigue.
@@ -23,10 +23,11 @@ pub const ID: &str = "meditative-102";
 const MIN_DRAWS: i32 = 1;
 const MAX_DRAWS: i32 = 2;
 
-/// The printed "Add 1-4" (base) and "Add 1-10" (Radiant): the least and most one Cry adds.
-const MIN_JADE: i32 = 1;
-const MAX_JADE: i32 = 4;
-const MAX_JADE_RADIANT: i32 = 10;
+/// The printed "Add 1-3" (base) and "Add 1-6" (Radiant): the least and most one Cry adds (patch
+/// v0.3.10, #831; 1-4 and 1-10 before).
+pub const MIN_JADE: i32 = 1;
+pub const MAX_JADE: i32 = 3;
+pub const MAX_JADE_RADIANT: i32 = 6;
 
 /// One uniform roll over `low..=high`.
 fn uniform(rng: &mut Rng, low: i32, high: i32) -> i32 {
@@ -133,7 +134,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1439_the_cry_draws_1_or_2_and_adds_1_to_4_every_value_seen_over_the_seeds() {
+        fn r1439_the_cry_draws_1_or_2_and_adds_1_to_3_every_value_seen_over_the_seeds() {
             let mut drawn_seen: Vec<i32> = Vec::new();
             let mut jade_seen: Vec<i32> = Vec::new();
             for n in 0..60 {
@@ -150,7 +151,7 @@ mod tests {
             drawn_seen.sort();
             jade_seen.sort();
             assert_eq!(drawn_seen, vec![1, 2]);
-            assert_eq!(jade_seen, vec![1, 2, 3, 4]);
+            assert_eq!(jade_seen, vec![1, 2, 3]);
         }
 
         #[test]
@@ -162,7 +163,7 @@ mod tests {
                 let (drawn, jade, taken) = cry(s);
                 // Lucky 1: each of the two rolls is two draws of the match rng.
                 assert_eq!(taken, 4);
-                let [draws, amount] = replayed(&seed, cursor, 1, [(1, 2), (1, 4)]);
+                let [draws, amount] = replayed(&seed, cursor, 1, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
                 assert_eq!([drawn, jade], [draws, amount]);
             }
         }
@@ -176,7 +177,7 @@ mod tests {
                 let cursor = s.state().rng_cursor;
                 let (drawn, jade, taken) = cry(s);
                 assert_eq!(taken, 6);
-                let [draws, amount] = replayed(&seed, cursor, 2, [(1, 2), (1, 4)]);
+                let [draws, amount] = replayed(&seed, cursor, 2, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
                 assert_eq!([drawn, jade], [draws, amount]);
             }
         }
@@ -200,7 +201,7 @@ mod tests {
                 let cursor = s.state().rng_cursor;
                 let (drawn, jade, taken) = cry(s);
                 assert_eq!(taken, 6);
-                let [draws, amount] = replayed(&seed, cursor, 2, [(1, 2), (1, 4)]);
+                let [draws, amount] = replayed(&seed, cursor, 2, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE)]);
                 assert_eq!([drawn, jade], [draws, amount]);
             }
         }
@@ -259,7 +260,7 @@ mod tests {
                 s.state_mut().players.p1.jade = Some(4);
                 s.play(ID, json!({}));
                 // Any add from 4 reaches 5. The Maid takes lane 1, so the Beauty lands beside it
-                // (R64), on its base face: the base face adds at most 4, short of 10.
+                // (R64), on its base face: the base face adds at most 3, short of 10.
                 assert!(s.view(P1).you.jade.is_some_and(|jade| (5..10).contains(&jade)));
                 let beauty = s.unit(P1, 2);
                 assert_eq!(beauty.as_ref().map(|unit| unit.def_id.as_str()), Some(BEAUTY));
@@ -273,7 +274,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1439_lucky_2_three_draws_a_roll_and_1_to_10_added() {
+        fn r1439_lucky_2_three_draws_a_roll_and_1_to_6_added() {
             let mut jade_seen: Vec<i32> = Vec::new();
             for n in 0..40 {
                 let seed = format!("catboy-maid-radiant-{n}");
@@ -283,13 +284,13 @@ mod tests {
                 assert_eq!(taken, 6);
                 assert!((MIN_DRAWS..=MAX_DRAWS).contains(&drawn));
                 assert!((MIN_JADE..=MAX_JADE_RADIANT).contains(&jade));
-                let [draws, amount] = replayed(&seed, cursor, 2, [(1, 2), (1, 10)]);
+                let [draws, amount] = replayed(&seed, cursor, 2, [(MIN_DRAWS, MAX_DRAWS), (MIN_JADE, MAX_JADE_RADIANT)]);
                 assert_eq!([drawn, jade], [draws, amount]);
                 if !jade_seen.contains(&jade) {
                     jade_seen.push(jade);
                 }
             }
-            // Past the base face's 4: the Radiant range reaches higher.
+            // Past the base face's 3: the Radiant range reaches higher.
             assert!(jade_seen.iter().any(|jade| *jade > MAX_JADE));
         }
 

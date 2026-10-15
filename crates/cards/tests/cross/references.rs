@@ -307,17 +307,16 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             naming("Pancake token"),
             strings(&["classicplus-012", "classicplus-013"])
         );
-        // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #53
-        // Prestige adds one, #59's granted Death fuses one and #60 Eschews casts one (§8.8 rows
-        // 53, 59 and 60, R1421). Issue #911 put Claude's Datacenter's "AI Generated card" back in
-        // the pool's one spelling.
+        // AI Slop and Claude's Datacenter make them; Scaling Law counts them. Meditative #59's granted
+        // Death fuses one and #60 Eschews casts one (§8.8 rows 59 and 60, R1421); #53 Prestige added one
+        // until #831's patch. Issue #911 put Claude's Datacenter's "AI Generated card" back in the
+        // pool's one spelling.
         assert_eq!(
             naming("AI generated card"),
             strings(&[
                 "classicplus-043",
                 "classicplus-078",
                 "classicplus-t-ai-02",
-                "meditative-053",
                 "meditative-059",
                 "meditative-060"
             ])
@@ -378,7 +377,7 @@ mod r279_the_reference_map_spec_5_7_10_10 {
         // Outside the phrase it still names Jade (Meditative #39.2).
         assert!(names("Your Jade Beauties become Radiant.", "Jade"));
         assert!(names(
-            "Add one of these: Dud (20%), Jade (70%) or Red Jade (10%).",
+            "Add one of these: Dud (20%), Jade (75%) or Red Jade (5%).",
             "Jade"
         ));
         // So neither Jade nor Red Jade lists a `refs` for the Counter alone.

@@ -1,6 +1,7 @@
-//! BUILD M8's `E2E=1` test server: the fixture accounts, the fixture invite codes and R144's reseed
-//! at boot. Port of `apps/server/src/api/e2e.ts`; the auth provider that honours the fixture tokens
-//! is `crate::auth::E2eAuth` (SURFACE §11.1), built from `E2E_ACCOUNTS` here.
+//! BUILD M8's `E2E=1` test server: the fixture accounts, the fixture invite codes and R144's reseed,
+//! at boot and on demand (`POST /api/e2e/reseed`). Port of `apps/server/src/api/e2e.ts`; the auth
+//! provider that honours the fixture tokens is `crate::auth::E2eAuth` (SURFACE §11.1), built from
+//! `E2E_ACCOUNTS` here.
 //!
 //! BUILD M8's preamble: "Cypress runs against `apps/web` in `E2E=1` mode (hotseat route and a test
 //! server with fixture accounts)." `e2e/README.md`'s assumption A6 spells out which accounts:
@@ -8,13 +9,15 @@
 //! verified email); seeded invite codes — one good, one missing, one expired, one exhausted."
 //!
 //! SPEC §11 R144: "In end-to-end mode the server reseeds its fixture accounts and invite codes at
-//! boot, so a spec that activates the pending account or spends an invite code is repeatable.
-//! Without this the invite-gate spec passes once and fails on every later run, which is
-//! indistinguishable from a regression." Spec 10 does exactly that: it flips `e2e-pending` to
-//! active and spends the good code.
+//! boot, and again on `POST /api/e2e/reseed`, which spec 10 calls before its first test, so a spec
+//! that activates the pending account or spends an invite code is repeatable against one server with
+//! no restart. Without this the invite-gate spec passes once and fails on every later run, which is
+//! indistinguishable from a regression." Spec 10 does exactly that: it flips `e2e-pending` to active
+//! and spends the good code.
 //!
-//! NOTHING HERE IS REACHABLE IN PRODUCTION. `app.rs` builds these only when `env.e2e` is true, and
-//! `env.rs` already refuses `E2E` together with `NODE_ENV=production`:
+//! NOTHING HERE IS REACHABLE IN PRODUCTION. `app.rs` builds these only when `env.e2e` is true,
+//! `post_reseed` answers as no route at all unless it is, and `env.rs` already refuses `E2E`
+//! together with `NODE_ENV=production`:
 //!
 //! ```text
 //! "E2E: must not be set together with NODE_ENV=production — BUILD M8's fixture accounts and
@@ -26,12 +29,14 @@
 //! lets CI override every one of them (`--expose p1Token=…`, `--expose goodCode=…`); an override
 //! with no matching change here would seed one set and ask for another, so the two move together.
 
+use std::sync::Arc;
+
 use indexmap::IndexMap;
 use serde::Serialize;
 use serde_json::json;
 
 use crate::api::crypto::{hashes_for_pepper, is_well_formed_code, normalize_code, system_ids};
-use crate::api::http::{ApiError, log_info, now_ms};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, log_info, now_ms, ok_of};
 use crate::app::App;
 use crate::config::{INVITE_CODE_LENGTH, MIN_ACCOUNT_AGE_YEARS, RATING_START, TERMS_VERSION};
 use crate::db::store::{Db, InviteCode, ProfileCreateInput, ProfileStatus, TermsSource};
@@ -200,8 +205,9 @@ impl Default for E2ESeedOptions {
     }
 }
 
-/// R144 with the contract's fixtures: what `app.rs` runs at boot under `E2E=1`, before the port
-/// opens, so no request can land on half a fixture set and so spec 10 is repeatable run after run.
+/// R144 with the contract's fixtures: what `app.rs` runs at boot under `E2E=1` (and `post_reseed` on
+/// demand), before the port opens, so no request can land on half a fixture set and so spec 10 is
+/// repeatable run after run.
 pub async fn seed_e2e_fixtures(app: &App) -> Result<E2ESeedSummary, ApiError> {
     seed_e2e_fixtures_with(app, E2ESeedOptions::default()).await
 }
@@ -288,6 +294,29 @@ pub async fn seed_e2e_fixtures_with(app: &App, options: E2ESeedOptions) -> Resul
         granted_cards,
         codes: written,
     })
+}
+
+// ---------------------------------------------------------------------------
+// R144: the reseed on demand
+// ---------------------------------------------------------------------------
+
+/// The reseed's path. A contract with `e2e/support/config.ts`'s `E2E_RESEED_PATH`, which spec 10
+/// posts to, like the fixtures above.
+pub const E2E_RESEED_PATH: &str = "/api/e2e/reseed";
+
+/// `POST /api/e2e/reseed` (`AuthLevel::None`): R144's reseed on demand, so spec 10 puts back the
+/// account it activates and the code it spends without a server restart. Answers the
+/// `E2ESeedSummary`: the profiles, the launch grant's size and the codes written.
+///
+/// Outside end-to-end mode it answers exactly what `api::http::dispatch` answers for a path nobody
+/// serves, so a production server (`env.rs` refuses `E2E` with `NODE_ENV=production`) neither runs
+/// it nor shows that it exists. Like the reseed at boot it wipes every row: the specs run one at a
+/// time against a server, and spec 10 calls it in its `before` hook, before any request of its own.
+pub async fn post_reseed(app: &Arc<App>, _req: Req) -> ApiResult {
+    if !app.env.e2e {
+        return Err(ApiError::new(ApiErrorCode::NotFound, "no such endpoint"));
+    }
+    ok_of(&seed_e2e_fixtures(app).await?)
 }
 
 fn invite_code_for(app: &App, kind: E2EInviteCodeKind, plain: &str, now: i64) -> InviteCode {

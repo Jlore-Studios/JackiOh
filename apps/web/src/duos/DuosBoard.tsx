@@ -21,6 +21,11 @@
 // PINGS (B64): the ping wheel on a hero, zone or hand card of either board sends a ping (`onPing`); a
 // ping marks its place (`duos-ping-marker`) for PING_SHOW_MS on whichever board shows its duel, the
 // teammate's ping plays its sound once, and one on the board not showing flashes the portal.
+//
+// REPLAY (#965): `replay` draws a finished game's step for `DuosReplay.tsx`. The own duel's Game is
+// `replay` too, with no legal action and a no-op `onAction`, as the teammate's already is; no card
+// bar, concede, waiting line or result panel is drawn, the rail's round line names the team's result,
+// and the portal still flips.
 
 import {
   useCallback,
@@ -63,6 +68,8 @@ export type DuosBoardProps = {
   pings: readonly ReceivedPing[];
   onPing: (ping: PingKind, target: PingTarget) => void;
   error?: string | null;
+  /** #965: a finished game's step to look at (`DuosReplay.tsx`): nothing is offered, and nothing is sent. */
+  replay?: boolean;
 };
 
 /** Which duel the board shows: the seat's own, or the teammate's through the portal. */
@@ -184,10 +191,12 @@ function ConcedeControl({ view, live, onConcede }: { view: DuosView; live: boole
 function ResultPanel({
   view,
   onShowBoard,
+  onWatchReplay,
   onLeave,
 }: {
   view: DuosView;
   onShowBoard: () => void;
+  onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
 }): ReactElement | null {
   if (view.result === null) return null;
@@ -200,6 +209,11 @@ function ResultPanel({
         <button type="button" data-testid={duosTestid.resultBoard} onClick={onShowBoard}>
           {t("View the board")}
         </button>
+        {onWatchReplay === undefined ? null : (
+          <button type="button" data-testid={duosTestid.resultReplay} onClick={onWatchReplay}>
+            {t("Watch the replay")}
+          </button>
+        )}
         {onLeave === undefined ? null : (
           <button type="button" className="button-primary" data-testid={duosTestid.resultBack} onClick={onLeave}>
             {t("Back to Play together")}
@@ -210,7 +224,7 @@ function ResultPanel({
   );
 }
 
-export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosBoardProps): ReactElement {
+export function DuosBoard({ view, legal, onAction, pings, onPing, error, replay = false }: DuosBoardProps): ReactElement {
   useLocale();
   const chrome = useContext(DuosChromeContext);
   const container = useRef<HTMLDivElement>(null);
@@ -263,7 +277,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
   const passLatest = useRef(sendPass);
   passLatest.current = sendPass;
   useEffect(() => {
-    if (showing !== "own") return undefined;
+    if (replay || showing !== "own") return undefined;
     let press: { pointerId: number; instanceId: string; x: number; y: number } | null = null;
     const onDown = (event: PointerEvent): void => {
       press = null;
@@ -296,7 +310,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
       window.removeEventListener("pointerup", onUp, true);
       window.removeEventListener("pointercancel", onCancel, true);
     };
-  }, [showing]);
+  }, [showing, replay]);
 
   // B64: the pings still up, marked on the board that shows their duel.
   usePingSounds(pings, seat);
@@ -322,6 +336,7 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
         {view.round === 0 || over ? null : <> · {ourTurn ? t("Your team's turn") : t("Enemy team's turn")}</>}
         {" · "}
         {t("You are {seat}", { seat: seatLabel(seat) })}
+        {replay && view.result !== null ? <> · {resultWords(view.result, teamOf(seat)).heading}</> : null}
       </p>
       <LifeStrip view={view} />
       <TeammateStrip view={view} link={chrome?.teammate ?? null} />
@@ -340,9 +355,9 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
         >
           {showing === "own" ? t("Teammate's board") : t("Back to your board")}
         </button>
-        <ConcedeControl view={view} live={concedeLegal} onConcede={sendConcede} />
+        {replay ? null : <ConcedeControl view={view} live={concedeLegal} onConcede={sendConcede} />}
       </div>
-      {!over && ourTurn && ended ? (
+      {!replay && !over && ourTurn && ended ? (
         <p className="duos-waiting" data-testid={duosTestid.waiting} role="status">
           {t("Waiting for your teammate")}
         </p>
@@ -363,8 +378,9 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
         <Game
           key="board-own"
           view={view.own}
-          legal={duelLegal}
-          onAction={sendDuel}
+          legal={replay ? NOTHING : duelLegal}
+          onAction={replay ? ignore : sendDuel}
+          replay={replay}
           error={error ?? null}
           autoEndTurn={false}
           resultForm="chip"
@@ -385,26 +401,29 @@ export function DuosBoard({ view, legal, onAction, pings, onPing, error }: DuosB
           boardRail={rail}
         />
       )}
-      <CardActions
-        key={`actions-${showing}`}
-        container={host}
-        view={shownView}
-        duel={shownDuel}
-        enabled={!over}
-        pass={showing === "own" ? { legal: passLegal, cost: view.team.passCost, left: view.team.passesLeft[slot] ?? 0 } : null}
-        onPass={sendPass}
-        onPing={onPing}
-        markers={markers}
-      />
+      {replay ? null : (
+        <CardActions
+          key={`actions-${showing}`}
+          container={host}
+          view={shownView}
+          duel={shownDuel}
+          enabled={!over}
+          pass={showing === "own" ? { legal: passLegal, cost: view.team.passCost, left: view.team.passesLeft[slot] ?? 0 } : null}
+          onPass={sendPass}
+          onPing={onPing}
+          markers={markers}
+        />
+      )}
       <p className="duos-sr-only" role="status" aria-live="polite">
         {heard === undefined ? "" : t("{seat}: {ping}", { seat: seatLabel(heard.from), ping: t(PING_LABEL[heard.ping]) })}
       </p>
-      {over && !boardAfterResult ? (
+      {over && !boardAfterResult && !replay ? (
         <ResultPanel
           view={view}
           onShowBoard={() => {
             setBoardAfterResult(true);
           }}
+          onWatchReplay={chrome?.onWatchReplay}
           onLeave={chrome?.onLeave}
         />
       ) : null}

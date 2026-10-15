@@ -3,11 +3,13 @@
 # `e2e/scripts/shard-specs.mjs` gives this shard. Electron is not run (docs/v0.3.0/README.md §7).
 #
 # Nothing is compiled here. The calling workflow builds once per run, in the order the client
-# needs: `scripts/build-wasm.sh` before `pnpm build:e2e` in its `wasm` job (artifact `web-build`:
-# apps/web/dist and the WASM module), and `cargo build --release -p jackioh-server -p jackioh-tools`
-# in its `rust-build` job (artifact `rust-release`: target/release/jackioh-server, and
-# target/release/jackioh, whose `replay` spec 01's and 13's hash checks run). The caller checks out
-# the repository and runs ./.github/actions/setup (Node is enough) first.
+# needs: `scripts/build-wasm.sh` before `pnpm build:e2e` (super.yml in its `wasm` job; ci.yml builds
+# the two modules in its `wasm` and `wasm-luau` jobs and the client on them in its `web-build` job),
+# into the artifact `web-build` (apps/web/dist and the WASM modules), and `cargo build --release -p
+# jackioh-server -p jackioh-tools` in its `rust-build` job (artifact `rust-release`:
+# target/release/jackioh-server, and target/release/jackioh, whose `replay` spec 01's and 13's hash
+# checks run). The caller checks out the repository and runs ./.github/actions/setup (Node is
+# enough) first.
 #
 # Fresh is the point. SPEC §11 R144 makes the server reseed its fixture accounts and invite codes at
 # boot, so a suite that activates the pending account or spends an invite code (spec 10) is

@@ -282,3 +282,33 @@ mod reply_score {
         );
     }
 }
+
+mod duos_life_r964000 {
+    use super::*;
+
+    /// The AI's seat as a Duos seat with a full 20 pool, `spent` or not.
+    fn with_pool(state: &GameState, spent: bool) -> GameState {
+        let mut out = state.clone();
+        out.players[AI].duos = Some(DuosLife {
+            pool: 20,
+            pool_cap: 20,
+            spent,
+        });
+        out
+    }
+
+    #[test]
+    fn r964000_a_20_damage_face_hit_is_no_win_against_an_unspent_duos_seat() {
+        let state = handed_over(json!({ "p1": { "health": 20 } }));
+        assert_eq!(reply_face_value(&state, AI, 20), AI_EVAL.win, "a 1v1 hero at 20");
+
+        let unspent = with_pool(&state, false);
+        let chip = reply_face_value(&unspent, AI, 20);
+        assert_eq!(chip, AI_REPLY.face_per_damage * 20.0, "20 own HP and a 20 pool");
+        assert!(chip < AI_EVAL.win);
+        assert_eq!(reply_face_value(&unspent, AI, 40), AI_EVAL.win, "all 40 of it");
+
+        // Spent: the hero's health is the pool, and 20 empties it.
+        assert_eq!(reply_face_value(&with_pool(&state, true), AI, 20), AI_EVAL.win);
+    }
+}

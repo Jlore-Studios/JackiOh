@@ -15,7 +15,7 @@ use jackioh_engine::testkit::{
     PlayerId, Value, Winner, json,
 };
 
-use super::support::{AI, clone, register_cards, scenario};
+use super::support::{AI, HUMAN, clone, register_cards, scenario};
 
 fn board(opts: Value) -> GameState {
     register_cards();
@@ -475,5 +475,119 @@ mod r1224_r1225_credit_line {
         // Borrowed: the same card counts again.
         held.players[AI].turn_log.mana_borrowed = Some(1);
         assert!(eval(&held, AI) > eval(&bare, AI));
+    }
+}
+
+mod duos_life_r964000 {
+    use super::*;
+    use jackioh_ai::{EvalWeights, starting_life};
+    use jackioh_engine::testkit::{DUOS_OWN_HEALTH, DUOS_POOL_HEALTH, DuosLife};
+
+    /// What a probed weight adds, so a term that counts moves the score by far more than rounding.
+    const PROBE: f64 = 1000.0;
+    /// A turn past AI_EVAL.closing_from, where the closing term counts.
+    const CLOSING_TURN: i32 = 20;
+
+    /// `state` with `player` a Duos seat at `own` HP and a `pool` of `cap`, as the engine's `duos_seat`
+    /// sets one up: a spent seat's hero health reads the pool (§13.4).
+    fn in_duos(state: &GameState, player: PlayerId, own: i32, pool: i32, cap: i32, spent: bool) -> GameState {
+        let mut out = clone(state);
+        out.players[player].hero.health = if spent { pool } else { own };
+        out.players[player].duos = Some(DuosLife {
+            pool,
+            pool_cap: cap,
+            spent,
+        });
+        out
+    }
+
+    /// Whether the term `probe` raises counts in AI's score of `state`.
+    fn counts(state: &GameState, probe: fn(&mut EvalWeights)) -> bool {
+        let mut probed = AI_EVAL;
+        probe(&mut probed);
+        evaluate(state, AI, NextSwing::Enemy, &probed) != eval(state, AI)
+    }
+
+    fn lethal_threat(state: &GameState) -> bool {
+        counts(state, |w| w.lethal_threat += PROBE)
+    }
+
+    fn lethal_pressure(state: &GameState) -> bool {
+        counts(state, |w| w.lethal_pressure += PROBE)
+    }
+
+    fn closing(state: &GameState) -> bool {
+        counts(state, |w| w.closing_weight += PROBE)
+    }
+
+    /// Three 4-mana 7/7s and Mr. Vanilla 4/4.
+    fn board_of_25() -> Value {
+        json!({ "field": ["core-025", "core-025", "core-025", "core-008"] })
+    }
+
+    #[test]
+    fn r964000_an_unspent_seat_at_20_own_hp_and_a_20_pool_is_not_under_lethal_threat_from_25() {
+        let state = board(json!({ "p2": board_of_25() }));
+        assert_eq!(face_threat(&state, HUMAN), 25);
+        assert!(
+            !lethal_threat(&in_duos(&state, AI, 20, 20, 20, false)),
+            "20 + 20 is 40"
+        );
+        assert!(!lethal_threat(&state), "a 1v1 hero at {HERO_HEALTH}");
+        assert!(
+            lethal_threat(&in_duos(&state, AI, 5, 20, 20, false)),
+            "5 + 20 is 25"
+        );
+        assert!(
+            lethal_threat(&in_duos(&state, AI, 20, 20, 20, true)),
+            "spent: the pool alone"
+        );
+        assert!(lethal_threat(&with_health(&state, AI, 20)), "a 1v1 hero at 20");
+    }
+
+    #[test]
+    fn r964000_lethal_pressure_counts_the_enemy_teams_pool() {
+        let state = board(json!({ "p1": board_of_25() }));
+        assert_eq!(face_threat(&state, AI), 25);
+        assert!(!lethal_pressure(&in_duos(&state, HUMAN, 20, 20, 20, false)));
+        assert!(lethal_pressure(&in_duos(&state, HUMAN, 20, 20, 20, true)));
+        assert!(lethal_pressure(&with_health(&state, HUMAN, 20)));
+    }
+
+    #[test]
+    fn r964000_closing_reads_no_damage_on_a_duos_opponent_at_its_starting_life() {
+        let state = board(json!({ "turn": CLOSING_TURN }));
+        assert!(!closing(&state), "a 1v1 hero at {HERO_HEALTH}");
+        assert!(!closing(&in_duos(&state, HUMAN, DUOS_OWN_HEALTH, 20, 20, false)));
+        assert!(closing(&in_duos(&state, HUMAN, DUOS_OWN_HEALTH, 15, 20, false)));
+        assert!(closing(&with_health(&state, HUMAN, 20)));
+    }
+
+    #[test]
+    fn r964000_more_pool_is_strictly_better_for_the_seat_and_strictly_worse_on_the_enemy() {
+        let state = board(base());
+        for pool in 1..DUOS_POOL_HEALTH {
+            let (less, more) = (pool, pool + 1);
+            assert!(
+                eval(&in_duos(&state, AI, 20, more, 20, false), AI)
+                    > eval(&in_duos(&state, AI, 20, less, 20, false), AI),
+                "own pool {more} over {less}"
+            );
+            assert!(
+                eval(&in_duos(&state, HUMAN, 20, more, 20, false), AI)
+                    < eval(&in_duos(&state, HUMAN, 20, less, 20, false), AI),
+                "enemy pool {more} under {less}"
+            );
+        }
+    }
+
+    #[test]
+    fn r964000_starting_life_is_hero_health_in_1v1_and_own_hp_plus_the_pool_cap_in_duos() {
+        let state = board(base());
+        assert_eq!(starting_life(&state, AI), HERO_HEALTH);
+        let duos = in_duos(&state, AI, 20, 7, 30, false);
+        // The pool's cap, not what is left of it.
+        assert_eq!(starting_life(&duos, AI), DUOS_OWN_HEALTH + 30);
+        assert_eq!(starting_life(&duos, HUMAN), HERO_HEALTH);
     }
 }

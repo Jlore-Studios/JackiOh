@@ -1,4 +1,4 @@
-//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (2) Spell, CN, Epic.
+//! M #32 Spiritually 中国 (SPEC §8.8 row 32): (3) Spell, CN, Epic.
 //!
 //! Base:    "One random effect: Get ready to learn Chinese; transform every card in your hand into
 //!           the same random CN card, which cost (0); summon {units} random CN Units."

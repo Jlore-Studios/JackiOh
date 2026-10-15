@@ -1245,6 +1245,23 @@
   animation-duration: calc(500ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- curveDrawn: the board dims a breath as KY's Papaya draws its curve across it (700 ms, R831003) */
+
+@keyframes jk-curve-drawn {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+[data-animating="curveDrawn"] {
+  animation-name: jk-curve-drawn;
+  animation-duration: calc(700ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
 /* --- locked: chain icon closes over the zone (250 ms) -------------------------------- */
 
 @keyframes jk-chain-close {

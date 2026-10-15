@@ -65,6 +65,7 @@ mod tests {
             static_flags,
             targets,
             modes,
+            mode_allowed,
             secret_modes,
             condition_met,
             preview,
@@ -113,6 +114,7 @@ mod tests {
             && static_flags.is_none()
             && targets.is_empty()
             && modes.is_empty()
+            && mode_allowed.is_none()
             && !secret_modes
             && condition_met.is_none()
             && preview.is_none()

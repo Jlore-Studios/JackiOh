@@ -1,6 +1,6 @@
-//! M #97.5 Bunker (SPEC §8.8 row 97.5, R1283). (2) Unit, Token (printed Epic), 5/10 → 10/30.
+//! M #97.5 Bunker (SPEC §8.8 row 97.5, R1283). (2) Unit, Token (printed Epic), 5/10 → 10/20.
 //!   Base:    "Tribute 2, Armor 3, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
-//!   Radiant: "Tribute 2, Armor 5, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
+//!   Radiant: "Tribute 2, Armor 6, Can't attack, First Strike\nThis strikes Units in its lane with {multiplier}× its Attack."
 //!   Engine:  "NEW: a lane multiplier (LANE-STRIKE): where combat reads both attacks once (R94), a
 //!            combatant whose face declares it has its attack multiplied when the other combatant stands
 //!            in the opposing unit zone of its own lane (§3.1), the hit then going through §4.4 as usual
@@ -8,8 +8,9 @@
 //!            §4.3) and in any forced attack, which skips Can't attack (§4.2); Cleave hits into other
 //!            lanes and every non-combat damage are not multiplied (MD-F14). The view may show the in-lane
 //!            number as a `preview` (R280). The designer's Radiant face printed 5/30, not doubling the
-//!            attack; R275's stat half makes it 10/30 (⚠ designer), 30 in its lane. Tunes: multiplier 3 ↑
-//!            (step 1); Armor 3 ↑ (Radiant 5); Tribute 2 ↓ (never below 1)."
+//!            attack; R275's stat half made it 10/30 (⚠ designer), patch v0.3.10 10/20 with Armor 6, 30
+//!            in its lane. Tunes: multiplier 3 ↑ (step 1); Armor 3 ↑ (Radiant 6); Tribute 2 ↓ (never
+//!            below 1)."
 
 use jackioh_engine::prelude::*;
 
@@ -37,8 +38,8 @@ pub fn script() -> CardScripts {
 // M 97.5 Bunker — SPEC §8.8 row 97.5, BUILD M10 row M 97.5: "Tribute 2, Armor 3, Can't attack, First Strike;
 // attacked by the Unit across from it, it strikes first for 15 (MD-F14), through that Unit's Armor and Divine
 // Shield; attacked from another lane, it strikes for 5; a forced attack (M 49.3) still multiplies in its
-// lane; non-combat damage is never multiplied; multiplier reads through `param()`; radiant 10/30 and Armor 5,
-// 30 in its lane".
+// lane; non-combat damage is never multiplied; multiplier reads through `param()`; radiant 10/20 and Armor 6
+// (10/30 and Armor 5 before patch v0.3.10), 30 in its lane".
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -73,7 +74,7 @@ mod tests {
                 js(&def.radiant.attack),
                 js(&def.radiant.health)
             ],
-            [json!(5), json!(10), json!(10), json!(30)]
+            [json!(5), json!(10), json!(10), json!(20)]
         );
         assert_eq!(
             js(&def.base.keywords),
@@ -86,7 +87,7 @@ mod tests {
         assert_eq!(
             js(&def.radiant.keywords),
             json!([
-                { "kind": "Armor", "n": 5 },
+                { "kind": "Armor", "n": 6 },
                 { "kind": "Can't attack" },
                 { "kind": "First Strike" }
             ])
@@ -329,9 +330,9 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1283_radiant_strikes_for_30_across_lane_and_has_armor_5() {
+        fn r1283_radiant_strikes_for_30_across_lane_and_has_armor_6() {
             crate::register_all();
-            // Radiant Bunker is 10/30 with Armor 5 and multiplier 3.
+            // Radiant Bunker is 10/20 with Armor 6 and multiplier 3.
             // In lane, strikes for 10 * 3 = 30.
             let mut s = crate::scenario(json!({
                 "p1": {
@@ -351,8 +352,8 @@ mod tests {
                 s.stats(&bunker)
                     .keywords
                     .iter()
-                    .any(|k| k == &Keyword::Armor { n: 5 }),
-                "radiant Bunker has Armor 5"
+                    .any(|k| k == &Keyword::Armor { n: 6 }),
+                "radiant Bunker has Armor 6"
             );
 
             // Pass turn to trigger Moths: Bunker attacks Moths across lane 1.
@@ -361,18 +362,18 @@ mod tests {
             // Moths dies to 30 damage.
             assert!(s.unit(P2, 1).is_none(), "Moths died to 30 damage");
 
-            // Moths strikes back for 1. Bunker has Armor 5, so takes 0 damage!
+            // First Strike: Moths dies before it strikes back, so the Bunker takes nothing.
             assert_eq!(s.unit(P1, 1).unwrap().damage, 0);
         }
 
         #[test]
-        fn radiant_is_10_30_with_armor_5() {
+        fn radiant_is_10_20_with_armor_6() {
             crate::register_all();
             let mut s = crate::scenario(json!({
                 "p1": { "field": [{ "def": ID, "radiant": true }] },
             }));
-            s.expect_stats(ID, json!({ "attack": 10, "health": 30 }));
-            assert_eq!(s.stats(ID).armor, 5);
+            s.expect_stats(ID, json!({ "attack": 10, "health": 20 }));
+            assert_eq!(s.stats(ID).armor, 6);
         }
     }
 }

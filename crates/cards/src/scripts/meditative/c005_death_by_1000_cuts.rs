@@ -1,6 +1,6 @@
 //! M #5 Death by 1000 cuts (SPEC §8.8 row 5, BUILD M10 row M 5). (1) Spell, Rare.
-//!   Base:    "Echo X\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana." (1; 2)
-//!   Radiant: "Echo X, Lifesteal\n…" (1; 4)
+//!   Base:    "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana." (1; 2)
+//!   Radiant: "Echo X, Lifesteal, Pierce\n…" (1; 4)
 //!
 //! A computed Echo X (R802): `Script.echo_x` reads `param(echo) × max_mana_of(controller)` (§2.3:
 //! min(turns started, 4) plus persistent modifiers) as the card is played (§10.5 step 4), so X stays
@@ -11,7 +11,8 @@
 //!
 //! The declared target is any Unit on either side (R81); each repeat asks a fresh target prompt (§6.2
 //! Echo, §10.6), and a repeat with no Unit to hit fizzles. Lifesteal is printed on the Radiant face,
-//! as on Core #93.1 Combo-Fodder, and heals once per hit (§4.4 step 8). Both numbers are declared and
+//! as on Core #93.1 Combo-Fodder, and heals once per hit (§4.4 step 8). Pierce, on both faces since patch v0.3.10, is printed
+//! on the Spell, so every hit skips Armor (§4.4 step 2, R346). Both numbers are declared and
 //! read through `param` (R386).
 
 use jackioh_engine::effects::damage;
