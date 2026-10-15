@@ -6378,6 +6378,11 @@
     "958": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "at": "2026-10-15T07:02:31Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "b106f20a8f90a47cca2ff1250652ccd35733a28e"
+      },
       "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
