@@ -106,7 +106,8 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
         // Once a turn (patch v0.3.10; Activate ♾️ before).
         cy.get(ts(activateUsesId(turtinator))).should("have.text", "0");
         cy.get(control).should("have.attr", "data-legal", "false");
-        cy.get(control).invoke("attr", "title").should("contain", "that ability has already been used this turn");
+        // The control capitalises the engine's refusal (ActivateControl.tsx, `capitalised`).
+        cy.get(control).invoke("attr", "title").should("contain", "That ability has already been used this turn");
         cy.get(control).click();
         cy.get(PROMPT).should("not.exist");
         cy.get(ts(cardId(turtinator))).should("exist");
