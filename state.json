@@ -7467,6 +7467,8 @@
       "pending_request": false,
       "provider": "claude-4",
       "queued_at": "2026-10-15T20:05:23Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38800389236",
       "self_check_findings": [],
       "started_at": "2026-10-15T20:15:46Z",
