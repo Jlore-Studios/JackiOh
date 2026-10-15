@@ -5980,10 +5980,8 @@
       "run_id": "38622757947",
       "started_at": "2026-10-14T19:20:40Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-1` (claude, opus) rejected it: `crates/cards/README.md:285`: The core shard command, and the identical ci.yml block the PR asks a person to paste, does not select the three `history::tests::r7"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
