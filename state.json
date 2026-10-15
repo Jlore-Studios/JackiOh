@@ -6554,6 +6554,7 @@
       "kind": "revise",
       "pending_request": false,
       "provider": "claude-3",
+      "question": "CI fails only on lesson 3 (apps/web/src/tutorial/scripts/traps.test.ts, R293): the human now needs 9 turns on the coach and coach-passive lines and 10 on autopilot, against a limit of 8. The cause is the per-hit Armor in damage_past_taunts, which the issue asks for. Lesson 3's AI deck has Big D-fender, so its units in Defense Position have Armor 3 (+2 aura, +1 Defense), and the lesson's Rush Tokens have 3 attack. The AI now sees that the tokens can't get past those walls and holds the line. The base AI won the lesson in 8 turns only by blundering: on the coach line it moved a Defense unit back to Attack Position and left a real 9-damage lethal. Which do you want? (a) Keep per-hit Armor and change lesson 3. One way is to swap Big D-fender out of the AI deck: Fed Fauci (core-091) and Moths to the Flame (core-009) pass every lesson-3 test, but each brings a mechanic no lesson teaches; Gravedigger (core-037) passes, but the lesson's own notes exclude it; Pointmaster, Twisted Sorcerer and Bigot fail. The others are to re-deal the lesson or to raise its turn limits. (b) Drop per-hit Armor and count Armor with health as before, keeping Poisonous, Trample, First Strike, Reborn and the hold-back fix. Every tutorial and practice test passes that way, but the issue's 'low-attack units vs an armored taunt' item is left undone.",
       "queued_at": "2026-10-15T10:41:10Z",
       "requested_by": "jgoetzmann-bot",
       "run_id": "38722142124",
