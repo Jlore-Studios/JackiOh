@@ -186,6 +186,7 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
         replays: jackioh_server::api::replays::Replays::default(),
+        card_stats: jackioh_server::api::stats::KeptReports::default(),
         queue_presence: jackioh_server::api::queue::QueuePresence::new(),
         social: jackioh_server::social::Social::default(),
     });
