@@ -16,7 +16,7 @@
 //! - **The catalog.** The real one (`crates/cards/catalog.json`), at the compiled-in version: the
 //!   server runs the real validator (`jackioh_engine::validator`), so TS's synthetic 24-card
 //!   catalog and its permissive and strict validators have no port to plug into. A test that wants
-//!   a smaller catalog builds one with `create_test_catalog` and hands it to `test_app_with`.
+//!   another catalog hands it to `test_app_with`.
 //! - **Not ported**, because the server has no such port any more (SURFACE §11.3): `createFakeIds`
 //!   (ids are `uuid` + `getrandom`), `fakeRandomDealer` (All Random deals through the engine),
 //!   `createFakeMatchDirectory` (the registry is `actor::registry::Registry`), `testConfig` and
@@ -94,7 +94,7 @@ pub struct TestAppOptions {
     pub e2e: bool,
     /// Environment variables over `test_env`'s.
     pub env: Vec<(String, String)>,
-    /// A catalog instead of the real one (`create_test_catalog`).
+    /// A catalog instead of the real one.
     pub catalog: Option<Catalog>,
     /// Leave the store empty: no fixture accounts, no fixture codes (TS `createTestDeps` started
     /// empty; R144's reseed is the end-to-end server's).

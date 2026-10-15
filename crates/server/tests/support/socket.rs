@@ -1,13 +1,12 @@
 //! In-memory `Socket`s over mpsc channels. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 //!
-//! `create_socket_pair` makes two fake clients. The server half (`FakeSocket::socket`) is the same
+//! `create_fake_socket` makes a fake client. The server half (`FakeSocket::socket`) is the same
 //! `Socket` the real `/ws/match` upgrade hands to `Registry::attach`, so the actor behaves as on
 //! the wire.
 //!
 //! The actor is a task, so every read first drains what has arrived on the channel. A test that
-//! waits awaits `next_frame`/`next_of_type` (or `settle`); one that asserts nothing happened reads
-//! `sent` after `settle`, never by waiting (tokio's paused clock would auto-advance and fire the
-//! match's timers).
+//! waits awaits `settle`; one that asserts nothing happened reads `sent` after `settle`, never by
+//! waiting (tokio's paused clock would auto-advance and fire the match's timers).
 //!
 //! Every method takes `&self`, as every test holds its sockets (part 31); the state sits behind locks.
 
@@ -84,7 +83,7 @@ impl FakeSocket {
     }
 
     /// Moves every frame the server has sent into `sent`, and notes its close. A frame sent after
-    /// the close is dropped. A `next_frame` in flight holds the receiver and records for itself.
+    /// the close is dropped.
     fn drain(&self) -> MutexGuard<'_, State> {
         let mut state = lock(&self.state);
         if let Ok(mut outgoing) = self.outgoing.try_lock() {
