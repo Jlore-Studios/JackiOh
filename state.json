@@ -7089,11 +7089,13 @@
         "by": "`claude` (strong)",
         "sha": "4975905f4a535d8bb127bf984325abb31bbcd491"
       },
+      "closed_at": "2026-10-15T18:49:48Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-15T17:46:34Z",
       "issue": 978,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
