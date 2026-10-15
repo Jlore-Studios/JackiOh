@@ -7371,6 +7371,7 @@
     "993": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "difficulty_by": {
         "at": "2026-10-15T20:39:29Z",
         "difficulty": "medium",
@@ -7397,7 +7398,7 @@
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
-      "queued_at": "2026-10-15T19:29:40Z",
+      "queued_at": "2026-10-15T20:49:27Z",
       "requested_by": "MaxGoetzmann",
       "run_id": "38803773518",
       "started_at": "2026-10-15T20:40:37Z",
