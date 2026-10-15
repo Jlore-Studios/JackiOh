@@ -479,7 +479,9 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
         }
         assert_eq!(tagged("Plague"), 17 + meditative(2));
-        for (tag, theirs) in [("Catalyst", 2), ("Prime", 2), ("Acclaimed", 4)] {
+        // v0.3.10 (#967) made Meditative #49 YileGPT Tamed a Catalyst and its #49.1 a Prime, beside #45
+        // and #91 and their tokens, and left Acclaimed on #49 and #49.1 alone.
+        for (tag, theirs) in [("Catalyst", 3), ("Prime", 3), ("Acclaimed", 2)] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(tagged(tag), 2 + meditative(theirs), "{tag}");
         }
