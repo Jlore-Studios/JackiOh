@@ -22,12 +22,15 @@ import { SPECTATORS_SETTING_TESTID } from "./testids.ts";
 
 import "../settings/settings.css";
 
-/** `PUT /api/settings` with the account's `allowSpectators` and no device group. */
+/**
+ * `PUT /api/settings` with the account's `allowSpectators` alone: a body with no `groups` writes that
+ * and nothing else, so no device group's copy is touched (`crates/server/src/api/settings.rs`).
+ */
 function putAllowSpectators(token: string, allow: boolean): Promise<{ settings: PlayerSettingsAccountCopy }> {
   return apiRequest<{ settings: PlayerSettingsAccountCopy }>("/api/settings", {
     method: "PUT",
     token,
-    body: { groups: {}, allowSpectators: allow },
+    body: { allowSpectators: allow },
   });
 }
 

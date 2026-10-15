@@ -114,7 +114,9 @@ pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
         .teams
         .clone()
         .unwrap_or_else(|| PerTeam::new(DUOS_HUMAN_TEAM, DUOS_HUMAN_TEAM));
-    let duels: Vec<GameState> = (0..DUOS_DUELS).map(|duel| create_duel(options, &rules, duel)).collect();
+    let duels: Vec<GameState> = (0..DUOS_DUELS)
+        .map(|duel| create_duel(options, &rules, duel))
+        .collect();
     DuosState {
         seed: options.seed.clone(),
         duels,
@@ -129,7 +131,9 @@ pub fn duos_create(options: &DuosCreateOptions) -> DuosState {
             },
         ),
         round: 0,
-        round_seats: (0..DUOS_DUELS).map(|duel| DuosSeat::of(duel, PlayerId::P1)).collect(),
+        round_seats: (0..DUOS_DUELS)
+            .map(|duel| DuosSeat::of(duel, PlayerId::P1))
+            .collect(),
         round_turns: vec![SETUP_TURN; DUOS_DUELS],
         ended: vec![false; DUOS_DUELS],
         end_applied: vec![false; DUOS_DUELS],

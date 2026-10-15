@@ -250,8 +250,9 @@
   text-align: center;
 }
 
-/* The card bar (B62, B64): over the top edge of the card it belongs to, above the hover preview. Only
-   its buttons take the pointer, so the rest of the card stays clickable under it. */
+/* The card bar (B62, B64): just above the card it belongs to, above the hover preview. Wholly above
+   it, never over it: on a phone the bar appears as the finger presses, and a bar over the card would
+   take that tap's click on its pass control. Only its buttons take the pointer. */
 
 .duos-card-actions {
   position: absolute;
@@ -260,7 +261,7 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, calc(-100% - 4px));
   pointer-events: none;
 }
 
@@ -477,5 +478,136 @@
 
   .duos-life__bar--pool {
     width: 60px;
+  }
+}
+
+/* THE RAIL'S ROOM. The rail rides in the board's control bar (Game.tsx's `boardRail`), which
+   board.css sizes for a rail of a line or two. The Duos rail is taller (both teams' life, the
+   teammate, the portal), so it is given room of its own rather than growing the board past the
+   screen, which hid the hand on a desktop and End turn on a phone. */
+
+/* A desktop: the control bar takes the whole sidebar under the opponent's hand, sized by the board
+   and not by what it holds (`contain: size`, as board.css sizes the log), and scrolls inside on a
+   short screen. The log steps aside, as it does on a phone; the opponent's hand keeps to its row. */
+@media (min-width: 1025px), (min-width: 900px) and (orientation: landscape) and (min-height: 501px) {
+  .duos-board .board > .hand-opponent {
+    grid-row: 1;
+  }
+
+  .duos-board .board > .control-bar {
+    grid-row: 2 / -1;
+    align-self: stretch;
+    align-content: flex-start;
+    overflow-y: auto;
+    contain: size;
+  }
+
+  .duos-board .board > .log {
+    display: none;
+  }
+}
+
+/* A phone: the rail takes a row of its own above the one row of controls, laid out across rather
+   than down, and the cards come down a size to make room for it (board.css's phone budget, plus
+   `--duos-rail-phone-h`, about the rail's height at 390 wide). */
+@media (max-width: 600px) {
+  .duos-board .board {
+    --duos-rail-phone-h: 132px;
+    --card-h: clamp(36px, calc((100cqh - 312px - var(--duos-rail-phone-h)) / 5.24), 90px);
+  }
+
+  .duos-board .board .control-bar {
+    flex-wrap: wrap;
+  }
+
+  .duos-board .board-rail {
+    padding: 4px 6px;
+  }
+
+  .duos-rail {
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 4px 6px;
+  }
+
+  .duos-board .duos-rail > .screen-nav {
+    flex: 0 0 auto;
+  }
+
+  .duos-round {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .duos-life {
+    flex: 1 1 100%;
+    flex-direction: row;
+  }
+
+  .duos-life__team {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 2px 6px;
+    padding: 2px 5px;
+  }
+
+  .duos-life__label {
+    display: none;
+  }
+
+  .duos-life__bar {
+    width: 22px;
+  }
+
+  .duos-life__bar--pool {
+    width: 30px;
+  }
+
+  .duos-teammate {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 0 6px;
+    padding: 2px 6px;
+    font-size: 0.72em;
+  }
+
+  .duos-rail__row {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .duos-rail__row button {
+    padding-inline: 8px;
+    font-size: 0.82em;
+  }
+
+  .duos-waiting {
+    flex: 1 1 100%;
+    padding: 2px 6px;
+  }
+
+  .duos-dev-bar {
+    gap: 4px 6px;
+    font-size: 0.9em;
+  }
+}
+
+/* A finger's targets (B29): the ping wheel's buttons and the pass control grow to 40px on a touch
+   screen, where 24px is under a fingertip. */
+@media (pointer: coarse) {
+  .duos-ping-wheel__ping {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .duos-pass {
+    min-height: 40px;
+    padding: 4px 12px;
+    justify-content: center;
   }
 }

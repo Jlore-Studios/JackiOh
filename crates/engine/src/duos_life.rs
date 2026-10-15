@@ -197,9 +197,15 @@ mod tests {
         side_loses(&mut side, 9);
         assert_eq!(side.duos.map(|life| (life.pool, life.spent)), Some((16, true)));
         side_set(&mut side, 18);
-        assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (18, Some(18)));
+        assert_eq!(
+            (side.hero.health, side.duos.map(|life| life.pool)),
+            (18, Some(18))
+        );
         side_set(&mut side, 99);
-        assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (20, Some(20)));
+        assert_eq!(
+            (side.hero.health, side.duos.map(|life| life.pool)),
+            (20, Some(20))
+        );
         side_set(&mut side, 0);
         assert_eq!((side.hero.health, side.duos.map(|life| life.pool)), (0, Some(0)));
         assert!(side.duos.unwrap().spent, "spent for the game");

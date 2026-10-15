@@ -15,6 +15,7 @@
 //!
 //! After every change to a duel the pools are made equal again (B15, `duel_changed`).
 
+use crate::catalog::fused_id_specs;
 use crate::config::{DUOS_SETTLE_CAP, SETUP_TURN};
 use crate::mana::mana_event;
 use crate::reduce::{begin_game, reduce};
@@ -145,13 +146,7 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
         push_duel_events(events, from, vec![paid]);
     }
 
-    // A card whose definition lives in its duel alone (a fused or crafted card's) takes it along.
-    if let Some(def) = state.duels[from].transient_defs.get(&card.def_id).cloned() {
-        state.duels[to]
-            .transient_defs
-            .entry(card.def_id.clone())
-            .or_insert(def);
-    }
+    carry_match_defs(state, from, to, &card.def_id);
 
     let target: &mut GameState = &mut state.duels[to];
     let new_instance_id = format!("c{}", target.next_id);
@@ -171,6 +166,24 @@ fn pass(state: &mut DuosState, seat: DuosSeat, instance_id: &str, events: &mut V
         instance_id: instance_id.to_string(),
         new_instance_id,
     });
+}
+
+/// A card whose definition lives in its duel alone — a fused or crafted card's (R77, R102) — takes it
+/// to the duel it is passed into, and with it every match-made definition it is made of: a Fuse's
+/// ingredients may be fused or crafted cards themselves, and the card's readers (its params, its
+/// element) read them through it.
+fn carry_match_defs(state: &mut DuosState, from: usize, to: usize, def_id: &str) {
+    let mut queue: Vec<String> = vec![def_id.to_string()];
+    while let Some(id) = queue.pop() {
+        let source = &state.duels[from];
+        let Some(def) = source.transient_defs.get(&id).cloned() else {
+            continue;
+        };
+        if let Some(specs) = fused_id_specs(Some(source), &id) {
+            queue.extend(specs.into_iter().map(|spec| spec.def_id));
+        }
+        state.duels[to].transient_defs.entry(id).or_insert(def);
+    }
 }
 
 /// After every step, until nothing moves: judge, open round 1, end the seats with nothing left, close

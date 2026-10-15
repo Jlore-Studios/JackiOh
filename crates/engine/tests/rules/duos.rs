@@ -20,16 +20,16 @@ use jackioh_engine::config::{
     duos_ai_team,
 };
 use jackioh_engine::duos::{
-    DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create, duos_fold, duos_hash, duos_legal_actions,
-    duos_reduce, duos_scenario, duos_seats_to_act, duos_view_for,
+    DuosReduceResult, DuosReplayInput, DuosState, duos_begin, duos_create, duos_fold, duos_hash,
+    duos_legal_actions, duos_reduce, duos_scenario, duos_seats_to_act, duos_view_for,
 };
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::DuosSeat::{A1, A2, B1, B2};
 use jackioh_engine::wire::{
-    DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosEvent, DuosHandicaps, DuosOutcome,
-    DuosSeat, DuosTeamRules, PerTeam, Team,
+    DUOS_SEATS, DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosEvent, DuosHandicaps,
+    DuosOutcome, DuosSeat, DuosTeamRules, PerTeam, Team,
 };
 
 use crate::rules::fixtures::catalog::{vanilla_catalog, vanilla_deck};
@@ -197,9 +197,18 @@ fn scripts() -> IndexMap<String, CardScripts> {
         }),
     );
     map.insert(SWAP.into(), on_play(|| vec![effects::swap_health()]));
-    map.insert(TEMPO.into(), on_play(|| vec![effects::end_turn(json_as(json!({})))]));
-    map.insert(AGAIN.into(), on_play(|| vec![effects::take_extra_turn(json_as(json!({})))]));
-    map.insert(VICTORY.into(), on_play(|| vec![effects::win_game(json_as(json!({})))]));
+    map.insert(
+        TEMPO.into(),
+        on_play(|| vec![effects::end_turn(json_as(json!({})))]),
+    );
+    map.insert(
+        AGAIN.into(),
+        on_play(|| vec![effects::take_extra_turn(json_as(json!({})))]),
+    );
+    map.insert(
+        VICTORY.into(),
+        on_play(|| vec![effects::win_game(json_as(json!({})))]),
+    );
     map.insert(
         CONCESSION.into(),
         on_play(|| vec![effects::win_game(json_as(json!({ "player": "enemy" })))]),
@@ -287,7 +296,14 @@ fn begun(seed: &str) -> DuosState {
 /// Round 1 open, team A on `a`, team B on DUOS_HUMAN_TEAM.
 fn begun_with(seed: &str, a: DuosTeamRules) -> DuosState {
     setup();
-    duos_scenario(seed, decks(), Some(PerTeam { a, b: DUOS_HUMAN_TEAM }))
+    duos_scenario(
+        seed,
+        decks(),
+        Some(PerTeam {
+            a,
+            b: DUOS_HUMAN_TEAM,
+        }),
+    )
 }
 
 fn free_passes() -> DuosTeamRules {
@@ -398,7 +414,11 @@ fn side_mut(state: &mut DuosState, seat: DuosSeat) -> &mut PlayerState {
 }
 
 fn hand_ids(state: &DuosState, seat: DuosSeat) -> Vec<String> {
-    side(state, seat).hand.iter().map(|card| card.id.clone()).collect()
+    side(state, seat)
+        .hand
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
 }
 
 fn health(state: &DuosState, seat: DuosSeat) -> i32 {
@@ -606,7 +626,11 @@ fn expect_pools_agree(state: &DuosState) {
         let pool = state.teams[seat.team()].pool;
         assert_eq!(pool_of(state, seat), pool, "{seat}'s pool is its team's");
         if is_spent(state, seat) {
-            assert_eq!(health(state, seat), pool, "{seat} is spent, so its health reads the pool");
+            assert_eq!(
+                health(state, seat),
+                pool,
+                "{seat} is spent, so its health reads the pool"
+            );
         }
     }
 }
@@ -675,7 +699,12 @@ fn play_randomly(live: &mut Live, seed: &str, max_steps: usize) {
             if matches!(offered, DuosActionBody::Concede) {
                 continue;
             }
-            if matches!(&offered, DuosActionBody::Duel { body: ActionBody::EndTurn }) {
+            if matches!(
+                &offered,
+                DuosActionBody::Duel {
+                    body: ActionBody::EndTurn
+                }
+            ) {
                 ends.push(offered);
             } else {
                 others.push(offered);
@@ -739,7 +768,10 @@ mod b1_two_ordinary_duels {
                 .map(|card| card.def_id.clone())
                 .collect();
             assert_eq!(dealt.len() as i32, DECK_SIZE, "{seat}");
-            assert!(dealt.iter().all(|id| deck.contains(id)), "{seat} plays its own deck");
+            assert!(
+                dealt.iter().all(|id| deck.contains(id)),
+                "{seat} plays its own deck"
+            );
         }
 
         let kept = keep_all(state);
@@ -853,7 +885,12 @@ mod b2_mulligans {
                 .iter()
                 .any(|event| matches!(event, DuosEvent::RoundStarted { round: 1 }));
             if i + 1 < order.len() {
-                assert_eq!(state.round, 0, "after {seat}'s mulligan, {} still owed", order.len() - i - 1);
+                assert_eq!(
+                    state.round,
+                    0,
+                    "after {seat}'s mulligan, {} still owed",
+                    order.len() - i - 1
+                );
                 assert!(!opened);
                 assert!(!duos_seats_to_act(&state).contains(&seat), "{seat} has answered");
             } else {
@@ -876,7 +913,11 @@ mod b2_mulligans {
         }
         assert_eq!(state.round, 0);
         for seat in [A1, B1] {
-            assert!(acting_moves(&state, seat).is_empty(), "{seat}: {:?}", acting_moves(&state, seat));
+            assert!(
+                acting_moves(&state, seat).is_empty(),
+                "{seat}: {:?}",
+                acting_moves(&state, seat)
+            );
             refused(&state, seat, end_turn());
         }
         let card = hand_ids(&state, A1)[0].clone();
@@ -970,13 +1011,21 @@ mod b4_round_seats {
     fn b4_the_team_out_of_its_round_cannot_act() {
         let state = begun("b4-out");
         for seat in [B1, B2] {
-            assert!(acting_moves(&state, seat).is_empty(), "{seat}: {:?}", acting_moves(&state, seat));
+            assert!(
+                acting_moves(&state, seat).is_empty(),
+                "{seat}: {:?}",
+                acting_moves(&state, seat)
+            );
             refused(&state, seat, end_turn());
             for card in hand_ids(&state, seat) {
                 refused(&state, seat, raw_play(&state, seat, &card));
             }
         }
-        assert!(!duos_seats_to_act(&state).iter().any(|seat| seat.team() == Team::B));
+        assert!(
+            !duos_seats_to_act(&state)
+                .iter()
+                .any(|seat| seat.team() == Team::B)
+        );
     }
 }
 
@@ -992,7 +1041,11 @@ mod b5_turn_end_sync {
         assert_eq!(state.round, 1);
         assert_eq!(state.duels[0].active, P1);
         assert_eq!(state.duels[0].turn, 1);
-        assert_eq!(hash_state(&state.duels[0]), duel0, "nothing is applied to duel 0 yet");
+        assert_eq!(
+            hash_state(&state.duels[0]),
+            duel0,
+            "nothing is applied to duel 0 yet"
+        );
         assert_eq!(sorted(duos_seats_to_act(&state)), [A2]);
         refused(&state, A1, end_turn());
     }
@@ -1028,7 +1081,10 @@ mod b5_turn_end_sync {
             .iter()
             .position(|event| matches!(event, DuosEvent::RoundStarted { round: 2 }))
             .expect("round 2 started");
-        assert!(opened > second, "the round opens once both duels have ended their turn");
+        assert!(
+            opened > second,
+            "the round opens once both duels have ended their turn"
+        );
     }
 
     #[test]
@@ -1036,7 +1092,11 @@ mod b5_turn_end_sync {
         let state = finish_round(begun("b5-round-2"));
         assert_eq!(state.round_seats, [B1, B2]);
         for seat in [A1, A2] {
-            assert!(acting_moves(&state, seat).is_empty(), "{seat}: {:?}", acting_moves(&state, seat));
+            assert!(
+                acting_moves(&state, seat).is_empty(),
+                "{seat}: {:?}",
+                acting_moves(&state, seat)
+            );
             refused(&state, seat, end_turn());
             for card in hand_ids(&state, seat) {
                 refused(&state, seat, raw_play(&state, seat, &card));
@@ -1054,7 +1114,11 @@ mod b6_ended_seat {
         let state = begun("b6");
         let card = hand_ids(&state, A1)[0].clone();
         let state = ok(&state, A1, end_turn());
-        assert!(acting_moves(&state, A1).is_empty(), "{:?}", acting_moves(&state, A1));
+        assert!(
+            acting_moves(&state, A1).is_empty(),
+            "{:?}",
+            acting_moves(&state, A1)
+        );
         // Duel 0 itself is still A1's main phase: the wrapper is what refuses.
         refused(&state, A1, raw_play(&state, A1, &card));
         refused(&state, A1, pass(&card));
@@ -1106,7 +1170,11 @@ mod b7_turn_ended_by_an_effect {
         let state = cast(state, A1, TEMPO).state;
         assert_eq!(state.duels[0].active, P2);
         // Duel 0 alone would let B1 play now; the round is still team A's.
-        assert!(acting_moves(&state, B1).is_empty(), "{:?}", acting_moves(&state, B1));
+        assert!(
+            acting_moves(&state, B1).is_empty(),
+            "{:?}",
+            acting_moves(&state, B1)
+        );
         refused(&state, B1, end_turn());
         for card in hand_ids(&state, B1) {
             refused(&state, B1, raw_play(&state, B1, &card));
@@ -1153,11 +1221,19 @@ mod b9_idle_round_seats {
         setup();
         let created = duos_create(&options("b9"));
         for seat in DUOS_SEATS {
-            assert_eq!(side(&created, seat).auto_end_turn, Some(false), "{seat} at creation");
+            assert_eq!(
+                side(&created, seat).auto_end_turn,
+                Some(false),
+                "{seat} at creation"
+            );
         }
         let begun_state = duos_begin(&created).state;
         for seat in DUOS_SEATS {
-            assert_eq!(side(&begun_state, seat).auto_end_turn, Some(false), "{seat} once begun");
+            assert_eq!(
+                side(&begun_state, seat).auto_end_turn,
+                Some(false),
+                "{seat} once begun"
+            );
         }
         let kept = keep_all(begun_state);
         for seat in DUOS_SEATS {
@@ -1173,7 +1249,11 @@ mod b9_idle_round_seats {
         let body = legal_play(&state, A1, &noop);
         let state = ok(&state, A1, body);
 
-        assert_eq!(state.ended, [true, false], "A1 has nothing left but ending its turn");
+        assert_eq!(
+            state.ended,
+            [true, false],
+            "A1 has nothing left but ending its turn"
+        );
         assert_eq!(state.round, 1);
         assert_eq!(state.duels[0].active, P1, "duel 0 waits for A2");
         assert_eq!(state.duels[0].turn, 1);
@@ -1214,7 +1294,9 @@ mod b10_no_draws_no_duel_concede {
         duos_legal_actions(state, seat).iter().any(|offered| {
             matches!(
                 offered,
-                DuosActionBody::Duel { body: ActionBody::OfferDraw | ActionBody::AnswerDraw { .. } | ActionBody::Concede }
+                DuosActionBody::Duel {
+                    body: ActionBody::OfferDraw | ActionBody::AnswerDraw { .. } | ActionBody::Concede
+                }
             )
         })
     }
@@ -1224,7 +1306,10 @@ mod b10_no_draws_no_duel_concede {
         setup();
         let created = duos_begin(&duos_create(&options("b10-list"))).state;
         for seat in DUOS_SEATS {
-            assert!(!offers_draw_or_duel_concede(&created, seat), "{seat} during the mulligans");
+            assert!(
+                !offers_draw_or_duel_concede(&created, seat),
+                "{seat} during the mulligans"
+            );
         }
 
         let state = begun("b10");
@@ -1307,7 +1392,10 @@ mod b11_team_concede {
         let state = begun("b11-again");
         let state = ok(&state, A1, DuosActionBody::Concede);
         let again = act(&state, A1, DuosActionBody::Concede);
-        assert!(again.state.result.is_none(), "only the teammate's concede ends the game");
+        assert!(
+            again.state.result.is_none(),
+            "only the teammate's concede ends the game"
+        );
         assert_eq!(again.state.concede_offer, Some(A1));
     }
 
@@ -1322,7 +1410,10 @@ mod b11_team_concede {
         let state = finish_round(state);
         assert_eq!(state.round, 3);
         let state = ok(&state, A2, DuosActionBody::Concede);
-        assert!(state.result.is_none(), "A1's old offer lapsed: A2's concede opens a new one");
+        assert!(
+            state.result.is_none(),
+            "A1's old offer lapsed: A2's concede opens a new one"
+        );
         assert_eq!(state.concede_offer, Some(A2));
     }
 
@@ -1349,7 +1440,10 @@ mod b12_starting_life {
         let state = begun("b12");
         for seat in DUOS_SEATS {
             assert_eq!(health(&state, seat), DUOS_OWN_HEALTH, "{seat}");
-            let life = side(&state, seat).duos.as_ref().expect("a Duos side carries its life");
+            let life = side(&state, seat)
+                .duos
+                .as_ref()
+                .expect("a Duos side carries its life");
             assert_eq!(life.pool, DUOS_POOL_HEALTH, "{seat}");
             assert_eq!(life.pool_cap, DUOS_POOL_HEALTH, "{seat}");
             assert!(!life.spent, "{seat}");
@@ -1392,7 +1486,13 @@ mod b12_starting_life {
     #[test]
     fn b12_the_rules_constants_and_the_ai_team_tiers() {
         assert_eq!(
-            (DUOS_OWN_HEALTH, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, DUOS_PASS_COST, DUOS_PASS_CAP),
+            (
+                DUOS_OWN_HEALTH,
+                DUOS_POOL_HEALTH,
+                DUOS_POOL_HEALTH_HARD,
+                DUOS_PASS_COST,
+                DUOS_PASS_CAP
+            ),
             (20, 20, 30, 1, 10)
         );
         assert_eq!(
@@ -1453,7 +1553,11 @@ mod b13_damage_carries_over {
         assert_eq!(side(&state, B1).hero.armor, 2);
         assert!(is_spent(&state, B1));
         assert_eq!(pool_of(&state, B1), DUOS_POOL_HEALTH - carried);
-        assert_eq!(health(&state, B1), DUOS_POOL_HEALTH - carried, "a spent hero's health reads the pool");
+        assert_eq!(
+            health(&state, B1),
+            DUOS_POOL_HEALTH - carried,
+            "a spent hero's health reads the pool"
+        );
         assert_eq!(state.teams.b.pool, DUOS_POOL_HEALTH - carried);
         assert!(!is_spent(&state, B2));
         assert_eq!(health(&state, B2), DUOS_OWN_HEALTH);
@@ -1462,7 +1566,10 @@ mod b13_damage_carries_over {
         let enemy = duos_view_for(&state, A1).enemy;
         assert_eq!(enemy.pool, DUOS_POOL_HEALTH - carried);
         assert_eq!((enemy.sides[0].own, enemy.sides[0].spent), (0, true));
-        assert_eq!((enemy.sides[1].own, enemy.sides[1].spent), (DUOS_OWN_HEALTH, false));
+        assert_eq!(
+            (enemy.sides[1].own, enemy.sides[1].spent),
+            (DUOS_OWN_HEALTH, false)
+        );
     }
 
     #[test]
@@ -1553,7 +1660,12 @@ mod b14_spent_heroes {
         let state = cast(state, A1, BACKFIRE).state;
         assert!(is_spent(&state, A1));
         assert_eq!(pool_of(&state, A1), POOL_AFTER_NUKE);
-        assert!(POOL_AFTER_NUKE + MEND_HEAL > DUOS_POOL_HEALTH, "the heal would overshoot the cap");
+        const {
+            assert!(
+                POOL_AFTER_NUKE + MEND_HEAL > DUOS_POOL_HEALTH,
+                "the heal would overshoot the cap"
+            )
+        };
 
         let state = cast(state, A1, MEND).state;
         assert_eq!(pool_of(&state, A1), DUOS_POOL_HEALTH, "capped at pool_cap");
@@ -1588,17 +1700,29 @@ mod b15_pool_sync {
         let state = cast(state, A1, NUKE).state; // B1 spent
         expect_pools_agree(&state);
         assert_eq!(pool_of(&state, B2), POOL_AFTER_NUKE);
-        assert_eq!(health(&state, B2), DUOS_OWN_HEALTH, "B2 is not spent: its health is its own");
+        assert_eq!(
+            health(&state, B2),
+            DUOS_OWN_HEALTH,
+            "B2 is not spent: its health is its own"
+        );
 
         let state = cast(state, A2, NUKE).state; // B2 spent too, from what duel 0 left
         let left = POOL_AFTER_NUKE - (NUKE_DAMAGE - DUOS_OWN_HEALTH);
         assert_eq!(state.teams.b.pool, left);
         assert_eq!(pool_of(&state, B1), left);
-        assert_eq!(health(&state, B1), left, "duel 1's hit reaches B1's health in duel 0");
+        assert_eq!(
+            health(&state, B1),
+            left,
+            "duel 1's hit reaches B1's health in duel 0"
+        );
         expect_pools_agree(&state);
 
         let state = cast(state, A1, BOLT).state;
-        assert_eq!(health(&state, B2), left - BOLT_DAMAGE, "duel 0's hit reaches B2's health in duel 1");
+        assert_eq!(
+            health(&state, B2),
+            left - BOLT_DAMAGE,
+            "duel 0's hit reaches B2's health in duel 1"
+        );
         expect_pools_agree(&state);
         assert!(state.result.is_none());
     }
@@ -1620,7 +1744,12 @@ mod b16_game_end {
                 .iter()
                 .any(|event| matches!(event, DuosEvent::Ended { .. }))
         );
-        expect_result(&result.state, DuosOutcome::Win, Some(Team::A), Some("poolEmptied"));
+        expect_result(
+            &result.state,
+            DuosOutcome::Win,
+            Some(Team::A),
+            Some("poolEmptied"),
+        );
     }
 
     #[test]
@@ -1741,10 +1870,20 @@ mod b18_health_swap {
         let state = cast(state, A1, BACKFIRE).state;
         let state = cast(state, A1, NUKE).state;
         assert!(is_spent(&state, A1) && is_spent(&state, B1));
-        let before = (health(&state, A1), health(&state, B1), state.teams.a.pool, state.teams.b.pool);
+        let before = (
+            health(&state, A1),
+            health(&state, B1),
+            state.teams.a.pool,
+            state.teams.b.pool,
+        );
         let state = cast(state, A1, SWAP).state;
         assert_eq!(
-            (health(&state, A1), health(&state, B1), state.teams.a.pool, state.teams.b.pool),
+            (
+                health(&state, A1),
+                health(&state, B1),
+                state.teams.a.pool,
+                state.teams.b.pool
+            ),
             before
         );
     }
@@ -1869,10 +2008,7 @@ mod b20_what_a_pass_does {
         {
             card.radiant = true;
             card.cost_mod = 2;
-            card.buffs = AttackHealth {
-                attack: 1,
-                health: 3,
-            };
+            card.buffs = AttackHealth { attack: 1, health: 3 };
         }
         let original = side(&state, A1)
             .hand
@@ -1895,7 +2031,10 @@ mod b20_what_a_pass_does {
             .iter()
             .map(|card| card.id.clone())
             .collect();
-        assert_eq!(kept, teammate_hand, "the teammate's own cards stay where they were");
+        assert_eq!(
+            kept, teammate_hand,
+            "the teammate's own cards stay where they were"
+        );
         let moved = hand.last().expect("the passed card");
         assert_eq!(moved.def_id, original.def_id);
         assert_eq!(moved.owner, A2.player());
@@ -1922,11 +2061,49 @@ mod b20_what_a_pass_does {
     }
 
     #[test]
+    fn b20_a_passed_fused_card_takes_its_match_made_definitions_and_their_ingredients_along() {
+        // A Fuse of a crafted card and a vanilla one, minted in duel 0 alone (R77, R102): its
+        // definition and the crafted one it is made of live only in duel 0's `transient_defs`.
+        let crafted = "craft:#duos";
+        let fused = format!("t-1:{crafted}+fx-1");
+        let mut state = begun("b20-fused");
+        let mut crafted_def = catalog()[NOOP].clone();
+        crafted_def.id = crafted.to_string();
+        let mut fused_def = catalog()[NOOP].clone();
+        fused_def.id = fused.clone();
+        state.duels[0]
+            .transient_defs
+            .insert(crafted.to_string(), crafted_def);
+        state.duels[0].transient_defs.insert(fused.clone(), fused_def);
+        give(&mut state, A1, NOOP);
+        let card = give(&mut state, A1, &fused);
+        let state = ok(&state, A1, pass(&card));
+
+        assert_eq!(
+            side(&state, A2).hand.last().map(|card| card.def_id.clone()),
+            Some(fused.clone())
+        );
+        let carried = &state.duels[1].transient_defs;
+        assert!(carried.contains_key(&fused), "the passed card's definition");
+        assert!(
+            carried.contains_key(crafted),
+            "and the crafted card it is fused from"
+        );
+        assert!(
+            !carried.contains_key("fx-1"),
+            "a catalog card's stays in the catalog"
+        );
+        // The receiver's duel reads it like any card of its own.
+        duos_legal_actions(&state, A2);
+        duos_view_for(&state, A2);
+    }
+
+    #[test]
     fn b20_a_pass_is_no_draw_play_or_discard_and_fires_no_trigger() {
         let mut state = begun("b20-quiet");
         give(&mut state, A1, NOOP);
         let wire = give(&mut state, A1, TRIPWIRE);
-        let draws = json_of(&side(&state, A2).draws);
+        let draws = json_of(side(&state, A2).draws);
         let result = act(&state, A1, pass(&wire));
         assert!(result.error.is_none());
         for kind in [
@@ -1939,8 +2116,12 @@ mod b20_what_a_pass_does {
             assert!(!has_duel_event(&result.events, kind), "no {kind} event");
         }
         let state = result.state;
-        assert_eq!(health(&state, A2), DUOS_OWN_HEALTH, "the card's arrival hook did not fire");
-        assert_eq!(json_of(&side(&state, A2).draws), draws, "not a draw");
+        assert_eq!(
+            health(&state, A2),
+            DUOS_OWN_HEALTH,
+            "the card's arrival hook did not fire"
+        );
+        assert_eq!(json_of(side(&state, A2).draws), draws, "not a draw");
         assert_eq!(
             side(&state, A2).hand.last().map(|card| card.def_id.as_str()),
             Some(TRIPWIRE)
@@ -2110,14 +2291,30 @@ mod b23_views {
             } else {
                 (&view.enemy, &view.team)
             };
-            assert_eq!((a.pool, a.pool_cap), (DUOS_POOL_HEALTH, DUOS_POOL_HEALTH), "{seat}");
-            assert_eq!((b.pool, b.pool_cap), (POOL_AFTER_NUKE, DUOS_POOL_HEALTH), "{seat}");
+            assert_eq!(
+                (a.pool, a.pool_cap),
+                (DUOS_POOL_HEALTH, DUOS_POOL_HEALTH),
+                "{seat}"
+            );
+            assert_eq!(
+                (b.pool, b.pool_cap),
+                (POOL_AFTER_NUKE, DUOS_POOL_HEALTH),
+                "{seat}"
+            );
             let lives = |team: &jackioh_engine::wire::DuosTeamView| -> Vec<(i32, bool)> {
                 team.sides.iter().map(|life| (life.own, life.spent)).collect()
             };
-            assert_eq!(lives(a), [(DUOS_OWN_HEALTH, false), (DUOS_OWN_HEALTH, false)], "{seat}");
+            assert_eq!(
+                lives(a),
+                [(DUOS_OWN_HEALTH, false), (DUOS_OWN_HEALTH, false)],
+                "{seat}"
+            );
             assert_eq!(lives(b), [(0, true), (DUOS_OWN_HEALTH, false)], "{seat}");
-            assert_eq!((a.pass_cost, b.pass_cost), (DUOS_PASS_COST, DUOS_PASS_COST), "{seat}");
+            assert_eq!(
+                (a.pass_cost, b.pass_cost),
+                (DUOS_PASS_COST, DUOS_PASS_COST),
+                "{seat}"
+            );
         }
     }
 
@@ -2135,11 +2332,19 @@ mod b23_views {
             }
             for owner in [seat, seat.teammate()] {
                 for card in &side(&state, owner).hand {
-                    assert!(seen.contains(&card.def_id), "{seat} sees {owner}'s {}", card.def_id);
+                    assert!(
+                        seen.contains(&card.def_id),
+                        "{seat} sees {owner}'s {}",
+                        card.def_id
+                    );
                 }
             }
             let reads_trap = seen.contains(GAMBIT);
-            assert_eq!(reads_trap, seat.team() == Team::A, "{seat} and A2's face-down card");
+            assert_eq!(
+                reads_trap,
+                seat.team() == Team::A,
+                "{seat} and A2's face-down card"
+            );
         }
     }
 }
@@ -2196,7 +2401,11 @@ mod b24_fold {
         });
         assert_eq!(replayed.refused_at, Some(4));
         assert_eq!(replayed.hash, kept);
-        assert_eq!(replayed.state.ended, [false, false], "nothing after the refusal is applied");
+        assert_eq!(
+            replayed.state.ended,
+            [false, false],
+            "nothing after the refusal is applied"
+        );
     }
 
     #[test]

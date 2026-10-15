@@ -160,7 +160,10 @@ fn play_duos_game(seed: u32) -> Result<DuosRun, String> {
             ));
         };
         let Some(body) = choose(&state, seat, &mut policy) else {
-            return Err(format!("{seat} was waited on but chose nothing in round {}", state.round));
+            return Err(format!(
+                "{seat} was waited on but chose nothing in round {}",
+                state.round
+            ));
         };
         let action = DuosAction {
             seat,
@@ -192,7 +195,12 @@ fn check_duos_run(run: &DuosRun) -> Result<String, String> {
             DUOS_TERMINAL_REASONS.join(", ")
         ));
     }
-    if let Some(game) = run.state.duels.iter().find(|game| game.turn > TURN_CAP_PLAYER_TURNS) {
+    if let Some(game) = run
+        .state
+        .duels
+        .iter()
+        .find(|game| game.turn > TURN_CAP_PLAYER_TURNS)
+    {
         return Err(format!(
             "a duel reached turn {}, past the R2 cap of {TURN_CAP_PLAYER_TURNS}",
             game.turn

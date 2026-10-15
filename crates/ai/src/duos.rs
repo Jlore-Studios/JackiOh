@@ -82,9 +82,7 @@ pub fn duos_decide(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -
         Some(ActionBody::EndTurn) if offers(&legal, ActionType::EndTurn) => {
             Some(pass_or_end(state, seat, &legal))
         }
-        Some(action) if offers(&legal, action.action_type()) => {
-            Some(DuosActionBody::Duel { body: action })
-        }
+        Some(action) if offers(&legal, action.action_type()) => Some(DuosActionBody::Duel { body: action }),
         _ => fallback(state, seat, &legal),
     }
 }
@@ -134,11 +132,9 @@ fn fallback(state: &DuosState, seat: DuosSeat, legal: &[DuosActionBody]) -> Opti
             .iter()
             .find(|action| !AI_SKIPPED_ACTIONS.contains(&action.action_type()))
     };
-    answer
-        .or_else(other)
-        .map(|action| DuosActionBody::Duel {
-            body: ActionBody::clone(action),
-        })
+    answer.or_else(other).map(|action| DuosActionBody::Duel {
+        body: ActionBody::clone(action),
+    })
 }
 
 // ---------------------------------------------------------------------------
@@ -479,10 +475,7 @@ pub fn duos_gate_game(n: usize, series: &str) -> DuosGateGame {
 
 /// A seat's place in DUOS_SEATS: the index of its controller's stream.
 fn gate_slot(seat: DuosSeat) -> usize {
-    DUOS_SEATS
-        .iter()
-        .position(|each| *each == seat)
-        .unwrap_or(0)
+    DUOS_SEATS.iter().position(|each| *each == seat).unwrap_or(0)
 }
 
 /// A gate game's options: four Easy decks by the AI's deck rule (R186's ban included), Easy's handicap

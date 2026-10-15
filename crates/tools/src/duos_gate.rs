@@ -96,10 +96,10 @@ mod tests {
             .collect();
         assert!(verdict(&duos_gate_report(&at_floor), &at_floor).is_ok());
 
-        let under: Vec<DuosGateGame> = (1..=DUOS_GATE_GAMES_SMOKE)
-            .map(|n| game(n, n < needed))
-            .collect();
-        let error = verdict(&duos_gate_report(&under), &under).unwrap_err().to_string();
+        let under: Vec<DuosGateGame> = (1..=DUOS_GATE_GAMES_SMOKE).map(|n| game(n, n < needed)).collect();
+        let error = verdict(&duos_gate_report(&under), &under)
+            .unwrap_err()
+            .to_string();
         assert!(error.contains(&format!("{DUOS_GATE_SERIES}:{needed}")), "{error}");
     }
 

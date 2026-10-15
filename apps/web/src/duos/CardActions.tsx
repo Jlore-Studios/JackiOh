@@ -162,18 +162,28 @@ export function CardActions({
       cancelClear();
       setFocus((current) => (sameSpot(current, spot) ? current : spot));
     };
+    // Whether the last pointer was a finger. Nothing hovers on a phone, so a tap's bar stays until
+    // the next press: the leave that ends every touch, and the mouse events a browser fires after a
+    // tap (which carry no pointer type), close nothing.
+    let touch = false;
+    const noteKind = (event: Event): void => {
+      const kind = (event as { pointerType?: unknown }).pointerType;
+      if (typeof kind === "string" && kind !== "") touch = kind === "touch";
+    };
     // A pointer or the focus arriving: the bar follows it onto a spot, and waits while it is on the bar.
     const over = (event: Event): void => {
+      noteKind(event);
       if (onBar(event.target)) {
         cancelClear();
         return;
       }
       const spot = spotOfElement(elementOf(event.target));
-      if (spot === null) clearSoon();
-      else point(spot);
+      if (spot !== null) point(spot);
+      else if (!touch) clearSoon();
     };
     // A press (a tap on a phone, where nothing hovers) moves the bar to its spot, or closes it.
     const down = (event: Event): void => {
+      noteKind(event);
       if (onBar(event.target)) return;
       const spot = spotOfElement(elementOf(event.target));
       if (spot !== null) {
@@ -183,8 +193,9 @@ export function CardActions({
       cancelClear();
       setFocus(null);
     };
-    const leave = (): void => {
-      clearSoon();
+    const leave = (event: Event): void => {
+      noteKind(event);
+      if (!touch) clearSoon();
     };
     const key = (event: KeyboardEvent): void => {
       if (event.key !== "Escape") return;

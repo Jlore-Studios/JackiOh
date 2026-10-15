@@ -184,7 +184,9 @@ pub(super) fn why_pass_refused(
     let theirs = &state.duels[mate.duel()];
     let cap = hand_cap_of(theirs, mate.player());
     if theirs.players[mate.player()].hand.len() as i32 >= cap {
-        return Err(EngineError::new(format!("your teammate's hand is full ({cap} cards)")));
+        return Err(EngineError::new(format!(
+            "your teammate's hand is full ({cap} cards)"
+        )));
     }
     Ok(())
 }

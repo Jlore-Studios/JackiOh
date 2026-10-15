@@ -14,7 +14,7 @@
 // `window.__jackiohDuos` (development builds only) holds the state, the log and a dispatch per seat,
 // for a spec or a person at the console.
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 
 import type { CardDefs } from "@jackioh/shared";
 import { PING_SHOW_MS } from "@jackioh/server-config";
@@ -123,9 +123,11 @@ function Hotseat({ ready }: { ready: Ready }): ReactElement {
   useLocale();
   const [state, setState] = useState<DuosState>(ready.state);
   const [seat, setSeat] = useState<DuosSeat>("a1");
-  const [log, setLog] = useState<readonly DuosAction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pings, setPings] = useState<readonly ReceivedPing[]>([]);
+  // The newest state and log, ahead of the render they cause: several actions in one tick (a spec's
+  // or the console's through the handle) each build on the one before.
+  const live = useRef<{ state: DuosState; log: readonly DuosAction[] }>({ state: ready.state, log: [] });
   const lookup = useMemo(() => (ready.defs === null ? null : lookupFromDefs(ready.defs)), [ready.defs]);
 
   const view = useMemo(() => duosViewFor(state, seat), [state, seat]);
@@ -139,21 +141,20 @@ function Hotseat({ ready }: { ready: Ready }): ReactElement {
    * One seat's action, nonced as `/dev/hotseat` nonces (`n<count>` over accepted actions), so the
    * same seed and log fold to the same game. Answers the engine's refusal, or null.
    */
-  const act = useCallback(
-    (actor: DuosSeat, body: DuosActionBody): string | null => {
-      const action: DuosAction = { seat: actor, nonce: `n${String(log.length)}`, body };
-      const result = duosReduce(state, action);
-      if (result.error !== undefined) {
-        setError(result.error);
-        return result.error;
-      }
-      setError(null);
-      setState(result.state);
-      setLog([...log, action]);
-      return null;
-    },
-    [state, log],
-  );
+  const act = useCallback((actor: DuosSeat, body: DuosActionBody): string | null => {
+    const { state: current, log: done } = live.current;
+    const action: DuosAction = { seat: actor, nonce: `n${String(done.length)}`, body };
+    const result = duosReduce(current, action);
+    if (result.error !== undefined) {
+      setError(result.error);
+      return result.error;
+    }
+    const next = [...done, action];
+    live.current = { state: result.state, log: next };
+    setError(null);
+    setState(result.state);
+    return null;
+  }, []);
 
   const switchTo = useCallback((next: DuosSeat) => {
     setError(null);
@@ -173,21 +174,25 @@ function Hotseat({ ready }: { ready: Ready }): ReactElement {
   useEffect(() => {
     if (!DEV_ONLY) return undefined;
     const handle: DevDuosHandle = {
-      state,
+      get state() {
+        return live.current.state;
+      },
       seed: ready.seed,
       seat,
-      log,
+      get log() {
+        return live.current.log;
+      },
       setSeat: switchTo,
       dispatch: act,
-      view: (each) => duosViewFor(state, each),
-      legal: (each) => duosLegalActions(state, each),
+      view: (each) => duosViewFor(live.current.state, each),
+      legal: (each) => duosLegalActions(live.current.state, each),
     };
     const host = window as unknown as { __jackiohDuos?: DevDuosHandle };
     host.__jackiohDuos = handle;
     return () => {
       if (host.__jackiohDuos === handle) delete host.__jackiohDuos;
     };
-  }, [state, seat, log, ready.seed, switchTo, act]);
+  }, [seat, ready.seed, switchTo, act]);
 
   const chrome: DuosChrome = useMemo(
     () => ({
