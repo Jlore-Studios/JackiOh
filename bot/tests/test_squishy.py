@@ -23,7 +23,7 @@ from unittest import mock
 import harness.__main__ as main_mod
 from harness import config, dashboard, events, identity, providers, split
 from harness import queue as queue_mod
-from harness.config import LABEL_BUILD
+from harness.config import LABEL_BUILD, LABEL_SUGGESTION
 
 from tests.fakes import OPERATOR, FakeGitHub
 from tests.support import make_config, make_ctx
@@ -32,6 +32,8 @@ from tests.test_workflows import job, read
 
 BOT_DIR = Path(__file__).resolve().parents[1]
 SQUISHY = {"login": "squishy-squooby", "id": 334289562}
+#: What Squishy's harness puts at the end of everything it writes (`gh.with_marker`).
+SQUISHYS_MARKER = "\n\n<!-- jackioh-squishy -->"
 
 
 class SquishyProcessTests(unittest.TestCase):
@@ -64,6 +66,8 @@ class IdentityTests(unittest.TestCase):
         self.assertFalse(found.suggestions)
         self.assertEqual([o.login for o in found.others], ["jgoetzmann-bot"])
         self.assertNotEqual(found.marker, config.MARKER)
+        # The night bot knows Squishy's words by this marker (#961).
+        self.assertEqual([o.marker for o in config.OTHERS], [found.marker])
 
     def test_squishys_subscription_is_its_own_on_githubs_runners(self):
         raw = json.loads((config.REPO_ROOT / ".squishy" / "providers.json").read_text())
@@ -176,7 +180,8 @@ class NightBotLeavesSquishyAloneTests(unittest.TestCase):
 
 class BotsDoNotTalkForEverTests(unittest.TestCase):
     """The bots name each other in their replies; only a bare `stop` from the other bot is a
-    command, and nothing answers it with a hint."""
+    command, and nothing answers it with a hint. Squishy's words carry its marker: what a person
+    types as Squishy's account does not, and is answered as anyone's (#961)."""
 
     def setUp(self):
         self.gh = FakeGitHub()
@@ -191,16 +196,31 @@ class BotsDoNotTalkForEverTests(unittest.TestCase):
     def test_squishys_reply_naming_the_night_bot_is_no_request(self):
         self.gh.add_issue(9, labels=(LABEL_BUILD,))
         out = self.comment(9, "@jgoetzmann-bot\n\n#9 is the night bot's (@jgoetzmann-bot): it "
-                              "carries the night bot's labels.", SQUISHY)
+                              "carries the night bot's labels." + SQUISHYS_MARKER, SQUISHY)
         self.assertEqual(out, ["no command"])
         self.assertEqual(self.gh.bot_comments(9), [])
 
     def test_a_bare_stop_from_squishy_stops_its_sub_issue(self):
         self.gh.add_issue(10, labels=(LABEL_BUILD,))
         self.comment(10, "@jgoetzmann-bot stop\n\njgoetzmann stopped the tree this belongs to "
-                         "(#4).", SQUISHY)
+                         "(#4)." + SQUISHYS_MARKER, SQUISHY)
         self.assertNotIn(LABEL_BUILD, self.gh.label_names(10))
         self.assertTrue(self.ctx.store.load()["items"]["10"]["stop_requested"])
+
+    def test_squishys_vote_is_no_vote(self):
+        self.gh.add_issue(13, labels=(LABEL_SUGGESTION,))
+        self.assertEqual(self.comment(13, "approve" + SQUISHYS_MARKER, SQUISHY), ["no command"])
+        self.assertEqual(self.gh.label_names(13), {LABEL_SUGGESTION})
+
+    def test_a_person_working_as_squishys_account_is_answered(self):
+        # #961: "Approve" typed as squishy-squooby on a suggestion was dropped as Squishy's own.
+        self.gh.add_issue(14, labels=(LABEL_SUGGESTION,))
+        self.comment(14, "Approve", SQUISHY)
+        self.assertEqual(self.gh.label_names(14), {LABEL_BUILD})
+        self.assertTrue(self.gh.bot_comments(14)[-1].startswith("@squishy-squooby\n\nQueued #14"))
+        self.gh.add_issue(15)
+        self.comment(15, "/harness build", SQUISHY)
+        self.assertIn(LABEL_BUILD, self.gh.label_names(15))
 
     def test_a_person_still_gets_every_command(self):
         self.gh.add_issue(11)

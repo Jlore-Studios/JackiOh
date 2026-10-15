@@ -19,6 +19,7 @@ from tests.support import DAY, NIGHT, idle_for, make_ctx
 
 TRUST = "jgoetzmann 3 id:95732896\nhelper 2\n"
 SQUISHY = {"login": "squishy-squooby", "id": 334289562}
+SQUISHYS_MARKER = "\n\n<!-- jackioh-squishy -->"
 AN_HOUR_AGO = iso(DAY - timedelta(hours=1))
 JUST_NOW = iso(DAY - timedelta(minutes=2))
 LAST_WEEK = iso(DAY - timedelta(days=5))
@@ -82,16 +83,29 @@ class LostCommentTests(Base):
         self.assertFalse(self.ctx.store.load()["halted"])
 
     def test_the_other_bots_words_are_never_reported_as_answered(self):
-        # #504: a comment from Squishy's account that names the night bot is no command of its
-        # own, so every sweep left it unanswered, and every sweep said it had answered it.
+        # #504: a comment of Squishy's that names the night bot is no command of its own, so
+        # every sweep left it unanswered, and every sweep said it had answered it.
         self.ctx.trust = Trust.parse(TRUST + "squishy-squooby 3 id:334289562\n")
         for body in ("@jgoetzmann\n\n#5 is the night bot's (@jgoetzmann-bot): it carries the "
                      "night bot's labels, so I leave it alone.",
                      "/harness revised. Just pushed the rust patch in, see if this is still needed"):
-            self.gh.add_comment(5, body, SQUISHY, "COLLABORATOR", created_at=AN_HOUR_AGO)
+            self.gh.add_comment(5, body + SQUISHYS_MARKER, SQUISHY, "COLLABORATOR",
+                                created_at=AN_HOUR_AGO)
         self.assertEqual(sweep.sweep(self.ctx), [])
         self.assertEqual(sweep.sweep(self.ctx), [])
         self.assertEqual(self.replies(5), [])
+
+    def test_a_persons_vote_from_squishys_account_is_answered_by_the_sweep(self):
+        # #961: "Approve" typed as squishy-squooby carries no marker of Squishy's, so it is a
+        # person's vote, and the sweep answers the ones the event dropped.
+        self.ctx.trust = Trust.parse(TRUST + "squishy-squooby 3 id:334289562\n")
+        self.gh.add_issue(6, "A suggestion", labels=(LABEL_SUGGESTION,))
+        self.gh.add_comment(6, "Approve", SQUISHY, "MEMBER", created_at=AN_HOUR_AGO)
+        notes = sweep.sweep(self.ctx)
+        self.assertIn(LABEL_BUILD, self.gh.label_names(6))
+        self.assertIn("Queued #6", self.replies(6)[-1])
+        self.assertIn("answered a comment on #6", notes[0])
+        self.assertEqual(sweep.sweep(self.ctx), [])
 
     def test_a_line_comment_on_a_diff_is_answered_too(self):
         self.gh.add_pull(9, "bot/issue-5", labels=(LABEL_PR,))
@@ -295,6 +309,13 @@ class NightRunTests(Base):
         self.assertEqual(len(self.gh.dispatches), 1)
         self.assertEqual(self.gh.dispatches[0]["workflow"], "bot-night.yml")
         self.assertIn("started a night run", notes[-1])
+
+    def test_a_lost_request_the_sweep_answers_starts_one_run_not_two(self):
+        self.at_night()
+        self.gh.add_comment(5, "/harness build", OPERATOR, created_at=iso(NIGHT - timedelta(hours=1)))
+        sweep.sweep(self.ctx)
+        self.assertIn("Queued #5", self.replies(5)[-1])
+        self.assertEqual(len(self.gh.dispatches), 1)
 
     def test_a_run_already_queued_or_going_is_left_to_it(self):
         self.at_night()

@@ -9,7 +9,7 @@ from datetime import timedelta
 from harness import events, status
 from harness.clock import iso
 from harness.config import (LABEL_BLOCKED, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN, LABEL_REVISE,
-                            LABEL_WORKING, MARKER)
+                            LABEL_SUGGESTION, LABEL_WORKING, MARKER)
 from harness.state import item as state_item
 
 from tests.fakes import BOT, OPERATOR, STRANGER, FakeGitHub
@@ -51,6 +51,21 @@ class CommentTests(unittest.TestCase):
     def test_force_starts_a_run_now(self):
         self.send("@jgoetzmann-bot build --force")
         self.assertEqual(self.gh.dispatches[0]["inputs"], {"item": "5", "force": "true", "mode": "build"})
+
+    def test_queued_work_starts_a_run_at_once_when_a_lane_is_free(self):
+        # #961: an `approve` waited for the sweep's next tick, up to five minutes, for its run.
+        self.ctx.clock_fn.at = NIGHT
+        self.gh.add_issue(6, labels=(LABEL_SUGGESTION,))
+        events.handle(self.ctx, "issue_comment", comment_event(6, "approve"))
+        self.assertEqual(self.gh.label_names(6), {LABEL_BUILD})
+        self.assertEqual([d["inputs"]["force"] for d in self.gh.dispatches], ["false"])
+
+    def test_a_run_on_its_way_is_left_to_take_queued_work(self):
+        self.ctx.clock_fn.at = NIGHT
+        self.gh.runs = {"1": {"status": "queued"}}
+        self.send("/harness build")
+        self.assertEqual(self.gh.label_names(5), {LABEL_BUILD})
+        self.assertEqual(self.gh.dispatches, [])
 
     def test_force_needs_the_operator(self):
         self.send("/harness build --force", user=HELPER, association="COLLABORATOR")

@@ -13,6 +13,7 @@ from typing import Any
 from datetime import timedelta
 
 from harness import asks, commands, declined, stepup
+from harness import plan as plan_mod
 from harness import providers as providers_mod
 
 from harness.asks import Ask
@@ -54,9 +55,9 @@ def handle(ctx: Context, name: str, payload: dict[str, Any]) -> list[str]:
             (name, action) not in FROM_THE_BOT_TOO):
         return ["ignored: the bot's own event"]
     if name == "issue_comment" and action in ("created", "edited"):
-        return on_comment(ctx, payload)
+        return on_comment(ctx, payload, start=True)
     if name == "pull_request_review_comment" and action in ("created", "edited"):
-        return on_comment(ctx, payload, review_comment=True)
+        return on_comment(ctx, payload, review_comment=True, start=True)
     if name == "pull_request_review" and action == "submitted":
         return on_review(ctx, payload)
     if name == "issues" and action in ("labeled", "assigned"):
@@ -76,10 +77,13 @@ def handle(ctx: Context, name: str, payload: dict[str, Any]) -> list[str]:
 OTHER_BOT_VERBS = ("stop",)
 
 
-def from_other_bot(user: dict[str, Any]) -> bool:
-    """The comment's author is another bot in the repository (`config.OTHERS`)."""
+def from_other_bot(user: dict[str, Any], body: str) -> bool:
+    """Another bot in the repository (`config.OTHERS`) wrote this comment or review: its account,
+    with its marker when it has one. A person can work as Squishy's account, and what they type
+    carries no marker, so it is theirs and answered as anyone's, a vote included (#961)."""
     login = str(user.get("login") or "").lower()
-    return any(other.login.lower() == login for other in OTHERS)
+    return any(other.login.lower() == login and (not other.marker or other.marker in body)
+               for other in OTHERS)
 
 
 def _is_own(body: str) -> bool:
@@ -150,8 +154,11 @@ def _reply(ctx: Context, number: int, body: str) -> None:
         ctx.gh.create_comment(number, body)  # once more; a second failure is the job's error
 
 
-def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = False) -> list[str]:
-    """Answer the commands in a comment, a line comment on a diff, or an edit of either."""
+def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = False,
+               start: bool = False) -> list[str]:
+    """Answer the commands in a comment, a line comment on a diff, or an edit of either. With
+    `start` (the event's, not the sweep's, which starts a run itself after), work it queued
+    starts now when a lane is free, rather than at the sweep's next tick (#961)."""
     comment = payload.get("comment") or {}
     body = str(comment.get("body") or "")
     if _is_own(body):
@@ -159,7 +166,7 @@ def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = 
     found = commands.parse(body, ctx.cfg.bot_login)
     nudge = not found and commands.names_the_bot(body, ctx.cfg.bot_login)
     voted, vote_line = ("", "") if review_comment else commands.vote(body, ctx.cfg.bot_login)
-    if from_other_bot(comment.get("user") or {}):
+    if from_other_bot(comment.get("user") or {}, body):
         # The bots name each other in their replies (#60): only a bare `stop`, which Squishy
         # sends to stop a tree it split, is acted on, and nothing is answered with a hint, so
         # two bots never talk to each other for ever.
@@ -205,6 +212,12 @@ def on_comment(ctx: Context, payload: dict[str, Any], *, review_comment: bool = 
     login = user.get("login", "")
     _reply(ctx, int(thread["number"]), f"@{login}\n\n" + "\n\n".join(replies))
     ctx.gh.react(comment_id, ANSWERED, review_comment=review_comment)
+    # A forced command started its own run already.
+    if start and ask.recorded and not any(c.force for c in found):
+        try:
+            plan_mod.start_if_free(ctx)
+        except GitHubError:
+            pass  # the sweep's next tick starts it
     return replies
 
 
@@ -464,9 +477,9 @@ def on_review(ctx: Context, payload: dict[str, Any]) -> list[str]:
     level = _level(ctx, user, review.get("author_association"))
     if level <= 0:
         return [f"ignored: @{user.get('login')} is not on the trust list"]
-    if from_other_bot(user):
-        return ["ignored: another bot's review"]
     body = str(review.get("body") or "")
+    if from_other_bot(user, body):
+        return ["ignored: another bot's review"]
     found = commands.parse(body, ctx.cfg.bot_login)
     changes = (LABEL_PR in label_names(pull) and level >= 2
                and str(review.get("state", "")).lower() == "changes_requested")

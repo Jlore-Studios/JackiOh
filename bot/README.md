@@ -278,7 +278,9 @@ Every way of asking either gets an answer at once, or is found again later:
   nothing merges that you stopped.
 - **`--force`** and **`/harness run`** start a run at once. Both are written down first, so if
   GitHub refuses to start one, or a newer run replaces it, the next hourly run picks it up
-  (`bot-night` fires every hour, all day).
+  (`bot-night` fires every hour, all day). Without them, a comment that queues work (an
+  `approve` vote included) starts a run at once too when a lane and a subscription are free for
+  it and no run is on its way, as the sweep would on its next tick (#961).
 - **A run that dies** (cancelled, timed out, crashed) leaves its item for the next run, which
   requeues it. A failure outside any item (a missing secret, the CLI refusing to start) is
   never charged to the item.
@@ -1147,7 +1149,11 @@ sub-issues too (for the night bot's, Squishy comments `@jgoetzmann-bot stop`).
 **One owner per issue.** Neither bot takes an issue that is the other's: the other's queue,
 state, pull request, mode or tree labels on it, or assigned to the other's account
 (`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
-line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
+line is a bare `stop`, and never answers it with a hint, so the two never talk for ever. The night
+bot knows Squishy's words by Squishy's marker (`marker` in `.harness/config.json`'s `others`), which
+its harness puts on everything it writes: a comment or review from `@squishy-squooby` without it
+was typed by a person working as that account, and is answered as anyone's, an `approve` vote
+included (#961). Squishy still reads everything from `@jgoetzmann-bot` as the night bot's.
 
 **The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
 `.github/workflows/hygiene.yml` (#839, #888) opens two issues for Squishy (`squishy:build`,

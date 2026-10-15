@@ -652,6 +652,28 @@ class Peek:
     idle: bool = False
 
 
+#: A `bot-night` run in one of these states is going, or about to.
+LIVE_RUN = ("queued", "in_progress", "waiting", "pending", "requested")
+
+
+def start_if_free(ctx: Context, look: Peek | None = None) -> bool:
+    """Start a night run when a lane and a subscription are free for work and no run is on its
+    way to take it; `look` is a `peek` the caller made already. True when it started one. A run
+    that is going but holds no lane yet (still in its gate or plan, or delivering) is on its
+    way, so this waits for it rather than piling more runs behind it."""
+    look = look or peek(ctx)
+    if not look.work:
+        return False
+    live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=20) if r.get("status") in LIVE_RUN]
+    # A run waiting for the shared subscription to be quiet may wait two hours; it is not on
+    # its way to the other subscriptions' work, which `peek` then offers instead.
+    waiting = 1 if quiet_waiting(ctx) else 0
+    if len(live) - waiting > look.held:
+        return False
+    ctx.dispatch()
+    return True
+
+
 def peek(ctx: Context, *, force: bool = False, item: int | None = None,
          mode: str = "auto") -> Peek:
     """Whether a run would find work, why, and with which subscription. Changes nothing.

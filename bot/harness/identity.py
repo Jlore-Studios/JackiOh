@@ -46,6 +46,10 @@ class Other:
     #: The environment variable that holds its GitHub token, for a process started as it
     #: (`__main__._companion`).
     token_env: str = ""
+    #: The marker its harness puts on everything it writes (its `identity.marker`). With one, a
+    #: comment from its account that lacks it was typed by a person working as that account,
+    #: and is theirs (#961); without one, everything from its account is its own.
+    marker: str = ""
 
 
 @dataclass(frozen=True)
@@ -91,7 +95,8 @@ def _other(raw: Any, where: str) -> Other:
         raise ValueError(f"{where}: expected an object")
     try:
         return Other(str(raw["name"]), str(raw["login"]), str(raw["label_prefix"]),
-                     home=str(raw.get("home") or ""), token_env=str(raw.get("token_env") or ""))
+                     home=str(raw.get("home") or ""), token_env=str(raw.get("token_env") or ""),
+                     marker=str(raw.get("marker") or ""))
     except KeyError as exc:
         raise ValueError(f"{where}: needs name, login and label_prefix ({exc})") from exc
 

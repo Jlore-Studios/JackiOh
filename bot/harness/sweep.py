@@ -42,7 +42,7 @@ from harness import commands, events, stepup, triage
 from harness import plan as plan_mod
 from harness.clock import iso, parse_iso
 from harness.config import (LABELS, LABEL_BLOCKED, LABEL_PLANNED, RETIRED_LABELS, LABEL_BUILD, LABEL_PR, LABEL_PR_OPEN,
-                            LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES, NIGHT_WORKFLOW)
+                            LABEL_REVISE, LABEL_TREE, LABEL_WORKING, MODES)
 from harness.context import Context
 from harness.errors import GitHubError
 from harness.queue import (branch_for_issue, is_human, label_names, labelled_difficulty,
@@ -55,8 +55,6 @@ SETTLE = timedelta(minutes=10)
 #: An edit shows as `updated_at` later than `created_at` by more than this.
 EDITED = timedelta(seconds=5)
 QUEUE_LABELS = {LABEL_BUILD, LABEL_REVISE, LABEL_WORKING, LABEL_BLOCKED}
-#: A `bot-night` run in one of these states is going, or about to.
-LIVE_RUN = ("queued", "in_progress", "waiting", "pending", "requested")
 
 _NUMBER = re.compile(r"/(?:issues|pulls)/(\d+)$")
 
@@ -401,19 +399,11 @@ def _trees(ctx: Context, since: datetime) -> list[str]:
 
 def _night_run(ctx: Context, since: datetime) -> list[str]:
     """Start a night run when a lane and a subscription are free for work and no run is on its
-    way to take it. Runs after the other parts, so a request they just answered counts. A run
-    that is going but holds no lane yet (still in its gate or plan, or delivering) is on its way,
-    so the sweep waits for it rather than piling more runs behind it."""
+    way to take it (`plan.start_if_free`). Runs after the other parts, so a request they just
+    answered counts."""
     look = plan_mod.peek(ctx)
     # The clock a survey waits on (#797): a free lane with nothing to start, tick after tick.
     plan_mod.note_idle(ctx, look.idle)
-    if not look.work:
+    if not plan_mod.start_if_free(ctx, look):
         return []
-    live = [r for r in ctx.gh.list_runs(NIGHT_WORKFLOW, limit=20) if r.get("status") in LIVE_RUN]
-    # A run waiting for the shared subscription to be quiet may wait two hours; it is not on
-    # its way to the other subscriptions' work, which `peek` then offers instead.
-    waiting = 1 if plan_mod.quiet_waiting(ctx) else 0
-    if len(live) - waiting > look.held:
-        return []
-    ctx.dispatch()
     return [f"started a night run, as a lane was free: {look.reason}"]

@@ -13,7 +13,8 @@
         "login": "squishy-squooby",
         "label_prefix": "squishy:",
         "home": ".squishy",
-        "token_env": "SQUISHY_GITHUB_TOKEN"
+        "token_env": "SQUISHY_GITHUB_TOKEN",
+        "marker": "<!-- jackioh-squishy -->"
       }
     ]
   },
