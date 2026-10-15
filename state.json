@@ -7403,9 +7403,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6200542325"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "994": {
