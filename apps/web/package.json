@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "// predev": "The engine is the Rust one compiled to WebAssembly (docs/v0.3.0/SURFACE.md §10.2): each of dev, build, build:e2e and test first builds crates/wasm into src/wasm/pkg. Idempotent, and quick when nothing changed.",
-    "predev": "sh ../../scripts/build-wasm.sh",
+    "predev": "JACKIOH_WASM_DUOS=1 sh ../../scripts/build-wasm.sh",
     "dev": "vite",
-    "// prebuild": "The production bundle's module is built without crates/wasm's `preview` feature (R1420's previewSets, the engine's testkit), so a module a player loads can preview no set; every other script builds it with (scripts/build-wasm.sh).",
+    "// prebuild": "The production bundle's module is built without crates/wasm's `preview` feature (R1420's previewSets, the engine's testkit), so a module a player loads can preview no set; every other script builds it with (scripts/build-wasm.sh). Only `predev` builds crates/wasm's `duos` feature (#936's Duos bindings, which only the dev-only /dev/duos calls), so no other module, the one a player loads included, carries them.",
     "prebuild": "JACKIOH_WASM_PREVIEW=0 sh ../../scripts/build-wasm.sh",
     "build": "vite build",
     "preview": "vite preview",

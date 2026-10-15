@@ -87,22 +87,22 @@ function browserSocket(url: string): SocketLike {
 /**
  * Refusal close codes; retrying one would loop against a settled server answer.
  */
-const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
+export const REFUSAL_CLOSE_CODES: readonly number[] = [4401, 4403, 4404];
 
 /**
  * R679: a voided match has no socket to reconnect to.
  */
-const VOIDED_CLOSE_CODE = 4410;
+export const VOIDED_CLOSE_CODE = 4410;
 
 /** A short backoff; the last entry repeats. Spec 05 reloads the page, so a resume is a fresh boot. */
-const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
+export const RECONNECT_DELAYS_MS: readonly number[] = [250, 500, 1000, 2000, 5000];
 
 /**
  * R1441: each backoff gains up to this fraction of itself, drawn at random, so every client a
  * server restart or a network blip dropped at once does not come back on the same beat. It only
  * adds time, so the first retry never comes before its 250 ms.
  */
-const RECONNECT_JITTER = 0.25;
+export const RECONNECT_JITTER = 0.25;
 
 /**
  * R1441: how long a socket may have said nothing before a woken page (the tab turned visible, the
@@ -194,7 +194,9 @@ export type ServerFrame =
   /** R643: an emote the opponent sent, relayed by the actor. */
   | { type: "emote"; from: PlayerId; emote: EmoteId }
   /** R738: what the opponent is aiming at now, or null when its aim has ended. */
-  | { type: "aim"; from: PlayerId; aim: Aim | null };
+  | { type: "aim"; from: PlayerId; aim: Aim | null }
+  /** #936 B51: how many friends are watching this match, sent when the count changes. */
+  | { type: "watchers"; count: number };
 
 /**
  * Parse one text frame; unknown frames must not take the board down.
@@ -275,6 +277,11 @@ export function parseServerFrame(text: string): ServerFrame | null {
       if (aim === undefined || (from !== "p1" && from !== "p2")) return null;
       return { type: "aim", from, aim };
     }
+    case "watchers": {
+      const count = parsed.count;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return null;
+      return { type: "watchers", count };
+    }
     default:
       return null;
   }
@@ -335,6 +342,8 @@ export type MatchSnapshot = {
   emote: { from: PlayerId; emote: EmoteId; seq: number } | null;
   /** R738: the opponent's aim as last relayed; null when none is up or the socket has dropped. */
   aim: { from: PlayerId; aim: Aim } | null;
+  /** #936 B51: the last `watchers` frame's count; 0 until one arrives. */
+  watchers: number;
 };
 
 export type MatchClient = {
@@ -392,6 +401,7 @@ const INITIAL: MatchSnapshot = {
   emoteHand: null,
   emote: null,
   aim: null,
+  watchers: 0,
 };
 
 /**
@@ -513,6 +523,9 @@ export function createMatchClient(options: MatchClientOptions): MatchClient {
         return;
       case "aim":
         patch({ aim: frame.aim === null ? null : { from: frame.from, aim: frame.aim } });
+        return;
+      case "watchers":
+        patch({ watchers: frame.count });
         return;
     }
   }

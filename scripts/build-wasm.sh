@@ -34,6 +34,12 @@
 # before it ships (#552); 0 builds it without, as apps/web's `prebuild` does for the production
 # bundle, so a module a player loads can preview nothing. Cargo keeps both builds, so switching costs
 # one compile each the first time only.
+#
+# JACKIOH_WASM_DUOS: 0 (the default) builds stubs in place of crates/wasm's `duos` feature, #936's
+# Duos bindings; 1 builds them, as apps/web's `predev` does, since only `/dev/duos` calls them and
+# only the dev server serves it. A networked co-op game needs none (the server plays it), so every
+# other module (`build:e2e`'s, `test`'s, the production bundle's) leaves them out. The Luau module
+# never carries them. Switching recompiles the bindings crate only.
 
 set -eu
 
@@ -106,14 +112,28 @@ if [ "$installed" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
   fi
 fi
 
+FEATURES=""
 case "${JACKIOH_WASM_PREVIEW:-1}" in
-  1) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features preview ;;
-  0) cargo build -p jackioh-wasm --release --target "$WASM_TARGET" ;;
+  1) FEATURES="preview" ;;
+  0) ;;
   *)
     echo "build-wasm: JACKIOH_WASM_PREVIEW is 1 (the default) or 0, not \"$JACKIOH_WASM_PREVIEW\"" >&2
     exit 1
     ;;
 esac
+case "${JACKIOH_WASM_DUOS:-0}" in
+  1) FEATURES="${FEATURES:+$FEATURES,}duos" ;;
+  0) ;;
+  *)
+    echo "build-wasm: JACKIOH_WASM_DUOS is 0 (the default) or 1, not \"$JACKIOH_WASM_DUOS\"" >&2
+    exit 1
+    ;;
+esac
+if [ -n "$FEATURES" ]; then
+  cargo build -p jackioh-wasm --release --target "$WASM_TARGET" --features "$FEATURES"
+else
+  cargo build -p jackioh-wasm --release --target "$WASM_TARGET"
+fi
 mkdir -p "$OUT_DIR"
 "$WASM_BINDGEN" --target web --out-dir "$OUT_DIR" "$MODULE"
 echo "build-wasm: wrote $OUT_DIR"

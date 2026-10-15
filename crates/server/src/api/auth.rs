@@ -281,6 +281,14 @@ pub(crate) async fn remove_account(app: &App, caller: &Caller) -> Result<(), Api
             ACCOUNT_DELETION_IN_SERIES_MESSAGE,
         ));
     }
+    // Duos co-op (#946): a live co-op match is refused as a live 1v1 is; 0039's keys would
+    // otherwise cascade it away from under the teammate.
+    if crate::duos::live_match_of(app, &profile.id).await?.is_some() {
+        return Err(ApiError::new(
+            ApiErrorCode::AlreadyInMatch,
+            ACCOUNT_DELETION_IN_MATCH_MESSAGE,
+        ));
+    }
 
     let mut tx = app.db.begin(Some(&profile.id)).await?;
     tx.profiles_remove(&profile.id).await?;

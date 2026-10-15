@@ -7,10 +7,11 @@ import type { Handicap } from "./generated/Handicap.ts";
 import type { CraftHatPrice } from "./generated/CraftHatPrice.ts";
 import type { CraftKeywordPrice } from "./generated/CraftKeywordPrice.ts";
 import type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
+import type { DuosTeamRules } from "./generated/DuosTeamRules.ts";
 import type { KeywordKind } from "./generated/KeywordKind.ts";
 import type { Tag } from "./generated/Tag.ts";
 
-export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice };
+export type { Difficulty, Handicap, CraftHatPrice, CraftKeywordPrice, CraftVerbPrice, DuosTeamRules };
 
 export const AI_DIFFICULTY: Readonly<Record<Difficulty, Handicap>> = {"easy":{"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0},"medium":{"deckSize":25,"manaBonus":1,"manaCap":5,"extraOpeningCards":1,"extraDrawsPerTurn":0},"hard":{"deckSize":30,"manaBonus":1,"manaCap":7,"extraOpeningCards":1,"extraDrawsPerTurn":1}};
 export const AI_TUTORIAL: Handicap = {"deckSize":12,"manaBonus":0,"manaCap":3,"extraOpeningCards":0,"extraDrawsPerTurn":0,"heroHealth":20};
@@ -39,6 +40,12 @@ export const CUSTOM_TEXT_MAX_LENGTH = 240;
 export const DECK_SIZE = 20;
 export const DIFFICULTIES: readonly Difficulty[] = ["easy","medium","hard"];
 export const DRAWS_PER_TURN = 1;
+export const DUOS_HUMAN_TEAM: DuosTeamRules = {"ownHealth":20,"poolHealth":20,"passCost":1,"passCap":10};
+export const DUOS_OWN_HEALTH = 20;
+export const DUOS_PASS_CAP = 10;
+export const DUOS_PASS_COST = 1;
+export const DUOS_POOL_HEALTH = 20;
+export const DUOS_POOL_HEALTH_HARD = 30;
 export const GLITCH_DEF_ID = "classic-t-glitch";
 export const HERO_HEALTH = 30;
 export const HUMAN_HANDICAP: Handicap = {"deckSize":20,"manaBonus":0,"manaCap":4,"extraOpeningCards":0,"extraDrawsPerTurn":0};

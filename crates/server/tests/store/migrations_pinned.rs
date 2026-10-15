@@ -58,6 +58,8 @@ const PINNED: &[(&str, &str)] = &[
     ("0035_replay_final_hash.sql", "6f99bf0a"),
     ("0036_lean_set.sql", "ccfe33e7"),
     ("0037_custom_cards.sql", "f1bfd2c3"),
+    ("0038_social.sql", "bc59b85e"),
+    ("0039_duos.sql", "5de67f7b"),
 ];
 
 /// `PINNED[name]`.

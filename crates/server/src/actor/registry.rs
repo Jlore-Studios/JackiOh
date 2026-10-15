@@ -509,3 +509,46 @@ impl Registry {
         lock(&self.actors).keys().cloned().collect()
     }
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+impl Registry {
+    /// B50: hands a watcher's socket to the seat `friend_id` began the match in, rebuilding the actor
+    /// first when it is not in memory, as a seat's socket would. A friend who holds no seat in it
+    /// reads as a missing match; a match with no room for another watcher, or one that cannot be
+    /// watched, as a conflict (`MatchActor::attach_watcher`). The caller has already judged that
+    /// `watcher_id` may watch `friend_id` (`social::watch`).
+    pub async fn attach_watcher(
+        &self,
+        app: &Arc<App>,
+        match_id: &str,
+        friend_id: &str,
+        watcher_id: &str,
+        socket: Socket,
+    ) -> Result<(), AttachError> {
+        let actor = self.actor_for(app, match_id).await?;
+        let Some(home) = actor.seat_of(friend_id) else {
+            return Err(AttachError::Api(ApiError::new(
+                ApiErrorCode::NotFound,
+                "no such match",
+            )));
+        };
+        actor
+            .attach_watcher(home, watcher_id, socket)
+            .map_err(|refused| AttachError::Api(ApiError::new(ApiErrorCode::Conflict, refused.message())))
+    }
+
+    /// B51, S7's `watchable`: how many sockets watch the match now; none for one not in memory.
+    pub fn watcher_count(&self, match_id: &str) -> usize {
+        self.get(match_id).map_or(0, |actor| actor.watcher_count())
+    }
+
+    /// B50, B46: lets go, in every match in memory, each watcher `revoked(watcher, friend)` names
+    /// (`MatchActor::revoke_watchers`). A watcher is only ever in memory, so no match elsewhere holds
+    /// one. Answers how many went.
+    pub fn revoke_watchers(&self, revoked: impl Fn(&str, &str) -> bool) -> usize {
+        let actors: Vec<MatchActor> = lock(&self.actors).values().cloned().collect();
+        actors.iter().map(|actor| actor.revoke_watchers(&revoked)).sum()
+    }
+}
+// ---- end Social: watching and shared replays ----

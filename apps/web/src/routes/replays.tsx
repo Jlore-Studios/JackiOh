@@ -23,6 +23,8 @@ import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { ReplayFailure, replayFailureText } from "../replay/source.ts";
 import type { ReplaySource } from "../replay/source.ts";
 import { onlineReplaySource, practiceReplaySource } from "../replay/sources.ts";
+import { ShareWithFriend } from "../together/ShareReplay.tsx";
+import { sharedWithMePath } from "../together/anchors.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "./replays.css";
@@ -35,6 +37,8 @@ export const replaysTestid = {
   noOnline: "replays-no-online",
   signIn: "replays-sign-in",
   more: "replays-more",
+  /** #936 B59: Play together's list of the replays friends shared. */
+  sharedWithMe: "replays-shared-with-me",
 } as const;
 
 type Listed<Row> =
@@ -42,7 +46,8 @@ type Listed<Row> =
   | { kind: "failed"; message: string }
   | { kind: "ready"; rows: Row[]; next: number | null; loadingMore: boolean };
 
-type Open = { key: string; source: ReplaySource };
+/** The replay on screen; `matchId` for an online match's, which can be shared with a friend (#936 B59). */
+type Open = { key: string; source: ReplaySource; matchId?: string };
 
 const RESULT_WORDS: Readonly<Record<PracticeReplayListing["result"], string>> = {
   win: "Win",
@@ -145,13 +150,18 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row) });
   };
   const openOnline = (row: OnlineReplayListing): void => {
-    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row) });
+    if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId });
   };
 
   if (open !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
-        <ReplayPlayer key={open.key} source={open.source} onLeave={() => setOpen(null)} />
+        <ReplayPlayer
+          key={open.key}
+          source={open.source}
+          onLeave={() => setOpen(null)}
+          {...(open.matchId === undefined ? {} : { actions: <ShareWithFriend matchId={open.matchId} /> })}
+        />
       </CatalogContext.Provider>
     );
   }
@@ -202,6 +212,14 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
           </p>
         ) : null}
         {account.kind === "error" ? <p role="alert">{account.message}</p> : null}
+        {token === null ? null : (
+          // #936 B59: the replays friends shared with this account are listed on Play together.
+          <p>
+            <a href={sharedWithMePath()} data-testid={replaysTestid.sharedWithMe} onClick={followInApp(sharedWithMePath())}>
+              {t("Shared with me →")}
+            </a>
+          </p>
+        )}
         {token !== null && online.kind === "loading" ? <p role="status">{t("Reading your online games…")}</p> : null}
         {token !== null && online.kind === "failed" ? <p role="alert">{online.message}</p> : null}
         {token !== null && online.kind === "ready" && online.rows.length === 0 ? (
@@ -224,6 +242,8 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                     <button type="button" onClick={() => openOnline(row)} disabled={why !== null}>
                       {t("Watch")}
                     </button>
+                    {/* #936 B59: a game that can be watched can be shared with a friend. */}
+                    {why === null ? <ShareWithFriend matchId={row.matchId} /> : null}
                   </li>
                 );
               })}

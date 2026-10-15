@@ -45,6 +45,7 @@
 //! HOW TO RUN
 //!   cargo jackioh fuzz                              the gate: seeds 1–1000
 //!   cargo jackioh fuzz --handicap                   the handicapped wave: seeds 1–1000
+//!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
 //!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
 //!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named
 //!
@@ -78,7 +79,7 @@ use rayon::prelude::*;
 use crate::agent::panic_message;
 use crate::gate::MS_PER_SECOND;
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap]` (SURFACE §12).
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos]` (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// The first seed of the wave (TS `JACKIOH_FUZZ_FROM`): 1 for the gate. `--from 700 --seeds 1`
@@ -93,12 +94,19 @@ pub struct Args {
     /// Hard, rotating by seed.
     #[arg(long)]
     pub handicap: bool,
+    /// Play random-policy Duos co-op games instead of the gate (#936 B25, `duos_fuzz.rs`): 200 seeds
+    /// unless `--seeds` says otherwise.
+    #[arg(long)]
+    pub duos: bool,
 }
 
-/// Runs the gate, or with `--handicap` the handicapped wave; prints its numbers and, when a seed
-/// failed, the report, and fails (exit 1).
+/// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave; prints its
+/// numbers and, when a seed failed, the report, and fails (exit 1).
 pub fn run(args: Args) -> anyhow::Result<()> {
     let from = first_seed(args.from);
+    if args.duos {
+        return crate::duos_fuzz::run(from, args.seeds);
+    }
     let ran = wave_size(args.seeds);
     if args.handicap {
         let wave = play_handicap_wave(from, ran);
