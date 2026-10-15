@@ -24,8 +24,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, UnitView, find_instance, has_keyword,
-    legal_actions, reduce, subsystems, takes_strike_back, unit_view,
+    Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, UnitView, effective_life,
+    find_instance, has_keyword, legal_actions, reduce, subsystems, takes_strike_back, unit_view,
 };
 
 use crate::candidates::candidate_actions_in;
@@ -126,11 +126,21 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     value
 }
 
+/// The static trader's value of a face hit of `damage` on `seat`'s hero: AI_EVAL.win when it would end
+/// the game, judged against all of `seat`'s life (`effective_life`: in a Duos duel its own HP and its
+/// team's pool while unspent, R964000), else AI_REPLY.face_per_damage a point.
+pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
+    if damage >= effective_life(state, seat) {
+        AI_EVAL.win
+    } else {
+        AI_REPLY.face_per_damage * f64::from(damage)
+    }
+}
+
 /// The opponent's attacks worth making out of `legal` (legal_actions(state, opp)), best static value
 /// first (ties keep legal_actions order).
 fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Vec<ActionBody> {
     let hero = format!("hero-{}", seat.as_str());
-    let health = state.players[seat].hero.health;
     let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
     for action in legal.iter().cloned() {
         let ActionBody::Attack {
@@ -146,11 +156,7 @@ fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Ve
         let value = if *target_id == hero {
             let damage =
                 subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, false);
-            if damage >= health {
-                AI_EVAL.win
-            } else {
-                AI_REPLY.face_per_damage * f64::from(damage)
-            }
+            reply_face_value(state, seat, damage)
         } else {
             trade_value(state, attacker, target_id)
         };

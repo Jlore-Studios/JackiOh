@@ -104,7 +104,7 @@ The client draws the seat's own duel as the 1v1 board ([[§10.10]]), with a life
 
 ### 13.7 The AI team
 
-One AI plays both seats of team B. Each seat plays its own duel as the practice AI plays a 1v1 game ([[§9.9]]): its mulligan and its prompts by the 1v1 decision, and its own turn by the same search, except that when the search would end the turn, the seat first makes its passes and then ends it.
+One AI plays both seats of team B. Each seat plays its own duel as the practice AI plays a 1v1 game ([[§9.9]]): its mulligan and its prompts by the 1v1 decision, and its own turn by the same search, except that when the search would end the turn, the seat first makes its passes and then ends it. It counts a seat's life as [[§13.4]]'s lethal judge does, its own HP and its team's pool together, and values a seat against the life it started with ([[R964000]]).
 
 - **Passing.** When it can pay, a seat passes a hand card it cannot play this turn and its teammate can: the teammate is a round seat that has not ended, can afford the card and has a zone for it. When passing is free, it also passes a card the teammate can afford next turn and it cannot. It passes the best cards first, and never more than its passes left or its teammate's free hand slots.
 - **Information.** It decides from what its team may know ([[R185]]): its own duel through the 1v1 decision's determinization, and its teammate's own state, which the team shares ([[§13.6]]). It never reads an opponent's hidden card.
