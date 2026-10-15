@@ -1,7 +1,8 @@
 // Play lobby (SPEC §9.5; R104, R253, R257, R258, R259, R264, R330, R505, R612, R661, R765, R767,
 // R1372, R640002). Verdicts are UX only (CLAUDE.md rule 7); the server owns validation and matchmaking.
 // Room links only prefill, the queue's readout stays on the mode tiles and the games line under them,
-// and rank never exposes its hidden rating.
+// and rank never exposes its hidden rating. R915005: a deck naming a custom card (or a trio holding
+// one) plays only in practice, so the pickers show it off, saying why, and never pick it themselves.
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 
@@ -37,6 +38,7 @@ import {
   type SavedDeck,
   type SavedTrio,
 } from "../net/api.ts";
+import { namesCustomCard } from "../creator/useCustomCards.ts";
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { MATCH_FOUND_STATUS, forgetQueued, liveGameOf, readQueued, rememberQueued } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -81,6 +83,8 @@ export const playTestid = {
   rank: "play-rank",
   leaderboard: "play-leaderboard",
   leanNewest: "play-lean-newest",
+  /** R915005: under a picker that offers a deck or trio naming a custom card: why it is off. */
+  practiceOnly: "play-practice-only",
 } as const;
 
 export const QUEUE_MODES: readonly QueueMode[] = ["bo1", "bo3", "random"];
@@ -210,24 +214,54 @@ function useLobbyData(token: string): LobbyLoad {
   return load;
 }
 
-/** The remembered deck if it is still saved, else the first complete deck, else the first deck. */
+/** R915005: a deck that names a custom card plays only in practice, never online. */
+export function deckPracticeOnly(deck: SavedDeck): boolean {
+  return namesCustomCard(deck.cards);
+}
+
+/** R915005: a trio holding such a deck is no online trio either. */
+export function trioPracticeOnly(trio: SavedTrio, decks: readonly SavedDeck[]): boolean {
+  return trio.deckIds.some((id) => {
+    const deck = id === null ? undefined : decks.find((saved) => saved.id === id);
+    return deck !== undefined && deckPracticeOnly(deck);
+  });
+}
+
+/**
+ * The remembered deck if it is still saved, else the first complete deck, else the first deck; never
+ * one that plays only in practice (R915005).
+ */
 export function defaultDeck(decks: readonly SavedDeck[], remembered: string | null): SavedDeck | null {
+  const online = decks.filter((deck) => !deckPracticeOnly(deck));
   return (
-    decks.find((deck) => deck.id === remembered) ??
-    decks.find((deck) => deck.cards.length === DECK_SIZE) ??
-    decks[0] ??
+    online.find((deck) => deck.id === remembered) ??
+    online.find((deck) => deck.cards.length === DECK_SIZE) ??
+    online[0] ??
     null
   );
 }
 
-/** The remembered trio if it is still saved, else the first trio with three decks, else the first. */
-export function defaultTrio(trios: readonly SavedTrio[], remembered: string | null): SavedTrio | null {
+/**
+ * The remembered trio if it is still saved, else the first trio with three decks, else the first;
+ * never one holding a deck that plays only in practice (R915005).
+ */
+export function defaultTrio(
+  trios: readonly SavedTrio[],
+  remembered: string | null,
+  decks: readonly SavedDeck[] = [],
+): SavedTrio | null {
+  const online = trios.filter((trio) => !trioPracticeOnly(trio, decks));
   return (
-    trios.find((trio) => trio.id === remembered) ??
-    trios.find((trio) => trio.deckIds.every((id) => id !== null)) ??
-    trios[0] ??
+    online.find((trio) => trio.id === remembered) ??
+    online.find((trio) => trio.deckIds.every((id) => id !== null)) ??
+    online[0] ??
     null
   );
+}
+
+/** "Name (practice only)": a deck or trio the picker shows but does not offer (R915005). */
+function practiceOnlyLabel(name: string): string {
+  return t("{name} (practice only)", { name });
 }
 
 /** Queue/room choice; null when its required pick is absent. */
@@ -623,7 +657,7 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
   const lobby = useLobbyData(token);
   const data = lobby.kind === "ready" ? lobby.data : null;
   const deck = data === null ? null : defaultDeck(data.decks, deckId);
-  const trio = data === null ? null : defaultTrio(data.trios, trioId);
+  const trio = data === null ? null : defaultTrio(data.trios, trioId, data.decks);
   const choice = choiceFor(mode, deck, trio, lean);
   const verdict = data === null ? null : verdictFor(mode, deck, trio, data);
 
@@ -926,13 +960,25 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                     setDeckId(event.target.value);
                   }}
                 >
-                  {data.decks.map((saved) => (
-                    <option key={saved.id} value={saved.id}>
-                      {saved.name}
-                    </option>
-                  ))}
+                  {deck === null ? <option value="">{t("No deck plays online yet")}</option> : null}
+                  {data.decks.map((saved) =>
+                    deckPracticeOnly(saved) ? (
+                      <option key={saved.id} value={saved.id} disabled>
+                        {practiceOnlyLabel(saved.name)}
+                      </option>
+                    ) : (
+                      <option key={saved.id} value={saved.id}>
+                        {saved.name}
+                      </option>
+                    ),
+                  )}
                 </select>
                 {deck === null ? null : <DeckSummary deck={deck} />}
+                {data.decks.some(deckPracticeOnly) ? (
+                  <p className="lobby-note" data-testid={playTestid.practiceOnly}>
+                    {t("A deck with a custom card plays only in practice, against the AI.")}
+                  </p>
+                ) : null}
               </div>
             )
           ) : null}
@@ -958,13 +1004,25 @@ export default function PlayRoute({ token }: PlayRouteProps): ReactElement {
                     setTrioId(event.target.value);
                   }}
                 >
-                  {data.trios.map((saved) => (
-                    <option key={saved.id} value={saved.id}>
-                      {saved.name}
-                    </option>
-                  ))}
+                  {trio === null ? <option value="">{t("No trio plays online yet")}</option> : null}
+                  {data.trios.map((saved) =>
+                    trioPracticeOnly(saved, data.decks) ? (
+                      <option key={saved.id} value={saved.id} disabled>
+                        {practiceOnlyLabel(saved.name)}
+                      </option>
+                    ) : (
+                      <option key={saved.id} value={saved.id}>
+                        {saved.name}
+                      </option>
+                    ),
+                  )}
                 </select>
                 {trio === null ? null : <TrioSummary trio={trio} decks={data.decks} />}
+                {data.trios.some((saved) => trioPracticeOnly(saved, data.decks)) ? (
+                  <p className="lobby-note" data-testid={playTestid.practiceOnly}>
+                    {t("A trio holding a deck with a custom card cannot play Conquest: custom cards play only in practice.")}
+                  </p>
+                ) : null}
               </div>
             )
           ) : null}

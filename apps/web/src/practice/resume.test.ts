@@ -120,4 +120,25 @@ describe("R668 the practice game to resume, on the device", () => {
     }).not.toThrow();
     expect(readPracticeResume()).toBeNull();
   });
+
+  it("R915006 a game with custom cards is kept with them, a Try it deck reads back, and malformed cards are no game", () => {
+    const card = {
+      id: "custom-ember-imp",
+      version: 1,
+      frame: { name: "Ember Imp", type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
+      source: "",
+    } as const;
+    const custom: PracticeStartConfig = { ...CONFIG, deck: { kind: "try", card: card.id }, customCards: [card] };
+    writePracticeResume(custom);
+    expect(readPracticeResume()).toEqual(custom);
+    writePracticeResume({ ...CONFIG, customCards: [] });
+    expect(readPracticeResume(), "an empty list is no custom card, and is not kept").toEqual(CONFIG);
+
+    for (const customCards of [[], "custom-ember-imp", [{ version: 1 }], [null]]) {
+      window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, customCards }));
+      expect(readPracticeResume(), JSON.stringify(customCards)).toBeNull();
+    }
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, deck: { kind: "try" } }));
+    expect(readPracticeResume(), "a Try it deck names its card").toBeNull();
+  });
 });

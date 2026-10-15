@@ -109,16 +109,23 @@ export type DeckStatus = { kind: DeckStatusKind; label: string };
 
 /**
  * The deck row's chip: "Ready" (may queue), "Incomplete" (L2), "N not owned" (L5 only) or "Needs a
- * fix" (anything else). With no collection a legal deck is "Complete", not "Ready". The label is in
- * the reader's language, so call it at render time.
+ * fix" (anything else). With no collection a legal deck is "Complete", not "Ready". R915005's L7 says
+ * where a deck plays, not what it lacks (`practiceOnly` badges it), so a deck that breaks only L7 is
+ * "Complete", never "Ready". The label is in the reader's language, so call it at render time.
  */
 export function deckStatus(verdict: LoadoutResult, collectionKnown: boolean): DeckStatus {
   if (verdict.ok) return collectionKnown ? { kind: "ready", label: t("Ready") } : { kind: "complete", label: t("Complete") };
-  const rules = verdict.errors.map((issue) => issue.rule);
+  const rules = verdict.errors.map((issue) => issue.rule).filter((rule) => rule !== "L7");
+  if (rules.length === 0) return { kind: "complete", label: t("Complete") };
   if (rules.includes("L2")) return { kind: "incomplete", label: t("Incomplete") };
   const unowned = rules.filter((rule) => rule === "L5").length;
   if (unowned > 0 && unowned === rules.length) return { kind: "unowned", label: t("{count} not owned", { count: unowned }) };
   return { kind: "invalid", label: t("Needs a fix") };
+}
+
+/** R915005: the validator's L7, a deck (or a trio) that names a custom card and so plays only in practice. */
+export function practiceOnly(verdict: LoadoutResult): boolean {
+  return !verdict.ok && verdict.errors.some((issue) => issue.rule === "L7");
 }
 
 /** A trio's three slots as decks, an empty slot (or one naming a deck that is gone) as null. */

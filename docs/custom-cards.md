@@ -184,6 +184,39 @@ fractions, nothing the sandbox removed) and `Card { … }`'s own checks, each sh
   `math.floor`.
 - Keep anything between runs: a hook's locals start fresh on every run.
 
+## The creator
+
+`/creator` (from the landing page's "Make cards" and the deck builder) lists your custom cards and
+edits one at a time (§12.11, R915010). The form holds the frame; the card's effects are written in one
+of two views of the same card:
+
+- **Builder**: blocks picked from menus, every word one of the kit's. Pick the target the card asks
+  for as it is played, add triggers (Cry, Death, start or end of your turn), give each its effects and
+  an optional condition ("only if you have at least 3 friendly units"), and for a Unit an aura or an
+  Activate. Each amount is one of the card's numbers (`dmg`, `dmg2`, `cards`, …), whose Radiant value
+  the numbers table sets, and the builder writes the card's text from the blocks until you write your
+  own. `apps/web/src/creator/builder.ts` is the whole vocabulary and the Luau it writes.
+- **Code**: the script itself, highlighted, with each problem the Luau module's check finds marked on
+  its line. Anything in this guide can be written here.
+
+A card whose script is still exactly what its blocks write opens in the builder; one written or
+changed in code stays code-only, and the builder says so (undo the change to go back, or start over).
+The frame's issues are the engine validator's, shown under their fields as you type; the script's come
+from the Luau module, which the creator loads the first time it checks one. A card with a script
+problem is not saved. Saving puts it on your account, so every device you sign in on has it; a save
+from a tab that is behind another save is refused and offers the newer one. "Try it against the AI"
+saves the card and starts a practice game with a random deck holding it.
+
+## Practice
+
+A custom card goes in a deck like any other card (the deck builder's "Custom" filter), and the deck is
+then marked practice only: the queue, rooms, rematches and ranked play refuse it (L7, R915005), and the
+server refuses it too. Started from practice, a game whose deck holds custom cards runs in the Luau
+module (R915009); the AI's deck stays a normal deck. The game records no card statistics, no ladder
+and no tutorial progress, and it is kept to resume and to replay with the cards as they were when it
+was dealt (R915006), so editing a card later never changes a game already played. A deck naming a card
+you deleted cannot start until the card is replaced.
+
 ## Limits
 
 | | |

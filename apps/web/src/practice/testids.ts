@@ -19,6 +19,15 @@ export const practiceTestid = {
   deckCurve: "practice-deck-curve",
   /** In the preview: one row per card of the chosen deck. */
   deckCard: (defId: string): string => `practice-deck-card-${defId}`,
+  /**
+   * R915005: under the preview, why a saved deck that names custom cards cannot start (one is gone,
+   * or they are still loading or could not be read); Start is off while it shows. role="status".
+   */
+  customBlocked: "practice-custom-blocked",
+  /** #921: `?try=<custom id>` while the account's custom cards are read, before the game starts. */
+  tryLoading: "practice-try-loading",
+  /** #921: on the setup, after `?try=` named no custom card of the account's; role="status". */
+  tryMissing: "practice-try-missing",
   start: "practice-start",
   loading: "practice-loading",
   error: "practice-error",

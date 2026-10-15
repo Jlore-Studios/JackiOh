@@ -13,6 +13,8 @@ export const landingTestid = {
   playAi: "landing-play-ai",
   playOnline: "landing-play-online",
   buildDecks: "landing-build-decks",
+  /** #920: the card creator. */
+  makeCards: "landing-make-cards",
   fan: "landing-card-fan",
   fanLeaving: "landing-fan-leaving",
   hotseat: "landing-hotseat",

@@ -65,8 +65,17 @@ The AI decides from what its seat may know ([[R185]]) and assumes nothing about 
 
 ### 12.9 Saved on the account
 
-An active account's custom cards are stored by the server in a table only their owner can read or write: at most `CUSTOM_CARDS_PER_ACCOUNT` (50), each saved whole by the routes under `/api/custom-cards` (list, get, create, update, delete). The server checks the frame with the engine's validator and the source's size, and never compiles or runs a script; the creator checks a script with the Luau module before it saves it. A deleted card leaves the decks that name it, which then cannot start a game until it is replaced.
+An active account's custom cards are stored by the server in a table only their owner can read or write ([[R915008]]): at most `CUSTOM_CARDS_PER_ACCOUNT` (50), each saved whole by the routes under `/api/custom-cards` (list, get, create, update, delete). The server checks the frame with the engine's validator and the source's size, and never compiles or runs a script; the creator checks a script with the Luau module before it saves it. A deleted card leaves the decks that name it, which then cannot start a game until it is replaced.
 
 ### 12.10 Practice with custom cards
 
 A practice game whose human deck holds a custom card runs in the Luau module, loaded only then ([[R915009]]). It records no card statistics ([[§9.11]]), no ladder progress and no tutorial progress. A normal game, practice or online, loads no Luau.
+
+### 12.11 The creator
+
+A signed-in player makes, edits and deletes their custom cards in the card creator, at `/creator` ([[R915010]]). It edits a card's frame in a form and its script one of two ways, which are two views of the same card:
+
+- **The builder** writes the script from blocks picked from menus, all in the kit's words: a target chosen as the card is played, then triggers (a Cry, a Death, the start or end of the player's turn), each with effects and an optional condition, then for a Unit an aura and an Activate. Each amount a block names is one of the card's numbers, and the builder writes the card's text from the blocks until the player writes their own. The builder's model is saved beside the card, and only the creator reads it.
+- **The code view** shows the same script in the kit, highlighted and editable, with each problem the Luau module's check finds shown on its line.
+
+A card whose script is still the one its model writes opens in the builder. A card written in code, or whose script was changed in the code view, is code-only: the builder says why it cannot show it and offers to start the card over. The frame's issues come from the engine's validator as the player types, the script's from the Luau module, and the creator saves no card whose script has a problem; the server's own refusals are shown as it sends them. A card is saved to the account ([[§12.9]]), so it is the same on every device the player signs in on, and "Try it" starts a practice game against the AI with a random deck holding the card ([[§12.10]]).

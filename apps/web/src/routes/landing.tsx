@@ -333,6 +333,14 @@ function Actions(): ReactElement {
         >
           {t("Build decks")}
         </a>
+        <a
+          className="landing-cta landing-cta--secondary"
+          href={paths.creator}
+          data-testid={landingTestid.makeCards}
+          onClick={followInApp(paths.creator)}
+        >
+          {t("Make cards")}
+        </a>
       </div>
       {/* Said where the player decides, not after they have signed up and confirmed an email. */}
       <p className="landing-cta-note" data-testid={landingTestid.inviteOnly}>

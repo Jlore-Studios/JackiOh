@@ -22,7 +22,7 @@
   },
   "ignoreCommand": "sh \"$(git rev-parse --show-toplevel)/scripts/vercel-ignore.sh\" && exit 0; exit 1",
   "rewrites": [
-    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|terms|accessibility|copyright|patch-notes|almanac|leaderboard|stats){/}?", "destination": "/index.html" },
+    { "source": "/(login|reset-password|invite|decks|play|account|practice|privacy|terms|accessibility|copyright|patch-notes|almanac|leaderboard|stats|creator){/}?", "destination": "/index.html" },
     { "source": "/(match|series)/([^/]+){/}?", "destination": "/index.html" }
   ],
   "headers": [

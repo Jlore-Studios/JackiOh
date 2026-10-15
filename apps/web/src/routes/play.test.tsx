@@ -43,6 +43,8 @@ import PlayRoute, {
   MATCH_FOUND_STATUS,
   MODE_LABEL,
   PLAY_CHOICE_KEY,
+  defaultDeck,
+  defaultTrio,
   pairTargetOf,
   playModeTestid,
   playTestid,
@@ -1081,5 +1083,48 @@ describe("R767 a room shared as a link", () => {
     expect(screen.getByTestId(playTestid.copyRoomLink)).toHaveTextContent("Copy invite link");
     expect(writeText).not.toHaveBeenCalled();
     expect(screen.queryByTestId(playTestid.error)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+// R915005: a deck naming a custom card plays only in practice
+// ---------------------------------------------------------------------------------------------
+
+describe("R915005 the lobby never offers a deck or trio that names a custom card", () => {
+  const CUSTOM = deck("d-custom", "Imps", [...run(1 + DECK_SIZE).slice(1), "custom-ember-imp"]);
+  const CUSTOM_TRIO = trio("t-custom", "Imp trio", [AGGRO.id, CUSTOM.id, RAMP.id]);
+
+  it("R915005 defaultDeck and defaultTrio pass over a practice deck, even when it is the remembered one", () => {
+    expect(defaultDeck([CUSTOM, AGGRO], CUSTOM.id)).toBe(AGGRO);
+    expect(defaultDeck([CUSTOM], null)).toBeNull();
+    expect(defaultTrio([CUSTOM_TRIO, MAIN], CUSTOM_TRIO.id, [AGGRO, CUSTOM, CONTROL, RAMP])).toBe(MAIN);
+    expect(defaultTrio([CUSTOM_TRIO], null, [AGGRO, CUSTOM, RAMP])).toBeNull();
+  });
+
+  it("R915005 the practice deck shows off, marked practice only, the remembered pick falls back, and the note says why", async () => {
+    window.localStorage.setItem(PLAY_CHOICE_KEY, JSON.stringify({ mode: "bo1", deckId: CUSTOM.id }));
+    vi.mocked(getDecks).mockResolvedValue(decksAnswer([CUSTOM, AGGRO], [CUSTOM_TRIO, MAIN]));
+    await renderLobby();
+
+    const select = screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement;
+    expect(select.value).toBe(AGGRO.id);
+    const option = within(select).getByRole("option", { name: "Imps (practice only)" }) as HTMLOptionElement;
+    expect(option.disabled).toBe(true);
+    expect(screen.getByTestId(playTestid.practiceOnly)).toHaveTextContent("A deck with a custom card plays only in practice");
+
+    pickMode("bo3");
+    const trios = screen.getByTestId(playTestid.trioSelect) as HTMLSelectElement;
+    expect(trios.value).toBe(MAIN.id);
+    expect((within(trios).getByRole("option", { name: "Imp trio (practice only)" }) as HTMLOptionElement).disabled).toBe(true);
+    expect(screen.getByTestId(playTestid.practiceOnly)).toHaveTextContent("cannot play Conquest");
+  });
+
+  it("R915005 with only practice decks there is nothing to queue or bring to a room", async () => {
+    vi.mocked(getDecks).mockResolvedValue(decksAnswer([CUSTOM], []));
+    await renderLobby();
+    expect((screen.getByTestId(playTestid.deckSelect) as HTMLSelectElement).value).toBe("");
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.createRoom)).toBeDisabled();
+    expect(screen.getByTestId(playTestid.joinSubmit)).toBeDisabled();
   });
 });

@@ -1,8 +1,10 @@
 // Practice setup maps difficulty and deck selection to Start (SPEC §9.9).
 // AI resource tiers derive from `AI_DIFFICULTY` (CLAUDE.md rule 9).
 // R1373, R924000: only the player's Random deck can lean toward a set; retain its pick.
+// R915005: a saved deck that names custom cards starts with them (`customCards`), drawn in the preview
+// from their frames; one that names a card the account no longer has says so and does not start.
 
-import { useId, useState, type FormEvent, type ReactElement } from "react";
+import { useId, useMemo, useState, type FormEvent, type ReactElement } from "react";
 
 import {
   AI_DIFFICULTY,
@@ -14,8 +16,15 @@ import {
   type Handicap,
 } from "@jackioh/engine/config";
 
-import type { CardDefs, LeanPick } from "@jackioh/shared";
+import type { CardDefs, CustomCard, LeanPick } from "@jackioh/shared";
 
+import {
+  customCardsOfDeck,
+  customDefsOf,
+  gameCustomCards,
+  namesCustomCard,
+  type CustomCardsState,
+} from "../creator/useCustomCards.ts";
 import { LeanSetPicker } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
@@ -38,7 +47,14 @@ import "./practice.css";
  * Selection passed to Start, including the random deck's "More cards from" pick (R1373, R924000) and
  * whether the game is a sandbox with dev tools (R923000).
  */
-export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanSet?: LeanPick | null; sandbox?: boolean };
+export type PracticeSetupChoice = {
+  difficulty: Difficulty;
+  deck: PracticeDeckChoice;
+  leanSet?: LeanPick | null;
+  sandbox?: boolean;
+  /** R915006: the custom cards the deck names, which the game carries (R915009: it runs on the Luau module). */
+  customCards?: CustomCard[];
+};
 
 /**
  * What the player's account offers the deck picker, and why when it offers nothing, so the hint
@@ -64,8 +80,25 @@ type PracticeSetupProps = {
   /** The worker's catalog for the deck preview; null while it loads or when it could not be read. */
   defs: CardDefs | null;
   defsFailed: boolean;
+  /** §12.9: the account's custom cards, which a saved deck may name; absent, there are none. */
+  custom?: CustomCardsState;
   onStart(choice: PracticeSetupChoice): void;
 };
+
+const NO_CUSTOM: CustomCardsState = { kind: "none" };
+const NO_CARDS: readonly CustomCard[] = [];
+
+/** Why a saved deck that names custom cards cannot start yet, or null when it can. */
+function customBlock(custom: CustomCardsState, missing: number): string | null {
+  if (custom.kind === "loading") return t("Loading your custom cards…");
+  if (custom.kind !== "ready") return t("Your custom cards could not be loaded, so this deck cannot start.");
+  if (missing === 0) return null;
+  return missing === 1
+    ? t("This deck names a custom card you no longer have. Replace it in Decks to play this deck.")
+    : t("This deck names {count} custom cards you no longer have. Replace them in Decks to play this deck.", {
+        count: String(missing),
+      });
+}
 
 function savedHint(saved: SavedDecks): ReactElement | null {
   switch (saved.kind) {
@@ -112,6 +145,8 @@ function previewFor(
         identity: t("One of your saved decks, exactly as you saved it."),
         cards: choice.cards,
       };
+    case "try":
+      return { title: t("Random deck"), identity: t("A random deck with your custom card."), cards: null };
   }
 }
 
@@ -171,7 +206,7 @@ function tierStats(handicap: Handicap): TierStat[] {
   ];
 }
 
-export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: PracticeSetupProps): ReactElement {
+export function PracticeSetup({ saved, initial, defs, defsFailed, custom = NO_CUSTOM, onStart }: PracticeSetupProps): ReactElement {
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
   const [deck, setDeck] = useState<string>(initial.deck);
   const [lean, setLean] = useState<LeanPick | null>(initial.leanSet ?? null);
@@ -188,9 +223,23 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
   const preview = previewFor(choice, savedDecks);
   const hint = savedHint(saved);
 
+  // R915005: the custom cards a saved deck names, drawn from their frames beside the catalog.
+  const customCards = custom.kind === "ready" ? custom.cards : NO_CARDS;
+  const customDefs = useMemo(() => customDefsOf(customCards), [customCards]);
+  const previewDefs = useMemo(() => (defs === null ? null : { ...defs, ...customDefs }), [defs, customDefs]);
+  const named = choice.kind === "saved" && namesCustomCard(choice.cards) ? customCardsOfDeck(choice.cards, customCards) : null;
+  const blocked = named === null ? null : customBlock(custom, named.missing.length);
+
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onStart({ difficulty, deck: choice, leanSet: lean, ...(sandbox ? { sandbox: true } : {}) });
+    if (blocked !== null) return;
+    onStart({
+      difficulty,
+      deck: choice,
+      leanSet: lean,
+      ...(sandbox ? { sandbox: true } : {}),
+      ...(named === null || named.cards.length === 0 ? {} : { customCards: gameCustomCards(named.cards) }),
+    });
   }
 
   return (
@@ -276,9 +325,14 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
             title={preview.title}
             identity={preview.identity}
             cards={preview.cards}
-            defs={defs}
+            defs={previewDefs}
             defsFailed={defsFailed}
           />
+          {blocked === null ? null : (
+            <p className="practice-setup__hint" data-testid={practiceTestid.customBlocked} role="status">
+              {blocked}
+            </p>
+          )}
         </div>
 
         <label className="practice-setup__sandbox">
@@ -297,7 +351,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
           </span>
         </label>
 
-        <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start}>
+        <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start} disabled={blocked !== null}>
           {t("Start game")}
         </button>
       </div>

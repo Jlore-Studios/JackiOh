@@ -123,6 +123,7 @@ const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
 const StatsRoute = lazy(() => import("./routes/stats.tsx"));
+const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -666,6 +667,18 @@ export function App(): ReactElement {
         <EngineGate>
           <PracticeRoute />
         </EngineGate>
+      );
+    }
+    // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
+    if (path === paths.creator) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <CreatorRoute token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
       );
     }
     if (path === paths.leaderboard) {
