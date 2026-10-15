@@ -1454,10 +1454,27 @@ impl Db {
         }
     }
 
-    /// Lets the pool's connections go, for a CLI about to exit. A no-op on the fake.
+    /// Lets the pool's connections go, for a CLI about to exit, and for `app::serve_until`'s
+    /// drain. A no-op on the fake.
     pub async fn close(&self) {
         if let Db::Pg(pool) = self {
-            pool.close().await;
+            pg::close(pool).await;
+        }
+    }
+
+    /// `/readyz`'s question (#861): whether the store answers. The pool connects lazily, so this
+    /// is what finds a database that died after boot. The fake answers once its tables' lock is
+    /// free.
+    pub async fn ping(&self) -> Result<(), StoreError> {
+        match self {
+            Db::Pg(pool) => {
+                sqlx::query("select 1").execute(pool).await?;
+                Ok(())
+            }
+            Db::Fake(data) => {
+                drop(data.lock().await);
+                Ok(())
+            }
         }
     }
 }

@@ -12,10 +12,11 @@ use std::cmp::Ordering;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::layers::AuraTable;
 use crate::prelude::json_as;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance};
-use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, perfect_pool, score_def};
+use crate::subsystems::scorer::{Scored, ScorerOptions, dry_run_base, perfect_pool, score_def_in};
 use crate::wire::PlayerId;
 
 /// `rank_perfect_hand`'s options.
@@ -51,9 +52,11 @@ pub fn rank_perfect_hand(
     let scorer_options = ScorerOptions {
         radiant: Some(radiant),
     };
+    // #892: one aura table for every candidate.
+    let auras = AuraTable::new(state);
     let mut ranked: Vec<Scored> = pool
         .into_iter()
-        .map(|def| score_def(state, viewer, def, &scorer_options, base.as_mut()))
+        .map(|def| score_def_in(&auras, viewer, def, &scorer_options, base.as_mut()))
         .collect();
     // Best score first; a NaN difference ties, and ties go by card id.
     ranked.sort_by(|a, b| match b.score.partial_cmp(&a.score) {

@@ -984,7 +984,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 - **Deploy**: `crates/server/Dockerfile` (multi-stage: `rust:1.97-slim` builds
   `cargo build --release -p jackioh-server`; `debian:bookworm-slim` with `ca-certificates` runs
   `/app/jackioh-server release`), `render.yaml` `runtime: docker`, the same service name, region,
-  plan, health check (`/api/catalog`) and env contract minus the Node-only keys (`NODE_VERSION`,
+  plan, health check (`/api/catalog` then, `/readyz` since #861) and env contract minus the Node-only keys (`NODE_VERSION`,
   `CYPRESS_INSTALL_BINARY`). `NODE_ENV` is still read (E2E refusal).
 
 ## 12. The `jackioh` CLI

@@ -427,6 +427,26 @@ impl Registry {
         tracing::info!(event = "match.stopped", matchId = %match_id);
     }
 
+    /// #861's drain: stops every in-memory actor the way `stop` stops one — its clock stops,
+    /// `MatchActor::halt` sends its open sockets 1001, and its queue drains, so a result being
+    /// written lands — and answers how many actors it stopped. `halt` sets `stopped` first, so
+    /// `on_socket_gone` stores no grace. The next process rebuilds each match from its log (§9.5),
+    /// and R744 starts the grace of a seat that does not come back. The log is untouched, so replay
+    /// is unaffected.
+    pub async fn stop_all(&self) -> usize {
+        let actors: Vec<(String, MatchActor)> = lock(&self.actors).drain(..).collect();
+        let count = actors.len();
+        let mut stopping = tokio::task::JoinSet::new();
+        for (match_id, actor) in actors {
+            stopping.spawn(async move {
+                actor.stop().await;
+                tracing::info!(event = "match.stopped", matchId = %match_id);
+            });
+        }
+        while stopping.join_next().await.is_some() {}
+        count
+    }
+
     /// Hands a socket to the seat this profile holds, rebuilding the actor first if it is not in
     /// memory. The socket itself is never told anything but its own `view_for` (§10.8). (TS resolved
     /// with the seat for the caller's log; SURFACE §11.2 answers `()`, and the actor logs the seat.)

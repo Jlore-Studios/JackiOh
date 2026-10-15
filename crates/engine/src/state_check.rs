@@ -38,6 +38,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::config::{BACKROW_ZONES, STATE_CHECK_PASS_CAP, UNIT_ZONES};
+use crate::layers::AuraTable;
 use crate::prompts::{ListStatus, ResumePlan, SELF_KEY, run_resumable_list};
 use crate::resolve::{HookOptions, make_context};
 use crate::script::{EngineSink, HookArgs};
@@ -94,8 +95,8 @@ fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
 /// §4.5 step 1: a unit dies at 0 or less health or when marked destroyed. Indestructible units are
 /// not collected for damage or a destroy mark, but one whose max health has fallen to 0 or less is
 /// (R69); one merely at 0 or less health with positive max health stays.
-fn is_dying(sink: &EngineSink<'_>, unit: &CardInstance) -> bool {
-    let view = crate::layers::unit_view(&*sink.state, unit);
+fn is_dying(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    let view = auras.unit_view(unit);
     let indestructible = has_keyword(&view.keywords, KeywordKind::Indestructible);
     if indestructible {
         return view.max_health <= 0;
@@ -955,12 +956,14 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
         // included — is sacrificed before anything is collected; a Vanilla one has no text (`scriptOf`).
         let tributes: Vec<CardInstance> = {
             let state = &*sink.state;
+            // #892: one aura table for every permanent's Untributable.
+            let auras = AuraTable::new(state);
             permanents_in_play(state)
                 .into_iter()
                 .filter(|card| {
                     // R1220: an Untributable card's `tributeWhen` never fires — without this, a card
                     // whose condition holds would loop the state check up to its pass cap.
-                    !crate::query::is_untributable(state, card)
+                    !crate::query::is_untributable_in(&auras, card)
                         && crate::scripts::script_of(state, card)
                             .tribute_when
                             .as_ref()
@@ -994,11 +997,15 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             .iter()
             .flat_map(|player| units_of(sink.state, *player))
             .collect();
-        let dying_ids: Vec<String> = units
-            .iter()
-            .filter(|unit| is_dying(sink, unit))
-            .map(|unit| unit.id.clone())
-            .collect();
+        let dying_ids: Vec<String> = {
+            // #892: one aura table for every unit's death check.
+            let auras = AuraTable::new(&*sink.state);
+            units
+                .iter()
+                .filter(|unit| is_dying(&auras, unit))
+                .map(|unit| unit.id.clone())
+                .collect()
+        };
         let survivors: Vec<CardInstance> = units
             .iter()
             .filter(|unit| !dying_ids.contains(&unit.id))
