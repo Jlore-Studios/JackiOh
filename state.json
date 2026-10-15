@@ -331,6 +331,13 @@
     "1013": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T23:14:10Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether 'the AI's search (crates/ai/src/)' means only the search loop, but the parenthetical covers the whole crate and CLAUDE.md rule 11 rates all AI work hard, so hard holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
