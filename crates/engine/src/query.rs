@@ -582,3 +582,14 @@ pub fn is_untributable(state: &GameState, card: &CardInstance) -> bool {
 pub fn credit_used_this_turn(state: &GameState, player: PlayerId) -> bool {
     state.players[player].turn_log.mana_borrowed.unwrap_or(0) > 0
 }
+
+/// R831008 (Meditative #98 Showdown's "an empty lane"): whether every zone of this lane is empty —
+/// both players' unit zones and backrow zones. A face-down backrow card occupies its zone, as any
+/// card does: its owner's opponent sees that the zone is taken, never what is in it.
+pub fn lane_is_empty(state: &GameState, lane: i32) -> bool {
+    [PlayerId::P1, PlayerId::P2].into_iter().all(|player| {
+        [Row::Units, Row::Backrow]
+            .into_iter()
+            .all(|row| card_at(state, crate::zones::ZoneSlot { player, row, lane }).is_none())
+    })
+}

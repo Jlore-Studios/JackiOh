@@ -384,10 +384,14 @@ mod tests {
                 s.play(FORWARD, json!({ "zone": 2 }));
                 s.end_turn();
                 s.state_mut().players.p2.mana.current = 10;
-                // p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text and stays.
+                // A copy of p2's second play is fused into p1's Field Trap, which keeps Final Gambit's text,
+                // stays and animates into its lane's unit zone (C+ #74, R831011).
                 s.play(RAPID, json!({}));
                 s.play(GAMBIT, json!({}));
-                assert!(s.backrow(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
+                assert!(s.unit(PlayerId::P1, 2).is_some_and(|card| card.def_id.contains(GAMBIT)));
+                // The Gambit p2 played stays set in their backrow; take it off, so only the copy in p1's
+                // Field Trap answers the hits below.
+                s.state_mut().players.p2.backrow[0] = None;
                 s.state_mut().players.p1.fatigue_count = 20;
                 // 4 at 4 health is lethal: re-aimed (4), then heal 10 and draw 3 from an empty deck. Each
                 // fatigue, 21, 22 and 23, is lethal at 14 and re-aimed too; p2 falls at the second, so the

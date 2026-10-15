@@ -354,7 +354,7 @@ mod tests {
     const COLLATERAL: &str = "core-034";
     /// Spell 1: destroy target backrow card, Lock its zone
     const MAGIC_JAMMED: &str = "core-036";
-    /// Spell 2: exile 7 random cards from your deck
+    /// Spell 2: exile every card in your deck that costs (2) or less
     const EUGENICS: &str = "core-042";
     /// 4/4
     const VANILLA: &str = "core-008";

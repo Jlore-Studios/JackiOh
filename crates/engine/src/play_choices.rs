@@ -192,6 +192,15 @@ pub fn declared_modes(state: &GameState, card: &CardInstance) -> Vec<ModeDecl> {
     crate::scripts::script_of(state, card).modes.clone()
 }
 
+/// R831008: whether this player may choose this option of the card's own declared modes now
+/// (`Script.mode_allowed`; Meditative #98 Showdown's empty lane). A card with no check allows all.
+pub fn mode_option_allowed(state: &GameState, player: PlayerId, card: &CardInstance, option: &str) -> bool {
+    crate::scripts::script_of(state, card)
+        .mode_allowed
+        .as_ref()
+        .is_none_or(|allowed| allowed(state, player, option))
+}
+
 /// The target declarations a play with these modes answers (R90, §8 Conventions). A declaration that
 /// belongs to some modes only (`forModes`, #24's damage and heal target) asks for nothing when none
 /// of them was chosen, so it takes no slot of the flat `targets` list — and one that does belong to
@@ -1637,7 +1646,18 @@ pub fn play_choice_combinations(
             .map(|slices| slices.into_iter().flatten().collect())
             .collect()
     };
-    let mode_option_lists: Vec<Vec<String>> = mode_decls.iter().map(|decl| decl.options.clone()).collect();
+    // R831008: the card's own modes offer only the options its check allows now; a declaration left
+    // with none leaves no combination, so the card is not offered.
+    let mode_option_lists: Vec<Vec<String>> = mode_decls
+        .iter()
+        .map(|decl| {
+            decl.options
+                .iter()
+                .filter(|option| declared.is_some() || mode_option_allowed(state, player, card, option))
+                .cloned()
+                .collect()
+        })
+        .collect();
     let mode_combos: Vec<Vec<String>> = cross_product(&mode_option_lists, MAX_CHOICE_COMBINATIONS);
 
     if targets_follow_modes(&target_decls) {
@@ -1794,7 +1814,6 @@ pub fn graveyard_play_actions_for(
 struct PlayPrice {
     x: Option<i32>,
     embiggen: Option<bool>,
-    #[allow(dead_code)]
     probe: CardInstance,
     cost: i32,
 }
@@ -1970,7 +1989,10 @@ pub fn priced_play_actions(
     let tribute_sets = legal_tribute_sets(state, player, card);
 
     for PlayPrice {
-        x, embiggen, cost, ..
+        x,
+        embiggen,
+        probe,
+        cost,
     } in play_prices(state, player, card)
     {
         let paid = payments(cost);
@@ -1989,8 +2011,10 @@ pub fn priced_play_actions(
                         .into_iter()
                         .map(|zone| (Some(zone), None))
                         .collect();
+                // R831013: the probe carries this price's embiggen, which an Equip may hang on
+                // (Core #56 Jilliax: "Paid (3): Equip.").
                 paired.extend(
-                    legal_equip_zones_for(state, player, card, tributes)
+                    legal_equip_zones_for(state, player, &probe, tributes)
                         .into_iter()
                         .map(|zone| (Some(zone), Some(true))),
                 );
@@ -2362,10 +2386,12 @@ fn refuse_targets(
 
 fn refuse_modes(
     state: &GameState,
+    player: PlayerId,
     card: &CardInstance,
     modes: &[String],
     decls: Option<&[ModeDecl]>,
 ) -> Result<(), EngineError> {
+    let own_modes = decls.is_none();
     let own;
     let decls: &[ModeDecl] = match decls {
         Some(decls) => decls,
@@ -2398,6 +2424,10 @@ fn refuse_modes(
         };
         if !decl.options.contains(option) {
             return refuse(format!("\"{option}\" is not a mode of {name}"));
+        }
+        // R831008: the same check `legalActions` offers by.
+        if own_modes && !mode_option_allowed(state, player, card, option) {
+            return refuse(format!("{name} cannot choose \"{option}\" now"));
         }
     }
     Ok(())
@@ -2478,7 +2508,17 @@ pub fn why_choices_refused(
     }
     let tributes: &[String] = action.tributes.as_deref().unwrap_or(&[]);
     if action.equip == Some(true) {
-        refuse_equip(state, player, card, action.zone.as_ref(), tributes)?;
+        // R831013: an Equip a price grants is read off the card stamped with the play's embiggen, as
+        // the listing reads it off that price's probe (Core #56 Jilliax).
+        let stamped = if has_embiggen_price(state, card) {
+            CardInstance {
+                embiggened: Some(action.embiggen == Some(true)),
+                ..card.clone()
+            }
+        } else {
+            card.clone()
+        };
+        refuse_equip(state, player, &stamped, action.zone.as_ref(), tributes)?;
     } else {
         refuse_zone(state, player, card, action.zone.as_ref(), tributes)?;
     }
@@ -2496,7 +2536,7 @@ pub fn why_choices_refused(
     let targets: &[Selection] = action.targets.as_deref().unwrap_or(&[]);
     let modes: &[String] = action.modes.as_deref().unwrap_or(&[]);
     refuse_targets(state, player, &face, targets, modes, None)?;
-    refuse_modes(state, &face, modes, None)?;
+    refuse_modes(state, player, &face, modes, None)?;
     // R123: a Tribute declared with an amount names the same units in `targets` and `tributes`.
     if !tribute_picks_agree(state, player, &face, targets, modes, tributes) {
         return refuse(format!(
@@ -2546,5 +2586,5 @@ pub fn why_declared_choices_refused(
     modes: &[String],
 ) -> Result<(), EngineError> {
     refuse_targets(state, player, card, targets, modes, Some(&declared.targets))?;
-    refuse_modes(state, card, modes, Some(&declared.modes))
+    refuse_modes(state, player, card, modes, Some(&declared.modes))
 }

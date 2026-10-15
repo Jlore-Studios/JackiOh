@@ -1326,16 +1326,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Exile 7 random cards from your deck. Each card left in your deck has a 30% chance to become Radiant."
+      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30% chance to become Radiant."
     },
     "radiant": {
-      "keywords": [
-        {
-          "kind": "Lucky",
-          "n": 1
-        }
-      ],
-      "text": "Lucky 1\nExile 7 random cards from your deck. Each card left in your deck has a 40% chance to become Radiant."
+      "keywords": [],
+      "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes Radiant."
     }
   },
   "core-043": {
@@ -1784,7 +1779,10 @@
     "tags": [],
     "rarity": "Common",
     "token": false,
-    "cost": 2,
+    "cost": {
+      "base": 2,
+      "embiggen": 3
+    },
     "loc": 3,
     "base": {
       "attack": 3,
@@ -1803,7 +1801,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield"
+      "text": "Rush, Taunt, Lifesteal, Divine Shield\nPaid (3): Equip."
     },
     "radiant": {
       "attack": 6,
@@ -1825,7 +1823,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn"
+      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip."
     }
   },
   "core-057": {
@@ -10416,22 +10414,32 @@
     ],
     "loc": 5,
     "base": {
+      "attack": 0,
+      "health": 1,
       "keywords": [
+        {
+          "kind": "Animated"
+        },
         {
           "kind": "Brittle",
           "n": 2
         }
       ],
-      "text": "Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse the last into this and gain +{brittleGain} Brittle."
+      "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
     },
     "radiant": {
+      "attack": 0,
+      "health": 2,
       "keywords": [
+        {
+          "kind": "Animated"
+        },
         {
           "kind": "Brittle",
           "n": 4
         }
       ],
-      "text": "Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
+      "text": "Animated, Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
     }
   },
   "classicplus-075": {
@@ -15739,11 +15747,11 @@
     "loc": 154,
     "base": {
       "keywords": [],
-      "text": "Choose a lane. Lock every other lane until the start of your next turn."
+      "text": "Choose an empty lane. Lock every other lane until the start of your next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
+      "text": "Choose an empty lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
     }
   },
   "meditative-099": {

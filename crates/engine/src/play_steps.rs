@@ -59,7 +59,7 @@ use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, equip_host_at, in_declared_order, interceptor_fits_decl,
-    legal_selections_for, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
+    legal_selections_for, mode_option_allowed, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
     targeting_discards_required, targets_follow_modes, why_choices_refused,
 };
 use crate::play_counts::record_play;
@@ -2448,12 +2448,20 @@ fn ask_repeat_modes(
         if let Some(repeat) = run.repeat.as_mut() {
             repeat.mode_at = at + 1;
         }
-        if decl.options.is_empty() {
+        // R831008: only the options the card's check allows now; with none the declaration is
+        // skipped, as one the board cannot satisfy is (R90).
+        let allowed: Vec<String> = decl
+            .options
+            .iter()
+            .filter(|option| mode_option_allowed(sink.state, run.player, card, option))
+            .cloned()
+            .collect();
+        if allowed.is_empty() {
             continue;
         }
         // R452: a random cast makes this choice itself, at random.
         if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
-            let option = sink.rng.pick(&decl.options).cloned();
+            let option = sink.rng.pick(&allowed).cloned();
             if let Some(option) = option
                 && let Some(repeat) = run.repeat.as_mut()
             {
@@ -2469,8 +2477,7 @@ fn ask_repeat_modes(
                 kind: decl.kind,
                 aim: None,
                 prompt: ask_label(step, &name, Some(&*run)),
-                options: decl
-                    .options
+                options: allowed
                     .iter()
                     .map(|option| PromptOption {
                         key: format!("mode:{option}"),

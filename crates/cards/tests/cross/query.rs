@@ -898,12 +898,12 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         // the release (v0.3.5) it holds §8.8's Meditative #36 CN Peptides (Lucky 1 on its Radiant
         // face) and #86 Mayor Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight,
         // and #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65
-        // Keymaster Keenus printed Lucky 1 among its every keyword until patch v0.3.7 (R1084, R781004).
+        // Keymaster Keenus printed Lucky 1 among its every keyword until patch v0.3.7 (R1084, R781004),
+        // and Core #42 Eugenics its Radiant face's Lucky 1 until patch v0.3.9 (R831014).
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
         let mut pool = strings(&[
             "core-004",
             "core-023",
-            "core-042",
             "classic-065",
             "classicplus-025",
             "classicplus-053",

@@ -1535,18 +1535,19 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
 - **Class:** B (plus `anyTags`).
 
 #### Meditative #98 · Showdown
-`meditative-098` · (2) Spell · Rare (assigned)
+`meditative-098` · (1) Spell · Rare (assigned)
 
 > **Designer:** Choose a lane. Lock all other lanes until the start of your next turn. ~~~ Choose a lane.
 > Lock all other lanes until the start of your next turn. Cast Book of Buff on any cards you place in it
 > this turn.
 
-- **Text:** Choose a lane. Lock every other lane until the start of your next turn.
-- **Radiant:** Choose a lane. Lock every other lane until the start of your next turn. This turn, after
+- **Text:** Choose an empty lane. Lock every other lane until the start of your next turn.
+- **Radiant:** Choose an empty lane. Lock every other lane until the start of your next turn. This turn, after
   you put a card into that lane, cast Book of Buff on it.
 - **Engine:**
   - **The lane** is a play-time choice: five `modes`, "lane-1" to "lane-5" (R81). A random cast picks
-    one at random.
+    one at random. Patch v0.3.9 offers only an empty lane, all four of its zones empty, so with none
+    the card cannot be played and a cast resolves into nothing (`Script.mode_allowed`, R831008).
   - **The Lock:** the hook locks every zone of the four other lanes, both sides and both rows, that is
     not already Locked (`lock` per zone). Under §6.3 Lock and R688 this refuses plays only; summons
     still land. It then runs `delay` (`at`: the start of the caster's next turn, R62's delayed stage)
@@ -3673,28 +3674,27 @@ Jlarna is played too.
 > Deck. ~~~ 2/2 · Tribute 1 · Windfury · Instead of attacking itself, this summons a Unit from your Hand
 > to do the attack. · Death: Shuffle Radiant Windfurious Prime into your Deck.
 
-- **Text:** Tribute 1, Windfury
-  When this would attack, summon a Unit of your choice from your hand to make that attack instead.
+- **Text:** Tribute 1, Rush, Windfury
+  When this would attack, summon a random Unit from your hand to make that attack instead.
   Bounce it afterwards if it survives.
   Death: Shuffle a Windfurious Prime into your deck.
-- **Radiant:** Tribute 1, Windfury
-  When this would attack, summon a Unit of your choice from your hand to make that attack instead.
+- **Radiant:** Tribute 1, Rush, Windfury
+  When this would attack, summon a random Unit from your hand to make that attack instead.
   Death: Shuffle a Radiant Windfurious Prime into your deck.
-- **Engine:** Tribute 1 (`tribute`, R101, R391) and Windfury (R636: two declared attacks a turn). Death:
-  `shuffle_into` a fresh `meditative-091-1` (Radiant: `radiant: true`) at a random position, R80's cap
-  turning it away, as C+ #38 Solarius's. The attack replacement is **NEW: ME-ATTACKSUMMON**: on every
-  attack Windfast makes (declared, spending its exertion, or forced), before `attackDeclared`, its
-  controller picks a Unit in their hand (a `hand` prompt, held on the opponent's turn under its own
-  clock, R79; one Unit is no prompt, R129); that card is summoned into the leftmost open unit zone (R64,
-  no Cry, R1; a summon, so traps that answer one fire, C #5 Tesla) and makes the attack on the same
-  target as a forced attack (R53: no sickness, no exertion, §4.2 step 2's restrictions holding), with
+- **Engine:** Tribute 1 (`tribute`, R101, R391), Rush and Windfury (R636: two declared attacks a turn).
+  Death: `shuffle_into` a fresh `meditative-091-1` (Radiant: `radiant: true`) at a random position,
+  R80's cap turning it away, as C+ #38 Solarius's. The attack replacement is **NEW: ME-ATTACKSUMMON**:
+  on every attack Windfast makes (declared, spending its exertion, or forced), before `attackDeclared`,
+  a random Unit in its controller's hand (no prompt since patch v0.3.9, R831006) is summoned into the
+  leftmost open unit zone (R64, no Cry, R1; a summon, so traps that answer one fire, C #5 Tesla) and
+  makes the attack on the same target as a forced attack (R53: no sickness, no exertion, §4.2 step 2's restrictions holding), with
   its own trap window and combat; Windfast neither strikes nor is struck. Base: after that combat's
   state check, the summoned card, if still on the field, is bounced to its controller's hand (R692,
   R78's reset; a unit token vanishes, R11).
 - **Rulings:** **MD-E14:** with no Unit in hand or no open unit zone the replacement can't happen and
   Windfast attacks itself; a summoned Unit that dies or leaves before its combat makes no attack, and
-  Windfast's attack is spent either way; each of Windfury's two attacks summons its own. "A Unit from
-  your Hand" with no "random" is the controller's pick, the way a target is.
+  Windfast's attack is spent either way; each of Windfury's two attacks summons its own. Patch v0.3.9
+  made the Unit a random one (R831006).
 - **Numbers:** none (Tribute 1 is a numbered keyword a Buff's X row moves).
 - **Check:** R275: stats doubled, the summoned Unit stays, and the Prime it shuffles is Radiant.
 - **Class:** C (NEW: ME-ATTACKSUMMON).

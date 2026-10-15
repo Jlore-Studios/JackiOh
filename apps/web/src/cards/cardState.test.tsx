@@ -525,7 +525,7 @@ describe("R383 Animated: its face prints the Unit it becomes, and a card standin
     expect(collection.container.querySelector(".cf-hp")?.getAttribute("data-face-health")).toBe("6");
     cleanup();
 
-    const plain = render(<CardFace face={faceModel({ defId: "classicplus-074", def: def("classicplus-074"), radiant: false })} />);
+    const plain = render(<CardFace face={faceModel({ defId: "core-018", def: def("core-018"), radiant: false })} />);
     expect(plain.container.querySelector(".cf-stats")).toBeNull();
   });
 

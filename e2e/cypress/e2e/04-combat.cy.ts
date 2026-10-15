@@ -66,7 +66,7 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     advanceToTurn(2);
     cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(4);
-    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 } });
+    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 }, answers: [{ kind: "embiggen", options: ["false"] }] });
 
     advanceToTurn(5);
     cy.instanceAt("p1", "units", 1).then((timmy) => {
@@ -135,7 +135,7 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     advanceToTurn(3);
     cy.playByName("Pointmaster", { zone: { side: "you", row: "units", lane: 2 } });
     advanceToTurn(4);
-    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 1 }, answers: [{ kind: "embiggen", options: ["false"] }] });
 
     advanceToTurn(5);
     cy.instanceAt("p1", "units", 1).then((timmy) => {

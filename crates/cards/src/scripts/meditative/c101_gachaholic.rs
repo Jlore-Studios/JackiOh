@@ -31,11 +31,11 @@ mod tests {
 
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
     /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #86 Mayor Medinamogger
-    /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004).
-    const SHIPPED_POOL: [&str; 11] = [
+    /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
+    /// Eugenics with patch v0.3.9, R831014).
+    const SHIPPED_POOL: [&str; 10] = [
         "core-004",
         "core-023",
-        "core-042",
         "classic-065",
         "classicplus-025",
         "classicplus-053",

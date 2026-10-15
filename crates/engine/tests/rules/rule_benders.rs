@@ -1,7 +1,7 @@
 //! The rule benders' engine proofs (issue #526): ME-TRIBAL's immunity ([[R940]]), the zeroed
 //! refresh ([[R941]]), the backrow fill ([[R942]]), ME-CREATED ([[R943]]) and the aimed cast with
-//! the lane watch ([[R946]]). Real cards through `scenario()` (registered first), the keyword
-//! granted through `granted_keywords`.
+//! the lane watch ([[R946]]), and Showdown's empty lane ([[R831008]]). Real cards through
+//! `scenario()` (registered first), the keyword granted through `granted_keywords`.
 
 use jackioh_engine::effects::{
     CardScope, CardScopeOptions, CardZone, FillBoardArgs, ScopeSide, TuneArgs, TuneDirection,
@@ -609,5 +609,33 @@ mod r946 {
         s.end_turn();
         s.play(FIENDER, json!({ "zone": 2 }));
         assert_eq!(books(&s), 2, "no Book after the turn");
+    }
+}
+
+mod r831008 {
+    use super::*;
+
+    const PAWN: &str = "core-096"; // My Pawn, a Trap, set face down.
+
+    #[test]
+    fn r831008_lane_is_empty_counts_every_zone() {
+        // One card in each of the four zones a lane has, in lanes 1 to 4: p1's unit zone, p1's
+        // backrow (a face-up Field Spell), p2's unit zone and p2's backrow (a face-down Trap, which
+        // occupies its zone as any card does). Lane 5 alone is empty.
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "p1": {
+                "field": [{ "def": VANILLA, "lane": 1 }],
+                "backrow": [{ "def": WELL, "faceUp": true, "lane": 2 }],
+                "library": library(),
+            },
+            "p2": {
+                "field": [{ "def": VANILLA, "lane": 3 }],
+                "backrow": [{ "def": PAWN, "lane": 4 }],
+                "library": library(),
+            },
+        }));
+        let empty: Vec<i32> = (1..=5).filter(|lane| lane_is_empty(s.state(), *lane)).collect();
+        assert_eq!(empty, vec![5]);
     }
 }

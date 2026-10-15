@@ -12,7 +12,8 @@ use jackioh_engine::testkit::*;
 
 use super::catalog::{spell_def, unit_def};
 
-/// #74's stand-in: a (2) Field Trap printing Brittle 2 (Radiant 4), every 2 plays, +1 Brittle.
+/// #74's stand-in: a (2) Animated 0/1 Field Trap printing Brittle 2 (Radiant 0/2, Brittle 4), every 2
+/// plays, +1 Brittle (R831011).
 pub fn forward() -> CardDef {
     spell_def(
         960,
@@ -25,8 +26,18 @@ pub fn forward() -> CardDef {
                 { "key": "plays", "base": 2, "radiant": 2, "better": "down", "step": 1, "min": 2 },
                 { "key": "brittleGain", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 },
             ],
-            "base": { "keywords": [{ "kind": "Brittle", "n": 2 }], "text": "Brittle 2" },
-            "radiant": { "keywords": [{ "kind": "Brittle", "n": 4 }], "text": "Brittle 4" },
+            "base": {
+                "attack": 0,
+                "health": 1,
+                "keywords": [{ "kind": "Animated" }, { "kind": "Brittle", "n": 2 }],
+                "text": "Animated, Brittle 2",
+            },
+            "radiant": {
+                "attack": 0,
+                "health": 2,
+                "keywords": [{ "kind": "Animated" }, { "kind": "Brittle", "n": 4 }],
+                "text": "Animated, Brittle 4",
+            },
         }),
     )
 }

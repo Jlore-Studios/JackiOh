@@ -1,56 +1,26 @@
 //! #42 Eugenics (SPEC §8.2). Spell, cost 2, Common.
-//!   Base:    "Exile 7 random cards from your deck. Each card left in your deck has a 30% chance to
-//!             become Radiant." (patch v0.1.1: 8 became 7 on both faces)
-//!   Radiant: "Lucky 1 at 40%" — §8 Conventions: a cell that changes only a number changes only that
-//!            number, and every clause it does not restate is kept. So the radiant face still exiles
-//!            7, and only the chance (30% → 40%) changes, with Lucky 1 added (§6.1: one extra roll,
-//!            keep the best, i.e. keep the success).
-//!   Engine:  "Fewer than 7 → exile all" — R60's "a random pick of N existing cards picks N
-//!            different cards, or all of them if fewer exist".
+//!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30%
+//!             chance to become Radiant." (patch v0.3.9; it exiled 7 random cards before)
+//!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
+//!             Radiant." (patch v0.3.9: 100%, and no Lucky, since nothing is left to chance)
+//!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65
+//!            as the clause resolves, so an X card out of play counts as 0, an embiggen card at its base
+//!            price, and a card's cost changes count; each exile is its own (R135). Then
+//!            `radiant_chance` rolls each card left, one independent roll per card in zone order (R60),
+//!            an already-Radiant card skipped; a Lucky given to the card rolls each twice and keeps a
+//!            success (R1438).
 //!
-//! NO DICE IN A CARD FILE. Rolling advances `rngCursor`, which is state (CLAUDE.md rules 4 and 5,
-//! §10.7), so both halves of this card are single effects that own their own randomness. Neither
-//! exists in `packages/engine/src/effects` yet; the signatures below are what the engine must add
-//! (see the agent report):
-//!
-//!   exileRandomFromLibrary({ count, player? })
-//!       R60: `count` DIFFERENT cards drawn uniformly from `player`'s library, or the whole library
-//!       when it holds fewer; each goes through the Exile verb (§6.3), so the exile counter moves
-//!       (R55) and a unit-token card ceases to exist instead of entering the pile (R11).
-//!
-//!   radiantChance({ zone, player?, chance, lucky? })
-//!       "each remaining library card has a 30% chance": ONE independent roll per card still in the
-//!       zone, in zone order (top down), through `rng.chance(chance)`. R60 makes the flag the whole
-//!       model and an already-Radiant card is skipped rather than rolled, so nothing is un-set and
-//!       the roll count is the number of non-Radiant cards. `lucky: n` routes the roll through
-//!       `rng.lucky(n, roll, better)` with "a success beats a failure" as the comparator (§6.1,
-//!       R32), which is what "Lucky 1 at 40%" means: two rolls per card, keep the success.
-//!
-//! ORDER MATTERS. The exile runs first and the chance rolls over what is LEFT ("each remaining
-//! library card"), so an exiled card is never rolled. Two effects in one list is the right shape for
-//! that: §4.5/R59 puts the state check after the whole list, never between two effects of it.
-//!
-//! (Rust: the two verbs are `effects::exile_random_from_library` and `effects::radiant_chance`, each
-//! handed its TS object literal through `json_as`.)
+//! ORDER MATTERS. The exile runs first and the chance rolls over what is LEFT ("each card left in your
+//! deck"), so an exiled card is never rolled. Two effects in one list is the right shape for that:
+//! §4.5/R59 puts the state check after the whole list, never between two effects of it.
 
 pub const ID: &str = "core-042";
 
-// #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R80).
+// #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
 //
-// The must-pass row (BUILD M4-T4 #42): "7 random exiled (all if fewer); 30% per remaining card;
-// radiant two rolls at 40%." (patch v0.1.1: 8 became 7.)
-//
-// Exact per-seed outcomes are not asserted here, and deliberately so: the two verbs this card needs
-// (`exileRandomFromLibrary`, `radiantChance`) are not in the effects library yet, so there is no
-// implementation whose draw order an expected number could be read off — a hard-coded count would
-// be a guess that locks the engine into whatever the guess was. What IS pinned down instead:
-//   * the counts the §8 row states (7, or the whole library when smaller);
-//   * that the roll is PER CARD and independent, proved with a 57-card library where "one roll for
-//     the zone" or "all or nothing" would land on 0 or 50 and an independent 30% cannot;
-//   * that the exiled cards are never rolled;
-//   * determinism: the same seed and the same steps give the same pattern of flags (§9.3);
-//   * that the radiant face rolls exactly one extra time per remaining card, which is what Lucky 1
-//     means (§6.1) and is a count, not a probability.
+// The must-pass row (BUILD M4-T4 #42): "every deck card that costs (2) or less exiled (R65's cost);
+// 30% per remaining card; radiant every remaining card Radiant."
+
 #[cfg(test)]
 mod tests {
     use super::ID;
@@ -58,39 +28,41 @@ mod tests {
 
     use crate::scenario;
 
-    /// A library of `n` identical non-Radiant, non-token cards. Identity is irrelevant to every clause
-    /// of this card — only the counts and the flags are — and #25 4-mana 7/7 has no script at all, so
-    /// nothing in the library can react to being exiled. R80 caps a library at 60.
-    fn library(n: usize) -> Vec<&'static str> {
-        vec!["core-025"; n]
+    const PLAIN: &str = "core-025"; // (4) 4-mana 7/7, no script: it stays.
+    const MENACE: &str = "core-019"; // (3) Midrange Menace: it stays.
+    const VANILLA: &str = "core-008"; // (1) Mr. Vanilla: exiled.
+    const STOCKPILE: &str = "core-005"; // (1) Stockpile: exiled.
+
+    /// `n` copies of one card. R80 caps a library at 60.
+    fn copies(n: usize, card: &'static str) -> Vec<Value> {
+        vec![json!(card); n]
     }
 
-    /// p1 casts Eugenics; #21 Hinder rides along so the turn does not auto-end after it (R82).
-    fn cast(library_size: usize, seed: &str) -> Scenario {
+    /// 50 cards that stay and 7 that cost (2) or less, shuffled together.
+    fn mixed() -> Vec<Value> {
+        let mut library = copies(50, PLAIN);
+        library.extend(copies(4, VANILLA));
+        library.extend(copies(3, STOCKPILE));
+        library
+    }
+
+    /// p1 casts Eugenics (Radiant on `radiant`) over `library`; #21 Hinder rides along so the turn does
+    /// not auto-end after it (R82).
+    fn cast_face(radiant: bool, library: Vec<Value>, seed: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
-            "p1": { "hand": ["core-042", "core-021"], "library": library(library_size) },
+            "p1": { "hand": [{ "def": "core-042", "radiant": radiant }, "core-021"], "library": library },
         }));
         s.play("core-042", json!({}));
         s
     }
 
-    /// The radiant face has to be flagged in hand. TS set `radiant` on the hand card after the build;
-    /// the setup entry's own `radiant: true` sets the same flag on the same freshly created hand card.
-    fn cast_radiant(library_size: usize, seed: &str) -> Scenario {
-        let mut s = scenario(json!({
-            "seed": seed,
-            "p1": {
-                "hand": [{ "def": "core-042", "radiant": true }, "core-021"],
-                "library": library(library_size),
-            },
-        }));
-        s.play("core-042", json!({}));
-        s
+    fn cast(library: Vec<Value>, seed: &str) -> Scenario {
+        cast_face(false, library, seed)
     }
 
     /// The effects a face returns, by `kind`. Neither hook reads its context, so any context will do:
-    /// TS handed a stub, Rust hands one built at rest over a scenario's state.
+    /// one built at rest over a scenario's state.
     fn effect_kinds(hook: Option<&Hook>) -> Vec<&'static str> {
         let Some(hook) = hook else {
             return vec![];
@@ -109,42 +81,56 @@ mod tests {
             .collect()
     }
 
+    fn def_ids(s: &Scenario, pile: &str) -> Vec<String> {
+        let mut ids: Vec<String> = s.pile(PlayerId::P1, pile).into_iter().map(|card| card.def_id).collect();
+        ids.sort();
+        ids
+    }
+
     /// "#42 Eugenics — base"
     mod base {
         use super::*;
 
-        /// "exiles 7 random cards from your deck"
         #[test]
-        fn exiles_7_random_cards_from_your_deck() {
-            let s = cast(12, "eugenics");
+        fn r831014_exiles_every_card_in_your_deck_that_costs_2_or_less_and_keeps_the_rest() {
+            let mut library = copies(4, PLAIN);
+            library.extend(copies(2, MENACE));
+            library.extend(copies(3, VANILLA));
+            library.extend(copies(2, STOCKPILE));
+            let s = cast(library, "eugenics");
 
-            assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
-            assert_eq!(s.pile(PlayerId::P1, "library").len(), 5);
+            assert_eq!(def_ids(&s, "exile"), vec![STOCKPILE, STOCKPILE, VANILLA, VANILLA, VANILLA]);
+            assert_eq!(def_ids(&s, "library"), vec![MENACE, MENACE, PLAIN, PLAIN, PLAIN, PLAIN]);
         }
 
-        /// "R60 exiles the whole library when it holds fewer than 7 (§8.2 Engine: 'fewer than 7 → exile all')"
         #[test]
-        fn r60_exiles_the_whole_library_when_it_holds_fewer_than_7_engine_fewer_than_7_exile_all() {
-            let s = cast(5, "eugenics");
+        fn r831014_r65_an_x_card_counts_as_0_an_embiggen_card_at_its_base_price_and_a_cost_change_counts() {
+            let library = vec![
+                json!("core-024"),                           // Efficiency Dividend, X: 0 out of play.
+                json!("core-056"),                           // Jilliax, (2) or paid (3): its (2).
+                json!("core-046"),                           // Suppressive Aura, (2) or paid (4): its (2).
+                json!({ "def": MENACE, "costMod": -1 }),     // (3) made (2): exiled.
+                json!({ "def": VANILLA, "costMod": 2 }),     // (1) made (3): kept.
+                json!(MENACE),                               // (3): kept.
+            ];
+            let s = cast(library, "eugenics-r65");
 
-            assert_eq!(s.pile(PlayerId::P1, "exile").len(), 5);
-            assert_eq!(s.pile(PlayerId::P1, "library").len(), 0);
+            assert_eq!(def_ids(&s, "exile"), vec!["core-019", "core-024", "core-046", "core-056"]);
+            assert_eq!(def_ids(&s, "library"), vec![VANILLA, MENACE]);
         }
 
-        /// "an empty library exiles nothing and the spell still counts as played (§8 Conventions)"
         #[test]
         fn an_empty_library_exiles_nothing_and_the_spell_still_counts_as_played() {
-            let mut s = cast(0, "eugenics");
+            let mut s = cast(vec![], "eugenics");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 0);
             s.expect_events(json!(["cardPlayed"]));
             s.expect_in_zone("core-042", "graveyard");
         }
 
-        /// "rolls 'each remaining library card' independently at 30%, so neither 0 nor all 50 come up"
         #[test]
         fn rolls_each_remaining_library_card_independently_at_30_percent_so_neither_0_nor_all_50_come_up() {
-            let s = cast(57, "eugenics");
+            let s = cast(mixed(), "eugenics");
             let remaining = s.pile(PlayerId::P1, "library");
 
             assert_eq!(remaining.len(), 50);
@@ -154,31 +140,27 @@ mod tests {
             assert!(converted < 50);
         }
 
-        /// "R60 the exiled cards are never rolled: the exile happens first, the chance rolls over what is left"
         #[test]
-        fn r60_the_exiled_cards_are_never_rolled_the_exile_happens_first_the_chance_rolls_over_what_is_left()
-        {
-            let s = cast(57, "eugenics");
+        fn r60_r831014_the_exiled_cards_are_never_rolled_the_exile_happens_first_the_chance_rolls_over_what_is_left() {
+            let s = cast(mixed(), "eugenics");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
             assert!(s.pile(PlayerId::P1, "exile").iter().all(|card| !card.radiant));
         }
 
-        /// "§9.3 is deterministic: the same seed and steps give the same flags"
         #[test]
         fn s9_3_is_deterministic_the_same_seed_and_steps_give_the_same_flags() {
             assert_eq!(
-                radiant_flags(&cast(57, "eugenics-determinism")),
-                radiant_flags(&cast(57, "eugenics-determinism")),
+                radiant_flags(&cast(mixed(), "eugenics-determinism")),
+                radiant_flags(&cast(mixed(), "eugenics-determinism")),
             );
         }
 
-        /// "§10.9 the base face is one exile effect followed by one chance effect, in that order"
         #[test]
         fn s10_9_the_base_face_is_one_exile_effect_followed_by_one_chance_effect_in_that_order() {
             assert_eq!(
                 effect_kinds(crate::scripts_of()[ID].clone().base.cry.as_ref()),
-                vec!["exileRandomFromLibrary", "radiantChance"],
+                vec!["exileMatching", "radiantChance"],
             );
         }
     }
@@ -187,10 +169,10 @@ mod tests {
     /// 50 more draws than the plain base face over the same exile, and more cards come up Radiant.
     #[test]
     fn r1438_given_lucky_1_the_base_face_rolls_twice_and_keeps_the_better() {
-        let plain = cast(57, "eugenics-lucky");
+        let plain = cast(mixed(), "eugenics-lucky");
         let mut lucky = scenario(json!({
             "seed": "eugenics-lucky",
-            "p1": { "hand": ["core-042", "core-021"], "library": library(57) },
+            "p1": { "hand": ["core-042", "core-021"], "library": mixed() },
         }));
         crate::give_lucky(&mut lucky, "core-042", 1);
         lucky.play("core-042", json!({}));
@@ -210,62 +192,28 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// "§8 Conventions: the unrestated clause is kept, so it still exiles 7"
         #[test]
-        fn s8_conventions_the_unrestated_clause_is_kept_so_it_still_exiles_7() {
-            let s = cast_radiant(12, "eugenics");
-
-            assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
-            assert_eq!(s.pile(PlayerId::P1, "library").len(), 5);
-        }
-
-        /// "R60 the exiled cards are still never rolled"
-        #[test]
-        fn r60_the_exiled_cards_are_still_never_rolled() {
-            let s = cast_radiant(57, "eugenics");
+        fn r831014_the_radiant_face_exiles_the_same_cards_and_every_card_left_becomes_radiant() {
+            let s = cast_face(true, mixed(), "eugenics");
 
             assert_eq!(s.pile(PlayerId::P1, "exile").len(), 7);
             assert!(s.pile(PlayerId::P1, "exile").iter().all(|card| !card.radiant));
+            assert_eq!(radiant_flags(&s), vec![true; 50]);
         }
 
-        /// "rolls per remaining card at 40% with Lucky 1, so neither 0 nor all 50 come up"
         #[test]
-        fn rolls_per_remaining_card_at_40_percent_with_lucky_1_so_neither_0_nor_all_50_come_up() {
-            let s = cast_radiant(57, "eugenics");
-            let remaining = s.pile(PlayerId::P1, "library");
-
-            assert_eq!(remaining.len(), 50);
-            let converted = remaining.iter().filter(|card| card.radiant).count();
-            assert!(converted > 0);
-            assert!(converted < 50);
+        fn r831014_it_prints_no_lucky_since_patch_v0_3_9() {
+            crate::register_all();
+            let def = crate::card_def(ID);
+            assert!(def.radiant.keywords.is_empty());
+            assert!(def.base.keywords.is_empty());
         }
 
-        /// "§6.1 Lucky 1 is exactly one extra roll per remaining card: 50 more draws than the base face"
         #[test]
-        fn s6_1_lucky_1_is_exactly_one_extra_roll_per_remaining_card_50_more_draws_than_the_base_face() {
-            // Same seed and same library, so the exile step consumes the same draws in both runs and the
-            // whole difference in `rngCursor` is the second roll Lucky 1 takes for each remaining card.
-            let plain = cast(57, "eugenics-lucky");
-            let lucky = cast_radiant(57, "eugenics-lucky");
-
-            assert_eq!(lucky.state().rng_cursor - plain.state().rng_cursor, 50);
-        }
-
-        /// "§9.3 is deterministic: the same seed and steps give the same flags"
-        #[test]
-        fn s9_3_is_deterministic_the_same_seed_and_steps_give_the_same_flags() {
-            assert_eq!(
-                radiant_flags(&cast_radiant(57, "eugenics-r-determinism")),
-                radiant_flags(&cast_radiant(57, "eugenics-r-determinism")),
-            );
-        }
-
-        /// "§10.9 the radiant face is the same pair of effects, so only the numbers changed"
-        #[test]
-        fn s10_9_the_radiant_face_is_the_same_pair_of_effects_so_only_the_numbers_changed() {
+        fn s10_9_the_radiant_face_is_the_same_pair_of_effects_so_only_the_chance_changed() {
             assert_eq!(
                 effect_kinds(crate::scripts_of()[ID].clone().radiant.cry.as_ref()),
-                vec!["exileRandomFromLibrary", "radiantChance"],
+                vec!["exileMatching", "radiantChance"],
             );
         }
     }
@@ -277,7 +225,7 @@ mod tests {
         /// "R311 a card rolled Radiant inside the library is still listed with the face it went in with"
         #[test]
         fn r311_a_card_rolled_radiant_inside_the_library_is_still_listed_with_the_face_it_went_in_with() {
-            let s = cast(57, "eugenics");
+            let s = cast(copies(57, PLAIN), "eugenics");
             let remaining = s.pile(PlayerId::P1, "library");
             assert!(remaining.iter().any(|card| card.radiant));
 
@@ -285,7 +233,7 @@ mod tests {
             assert_eq!(
                 serde_json::to_value(&s.view(PlayerId::P1).you.own_library).unwrap(),
                 json!({
-                    "cards": [{ "defId": "core-025", "radiant": false, "count": remaining.len() }],
+                    "cards": [{ "defId": PLAIN, "radiant": false, "count": remaining.len() }],
                     "unknown": 0,
                 }),
             );

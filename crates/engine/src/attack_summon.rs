@@ -22,8 +22,8 @@ use serde_json::Value;
 
 use crate::combat::AttackTarget;
 use crate::script::EngineSink;
-use crate::state::{CardInstance, DeclaredAttack, EngineError, GameState, Resume, find_instance};
-use crate::wire::{CardType, PlayerId, PromptKind, Row, Selection};
+use crate::state::{CardInstance, DeclaredAttack, GameState, Resume, find_instance};
+use crate::wire::{CardType, PlayerId, Row};
 
 /// R113: the `resume.hook` of the engine sequence this module parks — the rest of a Prime's combat or
 /// a substitute's bounce a question stopped.

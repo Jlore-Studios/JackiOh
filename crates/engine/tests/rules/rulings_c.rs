@@ -51,7 +51,7 @@ use jackioh_engine::triggers::SettleOptions;
 use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, PlaceOnFieldOptions};
 
 use super::fixtures::combat::stacker;
-use super::fixtures::harness::{in_hand, new_game, put as put_with, slot};
+use super::fixtures::harness::{in_hand, new_game, put as put_with, set_library, slot};
 
 const P1: PlayerId = PlayerId::P1;
 const P2: PlayerId = PlayerId::P2;
@@ -3890,6 +3890,32 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
         // (TS: `Object.keys(effects)` contains both verbs; in Rust, naming them is the check.)
         let _exile_matching = effects::exile_matching;
         let _draw_from_library = effects::draw_from_library;
+    }
+
+    #[test]
+    fn r831014_cost_filter_max_cost_exiles_only_cheap_cards() {
+        // Core #42 Eugenics' "exile all cards in your deck that cost (2) or less": `maxCost` keeps every
+        // card whose cost per R65 is above it, and the cheap ones go one exile each (R135).
+        let mut state = game("r831014-max-cost");
+        let library = set_library(&mut state, P1, &[BODY, TRIBUTE_TWO, FUSE_PRICEY, BODY, FUSE_DEAR]);
+        let mut sink = SinkFor::new(&state);
+        apply_as(
+            &mut sink,
+            &mut state,
+            P1,
+            vec![effects::exile_matching(json_as(json!({ "zones": ["library"], "maxCost": 2 })))],
+        );
+        let kept: Vec<String> = state.players.p1.library.iter().map(|card| card.def_id.clone()).collect();
+        assert_eq!(kept, vec![TRIBUTE_TWO, FUSE_PRICEY, FUSE_DEAR]);
+        let exiled: Vec<String> = sink
+            .events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Exiled { instance_id, .. } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(exiled, vec![library[0].id.clone(), library[3].id.clone()]);
     }
 
     #[test]

@@ -179,9 +179,7 @@ mod tests {
         fn r384_once_a_turn_a_second_use_is_refused_and_your_next_turn_it_is_yours_again() {
             let mut s = gift(false, json!({ "library": [FILLER, FILLER, FILLER] }), json!({}));
             open(&mut s);
-            s.expect_refused(|s| {
-                s.activate(GIFT, json!({ "ability": "gift" }));
-            });
+            s.expect_refused(|s| s.activate(GIFT, json!({ "ability": "gift" })));
             s.end_turn().end_turn();
             assert_eq!(s.state().active, P1);
             open(&mut s);

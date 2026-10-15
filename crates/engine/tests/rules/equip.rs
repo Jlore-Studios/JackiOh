@@ -116,8 +116,14 @@ fn sentry() -> CardDef {
     def_of_kind("sentry", 1905, json!({}))
 }
 
+/// Core #56 Jilliax's shape (R831013): a (1) 1/1 with an embiggen price of (2), at which it is Equip —
+/// its `conditionalKeywords` hands Equip to a card stamped embiggened.
+fn paid() -> CardDef {
+    def_of_kind("paid", 1906, json!({ "cost": { "base": 1, "embiggen": 2 } }))
+}
+
 fn defs() -> Vec<CardDef> {
-    vec![host(), mag(), both(), immutable(), sentry()]
+    vec![host(), mag(), both(), immutable(), sentry(), paid()]
 }
 
 fn scripts() -> IndexMap<String, CardScripts> {
@@ -168,6 +174,23 @@ fn scripts() -> IndexMap<String, CardScripts> {
         CardScripts {
             base: watch(),
             radiant: watch(),
+        },
+    );
+    let paid_equip = || Script {
+        conditional_keywords: Some(read_hook(|args| {
+            if args.self_.embiggened == Some(true) {
+                vec![Keyword::Equip]
+            } else {
+                vec![]
+            }
+        })),
+        ..Script::default()
+    };
+    scripts.insert(
+        paid().id,
+        CardScripts {
+            base: paid_equip(),
+            radiant: paid_equip(),
         },
     );
     scripts
@@ -491,5 +514,30 @@ mod r781000_the_old_name_reads_as_equip {
         let written = serde_json::to_value(&body).expect("writes");
         assert_eq!(written["equip"], json!(true));
         assert!(written.get("magnetic").is_none());
+    }
+}
+
+mod r831013_an_equip_a_price_grants {
+    use super::*;
+
+    #[test]
+    fn r831013_is_offered_only_at_that_price_and_reduce_agrees() {
+        let mut state = playing("equip-paid");
+        put(&mut state, &host().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        state.players.p1.mana.current = 5;
+        let card = in_hand(&mut state, &paid().id, PlayerId::P1, 1).remove(0);
+        // Every Equip play listed is at the embiggen price; the base price lists plain plays only.
+        let offered = equip_actions(&state, &card.id);
+        assert!(!offered.is_empty(), "an Equip play onto the host at (2)");
+        assert!(offered.iter().all(|action| action["embiggen"] == json!(true)));
+        let mut base = play_input(&card.id, 1, true, Value::Null);
+        base["embiggen"] = json!(false);
+        assert!(act_result(&state, base).error.is_some(), "no Equip at (1)");
+        let mut embiggened = play_input(&card.id, 1, true, Value::Null);
+        embiggened["embiggen"] = json!(true);
+        let after = act_result(&state, embiggened);
+        assert!(after.error.is_none(), "{:?}", after.error);
+        assert_eq!(fused_events(&after.events).len(), 1, "it fused into the host");
+        assert_eq!(after.state.players.p1.mana.current, 5 - 2);
     }
 }

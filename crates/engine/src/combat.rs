@@ -1045,7 +1045,7 @@ pub fn run_owed_attack(sink: &mut EngineSink<'_>, item: &WorkItem) {
 /// trap window — and only then step 5's combat and state check.
 ///
 /// R1202: an attack Windfast would make, its substitute makes instead (`attack_summon`): the
-/// exertion below is Windfast's, spent before the pick, and no `attackDeclared` of its own is ever
+/// exertion below is Windfast's, spent before the substitute is drawn, and no `attackDeclared` of its own is ever
 /// emitted for it.
 ///
 /// Step 4 in full: "Declaring the attack has now spent the attacker's exertion, before any damage.

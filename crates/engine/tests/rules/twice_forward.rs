@@ -1,8 +1,8 @@
 //! C+ #74 Twice Forward One Step Backwards' Field Trap (R425): it counts the opponent's plays from
-//! when it is set, and on every second one, once that card has resolved, fuses it (Radiant: a Radiant
-//! copy of it) into itself (R77, R102) and gains Brittle (R385); with nothing left to fuse it gains the
-//! Brittle face-down; it turns face-up at its first fuse (R33). Through fixture scripts; the real
-//! card's test covers the same cases again.
+//! when it is set, and on every second one, once that card has resolved, fuses a copy of it (Radiant:
+//! a Radiant copy) into itself (R77, R102), the card never consumed (R831011), gains Brittle (R385)
+//! and, Animated, animates; it turns face-up at its first fuse (R33). Through fixture scripts; the
+//! real card's test covers the same cases again.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -129,6 +129,14 @@ fn trap_of_mut<'a>(state: &'a mut GameState, trap_id: &str) -> &'a mut CardInsta
     find_instance_mut(state, trap_id).expect("the trap is gone")
 }
 
+/// The definitions a fused card was made of, in order (R102).
+fn ingredient_defs(state: &GameState, def_id: &str) -> Option<Vec<String>> {
+    def_of(Some(state), def_id)
+        .ingredients
+        .as_ref()
+        .map(|parts| parts.iter().map(|part| part.def_id.clone()).collect())
+}
+
 /// The first `fused` event's instance ids.
 fn first_fused_ids(events: &[GameEvent]) -> Option<Vec<String>> {
     events_of_type(events, GameEventType::Fused)
@@ -187,23 +195,34 @@ mod c_plus_c74s_field_trap_r425 {
     }
 
     #[test]
-    fn r425_r77_on_the_2nd_after_it_resolves_a_unit_on_the_field_is_fused_into_this_still_a_field_trap_1_brittle_face_up()
+    fn r425_r77_r831011_on_the_2nd_after_it_resolves_a_copy_of_a_unit_on_the_field_is_fused_into_this_the_unit_staying_still_a_field_trap_1_brittle_face_up_animated()
      {
         let OpponentsTurn { state, trap_id } = opponents_turn("unit", false);
         let first = play(state, PlayerId::P2, &spell().id, None);
         let second = play(first.state, PlayerId::P2, "fx-5", Some((Row::Units, 1)));
         let kept = trap_of(&second.state, &trap_id);
-        assert!(find_instance(&second.state, &second.card.id).is_none());
-        assert!(second.state.players.p2.units[0].is_none());
+        // R831011: the Unit is never consumed; a copy of its definition is fused in.
+        assert_eq!(
+            second.state.players.p2.units[0]
+                .as_ref()
+                .and_then(|pile| pile.first())
+                .map(|card| card.id.clone()),
+            Some(second.card.id.clone())
+        );
+        assert_eq!(
+            ingredient_defs(&second.state, &kept.def_id),
+            Some(vec!["fx-5".to_string(), forward().id])
+        );
         assert_eq!(
             def_of(Some(&second.state), &kept.def_id).type_,
             CardType::FieldTrap
         );
+        // Animated: the last step of its firing moved it into its lane's unit zone.
         assert_eq!(
             kept.zone,
             Zone::Field {
                 player: PlayerId::P1,
-                row: Row::Backrow,
+                row: Row::Units,
                 lane: 2,
             }
         );
@@ -213,10 +232,11 @@ mod c_plus_c74s_field_trap_r425 {
         let types: Vec<GameEventType> = second.events.iter().map(GameEvent::event_type).collect();
         assert!(index_of(&types, GameEventType::CardResolved) < index_of(&types, GameEventType::TrapFired));
         assert!(index_of(&types, GameEventType::TrapFired) < index_of(&types, GameEventType::Fused));
+        assert!(index_of(&types, GameEventType::Fused) < index_of(&types, GameEventType::Animated));
     }
 
     #[test]
-    fn r425_a_spell_is_fused_from_its_owners_graveyard() {
+    fn r831011_a_copy_of_a_spell_is_fused_in_the_spell_staying_in_its_owners_graveyard() {
         let OpponentsTurn { state, trap_id } = opponents_turn("spell", false);
         let second = play(
             play(state, PlayerId::P2, &spell().id, None).state,
@@ -225,7 +245,7 @@ mod c_plus_c74s_field_trap_r425 {
             None,
         );
         assert!(
-            !second
+            second
                 .state
                 .players
                 .p2
@@ -233,12 +253,13 @@ mod c_plus_c74s_field_trap_r425 {
                 .iter()
                 .any(|card| card.id == second.card.id)
         );
-        assert!(first_fused_ids(&second.events).is_some_and(|ids| ids.contains(&second.card.id)));
-        assert_eq!(trap_of(&second.state, &trap_id).face_up, Some(true));
+        let kept = trap_of(&second.state, &trap_id);
+        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![spell().id, forward().id]));
+        assert_eq!(kept.face_up, Some(true));
     }
 
     #[test]
-    fn r425_a_trap_is_fused_from_its_owners_backrow() {
+    fn r831011_a_copy_of_a_trap_is_fused_in_the_trap_staying_set_in_its_owners_backrow() {
         let OpponentsTurn { state, trap_id } = opponents_turn("trap", false);
         let second = play(
             play(state, PlayerId::P2, &spell().id, None).state,
@@ -246,19 +267,19 @@ mod c_plus_c74s_field_trap_r425 {
             &trap().id,
             Some((Row::Backrow, 1)),
         );
-        assert!(second.state.players.p2.backrow[0].is_none());
-        // R227: the trap was set under a fresh id, the one its play announced.
+        // R227: the trap was set under a fresh id, the one its play announced; it is still there.
         let set_id = plays_of(&second.events).first().map(|(_, id)| id.clone());
-        assert!(
-            first_fused_ids(&second.events)
-                .is_some_and(|ids| set_id.as_ref().is_some_and(|set_id| ids.contains(set_id)))
+        assert_eq!(
+            second.state.players.p2.backrow[0].as_ref().map(|card| card.id.clone()),
+            set_id
         );
-        assert_eq!(active_brittle_count(trap_of(&second.state, &trap_id)), Some(3));
+        let kept = trap_of(&second.state, &trap_id);
+        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![trap().id, forward().id]));
+        assert_eq!(active_brittle_count(kept), Some(3));
     }
 
     #[test]
-    fn r589_r425_r687_with_nothing_left_to_fuse_an_exiled_spell_it_reveals_and_still_gains_1_brittle_unfired()
-    {
+    fn r589_r831011_an_exiled_spell_still_has_a_copy_fused_in_it_reveals_and_gains_1_brittle() {
         let OpponentsTurn { state, trap_id } = opponents_turn("gone", false);
         let second = play(
             play(state, PlayerId::P2, &spell().id, None).state,
@@ -268,6 +289,8 @@ mod c_plus_c74s_field_trap_r425 {
         );
         let kept = trap_of(&second.state, &trap_id);
         assert!(!second.card.id.is_empty());
+        // R589's "if it still exists" went with the consumed card: the Spell stays exiled and a copy
+        // of it is fused in all the same.
         assert!(
             second
                 .state
@@ -277,10 +300,10 @@ mod c_plus_c74s_field_trap_r425 {
                 .iter()
                 .any(|card| card.id == second.card.id)
         );
-        assert!(events_of_type(&second.events, GameEventType::TrapFired).is_empty());
-        // No Brittle sits on an unrevealed card: the gain reveals it first, then lands on the started 2.
+        assert_eq!(events_of_type(&second.events, GameEventType::TrapFired).len(), 1);
+        // No Brittle sits on an unrevealed card: the fire reveals it first, then the gain lands on the started 2.
         assert_eq!(kept.face_up, Some(true));
-        assert_eq!(kept.def_id, forward().id);
+        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![self_exiler().id, forward().id]));
         assert_eq!(active_brittle_count(kept), Some(3));
         // Revealed, the opponent reads the card now.
         let theirs = serde_json::to_string(&view_for(&second.state, PlayerId::P2)).expect("serialises");
@@ -301,13 +324,12 @@ mod c_plus_c74s_field_trap_r425 {
                 .collect::<Vec<_>>(),
             vec![caster().id, spell().id]
         );
+        // A copy of the cast Spell, the later play, is fused in — not of the card that cast it.
         assert_eq!(
-            first_fused_ids(&first.events),
-            Some(vec![
-                played.get(1).map(|(_, id)| id.clone()).unwrap_or_default(),
-                trap_id.clone(),
-            ])
+            ingredient_defs(&first.state, &trap_of(&first.state, &trap_id).def_id),
+            Some(vec![spell().id, forward().id])
         );
+        assert_eq!(first_fused_ids(&first.events).and_then(|ids| ids.last().cloned()), Some(trap_id.clone()));
         assert!(
             first
                 .state
@@ -336,13 +358,13 @@ mod c_plus_c74s_field_trap_r425 {
         let OpponentsTurn { state, trap_id } = opponents_turn("texts", false);
         let mut next = play(state, PlayerId::P2, &turner().id, Some((Row::Units, 1))).state;
         next = play(next, PlayerId::P2, &turner().id, Some((Row::Units, 2))).state;
-        // The second Turner is fused into p1's trap; the first stays p2's.
+        // A copy of the second Turner is fused into p1's trap; both Turners stay p2's (R831011).
         assert_ne!(trap_of(&next, &trap_id).def_id, forward().id);
         let p2_before = next.players.p2.hero.health;
         let p1_before = next.players.p1.hero.health;
         next = act(&next, json!({ "type": "endTurn", "playerId": "p2" })).state;
-        // p2's own Turner hit p1 at p2's end of turn; the fused one waits for p1's end of turn.
-        assert_eq!(next.players.p1.hero.health, p1_before - TURNER_DAMAGE);
+        // p2's own two Turners hit p1 at p2's end of turn; the fused one waits for p1's end of turn.
+        assert_eq!(next.players.p1.hero.health, p1_before - 2 * TURNER_DAMAGE);
         next = act(&next, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(next.players.p2.hero.health, p2_before - TURNER_DAMAGE);
 
