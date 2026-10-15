@@ -8,6 +8,7 @@ pub mod collection;
 pub mod consent;
 pub mod cors;
 pub mod crypto;
+pub mod custom_cards;
 pub mod decks;
 pub mod e2e;
 pub mod game_records;

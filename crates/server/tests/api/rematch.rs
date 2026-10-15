@@ -788,6 +788,39 @@ mod rematch_refusals {
     use super::*;
 
     #[tokio::test(start_paused = true)]
+    async fn r915005_a_best_of_1_rematch_of_a_deck_with_a_custom_card_is_refused_l7_creating_nothing() {
+        let app = test_app().await;
+        let (a, b, finished) = names("custom-card");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        // A finished match whose frozen deck holds a custom card, as no queue or room would ever
+        // freeze (they ask L7 first): the rematch asks it again rather than replay the deck.
+        let custom = "custom-0123456789abcdef0123456789abcdef";
+        let (mut one, two) = real_decks();
+        one[0] = custom.to_string();
+        finished_match(&app, &finished, &a, &b, json!({ "decks": [one, two] })).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        let (code, refused) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(code, 422, "{refused}");
+        assert_eq!(refused["error"]["code"], "loadout_invalid");
+        let details = refused["error"]["details"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(details.len(), 1, "{refused}");
+        assert_eq!(details[0]["rule"], "L7");
+        assert_eq!(details[0]["cardId"], custom);
+        assert_eq!(refused["error"]["message"], details[0]["message"]);
+        assert!(live_ids(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
+        // The claim was let go: the status shows no game made.
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], Value::Null);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn a_non_seat_gets_404_on_both_endpoints_like_for_a_missing_match() {
         let app = test_app().await;
         let (a, b, finished) = names("non-seat");

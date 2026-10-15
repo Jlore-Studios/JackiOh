@@ -9,6 +9,9 @@
 //! "More cards from" pick (`leanSet`, absent = none, or R1372's `leanNewest` from an older client; the
 //! latest offer's stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
 //!
+//! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
+//! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
+//!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
 //! The offers live in a module-level map, like `queue.rs`'s `E2E_SEED_BY_TICKET`: rendezvous state
@@ -25,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::collection::caller_profile;
-use crate::api::decks::lean_of;
+use crate::api::decks::{assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -166,8 +169,14 @@ async fn create_rematch(
     leans: (Option<LeanPick>, Option<LeanPick>),
     match_id: &str,
 ) -> Result<(), ApiError> {
-    let seed = new_seed();
     let random = mode == QueueMode::Random;
+    // R915005: a deck with a custom card plays only in practice, so the frozen decks a Best-of-1
+    // rematch would replay are asked the validator's L7, as the queue asks it, before anything is
+    // claimed. All Random deals from the catalog, which holds no custom card.
+    if !random {
+        assert_no_custom_cards(&[&finished.decks.0, &finished.decks.1])?;
+    }
+    let seed = new_seed();
     let portrait_of = |at: usize| -> Option<String> {
         finished
             .portraits

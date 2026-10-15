@@ -1097,3 +1097,61 @@ mod r642_the_portraits_on_a_rooms_match {
         );
     }
 }
+
+mod a_deck_with_a_custom_card_r915005 {
+    //! R915005 — a deck with a custom card plays only in practice: a room refuses it at both doors
+    //! with the validator's L7, before anything is claimed.
+    use super::*;
+
+    /// The harness's deck with its first card swapped for a custom card: legal by every other rule.
+    fn custom_deck() -> Vec<String> {
+        let mut cards = deck();
+        cards[0] = "custom-0123456789abcdef0123456789abcdef".to_string();
+        cards
+    }
+
+    fn assert_l7(status: u16, refused: &Value) {
+        assert_eq!(status, 422, "{refused}");
+        assert_eq!(refused["error"]["code"], "loadout_invalid");
+        let details = refused["error"]["details"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(details.len(), 1, "{refused}");
+        assert_eq!(details[0]["rule"], "L7");
+        assert_eq!(details[0]["cardId"], json!(custom_deck()[0]));
+        assert_eq!(refused["error"]["message"], details[0]["message"]);
+    }
+
+    #[tokio::test]
+    async fn r915005_refuses_a_room_create_and_a_join_with_a_custom_card_deck_l7_and_claims_nothing() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        save_deck(&h.app, HOST, &uuid(9), &custom_deck(), "host's homebrew").await;
+        save_deck(&h.app, GUEST, &uuid(10), &custom_deck(), "guest's homebrew").await;
+
+        // The host's door: no room is made.
+        let (status, refused) = create(&h.app, &h.host, json!({ "mode": "bo1", "deckId": uuid(9) })).await;
+        assert_l7(status, &refused);
+        assert!(h.rooms().await.is_empty());
+
+        // The guest's door: the room stays open to a deck that may play, and no match starts.
+        let (status, made) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{made}");
+        let code = made["code"].as_str().expect("a code").to_string();
+        let (status, refused) = join(
+            &h.app,
+            &h.guest,
+            &code,
+            json!({ "mode": "bo1", "deckId": uuid(10) }),
+        )
+        .await;
+        assert_l7(status, &refused);
+        assert_eq!(h.rooms().await[0]["guestProfileId"], Value::Null);
+        assert!(started(&h.app).await.is_empty());
+
+        // Control: the guest's own legal deck joins the same room.
+        let (status, joined) = h.join(&code, json!({})).await;
+        assert_eq!(status, 200, "{joined}");
+    }
+}

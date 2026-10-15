@@ -1,5 +1,5 @@
 //! The production store (SPEC §9.2's `API functions -> Postgres` edge), implemented over the
-//! migrations in `crates/server/migrations` (0001-0035) with sqlx (← `apps/server/src/db/store.ts`,
+//! migrations in `crates/server/migrations` (0001-0037) with sqlx (← `apps/server/src/db/store.ts`,
 //! SURFACE §11.1, §11.2).
 //!
 //! One free async fn per store method, named `<substore>_<method>` (the root `redeem` and
@@ -64,23 +64,24 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{GameEventType, GameRecord, parse_game_record, portrait_or_default, sources_of};
-use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId};
+use jackioh_engine::{Action, CustomCard, LastBoardEntry, LeanPick, PlayerId};
 
 use crate::auth::is_uuid;
 use crate::config::{RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, ConsentRow,
-    EmoteEventRow, FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult,
-    Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError,
-    TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome,
-    TutorialHiddenChoice, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome,
+    CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, EmoteEventRow, FrozenDeck, FrozenTrio,
+    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow,
+    MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits,
+    PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
+    PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
+    PublicPlayerSummary, QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayRow,
+    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio,
+    Season, SeasonStanding, SeriesRow, SeriesSide, SignalOutcomeRow, StoreError, TermsAcceptanceRow,
+    TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UpsertOutcome, UsernameClaim,
+    UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -1038,16 +1039,55 @@ fn upsert_outcome_of<T: DeserializeOwned>(
     allowed: &[&str],
     value: Option<String>,
 ) -> Result<T, StoreError> {
+    outcome_of(function, "0007", allowed, value)
+}
+
+/// A write function's answer read back as the port's outcome: one of `allowed`, which is exactly
+/// what the function returns in `migration`; anything else is a schema this was not built against.
+fn outcome_of<T: DeserializeOwned>(
+    function: &str,
+    migration: &str,
+    allowed: &[&str],
+    value: Option<String>,
+) -> Result<T, StoreError> {
     if let Some(text) = value.as_deref()
         && allowed.contains(&text)
     {
         return from_literal(text);
     }
     Err(StoreError::from(format!(
-        "{function} returned {}, which is not one of {} (migration 0007)",
+        "{function} returned {}, which is not one of {} (migration {migration})",
         stringify(&value),
         allowed.join(", ")
     )))
+}
+
+/// Exactly what `app.create_custom_card` and `app.update_custom_card` return (migration 0037).
+const CUSTOM_CARD_CREATE_OUTCOMES: &[&str] = &["created", "limit"];
+const CUSTOM_CARD_UPDATE_OUTCOMES: &[&str] = &["updated", "stale", "missing"];
+
+/// `public.custom_cards`' columns (migration 0037, R915008).
+macro_rules! custom_card_columns {
+    () => {
+        "id, profile_id, version, frame, source, builder, created_at, updated_at"
+    };
+}
+
+/// One `public.custom_cards` row as the port's card. The frame is read straight into the engine's
+/// `CustomFrame`, so a row some other writer made that is not one fails here, by name.
+fn to_custom_card(row: &PgRow) -> Result<SavedCustomCard, StoreError> {
+    Ok(SavedCustomCard {
+        profile_id: uuid_text(row, "profile_id")?,
+        card: CustomCard {
+            id: get(row, "id")?,
+            version: get(row, "version")?,
+            frame: json_col(row, "frame")?,
+            source: get(row, "source")?,
+            builder: get(row, "builder")?,
+        },
+        created_at: ms_of(get(row, "created_at")?),
+        updated_at: ms_of(get(row, "updated_at")?),
+    })
 }
 
 /// `public.tutorial_progress` (migration 0011, R320).
@@ -2612,6 +2652,141 @@ pub async fn trios_remove(t: &mut PgTx<'_>, profile_id: &str, trio_id: &str) -> 
     run_as(t, Some(profile_id)).await?;
     let done = sqlx::query("delete from public.trios where id = $1::uuid and profile_id = $2::uuid")
         .bind(trio_id)
+        .bind(profile_id)
+        .execute(&mut **t)
+        .await
+        .map_err(db_error)?;
+    Ok(done.rows_affected() == 1)
+}
+
+// ---------------------------------------------------------------------------
+// Custom cards on the account (SPEC §12.9, R915008)
+//
+// Migration 0037. A create and a save are one call each to `app.create_custom_card` and
+// `app.update_custom_card`, which count the cap under the profile lock and the version under the
+// card's; the reads and the delete are single statements on the owner's own rows.
+// ---------------------------------------------------------------------------
+
+/// Oldest first, ties on the id's bytes (`collate "C"`, so a collation that skips hyphens cannot
+/// order them otherwise than the in-memory store does).
+pub async fn custom_cards_list(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+) -> Result<Vec<SavedCustomCard>, StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        custom_card_columns!(),
+        " from public.custom_cards where profile_id = $1::uuid order by created_at, id collate \"C\""
+    ))
+    .bind(profile_id)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(to_custom_card).collect()
+}
+
+pub async fn custom_cards_get(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    card_id: &str,
+) -> Result<Option<SavedCustomCard>, StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    let row = sqlx::query(concat!(
+        "select ",
+        custom_card_columns!(),
+        " from public.custom_cards where profile_id = $1::uuid and id = $2::text"
+    ))
+    .bind(profile_id)
+    .bind(card_id)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.as_ref().map(to_custom_card).transpose()
+}
+
+/// R915008: one call to `app.create_custom_card`, which takes the profile row lock, refuses an
+/// inactive profile, counts the cap under the lock (the smaller of `max_cards` and
+/// `app.settings.max_custom_cards`, KNOWN DIVERGENCES, caps) and writes the card at version 1.
+pub async fn custom_cards_create(
+    t: &mut PgTx<'_>,
+    card: &CustomCardWrite,
+    max_cards: i64,
+) -> Result<CustomCardCreateOutcome, StoreError> {
+    let max_cards = i32::try_from(max_cards).unwrap_or(i32::MAX);
+    run_as(t, Some(card.profile_id.as_str())).await?;
+    let row = sqlx::query(concat!(
+        "select app.create_custom_card($1::uuid, $2::text, $3::jsonb, $4::text, $5::jsonb, ",
+        ts!("$6"),
+        ", $7::int) as outcome"
+    ))
+    .bind(card.profile_id.as_str())
+    .bind(card.id.as_str())
+    .bind(json(&card.frame)?)
+    .bind(card.source.as_str())
+    .bind(json_or_null(&card.builder)?)
+    .bind(card.at)
+    .bind(max_cards)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let outcome = match row {
+        None => None,
+        Some(row) => get::<Option<String>>(&row, "outcome")?,
+    };
+    outcome_of(
+        "app.create_custom_card",
+        "0037",
+        CUSTOM_CARD_CREATE_OUTCOMES,
+        outcome,
+    )
+}
+
+/// R915008: one call to `app.update_custom_card`, which refuses an inactive profile and, under the
+/// card's row lock, replaces the profile's own card when its version is still `replaces`.
+pub async fn custom_cards_update(
+    t: &mut PgTx<'_>,
+    card: &CustomCardWrite,
+    replaces: i32,
+) -> Result<CustomCardUpdateOutcome, StoreError> {
+    run_as(t, Some(card.profile_id.as_str())).await?;
+    let row = sqlx::query(concat!(
+        "select app.update_custom_card($1::uuid, $2::text, $3::int, $4::jsonb, $5::text, $6::jsonb, ",
+        ts!("$7"),
+        ") as outcome"
+    ))
+    .bind(card.profile_id.as_str())
+    .bind(card.id.as_str())
+    .bind(replaces)
+    .bind(json(&card.frame)?)
+    .bind(card.source.as_str())
+    .bind(json_or_null(&card.builder)?)
+    .bind(card.at)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let outcome = match row {
+        None => None,
+        Some(row) => get::<Option<String>>(&row, "outcome")?,
+    };
+    outcome_of(
+        "app.update_custom_card",
+        "0037",
+        CUSTOM_CARD_UPDATE_OUTCOMES,
+        outcome,
+    )
+}
+
+/// Not an `app.*` function, as `decks_remove`: a delete of the profile's own row has nothing to
+/// decide. A deck naming the card keeps naming it (§12.9).
+pub async fn custom_cards_remove(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    card_id: &str,
+) -> Result<bool, StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    let done = sqlx::query("delete from public.custom_cards where id = $1::text and profile_id = $2::uuid")
+        .bind(card_id)
         .bind(profile_id)
         .execute(&mut **t)
         .await
@@ -5653,10 +5828,19 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 //    `tests/store/contract.rs`. Its caps are the smaller of the caller's and `app.settings`'
 //    `player_settings_groups_max` / `player_settings_bytes_max`. The byte cap counts the text
 //    jsonb prints, which the in-memory store reproduces (`jsonb_text_bytes`) for ordinary values.
-//  * caps. The port passes the cap (`max_decks`, `max_trios`); the SQL applies the smaller of it and
-//    `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring `MAX_SAVED_DECKS` and
-//    `MAX_SAVED_TRIOS`). Equal today. Raising a cap in `src/config.rs` alone raises it only in
-//    memory; the database needs a migration updating its row, as for the redemption limits.
+//  * custom card strictness (R915008). `app.create_custom_card` and `app.update_custom_card` (0037)
+//    refuse, by raising, a profile that is missing or not active, and `public.custom_cards`' checks
+//    refuse an id that is not `custom-` and 1 to 57 lowercase letters, digits and hyphens, a
+//    version under 1, a frame that is not an object, a source over 8192 bytes and a builder whose
+//    jsonb text passes twice the engine's 16384 bytes. The in-memory store checks none of these,
+//    because `src/api/custom_cards.rs` refuses a card the engine's validator refuses first
+//    (R915001) and its routes are `active`. jsonb also keeps a builder's object keys in its own
+//    order and one of a doubled key; neither changes the value the port reads back.
+//  * caps. The port passes the cap (`max_decks`, `max_trios`, `max_cards`); the SQL applies the
+//    smaller of it and `app.settings.max_saved_decks` / `max_saved_trios` (0007, mirroring
+//    `MAX_SAVED_DECKS` and `MAX_SAVED_TRIOS`) / `max_custom_cards` (0037, mirroring
+//    `CUSTOM_CARDS_PER_ACCOUNT`). Equal today. Raising a cap in `src/config.rs` alone raises it only
+//    in memory; the database needs a migration updating its row, as for the redemption limits.
 //  * deck and trio timestamps. `app.upsert_deck` / `app.upsert_trio` take one instant: `updated_at`
 //    always, `created_at` too when the row is new, and this store hands them `updated_at`. The fake
 //    stores a new deck's `created_at` as given. The two agree for any caller that stamps a new

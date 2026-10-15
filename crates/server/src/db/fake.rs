@@ -62,6 +62,9 @@
 //!  - `trios_upsert` refuses a slot naming a deck that is not this profile's (`unknown_deck`, the
 //!    composite foreign key) and one deck in two slots (the check constraint);
 //!  - `decks_remove` empties every trio slot that named the deck (`on delete set null`);
+//!  - `custom_cards_create` refuses a create past the cap (`limit`) and an id already held, and
+//!    `custom_cards_update` is compare-and-set on the card's version (`stale`) and the owner's
+//!    alone (`missing`), as `app.create_custom_card` / `app.update_custom_card` are (0037, R915008);
 //!  - `series_update` is compare-and-set on `version`;
 //!  - `tutorial_merge` only ever grows the lessons and keeps the newest choice (0011, R320);
 //!  - `player_settings_merge` replaces a group only with a strictly later one and caps the result's
@@ -91,7 +94,7 @@ use tokio::sync::{Mutex, MutexGuard};
 use jackioh_engine::wire::stats::{
     CardStatsFilter, DEV_RECORD_ID_PREFIX, GameRecord, GameSource, PilotFilter, record_matches,
 };
-use jackioh_engine::wire::{PLAYER_IDS, PlayerId};
+use jackioh_engine::wire::{CustomCard, PLAYER_IDS, PlayerId};
 
 use crate::api::collection::{LAUNCH_COPIES, LAUNCH_GRANT_REASON};
 use crate::config::PersonaName;
@@ -102,16 +105,17 @@ use crate::config::{
 };
 use crate::db::store::{
     ActionTimingRow, BotDeck, BotRating, BotRow, CodeAttempt, CodeAttemptResult, CollectionEntry,
-    CollectionGrant, ConsentRow, Db, EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery,
-    InviteCluster, InviteCode, LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase,
-    MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
+    CollectionGrant, ConsentRow, CustomCardCreateOutcome, CustomCardUpdateOutcome, CustomCardWrite, Db,
+    EmoteEventRow, FavouriteCard, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardEntry, LastBoardKind, MatchActionRow, MatchClocks, MatchPhase, MatchRow, MatchSeats,
+    MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry, PlayerSettingsLimits,
     PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions,
     PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus,
     PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult, ReplayRow, ResultRow,
-    RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
-    SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus,
-    TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
+    RetentionPurgeInput, RetentionPurgeResult, Room, SavedCustomCard, SavedDeck, SavedTrio, Season,
+    SeasonStanding, SeriesRow, SeriesStatus, SignalOutcomeRow, StoreError, TermsAcceptanceRow, TermsSource,
+    Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome,
+    TutorialProgressRow, UpsertOutcome, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::SeasonRank;
@@ -206,6 +210,8 @@ pub struct FakeTables {
     // DeckTables
     pub decks: Vec<SavedDeck>,
     pub trios: Vec<SavedTrio>,
+    // CustomCardTables: the table R915008 adds (`public.custom_cards`, migration 0037): one row per card.
+    pub custom_cards: Vec<SavedCustomCard>,
     pub series: Vec<SeriesRow>,
     pub matches: Vec<MatchRow>,
     pub match_actions: Vec<MatchActionRow>,
@@ -1924,6 +1930,114 @@ pub fn trios_remove(f: &mut FakeTx<'_>, profile_id: &str, trio_id: &str) -> Resu
     Ok(true)
 }
 
+// ---------------------------------------------------------------------------
+// Custom cards on the account (R915008, migration 0037)
+// ---------------------------------------------------------------------------
+
+/// A profile's custom cards, oldest first: `created_at`, then `id`.
+pub fn custom_cards_list(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Vec<SavedCustomCard>, StoreError> {
+    call(f, "customCards.list")?;
+    let mut rows: Vec<SavedCustomCard> = f
+        .tables()
+        .custom_cards
+        .iter()
+        .filter(|row| row.profile_id == profile_id)
+        .cloned()
+        .collect();
+    rows.sort_by(|a, b| by_creation(a.created_at, &a.card.id, b.created_at, &b.card.id));
+    Ok(rows)
+}
+
+/// The profile's own card with this id, or none.
+pub fn custom_cards_get(
+    f: &mut FakeTx<'_>,
+    profile_id: &str,
+    card_id: &str,
+) -> Result<Option<SavedCustomCard>, StoreError> {
+    call(f, "customCards.get")?;
+    Ok(f.tables()
+        .custom_cards
+        .iter()
+        .find(|row| row.card.id == card_id && row.profile_id == profile_id)
+        .cloned())
+}
+
+/// A new card at version 1, as `app.create_custom_card` (0037) writes it: the cap first, then the
+/// id, which is unique (`custom_cards_pkey`).
+pub fn custom_cards_create(
+    f: &mut FakeTx<'_>,
+    card: &CustomCardWrite,
+    max_cards: i64,
+) -> Result<CustomCardCreateOutcome, StoreError> {
+    let max_cards = usize::try_from(max_cards).unwrap_or(0);
+    call(f, "customCards.create")?;
+    let rows = &mut f.tables().custom_cards;
+    let held = rows
+        .iter()
+        .filter(|row| row.profile_id == card.profile_id)
+        .count();
+    if held >= max_cards {
+        return Ok(CustomCardCreateOutcome::Limit);
+    }
+    if rows.iter().any(|row| row.card.id == card.id) {
+        return Err(StoreError::from(format!(
+            "custom_cards.id is unique: {}",
+            card.id
+        )));
+    }
+    rows.push(SavedCustomCard {
+        profile_id: card.profile_id.clone(),
+        card: CustomCard {
+            id: card.id.clone(),
+            version: 1,
+            frame: card.frame.clone(),
+            source: card.source.clone(),
+            builder: card.builder.clone(),
+        },
+        created_at: card.at,
+        updated_at: card.at,
+    });
+    Ok(CustomCardCreateOutcome::Created)
+}
+
+/// Replaces the profile's own card whole when its version is still `replaces`, as
+/// `app.update_custom_card` (0037) does: the version counted, `created_at` kept.
+pub fn custom_cards_update(
+    f: &mut FakeTx<'_>,
+    card: &CustomCardWrite,
+    replaces: i32,
+) -> Result<CustomCardUpdateOutcome, StoreError> {
+    call(f, "customCards.update")?;
+    let Some(row) = f
+        .tables()
+        .custom_cards
+        .iter_mut()
+        .find(|row| row.card.id == card.id && row.profile_id == card.profile_id)
+    else {
+        return Ok(CustomCardUpdateOutcome::Missing);
+    };
+    if row.card.version != replaces {
+        return Ok(CustomCardUpdateOutcome::Stale);
+    }
+    // Postgres's `int` raises past its range, as this does.
+    row.card.version = replaces
+        .checked_add(1)
+        .ok_or_else(|| StoreError::from("custom_cards.version is out of range"))?;
+    row.card.frame = card.frame.clone();
+    row.card.source = card.source.clone();
+    row.card.builder = card.builder.clone();
+    row.updated_at = card.at;
+    Ok(CustomCardUpdateOutcome::Updated)
+}
+
+/// Deletes the profile's own card. False when it has none with this id.
+pub fn custom_cards_remove(f: &mut FakeTx<'_>, profile_id: &str, card_id: &str) -> Result<bool, StoreError> {
+    call(f, "customCards.remove")?;
+    Ok(keep_only(&mut f.tables().custom_cards, |row| {
+        !(row.card.id == card_id && row.profile_id == profile_id)
+    }) == 1)
+}
+
 pub fn series_create(f: &mut FakeTx<'_>, row: &SeriesRow) -> Result<(), StoreError> {
     call(f, "series.create")?;
     if f.tables().series.iter().any(|existing| existing.id == row.id) {
@@ -2862,6 +2976,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     keep_only(&mut tables.grants, |row| row.profile_id != profile_id);
     keep_only(&mut tables.decks, |row| row.profile_id != profile_id);
     keep_only(&mut tables.trios, |row| row.profile_id != profile_id);
+    // 0037, R915008: a profile's custom cards cascade with it.
+    keep_only(&mut tables.custom_cards, |row| row.profile_id != profile_id);
     keep_only(&mut tables.tutorial, |row| row.profile_id != profile_id);
     keep_only(&mut tables.player_settings, |row| row.profile_id != profile_id);
     keep_only(&mut tables.last_boards, |row| row.profile_id != profile_id);

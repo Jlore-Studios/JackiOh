@@ -2099,6 +2099,46 @@ mod r253_what_may_be_queued_through_the_real_validator {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r915005_refuses_a_best_of_1_deck_and_a_trio_holding_a_custom_card_l7_before_any_other_rule() {
+        let w = real_wiring().await;
+        let size = w.size;
+        let custom = "custom-0123456789abcdef0123456789abcdef".to_string();
+        // Legal by every other rule: the custom card is one card of a full deck of owned cards.
+        let mut homebrew = vec![custom.clone()];
+        homebrew.extend(w.pool[1..size].iter().cloned());
+        let deck_id = save_deck_for(&w.app, "real", &homebrew, "Homebrew").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": deck_id }), "L7").await;
+        assert_eq!(refused["error"]["details"].as_array().map(Vec::len), Some(1));
+        assert_eq!(refused["error"]["details"][0]["cardId"], json!(custom));
+        let message = refused["error"]["message"].as_str().unwrap_or("").to_string();
+        assert!(
+            message.contains("Homebrew") && message.contains(&custom),
+            "{message}"
+        );
+
+        // A deck that breaks L2 too still reads L7 first.
+        let short = save_deck_for(&w.app, "real", std::slice::from_ref(&custom), "Short").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": short }), "L7").await;
+        let rules: Vec<Value> = refused["error"]["details"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|issue| issue["rule"].clone())
+            .collect();
+        assert_eq!(rules, vec![json!("L7"), json!("L2")]);
+
+        // A trio with the custom card in its second deck.
+        let ids = [
+            Some(save_deck_for(&w.app, "real", &w.pool[size..size * 2], "Aggro").await),
+            Some(deck_id.clone()),
+            Some(save_deck_for(&w.app, "real", &w.pool[size * 2..size * 3], "Tempo").await),
+        ];
+        let trio_id = save_trio_for(&w.app, "real", Some(ids), "Main").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo3", "trioId": trio_id }), "L7").await;
+        assert_eq!(refused["error"]["details"][0]["deck"], json!(2));
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r253_refuses_a_best_of_3_trio_with_an_empty_slot_as_l1() {
         let w = real_wiring().await;
         let size = w.size;
