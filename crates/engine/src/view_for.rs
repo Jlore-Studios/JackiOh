@@ -45,7 +45,9 @@
 //!     hand, the top of a unit pile and a backrow card face-up to the viewer — and on no other
 //!     (`preview.ts` owns that rule). #492, R81: a fourth, `embiggenCost` (what a play at the card's
 //!     embiggen price costs now, `play_choices::embiggen_play_cost`), on the viewer's own hand cards
-//!     only, beside the normal price `cost` already is.
+//!     only, beside the normal price `cost` already is. #992, R90: a fifth, `choicesTruncated`, on the
+//!     viewer's own hand cards only, while `legal_actions` lists plays of the card whose choice
+//!     combinations R90's bound cut (`play_choices::hand_play_choices_truncated`).
 //!   - R849000: `sick` on every unit, both seats; `attackReason` on the viewer's own units that may act
 //!     (`attack_reason_of`).
 //!   - R979000: `playReason` on the viewer's own hand cards that may act now and have no legal play
@@ -81,7 +83,7 @@ use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
 use crate::params::params_view;
-use crate::play_choices::embiggen_play_cost;
+use crate::play_choices::{embiggen_play_cost, hand_play_choices_truncated};
 use crate::preview::{backrow_is_public, is_face_down, preview_of};
 use crate::script::ConditionZone;
 use crate::setup::{mulligan_prompt_for, returned_awaiting_shuffle};
@@ -296,6 +298,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         condition_active: None,
         countered_on_play: None,
         play_reason: None,
+        choices_truncated: None,
         preview: None,
         type_: None,
         brittle: None,
@@ -416,6 +419,14 @@ fn with_embiggen_cost(mut view: CardView, state: &GameState, card: &CardInstance
 fn with_counter_warning(mut view: CardView, countered: bool) -> CardView {
     if countered {
         view.countered_on_play = Some(true);
+    }
+    view
+}
+
+/// #992, R90: the bound's mark, `true` or absent like the warning above.
+fn with_choices_truncated(mut view: CardView, truncated: bool) -> CardView {
+    if truncated {
+        view.choices_truncated = Some(true);
     }
     view
 }
@@ -1026,20 +1037,23 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             side.hand
                 .iter()
                 .map(|card| {
-                    with_preview(
-                        with_play_reason(
-                            with_counter_warning(
-                                with_condition(
-                                    with_embiggen_cost(hand_card_view(state, card), state, card),
-                                    condition_active(state, card, viewer, ConditionZone::Hand),
+                    with_choices_truncated(
+                        with_preview(
+                            with_play_reason(
+                                with_counter_warning(
+                                    with_condition(
+                                        with_embiggen_cost(hand_card_view(state, card), state, card),
+                                        condition_active(state, card, viewer, ConditionZone::Hand),
+                                    ),
+                                    countered.contains(&card.id),
                                 ),
-                                countered.contains(&card.id),
+                                state,
+                                card,
+                                viewer,
                             ),
-                            state,
-                            card,
-                            viewer,
+                            preview_of(state, card, viewer, ConditionZone::Hand),
                         ),
-                        preview_of(state, card, viewer, ConditionZone::Hand),
+                        hand_play_choices_truncated(state, viewer, card),
                     )
                 })
                 .collect(),

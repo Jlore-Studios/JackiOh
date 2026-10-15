@@ -83,6 +83,8 @@ export const DAMAGE_POP = ".damage-pop";
 export const HEAL_POP = ".heal-pop";
 export const LOSS_POP = ".loss-pop";
 export const RADIANT = ".radiant";
+/** #991: a field card the hovered or selected hand card's preview counts (apps/web/src/game/glow.ts `countedAttr`). */
+export const COUNTED = '[data-counted="true"]';
 
 export function switchPositionId(instanceId: string): string {
   return `switch-${instanceId}`;

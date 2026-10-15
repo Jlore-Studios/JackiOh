@@ -457,6 +457,20 @@ fn first_decl(state: &GameState, card: &CardInstance) -> TargetDecl {
     first(play_choices::declared_targets(state, card))
 }
 
+fn own_hand(view: &PlayerView) -> Vec<CardView> {
+    match &view.you.hand {
+        HandView::Cards(cards) => cards.clone(),
+        HandView::Count { .. } => panic!("the viewer's own hand must travel in full (§10.8)"),
+    }
+}
+
+fn hand_card(view: &PlayerView, instance_id: &str) -> CardView {
+    own_hand(view)
+        .into_iter()
+        .find(|card| card.instance_id == instance_id)
+        .unwrap_or_else(|| panic!("{instance_id} is not in the viewer's hand"))
+}
+
 mod r81_r90_play_choice_declarations_and_filters {
     use super::*;
 
@@ -1176,5 +1190,219 @@ mod r81_r90_play_choice_declarations_and_filters {
             ))
             .contains("needs 2 targets")
         );
+    }
+
+    /// Both sides' lanes 1 to 5 filled and the "choose 2 or 3" card in p1's hand: ten units, so 165
+    /// combinations against R90's bound.
+    fn wide_board_with_up_to_three(seed: &str) -> (GameState, CardInstance) {
+        let mut state = playing(seed);
+        for player in [PlayerId::P1, PlayerId::P2] {
+            for lane in [1, 2, 3, 4, 5] {
+                put(&mut state, &plain.id, slot(player, Row::Units, lane), json!({}));
+            }
+        }
+        let card = first(in_hand(&mut state, &up_to_three().id, PlayerId::P1, 1));
+        (state, card)
+    }
+
+    /// "R90 marks a 'choose 2 or 3' play cut at the bound and keeps its first 64 in order (#992)"
+    #[test]
+    fn r90_marks_a_choose_2_or_3_play_cut_at_the_bound_and_keeps_its_first_64_in_order() {
+        let (state, card) = wide_board_with_up_to_three("marked-wide-board");
+
+        let listed = play_choices::listed_play_choices(&state, PlayerId::P1, &card, None);
+        assert!(listed.truncated);
+        assert_eq!(listed.combos.len(), MAX_CHOICE_COMBINATIONS);
+        assert_eq!(
+            listed.combos,
+            play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None)
+        );
+
+        // R90's keep-first order: every pair in index order, then triples, cut at the bound.
+        let options = legal(&state, &card, &first_decl(&state, &card));
+        assert_eq!(options.len(), 10);
+        let mut expected: Vec<Vec<Selection>> = Vec::new();
+        for (i, a) in options.iter().enumerate() {
+            for b in &options[i + 1..] {
+                expected.push(vec![a.clone(), b.clone()]);
+            }
+        }
+        for (i, a) in options.iter().enumerate() {
+            for (j, b) in options.iter().enumerate().skip(i + 1) {
+                for c in &options[j + 1..] {
+                    expected.push(vec![a.clone(), b.clone(), c.clone()]);
+                }
+            }
+        }
+        expected.truncate(MAX_CHOICE_COMBINATIONS);
+        for (at, combo) in listed.combos.iter().enumerate() {
+            assert_eq!(
+                combo.targets.clone().unwrap_or_default(),
+                expected[at],
+                "combination {at}"
+            );
+        }
+        for option in &options {
+            assert!(
+                listed
+                    .combos
+                    .iter()
+                    .any(|combo| combo.targets.as_deref().unwrap_or(&[]).contains(option)),
+                "{option:?} is in no listed combination"
+            );
+        }
+
+        let plays = legal_actions(&state, PlayerId::P1)
+            .iter()
+            .filter_map(play_choices::PlayAction::from_body)
+            .filter(|play| play.instance_id == card.id)
+            .count();
+        assert_eq!(plays, MAX_CHOICE_COMBINATIONS);
+
+        let own = hand_card(&view_for(&state, PlayerId::P1), &card.id);
+        assert_eq!(own.choices_truncated, Some(true));
+        assert_eq!(
+            serde_json::to_value(&own).expect("serialises")["choicesTruncated"],
+            json!(true)
+        );
+        let theirs = serde_json::to_string(&view_for(&state, PlayerId::P2)).expect("serialises");
+        assert!(!theirs.contains("choicesTruncated"));
+    }
+
+    /// "R90 marks a cross of two declarations cut at the bound (#992)"
+    #[test]
+    fn r90_marks_a_cross_of_two_declarations_cut_at_the_bound() {
+        let mut state = playing("marked-cross");
+        for player in [PlayerId::P1, PlayerId::P2] {
+            for lane in [1, 2, 3] {
+                put(&mut state, &plain.id, slot(player, Row::Units, lane), json!({}));
+            }
+        }
+        let card = first(in_hand(&mut state, &remainder().id, PlayerId::P1, 1));
+
+        // Three enemy picks crossed with the 41 one-to-three picks of six units: 123 combinations.
+        let listed = play_choices::listed_play_choices(&state, PlayerId::P1, &card, None);
+        assert!(listed.truncated);
+        assert_eq!(listed.combos.len(), MAX_CHOICE_COMBINATIONS);
+        let decl = play_choices::declared_targets(&state, &card)[0].clone();
+        let firsts = legal(&state, &card, &decl);
+        assert_eq!(firsts.len(), 3);
+        // The combinations kept first offer every pick of the first declaration.
+        for (at, pick) in firsts.iter().enumerate() {
+            let targets = listed.combos[at].targets.as_deref().expect("a play with targets");
+            assert_eq!(&targets[0], pick, "combination {at}");
+        }
+        assert_eq!(
+            hand_card(&view_for(&state, PlayerId::P1), &card.id).choices_truncated,
+            Some(true)
+        );
+    }
+
+    /// "R90 leaves an uncut play unmarked on a narrow board (#992)"
+    #[test]
+    fn r90_leaves_an_uncut_play_unmarked_on_a_narrow_board() {
+        let mut state = playing("unmarked-narrow-board");
+        for lane in [1, 2] {
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
+        }
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        let card = first(in_hand(&mut state, &up_to_three().id, PlayerId::P1, 1));
+
+        // Three units: three pairs and one triple.
+        let listed = play_choices::listed_play_choices(&state, PlayerId::P1, &card, None);
+        assert!(!listed.truncated);
+        assert_eq!(listed.combos.len(), 4);
+        assert_eq!(
+            listed.combos,
+            play_choices::play_choice_combinations(&state, PlayerId::P1, &card, None)
+        );
+        let view = view_for(&state, PlayerId::P1);
+        assert_eq!(hand_card(&view, &card.id).choices_truncated, None);
+        assert!(
+            !serde_json::to_string(&view)
+                .expect("serialises")
+                .contains("choicesTruncated")
+        );
+    }
+
+    /// "R90 marks no card legalActions does not offer (#992)"
+    #[test]
+    fn r90_marks_no_card_legal_actions_does_not_offer() {
+        let (mut state, card) = wide_board_with_up_to_three("marked-unaffordable");
+        state.players.p1.mana.current = 0;
+
+        // The enumeration is still cut, but the card cannot be paid for, so no play of it is listed.
+        assert!(play_choices::listed_play_choices(&state, PlayerId::P1, &card, None).truncated);
+        assert!(!play_choices::hand_play_choices_truncated(
+            &state,
+            PlayerId::P1,
+            &card
+        ));
+        assert!(
+            !legal_actions(&state, PlayerId::P1)
+                .iter()
+                .filter_map(play_choices::PlayAction::from_body)
+                .any(|play| play.instance_id == card.id)
+        );
+        assert_eq!(
+            hand_card(&view_for(&state, PlayerId::P1), &card.id).choices_truncated,
+            None
+        );
+    }
+
+    /// "R90 marks a list only when the bound dropped a combination, not when it fills the bound exactly
+    /// (#992)"
+    #[test]
+    fn r90_marks_a_list_only_when_the_bound_dropped_a_combination_not_when_it_fills_it_exactly() {
+        let mut state = playing("marked-at-the-bound");
+        for lane in [1, 2, 3, 4] {
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
+        }
+        for lane in [1, 2, 3] {
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P2, Row::Units, lane),
+                json!({}),
+            );
+        }
+        let card = first(in_hand(&mut state, &up_to_three().id, PlayerId::P1, 1));
+        // "Up to 3" of the board's units: the empty pick, then 7 singles, 21 pairs and 35 triples of
+        // seven units come to exactly 64 combinations, the bound.
+        let declared = play_choices::DeclaredChoices {
+            targets: vec![json_as(
+                json!({ "kind": "target", "min": 0, "max": 3, "filter": { "side": "any", "of": ["unit"] } }),
+            )],
+            modes: Vec::new(),
+        };
+        let exact = play_choices::listed_play_choices(&state, PlayerId::P1, &card, Some(&declared));
+        assert_eq!(exact.combos.len(), MAX_CHOICE_COMBINATIONS);
+        assert!(!exact.truncated);
+
+        // An eighth unit makes 93, one past which the bound drops.
+        put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
+        let cut = play_choices::listed_play_choices(&state, PlayerId::P1, &card, Some(&declared));
+        assert_eq!(cut.combos.len(), MAX_CHOICE_COMBINATIONS);
+        assert!(cut.truncated);
     }
 }

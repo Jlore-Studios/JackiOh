@@ -10,7 +10,8 @@
 //!   * `declared_targets` / `declared_modes` — what the card's script asked for;
 //!   * `legal_selections_for` — every selection one `TargetDecl` filter admits, in a deterministic
 //!     order (the chooser's side first, lane order within a side);
-//!   * `play_choice_combinations` / `play_actions_for` — R90's enumeration, bounded;
+//!   * `play_choice_combinations` / `play_actions_for` — R90's enumeration, bounded; `listed_play_choices`
+//!     and `hand_play_choices_truncated` say when the bound cut it (#992);
 //!   * `why_choices_refused` — the single refusal, returning `Ok` when every choice is legal.
 //!
 //! R90 is the governing ruling for the validation: several declarations read the flat `targets` list
@@ -44,8 +45,9 @@ use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
 use crate::state::{CardInstance, EngineError, GameState, ModifierKind};
 use crate::wire::{
-    ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, PlagueSpend, PlayerId,
-    PromptKind, RevealAt, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice, opponent_of,
+    ActionBody, CardCost, CardType, FilterOf, FilterSide, KeywordKind, ModeDecl, Phase, PlagueSpend,
+    PlayerId, PromptKind, RevealAt, Row, Selection, Tag, TargetDecl, TargetFilter, Zone, ZoneChoice,
+    opponent_of,
 };
 use crate::zones::ZoneSlot;
 
@@ -150,8 +152,9 @@ pub struct PlayChoices {
 // R90's enumeration bound is `MAX_CHOICE_COMBINATIONS` in `config.rs` (BUILD §2): "Choose 2 or 3"
 // on a full board is 165 combinations, and the client only needs enough of them to offer every
 // picker, so the target and mode enumerations below stop at the cap rather than growing with the
-// board — and a cut drops combinations, never a pick (`cross_product`, `interleaved`). A Tribute's
-// paying sets are the exception: they are the play's price, listed whole (`legal_tribute_sets`).
+// board — and a cut drops combinations, never a pick (`cross_product`, `interleaved`), and
+// `listed_play_choices` says when one did (#992). A Tribute's paying sets are the exception: they are
+// the play's price, listed whole (`legal_tribute_sets`).
 
 /// §7: the Sheep Token, which is "worth 2 Tributes while on the field" (§3.2, §6.3).
 pub const SHEEP_TOKEN_INDEX: &str = "T-sheep";
@@ -1449,11 +1452,14 @@ fn split_selections(
     out
 }
 
-/// Every subset of `options` a declaration may answer with, size-ascending then index order; none at
-/// all for a needed pick the board cannot satisfy, so no play is offered (R703).
-fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<Vec<Selection>> {
+/// Every subset of `options` a declaration may answer with, size-ascending then index order, up to
+/// R90's bound; none at all for a needed pick the board cannot satisfy, so no play is offered (R703).
+/// Also whether the bound dropped any (#992).
+fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> (Vec<Vec<Selection>>, bool) {
+    // #992: one past R90's bound, so a subset the bound drops is seen.
+    const SEEN: usize = MAX_CHOICE_COMBINATIONS + 1;
     if unmet_requirement(decl, options.len()) {
-        return Vec::new();
+        return (Vec::new(), false);
     }
     let low = take_for(decl, options.len());
     let high = if is_last {
@@ -1470,7 +1476,7 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<V
         picked: &mut Vec<Selection>,
         out: &mut Vec<Vec<Selection>>,
     ) {
-        if out.len() >= MAX_CHOICE_COMBINATIONS {
+        if out.len() >= SEEN {
             return;
         }
         if picked.len() == size {
@@ -1481,7 +1487,7 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<V
             picked.push(options[at].clone());
             walk(options, size, at + 1, picked, out);
             picked.pop();
-            if out.len() >= MAX_CHOICE_COMBINATIONS {
+            if out.len() >= SEEN {
                 return;
             }
         }
@@ -1491,13 +1497,15 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<V
     while size <= high {
         let mut picked: Vec<Selection> = Vec::new();
         walk(options, size, 0, &mut picked, &mut out);
-        if out.len() >= MAX_CHOICE_COMBINATIONS {
+        if out.len() >= SEEN {
             break;
         }
         size += 1;
     }
 
-    out
+    let truncated = out.len() > MAX_CHOICE_COMBINATIONS;
+    out.truncate(MAX_CHOICE_COMBINATIONS);
+    (out, truncated)
 }
 
 /// The cross of several lists, the first varying slowest, bounded by `cap` (R90). When the whole cross
@@ -1507,10 +1515,11 @@ fn subsets_for(options: &[Selection], decl: &TargetDecl, is_last: bool) -> Vec<V
 /// up to the bound. Cut in order alone, the first list's later items were in no combination at all:
 /// a crafted Twisted Sorcerer + K-Pop Fanatic crossed over eleven and eight picks never offered the
 /// Sorcerer's 4 damage at the enemy hero (R81, R102), and the client, which builds a play only out of
-/// the plays `legal_actions` lists (CLAUDE.md rule 7), could not make it.
-fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> Vec<Vec<T>> {
+/// the plays `legal_actions` lists (CLAUDE.md rule 7), could not make it. Also whether the bound dropped
+/// any (#992).
+fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> (Vec<Vec<T>>, bool) {
     if lists.iter().any(Vec::is_empty) {
-        return Vec::new();
+        return (Vec::new(), false);
     }
     let total = lists
         .iter()
@@ -1563,16 +1572,17 @@ fn cross_product<T: Clone>(lists: &[Vec<T>], cap: usize) -> Vec<Vec<T>> {
             break;
         }
     }
-    out
+    (out, total > cap)
 }
 
 /// R90: several groups of answers kept under one bound — the target combinations of each mode choice
 /// a `forModes` card offers — all of them when they fit, and otherwise taken a round at a time, one
-/// from each group in turn, so every mode choice keeps answers of its own.
-fn interleaved<T: Clone>(groups: &[Vec<T>], cap: usize) -> Vec<T> {
+/// from each group in turn, so every mode choice keeps answers of its own. Also whether the bound
+/// dropped any (#992).
+fn interleaved<T: Clone>(groups: &[Vec<T>], cap: usize) -> (Vec<T>, bool) {
     let total: usize = groups.iter().map(Vec::len).sum();
     if total <= cap {
-        return groups.iter().flatten().cloned().collect();
+        return (groups.iter().flatten().cloned().collect(), false);
     }
     let mut out: Vec<T> = Vec::new();
     let mut round = 0usize;
@@ -1593,7 +1603,18 @@ fn interleaved<T: Clone>(groups: &[Vec<T>], cap: usize) -> Vec<T> {
         }
         round += 1;
     }
-    out
+    (out, true)
+}
+
+/// #992: a card's choice combinations as `play_choice_combinations` lists them, and whether R90's
+/// bound dropped any.
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct ListedChoices {
+    /// Exactly `play_choice_combinations`' list, in its order.
+    pub combos: Vec<PlayChoices>,
+    /// The bound dropped at least one legal combination, so `combos` is a slice whose first ones offer
+    /// every pick (R90). Never set when `combos` is empty: no combination exists then.
+    pub truncated: bool,
 }
 
 /// R90: "`legalActions` enumerates every legal combination, bounded by `MAX_CHOICE_COMBINATIONS`".
@@ -1606,6 +1627,17 @@ pub fn play_choice_combinations(
     card: &CardInstance,
     declared: Option<&DeclaredChoices>,
 ) -> Vec<PlayChoices> {
+    listed_play_choices(state, player, card, declared).combos
+}
+
+/// #992: `play_choice_combinations` and whether R90's bound cut it, seen where the cut is made
+/// (`subsets_for`, `cross_product`, `interleaved`), never by counting the combinations a second way.
+pub fn listed_play_choices(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    declared: Option<&DeclaredChoices>,
+) -> ListedChoices {
     let target_decls: Vec<TargetDecl> = match declared {
         Some(declared) => declared.targets.clone(),
         None => declared_targets(state, card),
@@ -1615,25 +1647,37 @@ pub fn play_choice_combinations(
         None => declared_modes(state, card),
     };
     if target_decls.is_empty() && mode_decls.is_empty() {
-        return vec![PlayChoices::default()];
+        return ListedChoices {
+            combos: vec![PlayChoices::default()],
+            truncated: false,
+        };
     }
 
-    let target_combos_for = |decls: &[TargetDecl]| -> Vec<Vec<Selection>> {
+    let target_combos_for = |decls: &[TargetDecl]| -> (Vec<Vec<Selection>>, bool) {
+        let mut subsets_cut = false;
         let per_decl: Vec<Vec<Vec<Selection>>> = decls
             .iter()
             .enumerate()
             .map(|(index, decl)| {
-                subsets_for(
+                let (subsets, cut) = subsets_for(
                     &legal_selections_for(state, player, card, decl),
                     decl,
                     index == decls.len() - 1,
-                )
+                );
+                subsets_cut |= cut;
+                subsets
             })
             .collect();
-        cross_product(&per_decl, MAX_CHOICE_COMBINATIONS)
-            .into_iter()
-            .map(|slices| slices.into_iter().flatten().collect())
-            .collect()
+        let (crossed, cross_cut) = cross_product(&per_decl, MAX_CHOICE_COMBINATIONS);
+        // No combination at all leaves nothing to cut.
+        let truncated = !crossed.is_empty() && (subsets_cut || cross_cut);
+        (
+            crossed
+                .into_iter()
+                .map(|slices| slices.into_iter().flatten().collect())
+                .collect(),
+            truncated,
+        )
     };
     // R831008: the card's own modes offer only the options its check allows now; a declaration left
     // with none leaves no combination, so the card is not offered.
@@ -1647,7 +1691,7 @@ pub fn play_choice_combinations(
                 .collect()
         })
         .collect();
-    let mode_combos: Vec<Vec<String>> = cross_product(&mode_option_lists, MAX_CHOICE_COMBINATIONS);
+    let (mode_combos, modes_cut) = cross_product(&mode_option_lists, MAX_CHOICE_COMBINATIONS);
 
     if targets_follow_modes(&target_decls) {
         // The target declarations a play answers depend on its modes (`forModes`), so each mode choice
@@ -1657,6 +1701,7 @@ pub fn play_choice_combinations(
         } else {
             mode_combos
         };
+        let mut targets_cut = false;
         let groups: Vec<Vec<PlayChoices>> = mode_choices
             .into_iter()
             .map(|modes| {
@@ -1664,7 +1709,9 @@ pub fn play_choice_combinations(
                 let answers: Vec<Option<Vec<Selection>>> = if active.is_empty() {
                     vec![None]
                 } else {
-                    target_combos_for(&active).into_iter().map(Some).collect()
+                    let (combos, cut) = target_combos_for(&active);
+                    targets_cut |= cut;
+                    combos.into_iter().map(Some).collect()
                 };
                 answers
                     .into_iter()
@@ -1679,13 +1726,22 @@ pub fn play_choice_combinations(
                     .collect()
             })
             .collect();
-        return interleaved(&groups, MAX_CHOICE_COMBINATIONS);
+        let (combos, interleave_cut) = interleaved(&groups, MAX_CHOICE_COMBINATIONS);
+        let truncated = !combos.is_empty() && (modes_cut || targets_cut || interleave_cut);
+        return ListedChoices { combos, truncated };
     }
 
-    let target_answers: Vec<Option<Vec<Selection>>> = if target_decls.is_empty() {
-        vec![None]
+    let (target_answers, targets_cut) = if target_decls.is_empty() {
+        (vec![None], false)
     } else {
-        target_combos_for(&target_decls).into_iter().map(Some).collect()
+        let (combos, cut) = target_combos_for(&target_decls);
+        (
+            combos
+                .into_iter()
+                .map(Some)
+                .collect::<Vec<Option<Vec<Selection>>>>(),
+            cut,
+        )
     };
     let mode_answers: Vec<Option<Vec<String>>> = if mode_decls.is_empty() {
         vec![None]
@@ -1699,13 +1755,18 @@ pub fn play_choice_combinations(
         (0..target_answers.len()).collect(),
         (0..mode_answers.len()).collect(),
     ];
-    cross_product(&index_lists, MAX_CHOICE_COMBINATIONS)
-        .into_iter()
-        .map(|pair| PlayChoices {
-            targets: target_answers[pair[0]].clone(),
-            modes: mode_answers[pair[1]].clone(),
-        })
-        .collect()
+    let (pairs, pairs_cut) = cross_product(&index_lists, MAX_CHOICE_COMBINATIONS);
+    let truncated = !pairs.is_empty() && (targets_cut || modes_cut || pairs_cut);
+    ListedChoices {
+        combos: pairs
+            .into_iter()
+            .map(|pair| PlayChoices {
+                targets: target_answers[pair[0]].clone(),
+                modes: mode_answers[pair[1]].clone(),
+            })
+            .collect(),
+        truncated,
+    }
 }
 
 /// Every `play` action this card could legally produce: R81's five choice kinds crossed, skipping the
@@ -1728,6 +1789,45 @@ pub fn play_actions_for(state: &GameState, player: PlayerId, card: &CardInstance
         }
     }));
     out
+}
+
+/// #992, R90, §10.8: whether `legal_actions` lists plays of this card in the player's hand whose choice
+/// combinations R90's bound cut — the view's `choicesTruncated`. Only in the player's own main phase
+/// with no prompt, mulligan or result, where `legal_actions` lists plays at all (§10.2, R211, R265);
+/// at a price the player can pay whose face's combinations were cut and at which a face-up play is
+/// listed.
+pub fn hand_play_choices_truncated(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    if state.result.is_some()
+        || state.pending.is_some()
+        || state.mulligan.is_some()
+        || state.active != player
+        || state.phase != Phase::Main
+    {
+        return false;
+    }
+    let mana = crate::credit::spendable_mana(state, player);
+    let cut_prices: Vec<PlayPrice> = play_prices(state, player, card)
+        .into_iter()
+        .filter(|price| {
+            price.cost <= mana
+                && listed_play_choices(
+                    state,
+                    player,
+                    &resolving_face(state, player, card, price.cost),
+                    None,
+                )
+                .truncated
+        })
+        .collect();
+    // A face-down play carries no choices (R783004); a price with no zone or Tribute set to play at
+    // lists no play, so what it cut is not offered.
+    !cut_prices.is_empty()
+        && play_actions_for(state, player, card).iter().any(|play| {
+            play.face_down.is_none()
+                && cut_prices
+                    .iter()
+                    .any(|price| price.x == play.x && price.embiggen == play.embiggen)
+        })
 }
 
 /// R783004: every face-down `play` a Cloaked card in hand could legally produce — one per price,

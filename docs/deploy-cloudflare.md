@@ -214,8 +214,11 @@ the site is on `jackioh.<your-account>.workers.dev`.
   it as the GitHub repository secret `RENDER_DEPLOY_HOOK_URL`. `deploy-watch.yml` then asks Render to
   deploy every push to `main` itself, so a deploy no longer depends on Render's GitHub integration,
   which stopped delivering pushes twice (after the repository moved, and again after it was
-  reconnected, #224). Keep Auto-Deploy on "On Commit" too; never "After CI checks pass" while any
-  check on `main` can be red for reasons that are not the server's.
+  reconnected, #224). It is the only trigger: render.yaml sets `autoDeployTrigger: "off"`, and the
+  watch runs only for a push that changes the server's image (its `paths`), so a push is built once
+  and a web-only or docs-only push not at all (#985: two builds of every push ran the workspace out
+  of build pipeline minutes). Check jackioh-server -> Settings -> Build & Deploy after the
+  Blueprint syncs: Auto-Deploy should read Off.
 - **Render API key** (once, recommended): Render -> Account Settings -> API Keys -> Create API Key,
   saved as the GitHub repository secret `RENDER_API_KEY`. With it `deploy-watch.yml` starts each
   deploy through Render's API with the pushed commit (`commitId`), and its `Render deploy of this
@@ -343,9 +346,9 @@ What is left is the dashboards' half (#256): set the Supabase Site URL to `https
   push after it, so a catalog change (v0.2.1) never arrived and nothing flagged it, because the
   watch then compared only the catalog version and the version had not changed. To repair it:
   jackioh-server, Settings, Build & Deploy: the repository must be `Jlore-Studios/JackiOh`, the
-  branch `main`, Auto-Deploy on commit ("After CI checks pass" would wait on the red Cloudflare
-  check). If the repository is not offered, an owner of the organization has to authorize Render's
-  GitHub app for it. The service is Blueprint-managed, so also check Blueprints, the repository of
+  branch `main`, Auto-Deploy Off (render.yaml's `autoDeployTrigger`; `deploy-watch.yml` starts each
+  deploy, section 4, step 4). If the repository is not offered, an owner of the organization has to
+  authorize Render's GitHub app for it. The service is Blueprint-managed, so also check Blueprints, the repository of
   the Blueprint. Then Manual Deploy, "Deploy latest commit". The `CATALOG_VERSION` in Environment is
   ignored: the start command overwrites it at every boot from `patches.json`, so a stale copy there
   cannot be served (delete it, so nobody edits it expecting an effect).

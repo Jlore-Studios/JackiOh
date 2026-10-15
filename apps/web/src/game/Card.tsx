@@ -28,6 +28,8 @@
 // R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
 // would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
 //
+// #991: a card the hovered or selected hand card's preview counts (`Highlight.counted`) wears `data-counted`.
+//
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
 // on a face-up backrow card of either seat: the corruption aura and a badge per mark
 // (cards/CardMarks.tsx), and `data-marks` naming them on the root. A face-down backrow card's back
@@ -68,7 +70,7 @@ import { useCardInfo, useCopiedDef, useFieldPower } from "./catalog.ts";
 import { liveFace } from "./faces.ts";
 import { isSpent, useActingSeat } from "./spent.ts";
 import { NO_HIGHLIGHT, testid, type AnimatingMap, type ClickTarget, type Highlight } from "./contract.ts";
-import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, glowAttr } from "./glow.ts";
+import { COUNTERED_NOTE, conditionAttr, conditionTargetAttr, counteredAttr, countedAttr, glowAttr } from "./glow.ts";
 import { useSetting } from "../settings/store.ts";
 import { t } from "../i18n/i18n.ts";
 
@@ -422,6 +424,8 @@ export default function Card(props: CardProps): ReactElement {
       data-condition-active={conditionAttr(card) ?? conditionTargetAttr(props.highlight, testId)}
       // R667: the engine says a card on the field would counter this hand card if played now.
       data-countered-on-play={counteredAttr(card)}
+      // #991, R583: a hovered or selected hand card's preview counts this card (highlights.css rings it).
+      data-counted={countedAttr(props.highlight, testId)}
       data-owner={props.owner ?? unit?.owner}
       data-controller={props.controller ?? unit?.controller}
       data-vanilla={unit?.vanilla === true ? "true" : undefined}

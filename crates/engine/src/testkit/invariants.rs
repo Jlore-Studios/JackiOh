@@ -25,7 +25,9 @@
 //!      open, a unit of the acting player that entered on this turn has no attack target unless it
 //!      has Rush or Charge, and no hero target unless it has Charge; the chosen `attack`, if any, is
 //!      checked the same way. It reads `attack_targets`, which is what `legal_actions` enumerates with.
-//!   I2 one declared attack per stint per turn, two for a unit that had Windfury in that stint (R636).
+//!   I2 one declared attack per stint per turn, two for a unit that had Windfury in that stint (R636):
+//!      seen on a state between actions, or gained inside the action, granted (`keywordGranted`) or
+//!      Buffed (`upgraded`, R386).
 //!      A unit that re-entered may attack again within its keywords (R83, R171); forced attacks are not
 //!      declarations and are skipped (R53).
 //!   I3 every card on the field arrived by an event (§10.3: every visible state change emits one).
@@ -92,7 +94,7 @@ use crate::damage::DamageTarget;
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
     ActionBody, CardType, Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView,
-    Selection, ZoneName, has_keyword, opponent_of,
+    Selection, TuningChange, ZoneName, has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -826,9 +828,10 @@ pub struct InvariantMonitor {
     last_attack: IndexMap<String, AttackMark>,
     /// R636: the stint in which each instance was last seen with Windfury. Read from the states between
     /// actions and after each one, so a unit that dies on its second attack was seen with it before —
-    /// and from `keywordGranted` events inside the action, so a unit granted Windfury mid-action is seen
-    /// before its declarations: R44's AI turn can summon a Conjure token and fight with it twice inside
-    /// one outer action, where no between-action state ever holds it.
+    /// and from `keywordGranted` events and a Buff's keyword row (`upgraded`, R386) inside the action, so
+    /// a unit given Windfury mid-action is seen before its declarations: R44's AI turn can summon a
+    /// Conjure token and fight with it twice inside one outer action, where no between-action state ever
+    /// holds it, or Buff an attacker My Pawn stopped into Windfury and attack with it again (R636).
     windfury: IndexMap<String, i32>,
     readied: IndexSet<String>,
     /// R424: the latest declared attack, and whether its attacker destroyed its target (R42).
@@ -1088,6 +1091,26 @@ impl InvariantMonitor {
                     // Windfury granted mid-action reads as a second attack without Windfury (see above).
                     // `lost` (R46) takes a keyword away instead of giving it, so it is never recorded.
                     if keyword.kind() == KeywordKind::Windfury && *lost != Some(true) {
+                        let stint = self.stint_of(instance_id);
+                        self.windfury.insert(instance_id.clone(), stint);
+                    }
+                }
+                GameEvent::Upgraded {
+                    instance_id,
+                    change:
+                        TuningChange::Keyword {
+                            keyword,
+                            added: true,
+                            also,
+                        },
+                    ..
+                } => {
+                    // A Buff's keyword row (R386) is the other way a unit gains a keyword, R1160's
+                    // multiplied row adding `also` beside it. Fuzz seed 7758 of the handicapped wave: My
+                    // Pawn cancelled an attack, R44's random rest of the turn Buffed the attacker into
+                    // Windfury, and it attacked once more inside the one action, as R636 allows.
+                    let mut gained = std::iter::once(keyword).chain(also.iter().flatten());
+                    if gained.any(|keyword| keyword.kind() == KeywordKind::Windfury) {
                         let stint = self.stint_of(instance_id);
                         self.windfury.insert(instance_id.clone(), stint);
                     }
