@@ -6780,6 +6780,7 @@
         "resolved_by": "`muse` (medium)",
         "sha": "2f4a5938f2bd57363a272d242f4aa2c38f950ecd"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
