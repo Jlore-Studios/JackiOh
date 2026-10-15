@@ -30,10 +30,15 @@ const NAMES = [
   "clippy",
   "rust_engine_rules",
   "rust_engine",
-  "rust_cards_lib",
+  "rust_cards_lib_core",
+  "rust_cards_lib_classic",
+  "rust_cards_lib_classic_plus",
+  "rust_cards_lib_meditative",
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
   "web",
   "e2e",
@@ -45,10 +50,15 @@ type Answer = Record<Name, boolean>;
 const RUST = [
   "rust_engine_rules",
   "rust_engine",
-  "rust_cards_lib",
+  "rust_cards_lib_core",
+  "rust_cards_lib_classic",
+  "rust_cards_lib_classic_plus",
+  "rust_cards_lib_meditative",
   "rust_cards",
   "rust_server",
   "rust_ai",
+  "rust_ai_slow_a",
+  "rust_ai_slow_b",
   "rust_tools_wasm",
 ] as const satisfies readonly Name[];
 
@@ -162,6 +172,8 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
     // The training lanes' standing prompts and loop: Devin and the training box read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
+    // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
+    expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
 
   // One case per file: each makes four processes, so a case never nears vitest's time limit.
@@ -210,6 +222,8 @@ describe("scripts/ci-scope.sh", () => {
     ".github/ISSUE_TEMPLATE-copy/x.yml",
     ".github/CODEOWNERS.bak",
     "docs/CONTRIBUTING.md",
+    "analysis-copy/x.py",
+    "crates/tools/analysis/x.rs",
   ])("runs everything the moment %s changes, alone or beside the bot's code", (file) => {
     expect(fullFor(file), file).toBe(true);
     expect(fullFor("bot/harness/state.py", file), `bot + ${file}`).toBe(true);
@@ -363,7 +377,6 @@ describe("scripts/ci-scope.sh", () => {
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         "crates/luau/Cargo.toml",
-        "crates/luau/src/lib.rs",
         "crates/server/src/env.rs",
         "crates/server/Dockerfile",
         "crates/server/tests/deploy/rehearse.sh",
@@ -376,7 +389,7 @@ describe("scripts/ci-scope.sh", () => {
       off: [
         "crates/server/src/api/queue.rs",
         "crates/tools/src/fuzz.rs",
-        "crates/luau/tests/api.rs",
+        "crates/luau/src/lib.rs",
         "crates/engine/tests/rules/after_attack.rs",
         "crates/cards/tests/cross/catalog.rs",
         "crates/ai/tests/ai/shadow_ban.rs",
@@ -448,23 +461,23 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/server/.env.example", ["rust_server", "rust_tools_wasm"]],
     ["crates/engine/src/reduce.rs", [...RUST]],
     ["crates/cards/catalog.json", [...RUST]],
-    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
-    ["crates/luau/src/lib.rs", [...RUST]],
+    ["crates/luau/src/lib.rs", ["rust_tools_wasm"]],
     ["crates/scratch/src/lib.rs", [...RUST]],
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["e2e/support/config.ts", ["rust_server"]],
-    ["render.yaml", ["rust_tools_wasm"]],
+    ["render.yaml", ["rust_server", "rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
     ["ladder/x.ts", ["rust_tools_wasm"]],
     // A crate's manifest also runs the group whose acceptance test holds the map to `cargo metadata`.
     ["crates/server/Cargo.toml", ["rust_server", "rust_tools_wasm"]],
-    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_tools_wasm"]],
+    ["crates/ai/Cargo.toml", ["rust_server", "rust_ai", "rust_ai_slow_a", "rust_ai_slow_b", "rust_tools_wasm"]],
   ];
   it("runs each Rust test group for the crates it builds on and the files its tests read", () => {
     const groups = (...files: string[]): Name[] => onFor(...files).filter((name) => (RUST as readonly Name[]).includes(name));

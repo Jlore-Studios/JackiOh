@@ -17,18 +17,20 @@
 //! Not ported (SURFACE §11.3): `loadStore`, `STORE_EXPORT_CANDIDATES` and `StoreUnavailableError`
 //! (the store is `db::store::Db`, chosen here), `createRuntime`'s port overrides and the `Runtime`
 //! type (tests build an `App` through `build`, `tests/support/deps.rs`), and `RunningServer.close`
-//! (the process serves until it is stopped).
+//! (the process serves until SIGTERM or Ctrl-C, then drains: `serve_until`).
 
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 
 use anyhow::anyhow;
 use axum::Router;
 use axum::extract::Request;
 use axum::response::Response;
 use indexmap::IndexMap;
+use tokio::task::JoinHandle;
 
 use crate::actor;
 use crate::api;
@@ -60,6 +62,13 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
+    /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
+    /// tests never share presence.
+    pub queue_presence: api::queue::QueuePresence,
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    /// SPEC S7: the friend requests' and chat's own allowances (B43, B53), held here for the
+    /// limiter's reason.
+    pub social: crate::social::Social,
 }
 
 // ---------------------------------------------------------------------------
@@ -300,6 +309,37 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::decks::delete_trio),
     ),
+    // api/custom_cards.rs (SPEC §12.9, R915008)
+    (
+        "GET",
+        "/api/custom-cards",
+        AuthLevel::Active,
+        h!(api::custom_cards::list_custom_cards),
+    ),
+    (
+        "POST",
+        "/api/custom-cards",
+        AuthLevel::Active,
+        h!(api::custom_cards::create_custom_card),
+    ),
+    (
+        "GET",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::get_custom_card),
+    ),
+    (
+        "PUT",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::update_custom_card),
+    ),
+    (
+        "DELETE",
+        "/api/custom-cards/:id",
+        AuthLevel::Active,
+        h!(api::custom_cards::delete_custom_card),
+    ),
     // api/queue.rs
     ("POST", "/api/queue", AuthLevel::Active, h!(api::queue::enqueue)),
     ("DELETE", "/api/queue", AuthLevel::Active, h!(api::queue::dequeue)),
@@ -450,6 +490,28 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::username::post_skip),
     ),
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a
+    // match id.
+    (
+        "GET",
+        "/api/replays/shared",
+        AuthLevel::Active,
+        h!(crate::social::shares::list_shared),
+    ),
+    (
+        "POST",
+        "/api/replays/:matchId/shares",
+        AuthLevel::Active,
+        h!(crate::social::shares::share_replay),
+    ),
+    (
+        "DELETE",
+        "/api/replays/:matchId/shares/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::shares::unshare_replay),
+    ),
+    // ---- end Social: watching and shared replays ----
     // api/replays.rs
     (
         "GET",
@@ -463,12 +525,155 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::Active,
         h!(api::replays::get_replay),
     ),
+    // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+    // social/*.rs (SPEC S7). `/api/chat/unread` comes before `/api/chat/:friendId`, which would
+    // otherwise take it as a friend's id.
+    (
+        "GET",
+        "/api/friends",
+        AuthLevel::Active,
+        h!(crate::social::friends::get_friends),
+    ),
+    (
+        "POST",
+        "/api/friends/requests",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/accept",
+        AuthLevel::Active,
+        h!(crate::social::friends::accept_request),
+    ),
+    (
+        "POST",
+        "/api/friends/requests/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::friends::decline_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/requests/:id",
+        AuthLevel::Active,
+        h!(crate::social::friends::cancel_request),
+    ),
+    (
+        "DELETE",
+        "/api/friends/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::remove_friend),
+    ),
+    (
+        "POST",
+        "/api/blocks",
+        AuthLevel::Active,
+        h!(crate::social::friends::post_block),
+    ),
+    (
+        "DELETE",
+        "/api/blocks/:profileId",
+        AuthLevel::Active,
+        h!(crate::social::friends::delete_block),
+    ),
+    (
+        "POST",
+        "/api/presence",
+        AuthLevel::Active,
+        h!(crate::social::presence::heartbeat),
+    ),
+    (
+        "POST",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::create),
+    ),
+    (
+        "GET",
+        "/api/challenges",
+        AuthLevel::Active,
+        h!(crate::social::challenges::list),
+    ),
+    (
+        "POST",
+        "/api/challenges/:id/decline",
+        AuthLevel::Active,
+        h!(crate::social::challenges::decline),
+    ),
+    (
+        "DELETE",
+        "/api/challenges/:id",
+        AuthLevel::Active,
+        h!(crate::social::challenges::cancel),
+    ),
+    (
+        "GET",
+        "/api/chat/unread",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_unread),
+    ),
+    (
+        "POST",
+        "/api/chat/messages/:id/report",
+        AuthLevel::Active,
+        h!(crate::social::chat::report),
+    ),
+    (
+        "GET",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::get_messages),
+    ),
+    (
+        "POST",
+        "/api/chat/:friendId",
+        AuthLevel::Active,
+        h!(crate::social::chat::send),
+    ),
+    // ---- end Social ----
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: duos/rooms.rs and duos/replay.rs.
+    (
+        "POST",
+        "/api/duos/rooms",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::create),
+    ),
+    (
+        "GET",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::get_room),
+    ),
+    (
+        "POST",
+        "/api/duos/rooms/:code/join",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::join),
+    ),
+    (
+        "DELETE",
+        "/api/duos/rooms/:code",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::cancel),
+    ),
+    (
+        "GET",
+        "/api/duos/live",
+        AuthLevel::Active,
+        h!(crate::duos::rooms::live),
+    ),
+    (
+        "GET",
+        "/api/duos/matches/:matchId/replay",
+        AuthLevel::Active,
+        h!(crate::duos::replay::get_replay),
+    ),
+    // ---- end Duos co-op (#946) ----
+    // api/health.rs (#861): render.yaml's healthCheckPath is /readyz.
+    ("GET", "/healthz", AuthLevel::None, h!(api::health::get_healthz)),
+    ("GET", "/readyz", AuthLevel::None, h!(api::health::get_readyz)),
 ];
-
-/// TS `allRoutes()`.
-pub fn all_routes() -> &'static [Route] {
-    ROUTES
-}
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -539,6 +744,9 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),
+        queue_presence: api::queue::QueuePresence::new(),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        social: crate::social::Social::default(),
     });
 
     if app.env.e2e {
@@ -558,8 +766,6 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     }
     Ok(app)
 }
-
-const WS_PATH: &str = "/ws/match";
 
 /// A WebSocket handshake (`Upgrade: websocket`), which `actor::ws_server::handle` answers; anything
 /// else on the same path is an ordinary request for the API router (TS's `ws` server only ever saw
@@ -608,6 +814,41 @@ pub fn router(app: Arc<App>) -> Router {
         }
     };
 
+    // ---- Social: watching and shared replays (#939, #940) ----
+    // S7's `/ws/watch`, a friend's seat watched SPECTATE_DELAY_MS behind (`social::watch`); as on
+    // `/ws/match`, anything but an upgrade on its path is the API's.
+    let watch_app = app.clone();
+    let watch_cors = cors.clone();
+    let watch = move |request: Request| {
+        let app = watch_app.clone();
+        let cors = watch_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_watch(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Social: watching and shared replays ----
+
+    // ---- Duos co-op (#946) ----
+    // Fullsend SPEC S6: `/ws/duos`, the co-op socket, beside `/ws/match` (`actor::ws_server::handle_duos`).
+    let duos_app = app.clone();
+    let duos_cors = cors.clone();
+    let duos_socket = move |request: Request| {
+        let app = duos_app.clone();
+        let cors = duos_cors.clone();
+        async move {
+            if is_websocket_upgrade(&request) {
+                actor::ws_server::handle_duos(app, request).await
+            } else {
+                serve_api(app, cors, request).await
+            }
+        }
+    };
+    // ---- end Duos co-op (#946) ----
+
     let fallback = move |request: Request| {
         let app = app.clone();
         let cors = cors.clone();
@@ -615,7 +856,11 @@ pub fn router(app: Arc<App>) -> Router {
     };
 
     Router::new()
-        .route(WS_PATH, axum::routing::any(socket))
+        .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
+        // Social (#939): S7's watch socket.
+        .route(actor::ws_server::WATCH_PATH, axum::routing::any(watch))
+        // Duos co-op (#946)
+        .route(actor::ws_server::WS_DUOS_PATH, axum::routing::any(duos_socket))
         .fallback(fallback)
 }
 
@@ -634,7 +879,162 @@ fn init_logging() {
         .try_init();
 }
 
-/// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops.
+/// Starts the background loops through `loops::spawn_supervised` and keeps their handles, so
+/// `stop_loops` can abort them on shutdown (#861).
+fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
+    // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
+    // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
+    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
+    // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
+    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
+    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
+    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
+    // instead of dying silently (#842).
+    let mut running = vec![
+        (
+            "matchmaker",
+            loops::spawn_supervised("matchmaker", app.clone(), api::queue::run_matchmaker),
+        ),
+        (
+            "series.sweeper",
+            loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper),
+        ),
+        (
+            "matches.reaper",
+            loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper),
+        ),
+        (
+            "retention.purge",
+            loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge),
+        ),
+        // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+        // SPEC S7: B49's sweep that marks lapsed challenges expired. (B53's chat purge runs inside
+        // `retention.purge`.)
+        (
+            "challenges.sweeper",
+            loops::spawn_supervised(
+                "challenges.sweeper",
+                app.clone(),
+                crate::social::challenges::run_sweeper,
+            ),
+        ),
+        // ---- end Social ----
+        // ---- Duos co-op (#946) ----
+        // Fullsend SPEC S6, B34, B40: expired co-op rooms go, finished actors leave memory, and a live
+        // co-op match a restart left without an actor is folded back.
+        (
+            "duos.sweeper",
+            loops::spawn_supervised("duos.sweeper", app.clone(), crate::duos::run_sweeper),
+        ),
+        // ---- end Duos co-op (#946) ----
+    ];
+    if app.env.ladder_bots {
+        running.push((
+            "bots.pool",
+            loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool),
+        ));
+    }
+    running
+}
+
+/// Aborts every loop `spawn_loops` started and waits for the tasks to end (#861's drain).
+async fn stop_loops(running: Vec<(&'static str, JoinHandle<()>)>) {
+    for (_, handle) in &running {
+        handle.abort();
+    }
+    for (name, handle) in running {
+        let _ = handle.await;
+        tracing::info!(event = "loop.stopped", "loop" = name);
+    }
+}
+
+/// SIGTERM or Ctrl-C, whichever comes first (#861).
+///
+/// The SIGTERM handler is installed when this function is called, not when the future is first
+/// polled, so a signal that arrives in between is not lost. The `Ok(())` pattern turns the Ctrl-C
+/// branch off if its handler fails, instead of shutting the server down.
+pub fn shutdown_signal() -> std::io::Result<impl Future<Output = ()> + Send + 'static> {
+    #[cfg(unix)]
+    let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+    Ok(async move {
+        #[cfg(unix)]
+        let terminated = async move {
+            terminate.recv().await;
+        };
+        #[cfg(not(unix))]
+        let terminated = std::future::pending::<()>();
+        tokio::select! {
+            () = terminated => tracing::info!(event = "server.signal", signal = "SIGTERM"),
+            Ok(()) = tokio::signal::ctrl_c() => tracing::info!(event = "server.signal", signal = "SIGINT"),
+        }
+    })
+}
+
+/// Serves `app` on `listener` until `shutdown` resolves, then drains and answers `Ok`.
+///
+/// NOT IN SPEC (#861): probes and shutdown are operational, like `loops.rs` (#842). The drain runs
+/// at most `drain` long and does five things, in this order: it stops accepting new connections,
+/// aborts the background loops, lets in-flight HTTP requests finish, stops every match and co-op actor (open
+/// sockets get close frame 1001 and queues drain so result writes land), waits for every socket to
+/// finish, and closes the store.
+///
+/// axum's graceful shutdown waits only for HTTP requests, because an upgraded socket leaves its
+/// count. That is why the actors are stopped and `all_closed` is awaited. `pg::close` waits for
+/// checked-out connections, which is why it sits inside the `drain` timeout: do not move it out.
+///
+/// Past `drain` it logs `server.drain_timed_out` and still answers `Ok`, so the process exits 0.
+pub async fn serve_until<F>(
+    app: Arc<App>,
+    listener: tokio::net::TcpListener,
+    shutdown: F,
+    drain: Duration,
+) -> anyhow::Result<()>
+where
+    F: Future<Output = ()> + Send + 'static,
+{
+    let running = spawn_loops(&app);
+    let (stop_accepting, stopping) = tokio::sync::oneshot::channel::<()>();
+    let server = tokio::spawn(
+        axum::serve(
+            listener,
+            router(app.clone()).into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async move {
+            let _ = stopping.await;
+        })
+        .into_future(),
+    );
+    shutdown.await;
+    tracing::info!(event = "server.draining", "drainSeconds" = drain.as_secs());
+    let _ = stop_accepting.send(());
+    let drained = tokio::time::timeout(drain, async {
+        stop_loops(running).await;
+        let served = server.await;
+        let matches = app.matches.stop_all().await;
+        // #936: the co-op actors too, so none writes its log after the store closes; each match's
+        // log stays, and the next boot folds it back (`duos::registry`).
+        let duos = crate::duos::registry::registry(&app);
+        for match_id in duos.live() {
+            duos.stop(&match_id).await;
+        }
+        actor::ws_server::close_all(&app);
+        actor::ws_server::all_closed(&app).await;
+        app.db.close().await;
+        (served, matches)
+    })
+    .await;
+    match drained {
+        Ok((served, matches)) => {
+            served??;
+            tracing::info!(event = "server.stopped", matches = matches);
+        }
+        Err(_) => tracing::warn!(event = "server.drain_timed_out", "drainSeconds" = drain.as_secs()),
+    }
+    Ok(())
+}
+
+/// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops, serve
+/// until SIGTERM or Ctrl-C, drain.
 pub async fn serve(env: Env) -> anyhow::Result<()> {
     init_logging();
     let app = build(env).await?;
@@ -654,6 +1054,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
 
     let origins = browser_origins(&app.env);
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.env.port)).await?;
+    let shutdown = shutdown_signal()?;
     tracing::info!(
         event = "server.listening",
         port = %app.env.port,
@@ -664,26 +1065,11 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
         "ladderBots" = app.env.ladder_bots,
     );
 
-    // §9.5: pairing runs on enqueue plus a sweeper (3 s), and a reaper resolves anything past the
-    // ceiling (30 s). R260, R263: the series sweeper (5 s) runs the pick clock and starts a game a
-    // restart left unstarted. The retention purge (`api/retention.rs`) runs once now, since a free
-    // instance may sleep before an hour is up, and then on its interval. Each loop logs its own
-    // failures and tries again on its next tick. R1454: with `LADDER_BOTS=on`, the bot pool is sized
-    // once now and then hourly. Each starts through `loops::spawn_supervised`, so a panic that
-    // unwinds out of a loop is logged (`loop.crashed`) and the loop starts again (`loop.restarted`)
-    // instead of dying silently (#842).
-    loops::spawn_supervised("matchmaker", app.clone(), api::queue::run_matchmaker);
-    loops::spawn_supervised("series.sweeper", app.clone(), api::series::run_sweeper);
-    loops::spawn_supervised("matches.reaper", app.clone(), api::results::run_reaper);
-    loops::spawn_supervised("retention.purge", app.clone(), api::retention::run_purge);
-    if app.env.ladder_bots {
-        loops::spawn_supervised("bots.pool", app.clone(), crate::bots::pool::run_bot_pool);
-    }
-
-    axum::serve(
+    serve_until(
+        app,
         listener,
-        router(app).into_make_service_with_connect_info::<SocketAddr>(),
+        shutdown,
+        Duration::from_secs(u64::try_from(crate::config::SHUTDOWN_DRAIN_SECONDS).unwrap_or(0)),
     )
-    .await?;
-    Ok(())
+    .await
 }

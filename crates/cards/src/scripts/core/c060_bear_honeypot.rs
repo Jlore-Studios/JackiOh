@@ -13,7 +13,117 @@
 //! on the field with its Cry resolved, the moment #41 Sheepish shares since R427, the two answering
 //! in lane order (R68). R662: the glow, both faces.
 
+use jackioh_engine::catalog::def_of;
+use jackioh_engine::effects::{fill_board, forced_attacks, summon};
+use jackioh_engine::prelude::*;
+use jackioh_engine::zones::open_zones;
+
 pub const ID: &str = "core-060";
+
+/// §7's shared Rush Token, 3/3 with Rush.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+/// §10.5 step 7's event: the play this trap answers, with the cost R56 reads (the fields of
+/// `cardResolved` this card reads after `match_` has read the rest).
+#[derive(Clone, Debug)]
+struct ResolvedPlay {
+    instance_id: String,
+    def_id: String,
+    permanent: bool,
+}
+
+/// "When your opponent plays a (1) Cost or less card, if you have an empty unit zone" (radiant: any
+/// card). Returns the play when the trap answers this event and `None` when it must stay armed.
+fn match_(ctx: &EffectContext, event: &GameEvent, any_cost: bool) -> Option<ResolvedPlay> {
+    let GameEvent::CardResolved {
+        player,
+        instance_id,
+        def_id,
+        permanent,
+        cost_paid,
+        ..
+    } = event
+    else {
+        return None;
+    };
+    // "the opponent plays": the trap's own controller setting off their own trap is not the trigger.
+    if *player == ctx.controller {
+        return None;
+    }
+    // R56 and R70: the cost actually paid, so a cast (0) is always "1 or less".
+    if !any_cost && *cost_paid > param(ctx, "costLimit") {
+        return None;
+    }
+    // R430: "if you have an empty unit zone" — an empty, unlocked, unreserved one (R64).
+    if open_zones(ctx.state, ctx.controller, Row::Units).is_empty() {
+        return None;
+    }
+    Some(ResolvedPlay {
+        instance_id: instance_id.clone(),
+        def_id: def_id.clone(),
+        permanent: *permanent,
+    })
+}
+
+/// "summon 2 Rush Tokens" / "fill your board with Rush Tokens"; then, if it was a Unit, "they attack
+/// it" with only the tokens this trap summoned (`summonedThisScript`). The Unit test reads the def, so
+/// a unit that died in its own resolution still counts; "it" is the played card's stay on the field
+/// (R174), so once `permanent` says that has ended nothing attacks, including when an earlier trap
+/// answering the same play took the card off the field and Reborn brought a new body back (`traps.rs`
+/// reads the flag again for each trap).
+fn tokens_and_attack(ctx: &EffectContext, played: &ResolvedPlay, fill: bool) -> Vec<Effect> {
+    let mut tokens: Vec<Effect> = if fill {
+        vec![fill_board(json_as(json!({ "defId": RUSH_TOKEN })))]
+    } else {
+        vec![
+            summon(json_as(json!({ "defId": RUSH_TOKEN }))),
+            summon(json_as(json!({ "defId": RUSH_TOKEN }))),
+        ]
+    };
+
+    if def_of(Some(&*ctx.state), &played.def_id).type_ != CardType::Unit || !played.permanent {
+        return tokens;
+    }
+    tokens.push(forced_attacks(json_as(json!({
+        "attackers": { "side": "self", "defId": RUSH_TOKEN, "summonedThisScript": true },
+        "target": { "instanceId": played.instance_id },
+    }))));
+    tokens
+}
+
+/// One face's trigger. The whole condition lives in the `when` predicate (R99, R61): `run` is reached
+/// only once the trap really is firing, so the `None` branch below is narrowing and never a decision.
+fn honeypot(any_cost: bool, fill: bool) -> TriggerDef {
+    TriggerDef::new("bear-honeypot", &[GameEventType::CardResolved], move |ctx, event| {
+        match match_(ctx, event, any_cost) {
+            None => vec![],
+            Some(played) => tokens_and_attack(ctx, &played, fill),
+        }
+    })
+    .with_when(move |ctx, event| match_(ctx, event, any_cost).is_some())
+}
+
+/// R662, R430: armed while its controller has an open unit zone for the tokens.
+fn condition_met() -> ConditionHook {
+    condition_hook(|ctx| {
+        ctx.zone == ConditionZone::Field && !open_zones(ctx.state, ctx.controller, Row::Units).is_empty()
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![honeypot(false, false)],
+            condition_met: Some(condition_met()),
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![honeypot(true, true)],
+            condition_met: Some(condition_met()),
+            ..Script::default()
+        },
+    }
+}
 
 // #60 Bear Honeypot (SPEC §8.3, BUILD M4-T4 row 60). Every test puts the trap face-down in p1's
 // backrow and makes p2 the active player: a Trap fires on the OPPONENT's turn and resolves to

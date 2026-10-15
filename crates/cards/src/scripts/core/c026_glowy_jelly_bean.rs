@@ -11,9 +11,29 @@
 //! R74 makes the radiant flag the whole model, so the chosen card's stats and text swap while it sits
 //! in hand (§5.2); a card that is already Radiant is untouched (§6.3 Make Radiant).
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-026";
 
+/// The two faces differ only in how many cards the play picks.
+fn glowy_jelly_bean(picks: i32) -> Script {
+    Script {
+        targets: vec![TargetDecl::hand(picks, picks, json!({ "of": ["hand"] }))],
+        cry: Some(hook(move |_ctx| {
+            (0..picks)
+                .map(|index| set_radiant(json_as(json!({ "target": { "of": "chosen", "index": index } }))))
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: glowy_jelly_bean(1),
+        radiant: glowy_jelly_bean(2),
+    }
+}
 
 // #26 Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 26): "Chosen hand card gets radiant flag,
 // picked as part of the play rather than a prompt (R81); radiant chooses 2, or the one card

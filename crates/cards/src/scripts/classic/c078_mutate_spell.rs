@@ -9,14 +9,78 @@
 //!            field (R96). Radiant fuse (§6.3, R77, R102) never offers an Immutable card of yours (R23)
 //!            and exiles if none. Tunes: draw 2 ↑; attacks 1 ↑."
 
+use jackioh_engine::effects::{
+    consume_plague, draw, exile, forced_attack_random, fuse_onto_your_card, instance_of,
+};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-078";
+
+const CHOSEN: TargetSpec = TargetSpec::Chosen { index: None };
+
+fn outcome(ctx: &mut EffectContext<'_>, fuses: bool) -> Vec<Effect> {
+    let Some(card) = instance_of(&*ctx, &CHOSEN) else {
+        return vec![];
+    };
+    let Zone::Field { row, .. } = card.zone else {
+        return vec![];
+    };
+    if card.controller != ctx.controller {
+        return vec![if fuses {
+            fuse_onto_your_card(json_as(json!({ "target": CHOSEN })))
+        } else {
+            exile(json_as(json!({ "target": CHOSEN })))
+        }];
+    }
+    if row == Row::Backrow {
+        return vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))];
+    }
+    vec![forced_attack_random(json_as(
+        json!({ "attacker": CHOSEN, "times": param(&*ctx, "attacks") }),
+    ))]
+}
+
+fn mutate(fuses: bool) -> Script {
+    let ability = ActivationDecl {
+        id: "mutate".into(),
+        label: "Remove a Plague Counter".into(),
+        uses: ActivationUses::Unlimited,
+        cost: None,
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "any", "of": ["unit", "backrow"], "plague": true }),
+        )],
+        modes: vec![],
+        can_activate: Some(condition_hook(|c| {
+            permanents_on_field(c.state, c.controller).iter().any(|card| plague_on(card) > 0)
+        })),
+        has: None,
+        run: hook(move |ctx| {
+            let mut effects = vec![consume_plague(json_as(json!({ "target": CHOSEN })))];
+            effects.extend(outcome(ctx, fuses));
+            effects
+        }),
+    };
+    Script {
+        activations: vec![ability],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: mutate(false),
+        radiant: mutate(true),
+    }
+}
 
 // SPEC §8.6 row 78: Field Spell (R402); Activate ♾️ (R384) removes Plague token:
 // enemy exiled (Radiant fused R77, R102; Immutable excluded, §10.8 hidden);
 // backrow draws 2 (Radiant 4); Unit forced-attacks random enemy (R53; R177, R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -126,7 +190,7 @@ mod tests {
                 { "key": "attacks", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(face.activations.len(), 1);
             assert_eq!(js(&face.activations[0].uses), json!("unlimited"));

@@ -3,16 +3,20 @@
 //! card is silent, that a 20% card flags low, that a large played delta flags whatever the in-deck
 //! rate, that a card under the sample is never flagged, that the report says provisional below the
 //! gate and counts live-only when forced, and that bot seats count like the public endpoint
-//! (R1451). The arithmetic is the engine's `wire::stats`; the store's own filtering is
+//! (R1451), and that `--file` prints the store path's report off record files with no store. The
+//! arithmetic is the engine's `wire::stats`; the store's own filtering is
 //! `tests/store/contract.rs`'s.
+
+use std::path::PathBuf;
 
 use serde_json::{Value, json};
 
 use jackioh_engine::wire::GameRecord;
 use jackioh_server::cli::balance_watch::{
-    BalanceWatchOptions, balance_watch_report, is_provisional, parse_balance_watch_args,
-    render_balance_watch, z_score,
+    BalanceWatchOptions, balance_watch_report, balance_watch_report_from_files, is_provisional,
+    parse_balance_watch_args, render_balance_watch, z_score,
 };
+use jackioh_server::cli::export_records::render_records;
 use jackioh_server::config::{CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES};
 use jackioh_server::db::store::Db;
 
@@ -132,6 +136,13 @@ mod parse_balance_watch_args_cases {
         assert_eq!(parsed.source, SourceFilter::All);
         let live = options(&["--patch=v0.3.6", "--source=live"]);
         assert_eq!(live.source, SourceFilter::Live);
+    }
+
+    #[test]
+    fn parse_reads_each_file_flag_in_order() {
+        let parsed = options(&["--patch=v0.3.6", "--file=a.jsonl", "--file=b.jsonl"]);
+        assert_eq!(parsed.files, ["a.jsonl", "b.jsonl"]);
+        assert!(options(&["--patch=v0.3.6"]).files.is_empty());
     }
 
     #[test]
@@ -358,5 +369,116 @@ mod balance_watch_report_cases {
             .expect("bw-dev is watched");
         assert_eq!((dev.games, dev.win_rate), (20, 0.5));
         assert!(!report.not_enough.contains(&"bw-dev".to_owned()));
+    }
+}
+
+mod balance_watch_file_cases {
+    use super::*;
+
+    /// Forty games of the strong card (32 wins) and of the tricky card (the played-delta fixture),
+    /// one live game, and one game of another patch.
+    fn fixture() -> Vec<GameRecord> {
+        let mut records = Vec::new();
+        for n in 0..40 {
+            records.push(dev_game(
+                &format!("dev:strong:{n}"),
+                "bw-strong",
+                &format!("bw-strong-filler-{n}"),
+                n < 32,
+            ));
+            records.push(dev_game(
+                &format!("dev:tricky:{n}"),
+                "bw-tricky",
+                "bw-tricky",
+                n < 28,
+            ));
+        }
+        records.push(fixed(
+            "live-1",
+            "live",
+            json!({ "p1": "human", "p2": "ai" }),
+            "bw-live-card",
+            "bw-live-filler",
+            true,
+        ));
+        let mut old = dev_game("dev:old:0", "bw-strong", "bw-old-filler", false);
+        old.patch = "v0.3.5".to_owned();
+        records.push(old);
+        records
+    }
+
+    fn temp_dir() -> PathBuf {
+        std::env::temp_dir().join(format!("jackioh-balance-watch-{}", uuid::Uuid::new_v4()))
+    }
+
+    #[tokio::test]
+    async fn file_input_prints_the_report_the_store_prints_on_a_shared_fixture() {
+        let records = fixture();
+        let db = seed(&records).await;
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).expect("a temp directory");
+        // The second file repeats three records of the first: one record per id.
+        let first = dir.join("a.jsonl");
+        let second = dir.join("b.jsonl");
+        std::fs::write(&first, render_records(&records[..41]).unwrap()).expect("the first file");
+        std::fs::write(
+            &second,
+            render_records(&records[41..]).unwrap() + &render_records(&records[..3]).unwrap(),
+        )
+        .expect("the second file");
+        let paths = [first, second];
+
+        for argv in [&["--patch=v0.3.6"][..], &["--patch=v0.3.6", "--source=live"][..]] {
+            let opts = options(argv);
+            let from_store = balance_watch_report(&db, &opts)
+                .await
+                .expect("the store's report");
+            let from_files = balance_watch_report_from_files(&paths, &opts)
+                .await
+                .expect("the files' report");
+            assert_eq!(from_files, from_store, "{argv:?}");
+            assert_eq!(
+                render_balance_watch(&from_files, &nobody),
+                render_balance_watch(&from_store, &nobody),
+                "{argv:?}"
+            );
+        }
+
+        let report = balance_watch_report_from_files(&paths, &options(&["--patch=v0.3.6"]))
+            .await
+            .expect("the files' report");
+        assert_eq!(cards(&report.high), vec!["bw-strong"]);
+        assert_eq!(
+            report.high[0].games, 40,
+            "the other patch is out, a repeat counts once"
+        );
+        assert_eq!(cards(&report.delta), vec!["bw-tricky"]);
+        assert_eq!(report.live_games, 1);
+        std::fs::remove_dir_all(&dir).expect("the temp directory goes");
+    }
+
+    #[tokio::test]
+    async fn file_input_names_the_file_and_line_it_cannot_read() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).expect("a temp directory");
+        let good = render_records(&[dev_game("dev:good:0", "bw-card", "bw-other", true)]).unwrap();
+        let bad = dir.join("bad.jsonl");
+        std::fs::write(&bad, format!("{good}{{\"id\":\"x\"}}\n")).expect("the bad file");
+        let opts = options(&["--patch=v0.3.6"]);
+        let error = balance_watch_report_from_files(std::slice::from_ref(&bad), &opts)
+            .await
+            .expect_err("a line that is not a record is refused")
+            .to_string();
+        assert!(
+            error.starts_with(&format!("{}: line 2: ", bad.display())),
+            "{error}"
+        );
+        let missing = dir.join("missing.jsonl");
+        let error = balance_watch_report_from_files(std::slice::from_ref(&missing), &opts)
+            .await
+            .expect_err("a missing file is refused")
+            .to_string();
+        assert!(error.contains(&missing.display().to_string()), "{error}");
+        std::fs::remove_dir_all(&dir).expect("the temp directory goes");
     }
 }

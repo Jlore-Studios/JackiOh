@@ -1,0 +1,156 @@
+/* The practice sandbox's dev tools (SandboxPanel.tsx, issue #923): a drawer over the board's right
+   edge, the whole width on a phone, scrolling on its own so the board stays where it is. */
+
+.sandbox-toggle,
+.sandbox-panel {
+  position: fixed;
+  z-index: 40;
+  color: var(--text, #efe0bf);
+  font-size: 14px;
+}
+
+.sandbox-toggle {
+  right: 16px;
+  bottom: 16px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid var(--line, #4a4335);
+  border-radius: 8px;
+  background: var(--bg-raised, #2a241c);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.sandbox-panel {
+  top: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line, #4a4335);
+  border-radius: 10px;
+  background: var(--bg-raised, #2a241c);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+}
+
+.sandbox-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sandbox-panel__title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.sandbox-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, #4a4335);
+}
+
+.sandbox-panel__heading {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-dim, #9aa1b8);
+  overflow-wrap: anywhere;
+}
+
+.sandbox-panel__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sandbox-panel__input,
+.sandbox-panel__select,
+.sandbox-panel__number,
+.sandbox-panel__button,
+.sandbox-panel__close {
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--line, #4a4335);
+  border-radius: 6px;
+  background: var(--bg-sunken, #1a1612);
+  color: inherit;
+  font: inherit;
+}
+
+.sandbox-panel__input,
+.sandbox-panel__select--wide {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.sandbox-panel__number {
+  width: 80px;
+}
+
+.sandbox-panel__button,
+.sandbox-panel__close {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.sandbox-panel__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sandbox-panel__check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.sandbox-panel__note {
+  margin: 0;
+  color: var(--text-dim, #9aa1b8);
+}
+
+.sandbox-panel__results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sandbox-panel__pick {
+  display: block;
+  width: 100%;
+  padding: 2px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+
+.sandbox-panel__pick[aria-pressed="true"] {
+  border-color: var(--glow, #e8c46a);
+}
+
+@media (max-width: 600px) {
+  .sandbox-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 60vh;
+    border-radius: 10px 10px 0 0;
+  }
+}

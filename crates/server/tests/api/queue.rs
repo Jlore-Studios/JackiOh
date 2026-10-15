@@ -16,6 +16,7 @@
 //!  - **R264**: a profile in a series that is not over can neither queue nor be paired.
 //!  - **R1372**: an All Random ticket's `leanNewest` leans the deck dealt to its own seat on the
 //!    newest set, and only that seat's.
+//!  - **R924000**: its `leanSet` picks the set: "newest" or any set that ships, and nothing else.
 //!  - **R1450**: a start whose cleanup fails too is released by the reaper once the grace has run.
 //!  - **R640001**: the window widens as §9.5 says and stops at `MAX_FAIR_GAP`, so two people
 //!    further apart than that never pair.
@@ -55,10 +56,11 @@ use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START,
-    RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, rating_window,
+    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, RATING_WINDOW_FULL_AFTER_SECONDS,
+    RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
+    rating_window,
 };
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
@@ -615,8 +617,204 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
         // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them at MAX_FAIR_GAP, still past it).
         tokio::time::advance(Duration::from_millis(120_000)).await;
+        // SPEC §11 R897000: the wait outlasts a presence window, and live clients poll through it,
+        // so both are heard from before the sweep judges them.
+        app.queue_presence.touch("low", now_ms());
+        app.queue_presence.touch("high", now_ms());
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
+    }
+}
+
+// SPEC §11 R897000 — an abandoned ticket expires before it seats anyone
+
+mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_stale_tickets_are_cancelled_by_the_sweep_and_pair_nobody() {
+        let app = test_app().await;
+        // PREMISE: the two would pair at once — same rating, same instant — so what follows is
+        // the expiry, not the window.
+        for (id, profile_id) in [("t-gone-1", "gone-1"), ("t-gone-2", "gone-2")] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating: 1000,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert!(matches_table(&app).await.is_empty());
+        for id in ["t-gone-1", "t-gone-2"] {
+            assert_eq!(ticket(&app, id).await["status"], "cancelled");
+        }
+        assert_eq!(open_count(&app).await, 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_a_ticket_that_keeps_being_touched_never_expires() {
+        let app = test_app().await;
+        for (id, profile_id) in [("t-kept-1", "kept-1"), ("t-kept-2", "kept-2")] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating: 1000,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+        // Three waits of half a window, heard from after each: never silent a full window.
+        for _ in 0..3 {
+            tokio::time::advance(Duration::from_millis(6_000)).await;
+            app.queue_presence.touch("kept-1", now_ms());
+            app.queue_presence.touch("kept-2", now_ms());
+        }
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 1);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["kept-1", "kept-2"])]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_any_signed_in_request_refreshes_the_ticket() {
+        let app = test_app().await;
+        let token = active_profile(&app, "polling", 1000.0).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-polling",
+                profile_id: "polling",
+                rating: 1000,
+                waited_ms: 0,
+                mode: "bo1",
+            },
+        )
+        .await;
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS - 1_000) as u64)).await;
+        // The queued client's own poll: a signed-in read with no queue body at all.
+        let (status, _) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(status, 200);
+        // Silent ever since, but heard from a window ago: still open, and still alone.
+        tokio::time::advance(Duration::from_millis(6_000)).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert_eq!(ticket(&app, "t-polling").await["status"], "open");
+    }
+
+    /// Two tickets further apart than `RATING_WINDOW_START`, enqueued together: the pair is made
+    /// only once the window has widened to the gap, and `sweep_every_poll` runs a sweep after
+    /// each `SERIES_POLL_SECONDS`, touching those of `heard` as a polling client would. Yields the
+    /// seconds waited when the sweep paired them, if it did within `RATING_WINDOW_FULL_AFTER_SECONDS`.
+    async fn sweep_every_poll(app: &Arc<App>, heard: &[&str]) -> Option<i64> {
+        let mut waited = 0;
+        while waited < RATING_WINDOW_FULL_AFTER_SECONDS {
+            tokio::time::advance(Duration::from_secs(SERIES_POLL_SECONDS as u64)).await;
+            waited += SERIES_POLL_SECONDS;
+            for profile_id in heard {
+                app.queue_presence.touch(profile_id, now_ms());
+            }
+            if try_pair(app).await.expect("a sweep").made == 1 {
+                return Some(waited);
+            }
+        }
+        None
+    }
+
+    /// The gap, and the seconds the widening window takes to reach it (R640001).
+    const WINDOW_GAP: i64 = RATING_WINDOW_START + 3 * RATING_WINDOW_WIDEN_BY;
+    const WINDOW_REACHES_GAP_AFTER_SECONDS: i64 =
+        (WINDOW_GAP - RATING_WINDOW_START) / RATING_WINDOW_WIDEN_BY * RATING_WINDOW_WIDEN_EVERY_SECONDS;
+
+    /// PREMISE of the test that waits it out: the wait is longer than the TTL.
+    const _: () = assert!(WINDOW_REACHES_GAP_AFTER_SECONDS * 1_000 > QUEUE_TICKET_STALE_MS);
+
+    async fn seed_far_apart(app: &App, ids: [(&str, &str, i64); 2]) {
+        for (id, profile_id, rating) in ids {
+            seed_ticket(
+                app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_two_heard_tickets_wait_out_the_rating_window_past_the_ttl() {
+        let app = test_app().await;
+        seed_far_apart(
+            &app,
+            [("t-near", "near", 1000), ("t-far", "far", 1000 + WINDOW_GAP)],
+        )
+        .await;
+
+        let paired_after = sweep_every_poll(&app, &["near", "far"]).await;
+
+        // The wait runs past `QUEUE_TICKET_STALE_MS` (below), and both are still there at its end.
+        assert_eq!(paired_after, Some(WINDOW_REACHES_GAP_AFTER_SECONDS));
+        assert_eq!(paired_profiles(&app).await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_a_silent_ticket_does_not_outwait_the_rating_window() {
+        let app = test_app().await;
+        seed_far_apart(
+            &app,
+            [("t-near", "near", 1000), ("t-far", "far", 1000 + WINDOW_GAP)],
+        )
+        .await;
+
+        // `far` is an API-only client that enqueued and never asked for anything again.
+        let paired_after = sweep_every_poll(&app, &["near"]).await;
+
+        assert_eq!(paired_after, None);
+        assert_eq!(ticket(&app, "t-far").await["status"], "cancelled");
+        assert_eq!(ticket(&app, "t-near").await["status"], "open");
+        assert!(matches_table(&app).await.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_get_me_answers_queued_while_a_ticket_is_open() {
+        let app = test_app().await;
+        let token = active_profile(&app, "queuer", 1000.0).await;
+        let [deck, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "queuer", &deck, "queuer's deck").await;
+
+        let (_, before) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(before["queued"], false);
+
+        let (status, queued) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 200);
+        assert_eq!(queued["status"], "open");
+        let (_, during) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(during["queued"], true);
+
+        let (status, _) = cancel(&app, &token).await;
+        assert_eq!(status, 200);
+        let (_, after) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(after["queued"], false);
     }
 }
 
@@ -1347,10 +1545,11 @@ mod r1372_more_cards_from_the_newest_set {
 
         let (status, first) = enqueue_with(&app, &one, json!({ "mode": "random", "leanNewest": true })).await;
         assert_eq!(status, 200, "{first}");
-        // The ask waits in the ticket, as a Best-of-1 deck would (migration 0027's column).
+        // The ask waits in the ticket, as a Best-of-1 deck would (migration 0036's column, R924000:
+        // an older client's `leanNewest: true` is the pick "newest").
         assert_eq!(
-            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
-            true
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "newest"
         );
         // The older ticket is p1 (R166), as in R258's test above.
         tokio::time::advance(Duration::from_millis(1)).await;
@@ -1392,8 +1591,94 @@ mod r1372_more_cards_from_the_newest_set {
         let (status, queued) = enqueue_with(&app, &one, json!({ "mode": "random" })).await;
         assert_eq!(status, 200, "{queued}");
         assert_eq!(
-            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanNewest"],
-            false
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            Value::Null
+        );
+    }
+
+    /// How many of a dealt deck's cards are of `set`.
+    fn of_set(deck: &Value, set: jackioh_engine::SetName) -> usize {
+        deck.as_array()
+            .map(|ids| {
+                ids.iter()
+                    .filter(|id| {
+                        id.as_str()
+                            .and_then(|id| jackioh_cards::CATALOG.get(id))
+                            .is_some_and(|def| def.set == set)
+                    })
+                    .count()
+            })
+            .unwrap_or(0)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r924000_a_ticket_leans_on_the_set_it_picked_and_its_partner_on_its_own() {
+        use jackioh_engine::SetName;
+        let app = test_app().await;
+        let one = active_profile(&app, "pick-one", 1000.0).await;
+        let two = active_profile(&app, "pick-two", 1000.0).await;
+
+        let (status, first) =
+            enqueue_with(&app, &one, json!({ "mode": "random", "leanSet": "Classic" })).await;
+        assert_eq!(status, 200, "{first}");
+        assert_eq!(
+            ticket(&app, first["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "Classic"
+        );
+        tokio::time::advance(Duration::from_millis(1)).await;
+        // A ticket that leans on another set pairs with it all the same.
+        let (_, second) = enqueue_with(&app, &two, json!({ "mode": "random", "leanSet": "newest" })).await;
+        assert_eq!(second["status"], "matched", "{second}");
+
+        let match_id = second["matchId"].as_str().expect("a match id").to_string();
+        let row = q!(app, matches_get(&match_id))
+            .map(|row| to_json(&row))
+            .expect("the match row");
+        let seed = row["seed"].as_str().expect("a seed").to_string();
+        let classic = json!(deal_random_deck(
+            &format!("{seed}:p1-deck"),
+            Some(SetName::Classic)
+        ));
+        let newest = json!(deal_random_deck(
+            &format!("{seed}:p2-deck"),
+            Some(newest_shipped_set())
+        ));
+        assert_eq!(seat_deck(&app, &match_id, "pick-one").await, classic);
+        assert_eq!(seat_deck(&app, &match_id, "pick-two").await, newest);
+        // R1370's floor holds for any set the player picks, not only the newest.
+        let floor =
+            (f64::from(jackioh_engine::config::DECK_SIZE) * jackioh_ai::AI_DECK.lean_min_share).ceil();
+        assert!(of_set(&classic, SetName::Classic) as f64 >= floor, "{classic}");
+        assert!(of_set(&newest, newest_shipped_set()) as f64 >= floor, "{newest}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r924000_a_lean_on_a_set_that_does_not_ship_or_on_nothing_known_is_refused() {
+        let app = test_app().await;
+        let one = active_profile(&app, "pick-bad", 1000.0).await;
+        for lean in [
+            json!("Boss"),
+            json!("Classic+ "),
+            json!("classic"),
+            json!(true),
+            json!(3),
+        ] {
+            let (status, refused) =
+                enqueue_with(&app, &one, json!({ "mode": "random", "leanSet": lean })).await;
+            assert_eq!(status, 400, "{lean}: {refused}");
+        }
+        assert!(tickets_table(&app).await.is_empty());
+        // `leanSet` is read before an older client's `leanNewest`, so a body with both leans on the pick.
+        let (status, queued) = enqueue_with(
+            &app,
+            &one,
+            json!({ "mode": "random", "leanSet": "Core", "leanNewest": true }),
+        )
+        .await;
+        assert_eq!(status, 200, "{queued}");
+        assert_eq!(
+            ticket(&app, queued["ticketId"].as_str().unwrap_or("")).await["leanSet"],
+            "Core"
         );
     }
 }
@@ -1452,9 +1737,12 @@ mod a_paired_match_whose_start_fails {
         let deck_b = save_deck_for(&app, "stranded-b", &second, "stranded-b's deck").await;
 
         enqueue_with(&app, &one, json!({ "mode": "bo1", "deckId": deck_a })).await;
+        // The start fails at `matches.create`, and the start-failure cleanup's conditional
+        // clears fail too (R890000 renamed them from `profiles.setInMatch` to
+        // `profiles.clearInMatch`; both names are refused so the cleanup fails either way).
         record_calls(&mut *fake(&app).await, |seen, method| {
             method == "matches.create"
-                || (method == "profiles.setInMatch"
+                || ((method == "profiles.setInMatch" || method == "profiles.clearInMatch")
                     && seen.iter().any(|previous| previous == "matches.create"))
         });
 
@@ -2011,6 +2299,46 @@ mod r253_what_may_be_queued_through_the_real_validator {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r915005_refuses_a_best_of_1_deck_and_a_trio_holding_a_custom_card_l7_before_any_other_rule() {
+        let w = real_wiring().await;
+        let size = w.size;
+        let custom = "custom-0123456789abcdef0123456789abcdef".to_string();
+        // Legal by every other rule: the custom card is one card of a full deck of owned cards.
+        let mut homebrew = vec![custom.clone()];
+        homebrew.extend(w.pool[1..size].iter().cloned());
+        let deck_id = save_deck_for(&w.app, "real", &homebrew, "Homebrew").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": deck_id }), "L7").await;
+        assert_eq!(refused["error"]["details"].as_array().map(Vec::len), Some(1));
+        assert_eq!(refused["error"]["details"][0]["cardId"], json!(custom));
+        let message = refused["error"]["message"].as_str().unwrap_or("").to_string();
+        assert!(
+            message.contains("Homebrew") && message.contains(&custom),
+            "{message}"
+        );
+
+        // A deck that breaks L2 too still reads L7 first.
+        let short = save_deck_for(&w.app, "real", std::slice::from_ref(&custom), "Short").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo1", "deckId": short }), "L7").await;
+        let rules: Vec<Value> = refused["error"]["details"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|issue| issue["rule"].clone())
+            .collect();
+        assert_eq!(rules, vec![json!("L7"), json!("L2")]);
+
+        // A trio with the custom card in its second deck.
+        let ids = [
+            Some(save_deck_for(&w.app, "real", &w.pool[size..size * 2], "Aggro").await),
+            Some(deck_id.clone()),
+            Some(save_deck_for(&w.app, "real", &w.pool[size * 2..size * 3], "Tempo").await),
+        ];
+        let trio_id = save_trio_for(&w.app, "real", Some(ids), "Main").await;
+        let refused = expect_refused(&w, json!({ "mode": "bo3", "trioId": trio_id }), "L7").await;
+        assert_eq!(refused["error"]["details"][0]["deck"], json!(2));
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r253_refuses_a_best_of_3_trio_with_an_empty_slot_as_l1() {
         let w = real_wiring().await;
         let size = w.size;
@@ -2055,5 +2383,52 @@ mod r253_what_may_be_queued_through_the_real_validator {
             assert_eq!(deck["cards"], json!(decks[n]));
             assert_eq!(nullable(deck, "portrait"), Value::Null);
         }
+    }
+}
+
+// R890000: the seat compare-and-set between the sweep's read and the claim
+
+mod r890000_a_room_join_between_the_sweep_read_and_the_claim {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r890000_room_join_between_sweep_read_and_claim_leaves_one_match() {
+        let app = test_app().await;
+        let t = |id, profile_id| SeedTicket {
+            id,
+            profile_id,
+            rating: 1000,
+            waited_ms: 1_000,
+            mode: "bo1",
+        };
+        seed_ticket(&app, t("t-r89-a", "r89-a")).await;
+        seed_ticket(&app, t("t-r89-b", "r89-b")).await;
+
+        // A room join lands between the sweep's busy-set read and the claim: it seats `r89-a`
+        // in its own match first, as `series_recovery.rs`'s `race_first_update` writes its rival
+        // row straight into the tables.
+        fake(&app).await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "tickets.claimPair"
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == "r89-a")
+                && row.in_match_id.is_none()
+            {
+                row.in_match_id = Some("r89-room-match".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        let report = try_pair(&app).await.expect("a sweep");
+        fake(&app).await.before_call = None;
+
+        // The pair never started: no match row, one failed start, and `r89-a` still points at
+        // the room match the rival won while `r89-b` was never seated. Both tickets stay
+        // claimed, as a failed start leaves them.
+        assert_eq!(report.made, 0);
+        assert_eq!(report.failed.len(), 1);
+        assert!(matches_table(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, "r89-a").await, json!("r89-room-match"));
+        assert_eq!(in_match_of(&app, "r89-b").await, Value::Null);
+        assert_eq!(ticket(&app, "t-r89-a").await["status"], "matched");
+        assert_eq!(ticket(&app, "t-r89-b").await["status"], "matched");
     }
 }

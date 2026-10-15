@@ -2,7 +2,46 @@
 //! rows (Radiant: the enemy's only); a Unit standing on an Ivory Tower while its play resolves is passed
 //! by (R446, R653), and the Tower is destroyed whatever it has fused (R418).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-024";
+
+/// Each player's outermost lanes (§3.1).
+const WALL_LANES: [i32; 2] = [1, 5];
+
+/// TS `walls(side: "any" | "enemy")`: `side` is the scope's side, `ScopeSide::Any` or `ScopeSide::Enemy`.
+fn walls(side: ScopeSide) -> Script {
+    let in_the_walls = move |ctx: &mut EffectContext<'_>| -> Vec<String> {
+        cards_in_scope(ctx, &json_as(json!({ "side": side, "rows": ["units", "backrow"] })))
+            .into_iter()
+            .filter_map(|card| {
+                if is_carried(&*ctx.state, &card) {
+                    return None;
+                }
+                let at = slot_of(&*ctx.state, &card)?;
+                if WALL_LANES.contains(&at.lane) { Some(card.id.clone()) } else { None }
+            })
+            .collect()
+    };
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(in_the_walls),
+                each: Arc::new(|instance_id: &str| {
+                    destroy(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: walls(ScopeSide::Any),
+        radiant: walls(ScopeSide::Enemy),
+    }
+}
 
 // C+ #24 Crushing Walls — SPEC §8.7 row 24, BUILD M9 Classic+ row C+ 24: "Destroys the top card of each of
 // the eight zones in lanes 1 and 5 (each side numbers its lanes from its owner's seat), Units and
@@ -75,7 +114,7 @@ mod tests {
         fn is_a_3_spell_with_no_play_time_choice() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(3));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());
         }

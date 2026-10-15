@@ -16,7 +16,9 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::testkit::{mock_animate_at_turn_start, mock_brittle_tick, mock_return_at_cleanup};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, set_library, setup_catalog, slot};
+use crate::rules::fixtures::harness::{
+    in_hand, matches_object, new_game, put, round_trip, set_library, setup_catalog, slot,
+};
 use crate::rules::fixtures::turn::{
     LOG_LANE, TURN_SCRIPTS, cast_spell, clock, crumble_watcher, log_card, note, notes, reminder,
     turn_catalog, write,
@@ -163,10 +165,6 @@ fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
     )
 }
 
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("serialises")).expect("deserialises")
-}
-
 /// The notes from `from` on, so a test reads one turn's stages.
 fn since(state: &GameState, from: usize) -> Vec<String> {
     notes(state).into_iter().skip(from).collect()
@@ -186,23 +184,6 @@ fn work_steps(state: &GameState) -> Vec<(String, String)> {
         .iter()
         .map(|item| (item.resume.hook.clone(), item.resume.step.clone()))
         .collect()
-}
-
-/// Every key of `expected` is in `actual` with a matching value.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 mod r62_s_start_of_a_turn_with_the_brittle_and_animated_stages_b3_1_b3_3 {

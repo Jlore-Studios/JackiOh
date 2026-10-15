@@ -20,8 +20,8 @@ use crate::config::{
 };
 use crate::rng::Rng;
 use crate::wire::{
-    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, Enchantment, GameEvent, Keyword,
-    PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, Row, RowFlags, SecretChoice,
+    AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CustomCard, Enchantment, GameEvent,
+    Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags, SecretChoice,
     Selection, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
@@ -914,6 +914,22 @@ pub struct DrawCount {
     pub count: i32,
 }
 
+/// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
+/// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
+/// hashes as before (B3).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct DuosLife {
+    pub pool: i32,
+    pub pool_cap: i32,
+    pub spent: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -1023,6 +1039,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub won_by_effect: Option<bool>,
+    /// #936 S3, B12: this seat's Duos life. Present only in a duel a `DuosState` holds, so a 1v1 state
+    /// hashes as before this field existed (B3). Every write to `hero.health` goes through
+    /// `duos_life.rs`, which reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub duos: Option<DuosLife>,
 }
 
 string_union! {
@@ -1220,6 +1242,24 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub secrets: Option<Vec<SecretRecord>>,
+    /// R923000: this game is a practice sandbox, whose tools (`ActionBody::Sandbox`) it alone accepts.
+    /// A `create_game` input, frozen with the game. D14: absent in every other game, so a game that
+    /// is no sandbox hashes exactly as before this field existed. Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+    pub sandbox: Option<bool>,
+    /// R915006: this game's custom cards (SPEC §12), by id: each card's frame, version and card-kit
+    /// source as `create_game` was given it (`custom::custom_game_copy`), which a Luau host lent the
+    /// engine builds the scripts from (`custom::with_custom_scripts`). A `create_game` input, frozen
+    /// with the game. D14: empty, and absent from the JSON, in every game without one.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CustomCard>>", optional))]
+    pub custom_cards: IndexMap<String, CustomCard>,
+    /// R915000: the definition each of `custom_cards`' frames builds (`custom::custom_def`), which
+    /// `catalog::find_def` reads after `transient_defs`. Absent with `custom_cards`.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, CardDef>>", optional))]
+    pub custom_defs: IndexMap<String, CardDef>,
     // ---- derived, never sent, stored or hashed ----
     /// R179: the scripts of `transient_defs`' fused definitions, composed once (as a Fuse mints one, and
     /// on entry to `reduce`: `scripts::sync_fused_scripts`) and shared by every state cloned from this
@@ -1561,6 +1601,7 @@ pub fn create_player_state() -> PlayerState {
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
+        duos: None,
     }
 }
 
@@ -1603,6 +1644,18 @@ pub struct CreateGameOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R923000: make the game a practice sandbox (`GameState.sandbox`). Setup, not an action: a replay
+    /// passes the same flag (`replay::ReplayInput.sandbox`). The server never sets it. Omitted or
+    /// false, the game is no sandbox.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub sandbox: Option<bool>,
+    /// R915006: the game's custom cards (SPEC §12), which its decks may name. Setup, not an action: a
+    /// replay passes the same cards (`replay::ReplayInput.customCards`). The caller checks them with
+    /// `custom::check_custom_setup` first; the server never sets it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub custom_cards: Option<Vec<CustomCard>>,
 }
 
 /// SURFACE §6.1's name for `CreateGameOptions`.
@@ -1680,6 +1733,18 @@ pub fn validate_handicap(handicap: &Handicap, label: &str) -> Result<(), EngineE
 /// other size is the handicap's, and the message says so. (TS throws; `create_game` panics with the
 /// message.)
 pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32) -> Result<(), EngineError> {
+    validate_deck_with(deck, catalog, &IndexMap::new(), label, size)
+}
+
+/// `validate_deck` for a game with custom cards (R915005): a custom id is one of `customs`, the
+/// game's own definitions, never the catalog's, and counts as one card of the deck.
+pub fn validate_deck_with(
+    deck: &[String],
+    catalog: &CardDefs,
+    customs: &IndexMap<String, CardDef>,
+    label: &str,
+    size: i32,
+) -> Result<(), EngineError> {
     if deck.len() as i32 != size {
         if size == DECK_SIZE {
             return Err(EngineError::new(format!(
@@ -1694,6 +1759,20 @@ pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32
     }
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
     for def_id in deck {
+        if crate::custom::is_custom_id(def_id) {
+            if !customs.contains_key(def_id) {
+                return Err(EngineError::new(format!(
+                    "{label}: \"{def_id}\" is a custom card the game was not given (R915005)"
+                )));
+            }
+            if seen.contains(&def_id.as_str()) {
+                return Err(EngineError::new(format!(
+                    "{label}: \"{def_id}\" appears twice; no duplicate card ids (§2.6 L3)"
+                )));
+            }
+            seen.push(def_id);
+            continue;
+        }
         let Some(def) = catalog.get(def_id) else {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is not in the catalog (§9.4 L6)"
@@ -1705,7 +1784,7 @@ pub fn validate_deck(deck: &[String], catalog: &CardDefs, label: &str, size: i32
             )));
         }
         seen.push(def_id);
-        if def.token || def.tags.contains(&Tag::Token) {
+        if def.is_token() {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"
             )));
@@ -1854,9 +1933,26 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         }
     }
 
+    // R915006: the game's custom cards and their definitions, before the decks that name them.
+    let customs: &[CustomCard] = options.custom_cards.as_deref().unwrap_or(&[]);
+    let custom_cards: IndexMap<String, CustomCard> = customs
+        .iter()
+        .map(|card| (card.id.clone(), crate::custom::custom_game_copy(card)))
+        .collect();
+    let custom_defs: IndexMap<String, CardDef> = customs
+        .iter()
+        .map(|card| (card.id.clone(), crate::custom::custom_def(card)))
+        .collect();
+
     for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
         let size = handicaps.get(player).map_or(DECK_SIZE, |h| h.deck_size);
-        if let Err(error) = validate_deck(deck_of(options, seat), catalog, player.as_str(), size) {
+        if let Err(error) = validate_deck_with(
+            deck_of(options, seat),
+            catalog,
+            &custom_defs,
+            player.as_str(),
+            size,
+        ) {
             panic!("{error}");
         }
     }
@@ -1911,6 +2007,9 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str) -> GameS
         seat_swaps: None,
         glitch_boards: None,
         secrets: None,
+        sandbox: options.sandbox.filter(|sandbox| *sandbox),
+        custom_cards,
+        custom_defs,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
 
@@ -2012,25 +2111,21 @@ pub fn clone_state(state: &GameState) -> GameState {
     state.clone()
 }
 
-pub fn active_units(side: &PlayerState) -> Vec<&CardInstance> {
-    side.units
-        .iter()
-        .filter_map(|pile| pile.as_ref().and_then(|pile| pile.first()))
-        .collect()
-}
-
-pub fn all_zones_empty(side: &PlayerState) -> bool {
-    side.units.iter().all(Option::is_none)
-        && side.backrow.iter().all(Option::is_none)
-        && side.carried.iter().flatten().all(Option::is_none)
-}
-
 /// §2.1, §2.2: whether it is `player`'s turn. Setup (`SETUP_TURN`) is no player's turn: `active`
 /// names p1 there only as a placeholder until p1 takes the first turn (§2.1 step 5), so a clause a
 /// card makes during setup — a cast on the opening deal or a mulligan's replacement draw (R70) — is
 /// made on no turn of its controller's (R155, R241).
 pub fn is_turn_of(state: &GameState, player: PlayerId) -> bool {
     state.turn != SETUP_TURN && state.active == player
+}
+
+/// R68: the two sides in the order simultaneous things happen on them, the active player's first.
+pub fn active_first(state: &GameState) -> [PlayerId; 2] {
+    if state.active == PlayerId::P1 {
+        [PlayerId::P1, PlayerId::P2]
+    } else {
+        [PlayerId::P2, PlayerId::P1]
+    }
 }
 
 /// Every place a card can be, in `find_instance`'s order, for one side.
@@ -2078,20 +2173,6 @@ pub fn find_instance_mut<'a>(state: &'a mut GameState, instance_id: &str) -> Opt
         &mut state.players.p2
     };
     side_cards_mut(side).find(|card| card.id == instance_id)
-}
-
-/// `rowOf`'s answer: a row's zones, which hold piles (units) or single cards (backrow).
-#[derive(Clone, Copy, Debug)]
-pub enum RowSlots<'a> {
-    Units(&'a Vec<Option<Pile>>),
-    Backrow(&'a Vec<Option<CardInstance>>),
-}
-
-pub fn row_of(side: &PlayerState, row: Row) -> RowSlots<'_> {
-    match row {
-        Row::Units => RowSlots::Units(&side.units),
-        Row::Backrow => RowSlots::Backrow(&side.backrow),
-    }
 }
 
 #[cfg(test)]

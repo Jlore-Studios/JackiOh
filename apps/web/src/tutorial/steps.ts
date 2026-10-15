@@ -14,19 +14,11 @@ export function myMain(ctx: CoachCtx): boolean {
   return view.result === null && isMyTurn(view) && view.phase === "main" && view.pending === null && !ctx.aiToAct;
 }
 
-export function aiTurn(view: PlayerView): boolean {
-  return view.result === null && !isMyTurn(view) && view.phase !== "mulligan" && view.phase !== "setup";
-}
-
 /** The human's mulligan picker; both seats decide together (§2.1 step 3, R265). */
 export function mulliganOpen(view: PlayerView): boolean {
   const prompt = view.pending !== null && view.pending.forYou && view.pending.kind === "mulligan";
   if (view.mulligan === undefined) return prompt;
   return !view.mulligan.youReady && prompt;
-}
-
-export function promptOpen(view: PlayerView, kind?: string): boolean {
-  return view.pending !== null && view.pending.forYou && (kind === undefined || view.pending.kind === kind);
 }
 
 export function myHand(view: PlayerView): CardView[] {

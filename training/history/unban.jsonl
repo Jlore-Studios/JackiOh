@@ -8,3 +8,4 @@
 {"generation":8,"lane":"unban","parent":"17b8cf2ed056f4ce027ded1177510703f4878d90","tree":"0ce1c788d435866bf5f76bdfeb8c815f369c3cc6","vsRandom":"97/100","vsParent":"81/100","shadowBan":0,"parentShadowBan":1,"date":"2026-10-10"}
 {"generation":10,"lane":"unban","parent":"e0e5796767f65d8e1a000db5cbcfd397ffdcea45","tree":"1798d7182862266d3498446fe041e078786b9ad4","vsRandom":null,"vsParent":"72/100","shadowBan":24,"parentShadowBan":31,"date":"2026-10-13"}
 {"generation":11,"lane":"unban","parent":"9e00ced24a5806b79ad57c3c107dc8f02161401f","tree":"7e86474a306dd94baa5df5bfe6d1e144cdad7060","vsRandom":null,"vsParent":"80/100","shadowBan":21,"parentShadowBan":24,"date":"2026-10-14"}
+{"generation":12,"lane":"unban","parent":"8c0e06481a2337f0aec6fb1fa086c4194e79dbbb","tree":"5a1aea5665e80ef9b6d0746e39df51dc36a2a0ec","vsRandom":null,"vsParent":"76/100","shadowBan":17,"parentShadowBan":21,"date":"2026-10-14"}

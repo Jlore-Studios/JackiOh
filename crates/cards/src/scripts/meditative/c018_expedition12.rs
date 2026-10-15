@@ -1,13 +1,58 @@
 //! Meditative #18 Expedition12 (SPEC §8.8 row 18). (1) Spell, Quickdraw, Epic.
-//!   Base:    "Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
-//!   Radiant: "Echo 1. Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
+//!   Base:    "Lose all mana next turn. Make a card in your hand Radiant."
+//!   Radiant: "Echo 1. Lose all mana next turn. Make a card in your hand Radiant."
 //!
 //! ME-TURN's lost refresh (R844) and a declared hand pick (R81, as C+ #41's): your other
 //! non-Radiant hand cards, made Radiant (§5.2). With no other non-Radiant hand card the pick has
 //! nothing and the Spell still resolves (§8 Conventions). The Radiant face's Echo repeat reopens
 //! the pick as a `hand` prompt (§10.6); its mana loss is the same next turn, so it changes nothing.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-018";
+
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::hand(
+        1,
+        1,
+        json!({ "of": ["hand"], "excludeSelf": true, "check": "notRadiant" }),
+    )]
+}
+
+fn target_checks() -> IndexMap<&'static str, TargetCheck> {
+    IndexMap::from([(
+        "notRadiant",
+        target_check(|a| a.candidate.is_some_and(|candidate| !candidate.radiant)),
+    )])
+}
+
+fn cry() -> Vec<Effect> {
+    vec![
+        lose_refreshes(json_as(json!({ "turns": 1 }))),
+        set_radiant(json_as(json!({ "target": { "of": "chosen" } }))),
+    ]
+}
+
+fn face(echo: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            echo: echo.then_some(1),
+            ..StaticFlags::default()
+        }),
+        targets: targets(),
+        target_checks: target_checks(),
+        cry: Some(hook(|_| cry())),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
 
 // Meditative #18 Expedition12 — SPEC §8.8 row 18, BUILD M10 row M 18: Quickdraw; your next turn's
 // refresh gives 0 mana and spends any next-turn rider, while mana gained during that turn still adds;
@@ -126,7 +171,7 @@ mod tests {
         #[test]
         fn r640_it_is_quickdraw_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(face.static_flags.as_ref().and_then(|flags| flags.quickdraw), Some(true));
             }

@@ -379,6 +379,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1237,7 +1247,7 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "jackioh-ai"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "indexmap",
  "jackioh-cards",
@@ -1248,18 +1258,17 @@ dependencies = [
 
 [[package]]
 name = "jackioh-cards"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "indexmap",
  "jackioh-engine",
- "jackioh-luau",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "jackioh-engine"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "indexmap",
  "jackioh-cards",
@@ -1270,8 +1279,10 @@ dependencies = [
 
 [[package]]
 name = "jackioh-luau"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
+ "indexmap",
+ "jackioh-cards",
  "jackioh-engine",
  "mlua",
  "serde",
@@ -1281,7 +1292,7 @@ dependencies = [
 
 [[package]]
 name = "jackioh-server"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -1304,7 +1315,6 @@ dependencies = [
  "time",
  "tokio",
  "tower",
- "tower-http 0.7.1",
  "tracing",
  "tracing-subscriber",
  "unicode-normalization",
@@ -1316,7 +1326,7 @@ dependencies = [
 
 [[package]]
 name = "jackioh-tools"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -1324,6 +1334,7 @@ dependencies = [
  "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
+ "jackioh-luau",
  "rayon",
  "serde",
  "serde_json",
@@ -1331,11 +1342,26 @@ dependencies = [
 
 [[package]]
 name = "jackioh-wasm"
-version = "0.4.0"
+version = "0.5.0"
+dependencies = [
+ "console_error_panic_hook",
+ "jackioh-ai",
+ "jackioh-cards",
+ "jackioh-engine",
+ "js-sys",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "jackioh-wasm-luau"
+version = "0.5.0"
 dependencies = [
  "jackioh-ai",
  "jackioh-cards",
  "jackioh-engine",
+ "jackioh-luau",
  "serde",
  "serde_json",
 ]
@@ -2068,7 +2094,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower",
- "tower-http 0.6.11",
+ "tower-http",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -2946,23 +2972,6 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "url",
-]
-
-[[package]]
-name = "tower-http"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08a05a66a4fdd61cbbe0a1d755ffe0ca6aba159dd4820936a0ff8a8278245b9c"
-dependencies = [
- "bitflags",
- "bytes",
- "http",
- "http-body",
- "percent-encoding",
- "pin-project-lite",
- "tower-layer",
- "tower-service",
- "tracing",
 ]
 
 [[package]]

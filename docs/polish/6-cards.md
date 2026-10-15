@@ -267,7 +267,6 @@ export function CardArt(props: CardArtProps): ReactElement;
 
 ```ts
 // model.ts
-export type FaceLayout = "full" | "compact" | "minion";
 export type StatTone = "base" | "buffed" | "reduced" | "damaged";
 export type FaceCost = {
   /** What the gem shows: the view's live number whenever there is one, "X" for an X card, else the printed price. */
@@ -409,7 +408,14 @@ turn" matches "Once per Turn".
 
 - Matching is case-sensitive and longest-first.
 - A term matches only at a word boundary: the characters on either side are not `[A-Za-z0-9]`, so
-  "Locked" and "taunt" stay plain text.
+  "Locking" and "taunt" stay plain text.
+- What bolds (R910000): every §6.2 trigger and §6.3 verb, and Radiant, in every case and
+  inflection the cards print, each such spelling an alias ("exile it", "exiled", "steal it",
+  "Locked", "Tributes", "Buffs"). `PLAIN_SPELLINGS` lists the words spelled like a term that name
+  something else ("your exile", the pile), which match like terms and print plain. A §6.1 keyword
+  bolds as the keyword a card has; card types, zones, stats and the §6.3 rows kept rules-only
+  (Summon, Draw, Discard, Destroy) stay plain. `rules.test.ts` fails on a card that prints a trigger or
+  verb that neither bolds nor is a plain spelling.
 - A match extends over a following ` <digits|X>` and then a `:`. So "Cry:" is one term, "Armor 2"
   is one term, and "Combo 2:" is one term.
 
@@ -897,7 +903,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - "Cry: deal 2" → the term `Cry:`;
   - "Armor 2" → the term `Armor 2`;
   - "Start of your turn:" → the term Start of turn;
-  - "taunt" and "Locked" stay text.
+  - "taunt" and "Locking" stay text;
+  - "exile it" → the term Exile, and "your exile" (the pile) stays text (R910000).
 
   `RulesText` renders each term as `strong.cf-term[data-term]`.
 - **B11.** `GLOSSARY` has one entry per `KEYWORD_KINDS` kind, carrying SPEC §6.1's rule text and
@@ -1005,8 +1012,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   the radiant clause, by first appearance; then the face's keywords not yet listed. On a radiant
   face those are the printed texts (B7), so radiant #56 explains Charge and Indestructible and
   never Rush or Divine Shield. Nothing is rendered when the list is empty (jsdom).
-- **B27.** `placePreview(anchor, viewport, size, prefer = "beside")` returns the right side when
-  the preview fits there, else left, else above, else below. With `prefer: "above"` it tries above
+- **B27.** `placePreview(anchor, viewport, size, prefer = "beside")` returns the left side when
+  the preview fits there, else right, else above, else below (#912 put the left first, where #814
+  asked for a card's full text on hover). With `prefer: "above"` it tries above
   first, then the same order: a full face in a row (the hand, the resolving strip, a prompt
   option) asks for it, so the preview rises over the card instead of covering the neighbour the
   pointer is heading for. `left` and `top` are clamped so the box stays `PREVIEW_MARGIN_PX` (8)

@@ -12,7 +12,7 @@
 // is `{ error: { code, message, details? } }` from `crates/server/src/api/http.rs`.
 
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
-import type { CardDefs, GameOverReason, PlayerId, PortraitId } from "@jackioh/shared";
+import type { CardDefs, GameOverReason, LeanPick, PlayerId, PortraitId } from "@jackioh/shared";
 
 import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 
@@ -35,6 +35,24 @@ const DEFAULT_WS_URL = "ws://localhost:8787/ws/match";
 export function matchSocketUrl(): string {
   const configured: unknown = import.meta.env.VITE_SERVER_WS_URL;
   return typeof configured === "string" && configured.length > 0 ? configured : DEFAULT_WS_URL;
+}
+
+/** The `/ws/match` path the configured socket URL ends in. */
+const MATCH_SOCKET_PATH = /\/ws\/match\/?$/u;
+
+/**
+ * A socket on the same server as `/ws/match` (#936: `/ws/duos`, `/ws/watch`): the configured URL
+ * with its path swapped for `path`, so one environment variable still names the server.
+ */
+export function serverSocketUrl(path: string, base: string = matchSocketUrl()): string {
+  try {
+    const url = new URL(base);
+    url.pathname = MATCH_SOCKET_PATH.test(url.pathname) ? url.pathname.replace(MATCH_SOCKET_PATH, path) : path;
+    return url.toString();
+  } catch {
+    // A relative test address.
+    return MATCH_SOCKET_PATH.test(base) ? base.replace(MATCH_SOCKET_PATH, path) : `${base.replace(/\/+$/u, "")}${path}`;
+  }
 }
 
 /** `crates/server/src/api/http.rs` `ApiErrorCode`, as the client sees it: an opaque string. */
@@ -201,6 +219,11 @@ export type MeResponse = {
   ageCheckOwed?: boolean;
   /** R757001: the account has not agreed to the terms in force (`TERMS_VERSION`). Missing: not owed. */
   termsOwed?: boolean;
+  /**
+   * R897000: whether this profile holds an open queue ticket. Optional because a server from
+   * before R897000 (or a test stub) omits it; missing never ends a wait.
+   */
+  queued?: boolean;
 };
 
 /** The caller's own username, as `/api/auth/me` and every username route answer with it (R1435). */
@@ -532,8 +555,12 @@ export type PlayerSettingValue = boolean | number | string;
 /** One group of settings (a store of the client) and when it last changed (epoch ms, the device's clock). */
 export type PlayerSettingsGroup = { at: number; values: Record<string, PlayerSettingValue> };
 
-/** `PlayerSettingsView` in `crates/server/src/api/settings.rs`: group id to group, empty before the first write. */
-export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup> };
+/**
+ * `PlayerSettingsView` in `crates/server/src/api/settings.rs`: group id to group, empty before the
+ * first write. `allowSpectators` (#936 S7, B50) is the account's own "Let friends watch my games", not a
+ * device group: `PUT` takes it beside `groups`. Optional because a server from before #936 omits it.
+ */
+export type PlayerSettingsAccountCopy = { groups: Record<string, PlayerSettingsGroup>; allowSpectators?: boolean };
 
 /** `GET /api/settings` (`active`): the account's copy, empty before its first write. */
 export async function getPlayerSettings(token: string): Promise<PlayerSettingsAccountCopy> {
@@ -566,13 +593,13 @@ export type QueueMode = "bo1" | "bo3" | "random";
 
 /**
  * What a queue ticket or a room is made with: a deck, a trio, or nothing at all. All Random's
- * `leanNewest` is the player's "More cards from the newest set" for their own dealt deck (R1372),
- * sent only when it is on: the server resolves the set and deals the deck (CLAUDE.md rule 7).
+ * `leanSet` is the player's "More cards from" pick for their own dealt deck (R1372, R924000), sent
+ * only when there is one: the server resolves "newest" and deals the deck (CLAUDE.md rule 7).
  */
 export type ModeChoice =
   | { mode: "bo1"; deckId: string }
   | { mode: "bo3"; trioId: string }
-  | { mode: "random"; leanNewest?: true };
+  | { mode: "random"; leanSet?: LeanPick };
 
 /** `POST /api/queue`. `matchId` for a paired Best-of-1 or All Random game, `seriesId` for Conquest. */
 export type EnqueueResponse = {
@@ -864,20 +891,20 @@ export type RematchStatusResponse = {
 };
 
 /**
- * `POST /api/matches/:id/rematch`. `leanNewest` (R1372) is this seat's "More cards from the newest
- * set" for an All Random rematch's dealt deck, sent only when it is on; a Best-of-1 rematch replays
- * its decks and the server reads no lean.
+ * `POST /api/matches/:id/rematch`. `lean` (R1372, R924000) is this seat's "More cards from" pick for
+ * an All Random rematch's dealt deck, sent only when there is one; a Best-of-1 rematch replays its
+ * decks and the server reads no lean.
  */
 export function rematchOffer(
   token: string,
   matchId: string,
   stakes: RematchStakes,
-  leanNewest = false,
+  lean: LeanPick | null = null,
 ): Promise<RematchOfferResponse> {
   return apiRequest<RematchOfferResponse>(`/api/matches/${encodeURIComponent(matchId)}/rematch`, {
     method: "POST",
     token,
-    body: leanNewest ? { stakes, leanNewest: true } : { stakes },
+    body: lean === null ? { stakes } : { stakes, leanSet: lean },
   });
 }
 
@@ -1001,10 +1028,6 @@ export type PlayerStatsAccountResponse = {
   isPrivate: boolean;
   updatedAt: number | null;
 };
-
-export function getPlayerStats(token: string): Promise<PlayerStatsAccountResponse> {
-  return apiRequest<PlayerStatsAccountResponse>("/api/stats/player", { token });
-}
 
 export function putPlayerStats(
   token: string,

@@ -1,6 +1,6 @@
 //! M #97.4 Mega Church (SPEC §8.8 row 97.4, R1282). (3) Unit, Token (printed Rare), 0/5 → 0/10.
-//!   Base:    "Tribute 5, Can't attack\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Take control of an enemy permanent."
-//!   Radiant: "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Take control of an enemy permanent. It becomes Radiant."
+//!   Base:    "Tribute 5, Can't attack\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Steal an enemy permanent."
+//!   Radiant: "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any permanent on either side that costs ({cheap}) or less.\nActivate: Steal an enemy permanent. Make it Radiant."
 //!   Engine:  "NEW: a wider Tribute (WIDE-TRIBUTE), a static flag the legal Tribute sets read: besides
 //!            your own Units, every permanent acting on the field on either side (unit tops, backrow
 //!            cards, face-down ones included, their cost public, R33; never a dormant card, R13) whose
@@ -14,7 +14,63 @@
 //!            same lane if free, else the first free zone, else it stays, R15; R171's entry), then made
 //!            Radiant on the Radiant face. Tunes: cheap 1 ↑; Tribute 5 ↓ (never below 1)."
 
+use jackioh_engine::effects::{set_radiant, steal};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-4";
+
+/// §8.8: "Tribute 5".
+const TRIBUTE_COST: i32 = 5;
+
+/// Costs (1) or less on either side.
+const TRIBUTE_CHEAP: i32 = 1;
+
+/// Activate is once a turn.
+const USES: i32 = 1;
+
+fn church(radiant: bool) -> Script {
+    let activation = ActivationDecl {
+        id: "church-steal".to_string(),
+        label: "Steal an enemy permanent".to_string(),
+        uses: ActivationUses::Count(USES),
+        cost: None,
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({
+                "side": "enemy",
+                "of": ["unit", "backrow"]
+            }),
+        )],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            let mut effects = vec![steal(json_as(json!({ "target": { "of": "chosen" } })))];
+            if radiant {
+                effects.push(set_radiant(json_as(json!({ "target": { "of": "chosen" } }))));
+            }
+            effects
+        }),
+    };
+
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            tribute_cheap: Some(TRIBUTE_CHEAP),
+            ..StaticFlags::default()
+        }),
+        activations: vec![activation],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: church(false),
+        radiant: church(true),
+    }
+}
 
 // M 97.4 Mega Church — SPEC §8.8 row 97.4, BUILD M10 row M 97.4: "Tribute 5, paid by any minimal set
 // of your Units and of permanents on either side costing (1) or less, face-down ones included, each
@@ -24,7 +80,7 @@ pub const ID: &str = "meditative-097-4";
 // `param()`; radiant 0/10, Divine Shield, and the stolen permanent is made Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -63,7 +119,7 @@ mod tests {
             js(&def.radiant.keywords),
             json!([{ "kind": "Can't attack" }, { "kind": "Divine Shield" }])
         );
-        let s = crate::scripts_of()[ID].clone();
+        let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(5));
         assert_eq!(
             s.base.static_flags.as_ref().and_then(|f| f.tribute_cheap),

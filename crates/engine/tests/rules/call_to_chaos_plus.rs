@@ -16,7 +16,9 @@ use crate::rules::fixtures::call_to_chaos_plus::{
     book, book_token, chaos_plus_catalog, classic, core95, fruit, golem, grape, hard_field, immutable, plus,
     trap,
 };
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, set_library, slot,
+};
 
 fn scripts(cry: Hook) -> CardScripts {
     CardScripts {
@@ -126,28 +128,11 @@ fn seed_where(radiant: bool, accept: impl Fn(&[String]) -> bool, tag: &str) -> S
     })
 }
 
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
-}
-
 fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value> {
     events_of_type(events, kind)
         .iter()
         .map(|event| json_of(event)[field].clone())
         .collect()
-}
-
-/// Every key `expected` names matches, recursively; an array matches in length too.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// The index of `kind`, -1 when absent.

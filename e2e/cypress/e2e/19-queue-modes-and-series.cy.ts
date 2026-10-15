@@ -162,6 +162,16 @@ function dequeue(account: E2EAccount): void {
     .should("eq", 200);
 }
 
+/**
+ * R897000: seat two is a queued client, so it polls like one. The queue cancels a ticket nobody has
+ * heard from for `QUEUE_TICKET_STALE_MS`, and the browser's earlier rated endings leave the two
+ * accounts apart, so the newer ticket may wait up to `RATING_WINDOW_FULL_AFTER_SECONDS` for its
+ * window to reach the gap.
+ */
+function pollWhileQueued(account: E2EAccount): void {
+  cy.stayQueued(account, SERIES_POLL_SECONDS * MS_PER_SECOND);
+}
+
 function me(account: E2EAccount): Cypress.Chainable<MeBody> {
   return cy
     .request<MeBody>({ method: "GET", url: api("/api/auth/me"), headers: bearer(account) })
@@ -237,6 +247,11 @@ function expectDealtFrom(hand: readonly string[], deck: readonly string[], other
 
 function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.visitAs(account, routes.play());
+  // The lobby's mode chips, or what the page shows instead when they never come.
+  cy.get("body", { timeout: timeouts.view }).should(($body) => {
+    const shown = $body.find(ts(playModeId(mode))).length > 0;
+    expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
+  });
   cy.get(ts(playModeId(mode)), { timeout: timeouts.view }).check();
   cy.get(ts(playModeId(mode))).should("be.checked");
 }
@@ -303,6 +318,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(response.body.mode, "R257: a Best-of-1 ticket").to.eq("bo1");
         expect(response.body.seriesId, "Best of 1 makes a match, never a series").to.eq(null);
       });
+      pollWhileQueued(seatTwo);
     });
 
     landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((id) => {
@@ -349,6 +365,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(response.status, "R258: All Random is queued with no deck at all").to.eq(200);
         expect(response.body.mode).to.eq("random");
       });
+      pollWhileQueued(seatTwo);
     });
 
     landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((id) => {
@@ -473,6 +490,7 @@ describe("19 queue modes and series — Best of 1, All Random, Conquest and room
         expect(response.body.mode, "R257: a Conquest ticket").to.eq("bo3");
         expect(response.body.matchId, "R338: a series opens on its pick phase, not on a match").to.eq(null);
       });
+      pollWhileQueued(seatTwo);
     });
 
     landedOn(SERIES_PATH, PAIRING_TIMEOUT_MS).then((id) => {

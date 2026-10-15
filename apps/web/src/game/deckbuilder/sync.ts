@@ -34,6 +34,7 @@ import {
   type TrioInput,
   type TrioSlots,
 } from "../../net/api.ts";
+import { isRecord } from "../../wire/json.ts";
 
 // The shapes
 
@@ -198,10 +199,6 @@ type Mirror = {
   deletedDecks: string[];
   deletedTrios: string[];
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);

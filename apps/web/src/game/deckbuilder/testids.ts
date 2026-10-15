@@ -29,12 +29,22 @@ export const DECK_CAP = "deck-cap";
 
 /**
  * One saved deck in the list: `data-count` (its cards), `data-status` (`ready`, `complete`,
- * `incomplete`, `unowned` or `invalid`, the chip it wears), `data-unsynced="true"` while a save is
- * pending, and `aria-current="true"` when it is open.
+ * `incomplete`, `unowned` or `invalid`, the chip it wears), `data-practice-only="true"` when it names
+ * a custom card (R915005), `data-unsynced="true"` while a save is pending, and `aria-current="true"`
+ * when it is open.
  */
 export function deckRowId(deckId: string): string {
   return `deck-row-${deckId}`;
 }
+
+/**
+ * R915005: "Practice only", on a deck row and in the open deck's verdict, wherever the validator's L7
+ * says the deck names a custom card. One per row, so a test reads it within its row.
+ */
+export const DECK_PRACTICE_ONLY = "deck-practice-only";
+
+/** #920: beside the set chips, the way to the card creator (`paths.creator`). */
+export const DECKS_OPEN_CREATOR = "decks-open-creator";
 
 export const DECK_NEW = "deck-new";
 export const DECK_CAP_REASON = "deck-cap-reason";

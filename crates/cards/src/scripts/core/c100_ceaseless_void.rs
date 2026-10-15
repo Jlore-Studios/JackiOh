@@ -11,7 +11,54 @@
 //! `costMod`, discounts and #77's clamp are `effectiveCost`'s. The engine counts plays, casts (R70)
 //! and exiles (R11); playing it counts after the cost is paid (§10.5 steps 2 and 4).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-100";
+
+/// R65's reading of the printed cost — 100 — taken from the catalog, never restated: read once, when
+/// the script is built, and carried into the cost hook.
+fn printed_cost_of_def() -> i32 {
+    query_cost(&crate::card_def(ID))
+}
+
+/// R55: "Costs 1 less per card drawn, played, destroyed or exiled this game by either player",
+/// floored at 0 (§8.5's Engine cell). The four counters are game-level, so neither side's identity
+/// is read and nothing is stored on the instance. The 1 is the declared number `discount` (R386).
+fn cost_now(state: &GameState, printed_cost: i32, discount: i32) -> i32 {
+    let counters = &state.counters;
+    let spent = counters.drawn + counters.played + counters.destroyed + counters.exiled;
+    (printed_cost - discount * spent).max(0)
+}
+
+/// "Cry: exile all other permanents on both sides": §3.1's two rows of both sides (§5.1's
+/// permanents), this unit excluded. No Death trigger (§6.3), and Indestructible does not stop it
+/// (§6.1): one effect in R68's order, then the state check (R59). Only the field matches, so a card
+/// dormant under a Stack pile is not one (R13); a unit token ceases to exist uncounted (R11, §3.2).
+fn exile_every_other_permanent() -> Vec<Effect> {
+    vec![exile_all(json_as(json!({ "side": "any", "rows": ["units", "backrow"], "excludeSelf": true })))]
+}
+
+/// One script for both faces: "Plus Charge" is a printed keyword on the catalog's radiant face and
+/// the 20/20 its printed stats, so both are §10.4 layer 1 and not a line of script, and both of the
+/// row's clauses are kept.
+pub fn script() -> CardScripts {
+    let printed_cost = printed_cost_of_def();
+    let void_ = Script {
+        cost: Some(cost_hook(move |args| cost_now(args.state, printed_cost, param(&args, "discount")))),
+        cry: Some(hook(|_ctx| exile_every_other_permanent())),
+        // R662: lit in hand once `play_cost` (R65, every discount) is within its controller's mana,
+        // whether or not a zone is free (the cost itself is on the face, R280).
+        condition_met: Some(condition_hook(|ctx| {
+            ctx.zone == ConditionZone::Hand
+                && play_cost(ctx.state, ctx.self_) <= unspent_mana_of(ctx.state, ctx.controller)
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: void_.clone(),
+        base: void_,
+    }
+}
 
 // #100 Ceaseless Void — SPEC §8.5, §6.3 (Cost, Exile), §10.4, §10.5, R11, R55, R65, R70; BUILD M4-T4
 // row 100. R275 doubles the radiant face's stats: a 20/20 with Charge. The cost is tested THROUGH
@@ -23,7 +70,6 @@ mod tests {
     use jackioh_engine::mana::{effective_cost, printed_cost};
     use jackioh_engine::state::find_instance_mut;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -209,7 +255,7 @@ mod tests {
             // "Plus Charge" and the 20/20 are printed on the radiant face and so §10.4 layer 1, not a line
             // of script, which is why the two faces are the same object and both of the row's clauses are
             // kept.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let (void_base, void_radiant) = (&scripts.base, &scripts.radiant);
             // The radiant face's hooks are the base face's own (shared `Arc`s).
             assert!(Arc::ptr_eq(void_radiant.cost.as_ref().unwrap(), void_base.cost.as_ref().unwrap()));

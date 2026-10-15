@@ -54,10 +54,14 @@ pub fn register_scripts(scripts: IndexMap<String, CardScripts>) {
     let _ = REGISTERED.set(scripts.into_iter().collect());
 }
 
-/// One registered entry, borrowed: the testkit's override while one is set, else the production
-/// registry. A fused id is never in it. Lookups read through this rather than `registered_scripts`,
-/// which copies every entry.
+/// One registered entry, borrowed: the script kept for it in the shipped catalog a replay is folding
+/// under (R767000), else the testkit's override while one is set, else the production registry. A
+/// fused id is never in it. Lookups read through this rather than `registered_scripts`, which copies
+/// every entry.
 pub fn registered_entry(def_id: &str) -> Option<&'static CardScripts> {
+    if let Some(kept) = crate::catalog::folding_script(def_id) {
+        return Some(kept);
+    }
     match override_map() {
         Some(over) => over.get(def_id),
         None => REGISTERED.get().and_then(|map| map.get(def_id)),
@@ -123,9 +127,13 @@ fn fused_ingredient_count(state: &GameState, def_id: &str) -> Option<usize> {
     Some(count)
 }
 
-/// Which registry a composition read its ingredients' scripts from: the testkit's override (each one a
-/// leaked box of its own) or the production registry, by address; 0 before either is set.
+/// Which registry a composition read its ingredients' scripts from: the shipped catalog a replay is
+/// folding under, whose kept scripts come first (R767000), the testkit's override (each one a leaked
+/// box of its own) or the production registry, by address; 0 before either is set.
 fn registry_identity() -> usize {
+    if let Some(shipped) = crate::catalog::folding() {
+        return std::ptr::from_ref(shipped) as usize;
+    }
     match override_map() {
         Some(over) => std::ptr::from_ref(over) as usize,
         None => REGISTERED
@@ -295,6 +303,14 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
     if let Some(entry) = registered_entry(def_id) {
         return Cow::Borrowed(entry);
     }
+    // R915002: a custom card's, from the host lent for this call; none lent, none at all.
+    if crate::custom::is_custom_id(def_id) {
+        return Cow::Owned(
+            crate::custom::custom_scripts(state, def_id)
+                .map(Arc::unwrap_or_clone)
+                .unwrap_or_default(),
+        );
+    }
     if let Some(scripts) = fused_scripts(state, def_id) {
         return Cow::Owned(scripts);
     }
@@ -305,6 +321,17 @@ pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts>
 pub fn face_ref(state: &GameState, def_id: &str, radiant: bool) -> ScriptRef {
     if let Some(entry) = registered_entry(def_id) {
         return ScriptRef::Static(if radiant { &entry.radiant } else { &entry.base });
+    }
+    // R915002: a custom card's face, from the host lent for this call.
+    if crate::custom::is_custom_id(def_id) {
+        return match crate::custom::custom_scripts(state, def_id) {
+            Some(scripts) => ScriptRef::Composed(Arc::new(if radiant {
+                scripts.radiant.clone()
+            } else {
+                scripts.base.clone()
+            })),
+            None => ScriptRef::Static(shared_empty_script()),
+        };
     }
     if let Some(face) = fused_face(state, def_id, radiant) {
         return face;

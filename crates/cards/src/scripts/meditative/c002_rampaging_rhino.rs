@@ -1,8 +1,8 @@
 //! M #2 Rampaging Rhino (SPEC §8.8 row 2, R59, R63, R174, R212, R386, R682, R780, R800): (2) Unit, Common,
 //! 5/9 → 11/20.
 //!
-//! Base:    "Whenever this takes damage, discard {discards|card|cards}."
-//! Radiant: "Trample\nWhenever this takes damage, discard {discards|card|cards}."
+//! Base:    "Whenever this takes damage, discard {discards|random card|random cards}."
+//! Radiant: "Trample\nWhenever this takes damage, discard {discards|random card|random cards}."
 //! Engine: a trigger on `damage` aimed at this card, as Core #91 Fed Fauci's, returning
 //! `discard_random { count: discards, player: self }`. Every damage instance is one discard, and each hit
 //! of a sweep is its own (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no
@@ -13,7 +13,46 @@
 //! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Trample is
 //! catalog data, so the Radiant face's script is the base's.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-002";
+
+/// "Whenever THIS takes damage": the event carries the target, so a hit this card dealt (its strike-back,
+/// its Trample overflow) is not a hit it took.
+fn is_hit_on_self(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(self_) = ctx.self_.as_ref() else {
+        return false;
+    };
+    match event {
+        GameEvent::Damage { target_id, .. } => *target_id == self_.id,
+        _ => false,
+    }
+}
+
+fn takes_damage() -> TriggerDef {
+    TriggerDef::new("rampaging-rhino-discard", &[GameEventType::Damage], |ctx, event| {
+        if is_hit_on_self(ctx, event) {
+            vec![discard_random(json_as(json!({ "count": param(&*ctx, "discards"), "player": "self" })))]
+        } else {
+            vec![]
+        }
+    })
+    .with_when(is_hit_on_self)
+}
+
+fn rampaging_rhino() -> Script {
+    Script {
+        triggers: vec![takes_damage()],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: rampaging_rhino(),
+        radiant: rampaging_rhino(),
+    }
+}
 
 // M #2 Rampaging Rhino — SPEC §8.8 row 2, BUILD M10 row M 2: "A trigger on `damage` aimed at it, one random
 // discard per damage instance from the hand of whoever controls it as the hit lands (R212, R682); a sweep
@@ -98,7 +137,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "discards", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert_eq!(scripts.base.triggers.len(), 1);
         assert_eq!(scripts.radiant.triggers.len(), 1);
     }

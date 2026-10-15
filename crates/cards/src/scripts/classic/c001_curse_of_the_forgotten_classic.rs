@@ -11,7 +11,82 @@
 //! took makes one forced attack on the enemy hero (R53). The attacker is named by its definition, as a
 //! Unit a card cast on the draw summoned (R58) is summoned by this list too and must not attack.
 
+use jackioh_engine::effects::{damage, draw, forced_attacks, recruit};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-001";
+
+/// The label both faces print the formula under (R280).
+const FORMULA: &str = "for each card in their exile";
+
+/// N: the damage per card times the opponent's exile size, now.
+fn curse_damage(ctx: &impl ParamContext, state: &GameState, controller: PlayerId) -> i32 {
+    param(ctx, "damage") * zone_count(state, opponent_of(controller), OffFieldZone::Exile)
+}
+
+fn hit_and_draw(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    vec![
+        damage(json_as(json!({
+            "to": { "of": "enemyHero" },
+            "amount": curse_damage(ctx, &*ctx.state, ctx.controller),
+        }))),
+        draw(json_as(json!({ "count": param(ctx, "draw") }))),
+    ]
+}
+
+/// The total under the formula's label (R280).
+fn preview() -> PreviewHook {
+    condition_hook(|c| {
+        vec![PreviewValue {
+            label: FORMULA.to_string(),
+            value: curse_damage(&c, c.state, c.controller),
+            display: None,
+            ids: None,
+        }]
+    })
+}
+
+/// The card the Recruit will take: the newest permanent in the opponent's exile (a Spell is never
+/// recruited, and a unit token is never in an exile, R11), read as the Spell resolves.
+fn newest_permanent_of_theirs(ctx: &EffectContext<'_>) -> Option<CardInstance> {
+    let state: &GameState = &*ctx.state;
+    let exile = zone_cards(state, opponent_of(ctx.controller), OffFieldZone::Exile);
+    exile
+        .iter()
+        .rev()
+        .find(|card| def_of(Some(state), &card.def_id).type_ != CardType::Spell)
+        .cloned()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| hit_and_draw(ctx))),
+        preview: Some(preview()),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            let recruited = newest_permanent_of_theirs(ctx);
+            let mut effects = hit_and_draw(ctx);
+            effects.push(recruit(json_as(json!({ "from": "exile", "whose": "enemy" }))));
+            // Only a Unit of the recruited definition attacks, not one a card cast on the draw summoned (C+ #26).
+            if let Some(card) = recruited
+                && def_of(Some(&*ctx.state), &card.def_id).type_ == CardType::Unit
+            {
+                effects.push(forced_attacks(json_as(json!({
+                    "attackers": { "side": "self", "defId": card.def_id, "summonedThisScript": true },
+                    "target": { "spec": { "of": "enemyHero" } },
+                }))));
+            }
+            effects
+        })),
+        preview: Some(preview()),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #1 — SPEC §8.6 row 1, BUILD M9 Classic row C 1: one hit of N (R63), then the draw; its preview
 // is N (R280); radiant: the same, then Recruit their newest permanent, back to its owner's piles when
@@ -109,7 +184,7 @@ mod tests {
                     { "key": "draw", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 },
                 ])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.preview.is_some());
             assert!(scripts.radiant.preview.is_some());
             assert!(scripts.base.targets.is_empty());

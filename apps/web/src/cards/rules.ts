@@ -1,26 +1,29 @@
 // Rules text as tokens: plain text, and glossary terms the face prints in bold
 // (docs/polish/6-cards.md, Surface B "Tokenizer").
 //
-// - Matching is case-sensitive and longest-first over every GLOSSARY label and alias.
+// - Matching is case-sensitive and longest-first over every GLOSSARY label and alias, and over
+//   PLAIN_SPELLINGS, which match like terms but print plain (R910000: "your exile" is the pile).
 // - A term matches only at a word boundary: the characters either side are not [A-Za-z0-9], so
-//   "Locked" and "taunt" stay plain text.
+//   "Locking" and "taunt" stay plain text.
 // - A match extends over a following ` <digits|X|♾️>` and then a `:`, so "Cry:", "Armor 2",
 //   "Combo 2:" and "Activate ♾️:" (patch v0.2.0, R384) are each one term.
 
 import { CHINESE_TERMS } from "./chinese.ts";
-import { GLOSSARY, type GlossaryEntry, type GlossaryTermId } from "./glossary.ts";
+import { GLOSSARY, PLAIN_SPELLINGS, type GlossaryEntry, type GlossaryTermId } from "./glossary.ts";
 import type { FaceModel } from "./model.ts";
 
 export type RulesToken = { kind: "text"; text: string } | { kind: "term"; text: string; term: GlossaryTermId };
 
-type Pattern = { text: string; term: GlossaryTermId };
+/** A spelling to match: a term's, or a plain spelling's (`term` null, R910000). */
+type Pattern = { text: string; term: GlossaryTermId | null };
 
 const ENTRIES: readonly GlossaryEntry[] = Object.values(GLOSSARY);
 
 /** Every spelling, longest first, so longer terms are tried before shorter ones. */
-const PATTERNS: readonly Pattern[] = ENTRIES.flatMap((entry) =>
-  [entry.label, ...entry.aliases].map((text) => ({ text, term: entry.id })),
-).sort((a, b) => b.text.length - a.text.length);
+const PATTERNS: readonly Pattern[] = [
+  ...ENTRIES.flatMap((entry) => [entry.label, ...entry.aliases].map((text) => ({ text, term: entry.id }))),
+  ...PLAIN_SPELLINGS.map((text) => ({ text, term: null })),
+].sort((a, b) => b.text.length - a.text.length);
 
 /** ` 3`, ` 10`, ` X` or ` ♾️` (Activate's "any number of times", with or without its emoji selector), ending at a word boundary. */
 const NUMBER_SUFFIX = /^ (?:\d+|X|\u267E\uFE0F?)(?![A-Za-z0-9])/;
@@ -29,12 +32,14 @@ function isWordChar(char: string | undefined): boolean {
   return char !== undefined && /[A-Za-z0-9]/.test(char);
 }
 
-function matchAt(text: string, start: number): { end: number; term: GlossaryTermId } | null {
+/** The match at `start`: a term, or a plain spelling (`term` null) that the caller prints as text. */
+function matchAt(text: string, start: number): { end: number; term: GlossaryTermId | null } | null {
   if (isWordChar(text[start - 1])) return null;
   for (const pattern of PATTERNS) {
     if (!text.startsWith(pattern.text, start)) continue;
     let end = start + pattern.text.length;
     if (isWordChar(text[end])) continue;
+    if (pattern.term === null) return { end, term: null };
     const suffix = NUMBER_SUFFIX.exec(text.slice(end));
     if (suffix !== null) end += suffix[0].length;
     if (text[end] === ":") end += 1;
@@ -53,6 +58,11 @@ export function tokenizeRules(text: string): RulesToken[] {
     if (match === null) {
       plain += text[index] ?? "";
       index += 1;
+      continue;
+    }
+    if (match.term === null) {
+      plain += text.slice(index, match.end);
+      index = match.end;
       continue;
     }
     if (plain !== "") {

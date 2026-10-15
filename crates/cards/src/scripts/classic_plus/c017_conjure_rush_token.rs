@@ -1,7 +1,38 @@
 //! C+ #17 Conjure Rush Token++ (SPEC §8.7 row 17): summon a Rush Token (Radiant: 3) with {keywords} (6)
 //! different random keywords from R21's pool it lacks; a summon with no open zone rolls nothing (R129).
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-017";
+
+/// §7's shared Rush Token, 3/3 with Rush.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+/// "Summon 3 Rush Tokens" on the Radiant face: the declared number `tokens` (R386), tuned on the
+/// Radiant face only — the base face's "a Rush Token" is 1 and never moves (R749), so both faces read
+/// the one number.
+fn conjure() -> Hook {
+    hook(|ctx| {
+        let keywords = param(&*ctx, "keywords");
+        (0..param(&*ctx, "tokens"))
+            .map(|_| summon(json_as(json!({ "defId": RUSH_TOKEN, "randomKeywords": keywords }))))
+            .collect()
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(conjure()),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(conjure()),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #17 Conjure Rush Token++ — SPEC §8.7 row 17, BUILD M9 Classic+ row C+ 17: "As C+ #15 with 6 different random
 // keywords the token lacks, out of the 17 R21 leaves it; the keyword count reads through `param()`; radiant 3 tokens
@@ -65,7 +96,7 @@ mod tests {
         assert_eq!(def.id, CARD);
         assert_eq!(js(&def.cost), json!(4));
         assert_eq!(def.type_, CardType::Spell);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(scripts.base.targets.is_empty());
         assert!(scripts.radiant.targets.is_empty());
     }

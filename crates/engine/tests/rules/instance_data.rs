@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{in_hand, put, round_trip, set_library, slot};
 use crate::rules::fixtures::instance_data::{
     CONSTANT_STEP, body, constant, instance_deck, instance_game, military, nerfer, numbered, numbered_body,
     register_instance_fixtures,
@@ -116,11 +116,6 @@ fn on_field(state: &GameState, id: &str) -> CardInstance {
 /// The card as the state holds it now (TS read its live object).
 fn live(state: &GameState, id: &str) -> CardInstance {
     find_instance(state, id).expect("the card is in the game").clone()
-}
-
-/// `JSON.parse(JSON.stringify(state))`.
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(serde_json::to_value(state).expect("a state serialises")).expect("a state parses")
 }
 
 fn first(cards: Vec<CardInstance>) -> CardInstance {

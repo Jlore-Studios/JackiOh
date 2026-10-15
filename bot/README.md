@@ -240,7 +240,8 @@ Every way of asking either gets an answer at once, or is found again later:
   how to phrase a request. The bot does not guess a build from it, and does not ignore it.
 - **The sweep** runs every ten minutes (`harness sweep`, and on demand from the Actions tab). It
   reads the last three days back from GitHub and answers anything no handler answered:
-  - a trusted command (in a comment, a diff comment or a review) that nobody claimed;
+  - a trusted command (in a comment, a diff comment or a review) that nobody claimed, and a bare
+    `approve` or `reject` vote on a suggestion, which the event job also wakes for at once (#929);
   - an assignment nothing queued;
   - a review asking for changes on a bot pull request, newer than anything the bot acted on;
   - a failed, cancelled or broken CI or `bot selftest` run on a bot pull request's head;
@@ -1148,13 +1149,17 @@ state, pull request, mode or tree labels on it, or assigned to the other's accou
 (`queue.owner`). Take those off to hand it over. A bot acts on the other's comment only when the
 line is a bare `stop`, and never answers it with a hint, so the two never talk for ever.
 
-**The weekly hygiene run.** Every Monday, `.github/workflows/hygiene.yml` (#839) opens `Architecture:
-weekly hygiene, <date>` for Squishy (`squishy:build`, `difficulty:hard`, `person merges`) unless the last
-one is still open: dead files, archives and the agent instructions, against a digest of Anthropic's
-current guidance that the workflow's model reads (on Squishy's subscription, with no GitHub token),
-since a builder has no web access. The issue also lists the stale branches the rule in
-`.github/hygiene/branches.py` finds safe to delete, with the command, for a person: the run deletes
-and merges nothing. For that, Squishy alone may change
+**The weekly hygiene run.** Every Tuesday at 22:07 UTC, just after Squishy's weekly reset,
+`.github/workflows/hygiene.yml` (#839, #888) opens two issues for Squishy (`squishy:build`,
+`difficulty:hard`, `person merges`), each unless its own last one is still open, so each cleanup
+is a pull request a person merges or closes on its own:
+`Architecture: weekly hygiene, dead files and archives, <date>` and `…, agent instructions, <date>`. The
+second carries a digest of Anthropic's current guidance that the workflow's model reads (on Squishy's
+subscription, with no GitHub token), since a builder has no web access. The first lists the stale
+branches as checkboxes for a person: tick some and comment `/delete-branches`, and
+`hygiene-delete.yml` (an owner's, member's or collaborator's comment, no model) surveys again with the
+rule in `.github/hygiene/branches.py`, deletes the ticked ones it does not keep, strikes them and replies
+with each sha. For that, Squishy alone may change
 `.claude/skills/` (`!.claude/skills/` in `.squishy/config.json`; `git.matches` reads a leading `!` as
 an exception), and `tests/test_skills.py` holds every skill to Markdown and to frontmatter that grants
 no tool and adds no hook.

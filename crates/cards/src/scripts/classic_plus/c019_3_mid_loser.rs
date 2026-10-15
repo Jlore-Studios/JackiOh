@@ -1,7 +1,53 @@
 //! C+ #19.3 Mid Loser (SPEC §8.7 row 19.3): Cry flips a coin (Lucky X: X more flips, heads kept): heads
 //! +{heads}/+{heads}; tails −{tails}/−{tails} and the opponent's next refresh is 1 higher.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019-3";
+
+// "your opponent gains 1 mana next turn": the declared number `oppMana` (R386), less being better.
+
+/// One coin, Lucky X times more, heads kept if any of them lands heads (R1440's `lucky_coin`).
+fn lands_heads(ctx: &mut EffectContext<'_>) -> bool {
+    // R987: the controller's Luck flips extra times beside the card's own Lucky.
+    let lucky = match ctx.live_self() {
+        Some(me) if me.zone.z() == ZoneName::Field => {
+            numbered_sum(&unit_view(&*ctx.state, me).keywords, KeywordKind::Lucky).unwrap_or(0)
+        }
+        _ => 0,
+    } + luck_of(&*ctx.state, ctx.controller);
+    ctx.rng.lucky_coin(lucky)
+}
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    if lands_heads(ctx) {
+        let heads = param(&*ctx, "heads");
+        return vec![buff(json_as(
+            json!({ "target": { "of": "self" }, "attack": heads, "health": heads }),
+        ))];
+    }
+    let tails = param(&*ctx, "tails");
+    vec![
+        buff(json_as(
+            json!({ "target": { "of": "self" }, "attack": -tails, "health": -tails }),
+        )),
+        next_turn_mana(json_as(
+            json!({ "amount": param(&*ctx, "oppMana"), "player": "enemy" }),
+        )),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's Lucky 1 and its heads 10 are catalog data the script reads.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #19.3 Mid Loser — SPEC §8.7 row 19.3, BUILD M9 Classic+ row C+ 19.3: "Cry, on a play from hand, a
 // cast or League of Losers' summon (R1, R411), flips a seeded coin: heads +5/+5 permanently; tails
@@ -13,7 +59,6 @@ pub const ID: &str = "classicplus-019-3";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -86,7 +131,7 @@ mod tests {
             assert!(def.token);
             assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
             assert_eq!(def.radiant.keywords, vec![Keyword::Lucky { n: 1 }]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(Arc::ptr_eq(
                 scripts.base.cry.as_ref().expect("base cry"),
                 scripts.radiant.cry.as_ref().expect("radiant cry"),

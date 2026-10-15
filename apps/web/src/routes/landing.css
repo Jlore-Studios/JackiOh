@@ -482,6 +482,12 @@
   gap: 10px;
 }
 
+/* An odd one out (Build decks, after Play online and Play together) takes the whole row rather
+   than half of it. */
+.landing .landing-ctas-secondary > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .landing a.landing-cta--secondary {
   font-size: 17px;
   color: var(--tavern-parchment);

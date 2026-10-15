@@ -49,8 +49,8 @@ describe("vercel.json", () => {
 
   it("routes every screen in the route table, with or without a trailing slash", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat and /dev/replays.
-      .filter(([name]) => name !== "hotseat" && name !== "devReplays")
+      // Production serves a genuine 404 at /dev/hotseat and /dev/duos (and /dev/replays, the replay list's old home).
+      .filter(([name]) => name !== "hotseat" && name !== "duosDev")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
     // R630: the Card Almanac is public.
@@ -79,6 +79,7 @@ describe("vercel.json", () => {
       "/assets/does-not-exist.js",
       "/favicon.ico",
       "/dev/hotseat",
+      "/dev/duos",
       "/dev/replays",
       "/Login",
       "/loginx",

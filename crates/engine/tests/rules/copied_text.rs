@@ -18,31 +18,12 @@ use jackioh_engine::view_for::view_for;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::copied_text::{CT, with_copied_text};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip, set_library, slot,
+};
 
 /// Every action this file sends gets a fresh nonce.
 static NONCE: AtomicU32 = AtomicU32::new(0);
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).expect("a state survives JSON")
-}
-
-/// Every key the expected object names matches, recursively.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
-}
 
 /// A sink whose rng starts at the state's cursor, as reduce does, kept beside the state.
 struct Sink {

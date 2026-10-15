@@ -16,16 +16,13 @@
 
 use std::collections::BTreeSet;
 
+use crate::rules::fixtures::harness::json_of;
 use jackioh_engine::config;
-use serde_json::{Value, json};
-
-fn json_of<T: serde::Serialize + ?Sized>(value: &T) -> Value {
-    serde_json::to_value(value).expect("a config value serialises")
-}
+use serde_json::json;
 
 #[test]
 fn r1_fires_cry_only_on_a_play_from_hand_or_a_cast() {
-    assert_eq!(json_of(&config::CRY_ON_PLAY_ONLY), json!(true));
+    assert_eq!(json_of(config::CRY_ON_PLAY_ONLY), json!(true));
 }
 
 #[test]
@@ -41,22 +38,22 @@ fn r4_caps_the_hand_at_10_and_burns_the_overflow_to_the_graveyard() {
 
 #[test]
 fn r5_does_not_restrict_attacks_by_lane() {
-    assert_eq!(json_of(&config::LANE_RESTRICTED_ATTACKS), json!(false));
+    assert_eq!(json_of(config::LANE_RESTRICTED_ATTACKS), json!(false));
 }
 
 #[test]
 fn r9_draws_the_mulligan_replacements_before_shuffling_the_returned_cards_back_in() {
-    assert_eq!(json_of(&config::MULLIGAN_ORDER), json!("draw-then-shuffle"));
+    assert_eq!(json_of(config::MULLIGAN_ORDER), json!("draw-then-shuffle"));
 }
 
 #[test]
 fn r14_rotates_two_independent_rings_bounces_a_locked_destination_and_carries_damage_and_buffs() {
-    assert_eq!(json_of(&config::ROTATION_RING), json!("two-rings"));
+    assert_eq!(json_of(config::ROTATION_RING), json!("two-rings"));
 }
 
 #[test]
 fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repeats_one_on_a_unit() {
-    let pool = json_of(&config::RANDOM_KEYWORD_POOL);
+    let pool = json_of(config::RANDOM_KEYWORD_POOL);
     assert_eq!(
         pool,
         json!([
@@ -101,7 +98,7 @@ fn r25_clamps_the_fib_index_at_fib_11_89() {
 
 #[test]
 fn r26_reads_genns_greed_as_exile_all_odd_cost_cards() {
-    assert_eq!(json_of(&config::GENN_GREED_EXILES), json!("odd"));
+    assert_eq!(json_of(config::GENN_GREED_EXILES), json!("odd"));
 }
 
 #[test]
@@ -117,7 +114,7 @@ fn r36_lets_only_the_active_player_offer_a_draw_once_a_turn_and_blocks_a_decline
 
 #[test]
 fn r39_gives_felinor_fiender_printed_stats_plus_the_sum_of_your_felinors_never_below_printed() {
-    assert_eq!(json_of(&config::FIENDER_STATS_MODE), json!("printed-plus-sum"));
+    assert_eq!(json_of(config::FIENDER_STATS_MODE), json!("printed-plus-sum"));
 }
 
 #[test]
@@ -148,7 +145,7 @@ fn r80_caps_a_library_at_library_cap_creating_no_new_card_and_routing_an_existin
 
 #[test]
 fn r84_keeps_concede_offer_draw_and_answer_draw_out_of_the_ai_policy() {
-    assert_eq!(json_of(&config::AI_END_TURN_PROBABILITY), json!(0.1));
+    assert_eq!(json_of(config::AI_END_TURN_PROBABILITY), json!(0.1));
 }
 
 #[test]
@@ -158,7 +155,7 @@ fn r102_composes_a_fuse_member_by_member_capped_cost_max_tribute_namespaced_trig
 
 #[test]
 fn r118_lets_a_traps_prompt_interrupt_a_play_without_eating_its_cry() {
-    assert_eq!(json_of(&config::CRY_ON_PLAY_ONLY), json!(true));
+    assert_eq!(json_of(config::CRY_ON_PLAY_ONLY), json!(true));
 }
 
 #[test]
@@ -169,12 +166,12 @@ fn r124_adds_hero_armor_up_across_its_sources_where_the_anti_oneshot_cap_takes_t
 
 #[test]
 fn r135_exiles_library_then_hand_then_graveyard_each_card_its_own_exile_after_the_draw() {
-    assert_eq!(json_of(&config::GENN_GREED_EXILES), json!("odd"));
+    assert_eq!(json_of(config::GENN_GREED_EXILES), json!("odd"));
 }
 
 #[test]
 fn r180_gives_each_seat_an_optional_handicap_stores_none_equal_to_a_humans_and_folds_it() {
-    let human = json_of(&config::HUMAN_HANDICAP);
+    let human = json_of(config::HUMAN_HANDICAP);
     assert_eq!(
         human,
         json!({
@@ -185,8 +182,8 @@ fn r180_gives_each_seat_an_optional_handicap_stores_none_equal_to_a_humans_and_f
             "extraDrawsPerTurn": 0
         })
     );
-    assert_eq!(json_of(&config::DIFFICULTIES), json!(["easy", "medium", "hard"]));
-    let tiers = json_of(&config::AI_DIFFICULTY);
+    assert_eq!(json_of(config::DIFFICULTIES), json!(["easy", "medium", "hard"]));
+    let tiers = json_of(config::AI_DIFFICULTY);
     assert_eq!(tiers["easy"], human);
     assert_eq!(
         tiers["medium"],
@@ -206,7 +203,7 @@ fn r183_makes_a_handicaps_extra_draws_separate_2_4_draws_each_with_its_own_chain
 #[test]
 fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero_at_20() {
     assert_eq!(
-        json_of(&config::AI_TUTORIAL),
+        json_of(config::AI_TUTORIAL),
         json!({
             "deckSize": 12,
             "manaBonus": 0,
@@ -216,7 +213,7 @@ fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero
             "heroHealth": 20
         })
     );
-    let tiers = json_of(&config::DIFFICULTIES);
+    let tiers = json_of(config::DIFFICULTIES);
     assert!(
         !tiers
             .as_array()
@@ -227,7 +224,7 @@ fn r290_gives_the_tutorial_opponent_a_handicap_below_easy_12_cards_3_mana_a_hero
 
 #[test]
 fn r346_makes_a_pierce_sources_damage_skip_armor_and_adds_pierce_to_the_random_keyword_pool() {
-    let pool = json_of(&config::RANDOM_KEYWORD_POOL);
+    let pool = json_of(config::RANDOM_KEYWORD_POOL);
     assert!(
         pool.as_array()
             .expect("the pool is a list")

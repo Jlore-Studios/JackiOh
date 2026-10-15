@@ -19,7 +19,69 @@
 //! card, costing ({setCost}) (`costOverride`, which persists in every zone, R78); a full hand burns it
 //! (R317), and in your hand the opponent's view names it no more (R97).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-017";
+
+/// TS `Extract<GameEvent, { type: "cardAnnounced" }>`: the fields of the announce this card reads.
+struct Announced {
+    instance_id: String,
+    def_id: String,
+}
+
+/// "When your opponent plays a Spell": the announce of an opponent's Spell-type play or cast.
+fn opponents_spell(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<Announced> {
+    let GameEvent::CardAnnounced { player, instance_id, def_id, card_type, .. } = event else {
+        return None;
+    };
+    if *player == ctx.controller {
+        return None;
+    }
+    if *card_type == CardType::Spell {
+        Some(Announced { instance_id: instance_id.clone(), def_id: def_id.clone() })
+    } else {
+        None
+    }
+}
+
+fn counter_it(ctx: &EffectContext<'_>, announced: &Announced, copy: bool) -> Vec<Effect> {
+    let countered = counter_play(json_as(json!({
+        "target": { "of": "instance", "instanceId": announced.instance_id },
+    })));
+    if !copy {
+        return vec![countered];
+    }
+    // Read before the counter moves it: the copy keeps the countered card's face (R57) and, a copy of a
+    // Chinese card being Chinese, its language (R1300).
+    let countered_card = find_instance(ctx.state, &announced.instance_id);
+    let radiant = countered_card.is_some_and(|card| card.radiant);
+    let mut args = json!({
+        "defId": announced.def_id,
+        "radiant": radiant,
+        "costOverride": param(ctx, "setCost"),
+    });
+    if countered_card.is_some_and(|card| card.chinese == Some(true)) {
+        args["chinese"] = json!(true);
+    }
+    vec![countered, add_to_hand(json_as(args))]
+}
+
+fn counterspell(copy: bool) -> TriggerDef {
+    TriggerDef::new("counterspell", &[GameEventType::CardAnnounced], move |ctx, event| {
+        match opponents_spell(ctx, event) {
+            None => vec![],
+            Some(announced) => counter_it(ctx, &announced, copy),
+        }
+    })
+    .with_when(|ctx, event| opponents_spell(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let base = Script { triggers: vec![counterspell(false)], ..Script::default() };
+
+    let radiant = Script { triggers: vec![counterspell(true)], ..Script::default() };
+    CardScripts { base, radiant }
+}
 
 // C #17 Counterspell — SPEC §8.6 row 17, BUILD M9 Classic row C 17: "Face-down (R33); fires on the
 // opponent's announce of a Spell (the Spell type; a Field Spell, Trap or Unit leaves it set), a cast by
@@ -96,7 +158,7 @@ mod tests {
     #[test]
     fn is_a_trap_whose_condition_lives_in_when_r99() {
         assert_eq!(crate::card_def(COUNTER).type_, CardType::Trap);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
         assert!(radiant.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
     }

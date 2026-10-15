@@ -49,6 +49,11 @@ pub const ROOM_CODE_LENGTH: usize = 6;
 /// the literal `15 * 60 * 1000` in `api/deps.ts`'s `defaultLimits()` (`roomCodeTtlMs`); v0.3.0 names
 /// it here (CLAUDE.md rule 9, research C §10 #17), and `api/deps.ts` is not ported.
 pub const ROOM_CODE_TTL_SECONDS: i64 = 15 * 60;
+/// R890000, §9.5: how many unclaimed unexpired rooms one host may hold open at once. Three bounds
+/// how far one host's rooms can amplify a seat race without stranding a host whose old room
+/// lingers to expiry. Advisory: the seat compare-and-set is what stops a double seat, not this.
+/// `create` refuses a fourth with 409.
+pub const MAX_OPEN_ROOMS_PER_HOST: i64 = 3;
 
 // ---------------------------------------------------------------------------------------------
 // The code alphabet (§9.4, §9.5).
@@ -180,7 +185,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
 /// holds it to). Changing either page's text changes its date and so this, and every account is
 /// asked to agree again.
-pub const TERMS_VERSION: &str = "2026-10-13/2026-10-13";
+pub const TERMS_VERSION: &str = "2026-10-13/2026-10-15";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
@@ -230,6 +235,21 @@ pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 /// recurs on every tick would restart them in a hot loop. Five seconds holds such a loop to one
 /// crash line per five seconds and leaves a pairing or a sweep late by seconds only.
 pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
+
+// ---------------------------------------------------------------------------------------------
+// The probes and the shutdown (`api/health.rs`, `app::serve_until`). Not in SPEC, and no R-row (#861).
+// ---------------------------------------------------------------------------------------------
+
+/// How long `GET /readyz` waits for the store to answer `select 1` before it answers 503. The
+/// pool retries a refused connection until its 10 s checkout timeout (`POOL_ACQUIRE_TIMEOUT_MS`,
+/// `db/pg.rs`). Without this bound, a dead database would hold the probe instead of failing it.
+pub const READINESS_PROBE_TIMEOUT_MS: i64 = 2_000;
+/// How long `app::serve_until`'s drain may run after SIGTERM or Ctrl-C before it stops waiting
+/// and still exits 0. Under the 30 s that Render (and `docker stop -t 30` in
+/// `tests/deploy/rehearse.sh`) waits between SIGTERM and SIGKILL.
+pub const SHUTDOWN_DRAIN_SECONDS: i64 = 20;
+/// How often the drain checks whether every match socket has finished.
+pub const SHUTDOWN_SOCKETS_POLL_MS: i64 = 50;
 
 // ---------------------------------------------------------------------------------------------
 // Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
@@ -329,6 +349,16 @@ pub const RATING_WINDOW_FULL_AFTER_SECONDS: i64 =
 // SPEC §11 R108: 3 s. Frequent enough that a ticket is rarely left waiting past its next window
 // widen before being reconsidered, without hammering the ticket table.
 pub const MATCHMAKER_SWEEP_INTERVAL_SECONDS: i64 = 3;
+
+/// SPEC §11 R897000: how long a queued ticket may go unheard from before the pairing sweep
+/// cancels it, in milliseconds. Six missed `SERIES_POLL_SECONDS` polls, so a flaky connection
+/// does not eject a real player, and under `BOT_FALLBACK_MIN_SECONDS`, so expiry always runs
+/// before the empty-queue fallback could seat the absent player.
+pub const QUEUE_TICKET_STALE_MS: i64 = 12_000;
+/// SPEC §11 R897000: how many `GET /api/auth/me` reads in a row must say the ticket is gone
+/// before the client stops waiting with a rejoin message. Two, so one failed or slow read cannot
+/// end a live queue.
+pub const QUEUE_ENDED_AFTER_READS: usize = 2;
 
 /// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
 /// claimed in it and the games that ended in it.
@@ -585,7 +615,8 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about forty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
-/// still the error's message, so nothing a player could fix is hidden.
+/// still the error's message, so nothing a player could fix is hidden. A refused custom card's
+/// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
 /// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
@@ -640,6 +671,18 @@ pub const TRIO_CODE_CORE_ONLY_VERSION: i32 = 1;
 /// and under 1,100 at the very worst (four-byte characters filling every name to its limit), so this
 /// leaves room for whatever a chat client wraps around a pasted code.
 pub const TRIO_CODE_MAX_INPUT_LENGTH: usize = 2048;
+
+// ---------------------------------------------------------------------------------------------
+// Custom cards on the account (SPEC §12.9, R915008). PUBLIC: the card creator imports the cap.
+// A card's own limits (its frame's, `CUSTOM_SOURCE_MAX_BYTES` of source and
+// `CUSTOM_BUILDER_MAX_BYTES` of builder) are the engine's (`jackioh_engine::config`), which the
+// validator applies; the request that carries one is held to `API_MAX_BODY_BYTES` like every body,
+// since the router reads a body before it picks the handler. A card at every limit fits it as JSON
+// unless most of its source is characters JSON escapes (`tests/api/custom_cards.rs`).
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §12.9, R915008: how many custom cards an account keeps. Mirrored in `app.settings` (0037).
+pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 
 // ---------------------------------------------------------------------------------------------
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).
@@ -1793,3 +1836,75 @@ pub const AI_EMOTE: AiEmoteConfig = AiEmoteConfig {
     delay_min_ms: 800.0,
     delay_max_ms: 2500.0,
 };
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (#936, Play together): friends, blocks, presence, challenges, watching and chat. PUBLIC:
+// the client reads the heartbeat, the poll, the chat's caps and a challenge's life.
+// ---------------------------------------------------------------------------------------------
+
+/// B43: friend requests one account may send in an hour; the next is 429.
+pub const FRIEND_REQUESTS_PER_HOUR: usize = 20;
+/// B43: friends one account may hold; a request or an accept past it is 409 `friend_cap`.
+pub const MAX_FRIENDS: i64 = 200;
+/// B47: a friend is online while their last heartbeat is at most this old.
+pub const PRESENCE_TTL_MS: i64 = 90_000;
+/// B47: how often a signed-in client sends `POST /api/presence`: half the TTL, so one lost beat
+/// never shows a friend offline.
+pub const PRESENCE_HEARTBEAT_MS: i64 = 45_000;
+/// B49: how long a challenge, and the room it opened, stays open unanswered.
+pub const CHALLENGE_TTL_MS: i64 = 120_000;
+/// B50: how far behind the live game a watcher's view runs.
+pub const SPECTATE_DELAY_MS: i64 = 30_000;
+/// B50: watchers one live match may hold at once.
+pub const SPECTATORS_PER_MATCH: usize = 8;
+/// B53: a chat message's longest body, in characters after trimming (`chat_messages`' check).
+pub const CHAT_MAX_CHARS: usize = 500;
+/// B53: chat messages one account may send in a minute; the next is 429.
+pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
+/// B53: how long a chat message is kept before the purge deletes it, and its reports with it.
+pub const CHAT_RETENTION_DAYS: i64 = 30;
+/// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
+pub const CHAT_PAGE: i64 = 50;
+/// B58: how often an open chat panel reads its conversation again.
+pub const CHAT_POLL_MS: i64 = 4_000;
+/// §9.4: how often a signed-in client reads its unread counts and its challenges again (the challenge
+/// toast, on every screen, and Play together). A challenge lives CHALLENGE_TTL_MS, so ten seconds
+/// shows one within a twelfth of its life; the friends list itself is read once a heartbeat
+/// (PRESENCE_HEARTBEAT_MS), the pace a status changes at.
+pub const SOCIAL_POLL_MS: i64 = 10_000;
+/// §9.5, §9.8: challenges one account may send in an hour; the next is 429. Each opens a room and a
+/// toast on the friend's screen, so a create-and-cancel loop is bounded; thirty is one every two
+/// minutes, a challenge's whole life, kept up for an hour.
+pub const CHALLENGES_PER_HOUR: usize = 30;
+// NOT IN SPEC: how often the challenge sweeper deletes the challenges lapsed by now. A lapsed
+// challenge is already shut (its room expired with it, the reaper takes the room's row, and no read
+// lists the challenge), so the sweep only removes the rows; ten seconds keeps none much past its
+// CHALLENGE_TTL_MS for one cheap delete.
+pub const CHALLENGE_SWEEP_INTERVAL_SECONDS: i64 = 10;
+// ---- end Social ----
+// ---- Duos co-op (#946) ----
+// Fullsend SPEC S6 (#936): the Duos co-op rooms and their four-seat actor (`src/duos/`). Every one is
+// exported to `apps/web/src/wire/serverConfig.ts`, since the co-op board renders the same clocks and
+// the ping wheel the same limits. The disconnect grace is the 1v1's `DISCONNECT_GRACE_SECONDS`.
+
+/// S6, B38: how long a round of a team with a person in it runs. On expiry every round seat that has
+/// not ended has its prompts answered by the AI and its turn ended (`duos::actor`).
+pub const DUOS_ROUND_CLOCK_MS: i64 = 90_000;
+/// S6: a prompt a person holds outside a round clock of their own (the AI team's round, or after the
+/// person ended): on expiry the AI answers that prompt for them.
+pub const DUOS_PROMPT_CLOCK_MS: i64 = 30_000;
+/// S6, B2: one deadline over the four open mulligans; on expiry the AI answers every one a person
+/// still owes.
+pub const DUOS_MULLIGAN_CLOCK_MS: i64 = 45_000;
+/// S6, B36: how long each AI-played seat waits before each action it owes, so a person can follow
+/// the AI team's turn.
+pub const DUOS_AI_STEP_DELAY_MS: i64 = 700;
+/// S6, B34: how long an unjoined co-op room stays open.
+pub const DUOS_ROOM_TTL_MS: i64 = 600_000;
+/// S6, B39: the pings one seat may send inside `PING_RATE_WINDOW_MS`; the rest are dropped silently.
+pub const PING_RATE_LIMIT: usize = 5;
+/// S6, B39: the sliding window `PING_RATE_LIMIT` is counted over.
+pub const PING_RATE_WINDOW_MS: i64 = 3_000;
+/// S6, B64: how long the board marks a pinged card.
+pub const PING_SHOW_MS: i64 = 2_500;
+// ---- end Duos co-op (#946) ----

@@ -11,7 +11,48 @@
 //! not answer; a predicate leaves it armed. R195, the yellow glow: in hand and backrow exactly when
 //! `library_is_larger` holds, the same function the trap's `when` and `run` read (public counts, §9.1).
 
+use jackioh_engine::effects::recruit;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-071";
+
+/// §10.9: a hook may READ state to compute an effect's arguments; it never writes. The two library
+/// sizes come through the read-only `zone_count` (BUILD M3-T1), "yours" being the trap's controller
+/// (R62, R52); "more cards than" is strictly greater, so an equal count does nothing.
+fn library_is_larger(state: &GameState, controller: PlayerId) -> bool {
+    let mine = zone_count(state, controller, OffFieldZone::Library);
+    let theirs = zone_count(state, opponent_of(controller), OffFieldZone::Library);
+    mine > theirs
+}
+
+/// The cost limit is the whole of the radiant text: the declared number `costLimit` (R386), read off
+/// the face that is up.
+fn intern_stimmy() -> Script {
+    let at_end_of_any_turn = TriggerDef::new("intern-stimmy-window", &[GameEventType::TurnEnded], |ctx, _event| {
+        if library_is_larger(ctx.state, ctx.controller) {
+            // R65: outside play an X-cost card counts as 0 and an embiggen card as its base price, which
+            // is what `recruit`'s filter reads off the library (`query_cost` in effects/summon.rs).
+            let max_cost = param(&*ctx, "costLimit");
+            vec![recruit(json_as(json!({ "filter": { "type": "Unit", "costRange": { "max": max_cost } } })))]
+        } else {
+            vec![]
+        }
+    })
+    .with_when(|ctx, _event| library_is_larger(ctx.state, ctx.controller));
+
+    Script {
+        triggers: vec![at_end_of_any_turn],
+        // R195: hand and field alike — the condition is the board's, not the play's.
+        condition_met: Some(condition_hook(|ctx| library_is_larger(ctx.state, ctx.controller))),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = intern_stimmy();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #71 Intern Stimmy — SPEC §8.3, BUILD M4-T4: "Trap window at the end of any turn with library >
 // opponent's → recruit ≤1 (R62); fires again next qualifying turn; radiant ≤2".

@@ -8,14 +8,14 @@
 //!
 //! Port of `packages/engine/test/prompt-kinds.test.ts`.
 
-use serde::Serialize;
-
 use jackioh_engine::effects::{ANSWER_OPTION_IDS, choose_from_hand};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, put, set_library, slot,
+};
 use crate::rules::fixtures::prompt_harness::{
     act, answer_keys, board, cast_now, expect_replays, hand_card, open_as, replayable, round_trip,
 };
@@ -26,24 +26,6 @@ use crate::rules::fixtures::prompts::{
 
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// vitest's `toMatchObject`: every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// TS `makeContext(sink, null, { controller })`'s options.

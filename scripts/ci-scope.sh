@@ -10,10 +10,15 @@
 #   clippy             `rust (fmt, clippy)`
 #   rust_engine_rules  `rust (test engine rules)`, and so on: each `rust_<group>` is one entry of
 #   rust_engine        ci.yml's `rust-test` matrix, named by its `group` (`tools, wasm` is
-#   rust_cards_lib     `rust_tools_wasm`)
+#   rust_cards_lib_core     `rust_tools_wasm`)
+#   rust_cards_lib_classic
+#   rust_cards_lib_classic_plus
+#   rust_cards_lib_meditative
 #   rust_cards
 #   rust_server
 #   rust_ai
+#   rust_ai_slow_a
+#   rust_ai_slow_b
 #   rust_tools_wasm
 #   web                `web (typecheck, eslint)` and `web (unit k/3)`
 #   e2e                `e2e smoke`
@@ -28,7 +33,9 @@
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
 # training lanes' prompts and loop (training/*.md, training/loop.sh: Devin and the training box read
-# them, no job does). Nothing a test, a build or a check reads is on the list. The other docs are
+# them, no job does), and the notebooks' project, analysis/ (#445: no file in crates/, apps/, e2e/,
+# spec/ or a per-pull-request job reads it; super.yml's `notebooks` job runs its tests once a day).
+# Nothing a test, a build or a check reads is on the list. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, web tests
 # read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
 # training/history/. A `full=false` diff prints every other line false too.
@@ -48,10 +55,10 @@
 #  - clippy: any Rust source, manifest, lockfile, clippy.toml, rustfmt.toml, the toolchain or
 #    .cargo/.
 #  - The Rust test groups follow the crate graph (`cargo metadata`, dev-dependencies included): a
-#    group runs when the change is in a crate it tests or in any crate those build on. The engine,
-#    the cards or the Luau host run every group (the engine's tests build on the cards and read their
-#    catalog, and the cards build on the host); the AI runs ai, server and tools, wasm; the server
-#    runs server; tools and wasm run tools, wasm.
+#    group runs when the change is in a crate it tests or in any crate those build on. The engine or
+#    the cards run every group (the engine's tests build on the cards and read their catalog); the AI
+#    runs its three groups (ai, ai slow a and ai slow b), server and tools, wasm; the server runs
+#    server; tools, wasm and luau run tools, wasm.
 #    A crate the map does not know runs every group. A crate's Cargo.toml also runs tools, wasm,
 #    whose acceptance test holds this map to `cargo metadata`, so a new path dependency is checked
 #    on the pull request that adds it.
@@ -59,17 +66,18 @@
 #    (the engine's and the server's export tests write it) engine and server; docs/radiant-audit.md
 #    (radiant_standard.rs) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example, render.yaml and apps/web/.env.production (the catalog version's
-#    sites, which the tools' patches tests read) tools, wasm, the first as well as server; and
+#    sites, which the tools' patches tests read) tools, wasm, the first as well as server;
+#    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23) and every Rust source for a file it includes from outside its crate, so a diff there that
 #    adds a line holding a reader call (`readFileSync(`, `include_str!(`, `include_bytes!(`,
 #    `read_to_string(`) or `CARGO_MANIFEST_DIR` runs tools, wasm.
-#  - web runs for everything but what no web test, build or typecheck reads: the server's and the
-#    tools' crates (except each manifest, which every cargo command loads, and the files the web's
-#    tests read there: env.rs, the Dockerfile and tests/deploy/), every crate's README, the engine's,
-#    the cards', the AI's, the Luau host's and the WASM crate's tests (except the engine's
-#    tests/fixtures/, which two web tests read), docs/, training/, reviews/, analysis/ and the top-level Markdown.
+#  - web runs for everything but what no web test, build or typecheck reads: the server's, the
+#    tools' and luau's crates (except each manifest, which every cargo command loads, and the files
+#    the web's tests read there: env.rs, the Dockerfile and tests/deploy/), every crate's README, the
+#    engine's, the cards', the AI's and the WASM crate's tests (except the engine's tests/fixtures/,
+#    which two web tests read), docs/, training/, reviews/, analysis/ and the top-level Markdown.
 #  - e2e runs for everything but what neither the client, the server, the `jackioh` binary (whose
 #    `replay` specs 01 and 13 run) nor a spec reads: every crate's tests (except the engine's golden
 #    traces, which tools' `replay` includes) and README, the web's unit tests, the docs, spec/,
@@ -94,8 +102,8 @@ head=$2
 # a glob.
 set -f
 
-LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_tools_wasm web e2e"
-RUST="rust_engine_rules rust_engine rust_cards_lib rust_cards rust_server rust_ai rust_tools_wasm"
+LINES="full db db_sql db_store db_deploy clippy rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm web e2e"
+RUST="rust_engine_rules rust_engine rust_cards_lib_core rust_cards_lib_classic rust_cards_lib_classic_plus rust_cards_lib_meditative rust_cards rust_server rust_ai rust_ai_slow_a rust_ai_slow_b rust_tools_wasm"
 
 # Every line, set to $1.
 every() {
@@ -124,6 +132,7 @@ skipped() {
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/*.md | training/loop.sh) ;;
+    analysis/*) ;;
     .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | .github/workflows/bot-selftest.yml) ;;
     .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
     .github/workflows/triage.yml | .github/workflows/deploy-watch.yml | .github/workflows/ci-duration.yml) ;;
@@ -183,10 +192,10 @@ for file in $files; do
   # The crate map, which acceptance.rs holds to `cargo metadata`.
   case "$file" in
     crates/server/.env.example) on rust_server rust_tools_wasm ;;
-    crates/engine/* | crates/cards/* | crates/luau/*) on $RUST ;;
-    crates/ai/*) on rust_ai rust_server rust_tools_wasm ;;
+    crates/engine/* | crates/cards/*) on $RUST ;;
+    crates/ai/*) on rust_ai rust_ai_slow_a rust_ai_slow_b rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
-    crates/tools/* | crates/wasm/*) on rust_tools_wasm ;;
+    crates/tools/* | crates/wasm/* | crates/luau/*) on rust_tools_wasm ;;
     crates/*)
       echo "ci-scope: $file is in no crate the map knows, running every Rust group" >&2
       on $RUST
@@ -194,7 +203,8 @@ for file in $files; do
     apps/web/src/wire/*) on rust_engine rust_server ;;
     docs/radiant-audit.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
-    render.yaml | apps/web/.env.production | packages/* | apps/server/* | ladder/*) on rust_tools_wasm ;;
+    render.yaml) on rust_server rust_tools_wasm ;;
+    apps/web/.env.production | packages/* | apps/server/* | ladder/*) on rust_tools_wasm ;;
   esac
 
   case "$file" in
@@ -202,10 +212,10 @@ for file in $files; do
   esac
 
   case "$file" in
-    crates/server/Cargo.toml | crates/tools/Cargo.toml) on web ;;
+    crates/server/Cargo.toml | crates/tools/Cargo.toml | crates/luau/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
-    crates/server/* | crates/tools/* | crates/*/README.md) ;;
-    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/luau/tests/* | crates/wasm/tests/*) ;;
+    crates/server/* | crates/tools/* | crates/luau/* | crates/*/README.md) ;;
+    crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/*) ;;
     docs/* | training/* | reviews/* | analysis/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;

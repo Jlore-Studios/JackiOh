@@ -1,14 +1,65 @@
 //! M #59 Permanent Upperclassman (SPEC §8.8 row 59): (3) Unit, Human, Rare, 3/3 → 6/6.
 //!
-//! Base:    "Cry: Summon a random (4) Unit. It gains "Death: Fuse a random Book and AI card.""
-//! Radiant: "Cry: Summon a random Radiant (4) Unit. It gains "Death: Fuse a random Radiant Book and
-//! AI card."" (the granted Death quoted in its sentence, R1445)
+//! Base:    "Cry: Summon a random (4) Cost Unit. It gains "Death: Fuse a random Book and a random AI
+//!          generated card and add the result to your hand.""
+//! Radiant: "Cry: Summon a random Radiant (4) Cost Unit. It gains "Death: Fuse a random Radiant Book
+//!          and a random Radiant AI generated card and add the result to your hand."" (the granted
+//!          Death quoted in its sentence, R1445)
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) plus multi-pool fusion (MD-D14) — the
 //! summoned Unit is granted `meditative-059#fusedBookDeath` as plain data; the hook fuses one pick
 //! from each pool, the Book first so the fused type falls back to it, into the controller's hand at
 //! (min(sum,4)) (R469). The Radiant face's fused card is Radiant.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-059";
+
+/// The granted Death, as both faces quote it and the grant map keys it.
+pub const FUSED_BOOK_DEATH: &str = "meditative-059#fusedBookDeath";
+
+/// Summon a random (4) Unit, then grant every Unit this Cry summoned the fused Book Death (one
+/// summon, read off `summoned_so_far` as C+ #19 does).
+fn upperclassman(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![
+                summon_random(json_as(json!({
+                    "query": { "type": "Unit", "cost": 4 },
+                    "radiant": radiant,
+                }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|ctx: &mut EffectContext<'_>| summoned_so_far(ctx)),
+                    each: Arc::new(move |instance_id: &str| {
+                        grant_ability(json_as(json!({
+                            "instanceId": instance_id,
+                            "grant": FUSED_BOOK_DEATH,
+                            "radiant": radiant,
+                        })))
+                    }),
+                }),
+            ]
+        })),
+        grants: IndexMap::from([(
+            "fusedBookDeath",
+            hook(move |_ctx| {
+                vec![fuse_generated(json_as(json!({
+                    "count": 2,
+                    "pools": [{ "tags": ["Book"] }, { "tags": ["AI"] }],
+                    "radiant": radiant,
+                    "handPrice": "fused",
+                })))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: upperclassman(false),
+        radiant: upperclassman(true),
+    }
+}
 
 // M #59 Permanent Upperclassman — SPEC §8.8 row 59, BUILD M10 row M 59: "Cry: summon a random (4)
 // Unit (Radiant: a random Radiant one) and grant it the face's Death (MD-D13, R1420); the grant
@@ -17,7 +68,7 @@ pub const ID: &str = "meditative-059";
 // so the fused type falls back to it; the Radiant face's fused card is Radiant".
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::prelude::*;
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const UPPERCLASSMAN: &str = "meditative-059";

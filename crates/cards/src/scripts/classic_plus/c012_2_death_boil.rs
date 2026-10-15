@@ -1,10 +1,48 @@
 //! C+ #12.2 Death Boil (SPEC §8.7 row 12.2): (1) Spell, Pancake, Token (printed Legendary).
-//!   Both faces: "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours,
-//!   heal it {amount}." — 6, Radiant 12.
+//!   Both faces: "Deal {amount} damage to an enemy or heal an ally {amount}." — 6, Radiant 12. The
+//!   chosen target is any Unit or hero, as the Grapes' (#911 gave the three one sentence).
 //! Which clause applies is read at resolution from who controls the target; the damage is one §4.4
 //! instance (Spell Damage raises it), the heal a Heal (a hero past 30, a unit up to its max, R19).
 
+use jackioh_engine::damage::DamageTarget;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-2";
+
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// Whether the chosen target is the caster's own (TS `boolean | null`: `None` when it is gone).
+fn is_yours(ctx: &EffectContext<'_>) -> Option<bool> {
+    let target = resolve_target(ctx, &json_as::<TargetSpec>(json!({ "of": "chosen" })))?;
+    let controller = match target {
+        DamageTarget::Hero { player } => player,
+        DamageTarget::Unit { instance } => instance.controller,
+    };
+    Some(controller == ctx.controller)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "amount");
+            let Some(yours) = is_yours(ctx) else {
+                return vec![];
+            };
+            vec![if yours {
+                heal(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))
+            } else {
+                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))
+            }]
+        })),
+        ..Script::default()
+    };
+    // The Radiant face is the same text at 12, a catalog value.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #12.2 Death Boil — SPEC §8.7 row 12.2, BUILD M9 Classic+ row C+ 12.2: "A target Unit or hero: an
 // enemy takes 6 damage (Spell Damage raises it), one of yours is healed 6 (a hero past 30, a unit up to

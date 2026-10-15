@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 # Pure (CLAUDE.md rule 4), as the engine is, plus mlua (#442 L3), which compiles Luau's C++ (`g++`).
 jackioh-engine = { workspace = true }
+indexmap = { workspace = true }
 mlua = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -21,3 +22,6 @@ ts = ["dep:ts-rs", "jackioh-engine/ts"]
 
 [dev-dependencies]
 jackioh-engine = { workspace = true, features = ["testkit"] }
+# #913: the kit's twins play beside the official cards' Rust scripts (`tests/kit.rs`). No cycle: since
+# #902 the cards take nothing of this crate.
+jackioh-cards = { workspace = true }

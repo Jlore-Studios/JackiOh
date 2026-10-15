@@ -10,7 +10,52 @@
 //!            readable cards while it acts (R980), and shows both records through `preview` (R982);
 //!            ME-LUCK: "You have Luck {luck}" (R987). Tunes: luck 1 ↑ (never below 1).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-040";
+
+/// The declared number `luck` (R987): "Aura: You have Luck {luck}".
+const LUCK: i32 = 1;
+
+/// R982: the two "last element" preview labels — exact substrings of line 3 (R280).
+const YOUR_LAST: &str = "Your last element";
+const THEIR_LAST: &str = "your opponent's last element";
+
+/// R982: both records through `preview` (R280), the glyph as their `display` (R372), and "—" before
+/// any play. No zone guard: the records read the same wherever the card is read.
+fn preview() -> PreviewHook {
+    condition_hook(|ctx| {
+        vec![
+            subsystems::feng_shui::element_preview(
+                YOUR_LAST,
+                subsystems::feng_shui::last_element(ctx.state, ctx.controller),
+            ),
+            subsystems::feng_shui::element_preview(
+                THEIR_LAST,
+                subsystems::feng_shui::last_element(ctx.state, opponent_of(ctx.controller)),
+            ),
+        ]
+    })
+}
+
+fn face() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            feng_shui: Some(true),
+            luck: Some(LUCK),
+            ..StaticFlags::default()
+        }),
+        preview: Some(preview()),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(),
+        radiant: face(),
+    }
+}
 
 // Meditative #40 Feng Shui — SPEC §8.8 row 40, R980–R987, BUILD M10 row M 40: "(2) Field Spell, CN,
 // Legendary. Aura: every card has an element (水, 木, 火, 金 or 土); auspicious behavior rewarded
@@ -22,15 +67,11 @@ pub const ID: &str = "meditative-040";
 // elements ride the indices: core-003 is 木, core-032 火, core-020 土, core-011 水, core-019 金.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, THEIR_LAST, YOUR_LAST};
     use crate::js;
     use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
     use jackioh_engine::wire::PlayerId::{P1, P2};
-
-    /// R982: the two "last element" preview labels — exact substrings of line 3 (R280).
-    const YOUR_LAST: &str = "Your last element";
-    const THEIR_LAST: &str = "your opponent's last element";
 
     /// (1) Unit, index 3: 木.
     const WOOD: &str = "core-003";

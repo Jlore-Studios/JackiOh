@@ -4,13 +4,11 @@
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use serde::Serialize;
-
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::catalog::{spell_def, vanilla_deck};
-use crate::rules::fixtures::harness::{events_of_type, new_game};
+use crate::rules::fixtures::harness::{events_of_type, json_of, new_game};
 
 const SEED: &str = "r345";
 
@@ -24,10 +22,6 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn action(body: ActionInput) -> Action {

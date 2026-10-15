@@ -9,7 +9,7 @@ use mlua::{Error, Lua, LuaOptions, StdLib, Table, Value, VmState};
 
 use crate::Site;
 use crate::api;
-use crate::config::{LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES};
+use crate::config::{CUSTOM_HOOK_INTERRUPTS, LUAU_HOOK_DEPTH, LUAU_HOOK_INTERRUPTS, LUAU_MEMORY_BYTES};
 use crate::lint::MATH_ALLOWED;
 
 /// The base library's globals a script never sees: output, environments, loading code at run time,
@@ -146,9 +146,10 @@ impl Budget {
     }
 
     /// A call begins: the outermost one starts a full budget, a nested one goes on drawing it down.
+    /// A custom card's outermost call starts `CUSTOM_HOOK_INTERRUPTS` (R915004).
     pub fn enter(&mut self, site: Site) {
         if self.calls.is_empty() {
-            self.left = LUAU_HOOK_INTERRUPTS;
+            self.left = budget_of(site);
         }
         self.calls.push(site);
     }
@@ -167,10 +168,7 @@ impl Budget {
 
 /// The VM's memory cap set to a limit until this drops, then put back as it was (#843). Every hook
 /// call runs under `LUAU_MEMORY_BYTES` (`vm::BudgetGuard`), a nested one included; a reader lifts it
-/// while it builds its answer. Under a cap mlua runs each value the host builds through a
-/// protected call, which cost a hook call about half its time; what a reader builds is bounded by
-/// the state it reads, not by the script, and is still counted, so the script's next allocation past
-/// the cap fails as before.
+/// while it builds its answer (`uncapped`).
 pub(crate) struct MemoryCap<'l> {
     lua: &'l Lua,
     previous: usize,
@@ -182,8 +180,8 @@ impl<'l> MemoryCap<'l> {
         MemoryCap::set(lua, LUAU_MEMORY_BYTES)
     }
 
-    /// No cap (mlua's limit 0), as a reader builds its answer.
-    pub(crate) fn lift(lua: &'l Lua) -> MemoryCap<'l> {
+    /// No cap (mlua's limit 0), as a reader builds its answer (`uncapped`).
+    fn lift(lua: &'l Lua) -> MemoryCap<'l> {
         MemoryCap::set(lua, 0)
     }
 
@@ -200,9 +198,40 @@ impl Drop for MemoryCap<'_> {
     }
 }
 
+/// A reader's answer (`ctx`'s readers, `J.query`, `J.pool`), built by `build` with the memory cap
+/// lifted and the cap put back once it is built. Under a cap mlua runs each value the host builds
+/// through a protected call, which cost a hook call about half its time. While it builds, the VM can
+/// pass the cap by what the reader allocates, which the state it reads or the table the script hands
+/// it bounds (`ctx:rng_shuffle`'s list, which the cap held), not anything the script does meanwhile.
+/// The answer is counted all the same: a reader that leaves the VM past the cap fails as an allocation
+/// past it would, with a memory error the hook's call names (`vm::BudgetGuard`, #871), so a hook
+/// never goes on holding more than the cap, however many answers it keeps.
+pub(crate) fn uncapped<T>(lua: &Lua, build: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
+    let cap = MemoryCap::lift(lua);
+    let answer = build()?;
+    let limit = cap.previous;
+    drop(cap);
+    if limit > 0 && lua.used_memory() > limit {
+        return Err(Error::MemoryError(format!(
+            "a reader's answer left the VM past {limit} bytes"
+        )));
+    }
+    Ok(answer)
+}
+
+/// The interrupts a hook call that begins at `site` may take: a custom card's budget (R915004), or
+/// L5's.
+pub fn budget_of(site: Site) -> u32 {
+    if crate::custom::is_custom_site(site) {
+        CUSTOM_HOOK_INTERRUPTS
+    } else {
+        LUAU_HOOK_INTERRUPTS
+    }
+}
+
 /// The error a hook stopped at L5's cap fails with, naming its card, face and hook.
 pub fn stopped(site: Site) -> String {
-    format!("{site}: stopped after {LUAU_HOOK_INTERRUPTS} interrupts (L5)")
+    format!("{site}: stopped after {} interrupts (L5)", budget_of(site))
 }
 
 /// The error a hook call nested deeper than `LUAU_HOOK_DEPTH` fails with, naming its card, face and

@@ -27,6 +27,7 @@ import { readSettings as readPanelSettings } from "../settings/store.ts";
 import { type AnimatingMap, type Side, sideOf, testid } from "./contract";
 import { SLAM_BURST, UNIT_SLAM, type SlamTier } from "./damageFeel.ts";
 import { createPlayTracker, pileOf, pileRunAt, sweepAt, type Pile, type PlayTracker, type Sweep, type ZoneImpact } from "./runs.ts";
+import { isRecord } from "../wire/json.ts";
 
 /* ------------------------------------------------------------------------------------------- *
  * Testids this table needs that `contract.ts` does not define
@@ -811,6 +812,17 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R915004: a custom card's hook failed and did nothing. The card fades once where it stands, or its
+  // controller's hero when the card is nowhere the viewer sees.
+  scriptFailed: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) =>
+      e.instanceId === null
+        ? testid.hero(sideOf(view, e.player))
+        : instanceOrPile(view, e.instanceId, testid.hero(sideOf(view, e.player))),
+  },
 };
 
 /**
@@ -1288,10 +1300,6 @@ const REWRITTEN_WITH_IDENTITY: Partial<Record<GameEventType, readonly string[]>>
 };
 
 const NOTHING_REWRITTEN: readonly string[] = [];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Whether two copies of an event, from two views, are the same occurrence: every field agrees,

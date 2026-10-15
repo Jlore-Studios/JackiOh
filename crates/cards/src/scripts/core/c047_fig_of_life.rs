@@ -11,9 +11,36 @@
 //! "Heal 20" is §6.3's Heal row, not this card's: a unit loses up to 20 damage and never rises past
 //! its max health, while a hero gains 20 with no cap, since §3 gives a hero no maximum.
 
+use jackioh_engine::effects::heal;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-047";
 
+/// The two faces differ only in how much the target is healed: the declared number `heal` (R386), 20
+/// and 50 on the Radiant face, read off the face that is running.
+fn fig_of_life() -> Script {
+    Script {
+        // R19: any unit or hero, either side.
+        // R656: a heal helps, so a random cast that targets enemies aims this at friends.
+        targets: vec![json_as(json!({
+            "kind": "target",
+            "min": 1,
+            "max": 1,
+            "filter": { "side": "any", "of": ["unit", "hero"] },
+            "aim": "help",
+        }))],
+        cry: Some(hook(|ctx| {
+            vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": param(&*ctx, "heal") })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = fig_of_life();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #47 Fig of Life — SPEC §8.2, BUILD M4-T4: "Heals a unit up to max or the hero without cap (R19);
 // radiant 50".
@@ -26,7 +53,7 @@ pub const ID: &str = "core-047";
 // has no maximum (§3) and goes straight past 30. The props have no script beyond printed keywords.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -182,7 +209,7 @@ mod tests {
             assert_eq!(def.id, FIG);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
             assert!(serde_json::to_value(&def.tags).unwrap().as_array().unwrap().contains(&json!("Fruit")));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
                     serde_json::to_value(&face.targets).unwrap(),

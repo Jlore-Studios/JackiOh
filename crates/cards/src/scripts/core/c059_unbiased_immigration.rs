@@ -11,7 +11,52 @@
 //! R60: the pool may repeat; §5.1 and R387 keep Tokens and #59 out of it; R4 burns an eleventh card.
 //! A hook may not roll dice (`ctx.rng.*` advances state), so `add_random_from_catalog` picks.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-059";
+
+/// §5.1's "a random card": the non-token catalog of every set (R380), minus this card (R387).
+fn card_pool() -> Value {
+    json!({ "excludeDefId": ID })
+}
+
+/// One add. `ctx.embiggened` is the price this Field Spell was played for (R65), read at the moment
+/// the trigger resolves rather than remembered by the script, so the two faces differ only in the
+/// radiant flag they put on the created card (§5.2, R74).
+fn add_random_card(ctx: &EffectContext, as_radiant: bool) -> Effect {
+    let mut args = json!({ "query": card_pool(), "count": 1 });
+    if as_radiant {
+        args["radiant"] = json!(true);
+    }
+    // "(paid 4: it costs 0)" — the embiggen price, not the mana actually spent after discounts. The
+    // (0) is the declared number `setCost` (R386).
+    if ctx.embiggened {
+        args["costOverride"] = json!(param(ctx, "setCost"));
+    }
+    add_random_from_catalog(json_as(args))
+}
+
+fn start_of_turn_base() -> Hook {
+    hook(|ctx| vec![add_random_card(ctx, false)])
+}
+
+fn start_of_turn_radiant() -> Hook {
+    hook(|ctx| vec![add_random_card(ctx, true)])
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            start_of_turn: Some(start_of_turn_base()),
+            ..Script::default()
+        },
+        radiant: Script {
+            start_of_turn: Some(start_of_turn_radiant()),
+            ..Script::default()
+        },
+    }
+}
 
 // #59 Unbiased Immigration (SPEC §8.3, BUILD M4-T4 row 59). Rulings proved here: R65 (the chosen
 // embiggen price is the cost, and `costOverride` starts the calculation), R81 (embiggen travels in

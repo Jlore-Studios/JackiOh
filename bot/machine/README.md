@@ -98,21 +98,22 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
-The two AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
-is always on: `jackioh-train@improve` and `jackioh-train@unban`, two systemd services that run
-`training/loop.sh <lane>` forever, each as its own user with its own checkout, Rust, Devin login
-and GitHub token. They run outside the harness: no runner, no GitHub Actions job, no slot of
-`machine_parallel`, no `training` label. A lane opens its own pull requests from `ai/<lane>`, and
-CI's `training gate` re-runs its promotion before anything merges.
+The AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
+is always on: `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, three systemd
+services that run `training/loop.sh <lane>` forever, each as its own user with its own checkout and
+Rust (the two training lanes also hold a Devin login and GitHub token, which the gather lane needs
+neither of). They run outside the harness: no runner, no GitHub Actions job, no slot of
+`machine_parallel`, no `training` label. A training lane opens its own pull requests from `ai/<lane>`,
+and CI's `training gate` re-runs its promotion before anything merges; the gather lane opens none.
 
 | | |
 |---|---|
 | Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus 8 GB swap), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refuses instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is the `m7i-flex.large`; on a paid plan the bigger one halves a lane's cycle |
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
-| Users | `agent-train-improve` and `agent-train-unban`: a home only each can read, no `sudo`, no Docker |
+| Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
 | In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
 | CLIs | `devin` (as on the night box), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Devin run the web's tests that play the AI before a promotion goes up |
-| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `DEVIN_MODEL=swe-2-max` (the knob for Devin's model), `RAYON_NUM_THREADS=2` (the two lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; both enabled, so they start at boot |
+| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `DEVIN_MODEL=swe-2-max` (the knob for Devin's model), `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; all three enabled, so they start at boot |
 | Idle stop | none: the box never powers itself off, and no starter wakes it |
 
 Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`

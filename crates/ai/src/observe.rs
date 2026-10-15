@@ -585,6 +585,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // A kept fusion of a fusion names its older ingredient in its id (R179), so that ingredient's
     // definition stays too: the id already says what it is, and its faces are public, summed into
     // the kept def's own.
+    // R915007: a custom card is known only once a card the seat may read names it: its definition and
+    // its script go with the rest of what a hidden card would tell.
+    next.custom_defs.retain(|def_id, _| referenced.contains(def_id));
+    next.custom_cards.retain(|def_id, _| referenced.contains(def_id));
     let mut transient: IndexSet<String> = IndexSet::new();
     let mut keep: Vec<String> = referenced
         .into_iter()

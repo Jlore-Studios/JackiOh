@@ -14,7 +14,38 @@
 //! same list, and `apply_effects` runs a list in order, so the new tokens are units the controller
 //! has when the buff lands and they get +2/+2 too (BUILD M4-T4 #62).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-062";
+
+/// §7's shared Felinor Token. Read through `card_def` so a wrong id fails as the script is built, not
+/// in play.
+fn felinor_token() -> String {
+    crate::card_def("core-t-felinor").id
+}
+
+pub fn script() -> CardScripts {
+    let base_token = felinor_token();
+    let radiant_token = felinor_token();
+    CardScripts {
+        base: Script {
+            cry: Some(hook(move |_ctx| vec![fill_board(json_as(json!({ "defId": base_token })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(move |ctx| {
+                // The +2/+2 is the declared number `buff` (R386).
+                let buff = param(&*ctx, "buff");
+                vec![
+                    fill_board(json_as(json!({ "defId": radiant_token }))),
+                    // "Then your units get +2/+2": after the fill, so the new tokens are included.
+                    buff_all_units(json_as(json!({ "side": "self", "attack": buff, "health": buff }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // #62 Friend of Felinors — SPEC §8.3, BUILD M4-T4 row 62.
 //

@@ -112,9 +112,6 @@ impl std::fmt::Debug for Env {
     }
 }
 
-/// TS's name for [`Env`].
-pub type ServerEnv = Env;
-
 /// TS `loadEnv`'s throw: every problem found, not just the first. `Display` is TS's message, one
 /// problem per line, each naming the variable, what it is for, and where to obtain it.
 #[derive(Clone, Debug, PartialEq, Eq)]

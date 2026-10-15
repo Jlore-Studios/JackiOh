@@ -1,5 +1,5 @@
 //! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (2) Field Spell, Legendary.
-//!   Base:    "End of Turn: Add a random AI Generated card to your hand. It costs (0)."
+//!   Base:    "End of Turn: Add a random AI generated card to your hand. It costs (0)."
 //!   Radiant: "… random Radiant AI generated card …"
 //!   Engine:  "Its controller's end of turn (R62). The pool is the ten AI generated cards (T-AI-1 to
 //!            T-AI-10, §7), named by the text, so tokens reach it; `costOverride` 0; the hand cap burns
@@ -8,7 +8,41 @@
 //! An `endOfTurn` hook runs on its controller's turn only (§6.2). Each card is its own pick (R60) through
 //! §6.3's Add to hand, so a full hand burns it, and the opponent sees the sentinel (R97).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-078";
+
+/// §8.7: "a random AI generated card" — the AI tag's ten tokens, which a pool names by asking for tokens.
+fn ai_pool() -> Value {
+    json!({ "tags": ["AI"], "token": true })
+}
+
+/// §8.7: "It costs (0)".
+const FREE: i32 = 0;
+
+/// The printed "a random AI generated card": one card per end of turn.
+const CARDS: i32 = 1;
+
+fn datacenter(radiant: bool) -> Script {
+    Script {
+        end_of_turn: Some(hook(move |_ctx| {
+            let mut args = json!({ "query": ai_pool(), "count": CARDS, "costOverride": FREE });
+            if radiant {
+                args["radiant"] = json!(radiant);
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: datacenter(false),
+        radiant: datacenter(true),
+    }
+}
 
 // C+ #78 Claude's Datacenter — SPEC §8.7 row 78, BUILD M9 Classic+ row C+ 78: "Field Spell: at each end
 // of your turn adds a random AI generated card (T-AI-1 to T-AI-10, the pool its text names) that costs
@@ -68,7 +102,7 @@ mod tests {
             assert_eq!(js(&def.cost), json!(2));
             assert_eq!(def.rarity, Rarity::Legendary);
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.end_of_turn.is_some());
             assert!(scripts.radiant.end_of_turn.is_some());
         }

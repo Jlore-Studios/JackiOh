@@ -22,6 +22,7 @@ Contents:
 5. The record, part by part
 6. What the batches found
 7. The reconcile
+8. v0.5.0: official cards back in Rust
 
 ---
 
@@ -401,7 +402,10 @@ Part 28 took classic-026, -030 and -035. The rest are in section 4.
   list its game never ends on either build. A logging parent build showed M #97.6 University
   activating `study` 25 times on one turn though its `uses` is 1; a build of `e374658dc`, before
   batch 19 ported University, stalls the same, so the stall is the card's or the engine's, not a
-  port's. The face bug that kept Mind Games was latent in six ported cards of the batch (CN in a
+  port's. The cause (#884): each use's own Buffs stepped University's Activate N and its `times`, so
+  every use funded more uses and more Buffs per use; R884000 caps the uses at
+  `ACTIVATE_UNLIMITED_CAP` a turn and `times` at 5, and its tests replay the loop in a reduced
+  scenario. The face bug that kept Mind Games was latent in six ported cards of the batch (CN in a
   bottle, both Knowledge Breakers, Do or Die, Meditative Journey, Disruptive Disruptor); none
   differed in its 400 games, so they stayed ported.
 - **Batch 19.** First restored Felinor Fuser's Rust (`5e292a8`'s file) and removed `/fullsend`'s
@@ -538,4 +542,50 @@ What the reconcile changed, beyond merging the parts:
     - `register_all` (the module's `init()` in node, five runs): 115–145 ms (budget 200 ms;
       `main`'s 28–33 ms).
   - `luau-analyze --mode=strict` did not run: the box had no Luau 0.740 release. Part 8's CI step
-    runs it.
+    runs it. Its first run found 31 errors, all fixed in #872: 18 were readers the context types
+    left out, and 13 were annotations in the scripts.
+
+## 8. v0.5.0: official cards back in Rust
+
+[#902](https://github.com/Jlore-Studios/JackiOh/issues/902) undid the port for official cards and
+kept the host for custom cards ([#915](https://github.com/Jlore-Studios/JackiOh/issues/915)).
+
+- **Why.** The game played the same, but everything it touched got slower or bigger, and official
+  cards gain nothing from a VM (the reconcile's numbers, section 7, against `main` on one box):
+
+  | | `main` | v0.4.0 |
+  |---|---|---|
+  | `fuzz --seeds 200` | 6,388 ms | 9,767 ms (×1.53) |
+  | A golden step (server, tools) | 1.151 ms | 1.579 ms (×1.37) |
+  | A golden step in the browser | 2.40 ms | 4.02 ms (×1.65) |
+  | The browser module, gzipped | 2,905,567 B | 3,933,262 B (+0.98 MiB) |
+  | `register_all` in the browser | 28–33 ms | 115–145 ms |
+
+  The AI pays this many times over, since every simulated move runs card hooks. The VM is only
+  needed for code that is not compiled into the game: custom cards.
+- **What came back.** Each of the 409 ported cards' `.rs` came back from `d787d2a8` (`main` just
+  before v0.4.0 merged), with `pub fn script()` and its tests, and its `.luau` was deleted; since
+  v0.4.0 no card script changed but #876's type annotations, so nothing needed porting. Call to
+  Chaos reads its golem's `script()` again. `crates/cards` builds without `jackioh-luau`
+  (`Cargo.toml` and `build.rs` from `d787d2a8`), and `cargo tree -i mlua` finds `mlua` under
+  `jackioh-luau` alone. The browser module is `wasm32-unknown-unknown` with wasm-bindgen again
+  (`crates/wasm`, `scripts/build-wasm.sh`, `rust-toolchain.toml`, `.cargo/config.toml` and the web's
+  wrapper from `d787d2a8`), and the contracts say official cards are Rust (CLAUDE.md rules 4–6,
+  `crates/cards/README.md`, `docs/ADDING_CARDS.md`, SPEC §10.9, BUILD, REVIEW,
+  `docs/architecture.md`). The workspace is at 0.5.0.
+- **What stayed.** `crates/luau` (the sandbox, the integer boundary, the lint, the VM, the `J`
+  bindings and `load_card`), built and tested as a workspace member; `crates/cards/luau/jackioh.luau`
+  and its generator, which CI still checks; the verbs and readers v0.4.0 added to the engine; the
+  `cargo jackioh luau` tools; and the notebooks.
+- **The proof**, on a box with 4 threads (Intel Xeon @ 2.80 GHz), against `main` at `d2623ca4`
+  built on the same box:
+  - The card tests: 5,884 unit and 754 cross-card, all passing.
+  - `luau diff` with `main` as the parent: the 382 restored cards that can be forced into a deck
+    (all but the 27 tokens no deckable card's `refs` name), 20 to a run, 200 games each: 0
+    mismatches, and every run's `golden check` 200 of 200.
+  - `luau bench`: `fuzz --seeds 200` 20,685 → 11,234 ms (×0.54); a golden step 4.340 → 2.865 ms
+    (×0.66). The slowest gate decision read 50 → 146 ms: one clock reading of whichever decision
+    ran slowest, as section 7 found, and far under `AI_GATE.max_decision_ms` (1,500).
+  - The browser module and its glue, `gzip -9`: 2,921,195 B (v0.4.0's 3,933,262 B; the module
+    before it 2,905,567 B). `register_all` (the module's `init()` in node, five runs on this box,
+    which runs `main`'s fuzz about twice as slow as section 7's): 53–78 ms.

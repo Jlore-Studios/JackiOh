@@ -16,7 +16,61 @@
 //! - **Summon** `units` random CN Units (repeats allowed, R60), each into the leftmost empty,
 //!   unlocked unit zone (R64); a full row takes fewer, drawing nothing for the rest (R129).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-032";
+
+/// The three effects the match rng picks among as the Spell resolves (MD-B9, R920).
+const EFFECTS: i32 = 3;
+
+fn spiritually(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            match ctx.rng.int(EFFECTS) {
+                // Get ready to learn Chinese: the flag on every card of both hands and both
+                // libraries (the Radiant face: the opponent's only), silently (R440).
+                0 => vec![translate(json_as(json!({
+                    "scope": {
+                        "side": if radiant { "enemy" } else { "any" },
+                        "zones": ["hand", "library"],
+                    },
+                })))],
+                // Transform the hand into the same random CN card, each costing (0).
+                1 => {
+                    let mut args = json!({
+                        "scope": { "side": "self", "zones": ["hand"] },
+                        "same": true,
+                        "query": { "tags": ["CN"] },
+                        "costOverride": 0,
+                    });
+                    if radiant {
+                        args["radiant"] = json!(true);
+                    }
+                    vec![transform_random(json_as(args))]
+                }
+                // Summon `units` random CN Units, Radiant on the Radiant face.
+                _ => (0..param(&*ctx, "units"))
+                    .map(|_| {
+                        let mut args = json!({ "query": { "type": "Unit", "tags": ["CN"] } });
+                        if radiant {
+                            args["radiant"] = json!(true);
+                        }
+                        summon_random(json_as(args))
+                    })
+                    .collect(),
+            }
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face learns only the opponent's cards and makes Radiant cards and Units; the
+    // numbers are the same on both faces.
+    let base = spiritually(false);
+    let radiant = spiritually(true);
+    CardScripts { base, radiant }
+}
 
 // M #32 Spiritually 中国 — SPEC §8.8 row 32, BUILD M10 row M 32: "One of three by one uniform roll
 // as it resolves (MD-B9), whatever the board: (1) every card of both hands and both decks gains the
@@ -28,14 +82,13 @@ pub const ID: &str = "meditative-032";
 // the new hand cards and the Units are Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
     const SPIRITUALLY: &str = "meditative-032";
-    /// The three effects the match rng picks among as the Spell resolves (MD-B9, R920).
-    const EFFECTS: i32 = 3;
     const FILLER: &str = "core-005";
     /// Shipped non-token CN cards the pools may draw (R387 keeps this card out): SPEC §8's CN rows of
     /// every set that ships, the Meditative set's among them since it ships (R380, R1420).

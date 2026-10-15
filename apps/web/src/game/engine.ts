@@ -96,10 +96,6 @@ export function setEnginePort(port: EnginePort | null): void {
   injected = port;
 }
 
-export function injectedEnginePort(): EnginePort | null {
-  return injected;
-}
-
 /** The engine's own `GameState` behind the client's opaque brand, and back. The casts strip only the brand. */
 type GameState = Parameters<typeof wasm.hashState>[0];
 const raw = (state: EngineState): GameState => state as unknown as GameState;

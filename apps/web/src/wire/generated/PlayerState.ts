@@ -2,6 +2,7 @@
 import type { CardInstance } from "./CardInstance";
 import type { DrawCount } from "./DrawCount";
 import type { DrawOfferState } from "./DrawOfferState";
+import type { DuosLife } from "./DuosLife";
 import type { GameLog } from "./GameLog";
 import type { Handicap } from "./Handicap";
 import type { HeroState } from "./HeroState";
@@ -100,4 +101,10 @@ riftExtraTurn?: true,
  * R850 (Meditative #8, #20): set when an effect wins the game for this player outright
  * (`win_game`). Only ever `Some(true)`.
  */
-wonByEffect?: true, };
+wonByEffect?: true, 
+/**
+ * #936 S3, B12: this seat's Duos life. Present only in a duel a `DuosState` holds, so a 1v1 state
+ * hashes as before this field existed (B3). Every write to `hero.health` goes through
+ * `duos_life.rs`, which reads it.
+ */
+duos?: DuosLife, };

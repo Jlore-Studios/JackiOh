@@ -8,7 +8,7 @@
 // `self` is typed with a local minimal interface rather than the `WebWorker` lib, which would clash
 // with the `DOM` lib the rest of `apps/web` compiles against.
 
-import { loadWasm } from "../wasm/index.ts";
+import { loadWasm, useLuauModule } from "../wasm/index.ts";
 import { createPracticeCore } from "./core.ts";
 import { defaultSaveStore } from "./saveStore.ts";
 import type { PracticeRequest, PracticeResponse } from "./protocol.ts";
@@ -40,10 +40,29 @@ const engine: Promise<string | null> = loadWasm().then(
 /** Both boot reads at once. Neither ever rejects. */
 const booted = Promise.all([engine, saves.ready]);
 
+/** Requests, one at a time in the order they came: each may first switch the module (R915009). */
+let chain: Promise<unknown> = booted;
+
 scope.onmessage = (event) => {
-  // Callbacks on one promise run in the order they were added, so requests keep their order.
   const request = event.data;
-  void booted.then(([failure]) => {
-    scope.postMessage(failure === null ? core.handle(request) : { id: request.id, type: "failed", message: failure });
+  chain = chain.then(async () => {
+    const [failure] = await booted;
+    if (failure !== null) {
+      scope.postMessage({ id: request.id, type: "failed", message: failure });
+      return;
+    }
+    // R915009: a game with custom cards runs on the Luau module, loaded the first time one asks;
+    // every other game on the normal module.
+    const luau = core.needsLuau(request);
+    if (luau !== null) {
+      try {
+        await useLuauModule(luau);
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        scope.postMessage({ id: request.id, type: "failed", message: `the custom cards' engine could not be loaded: ${message}` });
+        return;
+      }
+    }
+    scope.postMessage(core.handle(request));
   });
 };

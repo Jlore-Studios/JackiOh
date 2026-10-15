@@ -35,8 +35,8 @@ use crate::actor::registry::AttachError;
 use crate::api::http::{ApiError, ApiErrorCode, assert_active, client_address, lock, rate_limit_address};
 use crate::app::{App, browser_origins};
 use crate::config::{
-    DEFAULT_TRUSTED_PROXY_HOPS, WS_IDLE_TIMEOUT_SECONDS, WS_MAX_CONNECTIONS_PER_ADDRESS,
-    WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
+    DEFAULT_TRUSTED_PROXY_HOPS, SHUTDOWN_SOCKETS_POLL_MS, WS_IDLE_TIMEOUT_SECONDS,
+    WS_MAX_CONNECTIONS_PER_ADDRESS, WS_OUTBOX_MAX_FRAMES, WS_PING_INTERVAL_SECONDS,
 };
 use crate::db::store::MatchStatus;
 
@@ -70,6 +70,9 @@ const CLOSE_MESSAGE_TOO_BIG: u16 = 1009;
 
 /// RFC 6455's normal closure.
 const CLOSE_NORMAL: u16 = 1000;
+
+/// RFC 6455's "going away": the server is shutting down (#861).
+const CLOSE_GOING_AWAY: u16 = 1001;
 
 /// How long a socket the server closed waits for the peer's half of the closing handshake before
 /// the connection is dropped.
@@ -646,6 +649,34 @@ fn unregister_client(app: usize, socket: &Socket) {
     }
 }
 
+/// Closes the sockets no actor closed, such as one mid-upgrade (#861's drain). The lock is
+/// released before any close (a close calls into the actor). Does nothing on a socket that is
+/// already closed.
+pub fn close_all(app: &App) {
+    let clients: Vec<Socket> = lock(&UPGRADES)
+        .get(&app_key(app))
+        .map(|entry| entry.clients.clone())
+        .unwrap_or_default();
+    for socket in clients {
+        socket.close(Some(CLOSE_GOING_AWAY), Some("the server is shutting down"));
+    }
+}
+
+fn holds_sockets(app: usize) -> bool {
+    lock(&UPGRADES)
+        .get(&app)
+        .is_some_and(|entry| !entry.clients.is_empty())
+}
+
+/// Resolves once every socket's pump has ended and its upgrade task has unregistered it (#861's
+/// drain). That happens after the peer answers the close, or after `CLOSE_HANDSHAKE_TIMEOUT`.
+pub async fn all_closed(app: &App) {
+    let poll = Duration::from_millis(u64::try_from(SHUTDOWN_SOCKETS_POLL_MS).unwrap_or(1));
+    while holds_sockets(app_key(app)) {
+        tokio::time::sleep(poll).await;
+    }
+}
+
 /// The address an upgrade is counted against: the peer, or R190's forwarded entry.
 fn upgrade_address(headers: &HeaderMap, peer: Option<&str>, trusted_proxy_hops: usize) -> String {
     rate_limit_address(&client_address(
@@ -719,3 +750,128 @@ pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -
             unregister_client(key, &socket);
         })
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+/// S7: the socket a friend's live game is watched on (`social::watch`).
+pub const WATCH_PATH: &str = "/ws/watch";
+
+/// The `?token=` of an upgrade, read exactly as `/ws/match` reads it.
+pub(crate) fn upgrade_token(uri: &Uri) -> Option<String> {
+    token_from(&query_pairs(uri))
+}
+
+/// The `/ws/watch` upgrade, held to all `/ws/match`'s is (`handle_with`): the origin check, the
+/// per-address count, the frame cap and the one subprotocol. The watch's frame handlers go in before
+/// the pump starts, so a hello sent the moment the socket opens is never dropped.
+pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
+    let options = AttachOptions::for_app(&app);
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+
+    if !origin_allowed(&allowed, &parts.headers) {
+        let origin = parts
+            .headers
+            .get("origin")
+            .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
+        tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(&app);
+    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
+        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let uri = parts.uri.clone();
+
+    upgrade
+        .max_message_size(MAX_FRAME_BYTES)
+        .max_frame_size(MAX_FRAME_BYTES)
+        .protocols([WS_SUBPROTOCOL])
+        .on_upgrade(move |ws| async move {
+            let _slot = slot;
+            let (socket, frames) = Socket::channel();
+            let listener = crate::social::watch::listen(&socket);
+            let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
+            register_client(key, &socket);
+            crate::social::watch::serve(&app, &socket, &uri, listener).await;
+            let _ = pumping.await;
+            unregister_client(key, &socket);
+        })
+}
+// ---- end Social: watching and shared replays ----
+
+// ---- Duos co-op (#946) ----
+
+/// Fullsend SPEC S6: the Duos co-op socket, upgraded on the same listener (`app::router`).
+pub const WS_DUOS_PATH: &str = "/ws/duos";
+
+/// S6, B35: the `/ws/duos` upgrade, through the doors `/ws/match` has (`handle_with`): a disallowed
+/// origin is refused before any token is read, an address over its socket count next, frames are
+/// capped at `MAX_FRAME_BYTES`, only `WS_SUBPROTOCOL` is echoed, and the pump pings and drops an idle
+/// peer the same way (R1441). The socket's hello gate goes on before its pump starts, so the hello
+/// that names the match is never dropped while the token is checked; then `duos::ws` authenticates it
+/// as `/ws/match` does and hands it to the co-op actor.
+pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
+    let options = AttachOptions::for_app(&app);
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+    if !origin_allowed(&allowed, &parts.headers) {
+        tracing::warn!(event = "ws.upgrade.origin_refused", path = WS_DUOS_PATH);
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(&app);
+    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
+        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
+        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    };
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return rejection.into_response(),
+    };
+    let query = query_pairs(&parts.uri);
+    let token = token_from(&query);
+    let match_id = query_param(&query, "matchId");
+
+    upgrade
+        .max_message_size(MAX_FRAME_BYTES)
+        .max_frame_size(MAX_FRAME_BYTES)
+        .protocols([WS_SUBPROTOCOL])
+        .on_upgrade(move |ws| async move {
+            let _slot = slot;
+            let (socket, frames) = Socket::channel();
+            let gate = crate::duos::ws::HelloGate::install(&socket);
+            let pump = tokio::spawn(pump(ws, socket.clone(), frames));
+            register_client(key, &socket);
+            crate::duos::ws::handle_duos_socket(&app, &socket, gate, token, match_id).await;
+            let _ = pump.await;
+            unregister_client(key, &socket);
+        })
+}
+// ---- end Duos co-op (#946) ----

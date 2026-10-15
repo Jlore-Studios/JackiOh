@@ -7,7 +7,32 @@
 //! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
 //! Summons fire no Cry (R1), and Reborn's return does not fire the Cry again.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-051";
+
+fn devin_bot(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![fill_board_random(json_as(json!({
+                "query": {
+                    "type": "Unit",
+                    "stats": { "attack": 1, "health": 1 },
+                    "withTokens": true,
+                },
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: devin_bot(false),
+        radiant: devin_bot(true),
+    }
+}
 
 // M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "Reborn; Cry (played or cast, R1): each
 // empty, unlocked unit zone of yours, left to right, gets its own random Unit whose printed base
@@ -15,6 +40,7 @@ pub const ID: &str = "meditative-051";
 // (R129); Reborn's return does not fire the Cry; radiant 2/2 and the 1/1s are Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{ZoneSlot, lock_zone};

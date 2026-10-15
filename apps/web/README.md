@@ -146,18 +146,22 @@ installed on first use into `.cache/` and named in no manifest, so no one else p
 board up through `window.__jackioh`, waiting for animations, the viewports and the screenshots. It is
 for work on what a player sees, and nothing else.
 
-The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
-device and, signed in, the account's online replays (first page), and opens one in the replay player.
-Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
-production build serves a 404 there and ships neither, and a test keeps every import of `src/replay/`
-inside it and the dev routes (the real entry points come with the result screens, #430).
+Replays (SPEC §9.3, §9.9, R768, R768000) open from three places: `/replays` (`routes/replays.tsx`) lists
+the practice games kept on the device and, signed in, the account's online games a page at a time; the
+practice result dialog and an online match's result panel offer "Watch the replay" (step 0) and "Share the
+last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
+the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
+match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+The GIF code still loads on demand, never in the main bundle.
 
 ```
 src/replay/
   source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
+                  `start` and `shareOnOpen` for a result screen's two buttons (R768000)
+  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
@@ -186,13 +190,15 @@ routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random,
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767)
+                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        rejoin message (R897000)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers
+                        then the game), and useLiveGame, the live match or series the menus' banner offers;
+                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online game (Rejoin, on / and
                         /practice); game-banner.css draws it as the tavern's notice
@@ -209,6 +215,72 @@ routes/lobby.css        the lobby's, the series screen's and its picker's tavern
 ```
 
 A practice game offers the account's complete saved decks by name, read from `GET /api/decks`.
+
+## Play together and Duos
+
+Play together (SPEC §9.4, §9.5) and Duos co-op (SPEC §13) are screens over the server's answers and
+views, and decide nothing: a friend's status, whether they may be challenged or watched, a chat
+message's mask and every refusal come from the server, shown in its own words, and a Duos board's
+legality comes from the `legal` array its socket sends (rule 7). Every screen here needs a signed-in,
+active account, and asks for one the way `/play` does.
+
+```
+routes (net/navigate.ts paths, and both vercel.json route tables):
+  /together              together/TogetherRoute.tsx: friends with status dots, the requests in and out
+                         (accept, decline, cancel), the blocked players (unblock), the add form by
+                         name#tag; per friend Challenge (online and idle), Watch (when `watchable`),
+                         Chat (always), Remove and Block; "Shared with me"; the co-op panel
+  /watch/:matchId        together/WatchRoute.tsx: a friend's seat over /ws/watch, Game on a view with no
+                         legal action, SPECTATE_DELAY_MS behind
+  /duos/:matchId         duos/DuosRoute.tsx: the networked co-op board over /ws/duos
+  /dev/duos              duos/DevDuosRoute.tsx: a four-seat hotseat Duos game over the WASM Duos
+                         bindings, with a seat switcher (development only, as /dev/hotseat)
+net/social.ts            fetch wrappers for every Play together route, typed (Friend, FriendRequest,
+                         Challenge, ChatMessage, SharedReplay, PlayerRef); errors are ApiRequestError
+net/duos.ts              fetch wrappers for the co-op routes, and the ping types (PingKind, PingTarget)
+together/ChatPanel.tsx   a conversation, polled every CHAT_POLL_MS while open
+together/InMatchChat.tsx the match board rail's chat toggle: online friends, each opening ChatPanel; the
+                         friends list is read only while its list is open
+together/config.ts       the social reads' pace: the friends list every FRIENDS_POLL_MS (a heartbeat,
+                         PRESENCE_HEARTBEAT_MS), the challenges and unread counts every SOCIAL_POLL_MS
+together/ChallengeToast.tsx  mounted once in the shell; polls GET /api/challenges while signed in and
+                         toasts an incoming challenge anywhere: Accept opens /play with the room code
+                         filled in (R767), Decline declines
+together/presence.ts     usePresenceHeartbeat: POST /api/presence every PRESENCE_HEARTBEAT_MS
+duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one), show its code,
+                         invite a friend by sending the code in chat, join by code; both players go to
+                         /duos/:matchId once the guest joins
+duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
+                         spent seat's bar giving way to its pool), the pass control, the portal, the
+                         teammate strip and the ping wheel
+```
+
+The landing page offers Play together beside Play online. The replays list and the replay player offer
+"Share with a friend". The match board's rail says how many friends are watching while any are
+(`match-watchers`, from the match socket's `watchers {count}` frame, which `game/net.ts` keeps as the
+snapshot's `watchers`). On the Duos board:
+
+- the pass control on an inspected hand card, or a hand card dragged onto the portal, sends `Pass`
+  only when `legal` holds it, with the pass cost and the passes left beside it (SPEC §13.5);
+- the portal flips the board to the teammate's duel, read-only (`legal` empty, a no-op `onAction`),
+  where cards can be hovered and inspected; the teammate strip always shows their own HP, mana, hand
+  count and whether they have ended, and "Waiting for your teammate" shows once the seat has ended;
+- the ping wheel on a hovered or inspected card offers the five pings; a received ping plays its
+  sound, marks its card for `PING_SHOW_MS` on either view and flashes the portal when the card is on
+  the other view (SPEC §13.10). A Duos board deals no emote hand and draws no aim arrow.
+
+The Duos WASM bindings (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`,
+`duos_view_for`, JSON in and out like the 1v1 ones) are reached only through `src/wasm/index.ts`, for
+`/dev/duos`; a networked co-op game's state stays on the server. Only the normal module carries them,
+and only the dev server's build (`predev`'s `JACKIOH_WASM_DUOS=1`, crates/wasm's `duos` feature): in
+any other build each throws the reason.
+
+Test ids, mirrored in `e2e/support/testids.ts`: `landing-play-together`, `together-add-input`,
+`together-add-submit`, `together-friend-row`, `together-request-accept`, `together-request-decline`,
+`together-challenge`, `together-watch`, `together-chat-open`, `chat-input`, `chat-send`,
+`chat-message`, `coop-create`, `coop-difficulty`, `coop-code`, `coop-join-input`, `coop-join-submit`,
+`duos-portal`, `duos-pass`, `duos-pool`, `duos-own-hp`, `duos-teammate-strip`, `duos-ping-wheel`,
+`duos-ping-<kind>` and `duos-ping-marker`.
 
 ## Practice
 
@@ -237,6 +309,9 @@ src/practice/
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
+  sandbox.ts SandboxPanel.tsx sandbox.css
+                      a sandbox game's dev tools (R923000–R923003): the card search, the cards the
+                      human can name, and the panel that sends each tool as a `sandbox` act
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
 ```
 
@@ -271,9 +346,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, sandbox, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
+  whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
+  its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
@@ -436,9 +515,35 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
-- Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
-  (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
-  `decide`), with `tutorial/harness.ts` for tests.
+- Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
+  (hotseat's port), `practice/core.ts` (the practice worker's game, and the only caller of the AI's
+  `decide`) and `duos/DevDuosRoute.tsx` (the Duos dev hotseat's `DuosState`, opaque, through the WASM
+  Duos bindings, which only the normal module carries), with `tutorial/harness.ts` for tests.
+- **The Luau module** (#919, SPEC §12.10, R915009) is a second build of the engine with the card kit,
+  for custom cards: `scripts/build-wasm.sh` writes it into `src/wasm/pkg/luau/`
+  (`crates/wasm/README.md`). Only `src/wasm/luau.ts` imports it, and only `src/wasm/index.ts` imports
+  that, dynamically: `useLuauModule(on)` switches the bindings every engine call goes through, which
+  the practice worker does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it
+  for the creator without switching. A normal game never loads it (`wasm/luau.test.ts` holds that no
+  other file imports it), and the normal module refuses a game with custom cards.
+
+## Custom cards (SPEC §12)
+
+- **The creator**, `/creator` (`routes/creator.tsx`, `creator/`): the account's custom cards, read and
+  saved through `net/customCards.ts` (`/api/custom-cards`, R915008), and an editor for one. The frame is
+  `creator/FrameForm.tsx`; the script is written in the no-code builder (`creator/builder.ts` is its
+  vocabulary and the kit Luau it writes, `BuilderView.tsx` its blocks) or the code view (`CodeView.tsx`,
+  highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
+  the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
+  from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+- **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
+  under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
+  L7 (R915005), and the play lobby offers it disabled.
+- **Practice** starts a saved deck with its custom cards on the config (`customCards`), and
+  `/practice?try=<id>` (`tryPath`) deals a random deck around one card. Such a game runs in the Luau
+  module, records no card statistics, and keeps its custom cards in its save, its replay and its
+  debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
+  in the log.
 
 ## Internationalisation
 

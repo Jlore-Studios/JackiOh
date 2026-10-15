@@ -2,7 +2,25 @@
 //! Vanilla a target Unit on either side (§6.3; Immutable refuses it, R23). Radiant: any permanent, a
 //! backrow card face-down or not included (R407: an aura stops, a trap never fires, Animated is lost).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-009";
+
+/// `of` is TS `TargetFilter["of"]`, written as its literal.
+fn silence(of: Value) -> Script {
+    Script {
+        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": of }))],
+        cry: Some(hook(|_ctx| vec![vanilla(Default::default())])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: silence(json!(["unit"])),
+        radiant: silence(json!(["unit", "backrow"])),
+    }
+}
 
 // C+ #9 Silence — SPEC §8.7 row 9, BUILD M9 Classic+ row C+ 9: "Vanilla a target Unit on either side:
 // printed keywords and text gone, back to its printed stats (its buffs gone, R781003), damage and granted
@@ -13,7 +31,7 @@ pub const ID: &str = "classicplus-009";
 // caster (R97, R177)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -63,7 +81,7 @@ mod tests {
         let def = crate::card_def(ID);
         assert_eq!(def.type_, CardType::Spell);
         assert_eq!(def.cost, CardCost::Fixed(0));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert_eq!(
             serde_json::to_value(&scripts.base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"] } }])

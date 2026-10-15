@@ -4,13 +4,10 @@
 
 import { validator } from "../wasm/index.ts";
 
-import type { CardDefs } from "./index.ts";
+import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
 
 /** §9.4: exactly 3 decks per loadout (Rust's `validator::LOADOUT_DECKS`). */
 export const LOADOUT_DECKS = 3;
-
-/** R252: a trio is §9.4's loadout of three decks, so it holds `LOADOUT_DECKS` of them. */
-export const TRIO_DECKS = LOADOUT_DECKS;
 
 export type CardId = string;
 
@@ -34,7 +31,7 @@ export type LoadoutInput = {
   collection: Collection;
 };
 
-export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6";
+export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
 
 export type LoadoutError = {
   rule: LoadoutRule;
@@ -57,7 +54,7 @@ export type TrioConflict = { cardId: CardId; decks: readonly number[] };
 /** R250, R641: a saved deck's structural rules. */
 export type DraftRule = "D1" | "D2" | "D3" | "D4" | "D5";
 
-/** R252: a saved trio's rules. T1 a name as D1; T2 exactly `TRIO_DECKS` slots; T3 no deck twice. */
+/** R252: a saved trio's rules. T1 a name as D1; T2 exactly `LOADOUT_DECKS` slots; T3 no deck twice. */
 export type TrioDraftRule = "T1" | "T2" | "T3";
 
 export type DraftIssue<Rule extends string = DraftRule> = {
@@ -161,4 +158,14 @@ export function checkTrioDraft(input: TrioDraftInput): DraftIssue<TrioDraftRule>
 /** R340: whether an import fits under both caps, and the sentence when it does not. */
 export function checkImportRoom(input: ImportRoomInput): ImportRoom {
   return validator<ImportRoom>("checkImportRoom", input);
+}
+
+/** R915001: every way a custom card breaks §12.2's limits, each with its field; empty when valid. */
+export function validateCustomCard(card: CustomCard): CustomIssue[] {
+  return validator<CustomIssue[]>("validateCustomCard", card);
+}
+
+/** R915000: the definition a custom card's frame builds, which the deck builder and the creator draw. */
+export function customDef(card: CustomCard): CardDef {
+  return validator<CardDef>("customDef", card);
 }

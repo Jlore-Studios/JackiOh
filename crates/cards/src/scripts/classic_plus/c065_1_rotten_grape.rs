@@ -1,6 +1,6 @@
 //! C+ #65.1 Rotten Grape (SPEC §8.7 row 65.1). (1) Spell, Fruit, Token (printed Common).
-//!   Base:    "Your hero loses 5 health."
-//!   Radiant: "Your hero loses 1 health."
+//!   Base:    "Lose 5 health."
+//!   Radiant: "Lose 1 health."
 //!   Engine:  "Lose health (§6.3, R18): no pipeline, no Armor, no cap. The Radiant's smaller loss is its
 //!            upgrade (R275). A Fruit for every Fruit rule (C+ #64, C+ #68). Tunes: none."
 //!
@@ -9,9 +9,31 @@
 //! list (§4.5). The entry declares no params (the Rotten Grape's numbers are printed), so the two
 //! amounts are named here.
 
+use jackioh_engine::effects::lose_health;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-065-1";
 
-// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1: "Your hero loses 5 health
+/// §8.7: the health each face costs its own hero, 5, and the Radiant face's smaller 1, its upgrade
+/// (R275): the declared number `loss` (R386), less being better.
+fn rotten() -> Hook {
+    hook(|ctx| vec![lose_health(json_as(json!({ "player": "self", "amount": param(&*ctx, "loss") })))])
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(rotten()),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(rotten()),
+            ..Script::default()
+        },
+    }
+}
+
+// C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1: "Lose 5 health
 // (R18): no Armor, no cap, no Blood Moon, no on-damage effect, and at 0 you lose at the state check;
 // radiant loses 1".
 #[cfg(test)]
@@ -53,7 +75,7 @@ mod tests {
         assert_eq!(def.tags, vec![Tag::Fruit, Tag::Token]);
         assert_eq!(def.rarity, Rarity::Token);
         assert_eq!(def.printed_rarity, Some(PrintedRarity::Common));
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
     }

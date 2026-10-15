@@ -9,10 +9,11 @@
 # five minutes (ci-duration.yml opens an issue past seven, #73); a piece that grows is split further
 # (a longer matrix list, or the test step by crate), never folded back into one long job.
 #
-#   rust       fmt and clippy; cargo test with the generated-types diff (V20); the release build of
-#              jackioh and jackioh-server, made once for the run; the catalog, patches and spec checks
-#              and 200 fuzz seeds on that build; and, on a pull request from a training lane's ai/*
-#              branch, the training gate (README §8).
+#   rust       fmt and clippy, and, once the card scripts are Luau, luau-analyze --mode=strict; cargo
+#              test with the generated-types diff (V20), and the same diff for the scripts' typed
+#              module (#442 L10); the release build of jackioh and jackioh-server, made once for the
+#              run; the catalog, patches and spec checks and 200 fuzz seeds on that build; and, on a
+#              pull request from a training lane's ai/* branch, the training gate (README §8).
 #   web        the WASM module and the e2e client, built once for the run; typecheck and eslint; the
 #              web's unit tests in thirds, without the audio, fx and asset tests.
 #   e2e smoke  Chrome only, specs 01, 06, 10, 13 and 19 (e2e/scripts/shard-specs.mjs SMOKE) against
@@ -120,6 +121,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           node: "false"
+          luau: "true"
       - name: cargo fmt --check
         run: cargo fmt --check
       # Also after a formatting failure, so one run reports both. Clippy builds the whole workspace
@@ -127,19 +129,34 @@ jobs:
       - name: cargo clippy
         if: ${{ !cancelled() }}
         run: cargo clippy --workspace --all-targets -- -D warnings
+      # #442 L10: every card script, and the typed module they require, under strict types. Skipped
+      # until the scripts are Luau (crates/cards/luau/jackioh.luau exists; the setup installs
+      # luau-analyze only then). `require("@jackioh")` resolves through the alias in
+      # crates/cards/src/scripts/.luaurc, which luau-analyze reads for every file below it, relative
+      # to the .luaurc's own directory and with the `.luau` added itself: the alias names the module
+      # without its extension (`../../luau/jackioh`), or every script fails "Unknown require". Lint
+      # warnings (an unused `J` in a script with no hooks) print and pass; a type error fails.
+      - name: luau-analyze --mode=strict
+        if: ${{ !cancelled() && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        run: |
+          # shellcheck disable=SC2046 # one argument per script on purpose.
+          luau-analyze --mode=strict $(git ls-files 'crates/cards/src/scripts/**/*.luau') crates/cards/luau/jackioh.luau
 
   # Every crate's tests: the engine's rules and golden replay, every card, the AI's units, the server
   # on the fake store, the tools. One job compiling the whole workspace took 14 minutes, nearly all
   # of it compiling, so each group compiles only its own crates and what they build on (the engine
   # and the cards at opt-level 2, about 80 s in every group), side by side. The engine and the cards
   # each split further, by test binary: `rules`, the engine's unit tests and the cards' unit tests
-  # (one per card) each take two to three minutes to compile on their own. `binaries` lists every test
+  # (one per card) each take two to three minutes to compile on their own. So does the AI, whose
+  # tests take minutes to play their games rather than to compile. `binaries` lists every test
   # binary of a crate split that way, checked against Cargo so a new one cannot go unrun; the last
   # group takes every crate no other group names, so a new crate cannot either.
   # The engine's two features: testkit, which its `rules` binary requires, and ts, whose
   # export_bindings tests (in its unit tests) write apps/web/src/wire/generated/ (SURFACE §5.1); the
   # engine's and the server's export_config tests write engineConfig.ts and serverConfig.ts. What a
-  # group wrote must be what is committed (V20), so every group checks.
+  # group wrote must be what is committed (V20), so every group checks. The same holds for the card
+  # scripts' typed module (#442 L10), which the group with `luau` (the one that runs crates/luau's
+  # tests) checks once it exists.
   rust-test:
     name: rust (test ${{ matrix.group }})
     needs: changes
@@ -171,12 +188,24 @@ jobs:
           - group: server
             cache: server
             test: -p jackioh-server
+          # The AI's integration tests in three binaries (#873): `ai`, and the four modules that play
+          # the most games at AI_GATE_BUDGET, in `ai_slow_a` and `ai_slow_b`. One cache: the three
+          # compile the same crates.
           - group: ai
             cache: ai
-            test: -p jackioh-ai
+            test: -p jackioh-ai --lib --test ai
+            doc: -p jackioh-ai
+            binaries: jackioh-ai ai ai_slow_a ai_slow_b
+          - group: ai slow a
+            cache: ai
+            test: -p jackioh-ai --test ai_slow_a
+          - group: ai slow b
+            cache: ai
+            test: -p jackioh-ai --test ai_slow_b
           - group: tools, wasm
             cache: tools-wasm
             test: --workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai
+            luau: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -217,6 +246,21 @@ jobs:
             echo "::error::apps/web/src/wire/ differs from what the Rust generates. Regenerate it with \`cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts\` and commit the result."
             echo "$changed"
             git --no-pager diff --stat -- apps/web/src/wire
+            exit 1
+          fi
+      # crates/luau's export_api test writes crates/cards/luau/jackioh.luau from the Rust types
+      # (ts-rs, under the crate's `ts` feature, which the group's own run leaves off), so it runs
+      # here with the feature, and what it wrote must be what is committed. Skipped until the module
+      # exists, as on main before v0.4.0, whose crates/luau has no `ts` feature.
+      - name: the card scripts' typed module is what the Rust generates (#442 L10)
+        if: ${{ matrix.luau && hashFiles('crates/cards/luau/jackioh.luau') != '' }}
+        run: |
+          cargo test -p jackioh-luau --features ts --test export_api
+          changed=$(git status --porcelain -- crates/cards/luau)
+          if [ -n "$changed" ]; then
+            echo "::error::crates/cards/luau/ differs from what the Rust generates. Regenerate it with \`cargo test -p jackioh-luau --features ts --test export_api\` and commit the result."
+            echo "$changed"
+            git --no-pager diff --exit-code -- crates/cards/luau
             exit 1
           fi
 
@@ -593,7 +637,7 @@ jobs:
   #                    (V22). Migration 0013 passed every superuser suite and then failed Render's
   #                    deploy: this is the suite that would have caught it.
   # Per pull request only when it touches what they test (scripts/ci-scope.sh's `db`); daily in
-  # super.yml regardless.
+  # super.yml regardless. The rehearsal runs as two jobs of its own, below.
   db-suite:
     name: db (${{ matrix.suite }})
     needs: changes
@@ -610,40 +654,72 @@ jobs:
           - suite: store contract
             script: crates/server/tests/db/run.sh
             rust: true
-          - suite: deploy rehearsal
-            script: crates/server/tests/deploy/rehearse.sh
-            rust: false
-            image-cache: true
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         if: ${{ matrix.rust }}
         with:
           node: "false"
-      # The rehearsal's image is built by buildx with its layer cache in GitHub's cache service, so an
-      # image whose Dockerfile and context have not changed is not compiled again: read everywhere,
-      # written only from main and staging, as the Rust cache is. Every stage's layers (mode=max):
-      # the Dockerfile's dependency layer (`cargo chef cook`, about 1.2 GB) changes only with a
-      # manifest or Cargo.lock, so a pull request that changes only sources reuses it and compiles
-      # just the workspace's crates. The build is the same Dockerfile and context either way
-      # (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).
-      - uses: docker/setup-buildx-action@v3
-        if: ${{ matrix.image-cache }}
-      # The cache service's URL and token, which only an action sees, for the script's buildx.
-      - uses: crazy-max/ghaction-github-runtime@v3
-        if: ${{ matrix.image-cache }}
       - name: pre-pull postgres
         run: docker pull postgres:16
       - name: ${{ matrix.suite }}
         env:
           SCRIPT: ${{ matrix.script }}
-          REHEARSAL_CACHE_FROM: ${{ matrix.image-cache && 'type=gha,scope=deploy-rehearsal' || '' }}
-          REHEARSAL_CACHE_TO: ${{ matrix.image-cache && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
         run: sh "$SCRIPT"
+
+  # The deploy rehearsal, in two jobs that each finish under five minutes (#653, #873). Its image is
+  # built by buildx with its layer cache in GitHub's cache service, so an image whose Dockerfile and
+  # context have not changed is not compiled again. Every stage's layers are kept (mode=max): the
+  # Dockerfile's dependency layer (cargo-chef and `cargo chef cook`, about 1.2 GB) changes only with
+  # a manifest, Cargo.lock or the Dockerfile's `chef` stage, so a change to the sources alone reuses
+  # it and compiles just the workspace's crates. The build is the same Dockerfile and context either
+  # way (rehearse.sh's REHEARSAL_CACHE_FROM and _TO).
+  #
+  # In one job, a change that rebuilt the dependency layer compiled it and then the server with thin
+  # LTO: 7m21s (#653) and 7m03s (#873). So the first job builds only the Dockerfile's `deps` stage
+  # (rehearse.sh's REHEARSAL_DEPS_ONLY) and writes it to the cache on every run, pull requests
+  # included, and the second, which builds the image on it and boots it, always finds it. Layers the
+  # cache already holds are not uploaded again. The second writes the whole image's layers only from
+  # main and staging, as the Rust cache is written.
+  db-deploy-deps:
+    name: db (deploy image deps)
+    needs: changes
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # The cache service's URL and token, which only an action sees, for the script's buildx.
+      - uses: crazy-max/ghaction-github-runtime@v3
+      - name: the image's dependency stage
+        env:
+          REHEARSAL_DEPS_ONLY: "1"
+          REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal
+          REHEARSAL_CACHE_TO: type=gha,mode=max,scope=deploy-rehearsal
+        run: sh crates/server/tests/deploy/rehearse.sh
+
+  db-deploy:
+    name: db (deploy rehearsal)
+    needs: [changes, db-deploy-deps]
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.db == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: crazy-max/ghaction-github-runtime@v3
+      - name: pre-pull postgres
+        run: docker pull postgres:16
+      - name: deploy rehearsal
+        env:
+          REHEARSAL_CACHE_FROM: type=gha,scope=deploy-rehearsal
+          REHEARSAL_CACHE_TO: ${{ (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging') && 'type=gha,mode=max,scope=deploy-rehearsal' || '' }}
+        run: sh crates/server/tests/deploy/rehearse.sh
 
   db:
     name: db
-    needs: [changes, db-suite]
+    needs: [changes, db-suite, db-deploy-deps, db-deploy]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -653,10 +729,14 @@ jobs:
           FULL: ${{ needs.changes.outputs.full }}
           DB: ${{ needs.changes.outputs.db }}
           SUITES: ${{ needs.db-suite.result }}
+          DEPS: ${{ needs.db-deploy-deps.result }}
+          DEPLOY: ${{ needs.db-deploy.result }}
         run: |
-          echo "full=$FULL db=$DB suites=$SUITES"
+          echo "full=$FULL db=$DB suites=$SUITES deploy-deps=$DEPS deploy=$DEPLOY"
           if [ "$FULL" = false ] || [ "$DB" = false ]; then
             echo "nothing the db suites test changed (scripts/ci-scope.sh); super.yml runs them daily"
             exit 0
           fi
           test "$SUITES" = success
+          test "$DEPS" = success
+          test "$DEPLOY" = success

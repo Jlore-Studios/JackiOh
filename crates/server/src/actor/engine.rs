@@ -40,8 +40,8 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng, SetName,
-    newest_shipped_set,
+    LeanPick, Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord,
+    ReplayRefusal, Rng, SetName, ShippedCatalog,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -99,6 +99,10 @@ pub fn create_game_args(
         dealt,
         last_boards,
         glitch_boards,
+        // R923000: no match the server runs is a practice sandbox.
+        sandbox: None,
+        // R915005: nor holds a custom card, which plays only in practice.
+        custom_cards: None,
     }
 }
 
@@ -120,6 +124,9 @@ pub fn fold_args(
         dealt,
         last_boards,
         glitch_boards,
+        // R923000, R915005: as `create_game_args`, never a sandbox and no custom card.
+        sandbox: None,
+        custom_cards: None,
     }
 }
 
@@ -165,6 +172,25 @@ pub fn replay_open(args: &FoldArgs, record: &ReplayRecord) -> ReplayOpen {
     jackioh_engine::replay_open(args, record, jackioh_cards::catalog_version())
 }
 
+/// R767000: the catalog a game played on `played_on` folds under: `None` for this build's own,
+/// the shipped one it carries, or `earlier_patch`.
+pub fn catalog_for(played_on: &str) -> Result<Option<&'static ShippedCatalog>, ReplayRefusal> {
+    registered();
+    jackioh_engine::catalog_for(played_on, jackioh_cards::catalog_version())
+}
+
+/// R767000: `run` on this thread under `shipped` (`None`: this build's own catalog), for that call.
+pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnce() -> T) -> T {
+    registered();
+    jackioh_engine::with_shipped(shipped, run)
+}
+
+/// R767000: `run` under the catalog an opened replay's checkpoints were folded under.
+pub fn under_checkpoints<T>(checkpoints: &ReplayCheckpoints, run: impl FnOnce() -> T) -> T {
+    registered();
+    jackioh_engine::under_checkpoints(checkpoints, run)
+}
+
 /// R768: steps `[from, from + count)` of an opened replay, each `view_for(state_k, seat)`.
 pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
     registered();
@@ -197,7 +223,7 @@ pub fn snapshot(state: &EngineState) -> MatchSnapshot {
 /// process. Callers seed it `"{seed}:p1-deck"` and `"{seed}:p2-deck"`. It lives here because the
 /// deck-builder needs the registered catalog, and this module is the one path to it.
 ///
-/// R1372: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
+/// R1372, R924000: `lean` is the set the seat's deck leans on (`lean_of`), at least half of it from that set
 /// (R1370); `None` deals the deck R258 always dealt for that seed. A player's deck is dealt from every
 /// set, the AI's soft gate (R1390) included.
 pub fn deal_random_deck(seed: &str, lean: Option<SetName>) -> Vec<String> {
@@ -251,10 +277,11 @@ pub fn deal_random_deck_excluding_with_strength(
     )
 }
 
-/// R1372: the set a seat's All Random deck leans on, from its player's "More cards from the newest
-/// set": the newest set that ships when the deck is dealt (R1371), or none.
-pub fn lean_of(lean_newest: bool) -> Option<SetName> {
-    lean_newest.then(newest_shipped_set)
+/// R1372, R924000: the set a seat's All Random deck leans on, from its player's "More cards from"
+/// pick: "newest" is the newest set that ships when the deck is dealt (R1371), a set is that set, and
+/// no pick is no lean.
+pub fn lean_of(lean: Option<LeanPick>) -> Option<SetName> {
+    lean.map(LeanPick::resolve)
 }
 
 /// R417, R565: each seat's last board from a finished game, seat order — every card on the field,

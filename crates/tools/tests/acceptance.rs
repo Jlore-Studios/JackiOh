@@ -226,10 +226,15 @@ fn v28_no_typescript_is_left_where_the_rust_replaced_it() {
 const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_engine_rules", &["jackioh-engine"]),
     ("rust_engine", &["jackioh-engine"]),
-    ("rust_cards_lib", &["jackioh-cards"]),
+    ("rust_cards_lib_core", &["jackioh-cards"]),
+    ("rust_cards_lib_classic", &["jackioh-cards"]),
+    ("rust_cards_lib_classic_plus", &["jackioh-cards"]),
+    ("rust_cards_lib_meditative", &["jackioh-cards"]),
     ("rust_cards", &["jackioh-cards"]),
     ("rust_server", &["jackioh-server"]),
     ("rust_ai", &["jackioh-ai"]),
+    ("rust_ai_slow_a", &["jackioh-ai"]),
+    ("rust_ai_slow_b", &["jackioh-ai"]),
     ("rust_tools_wasm", &[]),
 ];
 

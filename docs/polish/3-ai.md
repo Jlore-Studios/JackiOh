@@ -298,6 +298,9 @@ export const AI_SEARCH = {
   zoneVariants: 2,
   /** Opponent prompts auto-answered inside one simulated step before it counts as an error. */
   maxAutoAnswers: 8,
+  /** Answers tried for each auto-answered prompt, in legalActions order, before the answerer's best
+   *  is committed (`simulate`'s and the opponent's reply's auto-answers, #891): each one node. */
+  maxAutoAnswerOptions: 4,
   /** Deepest line the lethal solver explores. */
   lethalMaxDepth: 10,
   /** Nodes of lethalNodes the solver's depth-first walk gets before its best-first walk (search pass). */
@@ -539,11 +542,16 @@ export type SimStep = { ok: true; state: GameState } | { ok: false; error: strin
 
 /**
  * One AI action on a determinized state: reduce (nonce `sim:${counter.used}`), then, while a prompt
- * of the other seat is open, answer it with the first entry of legalActions (each answer one more
- * node, at most AI_SEARCH.maxAutoAnswers). A throw or a refusal is `{ ok: false }`. Returns null
- * without touching anything when the counter refuses a node.
+ * of the other seat is open, answer it with the answerer's best of its first
+ * AI_SEARCH.maxAutoAnswerOptions answers (legalActions less concede, each scored by `evaluate` from
+ * the answerer's own seat on the determinization, R185; strictly greater wins, so ties keep legal
+ * order; each answer tried one more node, at most AI_SEARCH.maxAutoAnswers prompts, #891). A throw
+ * or a refusal is `{ ok: false }`. Returns null without touching anything when the counter refuses
+ * a node.
  */
 export function simulate(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
+/** `simulate` as before #891, the greedy baseline's: every prompt of the other seat gets the first entry of legalActions. */
+export function simulateFirstAnswers(state: GameState, seat: PlayerId, action: ActionBody, counter: NodeCounter): SimStep | null;
 
 /**
  * A line's value: "over"/"yielded" → evaluate; "passed" → evaluate − AI_EVAL.unspentMana ×
@@ -647,9 +655,9 @@ export function hiddenCardIds(state: GameState, seat: PlayerId): Set<string>;
 
 /**
  * The opponent's reply to a line that handed it the turn, played on the determinization by a fixed
- * rule (below) until it ends its turn. Prompts on either side get their first legal answer. Returns
- * the state at the seat's next main phase or prompt, or where the game ended; null when the counter
- * refused a node. `hidden` defaults to `hiddenCardIds(state, seat)`.
+ * rule (below) until it ends its turn. Prompts on either side get their answerer's best answer, as
+ * in `simulate` (#891). Returns the state at the seat's next main phase or prompt, or where the game
+ * ended; null when the counter refused a node. `hidden` defaults to `hiddenCardIds(state, seat)`.
  */
 export function simulateReply(state: GameState, seat: PlayerId, counter: NodeCounter, hidden?: ReadonlySet<string>): GameState | null;
 

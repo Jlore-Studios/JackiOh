@@ -13,15 +13,13 @@ import {
   type GameOutcome,
   type PlayerStats,
 } from "./model.ts";
+import { isRecord } from "../wire/json.ts";
+import { localStorageOrNull } from "../net/storage.ts";
 
 let snapshot: PlayerStats | null = null;
 
 const listeners = new Set<() => void>();
 let storageListening = false;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function count(value: unknown): number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : 0;
@@ -67,17 +65,9 @@ export function parsePlayerStats(raw: unknown): PlayerStats {
   }
 }
 
-function storageOrNull(): Storage | null {
-  try {
-    return window.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function loadStored(): PlayerStats {
   try {
-    const raw = storageOrNull()?.getItem(PLAYER_STATS_KEY) ?? null;
+    const raw = localStorageOrNull()?.getItem(PLAYER_STATS_KEY) ?? null;
     return raw === null ? EMPTY_STATS : parsePlayerStats(raw);
   } catch {
     return EMPTY_STATS;
@@ -86,7 +76,7 @@ function loadStored(): PlayerStats {
 
 function persist(stats: PlayerStats): void {
   try {
-    storageOrNull()?.setItem(PLAYER_STATS_KEY, JSON.stringify({ v: PLAYER_STATS_VERSION, ...stats }));
+    localStorageOrNull()?.setItem(PLAYER_STATS_KEY, JSON.stringify({ v: PLAYER_STATS_VERSION, ...stats }));
   } catch {
     // Storage unavailable: retain the in-memory value.
   }

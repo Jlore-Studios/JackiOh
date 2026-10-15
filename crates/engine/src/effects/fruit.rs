@@ -176,8 +176,7 @@ pub struct DamageEnemyOrHealFriendArgs {
     pub amount: i32,
 }
 
-/// C+ #65.2 Normal Grape, #65.3 Large Grape: "Choose a Unit or hero. If it's an enemy, deal N damage to
-/// it; if it's yours, heal it N." The chosen card or hero (the play's declared target, R81) is judged
+/// C+ #65.2 Normal Grape, #65.3 Large Grape: "Deal N damage to an enemy or heal an ally N." The chosen card or hero (the play's declared target, R81) is judged
 /// as the effect resolves: a hero by its seat, a Unit by its controller. An enemy takes one §4.4 hit
 /// from the card running the script (a Spell's, so Spell Damage raises it); a friend is healed (§6.3
 /// Heal, R19). A target gone by then is nothing.
@@ -264,7 +263,7 @@ pub struct DrawPricedArgs {
     pub cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
-    /// Meditative #79 Radiant ("Draw 4 cards. Each becomes Radiant."): the card the draw put in the hand
+    /// Meditative #79 Radiant ("Draw 4. Each becomes Radiant."): the card the draw put in the hand
     /// becomes Radiant (§5.2, §6.3 Make Radiant).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radiant: Option<bool>,

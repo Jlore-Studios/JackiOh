@@ -9,7 +9,33 @@
 //! a hidden card's change reaches the other seat as a bare cue (R177, R440). Empty zones draw nothing
 //! (R129). The Radiant face's two is its declared `cards`, so both faces run this one script.
 
+use jackioh_engine::effects::{degrade, upgrade};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-070";
+
+fn tick(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![
+        upgrade(json_as(json!({
+            "scope": { "side": "self", "zones": ["hand", "field"], "excludeSelf": true },
+            "random": param(ctx, "cards")
+        }))),
+        degrade(json_as(json!({ "scope": { "side": "enemy", "zones": ["hand", "field"] }, "random": param(ctx, "cards") }))),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let tick: Hook = hook(tick);
+    let base = Script {
+        start_of_turn: Some(tick.clone()),
+        end_of_turn: Some(tick),
+        ..Script::default()
+    };
+
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #70 Chaos Machine — SPEC §8.7 row 70, BUILD M9 row C+ 70: at the start and at the end of its
 // controller's turn it Upgrades one random other card among their hand and side of the field and
@@ -22,7 +48,6 @@ pub const ID: &str = "classicplus-070";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -85,7 +110,7 @@ mod tests {
         let def = js(&crate::card_def(ID));
         assert_eq!(def["cost"], json!(2));
         assert_eq!(def["type"], json!("Field Spell"));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         let start = base.start_of_turn.as_ref().unwrap();
         assert!(Arc::ptr_eq(start, base.end_of_turn.as_ref().unwrap()));
         assert!(Arc::ptr_eq(start, radiant.start_of_turn.as_ref().unwrap()));
@@ -271,7 +296,7 @@ mod tests {
             crate::register_all();
             let mut s = machine(json!({ "hand": [FILLER] }), json!({ "hand": [] }), false, None);
             let own = s.backrow(P1, 1).expect("Chaos Machine in lane 1");
-            let end_of_turn = crate::scripts_of()[ID].clone().base.end_of_turn.expect("the tick");
+            let end_of_turn = script().base.end_of_turn.expect("the tick");
             let mut events: Vec<GameEvent> = Vec::new();
             let state = s.state_mut();
             let mut rng = Rng::new(&state.seed, state.rng_cursor);

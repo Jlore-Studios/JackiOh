@@ -96,9 +96,6 @@ pub struct CreateMatchClockInput {
     pub on_expire: ExpiryHandler,
 }
 
-/// TS `CreateMatchClock`: `crate::actor::clock::create_match_clock` has this type.
-pub type CreateMatchClock = fn(CreateMatchClockInput) -> MatchClock;
-
 // ---------------------------------------------------------------------------
 // Results (SPEC §9.5, M7-T2)
 // ---------------------------------------------------------------------------

@@ -21,16 +21,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use jackioh_engine::zones::{card_at, slots_of};
 
 use crate::rules::fixtures::catalog::spell_def;
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// `JSON.parse(JSON.stringify(state))`.
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).expect("a state survives JSON")
-}
+use crate::rules::fixtures::harness::{in_hand, json_of, new_game, put, round_trip, slot};
 
 /// `{ ...spellDef(index, overrides), ...rest }`: the fixture Spell with `rest`'s fields laid over it.
 fn spell_with(index: i32, overrides: Value, rest: Value) -> CardDef {

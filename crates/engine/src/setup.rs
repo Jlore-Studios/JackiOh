@@ -285,28 +285,34 @@ fn dealt_quickdraw(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     dealt
 }
 
+/// R225: a card the deal puts into the hand from the library arrives as a draw does: counted
+/// (`counters.drawn`) and reported (`drawn`, no turn draw and nothing emptied, then `addedToHand`).
+fn deal_as_draw(sink: &mut EngineSink, player: PlayerId, mut card: CardInstance) {
+    move_to_zone(
+        sink.state,
+        &mut card,
+        OffFieldZone::Hand,
+        MoveToZoneOptions::default(),
+    );
+    sink.state.counters.drawn += 1;
+    sink.events.push(GameEvent::Drawn {
+        player,
+        instance_id: card.id.clone(),
+        def_id: card.def_id.clone(),
+        turn_draw: None,
+        emptied: None,
+    });
+    sink.events.push(GameEvent::AddedToHand {
+        player,
+        instance_id: card.id.clone(),
+        def_id: card.def_id.clone(),
+    });
+}
+
 /// R225: the seat's dealt Quickdraw cards, each as the opening draw it replaces, in the library's order.
 fn deal_quickdraw(sink: &mut EngineSink, player: PlayerId) {
-    for mut card in dealt_quickdraw(sink.state, player) {
-        move_to_zone(
-            sink.state,
-            &mut card,
-            OffFieldZone::Hand,
-            MoveToZoneOptions::default(),
-        );
-        sink.state.counters.drawn += 1;
-        sink.events.push(GameEvent::Drawn {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-            turn_draw: None,
-            emptied: None,
-        });
-        sink.events.push(GameEvent::AddedToHand {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-        });
+    for card in dealt_quickdraw(sink.state, player) {
+        deal_as_draw(sink, player, card);
     }
 }
 
@@ -328,30 +334,13 @@ fn deal_suspended(sink: &mut EngineSink, player: PlayerId, count: i32) {
             .cloned()
             .collect()
     };
-    for mut card in waiting {
-        move_to_zone(
-            sink.state,
-            &mut card,
-            OffFieldZone::Hand,
-            MoveToZoneOptions::default(),
-        );
-        if let Some(live) = find_instance_mut(sink.state, &card.id) {
+    for card in waiting {
+        let instance_id = card.id.clone();
+        deal_as_draw(sink, player, card);
+        if let Some(live) = find_instance_mut(sink.state, &instance_id) {
             live.memory
                 .insert(SUSPENDED_CAST_KEY.to_string(), Value::Bool(true));
         }
-        sink.state.counters.drawn += 1;
-        sink.events.push(GameEvent::Drawn {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-            turn_draw: None,
-            emptied: None,
-        });
-        sink.events.push(GameEvent::AddedToHand {
-            player,
-            instance_id: card.id.clone(),
-            def_id: card.def_id.clone(),
-        });
     }
 }
 

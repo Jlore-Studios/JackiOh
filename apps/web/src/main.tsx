@@ -51,6 +51,11 @@
 // THE ENGINE LOADS ALONGSIDE (#778). The engine's module is 2.31 MB gzipped, and the landing, sign-in,
 // the reset and code screens and the legal pages never call it. The page paints once the language is
 // in; EngineGate holds every other screen until the module is in, with a retry if it never arrives.
+//
+// FRIENDS FIND THE PLAYER ANYWHERE (#936, B47, B57). While the tab holds a session, the shell sends the
+// presence heartbeat (`together/presence.ts`) and shows the challenge toast (`together/ChallengeToast.tsx`)
+// over every screen, whichever is open: both are this file's, as the queue's follow is, so neither
+// waits on a screen's gate nor restarts with it.
 
 import {
   Component,
@@ -79,15 +84,20 @@ import { useQueueFollow } from "./net/liveGame.ts";
 import { adoptRoomLink } from "./net/roomLink.ts";
 import { useSettingsAccountSync } from "./settings/accountSync.ts";
 import {
+  duosIdOf,
   loginPath,
   matchIdOf,
   navigate,
   paths,
   seriesIdOf,
   usePathname,
+  watchIdOf,
 } from "./net/navigate.ts";
 import { readSession } from "./net/session.ts";
 import type { MeResponse } from "./net/api.ts";
+import { ChallengeToast } from "./together/ChallengeToast.tsx";
+import { usePresenceHeartbeat } from "./together/presence.ts";
+import { watchFriendOf } from "./together/watchLink.ts";
 // Static, not lazy: the gate's own panels offer "Sign out", which must work synchronously from a
 // screen that failed to load anything else, so account.tsx is in the entry chunk either way.
 import AccountRoute, { signOut, signOutLabel, useSigningOut } from "./routes/account.tsx";
@@ -105,8 +115,12 @@ const DEV_ONLY = import.meta.env.MODE !== "production";
 // Only outside production: a production build serves NotFound at /dev/hotseat, and with the import
 // behind DEV_ONLY the bundler leaves the hotseat chunk (and the developer text in it) out entirely.
 const HotseatRoute = DEV_ONLY ? lazy(() => import("./routes/dev/hotseat.tsx")) : null;
-// The replay player's dev list (#511), left out of a production build the same way.
-const DevReplaysRoute = DEV_ONLY ? lazy(() => import("./routes/dev/replays.tsx")) : null;
+// #936 B65: the four-seat Duos hotseat, outside production only, as the 1v1 hotseat is.
+const DevDuosRoute = DEV_ONLY ? lazy(() => import("./duos/DevDuosRoute.tsx")) : null;
+// #936 B61–B64: the networked co-op board.
+const DuosRoute = lazy(() => import("./duos/DuosRoute.tsx"));
+// R768000: the recent games and their replays.
+const ReplaysRoute = lazy(() => import("./routes/replays.tsx"));
 const LoginRoute = lazy(() => import("./routes/login.tsx"));
 const ResetPasswordRoute = lazy(() => import("./routes/reset-password.tsx"));
 const InviteRoute = lazy(() => import("./routes/invite.tsx"));
@@ -123,6 +137,10 @@ const PatchNotesRoute = lazy(() => import("./routes/patch-notes.tsx"));
 const AlmanacRoute = lazy(() => import("./routes/almanac.tsx"));
 const LeaderboardRoute = lazy(() => import("./routes/leaderboard.tsx"));
 const StatsRoute = lazy(() => import("./routes/stats.tsx"));
+const CreatorRoute = lazy(() => import("./routes/creator.tsx"));
+// #936: Play together and a friend's game watched.
+const TogetherRoute = lazy(() => import("./together/TogetherRoute.tsx").then((module) => ({ default: module.TogetherRoute })));
+const WatchRoute = lazy(() => import("./together/WatchRoute.tsx").then((module) => ({ default: module.WatchRoute })));
 
 /**
  * Chrome this file invented: the gate's holding panels, their exits and the 404. The names live in
@@ -613,6 +631,10 @@ export function App(): ReactElement {
   useDocumentHead(path);
   // R765: a pairing finds the player on any screen; see THE QUEUE FOLLOWS THE PLAYER above.
   const found = useQueueFollow(path);
+  // #936: see FRIENDS FIND THE PLAYER ANYWHERE above. Read at every render, so a sign-in in this page
+  // (which moves to another path) starts both.
+  const signedIn = readSession() !== null;
+  usePresenceHeartbeat(signedIn);
 
   // #778: every screen but the seven engine-free ones waits in EngineGate, inside the account gate so its redirects do not wait.
   const route = ((): ReactElement => {
@@ -668,6 +690,18 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
+    // #920: the card creator keeps its cards on the account, so it is behind the gate like the decks.
+    if (path === paths.creator) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <CreatorRoute token={account.token} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
     if (path === paths.leaderboard) {
       return (
         <Gated key={path}>
@@ -699,12 +733,28 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
+    // R768000: the recent games: the device's practice games for anyone, the account's online ones signed in.
+    if (path === paths.replays) {
+      return <ReplaysRoute />;
+    }
     // R654: public statistics page is public, like the almanac.
     if (path === paths.stats) {
       return (
         <EngineGate>
           <StatsRoute />
         </EngineGate>
+      );
+    }
+    // #936 B54: Play together asks for an active account the way `/play` does.
+    if (path === paths.together) {
+      return (
+        <Gated key={path}>
+          {() => (
+            <EngineGate>
+              <TogetherRoute />
+            </EngineGate>
+          )}
+        </Gated>
       );
     }
 
@@ -735,6 +785,35 @@ export function App(): ReactElement {
       );
     }
 
+    // #936 B50: a friend's live game, watched from their seat; the friend rides on `?friend=`.
+    const watchId = watchIdOf(path);
+    if (watchId !== null) {
+      const friendId = watchFriendOf(window.location.search);
+      return (
+        <Gated key={path}>
+          {() => (
+            <EngineGate>
+              <WatchRoute key={friendId} matchId={watchId} friendId={friendId} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
+    // #936: a Duos co-op match, behind the same gate as a match; the board reads its own socket's token.
+    const duosId = duosIdOf(path);
+    if (duosId !== null) {
+      return (
+        <Gated key={path}>
+          {(account) => (
+            <EngineGate>
+              <DuosRoute key={sessionKeyOf(account.token)} matchId={duosId} />
+            </EngineGate>
+          )}
+        </Gated>
+      );
+    }
+
     if (path === paths.hotseat) {
       if (HotseatRoute === null) return <NotFound path={path} />;
       return (
@@ -743,9 +822,13 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
-    if (path === paths.devReplays) {
-      if (DevReplaysRoute === null) return <NotFound path={path} />;
-      return <DevReplaysRoute />;
+    if (path === paths.duosDev) {
+      if (DevDuosRoute === null) return <NotFound path={path} />;
+      return (
+        <EngineGate>
+          <DevDuosRoute />
+        </EngineGate>
+      );
     }
     return <NotFound path={path} />;
   })();
@@ -757,6 +840,7 @@ export function App(): ReactElement {
         <Suspense fallback={<Loading what="Loading…" slow />}>{route}</Suspense>
       </RouteErrorBoundary>
       <QueueFound game={found} />
+      {signedIn ? <ChallengeToast /> : null}
     </>
   );
 }

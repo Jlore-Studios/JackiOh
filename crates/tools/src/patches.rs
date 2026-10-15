@@ -38,10 +38,10 @@
 //!   `.github/workflows/patches-ship.yml` runs it after every merge that touches `pending/`.
 //!
 //! There is no clock here (CLAUDE.md rule 4): dates come from the git history, and the UTC
-//! conversion below is arithmetic. One file holds the modules `naming`, `patch`, `patches_io` and
-//! `versions` (R650's micro versions) and the command itself, each keeping its module (SURFACE §4.2),
-//! with their tests at the bottom; `js` comes first. Some functions have no caller in the binary,
-//! only in the tests (`naming`'s convention, `versions_at_sites` and the paths `patches_io` names).
+//! conversion below is arithmetic. One file holds the modules `patch`, `patches_io` and `versions`
+//! (R650's micro versions) and the command itself, each keeping its module (SURFACE §4.2), with their
+//! tests at the bottom; `js` comes first. Some functions have no caller in the binary, only in the
+//! tests (`versions_at_sites` and the paths `patches_io` names).
 #![allow(dead_code)]
 
 use std::fmt;
@@ -406,349 +406,6 @@ pub(crate) mod js {
                     out.push(found);
                 }
                 None => at = start + 1,
-            }
-        }
-        out
-    }
-}
-
-/* naming */
-
-/// The catalog-id <-> filename convention for card scripts and card tests (SPEC §10.9; set folders,
-/// B2.2). Pure string functions, no I/O and no catalog import. The Rust card files follow SURFACE
-/// §4.1's own convention (`c001_big_d_fender.rs`), which `crates/cards/build.rs` reads by each file's
-/// `ID`; these are the rules of the older file names.
-///
-/// The convention, by example (the catalog id is the key of `catalog.json`, SPEC §5):
-///
-/// ```text
-///   core-001             "Big D-fender"         src/scripts/001-big-d-fender.ts
-///   core-051-1           "KY's Empty Notebook"  src/scripts/051-1-kys-empty-notebook.ts
-///   core-t-rush          "Rush Token"           src/scripts/t-rush.ts
-///   classic-043          "Plague Nuke"          src/scripts/classic/043-plague-nuke.ts
-///   classicplus-012-1    "Devour"               src/scripts/classic-plus/012-1-devour.ts
-///   classicplus-t-ai-01  "Helpful Assistant"    src/scripts/classic-plus/t-ai-01-helpful-assistant.ts
-/// ```
-///
-/// and the same path under `test/` with `.test.ts`. So a file's path is its set's folder (none for
-/// Core) and a basename `<prefix>-<slug>`, where the prefix is the id minus its set segment, except
-/// for Core's named tokens of SPEC §7 — the four shared ones, The Coin and the Ghoul Token — which
-/// are filed under the bare prefix (`t-rush`, `t-coin`). An index repeats across sets, so the folder,
-/// never the basename alone, says which set a file belongs to.
-pub mod naming {
-    use std::cmp::Ordering;
-
-    use super::js::is_digits;
-
-    /// Every shipped id is `<set>-<prefix>`, the set segment holding no hyphen (`classicplus`, B2.2).
-    const SET_SEGMENT_SEPARATOR: char = '-';
-
-    /// A shipped set's id segment.
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-    pub enum SetSegment {
-        Core,
-        Classic,
-        Classicplus,
-    }
-
-    impl SetSegment {
-        /// The segment as ids write it.
-        pub fn as_str(self) -> &'static str {
-            match self {
-                SetSegment::Core => "core",
-                SetSegment::Classic => "classic",
-                SetSegment::Classicplus => "classicplus",
-            }
-        }
-    }
-
-    /// The shipped sets' id segments and the folder each one's scripts and tests live in, in catalog order.
-    pub const SET_FOLDERS: &[(SetSegment, &str)] = &[
-        (SetSegment::Core, ""),
-        (SetSegment::Classic, "classic"),
-        (SetSegment::Classicplus, "classic-plus"),
-    ];
-
-    const SET_SEGMENTS: &[SetSegment] = &[SetSegment::Core, SetSegment::Classic, SetSegment::Classicplus];
-
-    fn folder_for(segment: SetSegment) -> &'static str {
-        SET_FOLDERS
-            .iter()
-            .find(|(each, _)| *each == segment)
-            .map_or("", |(_, folder)| *folder)
-    }
-
-    /// The set folders that are not the package root, for a tool that walks them.
-    pub const SET_SUBFOLDERS: &[&str] = &["classic", "classic-plus"];
-
-    /// `classic-043` -> `classic`; `None` for an id whose set segment names no shipped set.
-    pub fn set_segment_of(id: &str) -> Option<SetSegment> {
-        let cut = id.find(SET_SEGMENT_SEPARATOR)?;
-        if cut == 0 {
-            return None;
-        }
-        let segment = &id[..cut];
-        SET_SEGMENTS.iter().copied().find(|each| each.as_str() == segment)
-    }
-
-    /// The folder a catalog id's script and test live in: `""` for Core, `classic`, `classic-plus`.
-    pub fn folder_of(id: &str) -> &'static str {
-        set_segment_of(id).map_or("", folder_for)
-    }
-
-    /// The set segment a folder holds (`""` -> `core`), or `None` for a folder that holds none.
-    pub fn segment_of_folder(folder: &str) -> Option<SetSegment> {
-        SET_SEGMENTS
-            .iter()
-            .copied()
-            .find(|segment| folder_for(*segment) == folder)
-    }
-
-    /// Catalog order of the sets (Core, Classic, Classic+), for sorting; an unknown set sorts last.
-    pub fn set_rank(id: Option<&str>) -> usize {
-        match id.and_then(set_segment_of) {
-            None => SET_SEGMENTS.len(),
-            Some(segment) => SET_SEGMENTS
-                .iter()
-                .position(|each| *each == segment)
-                .unwrap_or(SET_SEGMENTS.len()),
-        }
-    }
-
-    /// The filename prefix of a catalog id: the id minus its leading set segment (`core-051-1` ->
-    /// `051-1`). Panics on a string that is no catalog id; every caller hands it catalog ids.
-    pub fn slug_prefix_of(id: &str) -> &str {
-        match id.find(SET_SEGMENT_SEPARATOR) {
-            Some(cut) if cut > 0 && cut != id.len() - 1 => &id[cut + 1..],
-            _ => panic!("\"{id}\" is not a catalog id (expected \"<set>-<prefix>\", e.g. \"core-043\")"),
-        }
-    }
-
-    /// `051-1` and `t-rush` are token prefixes; `051` is a card prefix. Nothing nests deeper.
-    pub fn is_token_prefix(prefix: &str) -> bool {
-        prefix.starts_with("t-")
-            || prefix
-                .split_once('-')
-                .is_some_and(|(main, sub)| is_digits(main) && is_digits(sub))
-    }
-
-    /// A shared token's prefix (`t-rush`, `t-ai-01`): a token no one card defines. Core's (SPEC §7's four
-    /// shared ones, The Coin and the Ghoul Token) are filed under the bare prefix; Classic+'s AI
-    /// generated cards carry their slug like any card.
-    pub fn is_shared_token_prefix(prefix: &str) -> bool {
-        prefix.starts_with("t-")
-    }
-
-    /// A card name as a filename slug: lowercase, apostrophes dropped, every other run of
-    /// non-alphanumerics collapsed to one `-`: "KY's Empty Notebook" -> `kys-empty-notebook` (the
-    /// apostrophe vanishes rather than becoming a dash), "4-mana 7/7" -> `4-mana-7-7`.
-    pub fn slugify(name: &str) -> String {
-        let lowered: String = name
-            .to_lowercase()
-            .chars()
-            .filter(|c| !matches!(c, '\'' | '\u{2018}' | '\u{2019}'))
-            .collect();
-        let mut out = String::new();
-        let mut in_run = false;
-        for c in lowered.chars() {
-            if c.is_ascii_lowercase() || c.is_ascii_digit() {
-                out.push(c);
-                in_run = false;
-            } else if !in_run {
-                out.push('-');
-                in_run = true;
-            }
-        }
-        out.trim_matches('-').to_string()
-    }
-
-    /// The canonical basename (no extension, no folder) for a catalog entry.
-    pub fn expected_basename(id: &str, name: &str) -> String {
-        let prefix = slug_prefix_of(id);
-        // Core's SPEC §7 shared tokens are one word already ("Rush Token" under `t-rush`), so the
-        // prefix is the whole filename; anything else carries its slug.
-        if is_shared_token_prefix(prefix) && set_segment_of(id) == Some(SetSegment::Core) {
-            return prefix.to_string();
-        }
-        format!("{prefix}-{}", slugify(name))
-    }
-
-    /// The path under `src/scripts/` or `test/`, without an extension: `classic/043-plague-nuke`.
-    pub fn expected_rel_path(id: &str, name: &str) -> String {
-        let folder = folder_of(id);
-        let basename = expected_basename(id, name);
-        if folder.is_empty() {
-            basename
-        } else {
-            format!("{folder}/{basename}")
-        }
-    }
-
-    /// `001-big-d-fender.ts` -> `001-big-d-fender`; also strips `.test.ts`.
-    pub fn basename_of(filename: &str) -> &str {
-        let stripped = filename.strip_suffix(".test.ts").unwrap_or(filename);
-        stripped.strip_suffix(".ts").unwrap_or(stripped)
-    }
-
-    /// Whether `basename` (no extension) is the file of catalog id `id`, in that id's own set folder.
-    ///
-    /// The slug is not checked: the prefix decides which card a file belongs to (`expected_basename`
-    /// reports a misspelt slug). The hard case is the prefix boundary: `051-1-kys-empty-notebook` belongs
-    /// to `core-051-1` and must NOT be read as a slug of `core-051`.
-    ///
-    /// With `all_ids` (every catalog id) the longest id prefix of that set the basename carries wins.
-    /// Without it the rule is the heuristic "a lone digit segment right after a card prefix is a token
-    /// sub-index", right for every shipped id except #25 "4-mana 7/7" (slug `025-4-mana-7-7`); pass
-    /// `all_ids` when the exact answer matters.
-    pub fn matches_card(basename: &str, id: &str, all_ids: Option<&[String]>) -> bool {
-        if let Some(all_ids) = all_ids {
-            return resolve_basename(basename, all_ids, folder_of(id)).as_deref() == Some(id);
-        }
-
-        let prefix = slug_prefix_of(id);
-        if basename == prefix {
-            return true; // the slugless form: `t-rush.ts`
-        }
-        let Some(rest) = basename
-            .strip_prefix(prefix)
-            .and_then(|rest| rest.strip_prefix('-'))
-        else {
-            return false;
-        };
-        if rest.is_empty() {
-            return false;
-        }
-        if is_token_prefix(prefix) {
-            return true; // a token id has no sub-token, so the rest is a slug
-        }
-        let mut chars = rest.chars();
-        let lone_digit =
-            chars.next().is_some_and(|c| c.is_ascii_digit()) && matches!(chars.next(), None | Some('-'));
-        !lone_digit
-    }
-
-    /// Which catalog id a basename in `folder` (`""` is Core's) belongs to, by longest prefix among that
-    /// folder's set: `051-1-kys-empty-notebook` matches `051` and `051-1`, and the longer one owns the
-    /// file. `None` means the filename names no card of that set, or the folder holds no set.
-    pub fn resolve_basename(basename: &str, all_ids: &[String], folder: &str) -> Option<String> {
-        let segment = segment_of_folder(folder)?;
-        let mut best: Option<&String> = None;
-        let mut best_length: Option<usize> = None;
-        for id in all_ids {
-            if set_segment_of(id) != Some(segment) {
-                continue;
-            }
-            let prefix = slug_prefix_of(id);
-            if basename != prefix && !basename.starts_with(&format!("{prefix}-")) {
-                continue;
-            }
-            if best_length.is_none_or(|length| prefix.len() > length) {
-                best = Some(id);
-                best_length = Some(prefix.len());
-            }
-        }
-        best.cloned()
-    }
-
-    /// A path's folder and basename.
-    #[derive(Clone, Debug, PartialEq, Eq)]
-    pub struct RelPath<'a> {
-        pub folder: &'a str,
-        pub basename: &'a str,
-    }
-
-    /// `classic/043-plague-nuke` -> its folder and basename; a Core path has the folder `""`.
-    pub fn split_rel_path(rel_path: &str) -> RelPath<'_> {
-        match rel_path.rfind('/') {
-            None => RelPath {
-                folder: "",
-                basename: rel_path,
-            },
-            Some(cut) => RelPath {
-                folder: &rel_path[..cut],
-                basename: &rel_path[cut + 1..],
-            },
-        }
-    }
-
-    /// Which catalog id a path under `src/scripts/` or `test/` (no extension) belongs to.
-    pub fn resolve_rel_path(rel_path: &str, all_ids: &[String]) -> Option<String> {
-        let RelPath { folder, basename } = split_rel_path(rel_path);
-        resolve_basename(basename, all_ids, folder)
-    }
-
-    /// A filename prefix as a sortable number, mirroring the engine's index ranking: `001` -> 1,
-    /// `051-1` -> 51.1 (so a card-defined token sorts straight after its card), `t-rush` -> +Infinity
-    /// (shared tokens sort last within their set).
-    pub fn prefix_rank(prefix: &str) -> f64 {
-        let (main, sub) = match prefix.split_once('-') {
-            None => (prefix, None),
-            Some((main, sub)) => (main, Some(sub)),
-        };
-        if !is_digits(main) || sub.is_some_and(|sub| !is_digits(sub)) {
-            return f64::INFINITY;
-        }
-        let text = match sub {
-            None => main.to_string(),
-            Some(sub) => format!("{main}.{sub}"),
-        };
-        let rank = text.parse::<f64>().unwrap_or(f64::INFINITY);
-        if rank.is_finite() { rank } else { f64::INFINITY }
-    }
-
-    /// A sort key: `[named-no-card tier, set, §5 index rank, path]`.
-    pub type SortKey = (usize, usize, f64, String);
-
-    /// The deterministic ordering every tool uses: catalog order — set (Core, Classic, Classic+),
-    /// then SPEC §5 index ascending, card-defined tokens after their card, shared tokens last within
-    /// the set — and anything that names no catalog card after all of it; then the path, so the
-    /// order never depends on the order the filesystem listed a directory.
-    pub fn sort_key(path: &str, id: Option<&str>) -> SortKey {
-        let tier = usize::from(id.is_none());
-        let set = set_rank(id);
-        let rank = id.map_or(f64::INFINITY, |id| prefix_rank(slug_prefix_of(id)));
-        (tier, set, rank, path.to_string())
-    }
-
-    /// Compares two `sort_key`s.
-    pub fn compare_sort_keys(a: &SortKey, b: &SortKey) -> Ordering {
-        if a.0 != b.0 {
-            return a.0.cmp(&b.0);
-        }
-        if a.1 != b.1 {
-            return a.1.cmp(&b.1);
-        }
-        if a.2 != b.2 {
-            // Infinity - Infinity is NaN, so compare, don't subtract
-            return if a.2 < b.2 {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            };
-        }
-        if a.3 == b.3 {
-            return Ordering::Equal;
-        }
-        if a.3 < b.3 {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }
-    }
-
-    /// A legal, unique JS identifier for the namespace import of a script file: paths are unique
-    /// within `src/scripts/`, the folder is part of the alias (`classic/043-…` -> `mclassic_043_…`),
-    /// and the `m` guard keeps `001-…` from starting an identifier with a digit.
-    pub fn module_alias_of(rel_path: &str) -> String {
-        let mut out = String::from("m");
-        let mut in_run = false;
-        for c in rel_path.chars() {
-            if c.is_ascii_alphanumeric() {
-                out.push(c);
-                in_run = false;
-            } else if !in_run {
-                out.push('_');
-                in_run = true;
             }
         }
         out
@@ -1972,6 +1629,92 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     Ok(problems)
 }
 
+/// R767000: every shipped version but the newest is carried by the cards compiled into this binary,
+/// each with its snapshot's definitions, in order, and a script for every card, so a replay of a game
+/// played on it folds under its own cards. The problems, or [] when every carried version is whole.
+/// Only `patches check` on this repository calls it: a fixture repository's versions are not the ones
+/// compiled in.
+pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
+    let versions: Vec<String> = read_patches(&paths.patches_json)?
+        .into_iter()
+        .map(|patch| patch.version)
+        .collect();
+    let older = &versions[..versions.len().saturating_sub(1)];
+    let carried = jackioh_cards::carried_versions();
+    let mut problems = Vec::new();
+    if carried != older {
+        problems.push(format!(
+            "the build carries {} shipped version(s), patches.json lists {} before its newest: rebuild jackioh (R767000)",
+            carried.len(),
+            older.len()
+        ));
+    }
+    for version in older {
+        let path = snapshot_path(version, &paths.dir)?;
+        let text = fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
+        let snapshot: jackioh_engine::CardDefs =
+            serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
+        let shipped = jackioh_cards::shipped_catalog(version);
+        problems.extend(carried_problems(
+            version,
+            &snapshot,
+            shipped.map(jackioh_engine::ShippedCatalog::defs),
+            |id| jackioh_cards::has_script_at(version, id),
+        ));
+    }
+    Ok(problems)
+}
+
+/// R767000: how `carried`, the definitions a build folds `version`'s games under, falls short of
+/// `snapshot`, the catalog as `version` shipped it: not carried at all, a card missing on either side
+/// or out of order, a definition that differs, or a card with no script on that version.
+fn carried_problems(
+    version: &str,
+    snapshot: &jackioh_engine::CardDefs,
+    carried: Option<&jackioh_engine::CardDefs>,
+    has_script: impl Fn(&str) -> bool,
+) -> Vec<String> {
+    let Some(carried) = carried else {
+        return vec![format!(
+            "{version} is shipped but not carried: its replays are refused (R767000)"
+        )];
+    };
+    let mut problems = Vec::new();
+    for id in snapshot.keys().filter(|id| !carried.contains_key(*id)) {
+        problems.push(format!(
+            "{version}: \"{id}\" is in its snapshot but not carried (R767000)"
+        ));
+    }
+    for id in carried.keys().filter(|id| !snapshot.contains_key(*id)) {
+        problems.push(format!(
+            "{version}: \"{id}\" is carried but not in its snapshot (R767000)"
+        ));
+    }
+    let shared: Vec<&String> = snapshot.keys().filter(|id| carried.contains_key(*id)).collect();
+    let carried_order: Vec<&String> = carried.keys().filter(|id| snapshot.contains_key(*id)).collect();
+    if shared != carried_order {
+        problems.push(format!(
+            "{version}: its cards are carried in another order than its snapshot's (R767000)"
+        ));
+    }
+    for (id, def) in snapshot {
+        let Some(held) = carried.get(id) else {
+            continue;
+        };
+        if serde_json::to_string(def).ok() != serde_json::to_string(held).ok() {
+            problems.push(format!(
+                "{version}: \"{id}\" is carried unlike its snapshot (R767000)"
+            ));
+        }
+        if !has_script(id) {
+            problems.push(format!(
+                "{version}: \"{id}\" has no script on it: keep the one it ran in jackioh_cards::KEPT_SCRIPTS (R767000)"
+            ));
+        }
+    }
+    problems
+}
+
 /// `git <args>` in `repo_root`, its stdout as text; a failing git is an error carrying its stderr.
 pub(crate) fn git(repo_root: &Path, args: &[&str], extra_env: &[(&str, &str)]) -> anyhow::Result<String> {
     let output = Command::new("git")
@@ -2326,11 +2069,14 @@ impl std::error::Error for CheckFailed {}
 fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     let command = argv.first().map(String::as_str);
     if command == Some("check") {
-        let problems = check_patches(repo_root)?;
+        let mut problems = check_patches(repo_root)?;
+        problems.extend(check_carried(&patch_paths(repo_root))?);
         if !problems.is_empty() {
             return Err(anyhow::Error::new(CheckFailed(problems)));
         }
-        println!("patches check: every catalog change is claimed by exactly one pending fragment");
+        println!(
+            "patches check: every catalog change is claimed by exactly one pending fragment, and every older shipped version is carried for replays (R767000)"
+        );
         return Ok(());
     }
     if command == Some("ship") {
@@ -2427,102 +2173,6 @@ mod tests {
 
     pub(super) fn strings(items: &[&str]) -> Vec<String> {
         items.iter().map(|item| (*item).to_string()).collect()
-    }
-
-    mod naming_test {
-        use super::strings;
-        use crate::patches::naming::*;
-
-        #[test]
-        fn slugify_reads_every_name_as_its_comment_says() {
-            for (name, slug) in [
-                ("Big D-fender", "big-d-fender"),
-                ("KY's Empty Notebook", "kys-empty-notebook"),
-                ("CN-Virus", "cn-virus"),
-                ("/fullsend", "fullsend"),
-                ("Call to Chaos (Core Edition)", "call-to-chaos-core-edition"),
-                ("\"Miss\" Mrow", "miss-mrow"),
-                ("4-mana 7/7", "4-mana-7-7"),
-                ("Forever&", "forever"),
-                ("BOOM! Big Max", "boom-big-max"),
-            ] {
-                assert_eq!(slugify(name), slug, "{name}");
-            }
-        }
-
-        #[test]
-        fn expected_rel_path_files_each_set_in_its_folder_and_cores_shared_tokens_bare() {
-            assert_eq!(expected_rel_path("core-001", "Big D-fender"), "001-big-d-fender");
-            assert_eq!(
-                expected_rel_path("core-051-1", "KY's Empty Notebook"),
-                "051-1-kys-empty-notebook"
-            );
-            assert_eq!(expected_rel_path("core-t-rush", "Rush Token"), "t-rush");
-            assert_eq!(
-                expected_rel_path("classic-043", "Plague Nuke"),
-                "classic/043-plague-nuke"
-            );
-            assert_eq!(
-                expected_rel_path("classicplus-012-1", "Devour"),
-                "classic-plus/012-1-devour"
-            );
-            assert_eq!(
-                expected_rel_path("classicplus-t-ai-01", "Helpful Assistant"),
-                "classic-plus/t-ai-01-helpful-assistant"
-            );
-        }
-
-        #[test]
-        fn matches_card_keeps_the_token_sub_index_off_its_card() {
-            assert!(!matches_card("051-1-kys-empty-notebook", "core-051", None));
-            assert!(matches_card("051-1-kys-empty-notebook", "core-051-1", None));
-            assert!(matches_card("t-rush", "core-t-rush", None));
-            let ids = strings(&["core-051", "core-051-1", "core-025"]);
-            assert_eq!(
-                resolve_basename("051-1-kys-empty-notebook", &ids, "").as_deref(),
-                Some("core-051-1")
-            );
-            // #25's slug opens with a digit segment: only the exact answer gets it right.
-            assert!(!matches_card("025-4-mana-7-7", "core-025", None));
-            assert!(matches_card("025-4-mana-7-7", "core-025", Some(ids.as_slice())));
-            assert_eq!(
-                resolve_rel_path("classic/043-plague-nuke", &strings(&["classic-043", "core-043"]))
-                    .as_deref(),
-                Some("classic-043")
-            );
-        }
-
-        #[test]
-        fn set_subfolders_are_the_folders_that_are_not_the_root() {
-            let derived: Vec<&str> = SET_FOLDERS
-                .iter()
-                .map(|(_, folder)| *folder)
-                .filter(|folder| !folder.is_empty())
-                .collect();
-            assert_eq!(derived, SET_SUBFOLDERS);
-        }
-
-        #[test]
-        fn sort_key_orders_by_set_then_index_tokens_after_their_card_and_shared_tokens_last() {
-            assert_eq!(prefix_rank("001"), 1.0);
-            assert_eq!(prefix_rank("051-1"), 51.1);
-            assert_eq!(prefix_rank("t-rush"), f64::INFINITY);
-            let mut keys = [
-                sort_key("x", None),
-                sort_key("t-rush", Some("core-t-rush")),
-                sort_key("classic/001-a", Some("classic-001")),
-                sort_key("051-1-b", Some("core-051-1")),
-                sort_key("051-a", Some("core-051")),
-            ];
-            keys.sort_by(compare_sort_keys);
-            let order: Vec<&str> = keys.iter().map(|key| key.3.as_str()).collect();
-            assert_eq!(order, ["051-a", "051-1-b", "t-rush", "classic/001-a", "x"]);
-            assert_eq!(
-                module_alias_of("classic/043-plague-nuke"),
-                "mclassic_043_plague_nuke"
-            );
-            assert_eq!(basename_of("001-big-d-fender.test.ts"), "001-big-d-fender");
-        }
     }
 
     // R650: a micro patch's version (`vA.B.Y`) is the newest shipped version plus the next letter.
@@ -4846,6 +4496,78 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// R767000: every older shipped version is carried, whole, for the replays of games played on it.
+    mod r767000_carried {
+        use super::super::{carried_problems, check_carried, patch_paths, repo_root};
+
+        fn pick(ids: &[&str]) -> jackioh_engine::CardDefs {
+            ids.iter()
+                .map(|id| ((*id).to_string(), jackioh_cards::CATALOG[*id].clone()))
+                .collect()
+        }
+
+        #[test]
+        fn r767000_every_shipped_version_but_the_newest_is_carried_with_every_script() {
+            let problems = check_carried(&patch_paths(&repo_root())).expect("the patch history reads");
+            assert!(problems.is_empty(), "{problems:#?}");
+        }
+
+        #[test]
+        fn r767000_names_an_uncarried_version_a_card_carried_otherwise_out_of_order_or_without_a_script() {
+            let snapshot = pick(&["core-001", "core-002", "core-003"]);
+            let named = |carried: Option<&jackioh_engine::CardDefs>, has_script: fn(&str) -> bool| {
+                carried_problems("v-old", &snapshot, carried, has_script)
+            };
+            assert!(named(Some(&snapshot), |_| true).is_empty());
+
+            let none = named(None, |_| true);
+            assert_eq!(none.len(), 1);
+            assert!(none[0].contains("v-old is shipped but not carried"), "{none:?}");
+
+            let fewer = named(Some(&pick(&["core-001", "core-002"])), |_| true);
+            assert!(
+                fewer
+                    .iter()
+                    .any(|problem| problem.contains("\"core-003\" is in its snapshot but not carried")),
+                "{fewer:?}"
+            );
+
+            let more = named(
+                Some(&pick(&["core-001", "core-002", "core-003", "core-004"])),
+                |_| true,
+            );
+            assert!(
+                more.iter()
+                    .any(|problem| problem.contains("\"core-004\" is carried but not in its snapshot")),
+                "{more:?}"
+            );
+
+            let swapped = named(Some(&pick(&["core-002", "core-001", "core-003"])), |_| true);
+            assert!(
+                swapped.iter().any(|problem| problem.contains("another order")),
+                "{swapped:?}"
+            );
+
+            let mut changed = snapshot.clone();
+            if let Some(def) = changed.get_mut("core-002") {
+                def.name.push_str(" (old)");
+            }
+            let differs = named(Some(&changed), |_| true);
+            assert_eq!(differs.len(), 1, "{differs:?}");
+            assert!(
+                differs[0].contains("\"core-002\" is carried unlike its snapshot"),
+                "{differs:?}"
+            );
+
+            let scriptless = named(Some(&snapshot), |id| id != "core-003");
+            assert_eq!(scriptless.len(), 1, "{scriptless:?}");
+            assert!(
+                scriptless[0].contains("\"core-003\" has no script on it"),
+                "{scriptless:?}"
+            );
         }
     }
 }

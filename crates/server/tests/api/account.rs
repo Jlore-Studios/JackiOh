@@ -230,6 +230,50 @@ mod delete_api_account {
         assert!(app.auth.verify(&setup.token).await.is_ok());
     }
 
+    /// Duos co-op (#946): a live co-op match is refused as a live 1v1 is, so the teammate's match
+    /// is never cascaded away (migration 0039); once it has ended, the account may go.
+    #[tokio::test]
+    async fn refuses_a_player_in_a_live_co_op_match_with_409_and_deletes_nothing() {
+        let setup = setup().await;
+        let app = &setup.app;
+        let rules = serde_json::to_value(jackioh_engine::config::DUOS_HUMAN_TEAM).expect("the rules' JSON");
+        let co_op: jackioh_server::duos::store::DuosMatch = serde_json::from_value(json!({
+            "id": "duos-live",
+            "seed": "s",
+            "a1": PROFILE,
+            "a2": OTHER,
+            "difficulty": "easy",
+            "options": {
+                "decks": { "a1": [], "a2": [], "b1": [], "b2": [] },
+                "dealt": [],
+                "teams": { "a": rules, "b": rules },
+                "handicaps": { "a1": null, "a2": null, "b1": null, "b2": null },
+            },
+            "createdAt": 0,
+            "endedAt": null,
+            "result": null,
+        }))
+        .expect("a co-op match row");
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        tx.duos_matches_create(&co_op).await.expect("a co-op match");
+        tx.commit().await.expect("a commit");
+
+        let (status, body) = remove(app, Some(&setup.token)).await;
+        assert_eq!(status, 409);
+        assert_eq!(error_of(&body)["code"], json!("already_in_match"));
+        assert!(profile_exists(app, PROFILE).await);
+
+        let mut tx = app.db.begin(None).await.expect("a transaction");
+        assert!(
+            tx.duos_matches_finish("duos-live", &json!({ "outcome": "draw" }), 1)
+                .await
+                .expect("the end")
+        );
+        tx.commit().await.expect("a commit");
+        assert_eq!(remove(app, Some(&setup.token)).await.0, 204);
+        assert!(!profile_exists(app, PROFILE).await);
+    }
+
     #[tokio::test]
     async fn refuses_a_player_in_a_conquest_series_that_is_not_over_with_409_and_deletes_nothing() {
         let setup = setup().await;

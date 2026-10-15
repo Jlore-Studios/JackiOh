@@ -1,7 +1,25 @@
 //! C+ #19.1 Top Loser (SPEC §8.7 row 19.1): Armor 3 (Radiant: 6, Immune to Spells, catalog keywords);
 //! never in Defense Position, and only a Unit in its lane may attack it (E35 static flags).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019-1";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            attacked_only_from_lane: Some(true),
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+
+    // The same script: Armor 6 and Immune to Spells are the Radiant face's catalog keywords.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.7 row 19.1: lane-only attacks (§4.2 step 2), never Defense, radiant Spell-immune.
 // Its Armor is a numbered keyword, which B3.4's X change tunes rather than a declared param (R386):
@@ -106,7 +124,7 @@ mod tests {
             assert!(def.token);
             assert_eq!(def.rarity, Rarity::Token);
             assert_eq!(def.printed_rarity, Some(PrintedRarity::Legendary));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags,
                 Some(StaticFlags {
