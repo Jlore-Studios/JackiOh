@@ -18,8 +18,14 @@ const { ignoreCommand } = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "ut
 let repo = "";
 let base = "";
 
+/** Where the throwaway repo lives: the checkout's own ignored `.cache/`, not the machine's shared temp
+ * directory, and with git's background upkeep off, so nothing but this file touches it while it runs
+ * (#1016: on main at 67811e0 a `git add` found the repo's object store gone mid-test). */
+const SCRATCH = join(ROOT, ".cache");
+
 function git(...args: string[]): string {
-  return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args], {
+  const quiet = ["-c", "maintenance.auto=false", "-c", "gc.auto=0"];
+  return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...quiet, ...args], {
     cwd: repo,
     encoding: "utf8",
   }).trim();
@@ -56,7 +62,8 @@ function builds({ ref = "main", message = "A change", env = "preview", previous 
 }
 
 beforeAll(() => {
-  repo = mkdtempSync(join(tmpdir(), "vercel-ignore-"));
+  mkdirSync(SCRATCH, { recursive: true });
+  repo = mkdtempSync(join(SCRATCH, "vercel-ignore-"));
   git("init", "-q", "-b", "main");
   mkdirSync(join(repo, "scripts"));
   copyFileSync(join(ROOT, "scripts/vercel-ignore.sh"), join(repo, "scripts/vercel-ignore.sh"));

@@ -3,7 +3,8 @@
 //!
 //! B16: one candidate is played without searching (no node, no draw from the AI's rng), and a seat
 //! that owes nothing gets null. B20: the mulligan returns the cards costing more than
-//! AI_MULLIGAN.keepMaxCost, keeping at most the one proven four-drop the shaped keep allows.
+//! AI_MULLIGAN.keepMaxCost, keeping at most the one proven four-drop the shaped keep allows, and
+//! keeps the cheap ones to AI_MULLIGAN_CURVE's curve (#993).
 //! B21 and R188: the AI answers an unanswered draw offer at once with a
 //! decline, and never concedes, offers a draw or accepts one.
 //!
@@ -11,15 +12,19 @@
 //! are dropped.
 
 use jackioh_ai::{
-    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AiOptions, Decision, DecisionReason, MatchHooks, Matchup,
-    SeatController, ai_to_act, decide, game_config, mulligan_keep_shaped, play_match, unanswered_draw_offer,
+    AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_MULLIGAN_CURVE, AiMulliganCurve, AiOptions, Decision,
+    DecisionReason, MatchHooks, Matchup, SeatController, ai_to_act, decide, game_config,
+    mulligan_keep_curved, mulligan_keep_shaped, play_match, unanswered_draw_offer,
 };
 use jackioh_engine::testkit::{
-    Action, ActionBody, ActionType, GameEvent, GameState, PerPlayer, PlayerId, PromptKind, create_rng,
-    def_of, json, legal_actions, mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems,
+    AI_DIFFICULTY, Action, ActionBody, ActionType, CreateGameOptions, DECK_SIZE, GameEvent, GameState,
+    PerPlayer, PerPlayerOpt, PlayerId, PromptKind, begin_game, create_game, create_rng, def_of, json,
+    legal_actions, mulligan_prompt_for, query_cost, reduce, seat_to_act, subsystems,
 };
 
-use super::support::{AI, HUMAN, act, act_with_nonce, clone, dealt_game, is_legal, register_cards, scenario};
+use super::support::{
+    AI, HUMAN, act, act_with_nonce, clone, dealt_game, is_legal, random_decks_sized, register_cards, scenario,
+};
 
 fn must_decide(state: &GameState, seat: PlayerId, seed: &str) -> Decision {
     decide(state, seat, &mut AiOptions::new(create_rng(seed, 0)))
@@ -274,8 +279,7 @@ mod the_mulligan_b20 {
     use super::*;
 
     #[test]
-    fn b20_the_ai_returns_exactly_the_cards_costing_more_than_keep_max_cost_with_reason_mulligan_and_reduce_takes_it()
-     {
+    fn b20_the_ai_returns_the_cards_its_curved_keep_leaves_with_reason_mulligan_and_reduce_takes_it() {
         let mut returned_total = 0;
         let mut kept_total = 0;
         for n in 1..=8 {
@@ -302,11 +306,11 @@ mod the_mulligan_b20 {
                     .collect();
                 // The shaped keep (mulligan.rs): the plain rule plus, at most, the one best card
                 // costing keep_max_cost + 1 whose shaped weight reaches DEAL_MULLIGAN_KEEP.
-                let keep = sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost));
+                let shaped = sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost));
                 for id in &plain {
-                    assert!(keep.contains(id), "{seed} {seat} {id}");
+                    assert!(shaped.contains(id), "{seed} {seat} {id}");
                 }
-                let extras: Vec<&String> = keep.iter().filter(|id| !plain.contains(id)).collect();
+                let extras: Vec<&String> = shaped.iter().filter(|id| !plain.contains(id)).collect();
                 assert!(extras.len() <= 1, "{seed} {seat} {extras:?}");
                 for id in &extras {
                     let card = hand.iter().find(|card| &card.id == *id).expect("in hand");
@@ -315,6 +319,16 @@ mod the_mulligan_b20 {
                         AI_MULLIGAN.keep_max_cost + 1,
                         "{seed} {seat} {id}"
                     );
+                }
+                // #993: the curve only sends more back, so the AI keeps part of the shaped keep.
+                let keep = sorted(mulligan_keep_curved(
+                    &state,
+                    seat,
+                    AI_MULLIGAN.keep_max_cost,
+                    &AI_MULLIGAN_CURVE,
+                ));
+                for id in &keep {
+                    assert!(shaped.contains(id), "{seed} {seat} {id}");
                 }
                 let returned: Vec<String> = hand
                     .iter()
@@ -338,7 +352,12 @@ mod the_mulligan_b20 {
                 };
                 assert_eq!(chosen, Some(keep.clone()), "{seed} {seat}");
                 assert_eq!(
-                    sorted(mulligan_keep_shaped(&state, seat, AI_MULLIGAN.keep_max_cost)),
+                    sorted(mulligan_keep_curved(
+                        &state,
+                        seat,
+                        AI_MULLIGAN.keep_max_cost,
+                        &AI_MULLIGAN_CURVE
+                    )),
                     keep,
                     "{seed} {seat}"
                 );
@@ -383,8 +402,13 @@ mod the_mulligan_b20 {
 
 /// p1's mulligan with its hand's defs replaced, so the costs are chosen by the test.
 fn mulligan_with(seed: &str, def_ids: &[&str]) -> GameState {
+    seat_mulligan_with(seed, PlayerId::P1, def_ids)
+}
+
+/// `seat`'s mulligan with its hand's defs replaced, so the costs are chosen by the test.
+fn seat_mulligan_with(seed: &str, seat: PlayerId, def_ids: &[&str]) -> GameState {
     let mut state = clone(&dealt_game(seed));
-    for (at, card) in state.players.p1.hand.iter_mut().enumerate() {
+    for (at, card) in state.players[seat].hand.iter_mut().enumerate() {
         card.def_id = def_ids[at % def_ids.len()].to_string();
     }
     state
@@ -394,11 +418,16 @@ mod the_mulligan_at_its_bounds_b20 {
     use super::*;
 
     #[test]
-    fn b20_a_hand_of_cards_costing_exactly_keep_max_cost_is_kept_whole() {
+    /// A curve, so #993's caps send none of it back: the three-drop at the bound stays with the rest.
+    fn b20_a_curve_topped_by_a_card_costing_exactly_keep_max_cost_is_kept_whole() {
         register_cards();
         let three = "core-019"; // Midrange Menace, 3
+        let one = "core-008"; // Mr. Vanilla, 1
+        let two = "core-020"; // Pointmaster, 2
         assert_eq!(query_cost(def_of(None, three)), AI_MULLIGAN.keep_max_cost);
-        let state = mulligan_with("decide-mulligan-keep-all", &[three]);
+        assert!(query_cost(def_of(None, one)) <= AI_MULLIGAN_CURVE.first_turn_max_cost);
+        assert!(query_cost(def_of(None, two)) <= AI_MULLIGAN_CURVE.early_turn);
+        let state = mulligan_with("decide-mulligan-keep-all", &[three, one, two]);
         let decision = must_decide(&state, PlayerId::P1, "decide-mulligan-keep-all");
         let kept = match &decision.action {
             ActionBody::Mulligan { keep } => Some(sorted(keep.clone())),
@@ -459,6 +488,191 @@ mod the_mulligan_at_its_bounds_b20 {
             .find(|card| card.id == kept[0])
             .expect("kept id is a hand card");
         assert_eq!(kept_card.def_id, proven);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// #993: the curve
+// ---------------------------------------------------------------------------------------------
+
+/// p2's mulligan on Hard's handicap, whose extra opening card (R182) makes it five cards, with its
+/// hand's defs replaced.
+fn hard_p2_mulligan_with(seed: &str, def_ids: &[&str]) -> GameState {
+    register_cards();
+    let mut state = begin_game(&create_game(&CreateGameOptions {
+        seed: seed.to_string(),
+        decks: random_decks_sized(seed, (DECK_SIZE, AI_DIFFICULTY.hard.deck_size)),
+        handicaps: Some(PerPlayerOpt {
+            p1: None,
+            p2: Some(AI_DIFFICULTY.hard),
+        }),
+        ..CreateGameOptions::default()
+    }))
+    .state;
+    assert_eq!(state.players.p2.hand.len(), 5, "{seed}");
+    for (at, card) in state.players.p2.hand.iter_mut().enumerate() {
+        card.def_id = def_ids[at % def_ids.len()].to_string();
+    }
+    state
+}
+
+mod the_mulligans_curve {
+    use super::*;
+
+    const ONE: &str = "core-008"; // Mr. Vanilla, 1
+    const TWO: &str = "core-020"; // Pointmaster, 2
+    const THREE: &str = "core-019"; // Midrange Menace, 3
+    const PROVEN_FOUR: &str = "core-054"; // 4, shaped weight above DEAL_MULLIGAN_KEEP
+
+    const OFF: AiMulliganCurve = AiMulliganCurve {
+        on: false,
+        ..AI_MULLIGAN_CURVE
+    };
+
+    /// The sorted `keep` of a mulligan decision.
+    fn kept(decision: &Decision) -> Vec<String> {
+        match &decision.action {
+            ActionBody::Mulligan { keep } => sorted(keep.clone()),
+            _ => panic!("not a mulligan"),
+        }
+    }
+
+    /// The sorted ids of the hand cards at those indexes.
+    fn hand_at(state: &GameState, seat: PlayerId, at: impl IntoIterator<Item = usize>) -> Vec<String> {
+        let mut ids: Vec<String> = at
+            .into_iter()
+            .map(|index| state.players[seat].hand[index].id.clone())
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    /// The card costs the tests below assume, against the curve's bounds.
+    fn costs_hold() {
+        register_cards();
+        assert!(query_cost(def_of(None, ONE)) <= AI_MULLIGAN_CURVE.first_turn_max_cost);
+        assert!(AI_MULLIGAN_CURVE.first_turn_max_cost < query_cost(def_of(None, TWO)));
+        assert!(query_cost(def_of(None, TWO)) <= AI_MULLIGAN_CURVE.early_turn);
+        assert!(AI_MULLIGAN_CURVE.early_turn < query_cost(def_of(None, THREE)));
+        assert_eq!(query_cost(def_of(None, THREE)), AI_MULLIGAN.keep_max_cost);
+        assert_eq!(
+            query_cost(def_of(None, PROVEN_FOUR)),
+            AI_MULLIGAN.keep_max_cost + 1
+        );
+    }
+
+    #[test]
+    fn curve_five_one_drops_keep_max_first_turn_of_them_and_the_rng_is_never_read() {
+        costs_hold();
+        let state = hard_p2_mulligan_with("decide-curve-ones", &[ONE]);
+        let decision = must_decide(&state, PlayerId::P2, "decide-curve-ones");
+        assert_eq!(decision.reason, DecisionReason::Mulligan);
+        assert_eq!(
+            kept(&decision),
+            hand_at(&state, PlayerId::P2, 0..AI_MULLIGAN_CURVE.max_first_turn)
+        );
+        let mut options = AiOptions::new(create_rng("decide-curve-ones-other", 0));
+        let again = decide(&state, PlayerId::P2, &mut options).expect("a decision");
+        assert_eq!(again.action, decision.action);
+        assert_eq!(options.rng.cursor(), 0);
+        assert_eq!(
+            sorted(mulligan_keep_curved(
+                &state,
+                PlayerId::P2,
+                AI_MULLIGAN.keep_max_cost,
+                &OFF
+            )),
+            sorted(mulligan_keep_shaped(
+                &state,
+                PlayerId::P2,
+                AI_MULLIGAN.keep_max_cost
+            ))
+        );
+        assert_eq!(
+            sorted(mulligan_keep_shaped(
+                &state,
+                PlayerId::P2,
+                AI_MULLIGAN.keep_max_cost
+            )),
+            sorted(hand_ids(&state, PlayerId::P2))
+        );
+        act(&state, PlayerId::P2, &decision.action);
+    }
+
+    #[test]
+    fn curve_a_five_card_curve_keeps_all_but_the_one_drops_past_max_first_turn() {
+        costs_hold();
+        let state = hard_p2_mulligan_with("decide-curve-mixed", &[ONE, ONE, ONE, TWO, THREE]);
+        let decision = must_decide(&state, PlayerId::P2, "decide-curve-mixed");
+        let keep = kept(&decision);
+        assert!(keep.len() < 5);
+        let mut expected: Vec<usize> = (0..AI_MULLIGAN_CURVE.max_first_turn).collect();
+        expected.extend([3, 4]);
+        assert_eq!(keep, hand_at(&state, PlayerId::P2, expected));
+        assert_eq!(
+            sorted(mulligan_keep_curved(
+                &state,
+                PlayerId::P2,
+                AI_MULLIGAN.keep_max_cost,
+                &OFF
+            ))
+            .len(),
+            5
+        );
+        act(&state, PlayerId::P2, &decision.action);
+    }
+
+    #[test]
+    fn curve_a_hand_with_no_early_play_keeps_its_cheapest_to_dig_for_one() {
+        costs_hold();
+        let state = seat_mulligan_with("decide-curve-dig", PlayerId::P1, &[THREE]);
+        let decision = must_decide(&state, PlayerId::P1, "decide-curve-dig");
+        assert_eq!(
+            kept(&decision),
+            hand_at(&state, PlayerId::P1, 0..AI_MULLIGAN_CURVE.keep_without_early)
+        );
+        assert_eq!(
+            sorted(mulligan_keep_curved(
+                &state,
+                PlayerId::P1,
+                AI_MULLIGAN.keep_max_cost,
+                &OFF
+            )),
+            sorted(hand_ids(&state, PlayerId::P1))
+        );
+        act(&state, PlayerId::P1, &decision.action);
+        let open = seat_mulligan_with("decide-curve-open", PlayerId::P1, &[THREE, THREE, ONE]);
+        let found = must_decide(&open, PlayerId::P1, "decide-curve-open");
+        assert_eq!(kept(&found), sorted(hand_ids(&open, PlayerId::P1)));
+    }
+
+    #[test]
+    fn curve_the_coin_makes_a_three_drop_an_early_play_for_the_seat_going_second() {
+        costs_hold();
+        let first = seat_mulligan_with("decide-curve-seats", PlayerId::P1, &[THREE]);
+        let second = seat_mulligan_with("decide-curve-seats", PlayerId::P2, &[THREE]);
+        let p1 = must_decide(&first, PlayerId::P1, "decide-curve-seats-p1");
+        let p2 = must_decide(&second, PlayerId::P2, "decide-curve-seats-p2");
+        assert_eq!(
+            kept(&p1).len(),
+            AI_MULLIGAN_CURVE
+                .keep_without_early
+                .min(hand_ids(&first, PlayerId::P1).len())
+        );
+        assert_eq!(kept(&p2), sorted(hand_ids(&second, PlayerId::P2)));
+        assert!(kept(&p2).len() > kept(&p1).len());
+    }
+
+    #[test]
+    fn curve_the_shaped_four_drop_stays_when_the_hand_digs_for_an_early_play() {
+        costs_hold();
+        let state = seat_mulligan_with("decide-curve-four", PlayerId::P1, &[PROVEN_FOUR, THREE, THREE]);
+        let decision = must_decide(&state, PlayerId::P1, "decide-curve-four");
+        assert_eq!(
+            kept(&decision),
+            hand_at(&state, PlayerId::P1, 0..=AI_MULLIGAN_CURVE.keep_without_early)
+        );
+        act(&state, PlayerId::P1, &decision.action);
     }
 }
 

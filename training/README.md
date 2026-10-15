@@ -268,8 +268,8 @@ login and opens no pull request. Each cycle:
    the lane's games are neither the gate's nor a person's `dev` run's. The file `cursor-<patch>` in
    `~/training-out/gather/` holds the next `n`: no game of a patch is played twice, and a new patch
    starts at 1.
-   A patch stops at `TRAIN_GATHER_PATCH_GAMES` (5000), which keeps its records near 9 MB in Postgres;
-   the lane then idles, looking again every `TRAIN_IDLE_SECONDS`, until `main` ships another patch.
+   A patch has no cap: the lane plays it until `main` ships another, about 4,000 games a day, which is
+   some 7 MB a day in Postgres.
 4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
    the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
    holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, from every game
