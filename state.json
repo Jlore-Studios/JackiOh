@@ -6864,7 +6864,7 @@
     "what": "revise #955 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-15T01:37:30Z",
+    "at": "2026-10-15T01:39:19Z",
     "notes": [
       "CI on #896: #896: queued a CI fix"
     ],
