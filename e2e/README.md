@@ -55,6 +55,17 @@ then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
 Electron is no longer run.
 
+Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause
+every request over the DevTools protocol (crbug.com/559770861, fixed in 156): every fetch in
+flight fails at once and every socket drops, so a lobby shows "Couldn't reach JackiOh" while
+`cy.request`, which runs in Node, is fine. When the `chrome` Cypress finds is a major in
+`support/chrome-pin.ts`'s `BROKEN_CHROME_MAJORS` and `CI` is set, `cypress.config.ts` points
+`chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (154), downloaded once into the repo's
+`.cache/chrome-for-testing/` (Linux x64 only); the run header then says `Chrome for Testing`.
+`E2E_CHROME_PIN=1` does the same off CI, `E2E_CHROME_PIN=0` keeps the system Chrome. Every other
+Chrome and browser launches as found, and a failed download keeps the system Chrome and says why.
+Drop 155 from the list once the runner image ships 156.
+
 Endpoints are overridable, so nothing in a spec has to change when a port moves:
 
 ```
