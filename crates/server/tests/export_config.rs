@@ -87,6 +87,9 @@ fn constants() -> Vec<(&'static str, Value)> {
             "CODE_STATUS_RECHECK_FLOOR_SECONDS",
             json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS),
         ),
+        // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
+        // ships; QUEUE_TICKET_STALE_MS stays server-only.
+        ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
         (
             "DECK_AUTOSAVE_RETRY_SECONDS",
@@ -204,13 +207,13 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 64,
+        listed, 65,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
          (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and QUEUE_ENDED_AFTER_READS (R897000)"
     );
 }
 

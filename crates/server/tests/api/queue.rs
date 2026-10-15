@@ -55,8 +55,9 @@ use jackioh_server::api::results::reap_open_matches;
 use jackioh_server::app::{App, ROUTES, now_ms};
 use jackioh_server::config::{
     BOT_FALLBACK_MAX_SECONDS, MAX_FAIR_GAP, MAX_SAVED_DECKS, MAX_SAVED_TRIOS, OPEN_MATCH_REAP_GRACE_SECONDS,
-    QUEUE_READOUT_WINDOW_SECONDS, RATING_WINDOW_FULL_AFTER_SECONDS, RATING_WINDOW_START,
-    RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, rating_window,
+    QUEUE_READOUT_WINDOW_SECONDS, QUEUE_TICKET_STALE_MS, RATING_WINDOW_FULL_AFTER_SECONDS,
+    RATING_WINDOW_START, RATING_WINDOW_WIDEN_BY, RATING_WINDOW_WIDEN_EVERY_SECONDS, SERIES_POLL_SECONDS,
+    rating_window,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{BotDeck, Db, NewBot, StoreError};
@@ -615,8 +616,204 @@ mod r166_r108_which_qualifying_opponent_a_sweep_pairs {
 
         // …and once both windows have widened past the gap, the same two pair (§9.5; R640001 stops them at MAX_FAIR_GAP, still past it).
         tokio::time::advance(Duration::from_millis(120_000)).await;
+        // SPEC §11 R897000: the wait outlasts a presence window, and live clients poll through it,
+        // so both are heard from before the sweep judges them.
+        app.queue_presence.touch("low", now_ms());
+        app.queue_presence.touch("high", now_ms());
         assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
         assert_eq!(paired_profiles(&app).await, vec![json!(["low", "high"])]);
+    }
+}
+
+// SPEC §11 R897000 — an abandoned ticket expires before it seats anyone
+
+mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_stale_tickets_are_cancelled_by_the_sweep_and_pair_nobody() {
+        let app = test_app().await;
+        // PREMISE: the two would pair at once — same rating, same instant — so what follows is
+        // the expiry, not the window.
+        for (id, profile_id) in [("t-gone-1", "gone-1"), ("t-gone-2", "gone-2")] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating: 1000,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS + 1) as u64)).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert!(matches_table(&app).await.is_empty());
+        for id in ["t-gone-1", "t-gone-2"] {
+            assert_eq!(ticket(&app, id).await["status"], "cancelled");
+        }
+        assert_eq!(open_count(&app).await, 0);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_a_ticket_that_keeps_being_touched_never_expires() {
+        let app = test_app().await;
+        for (id, profile_id) in [("t-kept-1", "kept-1"), ("t-kept-2", "kept-2")] {
+            seed_ticket(
+                &app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating: 1000,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+        // Three waits of half a window, heard from after each: never silent a full window.
+        for _ in 0..3 {
+            tokio::time::advance(Duration::from_millis(6_000)).await;
+            app.queue_presence.touch("kept-1", now_ms());
+            app.queue_presence.touch("kept-2", now_ms());
+        }
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 1);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["kept-1", "kept-2"])]);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_any_signed_in_request_refreshes_the_ticket() {
+        let app = test_app().await;
+        let token = active_profile(&app, "polling", 1000.0).await;
+        seed_ticket(
+            &app,
+            SeedTicket {
+                id: "t-polling",
+                profile_id: "polling",
+                rating: 1000,
+                waited_ms: 0,
+                mode: "bo1",
+            },
+        )
+        .await;
+        tokio::time::advance(Duration::from_millis((QUEUE_TICKET_STALE_MS - 1_000) as u64)).await;
+        // The queued client's own poll: a signed-in read with no queue body at all.
+        let (status, _) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(status, 200);
+        // Silent ever since, but heard from a window ago: still open, and still alone.
+        tokio::time::advance(Duration::from_millis(6_000)).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert_eq!(ticket(&app, "t-polling").await["status"], "open");
+    }
+
+    /// Two tickets further apart than `RATING_WINDOW_START`, enqueued together: the pair is made
+    /// only once the window has widened to the gap, and `sweep_every_poll` runs a sweep after
+    /// each `SERIES_POLL_SECONDS`, touching those of `heard` as a polling client would. Yields the
+    /// seconds waited when the sweep paired them, if it did within `RATING_WINDOW_FULL_AFTER_SECONDS`.
+    async fn sweep_every_poll(app: &Arc<App>, heard: &[&str]) -> Option<i64> {
+        let mut waited = 0;
+        while waited < RATING_WINDOW_FULL_AFTER_SECONDS {
+            tokio::time::advance(Duration::from_secs(SERIES_POLL_SECONDS as u64)).await;
+            waited += SERIES_POLL_SECONDS;
+            for profile_id in heard {
+                app.queue_presence.touch(profile_id, now_ms());
+            }
+            if try_pair(app).await.expect("a sweep").made == 1 {
+                return Some(waited);
+            }
+        }
+        None
+    }
+
+    /// The gap, and the seconds the widening window takes to reach it (R640001).
+    const WINDOW_GAP: i64 = RATING_WINDOW_START + 3 * RATING_WINDOW_WIDEN_BY;
+    const WINDOW_REACHES_GAP_AFTER_SECONDS: i64 =
+        (WINDOW_GAP - RATING_WINDOW_START) / RATING_WINDOW_WIDEN_BY * RATING_WINDOW_WIDEN_EVERY_SECONDS;
+
+    /// PREMISE of the test that waits it out: the wait is longer than the TTL.
+    const _: () = assert!(WINDOW_REACHES_GAP_AFTER_SECONDS * 1_000 > QUEUE_TICKET_STALE_MS);
+
+    async fn seed_far_apart(app: &App, ids: [(&str, &str, i64); 2]) {
+        for (id, profile_id, rating) in ids {
+            seed_ticket(
+                app,
+                SeedTicket {
+                    id,
+                    profile_id,
+                    rating,
+                    waited_ms: 0,
+                    mode: "bo1",
+                },
+            )
+            .await;
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_two_heard_tickets_wait_out_the_rating_window_past_the_ttl() {
+        let app = test_app().await;
+        seed_far_apart(
+            &app,
+            [("t-near", "near", 1000), ("t-far", "far", 1000 + WINDOW_GAP)],
+        )
+        .await;
+
+        let paired_after = sweep_every_poll(&app, &["near", "far"]).await;
+
+        // The wait runs past `QUEUE_TICKET_STALE_MS` (below), and both are still there at its end.
+        assert_eq!(paired_after, Some(WINDOW_REACHES_GAP_AFTER_SECONDS));
+        assert_eq!(paired_profiles(&app).await.len(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_a_silent_ticket_does_not_outwait_the_rating_window() {
+        let app = test_app().await;
+        seed_far_apart(
+            &app,
+            [("t-near", "near", 1000), ("t-far", "far", 1000 + WINDOW_GAP)],
+        )
+        .await;
+
+        // `far` is an API-only client that enqueued and never asked for anything again.
+        let paired_after = sweep_every_poll(&app, &["near"]).await;
+
+        assert_eq!(paired_after, None);
+        assert_eq!(ticket(&app, "t-far").await["status"], "cancelled");
+        assert_eq!(ticket(&app, "t-near").await["status"], "open");
+        assert!(matches_table(&app).await.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r897000_get_me_answers_queued_while_a_ticket_is_open() {
+        let app = test_app().await;
+        let token = active_profile(&app, "queuer", 1000.0).await;
+        let [deck, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "queuer", &deck, "queuer's deck").await;
+
+        let (_, before) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(before["queued"], false);
+
+        let (status, queued) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 200);
+        assert_eq!(queued["status"], "open");
+        let (_, during) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(during["queued"], true);
+
+        let (status, _) = cancel(&app, &token).await;
+        assert_eq!(status, 200);
+        let (_, after) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(after["queued"], false);
     }
 }
 
