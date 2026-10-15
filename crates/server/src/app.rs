@@ -20,7 +20,7 @@
 //! (the process serves until SIGTERM or Ctrl-C, then drains: `serve_until`).
 
 use std::future::Future;
-use std::net::SocketAddr;
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
@@ -1033,6 +1033,23 @@ where
     Ok(())
 }
 
+/// The listener `serve` answers on: every interface, IPv6 and IPv4 alike (`[::]`, which takes
+/// IPv4 too while `net.ipv6.bindv6only` is 0, Linux's default), or every IPv4 interface where the
+/// host has no IPv6. `localhost` names `::1` before `127.0.0.1` on the CI runners and on macOS, and
+/// Chrome under Cypress 16 makes its own connections, so an IPv4-only listener left every new
+/// browser connection to `http://localhost:8787` depending on a fallback from a refused `::1`. An
+/// IPv4 peer now arrives as `::ffff:a.b.c.d`, which `rate_limit_address` already keys as `a.b.c.d`
+/// (R190), so no limit's key changes.
+async fn bind_listener(port: u16) -> std::io::Result<tokio::net::TcpListener> {
+    match tokio::net::TcpListener::bind((Ipv6Addr::UNSPECIFIED, port)).await {
+        Ok(listener) => Ok(listener),
+        Err(error) => {
+            tracing::info!(event = "server.ipv4_only", reason = %error);
+            tokio::net::TcpListener::bind((Ipv4Addr::UNSPECIFIED, port)).await
+        }
+    }
+}
+
 /// TS `start(env)`: build, open the season, listen on `$PORT`, spawn the background loops, serve
 /// until SIGTERM or Ctrl-C, drain.
 pub async fn serve(env: Env) -> anyhow::Result<()> {
@@ -1053,7 +1070,7 @@ pub async fn serve(env: Env) -> anyhow::Result<()> {
     }
 
     let origins = browser_origins(&app.env);
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.env.port)).await?;
+    let listener = bind_listener(app.env.port).await?;
     let shutdown = shutdown_signal()?;
     tracing::info!(
         event = "server.listening",
