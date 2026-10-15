@@ -6802,30 +6802,12 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/server/tests/actor/ws_server.rs"
-          ],
-          "from": "ba55321877eafb1bb4d8bb9b92beccf9547c8e9a",
-          "main": "8ba509814c48560a38e6a10b20b4d04a412c2923"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "run": "38682031418",
-            "tier": "medium"
-          }
-        ],
+        "reviews": [],
         "sha": "2f4a5938f2bd57363a272d242f4aa2c38f950ecd",
-        "tiers": {
-          "muse": "medium"
-        }
+        "tiers": {}
       }
     },
     "956": {
