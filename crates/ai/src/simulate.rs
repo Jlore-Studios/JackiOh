@@ -13,8 +13,8 @@ use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
-    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of, find_instance,
-    legal_actions, opponent_of, owed_mana_of, reduce, unit_view,
+    Action, ActionBody, CardInstance, GameState, PLAYER_IDS, Phase, PlayerId, active_units_of,
+    effective_life, find_instance, legal_actions, opponent_of, owed_mana_of, reduce, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -250,9 +250,10 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             let defender = opponent_of(actor);
             // The trap's `when` asks a would-be-lethal declaration at its controller's hero; the
             // surcharge reads the same gate approximately — the unit's attack against the hero's
-            // health — so a chip attack at an armed board is not charged the playout's price.
+            // life (`effective_life`, as the trap's lethal judge reads it, R964000) — so a chip
+            // attack at an armed board is not charged the playout's price.
             let lethalish = find_instance(state, attacker_id)
-                .is_some_and(|unit| unit_view(state, unit).attack >= state.players[defender].hero.health);
+                .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()

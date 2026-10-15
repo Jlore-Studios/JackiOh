@@ -19,6 +19,7 @@
 // live region that is always in the tree, so each notice is read out as it arrives.
 //
 // `view.drawOffer` alone says an offer stands (R269); the event stream only says what became of one.
+// The Offer draw control's words come from here too (`offerDrawControlText`): while a declined offer blocks the viewer (R36), it names the turns left, from `view.drawOfferBlockedTurns`.
 
 import { useId, type ReactElement } from "react";
 
@@ -80,6 +81,8 @@ export const DRAW_TEXT = {
   declinedByOpponent: "Your opponent declined the draw",
   accepted: "Draw accepted",
   expired: "The draw offer expired",
+  offerBlocked: "Draw blocked ({count})",
+  offerBlockedTitle: "Offer draw blocked ({count} of your turns left)",
 } as const;
 
 export function drawNoticeText(notice: DrawNotice): string {
@@ -95,6 +98,18 @@ export function drawNoticeText(notice: DrawNotice): string {
     case "expired":
       return DRAW_TEXT.expired;
   }
+}
+
+/**
+ * R36: what the Offer draw control reads. While a declined offer still blocks the viewer, the view
+ * counts the turns of theirs it covers (`drawOfferBlockedTurns`, on their own view only), and the
+ * control names them, with the full sentence as its tooltip. Whether it is live is still `legal`'s
+ * alone (CLAUDE.md rule 7): this only says why it is dark.
+ */
+export function offerDrawControlText(view: PlayerView): { label: string; title?: string } {
+  const left = view.drawOfferBlockedTurns;
+  if (left === undefined) return { label: t("Offer draw") };
+  return { label: t(DRAW_TEXT.offerBlocked, { count: left }), title: t(DRAW_TEXT.offerBlockedTitle, { count: left }) };
 }
 
 /** The engine's own `answerDraw` body, when `legal` lists it. */

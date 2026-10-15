@@ -16,6 +16,8 @@ export type DuosChrome = {
   teammate?: { connected: boolean; aiPlaying: boolean } | null;
   /** Where the result panel's "back" goes. */
   onLeave?: () => void;
+  /** #965: the result panel's "Watch the replay" (§13.9); absent, it offers none (/dev/duos has no server replay). */
+  onWatchReplay?: () => void;
 };
 
 export const DuosChromeContext = createContext<DuosChrome | null>(null);

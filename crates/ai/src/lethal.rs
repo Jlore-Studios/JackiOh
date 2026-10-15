@@ -9,13 +9,14 @@
 //!      the first path it tries. When the walk runs out of moves before it runs out of nodes, the
 //!      whole tree has been searched and there is no lethal to find.
 //!   2. Otherwise a best-first walk with what is left: it expands the position closest to lethal
-//!      (`ready_gap`: the enemy hero's health less what the attacks still to come would deal past its
-//!      Taunts), trying its first AI_SEARCH.lethalWidth moves at once. A depth-first walk spends
-//!      everything below its first move, so a lethal that starts with a card late in move order (a
-//!      spell that kills one's own unit for its Death, a tribute of the enemy's Taunts) is out of its
-//!      reach on a wide board. The best-first walk tries each of the first lethalWidth moves and
-//!      ranks what they leave by `ready_gap`, so such a card is found when it is among those moves. A
-//!      move past the first lethalWidth of its position is never tried by either walk.
+//!      (`ready_gap`: the enemy hero's life, in a Duos duel its own HP and its team's pool (R964000),
+//!      less what the attacks still to come would deal past its Taunts), trying its first
+//!      AI_SEARCH.lethalWidth moves at once. A depth-first walk spends everything below its first
+//!      move, so a lethal that starts with a card late in move order (a spell that kills one's own
+//!      unit for its Death, a tribute of the enemy's Taunts) is out of its reach on a wide board. The
+//!      best-first walk tries each of the first lethalWidth moves and ranks what they leave by
+//!      `ready_gap`, so such a card is found when it is among those moves. A move past the first
+//!      lethalWidth of its position is never tried by either walk.
 //!
 //! A line counts only when it wins on every determinization.
 //!
@@ -27,7 +28,7 @@ use std::rc::Rc;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
-    attacks_per_turn, can_attack, has_exertion, legal_actions, unit_view,
+    attacks_per_turn, can_attack, effective_life, has_exertion, legal_actions, unit_view,
 };
 
 use crate::candidates::candidate_actions;
@@ -154,10 +155,11 @@ fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
     attacks_per_turn(state, unit) - spent
 }
 
-/// How far the seat stands from lethal this turn: the enemy hero's health less what the units that
-/// may still attack (those `legal_actions` lists an attack for) would deal it past the enemy's Taunts,
-/// counted as `face_threat` counts it. Zero or less means the attacks left could end the game. It
-/// only orders the search; a lethal is always proved by playing it through `reduce`.
+/// How far the seat stands from lethal this turn: the enemy hero's life (`effective_life`: in a Duos
+/// duel its own HP and its team's pool, R964000) less what the units that may still attack (those
+/// `legal_actions` lists an attack for) would deal it past the enemy's Taunts, counted as
+/// `face_threat` counts it. Zero or less means the attacks left could end the game. It only orders
+/// the search; a lethal is always proved by playing it through `reduce`.
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     if let Some(result) = &state.result {
         return if result.winner.player() == Some(seat) {
@@ -167,10 +169,10 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
         };
     }
     let opp = seat.opponent();
-    let health = state.players[opp].hero.health;
+    let life = effective_life(state, opp);
     // legal_actions lists no attack while a prompt is open or outside the seat's own main phase.
     if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
-        return f64::from(health);
+        return f64::from(life);
     }
     // TS first ran `subsystems.syncFusedScripts(state)`, as legalActions did, so a fused card's scripts
     // were this state's own before its layers were read. Rust builds fused scripts from the state on
@@ -184,7 +186,7 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
             }
         }
     }
-    f64::from(health - damage_past_taunts(state, opp, &attacks))
+    f64::from(life - damage_past_taunts(state, opp, &attacks))
 }
 
 /// What a new position means for the walk: a proved lethal, a position to search on from, or neither.
