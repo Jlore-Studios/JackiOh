@@ -11,7 +11,124 @@
 //! mana (§2.3). R280: the preview lists the counting piles in rank order, by name and size (public,
 //! §10.8). Numbers read through `param` (R386).
 
+use jackioh_engine::effects::{damage, draw, gain_mana};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-019";
+
+/// The three piles' names in the text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PileName {
+    Deck,
+    Graveyard,
+    Exile,
+}
+
+impl PileName {
+    fn as_str(self) -> &'static str {
+        match self {
+            PileName::Deck => "Deck",
+            PileName::Graveyard => "Graveyard",
+            PileName::Exile => "Exile",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct Pile {
+    zone: OffFieldZone,
+    name: PileName,
+}
+
+/// The three piles in the text's order, which is the tie order.
+const PILES: [Pile; 3] = [
+    Pile {
+        zone: OffFieldZone::Library,
+        name: PileName::Deck,
+    },
+    Pile {
+        zone: OffFieldZone::Graveyard,
+        name: PileName::Graveyard,
+    },
+    Pile {
+        zone: OffFieldZone::Exile,
+        name: PileName::Exile,
+    },
+];
+
+#[derive(Clone, Copy, Debug)]
+struct RankedPile {
+    name: PileName,
+    size: i32,
+}
+
+/// §8 Conventions: any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// The `count` largest of `player`'s piles, largest first, a tie going to the pile listed first.
+fn counting_piles(state: &GameState, player: PlayerId, count: usize) -> Vec<RankedPile> {
+    let mut sized: Vec<(PileName, i32, usize)> = PILES
+        .iter()
+        .enumerate()
+        .map(|(order, pile)| (pile.name, zone_count(state, player, pile.zone), order))
+        .collect();
+    // Stable (SURFACE §4.4.1): the larger first, a tie by the text's order.
+    sized.sort_by(|a, b| b.1.cmp(&a.1).then(a.2.cmp(&b.2)));
+    sized
+        .into_iter()
+        .take(count)
+        .map(|(name, size, _)| RankedPile { name, size })
+        .collect()
+}
+
+fn lizards_breath(piles_counted: usize, label: &'static str) -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(move |ctx| {
+            let counting: Vec<PileName> = counting_piles(&*ctx.state, ctx.controller, piles_counted)
+                .into_iter()
+                .map(|pile| pile.name)
+                .collect();
+            let extra = if counting.contains(&PileName::Exile) {
+                param(&*ctx, "extraDamage")
+            } else {
+                0
+            };
+            let mut effects = vec![damage(json_as(
+                json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") + extra }),
+            ))];
+            if counting.contains(&PileName::Deck) {
+                effects.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+            }
+            if counting.contains(&PileName::Graveyard) {
+                effects.push(gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))));
+            }
+            effects
+        })),
+        // R280: the pile or piles that would count now, in rank order.
+        preview: Some(condition_hook(move |ctx| -> Vec<PreviewValue> {
+            counting_piles(ctx.state, ctx.controller, piles_counted)
+                .into_iter()
+                .map(|pile| PreviewValue {
+                    label: label.to_string(),
+                    value: pile.size,
+                    display: Some(pile.name.as_str().to_string()),
+                    ids: None,
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: lizards_breath(1, "Your largest pile"),
+        radiant: lizards_breath(2, "Your two largest piles"),
+    }
+}
 
 // BUILD M9 Classic row C 19: one hit (2, or 6 with Exile; radiant 4, or 8), then the largest pile's
 // draw or mana (the two largest on radiant), ties to the pile listed first; numbers via `param()` (R386).
@@ -82,7 +199,7 @@ mod tests {
         #[test]
         fn declares_one_target_any_unit_or_hero_on_either_side_and_a_preview_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, BREATH);
             assert_eq!(
                 serde_json::to_value(&scripts.base.targets).unwrap(),

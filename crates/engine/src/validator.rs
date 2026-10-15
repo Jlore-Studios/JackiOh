@@ -101,6 +101,8 @@ string_union! {
         L4 = "L4",
         L5 = "L5",
         L6 = "L6",
+        /// R915005: a custom card plays only in practice, so no queued deck or trio may hold one.
+        L7 = "L7",
     }
 }
 
@@ -315,6 +317,19 @@ fn check(
         }
 
         for card_id in &deck_order {
+            // L7 (R915005) — a custom card plays only in practice. It is judged by this rule alone.
+            if crate::custom::is_custom_id(card_id) {
+                errors.push(LoadoutError {
+                    rule: LoadoutRule::L7,
+                    message: format!(
+                        "{} holds the custom card \"{card_id}\": a deck with a custom card plays only in practice.",
+                        label_at(index)
+                    ),
+                    deck: Some(deck_number),
+                    card_id: Some(card_id.clone()),
+                });
+                continue;
+            }
             let count = deck_counts.get(card_id).copied().unwrap_or(0);
             let def = catalog.cards.get(card_id);
 
@@ -393,6 +408,10 @@ fn check(
             }
         }
     }
+
+    // L7 (R915005) comes first in what the player reads, and L4 and L5 never judge a custom card.
+    errors.sort_by_key(|error| error.rule != LoadoutRule::L7);
+    order.retain(|card_id| !crate::custom::is_custom_id(card_id));
 
     // L4 — a card id appears in at most one deck of the loadout. One deck has nothing to share with.
     if scope == Scope::Trio {
@@ -684,7 +703,8 @@ pub fn check_deck_draft(input: &DeckDraftInput) -> Vec<DraftIssue> {
         *counts.entry(card_id.as_str()).or_insert(0) += 1;
     }
     for (card_id, count) in counts {
-        if !(input.is_deckable)(card_id) {
+        // R915005: a draft keeps a well-formed custom id, which plays in practice and is judged there.
+        if !(input.is_deckable)(card_id) && !crate::custom::custom_id_well_formed(card_id) {
             issues.push(DraftIssue {
                 rule: DraftRule::D3,
                 message: format!("\"{card_id}\" is not a card a deck can hold."),

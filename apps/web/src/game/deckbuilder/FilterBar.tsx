@@ -13,7 +13,7 @@
 // shows the toggle and hides the folded rows only there). The fold is the one piece of state this
 // component owns: it is layout, not a filter, and the chips stay mounted either way.
 
-import { useId, useState, type ReactElement } from "react";
+import { useId, useState, type ReactElement, type ReactNode } from "react";
 
 import type { CardType, Rarity, SetName, Tag } from "@jackioh/shared";
 
@@ -62,6 +62,10 @@ type FilterBarProps = {
   ownedControl?: boolean;
   /** The tag chips, in order; the deck builder's `DECK_CHIP_TAGS` (R1381) when absent. */
   tags?: readonly Tag[];
+  /** The set chips, in order; `FILTER_SETS` when absent (the deck builder adds "Custom", R915005). */
+  sets?: readonly SetName[];
+  /** After the set chips: the deck builder's way to the card creator (#920). */
+  setsAfter?: ReactNode;
 };
 
 const SORT_LABELS: Readonly<Record<SortKey, string>> = {
@@ -105,6 +109,7 @@ function Chip({ testId, pressed, label, title, className, onToggle, rarity }: Ch
 
 export default function FilterBar(props: FilterBarProps): ReactElement {
   const { filter, onFilter, sort, onSort, count, ownedUnavailable = false, ownedControl = true, tags = DECK_CHIP_TAGS } = props;
+  const { sets = FILTER_SETS, setsAfter } = props;
   // The type, tag and rarity chips print the card frame's own words in the reader's language
   // (cards/chinese.ts, R1303); a language with no card table reads the catalog's English.
   const locale = useLocale();
@@ -265,7 +270,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
             <span className="db-group-label" aria-hidden="true">
               {t("Set")}
             </span>
-            {FILTER_SETS.map((set) => (
+            {sets.map((set) => (
               <Chip
                 key={set}
                 testId={filterSetId(set)}
@@ -277,6 +282,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
                 }}
               />
             ))}
+            {setsAfter}
           </div>
           <div className="db-chip-group" role="group" aria-label={t("Type")}>
             <span className="db-group-label" aria-hidden="true">

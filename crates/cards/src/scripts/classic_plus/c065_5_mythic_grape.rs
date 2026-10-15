@@ -13,7 +13,32 @@
 //! printed rarity never feeds a pool (§5), so no Grape is ever one of them, this one included (R387).
 //! An empty hand moves nothing and draws nothing from the rng (R129).
 
+use jackioh_engine::effects::replace_hand_with_random;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-065-5";
+
+/// §8.7: "They cost (0)": the declared number `setCost` (R386), less being better.
+fn mythic_grape(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "query": { "rarity": "Mythic" }, "costOverride": param(&*ctx, "setCost") });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![replace_hand_with_random(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = mythic_grape(false);
+
+    let radiant = mythic_grape(true);
+
+    CardScripts { base, radiant }
+}
 
 // C+ #65.5 Mythic Grape — SPEC §8.7 row 65.5, BUILD M9 Classic+ row C+ 65.5: "Each other card in your
 // hand goes to your graveyard (not a discard) and is replaced by a random non-token Mythic card of any
@@ -46,7 +71,7 @@ mod tests {
         assert_eq!(js(&def.cost), json!(0));
         assert_eq!(js(&def.rarity), json!("Token"));
         assert_eq!(js(&def.printed_rarity), json!("Mythic"));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
     }

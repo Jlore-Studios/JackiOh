@@ -852,6 +852,14 @@ pub enum GameEvent {
         guess: SecretChoice,
         outcome: PredictOutcome,
     },
+    /// R915004: a custom card's hook failed and did nothing (SPEC §12.5): the card's controller, the
+    /// card when it is in play, its definition and what went wrong, for the board to show.
+    ScriptFailed {
+        player: PlayerId,
+        instance_id: Option<String>,
+        def_id: String,
+        message: String,
+    },
 }
 
 /// serde's `skip_serializing_if` for a number left off the wire at 0 (D14: `damage.absorbed`).
@@ -979,6 +987,7 @@ string_union! {
         SecretChosen = "secretChosen",
         SecretRevealed = "secretRevealed",
         Predicted = "predicted",
+        ScriptFailed = "scriptFailed",
     }
 }
 
@@ -1143,6 +1152,7 @@ impl GameEvent {
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
             GameEvent::SecretRevealed { .. } => GameEventType::SecretRevealed,
             GameEvent::Predicted { .. } => GameEventType::Predicted,
+            GameEvent::ScriptFailed { .. } => GameEventType::ScriptFailed,
         }
     }
 }
@@ -1213,8 +1223,8 @@ mod tests {
         assert_eq!(over.event_type().as_str(), "gameOver");
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
-        // `deradianted` (R1102) and `manaSpent` (R1109).
-        assert_eq!(GAME_EVENT_TYPES.len(), 76);
+        // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004).
+        assert_eq!(GAME_EVENT_TYPES.len(), 77);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no

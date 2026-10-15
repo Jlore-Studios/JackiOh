@@ -8,8 +8,41 @@
 //! for this file to script. Armor sums across every source (§10.4), so a Defense-Position ally ends
 //! up with this aura's 2 on top of Defense Position's own +1 (§4.1) and takes 3 less (BUILD M4-T4).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-001";
 
+/// Armor +n on the controller's own units that are on the field in Defense Position (§4.1, §10.4).
+/// "Your units" is the controller's side, so an enemy unit in Defense Position gets nothing, and the
+/// aura reads the position off the instance on every read rather than storing a total. n is the
+/// declared number `armor` (R386): 2, 4 on the Radiant face.
+fn defense_armor_aura() -> AuraHook {
+    aura_hook(|args: HookArgs<'_>| {
+        let n = param(&args, "armor");
+        let controller = args.self_.controller;
+        vec![AuraEntry {
+            applies: Box::new(move |unit: &CardInstance| {
+                unit.controller == controller
+                    && matches!(unit.zone, Zone::Field { row: Row::Units, .. })
+                    && unit.position.unwrap_or(Position::Atk) == Position::Def
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![Keyword::Armor { n }]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        aura: Some(defense_armor_aura()),
+        ..Script::default()
+    };
+    // The same aura: the Radiant face's 4 is its declared `armor`, read off the face that is up.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // BUILD M4-T4 row 1: "DEF ally takes 3 less (1 position + 2 aura), ATK ally unaffected; it never
 // attacks; radiant +4". The aura shows only in damage (§4.4 step 2 subtracts total Armor), so each

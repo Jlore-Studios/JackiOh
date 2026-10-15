@@ -1,7 +1,60 @@
 //! C+ #19.5 Bot Loser (SPEC §8.7 row 19.5): +{attackGain} Attack whenever it is R42's killer; while
 //! Berserk it attacks its own hero at your start and end of turn; the Radiant face can't go Berserk (R412).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-019-5";
+
+/// "Whenever this destroys a Unit, it gains +{attackGain} Attack." (`when` is read for traps only, so the test is in `run`.)
+fn on_kill() -> TriggerDef {
+    TriggerDef::new("bot-loser-kill", &[GameEventType::Destroyed], |ctx, event| {
+        let killed_by_me = match (event, ctx.self_.as_ref()) {
+            (GameEvent::Destroyed { killer_id: Some(killer), .. }, Some(me)) => *killer == me.id,
+            _ => false,
+        };
+        if killed_by_me {
+            vec![buff(json_as(json!({ "target": { "of": "self" }, "attack": param(&*ctx, "attackGain") })))]
+        } else {
+            Vec::new()
+        }
+    })
+}
+
+/// "While Berserk: At the start and end of your turn, this attacks your hero."
+fn berserk_attack(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    match ctx.live_self() {
+        Some(me) if is_berserk(me) => {
+            vec![forced_attack_own_hero(json_as(json!({ "attacker": { "of": "self" } })))]
+        }
+        _ => Vec::new(),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let kill = on_kill();
+
+    let base = Script {
+        triggers: vec![kill.clone()],
+        start_of_turn: Some(hook(berserk_attack)),
+        end_of_turn: Some(hook(berserk_attack)),
+        condition_met: Some(condition_hook(|c| c.zone == ConditionZone::Field && is_berserk(c.self_))),
+        ..Script::default()
+    };
+
+    // "This can't go Berserk": no flag, and no Berserk attacks printed (R412).
+    let radiant = Script {
+        triggers: vec![kill],
+        static_flags: Some(StaticFlags {
+            never_berserk: Some(true),
+            ..StaticFlags::default()
+        }),
+        // R195: this face prints no condition, so it never glows; R195's list pins the hook on both faces.
+        condition_met: Some(condition_hook(|_c| false)),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.7 row 19.5: kills grant permanent Attack (R42); while Berserk (lost on leave, R78)
 // it forced-attacks its hero at start/end of turn (R53); conditionMet reflects Berserk (R195);
@@ -9,7 +62,6 @@ pub const ID: &str = "classicplus-019-5";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jackioh_engine::effects::go_berserk;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -86,7 +138,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.base.keywords, vec![Keyword::Rush, Keyword::FirstStrike]);
             assert_eq!(def.radiant.keywords, vec![Keyword::Charge, Keyword::FirstStrike]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.never_berserk), Some(true));
             assert!(scripts.radiant.start_of_turn.is_none());
             assert!(scripts.base.start_of_turn.is_some());

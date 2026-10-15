@@ -48,6 +48,10 @@ export type { CraftRecipe } from "./generated/CraftRecipe.ts";
 export type { CraftVerb } from "./generated/CraftVerb.ts";
 export type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
 export type { CreditView } from "./generated/CreditView.ts";
+export type { CustomCard } from "./generated/CustomCard.ts";
+export type { CustomFrame } from "./generated/CustomFrame.ts";
+export type { CustomIssue } from "./generated/CustomIssue.ts";
+export type { CustomParam } from "./generated/CustomParam.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";
@@ -77,11 +81,13 @@ export type { QuestView } from "./generated/QuestView.ts";
 export type { Rarity } from "./generated/Rarity.ts";
 export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
+export type { SandboxOp } from "./generated/SandboxOp.ts";
 export type { SecretChoice } from "./generated/SecretChoice.ts";
 export type { SecretView } from "./generated/SecretView.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
+export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
@@ -190,6 +196,7 @@ export const GAME_EVENT_TYPES = [
   "secretChosen",
   "secretRevealed",
   "predicted",
+  "scriptFailed",
 ] as const satisfies readonly GameEventType[];
 
 /**
@@ -209,17 +216,22 @@ export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (ty
 // declares its own copies only for its functions' signatures, which are the same shapes.
 export {
   KEYWORD_KINDS,
+  LEAN_NEWEST,
   PARAM_PLACEHOLDER,
   PLAYER_IDS,
   SHIPPED_SETS,
   fillParams,
   hasKeyword,
+  isLeanPick,
   keywordKey,
+  leanPicks,
+  leanSetOf,
   newestShippedSet,
   opponentOf,
   paramPlaceholders,
   setShips,
 } from "./catalog.ts";
+export type { LeanPick } from "./catalog.ts";
 
 export * from "./codes.ts";
 export * from "./emotes.ts";

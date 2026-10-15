@@ -157,6 +157,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
     secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
     predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+    scriptFailed: { type: "scriptFailed", player: "p1", instanceId: unit, defId: "custom-fixture", message: "cry failed on line 3: boom" },
   };
 }
 

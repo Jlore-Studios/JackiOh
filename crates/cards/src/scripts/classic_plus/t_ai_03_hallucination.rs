@@ -8,7 +8,35 @@
 //! at the start of t + 2 and crumbles at the start of t + 4. An empty deck gives nothing (R129); the hand
 //! cap burns extras (§2.4). AI cards declare no numbers (B8), so the counts are this file's.
 
+use jackioh_engine::effects::add_library_copies;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-03";
+
+const COPIES: i32 = 1;
+const RADIANT_COPIES: i32 = 2;
+const BRITTLE: i32 = 2;
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| {
+                vec![add_library_copies(json_as(json!({ "of": "enemy", "count": COPIES, "brittle": BRITTLE })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| {
+                vec![add_library_copies(json_as(json!({
+                    "of": "enemy",
+                    "count": RADIANT_COPIES,
+                    "brittle": BRITTLE,
+                })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // T-AI-3 Hallucination — SPEC §8.7 row T-AI-3, BUILD M9 row T-AI-3: adds a copy of a random card of the
 // opponent's deck to your hand, a new card you own (the original stays), carrying the original's radiant
@@ -88,7 +116,7 @@ mod tests {
             assert_eq!(def["type"], json!("Spell"));
             assert_eq!(def["tags"], json!(["AI", "Token"]));
             assert_eq!(def["token"], json!(true));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

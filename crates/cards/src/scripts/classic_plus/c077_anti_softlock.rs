@@ -10,11 +10,50 @@
 //! Spell, Pierce is R346's and Stack does nothing. Unlock clears every Locked zone of both players and
 //! leaves a reserved one reserved. The Radiant's choice is a mode declared at play (R81).
 
+use jackioh_engine::effects::{chosen_options, draw, grant_keyword_cards, unlock_all};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-077";
 
-// C+ #77 Anti-Softlock — SPEC §8.7 row 77, E20, E21, E38, R81, R97, R346, R386, R440, BUILD M9 row C+ 77.
+const ALL: &str = "All cards";
+const YOURS: &str = "Only yours";
 
+fn anti_softlock(side: impl Fn(&EffectContext<'_>) -> &'static str + Send + Sync + 'static) -> Hook {
+    hook(move |ctx| {
+        let scope = json!({ "side": side(&*ctx), "zones": ["field", "hand", "library"] });
+        vec![
+            draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+            grant_keyword_cards(json_as(json!({ "scope": scope, "keyword": { "kind": "Stack" } }))),
+            grant_keyword_cards(json_as(json!({ "scope": scope, "keyword": { "kind": "Pierce" } }))),
+            unlock_all(Default::default()),
+        ]
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(anti_softlock(|_ctx| "any")),
+            ..Script::default()
+        },
+        radiant: Script {
+            modes: vec![ModeDecl {
+                kind: PromptKind::Mode,
+                options: vec![ALL.to_string(), YOURS.to_string()],
+            }],
+            cry: Some(anti_softlock(|ctx| {
+                if chosen_options(ctx).first().map(String::as_str) == Some(YOURS) {
+                    "self"
+                } else {
+                    "any"
+                }
+            })),
+            ..Script::default()
+        },
+    }
+}
+
+// C+ #77 Anti-Softlock — SPEC §8.7 row 77, E20, E21, E38, R81, R97, R346, R386, R440, BUILD M9 row C+ 77.
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -99,7 +138,7 @@ mod tests {
                     .collect()
             });
             assert_eq!(params, Some(vec![json!(["draw", 1, 2])]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.modes.is_empty());
             assert_eq!(js(&scripts.radiant.modes), json!([{ "kind": "mode", "options": [ALL, YOURS] }]));
         }

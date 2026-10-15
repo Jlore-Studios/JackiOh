@@ -46,12 +46,13 @@ use jackioh_server::config::PersonaName;
 use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
-    Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, TermsSource, Ticket,
-    TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
+    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks,
+    MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow,
+    PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow,
+    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio,
+    Season, SeriesRow, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -395,7 +396,7 @@ pub const TRUNCATE: &str = "truncate
   public.game_records, public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_actions, public.tickets, public.matches,
-  public.trios, public.decks,
+  public.trios, public.decks, public.custom_cards,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
   public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
@@ -1899,6 +1900,296 @@ mod trios {
 }
 
 // ---------------------------------------------------------------------------
+// Custom cards on the account (SPEC §12.9, R915008; migration 0037)
+// ---------------------------------------------------------------------------
+
+mod custom_cards {
+    use super::*;
+
+    /// A server-minted id (R915000): `custom-` and 32 lowercase hex digits.
+    fn custom_id() -> String {
+        format!("custom-{}", uuid::Uuid::new_v4().simple())
+    }
+
+    /// A Unit's frame within §12.2, with a keyword and a number, as the engine's `CustomFrame` reads it.
+    fn frame(name: &str) -> Value {
+        json!({
+            "name": name,
+            "type": "Unit",
+            "cost": 2,
+            "rarity": "Rare",
+            "attack": 2,
+            "health": 3,
+            "keywords": ["Taunt"],
+            "text": "Cry: Deal {dmg}.",
+            "params": [{ "key": "dmg", "base": 1, "radiant": 2 }],
+        })
+    }
+
+    fn write(harness: &StoreHarness, profile_id: &str, over: Value) -> CustomCardWrite {
+        from(spread(
+            json!({
+                "id": custom_id(),
+                "profileId": profile_id,
+                "frame": frame("Spark"),
+                "source": "return Card { cry = function(c, n) c:damage(\"an enemy\", n.dmg) end }",
+                "builder": { "trigger": "cry", "steps": [{ "verb": "damage", "n": "dmg" }] },
+                "at": harness.now(),
+            }),
+            over,
+        ))
+    }
+
+    /// The card a create of `card` makes: version 1, made and saved at `card.at`.
+    fn created(card: &CustomCardWrite) -> SavedCustomCard {
+        let shown = j(card);
+        from(json!({
+            "profileId": shown["profileId"],
+            "card": {
+                "id": shown["id"],
+                "version": 1,
+                "frame": shown["frame"],
+                "source": shown["source"],
+                "builder": shown["builder"],
+            },
+            "createdAt": shown["at"],
+            "updatedAt": shown["at"],
+        }))
+    }
+
+    async fn r915008_lists_nothing_before_a_card_is_made(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        assert!(q!(harness, t => t.custom_cards_list(&profile.id)).is_empty());
+        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &custom_id())).is_none());
+    }
+
+    async fn r915008_creates_a_card_at_version_1_and_reads_it_back_exactly(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let card = write(harness, &profile.id, json!({}));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_create(&card, 50))),
+            "created"
+        );
+        let expected = created(&card);
+        assert_eq!(
+            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+            Some(expected.clone())
+        );
+        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)), vec![expected]);
+
+        // A card with no builder's model and no script (a vanilla card) reads back as it was made.
+        let vanilla = write(harness, &profile.id, json!({ "source": "", "builder": null }));
+        q!(harness, t => t.custom_cards_create(&vanilla, 50));
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&profile.id, &vanilla.id)),
+            "the vanilla card",
+        );
+        assert_eq!(read, created(&vanilla));
+        assert!(absent(&j(&read.card), "builder"));
+    }
+
+    async fn r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let second = write(harness, &a.id, json!({ "frame": frame("Second"), "at": now + 2 }));
+        let first = write(harness, &a.id, json!({ "frame": frame("First"), "at": now + 1 }));
+        q!(harness, t => t.custom_cards_create(&second, 50));
+        q!(harness, t => t.custom_cards_create(&first, 50));
+        let theirs = write(harness, &b.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&theirs, 50));
+        let names: Vec<Value> = q!(harness, t => t.custom_cards_list(&a.id))
+            .iter()
+            .map(|saved| j(saved)["card"]["frame"]["name"].clone())
+            .collect();
+        assert_eq!(names, vec![json!("First"), json!("Second")]);
+        // Another profile's card is not this one's to read.
+        assert!(q!(harness, t => t.custom_cards_get(&a.id, &theirs.id)).is_none());
+    }
+
+    async fn r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let cards = [
+            write(harness, &profile.id, json!({})),
+            write(harness, &profile.id, json!({})),
+        ];
+        for card in &cards {
+            assert_eq!(lit(&q!(harness, t => t.custom_cards_create(card, 2))), "created");
+        }
+        let third = write(harness, &profile.id, json!({}));
+        assert_eq!(lit(&q!(harness, t => t.custom_cards_create(&third, 2))), "limit");
+        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)).len(), 2);
+        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &third.id)).is_none());
+        // Another profile's cards do not count against this one's cap.
+        let other = active_profile(harness, None).await;
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_create(&write(harness, &other.id, json!({})), 2))),
+            "created"
+        );
+        // A save at the cap is not a create.
+        let edited: CustomCardWrite = from(spread(j(&cards[0]), json!({ "frame": frame("Renamed") })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
+            "updated"
+        );
+    }
+
+    async fn r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made(
+        harness: &StoreHarness,
+    ) {
+        let profile = active_profile(harness, None).await;
+        let card = write(harness, &profile.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let made_at = card.at;
+        let edited: CustomCardWrite = from(spread(
+            j(&card),
+            json!({
+                "frame": frame("Big Spark"),
+                "source": "return Card {}",
+                "builder": null,
+                "at": made_at + 5_000,
+            }),
+        ));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
+            "updated"
+        );
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+            "the saved card",
+        );
+        let expected: SavedCustomCard = from(spread(
+            j(&created(&edited)),
+            json!({
+                "card": spread(j(&created(&edited))["card"].clone(), json!({ "version": 2 })),
+                "createdAt": made_at,
+                "updatedAt": made_at + 5_000,
+            }),
+        ));
+        assert_eq!(read, expected);
+        assert!(absent(&j(&read.card), "builder"));
+
+        // And again: each save counts one more.
+        let again: CustomCardWrite = from(spread(j(&edited), json!({ "at": made_at + 9_000 })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&again, 2))),
+            "updated"
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+                "the card"
+            ))["card"]["version"],
+            3
+        );
+    }
+
+    async fn r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let first: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("First save") })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&first, 1))),
+            "updated"
+        );
+
+        // Version 1 again, from a tab that never saw the first save: stale.
+        let late: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("Late save") })));
+        assert_eq!(lit(&q!(harness, t => t.custom_cards_update(&late, 1))), "stale");
+        // Another profile saving the owner's card, at its right version: missing.
+        let theirs: CustomCardWrite = from(spread(
+            j(&card),
+            json!({ "profileId": other.id, "frame": frame("Mine now") }),
+        ));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&theirs, 2))),
+            "missing"
+        );
+        // A card nobody made: missing.
+        let nobody = write(harness, &owner.id, json!({}));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&nobody, 1))),
+            "missing"
+        );
+
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
+            "the owner's card",
+        );
+        assert_eq!(j(&read)["card"]["frame"]["name"], "First save");
+        assert_eq!(read.card.version, 2);
+        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &nobody.id)).is_none());
+    }
+
+    async fn r915008_refuses_an_id_already_held_whoever_holds_it(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let clash: CustomCardWrite = from(spread(
+            j(&card),
+            json!({ "profileId": other.id, "frame": frame("Clash") }),
+        ));
+        assert!(call!(harness, t => t.custom_cards_create(&clash, 50)).is_err());
+        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
+                "the card"
+            ))["card"]["frame"]["name"],
+            "Spark"
+        );
+    }
+
+    async fn r915008_deletes_only_the_owner_s_card(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        let kept = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        q!(harness, t => t.custom_cards_create(&kept, 50));
+
+        assert!(!q!(harness, t => t.custom_cards_remove(&other.id, &card.id)));
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_some());
+        assert!(q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_none());
+        assert!(!q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
+        let left: Vec<String> = q!(harness, t => t.custom_cards_list(&owner.id))
+            .into_iter()
+            .map(|saved| saved.card.id)
+            .collect();
+        assert_eq!(left, vec![kept.id.clone()]);
+    }
+
+    async fn r915008_deleting_an_account_deletes_its_cards(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let stays = active_profile(harness, None).await;
+        q!(harness, t => t.custom_cards_create(&write(harness, &gone.id, json!({})), 50));
+        let kept = write(harness, &stays.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&kept, 50));
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert!(q!(harness, t => t.custom_cards_list(&gone.id)).is_empty());
+        assert_eq!(q!(harness, t => t.custom_cards_list(&stays.id)).len(), 1);
+    }
+
+    both_stores!(
+        r915008_lists_nothing_before_a_card_is_made,
+        r915008_creates_a_card_at_version_1_and_reads_it_back_exactly,
+        r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own,
+        r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap,
+        r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made,
+        r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing,
+        r915008_refuses_an_id_already_held_whoever_holds_it,
+        r915008_deletes_only_the_owner_s_card,
+        r915008_deleting_an_account_deletes_its_cards,
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Tutorial progress on the account (SPEC §9.10, R320)
 // ---------------------------------------------------------------------------
 
@@ -3281,25 +3572,35 @@ mod rooms {
         assert!(claimed["hostTrio"].is_null());
     }
 
-    /// R1372: an All Random host's "More cards from the newest set" waits with the room until the join
-    /// (`matches.room_lean_newest`, migration 0027), and a room that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random host's "More cards from" pick waits with the room until the
+    /// join (`matches.room_lean_set`, migration 0036), and a room that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let guest = active_profile(harness, None).await;
         let leaning = room(
             harness,
             "DEF567",
             &host.id,
-            json!({ "mode": "random", "hostDeck": [], "hostLeanNewest": true }),
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "newest" }),
         );
         assert!(q!(harness, t => t.rooms_create(&leaning)));
         let found = j(&must(q!(harness, t => t.rooms_get("DEF567")), "the room"));
-        assert_eq!(found["hostLeanNewest"], true);
+        assert_eq!(found["hostLeanSet"], "newest");
         let claimed = j(&must(
             q!(harness, t => t.rooms_claim("DEF567", &guest.id, &id(), harness.now())),
             "the claim",
         ));
-        assert_eq!(claimed["hostLeanNewest"], true);
+        assert_eq!(claimed["hostLeanSet"], "newest");
+
+        let classic_plus = room(
+            harness,
+            "FGH789",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "Classic+" }),
+        );
+        assert!(q!(harness, t => t.rooms_create(&classic_plus)));
+        let found = j(&must(q!(harness, t => t.rooms_get("FGH789")), "the room"));
+        assert_eq!(found["hostLeanSet"], "Classic+");
 
         let plain = room(
             harness,
@@ -3309,7 +3610,7 @@ mod rooms {
         );
         assert!(q!(harness, t => t.rooms_create(&plain)));
         let found = j(&must(q!(harness, t => t.rooms_get("EFG678")), "the room"));
-        assert_eq!(found["hostLeanNewest"], false);
+        assert!(found["hostLeanSet"].is_null(), "{found}");
     }
 
     async fn refuses_a_code_that_is_already_taken(harness: &StoreHarness) {
@@ -3453,7 +3754,7 @@ mod rooms {
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
-        r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
+        r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
         refuses_a_code_that_is_already_taken,
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
@@ -3615,36 +3916,46 @@ mod tickets {
         assert!(!q!(harness, t => t.tickets_claim_pair(&row.id, &row.id, &id(), harness.now())));
     }
 
-    /// R1372: an All Random ticket's "More cards from the newest set" waits in the ticket until it is
-    /// paired (`tickets.lean_newest`, migration 0027), and a ticket that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random ticket's "More cards from" pick waits in the ticket until it is
+    /// paired (`tickets.lean_set`, migration 0036), and a ticket that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+        use jackioh_engine::{LeanPick, SetName};
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
         let leaning = ticket(
             harness,
             &a.id,
-            json!({ "mode": "random", "deck": [], "leanNewest": true }),
+            json!({ "mode": "random", "deck": [], "leanSet": "newest" }),
         );
         let plain = ticket(harness, &b.id, json!({ "mode": "random", "deck": [] }));
+        let classic = ticket(
+            harness,
+            &c.id,
+            json!({ "mode": "random", "deck": [], "leanSet": "Classic" }),
+        );
         q!(harness, t => t.tickets_insert(&leaning));
         q!(harness, t => t.tickets_insert(&plain));
+        q!(harness, t => t.tickets_insert(&classic));
         assert_eq!(
             q!(harness, t => t.tickets_get(&leaning.id)),
             Some(leaning.clone())
         );
-        assert!(leaning.lean_newest);
-        assert!(!plain.lean_newest);
-        let open = q!(harness, t => t.tickets_list_open());
-        let lean_of = |ticket_id: &str| {
-            open.iter()
-                .find(|row| row.id == ticket_id)
-                .map(|row| row.lean_newest)
-        };
-        assert_eq!(lean_of(&leaning.id), Some(true));
-        assert_eq!(lean_of(&plain.id), Some(false));
         assert_eq!(
-            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean_newest),
-            Some(true)
+            q!(harness, t => t.tickets_get(&classic.id)),
+            Some(classic.clone())
+        );
+        assert_eq!(leaning.lean, Some(LeanPick::Newest));
+        assert_eq!(plain.lean, None);
+        assert_eq!(classic.lean, Some(LeanPick::Set(SetName::Classic)));
+        let open = q!(harness, t => t.tickets_list_open());
+        let lean_of = |ticket_id: &str| open.iter().find(|row| row.id == ticket_id).map(|row| row.lean);
+        assert_eq!(lean_of(&leaning.id), Some(Some(LeanPick::Newest)));
+        assert_eq!(lean_of(&plain.id), Some(None));
+        assert_eq!(lean_of(&classic.id), Some(Some(LeanPick::Set(SetName::Classic))));
+        assert_eq!(
+            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean),
+            Some(Some(LeanPick::Newest))
         );
     }
 
@@ -3768,7 +4079,7 @@ mod tickets {
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
-        r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
+        r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
         cancels_an_open_ticket_and_cancelling_twice_is_harmless,
         claims_a_pair_exactly_once,

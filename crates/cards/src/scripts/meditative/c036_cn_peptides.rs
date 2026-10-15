@@ -14,7 +14,59 @@
 //! - **Heads:** `upgrade({ target: chosen, times })`. **Tails:** `destroy`; an Indestructible Unit
 //!   survives (R46).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-036";
+
+/// The card's Lucky X, printed plus given (R1438): the face's as Nerf and Buff have moved it, and any
+/// Lucky given to it (`effects/fruit.rs`'s `lucky_of` shape), plus its controller's Luck (R987).
+fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
+    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own)) + luck_of(ctx.sink.state, ctx.controller)
+}
+
+fn peptides() -> Script {
+    Script {
+        targets: vec![TargetDecl {
+            // R703: no Unit to target means no play. The default `aim: harm` stays: the destroy
+            // is the harmful branch, and a cast that targets enemies should aim it at them.
+            required: Some(true),
+            ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))
+        }],
+        cry: Some(hook(|ctx| {
+            let Some(target) = instance_of(&*ctx, &TargetSpec::Chosen { index: None }) else {
+                return vec![];
+            };
+            let (id, friendly) = (target.id.clone(), target.controller == ctx.controller);
+            let lucky = lucky_of(ctx);
+            let heads = ctx.rng.lucky(
+                lucky,
+                |rng| rng.coin(),
+                move |a, b| {
+                    if friendly { a || b } else { a && b }
+                },
+            );
+            if heads {
+                vec![upgrade(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                    "times": param(&*ctx, "times"),
+                })))]
+            } else {
+                vec![destroy(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                })))]
+            }
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: the printed Lucky 1 and the declared `times` (7,
+    // radiant 10) are what differ.
+    let base = peptides();
+    let radiant = peptides();
+    CardScripts { base, radiant }
+}
 
 // M #36 CN Peptides — SPEC §8.8 row 36, BUILD M10 row M 36: "A declared Unit on either side; one
 // coin: heads 7 separate Buffs (R386), tails destroyed, an Indestructible one surviving (R46); fair
@@ -23,6 +75,7 @@ pub const ID: &str = "meditative-036";
 // 75% each way, and 10 Buffs".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

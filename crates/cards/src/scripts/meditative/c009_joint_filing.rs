@@ -10,7 +10,20 @@
 //! as it pops (R153, R821). Several multipliers do not add: the highest holds (R820). Both faces run one
 //! script; `param` reads the face's `extra`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-009";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        turn_hook_extra: Some(read_hook(|args| param(&args, "extra"))),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // Meditative #9 Joint Filing — SPEC §8.8 row 9, BUILD M10 row M 9: "While it acts, each of your
 // start-of-turn and end-of-turn hooks runs twice, each copy its own queue entry right behind the
@@ -69,7 +82,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "extra", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.turn_hook_extra.is_some());
         assert!(scripts.radiant.turn_hook_extra.is_some());
     }

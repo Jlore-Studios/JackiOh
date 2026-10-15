@@ -5,11 +5,8 @@ verbs, keywords and filters the engine already has. Anything else is [§6](#6-a-
 
 It was first written by reading C+ #5 Guy Att, #6 Wrong-House Attacker, #77 Anti-Softlock and the Rush Token, grepping every file that
 names a card of each kind, and adding a dummy Classic+ unit (a vanilla (1) 1/1 Human) to a scratch worktree and running every gate;
-since v0.3.0 the cards are Rust, and since v0.4.0 (#442) a card's script is Luau, a `.luau` beside the Rust file that holds its
-id and its tests; the files and gates below are those. A card kept in Rust (`docs/v0.4.0/README.md` names each with its reason)
-is changed in its `.rs`'s `pub fn script()`. The contract a card file is held to is
-[`crates/cards/README.md`](../crates/cards/README.md); [`docs/v0.4.0/PORTING.md`](v0.4.0/PORTING.md) is the mechanics of a
-Luau script, Rust beside Luau, rule by rule. One step cannot be done on Linux: [§7](#7-what-cannot-be-done-on-linux).
+since v0.3.0 the cards are Rust, and the files and gates below are the Rust ones. The contract a card file is held to is
+[`crates/cards/README.md`](../crates/cards/README.md). One step cannot be done on Linux: [§7](#7-what-cannot-be-done-on-linux).
 
 ## 1. The files, in the order to touch them
 
@@ -20,7 +17,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 |---|---|---|---|
 | 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
 | 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card | `catalog check`, `tests/cross/catalog.rs` |
-| 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` and `cNNN_slug.luau` | the `.rs`: its header, `pub const ID` and its tests; the `.luau` beside it: the script ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file, a `.luau` with no `.rs`, a card with two scripts or none, and a `.luau` the lint or Luau's compiler refuses |
+| 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
 | 4 | `crates/cards/tests/cross/catalog.rs` | the card's fixture row in `CLASSIC_PLUS`; `RARITY_COUNTS` and `SET_SIZES` (the totals and row counts are their sums) | itself |
 | 5 | `crates/tools/src/catalog.rs` | the set's `cards` and `rarities` in `sets()`, `expected_tag_count` for each tag the card has, and the totals `the_shipped_catalog_passes_every_check` pins | `catalog check`, `cargo test -p jackioh-tools` |
 | 6 | `docs/radiant-audit.md` | one row `\| <index> \| <name> \| …`; the Radiant face must meet R275 (about twice the base face; doubling stats alone is not enough for a unit with text) | `tests/cross/radiant_standard.rs` |
@@ -41,7 +38,7 @@ Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) a
 `spec/`, `docs/architecture.md`.
 
 **A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and a set held the same way later is one too) differs in five places, the Meditative paths below standing for its own:
-- Its files go in `src/scripts/meditative/`.
+- Its script goes in `src/scripts/meditative/`.
 - Rows 1, 4, 5, 6 and 7 are already written. §8.8, §7, the `MEDITATIVE` fixture, the census in `crates/tools/src/catalog.rs`,
   `docs/radiant-audit.md` and BUILD M10 list every card of the set, so a card part corrects its rows only where its build
   decided otherwise.
@@ -74,56 +71,47 @@ Also grep the Markdown for the stated totals (`370 cards`, `80 tokens`, `450`) a
 }
 ```
 
-**The card file** (`src/scripts/classic_plus/c006_wrong_house_attacker.rs`, its header comment saying what the card does and
-why, then its id; its tests follow, below). `build.rs` reads the `ID` line and pairs the `.luau` of the same name with it:
+**Script, keywords only** (`src/scripts/classic_plus/c006_wrong_house_attacker.rs`, its header comment left out). Keywords are catalog
+data, so there is nothing to run:
 
 ```rust
-//! C+ #6 Wrong-House Attacker (SPEC §8.7 row 6). (1) Unit, Human, Common, 1/1 → 2/2. …
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-006";
-```
 
-**Script, keywords only** (`c006_wrong_house_attacker.luau`). Keywords are catalog data, so there is nothing to run, and a script
-that calls no `J` function requires nothing:
-
-```luau
---!strict
-
--- Keywords only: the Radiant face adds Reborn and doubles the stats, catalog data only.
-return {
-	base = {},
-	radiant = "base",
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    // The Radiant face adds Reborn and doubles the stats: catalog data only.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
 }
 ```
 
-**Script with an effect** (`c005_guy_att.luau`). A hook returns a list of `J.<verb>(…)` calls, the engine's effects under their
-own names, and never touches state:
+**Script with an effect** (`c005_guy_att.rs`). Hooks return `Vec<Effect>` from the engine's effects and never touch state:
 
-```luau
---!strict
-local J = require("@jackioh")
+```rust
+use jackioh_engine::prelude::*;
 
-local base = {
-	cry = function(ctx: J.EffectContext)
-		return { J.destroy_all({ side = "self", rows = { "backrow" } }) }
-	end,
+pub const ID: &str = "classicplus-005";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "self", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| vec![destroy_all(json_as(json!({ "side": "any", "rows": ["backrow"] })))])),
+            ..Script::default()
+        },
+    }
 }
-
-local radiant = {
-	cry = function(ctx: J.EffectContext)
-		return { J.destroy_all({ side = "any", rows = { "backrow" } }) }
-	end,
-}
-
-return { base = base, radiant = radiant }
 ```
 
-Read a declared number with `ctx:param("draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
-([cards README §1](../crates/cards/README.md#1-the-card-file)). A face that runs what the other runs is `radiant = "base"`.
-Integers only, `ipairs` only, `J.div` and `J.rem` for Rust's `/` and `%`, a typed `ctx`, and what else the lint and the sandbox
-hold a script to: [PORTING.md §2](v0.4.0/PORTING.md#2-the-translation-rules).
+Read a declared number with `param(ctx, "draw")`, never a literal. Declared targets and modes go in `targets` and `modes`
+([cards README §1](../crates/cards/README.md#1-the-card-file)). A card with no script of its own for one face reuses `base`.
 
-**Tests**, at the bottom of the `.rs` (two cases in the shape of C+ #6's), in Rust whatever the script is written in (#442 L16). Build every game with the testkit's `scenario()`
+**Tests**, at the bottom of the same file (two cases in the shape of C+ #6's). Build every game with the testkit's `scenario()`
 after `crate::register_all()`, and name a test after the ruling it pins (`fn r64_the_copy_lands_in_the_leftmost_free_zone`):
 
 ```rust
@@ -184,10 +172,9 @@ replaces: add `(ID, the newest shipped version, a fn that builds the old scripts
 `KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
 refused by their final hash rather than shown wrong.
 
-`loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script, a port to Luau included, leaves it
-as it is. A new card's comes from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.luau` (its lines that hold code,
-comments and the `require` left out; for a `.rs`, its non-blank, non-comment, non-`use` lines above `#[cfg(test)]`), written into
-its entry by hand. In a patch split over several PRs, only the part that changes card data adds the
+`loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script leaves it as it is. A new card's comes
+from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.rs` (its non-blank, non-comment, non-`use` lines above
+`#[cfg(test)]`), written into its entry by hand. In a patch split over several PRs, only the part that changes card data adds the
 fragment ([issues-and-patches.md](issues-and-patches.md)).
 
 ## 4. Gates, and what a new card breaks that is not your card's fault
@@ -201,7 +188,6 @@ cargo jackioh catalog check
 cargo jackioh patches check
 cargo jackioh spec check
 cargo test -p jackioh-cards c006_wrong_house_attacker    # your card's own tests first
-luau-analyze --mode=strict crates/cards/src/scripts/classic_plus/c006_wrong_house_attacker.luau   # Luau 0.740's strict check, where it is installed
 cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 cargo jackioh fuzz --seeds 200                            # CI's wave; plain `cargo jackioh fuzz` plays 1,000
 pnpm --dir apps/web test                                  # the voice lines and the flavour line
@@ -236,9 +222,8 @@ One more card shifts every random draw from the pool (R380), so tests and games 
 ## 5. Do not read
 
 These look relevant and do not change for a standard card: `crates/cards/src/lib.rs` and `build.rs` (the registry is generated: there is
-nothing to wire), the snapshots in `crates/cards/patches/`, `crates/engine/**` and `crates/luau/**` (unless the text needs a new
-verb, [§6](#6-a-card-the-engine-cannot-express-yet); `crates/cards/luau/jackioh.luau` is where to look up what `J` takes),
-`apps/web/src/cards/**` (faces and art are drawn from the catalog; procedural art needs
+nothing to wire), the snapshots in `crates/cards/patches/`, `crates/engine/**` (unless the text needs a new verb,
+[§6](#6-a-card-the-engine-cannot-express-yet)), `apps/web/src/cards/**` (faces and art are drawn from the catalog; procedural art needs
 nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog), `e2e/fixtures/decks/*.json`, `reviews/`, `docs/polish/`,
 `docs/v0.3.0/`, and the designer's source notes (`JackiOh_*.md`).
 
@@ -247,12 +232,8 @@ nothing), `crates/server/src/**` and `crates/ai/src/**` (they read the catalog),
 When the text needs a verb, keyword, filter or board fact that no card uses: find where the most similar existing mechanic lives, add the new
 one beside it in that pattern, and test it there. A verb is an effect in `crates/engine/src/effects/` (re-exported by `effects/mod.rs` and the
 prelude), a new board fact goes in `crates/engine/src/query.rs`, a new keyword also needs its row in spec §6.1 (the web glossary reads that
-table). Engine tests that need the card's behaviour use a fixture script in `crates/engine/tests/rules/fixtures/`. Then bind it for
-Luau: a verb is one `verb!(name, ArgsStruct)` line in its effects module's file in `crates/luau/src/api/`, a reader a method in
-`crates/luau/src/reads.rs`, a new hook type an adapter in `crates/luau/src/hooks.rs`; regenerate the typed module with
-`cargo test -p jackioh-luau --features ts --test export_api` and commit `crates/cards/luau/jackioh.luau` (`crates/luau/README.md`,
-What is bound; `docs/v0.4.0/api-gaps.md` lists what is still unbound). Keep the card's script a list of those effects (CLAUDE.md
-rules 4 and 5). A rule the spec does not decide is a new ruling note with a proving test (CLAUDE.md rule 3).
+table). Engine tests that need the card's behaviour use a fixture script in `crates/engine/tests/rules/fixtures/`. Keep the card's script a
+list of those effects (CLAUDE.md rules 4 and 5). A rule the spec does not decide is a new ruling note with a proving test (CLAUDE.md rule 3).
 No escalation step.
 
 ## 7. What cannot be done on Linux

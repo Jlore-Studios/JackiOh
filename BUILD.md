@@ -73,8 +73,7 @@ jackioh/
       build.rs                 the registry, generated from src/scripts/**; the compiled-in catalog version
       src/lib.rs               CATALOG, CATALOG_VERSION, card_def, register_all, REGISTRY
       src/query.rs             catalog.query, the only random-pool source (§5.1)
-      src/scripts/core/cNNN_slug.rs          one file per Core card (NNN = zero-padded index) with its id and tests, its script in
-                                             cNNN_slug.luau beside it (or pub fn script() for a card kept in Rust); tokens cNNN_k_slug, t_slug
+      src/scripts/core/cNNN_slug.rs          one file per Core card (NNN = zero-padded index) with its tests; tokens cNNN_k_slug.rs, t_slug.rs
       src/scripts/classic/cNNN_slug.rs       Classic cards
       src/scripts/classic_plus/cNNN_slug.rs  Classic+ cards, tokens cNNN_k_slug.rs, AI cards t_ai_NN_slug.rs
       tests/cards.rs, cross/   the cross-card tests: catalog.rs (M4-T1 acceptance), query.rs, references.rs, radiant_standard.rs, …

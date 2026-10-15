@@ -9,7 +9,31 @@
 //! its own declared number. The designer's Radiant said 3, read as copied from Two Grapes; it is 5 so
 //! the Radiant face never loses two Grapes (SPEC §8.7 row 66).
 
+use jackioh_engine::effects::add_rolled_grapes;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-066";
+
+fn vine_of_grapes(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let mut args = json!({ "count": param(ctx, "grapes") });
+            if radiant {
+                args["radiant"] = json!(true);
+            }
+            vec![add_rolled_grapes(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = vine_of_grapes(false);
+
+    let radiant = vine_of_grapes(true);
+
+    CardScripts { base, radiant }
+}
 
 // C+ #66 Vine of Grapes — SPEC §8.7 row 66, BUILD M9 Classic+ row C+ 66: "As Two Grapes with 5 Grapes;
 // the count reads through `param()`; radiant 5 Radiant Grapes, each rolled with Lucky 1".
@@ -88,7 +112,7 @@ mod tests {
         assert!(def.tags.contains(&Tag::Fruit));
         assert!(def.refs.is_none());
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Lucky", "n": 1 }]));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
     }

@@ -1506,6 +1506,66 @@ pub const OVERCOMING_CYCLE: [CardElement; 5] = [
     CardElement::Metal,
 ];
 
+/// R923002: the most health the practice sandbox's tools may set a hero to (`sandbox.rs`). A hero's
+/// health is set at least to 1: the tools arrange a board, and a hero at 0 would end the game.
+pub const SANDBOX_HERO_HEALTH_MAX: i32 = 99;
+/// R923002: the most Armor the sandbox's tools may give a hero.
+pub const SANDBOX_ARMOR_MAX: i32 = 99;
+/// R923002: the most mana, current or maximum, the sandbox's tools may set. More than `MAX_MANA`, so a
+/// board that needs a big turn can be tried; the next refresh reads the maximum as it reads any other.
+pub const SANDBOX_MANA_MAX: i32 = 10;
+/// R923002: the most cards one of the sandbox's draws takes.
+pub const SANDBOX_DRAW_MAX: i32 = 10;
+
+// ---------------------------------------------------------------------------------------------
+// Custom cards (#915, SPEC §12, R915000–R915009)
+// ---------------------------------------------------------------------------------------------
+
+/// R915000: what every custom card's id begins with. No catalog id does.
+pub const CUSTOM_ID_PREFIX: &str = "custom-";
+/// R915000: the longest custom id, the prefix included: room for the server's 32 hex digits and more.
+pub const CUSTOM_ID_MAX_LENGTH: usize = 64;
+/// R915001: the longest custom card name, in characters, as a deck's (`DECK_NAME_MAX_LENGTH`).
+pub const CUSTOM_NAME_MAX_LENGTH: usize = 40;
+/// R915001: the longest custom card text, in characters: two lines of a card face.
+pub const CUSTOM_TEXT_MAX_LENGTH: usize = 240;
+/// R915001: the most a custom card costs, as the catalog's dearest cards (mana past `MAX_MANA` is gained).
+pub const CUSTOM_COST_MAX: i32 = 10;
+/// R915001: the highest attack a custom Unit prints.
+pub const CUSTOM_ATTACK_MAX: i32 = 12;
+/// R915001: the highest health a custom Unit prints.
+pub const CUSTOM_HEALTH_MAX: i32 = 12;
+/// R915001: the highest attack or health a custom Unit's Radiant face prints, twice the base caps.
+pub const CUSTOM_RADIANT_STAT_MAX: i32 = 24;
+/// R915001: the most keywords a custom Unit prints.
+pub const CUSTOM_KEYWORDS_MAX: usize = 4;
+/// R915001: the keywords a custom Unit may print, and the card kit may give: the game's own simple
+/// combat keywords, none of which takes a number.
+pub const CUSTOM_KEYWORDS: &[KeywordKind] = &[
+    KeywordKind::Taunt,
+    KeywordKind::Rush,
+    KeywordKind::Charge,
+    KeywordKind::FirstStrike,
+    KeywordKind::Poisonous,
+    KeywordKind::Lifesteal,
+    KeywordKind::Reborn,
+    KeywordKind::DivineShield,
+    KeywordKind::Trample,
+    KeywordKind::Windfury,
+    KeywordKind::Ranged,
+    KeywordKind::Flying,
+];
+/// R915001: the most numbers (`{key}`s) a custom card prints.
+pub const CUSTOM_PARAMS_MAX: usize = 6;
+/// R915001: the longest name of a custom card's number.
+pub const CUSTOM_PARAM_KEY_MAX_LENGTH: usize = 16;
+/// R915001: the highest value a custom card's number prints, on either face.
+pub const CUSTOM_PARAM_MAX: i32 = 20;
+/// R915001: the longest card-kit script, in bytes of UTF-8.
+pub const CUSTOM_SOURCE_MAX_BYTES: usize = 8_192;
+/// R915001: the longest builder's model a custom card keeps, in bytes of JSON.
+pub const CUSTOM_BUILDER_MAX_BYTES: usize = 16_384;
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -10,17 +10,79 @@
 //! clause begins (`forEachCard`, R113). "Exile this" is where §10.5 step 7 sends the Spell (§5.1,
 //! R178), so it never summons or offers itself.
 
+use jackioh_engine::effects::{ForEachCardArgs, choose_pick, exile, for_each_card, summon};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-044";
+
+/// Your graveyard's Units, oldest first (§3: a graveyard is chronological).
+fn graveyard_units(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let state: &GameState = ctx.state;
+    let mut units = Vec::new();
+    for card in zone_cards(state, ctx.controller, OffFieldZone::Graveyard).iter() {
+        if def_of(Some(state), &card.def_id).type_ == CardType::Unit {
+            units.push(CardInstance::clone(card));
+        }
+    }
+    units
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            // Any number of Units, the budget the only bound.
+            let max = zone_count(ctx.state, ctx.controller, OffFieldZone::Graveyard);
+            let budget = param(&*ctx, "budget");
+            vec![
+                choose_pick(json_as(json!({
+                    "step": "picked",
+                    "from": [{ "zone": "graveyard" }],
+                    "filter": { "type": "Unit" },
+                    "max": max,
+                    "budget": budget,
+                    "prompt": "Summon Units from your graveyard within the budget",
+                }))),
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        resume: IndexMap::from([(
+            "picked",
+            hook(|ctx| {
+                (0..ctx.targets.len())
+                    .map(|index| summon(json_as(json!({ "instance": { "of": "chosen", "index": index } }))))
+                    .collect()
+            }),
+        )]),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
+                        graveyard_units(ctx).into_iter().map(|card| card.id).collect()
+                    }),
+                    each: Arc::new(|instance_id: &str| -> Effect {
+                        summon(json_as(json!({ "instance": { "of": "instance", "instanceId": instance_id } })))
+                    }),
+                }),
+                exile(json_as(json!({ "target": { "of": "self" } }))),
+            ]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #44 Back from the GY — SPEC §8.6 row 44, BUILD M9 Classic row C 44: a budgeted pick of graveyard
 // Units (R65 cost, an X Unit 0), a pick over the budget refused, each summoned without a Cry into the
 // leftmost open zones; no Unit there → nothing; this Spell is exiled (§5.1); radiant: every Unit,
 // oldest first; its tuned number (budget) reads through `param()` (R386).
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -82,7 +144,7 @@ mod tests {
             crate::register_all();
             let def = js(&registered_catalog()[BACK]);
             assert_eq!(def["params"], json!([{ "key": "budget", "base": 5, "radiant": 5, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }]));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.radiant.targets.is_empty());
         }

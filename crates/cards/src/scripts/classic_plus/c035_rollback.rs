@@ -3,17 +3,65 @@
 //! Radiant face also declares the part: your side, your opponent's side or both. The history and the
 //! restore are E29's.
 
+use jackioh_engine::effects::{chosen_number, roll_back};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-035";
+
+/// N, declared with the play, "1" to ROLLBACK_MAX_TURNS.
+fn turns() -> ModeDecl {
+    ModeDecl {
+        kind: PromptKind::Number,
+        options: (0..ROLLBACK_MAX_TURNS).map(|n| (n + 1).to_string()).collect(),
+    }
+}
+
+/// The Radiant face's parts of the board, as its play names them.
+const SIDES: [(&str, &str); 3] = [("your side", "self"), ("your opponent's side", "enemy"), ("both sides", "both")];
+
+fn back(ctx: &EffectContext<'_>, sides: Option<&str>) -> Vec<Effect> {
+    let turns_ago = chosen_number(ctx);
+    match (turns_ago, sides) {
+        (Some(turns_ago), Some(sides)) => {
+            vec![roll_back(json_as(json!({ "turnsAgo": turns_ago, "sides": sides })))]
+        }
+        _ => vec![],
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        modes: vec![turns()],
+        cry: Some(hook(|ctx| back(&*ctx, Some("both")))),
+        ..Script::default()
+    };
+    let radiant = Script {
+        modes: vec![
+            turns(),
+            ModeDecl {
+                kind: PromptKind::Mode,
+                options: SIDES.iter().map(|(label, _)| label.to_string()).collect(),
+            },
+        ],
+        cry: Some(hook(|ctx| {
+            let sides = ctx
+                .modes
+                .get(1)
+                .and_then(|label| SIDES.iter().find(|(name, _)| name == label).map(|(_, side)| *side));
+            back(&*ctx, sides)
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #35 Rollback (SPEC §8.7, R419, R562, R563, R566).
 // The harness starts mid-game on turn 9 without running a turn start, so tests begin history with
 // `endTurn()`; two reach turn 11 with snapshots of turns 10 and 11. Libraries hold fillers and each
 // side keeps a Unit so no turn auto-ends (R82).
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -137,7 +185,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, ROLLBACK);
             assert_eq!(crate::card_def(ID).id, ROLLBACK);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(js(&scripts.base.modes), json!([{ "kind": "number", "options": ["1", "2", "3"] }]));
             assert_eq!(
                 js(&scripts.radiant.modes),

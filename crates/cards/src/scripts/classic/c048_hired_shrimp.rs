@@ -9,7 +9,60 @@
 //!            chooser may not read, always offered and judged at resolution (R177). A fused card's
 //!            `loc` is its ingredients' sum; Indestructible stays.
 
+use jackioh_engine::effects::{TargetSpec, destroy, instance_of, unreadable_by};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-048";
+
+fn loc_of(state: &GameState, def_id: &str) -> i32 {
+    def_of(Some(state), def_id).loc.unwrap_or(0)
+}
+
+fn longer(state: &GameState, card: &CardInstance, shrimp_def_id: &str) -> bool {
+    loc_of(state, &card.def_id) > loc_of(state, shrimp_def_id)
+}
+
+/// The Radiant face names its target check in the declaration's filter.
+fn shrimp(check: Option<&'static str>) -> Script {
+    let mut filter = json!({ "side": "any", "of": ["unit", "backrow"] });
+    if let Some(check) = check {
+        filter["check"] = json!(check);
+    }
+    Script {
+        targets: vec![TargetDecl::target(1, 1, filter)],
+        target_checks: IndexMap::from([(
+            "longer",
+            target_check(|args| match args.candidate {
+                Some(candidate) => {
+                    unreadable_by(args.state, candidate).contains(&args.player)
+                        || longer(args.state, candidate, &args.self_.def_id)
+                }
+                None => false,
+            }),
+        )]),
+        cry: Some(hook(|ctx| {
+            let target = instance_of(ctx, &TargetSpec::Chosen { index: None });
+            let shrimp_def_id = match &ctx.self_ {
+                Some(me) => me.def_id.clone(),
+                None => ID.to_string(),
+            };
+            match target {
+                Some(target) if longer(ctx.state, &target, &shrimp_def_id) => {
+                    vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))]
+                }
+                _ => vec![],
+            }
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: shrimp(None),
+        radiant: shrimp(Some("longer")),
+    }
+}
 
 // BUILD M9 Classic row C 48 (SPEC §8.6 row 48): the base Cry targets any permanent, never itself (R397,
 // R70, R90), destroying only a longer `loc`; Indestructible survives (R46); a face-down option carries
@@ -17,7 +70,7 @@ pub const ID: &str = "classic-048";
 // Unlicensed Experimentation, which fuses the opponent's played permanent onto one of its controller's of that type (R77, R102).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -123,7 +176,7 @@ mod tests {
             assert_eq!(def.id, SHRIMP);
             assert_eq!(def.loc, Some(shrimp_loc()));
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"] } }]),

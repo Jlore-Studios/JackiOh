@@ -9,7 +9,29 @@
 //! Spell reveals (`reveal_echo`, R1045); the Cry draws. Until patch v0.3.7 it was ME-ALTPLAY's
 //! face-down play permission, each Spell revealing at a time chosen as it was set.
 
+use jackioh_engine::alt_play::cloak_hand_aura;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-099";
+
+fn paranoia(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let count = param(&*ctx, "draw");
+            vec![draw(json_as(json!({ "count": count })))]
+        })),
+        aura: Some(cloak_hand_aura(CardType::Spell)),
+        reveal_echo: radiant.then(|| -> RevealEchoHook { Arc::new(|args| param(&args, "echo")) }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: paranoia(false),
+        radiant: paranoia(true),
+    }
+}
 
 // M #99 Paranoia — SPEC §8.8 row 99, BUILD M10 row M 99.
 #[cfg(test)]

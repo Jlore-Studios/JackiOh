@@ -8,7 +8,42 @@
 //! never runs, auras and turn lines run, fused Activates share the Tree's count, and a fused
 //! keyword applies at once (R1087).
 
+use jackioh_engine::effects::fuse_random_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-075";
+
+fn tree(radiant: bool) -> Script {
+    // C+ #31 Fusion Lab's shape: one Activate, once a turn, fusing a random card into self.
+    let grow = ActivationDecl {
+        id: "grow".to_string(),
+        label: "Fuse a random Field Spell into this".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            vec![fuse_random_into(json_as(json!({
+                "into": { "target": { "of": "self" } },
+                "query": { "type": "Field Spell" },
+                "radiant": radiant,
+            })))]
+        }),
+    };
+    Script {
+        activations: vec![grow],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: tree(false),
+        radiant: tree(true),
+    }
+}
 
 // M #75 Ever Growing Tree — SPEC §8.8 row 75, BUILD M10 row M 75: "Activate, once a turn in your
 // main phase: one random non-token Field Spell (never itself or one already fused in) is fused
@@ -17,6 +52,7 @@ pub const ID: &str = "meditative-075";
 // survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

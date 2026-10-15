@@ -15,7 +15,8 @@
 //! tests that read them (R1441), `PLAY_TELEMETRY_RETENTION_DAYS` for the privacy policy (R1442),
 //! `MIN_ACCOUNT_AGE_YEARS`, `BIRTH_YEAR_EARLIEST` and `TERMS_VERSION` for the age screen, the terms
 //! box and the legal pages (R757000, R757001), and `REPLAY_LIST_PAGE` and
-//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768).
+//! `REPLAY_REQUESTS_PER_MINUTE` for the online replays' list and allowance (R768), and
+//! `CUSTOM_CARDS_PER_ACCOUNT` for the card creator (R915008).
 
 use serde_json::{Value, json};
 
@@ -87,6 +88,7 @@ fn constants() -> Vec<(&'static str, Value)> {
             "CODE_STATUS_RECHECK_FLOOR_SECONDS",
             json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS),
         ),
+        ("CUSTOM_CARDS_PER_ACCOUNT", json!(c::CUSTOM_CARDS_PER_ACCOUNT)),
         // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
         // ships; QUEUE_TICKET_STALE_MS stays server-only.
         ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
@@ -207,11 +209,12 @@ fn every_name_is_listed_once() {
     names.dedup();
     assert_eq!(names.len(), listed, "a constant is listed twice");
     assert_eq!(
-        listed, 65,
+        listed, 66,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
-         (R757000, R757001), and REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), with \
+         (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), and \
+         CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
          RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and QUEUE_ENDED_AFTER_READS (R897000)"
     );

@@ -3,14 +3,45 @@
 //! (R78) become that many hits of {damage}, each on a random enemy still standing (E37, R59). Both faces
 //! run this script; the numbers are the face's declared `params` (R386). Preview: the hits (R280).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-003";
+
+/// R280: the words the preview's value follows, on both faces.
+const HITS_LABEL: &str = "for each Plague Counter on this";
+
+/// One hit per Plague Counter on the card — the Death's count and the preview's (R78: last-known).
+fn hits(self_: Option<&CardInstance>) -> i32 {
+    self_.and_then(|card| card.counters.plague).unwrap_or(0)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        end_of_turn: Some(hook(|ctx| vec![place_plague(json_as(json!({ "amount": param(&*ctx, "tokens") })))])),
+        death: Some(hook(|ctx| {
+            let per_hit = param(&*ctx, "damage");
+            vec![damage_split(json_as(json!({
+                "amount": hits(ctx.self_.as_ref()) * per_hit,
+                "perHit": per_hit,
+                "among": "enemies",
+            })))]
+        })),
+        preview: Some(condition_hook(|c| {
+            vec![json_as::<PreviewValue>(json!({ "label": HITS_LABEL, "value": hits(Some(c.self_)) }))]
+        })),
+        ..Script::default()
+    };
+    // The Radiant face differs only in its stats and its `tokens` value (3), both catalog data.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.7 row 3: Death reads last-known tokens (R78) and deals that many hits of 1,
 // each to a random enemy still standing, all before the state check (R59); 0 tokens deals
 // nothing and draws nothing (R129); preview is the hits its Death would deal now (R280).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
@@ -105,7 +136,7 @@ mod tests {
             vec![("tokens".to_string(), 2, 3), ("damage".to_string(), 1, 1)]
         );
         // The Radiant face is the base face's very script.
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let same = |a: &Option<Hook>, b: &Option<Hook>| match (a, b) {
             (Some(a), Some(b)) => Arc::ptr_eq(a, b),
             _ => false,
@@ -336,7 +367,7 @@ mod tests {
                 .and_then(|pile| pile.first())
                 .cloned()
                 .expect("no Snake in lane 1");
-            let preview = crate::scripts_of()[ID].clone().base.preview.expect("the base face has a preview");
+            let preview = script().base.preview.expect("the base face has a preview");
             let shown = preview(ConditionContext {
                 state: &bare,
                 self_: &self_,

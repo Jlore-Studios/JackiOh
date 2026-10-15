@@ -10,7 +10,67 @@
 //! anyway (R46) and a Reborn one comes back. With no Unit there is nothing to destroy and nothing is
 //! drawn (R129).
 
+use jackioh_engine::effects::{
+    ForEachCardArgs, cards_in_scope, destroy, for_each_card, instance_of, remember_random,
+};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-032-2";
+
+/// Where the base face keeps the survivor it drew, until the destroy reads it.
+const SURVIVOR: &str = "survivor";
+
+/// R81: the Radiant face's survivor, one Unit of either side.
+fn survivor_pick() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+/// "All Units": both sides' Units a Spell may affect, the tops of piles (§3.2), in R68's order.
+fn unit_ids(ctx: &EffectContext<'_>) -> Vec<String> {
+    cards_in_scope(ctx, &json_as(json!({ "side": "any" })))
+        .iter()
+        .map(|unit| unit.id.clone())
+        .collect()
+}
+
+/// Every such Unit but `survivor`, each marked destroyed; read as the list reaches it.
+fn destroy_all_but(survivor: impl Fn(&EffectContext<'_>) -> Option<String> + Send + Sync + 'static) -> Effect {
+    for_each_card(ForEachCardArgs {
+        cards: Arc::new(move |ctx: &mut EffectContext<'_>| {
+            let spared = survivor(&*ctx);
+            unit_ids(&*ctx)
+                .into_iter()
+                .filter(|id| Some(id) != spared.as_ref())
+                .collect()
+        }),
+        each: Arc::new(|instance_id: &str| {
+            destroy(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+        }),
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                // R60: one draw of the match rng over the Units it would destroy; none, no draw (R129).
+                remember_random(json_as(json!({ "key": SURVIVOR, "options": unit_ids(&*ctx) }))),
+                destroy_all_but(|at| recalled(at, SURVIVOR).and_then(|drawn| drawn.as_str().map(str::to_string))),
+            ]
+        })),
+        ..Script::default()
+    };
+    let radiant = Script {
+        targets: survivor_pick(),
+        cry: Some(hook(|_ctx| {
+            vec![destroy_all_but(|at| {
+                instance_of(at, &json_as(json!({ "of": "chosen" }))).map(|unit| unit.id.clone())
+            })]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #32.2 Brawl — SPEC §8.7 row 32.2, BUILD M9 Classic+ row C+ 32.2: "Destroys every Unit on both
 // sides but one survivor drawn at random (R60); Indestructible and Immune to Spells Units stay as well;
@@ -18,7 +78,7 @@ pub const ID: &str = "classicplus-032-2";
 // (R81)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -83,7 +143,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, BRAWL);
             assert_eq!(crate::card_def(ID).id, BRAWL);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert_eq!(
                 js(&scripts.radiant.targets),

@@ -7,7 +7,39 @@
 //! The token takes the leftmost free unit zone (R64) and fizzles on a full row (§3.2); a hero heal has
 //! no cap (§3, R19); the hit is one §4.4 instance from this Spell, which Spell Damage raises (E6).
 
+use jackioh_engine::effects::{damage, heal, summon};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-059";
+
+/// TS `cardDef("core-t-rush").id`.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+/// §8 Conventions: "Deal N damage" with no target named is targeted — any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+fn apple(radiant: bool) -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(move |ctx| {
+            vec![
+                summon(json_as(json!({ "defId": RUSH_TOKEN, "radiant": radiant }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }))),
+                damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: apple(false),
+        radiant: apple(true),
+    }
+}
 
 // C+ #59 All Purpose Apple — SPEC §8.7 row 59, BUILD M9 Classic+ row C+ 59: "Summons a Rush Token (3/3
 // Rush) into your leftmost open zone (none on a full board, the rest still resolving), heals your hero
@@ -52,7 +84,7 @@ mod tests {
         assert_eq!(def.id, APPLE);
         assert_eq!(def.tags, vec![Tag::Fruit]);
         assert_eq!(
-            serde_json::to_value(&crate::scripts_of()[super::ID].clone().base.targets).unwrap(),
+            serde_json::to_value(&super::script().base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
         );
     }

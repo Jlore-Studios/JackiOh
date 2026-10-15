@@ -9,7 +9,40 @@
 //! expiry, live only once they are the active player on a later turn and gone at that turn's cleanup.
 //! Two Taxes are two modifiers, and they add.
 
+use jackioh_engine::effects::add_cost_rule;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-07";
+
+/// TS's `{ base, radiant } as const`: one number per face.
+#[derive(Clone, Copy)]
+struct ByFaceTax {
+    base: i32,
+    radiant: i32,
+}
+
+/// §8.7: "(1) more", Radiant "(2) more". An AI card declares no params (B8), so its numbers live here.
+const TAX: ByFaceTax = ByFaceTax { base: 1, radiant: 2 };
+
+fn tax(amount: i32) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![add_cost_rule(json_as(json!({
+                "player": "enemy",
+                "rule": { "amount": amount },
+                "lasts": "theirNextTurn",
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: tax(TAX.base),
+        radiant: tax(TAX.radiant),
+    }
+}
 
 // T-AI-7 Alignment Tax — SPEC §8.7 row T-AI-7, BUILD M9 Classic+ row T-AI-7: "A player modifier on the
 // opponent: their cards cost (1) more during their next turn only, inert for the rest of this turn,
@@ -99,7 +132,7 @@ mod tests {
             assert_eq!(def.type_, CardType::Spell);
             assert_eq!(js(&def.tags), json!(["AI", "Token"]));
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.cry.is_some());
             assert!(scripts.radiant.cry.is_some());
         }

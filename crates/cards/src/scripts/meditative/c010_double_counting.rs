@@ -10,7 +10,20 @@
 //! step 3). A Spell's resolution is no Cry (R822). Several multipliers do not add: the highest holds
 //! (R820). Both faces run one script; `param` reads the face's `extra`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-010";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry_death_extra: Some(read_hook(|args| param(&args, "extra"))),
+        ..Script::default()
+    };
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // Meditative #10 Double Counting — SPEC §8.8 row 10, BUILD M10 row M 10: "While it acts, the Cry of
 // a Unit or Field Spell you play or cast runs twice with the same declared targets and modes
@@ -89,7 +102,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "extra", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.cry_death_extra.is_some());
         assert!(scripts.radiant.cry_death_extra.is_some());
     }

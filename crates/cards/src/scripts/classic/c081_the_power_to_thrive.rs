@@ -7,7 +7,50 @@
 //! One ability, once per turn, its mode carried in the `activate` action. Heal has no cap on a hero (R19).
 //! The three numbers are declared (R386).
 
+use jackioh_engine::effects::{draw, gain_mana, heal};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-081";
+
+const MODES: [&str; 3] = ["heal", "draw", "mana"];
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![ActivationDecl {
+            id: "thrive".into(),
+            label: "Choose one".into(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![ModeDecl {
+                kind: PromptKind::Mode,
+                options: MODES.iter().map(|mode| mode.to_string()).collect(),
+            }],
+            can_activate: None,
+            has: None,
+            run: hook(|ctx| {
+                let mode = ctx.modes.first().cloned();
+                if mode.as_deref() == Some("heal") {
+                    return vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") })))];
+                }
+                if mode.as_deref() == Some("draw") {
+                    return vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))];
+                }
+                if mode.as_deref() == Some("mana") {
+                    vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))]
+                } else {
+                    vec![]
+                }
+            }),
+        }],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 6, 2 and 2 are its declared numbers.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81: "Activate, once per turn
 // (R384), the mode carried in the `activate` action: heal your hero 3 (no cap, R19), draw 1, or gain 1 mana
@@ -15,7 +58,7 @@ pub const ID: &str = "classic-081";
 // heal 6, draw 2, or 2 mana; its tuned numbers (heal, draw, mana) read through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -91,7 +134,7 @@ mod tests {
                 { "key": "mana", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let abilities: Vec<Value> = scripts
             .base
             .activations

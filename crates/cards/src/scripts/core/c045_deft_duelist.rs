@@ -11,9 +11,17 @@
 //! R49 (two exertions: one attack plus one switch in a turn) is the Deft keyword, read through
 //! §10.4's layers, so a granted Deft works the same as the printed one.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-045";
 
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // #45 Deft Duelist (SPEC §8.2, §4.1, §4.2, §4.4; R6, R49, R63).
 //
@@ -25,7 +33,7 @@ pub const ID: &str = "core-045";
 // Charge and Armor 1 are printed keywords, so the tests read them through their effect.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -73,7 +81,7 @@ mod tests {
         /// "R49 the two exertions are the Deft keyword on both faces, which `combat.ts` reads"
         #[test]
         fn r49_the_two_exertions_are_the_deft_keyword_on_both_faces_which_combat_reads() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(!has_deft_duelist_flag(&scripts.base));
             assert!(!has_deft_duelist_flag(&scripts.radiant));
             let def = def();

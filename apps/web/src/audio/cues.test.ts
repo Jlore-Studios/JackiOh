@@ -228,6 +228,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
 };
 
 /** The design's sfx column, row by row (null is an explicit silence). */
@@ -313,6 +314,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   secretChosen: "trapSet",
   secretRevealed: "trapSting",
   predicted: "notify",
+  // #915 (R915004).
+  scriptFailed: "notify",
 };
 
 /** Rows that return exactly their headline sound, whatever the payload (summoned: B56, below). */

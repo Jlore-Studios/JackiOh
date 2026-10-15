@@ -5,7 +5,30 @@
 //!   via `add_random_from_catalog` with a Prime tag query (R382's pool takes its tokens);
 //!   repeats allowed (R60); a full hand burns; hidden (R97). A Fruit, it joins Fruit pools (R382).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-055";
+
+fn dragon_fruit(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Prime"] },
+                "count": param(&*ctx, "cards"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: dragon_fruit(false),
+        radiant: dragon_fruit(true),
+    }
+}
 
 // M #55 Dragon Fruit — SPEC §8.8 row 55, BUILD M10 row M 55.
 #[cfg(test)]

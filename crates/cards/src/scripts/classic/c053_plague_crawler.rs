@@ -9,14 +9,68 @@
 //! `when` (R99), checked again in `run`.
 //! Tuned numbers `tokens` and `draw` (R386) read through `param` on the running face.
 
+use jackioh_engine::effects::{draw, place_plague};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-053";
+
+/// "another permanent": the top of any unit pile or any backrow card, either side, never this one.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "backrow"], "excludeSelf": true }),
+    )]
+}
+
+/// A placement of Plague Counters on this card: `counterChanged` for `plague` with `placed`, naming it.
+fn placed_on_this(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(me) = &ctx.self_ else {
+        return false;
+    };
+    matches!(
+        event,
+        GameEvent::CounterChanged { counter: CounterKind::Plague, instance_id, placed, .. }
+            if *instance_id == me.id && placed.unwrap_or(0) > 0
+    )
+}
+
+fn draw_on_placement() -> TriggerDef {
+    TriggerDef::new("plague-crawler-placed", &[GameEventType::CounterChanged], |ctx, event| {
+        if !placed_on_this(ctx, event) {
+            return vec![];
+        }
+        let count = param(&*ctx, "draw");
+        vec![draw(json_as(json!({ "count": count })))]
+    })
+    .with_when(placed_on_this)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "tokens");
+            vec![place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+        })),
+        triggers: vec![draw_on_placement()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 2 tokens and draw 2 are its declared numbers, which `param`
+    // reads off the running face.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #53 — SPEC §8.6 row 53, BUILD M9 Classic row C 53: Cry places plague tokens on another permanent
 // (face-down carries only id, R177); draws on placement on it; tuned numbers read via `param()` (R386).
 // Fusing Crawler onto C #27 Pestilent Slime (R77) tests multiplier and trigger sitting on one card.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -109,7 +163,7 @@ mod tests {
             crate::register_all();
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], CRAWLER);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"], "excludeSelf": true } }]),

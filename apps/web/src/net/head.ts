@@ -43,6 +43,8 @@ export function screenNameFor(path: string): string | null {
       return "Leaderboard";
     case paths.stats:
       return "Statistics";
+    case paths.creator:
+      return "Card creator";
     case paths.replays:
       return "Replays";
     case paths.hotseat:

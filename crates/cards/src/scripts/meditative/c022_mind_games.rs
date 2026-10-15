@@ -10,7 +10,129 @@
 //! with no mode keeps no secret — that only happens in a redacted copy (R865) — and still hands the
 //! opponent its Fortify Mind.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-022";
+
+/// The token this hands the opponent (M #22.1).
+const FORTIFY_MIND: &str = "meditative-022-1";
+
+/// The `resume` step the reward re-enters.
+const REWARD: &str = "reward";
+
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn secret_modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: SecretChoice::ALL.iter().map(|choice| choice.as_str().to_string()).collect(),
+    }]
+}
+
+fn choice_of(mode: Option<String>) -> Option<SecretChoice> {
+    mode?.parse::<SecretChoice>().ok()
+}
+
+/// The reward's Defend: heal the caster's hero and each of their Units, then grant the hero Armor
+/// and each Unit Armor `n` (R59: one hit each, closed by one state check).
+fn defend_side(heal_n: i32, armor_n: i32) -> Vec<Effect> {
+    let mut out = vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": heal_n })))];
+    out.push(for_each_card(ForEachCardArgs {
+        cards: cards_of(|ctx| {
+            active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()).collect()
+        }),
+        each: each_of(move |instance_id| {
+            heal(json_as(json!({
+                "target": { "of": "instance", "instanceId": instance_id },
+                "amount": heal_n,
+            })))
+        }),
+    }));
+    out.push(gain_hero_armor(json_as(json!({ "amount": armor_n }))));
+    out.push(for_each_card(ForEachCardArgs {
+        cards: cards_of(|ctx| {
+            active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()).collect()
+        }),
+        each: each_of(move |instance_id| {
+            grant_keyword(json_as(json!({
+                "target": { "of": "instance", "instanceId": instance_id },
+                "keyword": { "kind": "Armor", "n": armor_n },
+            })))
+        }),
+    }));
+    out
+}
+
+pub fn script() -> CardScripts {
+    let cry = |radiant: bool| {
+        hook(move |ctx| {
+            let Some(choice) = choice_of(chosen_options(ctx).into_iter().next()) else {
+                // R865: a redacted copy has no mode to file, so no secret is kept — but the
+                // Fortify Mind it would have linked still reaches the enemy hand.
+                return vec![add_to_hand(json_as(json!({ "defId": FORTIFY_MIND, "player": "enemy" })))];
+            };
+            let cost_override = if radiant { Some(param(&*ctx, "fortifyCost")) } else { None };
+            vec![keep_secret(json_as(json!({
+                "choice": choice.as_str(),
+                "step": REWARD,
+                "link": { "defId": FORTIFY_MIND, "player": "enemy", "costOverride": cost_override },
+            })))]
+        })
+    };
+    let reward = hook(|ctx| {
+        let Some(Value::String(secret_id)) = ctx.data.get(SECRET_KEY) else {
+            return vec![];
+        };
+        let secret_id = secret_id.clone();
+        let Some(choice) = secret_of(ctx.state, &secret_id).and_then(|secret| secret.choice) else {
+            return vec![];
+        };
+        let mut out = vec![resolve_secret(json_as(json!({ "secretId": secret_id })))];
+        match choice {
+            SecretChoice::Greed => {
+                out.push(gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") }))));
+                out.push(draw(json_as(json!({ "count": param(&*ctx, "draw") }))));
+            }
+            SecretChoice::Attack => {
+                out.push(damage_all(json_as(json!({
+                    "amount": param(&*ctx, "damage"),
+                    "side": "enemy",
+                    "heroes": true,
+                }))));
+            }
+            SecretChoice::Defend => {
+                out.extend(defend_side(param(&*ctx, "heal"), param(&*ctx, "armor")));
+            }
+        }
+        out
+    });
+    let mut base_resume = IndexMap::new();
+    base_resume.insert(REWARD, reward);
+    let base = Script {
+        modes: secret_modes(),
+        secret_modes: true,
+        cry: Some(cry(false)),
+        resume: base_resume.clone(),
+        ..Script::default()
+    };
+    // The Radiant face prices the Fortify Mind it hands over; the reward matches the base face.
+    let radiant = Script {
+        modes: secret_modes(),
+        secret_modes: true,
+        cry: Some(cry(true)),
+        resume: base_resume,
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // Meditative #22 Mind Games — SPEC §8.8 row 22, BUILD M10 row M 22: "(2) Epic Spell: the secret
 // mode reaches no opponent view, event or log line until it is revealed; at the start of your next
@@ -21,12 +143,9 @@ pub const ID: &str = "meditative-022";
 // the reward; its numbers read through `param()`; radiant the Fortify Mind costs (2)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{FORTIFY_MIND, ID};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
-
-    /// The token this hands the opponent (M #22.1).
-    const FORTIFY_MIND: &str = "meditative-022-1";
 
     use crate::js;
 

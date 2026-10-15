@@ -7,7 +7,77 @@
 //! still, with the Unit's text and keywords, and the Unit ceases to exist. The Radiant face makes the
 //! Unit Radiant as it lands, so its Cry runs on that face, and fuses it in on its Radiant face (R469).
 
+use jackioh_engine::effects::{fuse_cards, set_radiant};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-033";
+
+/// The Unit standing on this Tower now, if any.
+fn rider_of(state: &GameState, tower: &CardInstance) -> Option<CardInstance> {
+    let at = slot_of(state, tower)?;
+    carried_at(state, at).cloned()
+}
+
+/// R653: the event is the play of the Unit stacked onto this Tower, landing or resolved.
+fn is_stacked_play(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(tower) = ctx.live_self() else {
+        return false;
+    };
+    match event {
+        GameEvent::CardPlayed { instance_id, .. } | GameEvent::CardResolved { instance_id, .. } => {
+            stacked_onto(tower).is_some_and(|stacked| stacked == instance_id.as_str())
+        }
+        _ => false,
+    }
+}
+
+/// R653: once the stacked Unit's play has resolved, the Unit standing on this — that card, or what an
+/// answer to the play left in its place — is fused into it.
+fn fuse_in(radiant: bool) -> TriggerDef {
+    TriggerDef::new("ivory-tower-fuse", &[GameEventType::CardResolved], move |ctx, event| {
+        // Not a trap, so the condition is read in `run` (only traps consult `when`, R99).
+        if !is_stacked_play(ctx, event) {
+            return vec![];
+        }
+        let Some(tower) = ctx.live_self().cloned() else {
+            return vec![];
+        };
+        let Some(rider) = rider_of(&*ctx.state, &tower) else {
+            return vec![];
+        };
+        let mut args = json!({ "instanceIds": [rider.id], "targetInstanceId": tower.id });
+        if radiant {
+            args["radiantIngredients"] = json!(true);
+        }
+        vec![fuse_cards(json_as(args))]
+    })
+}
+
+/// The Radiant face's landing trigger: the stacked Unit becomes Radiant as it is played onto this.
+fn radiant_on_landing() -> TriggerDef {
+    TriggerDef::new("ivory-tower-radiant", &[GameEventType::CardPlayed], |ctx, event| match event {
+        GameEvent::CardPlayed { instance_id, .. } if is_stacked_play(ctx, event) => {
+            vec![set_radiant(json_as(json!({ "instanceId": instance_id })))]
+        }
+        _ => vec![],
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            fuses_carried: Some(true),
+            ..StaticFlags::default()
+        }),
+        triggers: vec![fuse_in(false)],
+        ..Script::default()
+    };
+    let radiant = Script {
+        triggers: vec![radiant_on_landing(), fuse_in(true)],
+        ..base.clone()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #33 Ivory Tower (SPEC §8.7, R418, R653): the first Unit played onto its zone stands on it
 // while play resolves, then fuses in per R77 (kept card). If Tower leaves early, Unit steps down

@@ -9,9 +9,26 @@
 //!
 //! A Spell's on-resolve script hangs off `cry` (§10.5 step 5).
 
+use jackioh_engine::effects::{draw, heal};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-005";
 
+/// The draw and the heal are the declared numbers `draw` and `heal` (R386): 2 and 2, 5 and 5 on the
+/// Radiant face, read off the face that is running.
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+                heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.1 #5 Stockpile. BUILD M4-T4 row 5: "Draw 2, heal 2 (hero may exceed 30); hand cap burns;
 // radiant 5/5".

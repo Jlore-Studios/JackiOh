@@ -3,7 +3,19 @@
 //! (§4.4 step 3, E6's per-hit cap: the lowest cap wins beside Anti-oneshot Armor's). Lose health (R18)
 //! and Set health are not damage and are not capped.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-011";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        hero_guard: Some(read_hook(|args| vec![HeroGuard { cap: Some(param(&args, "cap")), divisor: None }])),
+        ..Script::default()
+    };
+    // The Radiant face adds Reborn and doubles the stats: catalog data only.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #11 Anime Armor — SPEC §8.7 row 11, BUILD M9 Classic+ row C+ 11: "While it is on the field its
 // controller's hero takes at most 1 from each damage instance (§4.4 step 3): combat, Spells, Pierce hits
@@ -15,7 +27,7 @@ pub const ID: &str = "classicplus-011";
 // Anime Armor stands in p1's unit lane 1 unless a test says otherwise.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
@@ -89,7 +101,7 @@ mod tests {
             json!([{ "key": "cap", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
         );
         // TS `expect(radiant).toBe(base)`: the Radiant face is the base face's very script.
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(matches!(
             (&scripts.base.hero_guard, &scripts.radiant.hero_guard),
             (Some(a), Some(b)) if Arc::ptr_eq(a, b)

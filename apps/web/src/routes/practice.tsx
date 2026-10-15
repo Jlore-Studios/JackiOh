@@ -20,6 +20,9 @@
 //   ?seat=p1|p2           the human's seat; otherwise a coin flip per game
 //   ?lesson=<id>          start that tutorial lesson at once, on its own seed and seat (a `?seed=`
 //                         or `?seat=` never overrides a lesson's)
+//   ?try=<custom id>      #921, the creator's "Try it" (`tryPath`): once the account's custom cards are
+//                         read, a game on a random deck around that card (R915005), on the remembered
+//                         difficulty; a card the account does not have shows the setup, saying so
 //   ?pace=fast            e2e pacing, honoured only outside a production build
 //
 // With none of the params that start a game, a free game left in progress on this device (a reload,
@@ -28,6 +31,10 @@
 // game saved that way is not picked up on the next visit: the setup shows, topped by a banner that
 // offers it back (Resume), and starting any other game from here ends it. While the player's online
 // game is live, a banner offers the way back to that too (`net/liveGame.ts`, `GameBanner.tsx`).
+//
+// Custom cards (SPEC §12): an active account's are read too (`useCustomCards`), for the saved decks
+// that name them and for `?try=`. A game with any carries them (R915006), runs on the Luau module
+// (R915009, the worker's choice) and records no card statistics (§12.10).
 
 import {
   useCallback,
@@ -40,15 +47,18 @@ import {
   type ReactNode,
 } from "react";
 
-import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
-import type { ActionBody, CardDefs, PlayerId, PlayerView } from "@jackioh/shared";
+import { CUSTOM_ID_PREFIX, DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
+import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
+import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
+import { gameCustomCards, useCustomCards } from "../creator/useCustomCards.ts";
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
 import { getFxSettings } from "../fx/settings.ts";
 import { t } from "../i18n/i18n.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
+import { getCustomCards, type CustomCardsResponse } from "../net/customCards.ts";
 import { useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
 import { navigate, paths } from "../net/navigate.ts";
@@ -78,6 +88,8 @@ import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
 import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
+import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
+import { SandboxPanel } from "../practice/SandboxPanel.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
 import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
@@ -133,6 +145,8 @@ type PracticeParams = {
   seat?: PlayerId;
   /** A tutorial lesson's id (`tutorial/lessons.ts`). */
   lesson?: string;
+  /** #921: a custom card's id, to try on a random deck around it. */
+  try?: string;
   pace?: "fast";
 };
 
@@ -159,6 +173,9 @@ export function readPracticeParams(search: string): PracticeParams {
 
   const lesson = params.get("lesson");
   if (lesson !== null && lessonById(lesson) !== undefined) out.lesson = lesson;
+
+  const tried = params.get("try");
+  if (tried !== null && tried.startsWith(CUSTOM_ID_PREFIX)) out.try = tried;
 
   if (params.get("pace") === "fast") out.pace = "fast";
 
@@ -188,8 +205,12 @@ function pacingFor(params: PracticeParams): PracticePacing {
   return reducedMotionNow() ? PRACTICE_PACING_REDUCED : PRACTICE_PACING;
 }
 
-/** The setup this device chose last; `leanNewest` is R1373's switch, kept whichever deck was picked. */
-type StoredSetup = { difficulty?: Difficulty; deck?: string; leanNewest?: boolean };
+/**
+ * The setup this device chose last; `leanSet` is the "More cards from" pick (R1373, R924000), kept
+ * whichever deck was picked. A setup kept before the picker holds R1373's `leanNewest`, read as
+ * "newest" when on.
+ */
+type StoredSetup = { difficulty?: Difficulty; deck?: string; leanSet?: LeanPick };
 
 function readStoredSetup(): StoredSetup {
   try {
@@ -197,11 +218,17 @@ function readStoredSetup(): StoredSetup {
     if (raw === null) return {};
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return {};
-    const { difficulty, deck, leanNewest } = parsed as { difficulty?: unknown; deck?: unknown; leanNewest?: unknown };
+    const { difficulty, deck, leanSet, leanNewest } = parsed as {
+      difficulty?: unknown;
+      deck?: unknown;
+      leanSet?: unknown;
+      leanNewest?: unknown;
+    };
+    const lean = isLeanPick(leanSet) ? leanSet : leanNewest === true ? LEAN_NEWEST : undefined;
     return {
       ...(isDifficulty(difficulty) ? { difficulty } : {}),
       ...(typeof deck === "string" && isDeckValue(deck) ? { deck } : {}),
-      ...(typeof leanNewest === "boolean" ? { leanNewest } : {}),
+      ...(lean === undefined ? {} : { leanSet: lean }),
     };
   } catch {
     // A private window, blocked site data or malformed JSON: nothing is remembered.
@@ -209,12 +236,12 @@ function readStoredSetup(): StoredSetup {
   }
 }
 
-function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, leanNewest: boolean): void {
+function writeStoredSetup(difficulty: Difficulty, deck: PracticeDeckChoice, lean: LeanPick | null): void {
   try {
     window.localStorage.setItem(
       PRACTICE_SETUP_KEY,
-      // R1373: the switch only when it is on; a setup without it reads as off.
-      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(leanNewest ? { leanNewest: true } : {}) }),
+      // R1373, R924000: the pick only when there is one; a setup without it reads as none.
+      JSON.stringify({ difficulty, deck: deckChoiceValue(deck), ...(lean === null ? {} : { leanSet: lean }) }),
     );
   } catch {
     // Remembering the setup is a convenience; a refusal costs nothing.
@@ -227,6 +254,10 @@ function configFor(choice: PracticeSetupChoice, params: PracticeParams): Practic
     difficulty: choice.difficulty,
     humanSeat: params.seat ?? randomSeat(),
     deck: choice.deck,
+    // R923000: a sandbox game, with its dev tools.
+    ...(choice.sandbox === true ? { sandbox: true } : {}),
+    // R915006: the custom cards the deck names, which the game carries.
+    ...(choice.customCards === undefined || choice.customCards.length === 0 ? {} : { customCards: choice.customCards }),
   };
 }
 
@@ -462,6 +493,8 @@ export type PracticeRouteProps = {
   coachScript?: (lessonId: string) => LessonScript | undefined;
   /** default `GET /api/auth/me`: R765's re-read of the player's live online game, for its banner */
   loadMe?: (token: string) => Promise<MeResponse>;
+  /** default `GET /api/custom-cards` (§12.9): the custom cards a saved deck or `?try=` names */
+  loadCustomCards?: (token: string) => Promise<CustomCardsResponse>;
 };
 
 type ScreenProps = Omit<PracticeRouteProps, "account"> & { account: Account };
@@ -488,9 +521,13 @@ function PracticeScreen({
   tutorialAccount,
   coachScript,
   loadMe,
+  loadCustomCards,
 }: ScreenProps): ReactElement {
   const params = useMemo(() => readPracticeParams(window.location.search), []);
   const saved = useSavedDecks(account, loadDecks ?? getDecks);
+  // §12.9: an active account's custom cards, which its saved decks and `?try=` name.
+  const customToken = account.kind === "ready" && account.me.profile.status === "active" ? account.token : null;
+  const custom = useCustomCards(customToken, loadCustomCards ?? getCustomCards);
   // R321: an active account's tutorial progress is merged with this device's and kept level with it.
   useTutorialAccountSync(account, tutorialAccount);
   // R634: and so are its game settings.
@@ -501,7 +538,7 @@ function PracticeScreen({
     return {
       difficulty: params.difficulty ?? stored.difficulty ?? PRACTICE_DEFAULT_DIFFICULTY,
       deck: params.deck ?? stored.deck ?? "random",
-      leanNewest: stored.leanNewest ?? false,
+      leanSet: stored.leanSet ?? null,
     };
   }, [params]);
 
@@ -512,7 +549,8 @@ function PracticeScreen({
    */
   const [arrival] = useState(() => {
     const autostart = autostartConfig(params);
-    const kept = autostart === null ? readPracticeResumeState() : null;
+    // #921: `?try=` starts a game too, once the card is read, so it picks up no game left before.
+    const kept = autostart === null && params.try === undefined ? readPracticeResumeState() : null;
     return { autostart, kept };
   });
   /** The game being picked up again (R668, R765); compared by identity with `game`. */
@@ -527,6 +565,13 @@ function PracticeScreen({
   );
   /** R765: the banner's Resume found nothing to fold, and the setup says so. */
   const [resumeLost, setResumeLost] = useState(false);
+  /**
+   * #921: `?try=`'s card: "pending" until the account's custom cards are read, then its game starts
+   * (null) or the setup says it was not found ("missing"). Null when the URL asks no try.
+   */
+  const [tryState, setTryState] = useState<"pending" | "missing" | null>(() =>
+    params.try !== undefined && arrival.autostart === null ? "pending" : null,
+  );
   /** The live online game, for the banner beside the practice one (R765). */
   const liveGame = useLiveGame(account, loadMe ?? getMe);
   const [controller, setController] = useState<PracticeController | null>(null);
@@ -541,7 +586,8 @@ function PracticeScreen({
 
   /** The last catalog a game brought, so the next setup screen previews decks without asking. */
   const [gameDefs, setGameDefs] = useState<CardDefs | null>(null);
-  const lobbyCatalog = useLobbyCatalog(game === null, gameDefs, hostFactory ?? defaultHostFactory);
+  // #921: a `?try=` still finding its card shows no setup, so it asks for no catalog yet.
+  const lobbyCatalog = useLobbyCatalog(game === null && tryState !== "pending", gameDefs, hostFactory ?? defaultHostFactory);
   const pace = useRef(pacing ?? pacingFor(params));
   pace.current = pacing ?? pacingFor(params);
 
@@ -625,8 +671,9 @@ function PracticeScreen({
 
   const onStart = useCallback(
     (choice: PracticeSetupChoice) => {
-      writeStoredSetup(choice.difficulty, choice.deck, choice.leanNewest ?? false);
+      writeStoredSetup(choice.difficulty, choice.deck, choice.leanSet ?? null);
       dropSavedGame();
+      setTryState(null);
       setGame(configFor(choice, params));
     },
     [params, dropSavedGame],
@@ -636,10 +683,32 @@ function PracticeScreen({
   const onStartLesson = useCallback(
     (lesson: TutorialLesson) => {
       dropSavedGame();
+      setTryState(null);
       setGame(lessonStartConfig(lesson));
     },
     [dropSavedGame],
   );
+
+  // #921: `?try=` starts its game once the account's custom cards are read: a random deck around the
+  // card (R915005), on the remembered difficulty and a fresh seed and seat (unless the URL fixes them).
+  const tryId = params.try;
+  const customState = custom.state;
+  useEffect(() => {
+    if (tryState !== "pending" || tryId === undefined) return;
+    if (account.kind === "loading" || customState.kind === "loading") return;
+    const card = customState.kind === "ready" ? customState.cards.find((candidate) => candidate.id === tryId) : undefined;
+    if (card === undefined) {
+      setTryState("missing");
+      return;
+    }
+    setTryState(null);
+    setGame(
+      configFor(
+        { difficulty: initial.difficulty, deck: { kind: "try", card: card.id }, customCards: gameCustomCards([card]) },
+        params,
+      ),
+    );
+  }, [tryState, tryId, account.kind, customState, initial.difficulty, params]);
 
   /** R765: the banner's Resume: the saved game picked up as a reload would pick it up (R668). */
   const onResume = useCallback(() => {
@@ -754,7 +823,18 @@ function PracticeScreen({
   /** The same difficulty and deck again, with a fresh seed and seat (unless the URL fixes them). */
   const onPlayAgain = useCallback(() => {
     if (game === null) return;
-    setGame(configFor({ difficulty: game.difficulty, deck: game.deck }, params));
+    setGame(
+      configFor(
+        {
+          difficulty: game.difficulty,
+          deck: game.deck,
+          ...(game.sandbox === true ? { sandbox: true } : {}),
+          // R915006: a game with custom cards deals them again.
+          ...(game.customCards === undefined ? {} : { customCards: game.customCards }),
+        },
+        params,
+      ),
+    );
   }, [game, params]);
 
   /** The game whose result dialog the player closed to read the final board; null shows it. */
@@ -822,6 +902,27 @@ function PracticeScreen({
     [controller],
   );
 
+  // R923000: a sandbox game's "Hold the AI's turn", one more reason the controller holds the AI's
+  // next step (as the board's animation and a voice line are), released with the game.
+  const [sandboxHeld, setSandboxHeld] = useState(false);
+  const onSandboxHold = useCallback(
+    (held: boolean) => {
+      setSandboxHeld(held);
+      controller?.setHold(SANDBOX_HOLD, held);
+    },
+    [controller],
+  );
+  useEffect(() => {
+    setSandboxHeld(false);
+    controller?.setHold(SANDBOX_HOLD, false);
+  }, [controller, state.config]);
+  const onSandboxTool = useCallback(
+    (op: SandboxOp) => {
+      controller?.act(sandboxAction(op));
+    },
+    [controller],
+  );
+
   // R642–R645: the game's emote half — the dealt portraits, the AI's persona and its replies —
   // driven off the controller's snapshots (practice/emotes.ts). With no game it deals nothing.
   const emotes = usePracticeEmotes(state.config, state.snapshot, state.aiSeat, controller);
@@ -842,6 +943,19 @@ function PracticeScreen({
   }, [wonLesson]);
   /** The path as it stood when this game started, so the result can say what the win opened. */
   const progressAtStart = useMemo(() => (game === null ? null : readTutorialProgress()), [game]);
+
+  if (game === null && tryState === "pending") {
+    return (
+      <Shell variant="lobby">
+        <BackLink to={paths.landing} />
+        <div className="practice-stage">
+          <p className="practice-stage__status" data-testid={practiceTestid.tryLoading} role="status">
+            {t("Finding your custom card…")}
+          </p>
+        </div>
+      </Shell>
+    );
+  }
 
   if (game === null) {
     return (
@@ -872,6 +986,11 @@ function PracticeScreen({
             <LiveGameBanner game={liveGame} />
           </div>
         )}
+        {tryState === "missing" ? (
+          <p className="notice" data-testid={practiceTestid.tryMissing} role="status">
+            {t("That custom card could not be found: it may have been deleted, or you may need to sign in.")}
+          </p>
+        ) : null}
         <TutorialPath onStart={onStartLesson} />
         <header className="practice-lobby__header" ref={practiceHeader}>
           <h2 className="practice-lobby__title">{t("Practice against the AI")}</h2>
@@ -886,6 +1005,7 @@ function PracticeScreen({
           initial={initial}
           defs={lobbyCatalog.defs}
           defsFailed={lobbyCatalog.failed}
+          custom={custom.state}
           onStart={onStart}
         />
       </Shell>
@@ -962,8 +1082,10 @@ function PracticeScreen({
       error={snapshot.error}
       resultForm="chip"
       emotes={emotes}
-      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not.
-      trackStats={config.lesson === undefined}
+      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not,
+      // R923000: nor is a sandbox game, which counts for nothing, and R915009: nor is a game with
+      // custom cards (§12.10).
+      trackStats={config.lesson === undefined && config.sandbox !== true && (config.customCards?.length ?? 0) === 0}
       {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
     />
   );
@@ -1008,7 +1130,7 @@ function PracticeScreen({
           <span className="practice-hud__tier">
             <TierCrest tier={config.difficulty} size="sm" />
             <span className="practice-hud__label">
-              <span className="practice-hud__mode">{t("Practice")}</span>
+              <span className="practice-hud__mode">{config.sandbox === true ? t("Sandbox") : t("Practice")}</span>
               <strong>{t(DIFFICULTY_LABEL[config.difficulty])}</strong>
             </span>
           </span>
@@ -1066,6 +1188,10 @@ function PracticeScreen({
       >
         {lookup === null ? board : <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>}
       </div>
+      {/* R923000: a sandbox game's dev tools, over the board's edge; while the game runs only. */}
+      {config.sandbox === true && result === null ? (
+        <SandboxPanel view={snapshot.view} defs={defs} held={sandboxHeld} onHold={onSandboxHold} onTool={onSandboxTool} />
+      ) : null}
       {leaveAskedFor !== null && leaveAskedFor.game === game && result === null ? (
         <PracticeLeave
           to={leaveAskedFor.to}

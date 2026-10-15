@@ -12,7 +12,48 @@
 //! sourced by this Unit, so its Pierce skips Armor (R346); it is not a Spell's hit, so Spell Damage never
 //! raises it.
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-076-1";
+
+/// §8.7: "Deal 1 damage" with no target named is targeted: any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// §8.7: "Activate" is once a turn, the Radiant face's "Activate 2" twice.
+const BASE_USES: i32 = 1;
+const RADIANT_USES: i32 = 2;
+
+fn ping(uses: i32) -> ActivationDecl {
+    ActivationDecl {
+        id: "ping".to_string(),
+        label: "Deal damage".to_string(),
+        uses: ActivationUses::Count(uses),
+        cost: None,
+        targets: targets(),
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| {
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") })))]
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            activations: vec![ping(BASE_USES)],
+            ..Script::default()
+        },
+        radiant: Script {
+            activations: vec![ping(RADIANT_USES)],
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #76.1 Brother Ping — SPEC §8.7 row 76.1, BUILD M9 Classic+ row C+ 76.1 (R384, R346, R386).
 // Activating is no play (R384: Combo, Quickstriker, Ceaseless Void ignore it); `activated` is public.
@@ -89,7 +130,7 @@ mod tests {
                 [json!(4), json!(4), json!(8), json!(8)]
             );
             assert_eq!(js(&def.base.keywords), json!([{ "kind": "Pierce" }]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             let uses = |script: &Script| script.activations.iter().map(|ability| js(&ability.uses)).collect::<Vec<_>>();
             assert_eq!(uses(&scripts.base), vec![json!(1)]);
             assert_eq!(uses(&scripts.radiant), vec![json!(2)]);

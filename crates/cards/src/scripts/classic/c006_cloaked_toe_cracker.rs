@@ -17,7 +17,70 @@
 //! answers it. The `manaChanged` it makes names no card, so a face-down trap stays unnamed to the
 //! opponent (R33, R97).
 
+use jackioh_engine::effects::gain_mana;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-006";
+
+const TRAP_TYPES: &[CardType] = &[CardType::Trap, CardType::FieldTrap];
+
+/// Your Traps and Field Traps cost (0).
+fn aura() -> CostAuraHook {
+    read_hook(|_args| {
+        vec![CostAura {
+            rule: CostRule {
+                types: Some(vec![CardType::Trap, CardType::FieldTrap]),
+                set_to: Some(0),
+                ..CostRule::default()
+            },
+            whose: CostAuraWhose::Yours,
+            ban: None,
+        }]
+    })
+}
+
+/// After you play a Trap or a Field Trap (a cast is a play, R70), gain the card's mana. A permanent's
+/// trigger reads its condition in `run` (a `when` predicate is a trap's, R99): any other play answers
+/// with nothing.
+fn after_you_play_a_trap() -> TriggerDef {
+    TriggerDef::new("toe-cracker-mana", &[GameEventType::CardPlayed], |ctx, event| {
+        let GameEvent::CardPlayed {
+            player,
+            instance_id,
+            def_id,
+            ..
+        } = event
+        else {
+            return vec![];
+        };
+        if *player != ctx.controller {
+            return vec![];
+        }
+        // R783005: the card as it stands, so a card set by its Cloaked is the Trap it was played as.
+        let played = find_instance(ctx.state, instance_id)
+            .map_or_else(|| def_of(Some(&*ctx.state), def_id).type_, |card| card_type_of(ctx.state, card));
+        if !TRAP_TYPES.contains(&played) {
+            return vec![];
+        }
+        vec![gain_mana(json_as(json!({ "amount": param(&*ctx, "mana") })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let cost_aura = aura();
+    let base = Script {
+        cost_aura: Some(cost_aura.clone()),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cost_aura: Some(cost_aura),
+        triggers: vec![after_you_play_a_trap()],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #6 Cloaked Toe Cracker — SPEC §8.6 row 6, BUILD M9 Classic row C 6: your Traps and Field Traps in hand
 // cost (0) while it is on the field (R65) and return to their cost when it leaves; the opponent's view of
@@ -59,7 +122,7 @@ mod tests {
                 js(&crate::card_def(CRACKER).params),
                 json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.triggers.is_empty());
             let ons: Vec<Vec<GameEventType>> = scripts.radiant.triggers.iter().map(|trigger| trigger.on.clone()).collect();
             assert_eq!(ons, vec![vec![GameEventType::CardPlayed]]);
