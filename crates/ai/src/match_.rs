@@ -79,8 +79,9 @@ pub struct MatchConfig {
 pub type AfterActionHook<'a> = Box<dyn FnMut(&GameState, &GameState, PlayerId, &ActionBody) + 'a>;
 
 /// Wraps each controller call for timing (the sweep): TS's `<T>(seat, run: () => T) => T`. The hook is
-/// handed the seat and the call, and must call it once; the call keeps its own result.
-pub type TimeDecisionHook<'a> = Box<dyn FnMut(PlayerId, &mut dyn FnMut()) + 'a>;
+/// handed the true state, the seat, the controller's rng as it stood before the call (so the sweep can
+/// decide the state again, R977000) and the call, and must call it once; the call keeps its own result.
+pub type TimeDecisionHook<'a> = Box<dyn FnMut(&GameState, PlayerId, &Rng, &mut dyn FnMut()) + 'a>;
 
 /// Handed (the true state, the seat, the controller's answer); answers the action the controller plays.
 pub type OverrideChoiceHook<'a> =
@@ -273,6 +274,8 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
             let time_decision = &mut hooks.time_decision;
             let override_choice = &mut hooks.override_choice;
             catch_unwind(AssertUnwindSafe(|| {
+                // The controller's stream before the call, for a hook that decides the state again (R977000).
+                let before = time_decision.as_ref().map(|_| rng.clone());
                 let mut run = || {
                     let mut made = choose_for(&controller, current, seat, rng);
                     if let Some(over) = override_choice.as_mut() {
@@ -280,9 +283,9 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
                     }
                     choice = Some(made);
                 };
-                match time_decision.as_mut() {
-                    Some(time) => time(seat, &mut run),
-                    None => run(),
+                match (time_decision.as_mut(), before.as_ref()) {
+                    (Some(time), Some(before)) => time(current, seat, before, &mut run),
+                    _ => run(),
                 }
             }))
         };
