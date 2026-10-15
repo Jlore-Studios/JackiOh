@@ -829,9 +829,76 @@ describe("a socket refused mid-game", () => {
       expect(document.body.textContent).not.toMatch(/refused this match socket/);
       expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "refused");
       expect(document.body.textContent).toMatch(/This match isn’t available/);
+      // A refusal is settled: no retry is offered.
+      expect(screen.queryByTestId("match-reconnect")).toBeNull();
     } finally {
       logged.mockRestore();
     }
+  });
+});
+
+describe("Reconnect now", () => {
+  /** Drop the live socket the way a dead network does: an unclean close that backs off. */
+  function drop(): void {
+    act(() => {
+      live().onclose?.({ code: 1006, reason: "", wasClean: false });
+    });
+  }
+
+  it("shows only while the socket is reconnecting, and a click opens a socket at once", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+
+    drop();
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "reconnecting");
+    expect(screen.getByTestId("match-reconnect")).toHaveTextContent("Reconnect now");
+
+    fireEvent.click(screen.getByTestId("match-reconnect"));
+    expect(sockets).toHaveLength(2);
+
+    attach({ legal: [{ type: "endTurn" }] });
+    expect(screen.getByTestId("match-status")).toHaveAttribute("data-connection", "open");
+    expect(screen.queryByTestId("match-reconnect")).toBeNull();
+  });
+
+  it("is offered on the holding panel too, when the first socket drops before any view", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    drop();
+    expect(screen.getByTestId("match-connecting")).toContainElement(screen.getByTestId("match-reconnect"));
+
+    fireEvent.click(screen.getByTestId("match-reconnect"));
+    expect(sockets).toHaveLength(2);
+  });
+
+  it("a reconnect's first view takes down the not-connected alert", () => {
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+    drop();
+
+    fireEvent.click(screen.getByTestId("end-turn"));
+    expect(screen.getByTestId("action-error")).toHaveTextContent("not connected to the match");
+
+    fireEvent.click(screen.getByTestId("match-reconnect"));
+    act(() => {
+      live().readyState = 1;
+      live().onopen?.({});
+    });
+    // An open alone proves nothing: the alert stays until the server answers.
+    expect(screen.getByTestId("action-error")).toHaveTextContent("not connected to the match");
+
+    act(() => {
+      live().onmessage?.({
+        data: JSON.stringify({
+          type: "view",
+          view: baseView({ viewer: "p1", active: "p1" }),
+          legal: [{ type: "endTurn" }],
+        }),
+      });
+    });
+    expect(screen.queryByTestId("action-error")).toBeNull();
   });
 });
 
