@@ -36,7 +36,7 @@ use crate::api::series_rules::{NewSeriesInput, NewSeriesSide};
 // `now_ms`: the server's one clock (SURFACE §11.3), read through tokio's clock so a paused test
 // moves every module's "now" together.
 use crate::app::{App, now_ms};
-use crate::config::{ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
+use crate::config::{MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
 use crate::db::store::{MatchSeat, QueueMode, Room, SeriesRow, StartMatchInput};
 
 /// SPEC §11 R149: a room code "is minted by retrying a bounded number of times against the codes
@@ -334,6 +334,21 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let now = now_ms();
     let expires_at = now + ROOM_CODE_TTL_SECONDS * 1000;
 
+    // R890000: one host holds at most `MAX_OPEN_ROOMS_PER_HOST` unclaimed unexpired rooms, so its
+    // rooms cannot amplify a seat race without bound. Advisory: the seat compare-and-set in `join`
+    // is what stops a double seat, not this count.
+    {
+        let mut tx = app.db.begin(None).await?;
+        let open = tx.rooms_count_open_by_host(&profile_id, now).await?;
+        tx.commit().await?;
+        if open >= MAX_OPEN_ROOMS_PER_HOST {
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "you have too many rooms open; wait for someone to join or let one expire",
+            ));
+        }
+    }
+
     for _attempt in 0..CODE_ATTEMPTS {
         // R79, §9.5: 6 characters from the invite-code alphabet.
         let code = mint_code();
@@ -519,7 +534,44 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
     }
 
     let seats = room_seats(&claimed, &profile_id, &frozen, &seed)?;
-    app.matches
+
+    // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
+    // "clears both players' in-match state" when the result lands). Both seats are claimed
+    // compare-and-set (R890000) before the start, while the claim's renamed `open` row satisfies
+    // the `current_match_id` foreign key, as the queue path's comment states: a queue sweep that
+    // seated a seat between `assert_host_free` and now loses one seat here instead of seating
+    // them twice. Dropping `tx` on a loss rolls both stores back, and `matches_discard_open`
+    // deletes the claim and frees the room code, so the room stays joinable.
+    {
+        let mut tx = app.db.begin(None).await?;
+        let host_seated = tx
+            .profiles_set_in_match(&claimed.host_profile_id, Some(&match_id))
+            .await?;
+        let guest_seated = host_seated && tx.profiles_set_in_match(&profile_id, Some(&match_id)).await?;
+        if host_seated && guest_seated {
+            tx.commit().await?;
+        } else {
+            // Before the commit, so nothing was written — but the claim above did commit, so
+            // delete it and free the room code: the room stays joinable. Dropped first: the
+            // fake store's lock is held by this transaction, and the cleanup begins its own.
+            drop(tx);
+            let mut cleanup = app.db.begin(None).await?;
+            cleanup.matches_discard_open(&match_id).await?;
+            cleanup.commit().await?;
+            if host_seated {
+                return Err(ApiError::new(
+                    ApiErrorCode::AlreadyInMatch,
+                    "finish your current match first",
+                ));
+            }
+            return Err(ApiError::new(
+                ApiErrorCode::Conflict,
+                "The host of that room is playing another game right now.",
+            ));
+        }
+    }
+    if let Err(error) = app
+        .matches
         .start(
             app,
             StartMatchInput {
@@ -533,14 +585,31 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
                 stake: None,
             },
         )
-        .await?;
-
-    // §9.5: the in-match flag both ends of the lifecycle read ("not in a match" above, and
-    // "clears both players' in-match state" when the result lands).
-    for seat_profile in [&claimed.host_profile_id, &profile_id] {
-        let mut tx = app.db.begin(None).await?;
-        tx.profiles_set_in_match(seat_profile, Some(&match_id)).await?;
-        tx.commit().await?;
+        .await
+    {
+        // The seats committed, so a failed start would lock both players out until the reaper's
+        // open-row sweep (R1450). Undo it now: conditional clears (R890000) that never wipe a
+        // rival flag, then the claim's row.
+        let cleanup: Result<(), ApiError> = async {
+            let mut tx = app.db.begin(None).await?;
+            tx.profiles_clear_in_match(&claimed.host_profile_id, &match_id)
+                .await?;
+            tx.profiles_clear_in_match(&profile_id, &match_id).await?;
+            tx.commit().await?;
+            let mut cleanup = app.db.begin(None).await?;
+            cleanup.matches_discard_open(&match_id).await?;
+            cleanup.commit().await?;
+            Ok(())
+        }
+        .await;
+        if let Err(cleanup_error) = cleanup {
+            tracing::error!(
+                event = "room.start_cleanup_failed",
+                matchId = %match_id,
+                message = %cleanup_error.message,
+            );
+        }
+        return Err(error);
     }
 
     tracing::info!(

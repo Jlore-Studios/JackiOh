@@ -27,7 +27,7 @@ use jackioh_server::actor::engine::deal_random_deck;
 use jackioh_server::actor::rooms::{e2e_room_seed_count, script_room_codes};
 use jackioh_server::app::App;
 use jackioh_server::config::{MAX_SAVED_DECKS, MAX_SAVED_TRIOS, ROOM_CODE_LENGTH, ROOM_CODE_TTL_SECONDS};
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{CollectionEntry, Db};
 
 use crate::support::deps::{TestAppOptions, add_user, call, record_logs, test_app, test_app_with};
@@ -1063,5 +1063,97 @@ mod r642_the_portraits_on_a_rooms_match {
             started(&h.app).await.remove(0)["portraits"],
             json!([DEFAULT_PORTRAIT, DEFAULT_PORTRAIT])
         );
+    }
+}
+
+// R890000 — a match seat is claimed atomically (§9.5)
+
+/// R890000, the room half: the join seats both seats compare-and-set before the start, and a
+/// host holds at most three open rooms.
+mod r890000_a_match_seat_is_claimed_atomically {
+    use super::*;
+
+    #[tokio::test]
+    async fn r890000_join_loses_when_queue_seats_the_host_first() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, created) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+
+        // The queue seats the host between the host-free check and the seat claim. Hooked on
+        // the claim, which commits: a rival write inside the seat transaction would roll back
+        // with the loss, while a real rival's commit stands.
+        fake(&h.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "rooms.claim"
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == HOST)
+                && row.in_match_id.is_none()
+            {
+                row.in_match_id = Some("r89-elsewhere".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        let (status, refused) = h.join(&code, json!({})).await;
+        fake(&h.app).lock().await.before_call = None;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "conflict");
+        // No match started, nobody was seated by the join, and the host keeps the game it found.
+        assert!(started(&h.app).await.is_empty());
+        assert_eq!(in_match_of(&h.app, HOST).await, json!("r89-elsewhere"));
+        assert_eq!(in_match_of(&h.app, GUEST).await, Value::Null);
+
+        // The claim was undone and the code freed, so nobody is locked: once the host is free
+        // a new room plays through.
+        assert!(h.rooms().await.is_empty());
+        store!(h.app, t => t.profiles_set_in_match(HOST, None).await.expect("profiles.setInMatch"));
+        let (status, created) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+        assert_eq!(h.join(&code, json!({})).await.0, 200);
+    }
+
+    #[tokio::test]
+    async fn r890000_join_loses_when_queue_seats_the_guest_first() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        let (status, created) = h.create(json!({})).await;
+        assert_eq!(status, 200, "{created}");
+        let code = created["code"].as_str().expect("a code").to_string();
+
+        // The queue seats the joiner after the host's seat won: only the joiner loses. Hooked
+        // on the claim, which commits, for the same reason as the host race above.
+        fake(&h.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "rooms.claim"
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == GUEST)
+                && row.in_match_id.is_none()
+            {
+                row.in_match_id = Some("r89-elsewhere".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        let (status, refused) = h.join(&code, json!({})).await;
+        fake(&h.app).lock().await.before_call = None;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "already_in_match");
+        assert!(started(&h.app).await.is_empty());
+        // The host's won seat rolled back with the transaction; the guest keeps its game.
+        assert_eq!(in_match_of(&h.app, HOST).await, Value::Null);
+        assert_eq!(in_match_of(&h.app, GUEST).await, json!("r89-elsewhere"));
+    }
+
+    #[tokio::test]
+    async fn r890000_create_refuses_a_fourth_open_room() {
+        let _turn = ROOMS.lock().await;
+        let h = harness(false).await;
+        for _ in 0..3 {
+            let (status, created) = h.create(json!({})).await;
+            assert_eq!(status, 200, "{created}");
+        }
+        let (status, refused) = h.create(json!({})).await;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "conflict");
+        assert_eq!(h.rooms().await.len(), 3);
     }
 }

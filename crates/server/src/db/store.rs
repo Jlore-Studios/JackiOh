@@ -1526,13 +1526,24 @@ impl Tx<'_> {
         dispatch!(self, profiles_answer_username_prompt(profile_id))
     }
 
-    /// Pass `None` to clear. §9.5: every terminal reason clears both players'.
+    /// Seats the profile in `match_id`, compare-and-set (R890000): setting `Some` writes only
+    /// while the seat is free and answers `false` without writing when another match holds it, so
+    /// a queue pair, room join, rematch or series game can never seat a player twice — the first
+    /// writer wins. `Err` only when the profile is missing. Clearing with `None` is
+    /// unconditional. §9.5: every terminal reason clears both players'.
     pub async fn profiles_set_in_match(
         &mut self,
         profile_id: &str,
         match_id: Option<&str>,
-    ) -> StoreResult<()> {
+    ) -> StoreResult<bool> {
         dispatch!(self, profiles_set_in_match(profile_id, match_id))
+    }
+
+    /// Clears the seat only while it points at `match_id` (R890000): a start-failure cleanup that
+    /// never wipes a rival match's flag. Always `Ok`, even when the seat points elsewhere or the
+    /// profile is missing.
+    pub async fn profiles_clear_in_match(&mut self, profile_id: &str, match_id: &str) -> StoreResult<()> {
+        dispatch!(self, profiles_clear_in_match(profile_id, match_id))
     }
 
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
@@ -1794,6 +1805,13 @@ impl Tx<'_> {
         at: i64,
     ) -> StoreResult<Option<Room>> {
         dispatch!(self, rooms_claim(code, guest_profile_id, match_id, at))
+    }
+
+    /// Counts the host's unclaimed unexpired open rooms (R890000): the advisory half of the
+    /// per-host open-room cap, so one host cannot amplify into unbounded rooms. Advisory only;
+    /// the seat compare-and-set is the guard.
+    pub async fn rooms_count_open_by_host(&mut self, host_profile_id: &str, at: i64) -> StoreResult<i64> {
+        dispatch!(self, rooms_count_open_by_host(host_profile_id, at))
     }
 
     // tickets

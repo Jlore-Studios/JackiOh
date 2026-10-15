@@ -307,7 +307,7 @@ async fn create_rematch(
                     .await
                     .map_err(|error| ApiError::internal(error.to_string()))?;
                 for bot in &bots {
-                    tx.profiles_set_in_match(bot, None)
+                    tx.profiles_clear_in_match(bot, match_id)
                         .await
                         .map_err(|error| ApiError::internal(error.to_string()))?;
                 }
@@ -325,30 +325,84 @@ async fn create_rematch(
     }
 
     // After the start, not before: the row is what the in-match reference points at
-    // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. A seat taken during
-    // the start keeps its game and tickets; a failure here is logged, not thrown.
-    let flagged = async {
-        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. Each seat is
+    // claimed compare-and-set (R890000): a seat taken during the start loses here instead of
+    // being seated twice, and the taken seat keeps its game and tickets.
+    let seated = async {
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut taken: Option<String> = None;
         for seat in [&seats.0, &seats.1] {
-            let found = tx.profiles_get_many(std::slice::from_ref(&seat.profile_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
-            let taken = found
+            // A seat the claim already holds (R639000's bots, seated for this match before the
+            // start) reads back as seated: only a flag pointing elsewhere loses. The read is
+            // only for equality; the compare-and-set stays the guard.
+            let held = tx
+                .profiles_get_many(std::slice::from_ref(&seat.profile_id))
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            let already = held
                 .first()
-                .is_some_and(|profile| profile.in_match_id.as_deref().is_some_and(|current| current != match_id));
-            if taken {
-                tracing::info!(event = "rematch.seat_taken", matchId = %match_id, profileId = %seat.profile_id);
-                continue;
+                .is_some_and(|profile| profile.in_match_id.as_deref() == Some(match_id));
+            if !already
+                && !tx
+                    .profiles_set_in_match(&seat.profile_id, Some(match_id))
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?
+            {
+                taken = Some(seat.profile_id.clone());
+                break;
             }
-            tx.profiles_set_in_match(&seat.profile_id, Some(match_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
             // A stray open ticket would block the re-queue M7-T1 promises after this game ends.
-            if let Some(ticket) = tx.tickets_open_for_profile(&seat.profile_id).await.map_err(|error| ApiError::internal(error.to_string()))? {
-                tx.tickets_cancel(&ticket.id, now_ms()).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            if let Some(ticket) = tx
+                .tickets_open_for_profile(&seat.profile_id)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?
+            {
+                tx.tickets_cancel(&ticket.id, now_ms())
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
             }
         }
-        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        Ok::<_, ApiError>(taken)
     }
     .await;
-    if let Err(error) = flagged {
-        tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
+    match seated {
+        Err(error) => {
+            tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
+        }
+        Ok(Some(taken)) => {
+            // That seat found another game mid-start. Undo the rematch: stop the actor, then
+            // erase the live match with no result (R679), whose `on delete set null` releases
+            // the winner seat's flag and any bot flags `bots_claim_for_rematch` set, while the
+            // taken seat is untouched. The caller clears the offer claim and the seats re-offer.
+            tracing::info!(event = "rematch.seat_taken", matchId = %match_id, profileId = %taken);
+            app.matches.stop(match_id).await;
+            let voided = async {
+                let mut tx = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.matches_forget_voided(match_id)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))
+            }
+            .await;
+            if let Err(error) = voided {
+                tracing::error!(event = "rematch.void_failed", matchId = %match_id, message = %error.message);
+            }
+            return Err(already_in_match());
+        }
+        Ok(None) => {}
     }
     tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
     Ok(())

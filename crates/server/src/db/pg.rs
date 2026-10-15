@@ -2077,22 +2077,59 @@ pub async fn profiles_set_glicko(
     Ok(())
 }
 
-/// §9.5: set when a match starts and cleared by every ending.
+/// §9.5: set when a match starts and cleared by every ending. Setting `Some` is a
+/// compare-and-set (R890000): one statement seats only a free profile, so a queue pair, room join,
+/// rematch or series game racing for one seat leaves exactly one winner. `true` seated, `false`
+/// seat taken, `Err` only when the profile is missing; clearing with `None` is unconditional.
 pub async fn profiles_set_in_match(
     t: &mut PgTx<'_>,
     profile_id: &str,
     match_id: Option<&str>,
-) -> Result<(), StoreError> {
+) -> Result<bool, StoreError> {
     run_as(t, Some(profile_id)).await?;
-    let done = sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
+    let done = sqlx::query(
+        "update public.profiles set current_match_id = $2::uuid
+          where id = $1::uuid and ($2::uuid is null or current_match_id is null)",
+    )
+    .bind(profile_id)
+    .bind(match_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
+    if done.rows_affected() == 1 {
+        return Ok(true);
+    }
+    // No row moved: a profile that was never there is an error, as `matches_finish` re-reads its
+    // id; a profile that is there is held by another match. (A free profile pointed at a match
+    // that does not exist raises the foreign key above, as before.)
+    let rows = sqlx::query("select id from public.profiles where id = $1::uuid")
         .bind(profile_id)
-        .bind(match_id)
-        .execute(&mut **t)
+        .fetch_all(&mut **t)
         .await
         .map_err(db_error)?;
-    if done.rows_affected() == 0 {
+    if rows.is_empty() {
         return Err(StoreError::from(format!("no profile {profile_id}")));
     }
+    Ok(false)
+}
+
+/// R890000: clears the seat only while it points at `match_id`, so a start-failure cleanup never
+/// wipes a rival match's flag. Always `Ok`.
+pub async fn profiles_clear_in_match(
+    t: &mut PgTx<'_>,
+    profile_id: &str,
+    match_id: &str,
+) -> Result<(), StoreError> {
+    run_as(t, Some(profile_id)).await?;
+    sqlx::query(
+        "update public.profiles set current_match_id = null
+          where id = $1::uuid and current_match_id = $2::uuid",
+    )
+    .bind(profile_id)
+    .bind(match_id)
+    .execute(&mut **t)
+    .await
+    .map_err(db_error)?;
     Ok(())
 }
 
@@ -3283,6 +3320,32 @@ pub async fn rooms_claim(
     .await
     .map_err(db_error)?;
     row.map(|row| RoomRow::read(&row).and_then(to_room)).transpose()
+}
+
+/// R890000: how many of the host's rooms are still open, unclaimed and unexpired — the advisory
+/// half of `MAX_OPEN_ROOMS_PER_HOST`. A claimed row has its guest set, a started one is `live`,
+/// and an expired one fails the ceiling, so none of them count.
+pub async fn rooms_count_open_by_host(
+    t: &mut PgTx<'_>,
+    host_profile_id: &str,
+    at: i64,
+) -> Result<i64, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query(concat!(
+        "select count(*)::int as n from public.matches
+          where p1_profile_id = $1::uuid
+            and status = 'open'
+            and room_code is not null
+            and p2_profile_id is null
+            and ceiling_at > ",
+        ts!("$2")
+    ))
+    .bind(host_profile_id)
+    .bind(at)
+    .fetch_optional(&mut **t)
+    .await
+    .map_err(db_error)?;
+    row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
 // ---------------------------------------------------------------------------

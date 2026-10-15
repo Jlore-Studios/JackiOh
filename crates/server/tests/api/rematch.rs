@@ -22,6 +22,7 @@
 //! The offers are module state shared by every test of this binary, so each test names its own
 //! profiles and matches instead of clearing the map, which would wipe a test running beside it.
 
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
@@ -38,7 +39,7 @@ use jackioh_server::api::rematch::{STAKE_DOUBLE, STAKE_NORMAL};
 use jackioh_server::api::results::record_result;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::REMATCH_OFFER_TTL_MS;
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{Db, MatchSeat, StartMatchInput};
 
 use crate::support::deps::{add_user, call, test_app};
@@ -1069,5 +1070,46 @@ mod r1442_rematch_signals {
             marks(&app, &finished).await,
             vec![(json!(true), json!(false)), (json!(true), json!(true))]
         );
+    }
+}
+
+// R890000 — a match seat is claimed atomically (§9.5)
+
+/// R890000, the rematch half: a seat taken mid-start voids the rematch instead of seating a
+/// player twice, and the taken seat keeps the game it found.
+mod r890000_a_seat_taken_mid_start {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r890000_seat_taken_mid_start_voids_the_rematch() {
+        let app = test_app().await;
+        let (a, b, finished) = names("seat-race");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished, &a, &b, json!({})).await;
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+
+        // The loser finds another game between the rematch's start and its flags: the second
+        // seat claim loses.
+        let b_elsewhere = b.clone();
+        let claims = Arc::new(AtomicU32::new(0));
+        fake(&app).await.before_call = Some(Arc::new(move |method: &str, tables: &mut FakeTables| {
+            if method == "profiles.setInMatch"
+                && claims.fetch_add(1, Ordering::SeqCst) == 1
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == b_elsewhere)
+            {
+                row.in_match_id = Some("r89-elsewhere".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        let (status, refused) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        fake(&app).await.before_call = None;
+        assert_eq!(status, 409, "{refused}");
+        assert_eq!(refused["error"]["code"], "already_in_match");
+        // No rematch row, the loser keeps its game, and the winner's flag went with the void.
+        assert!(live_ids(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, &b).await, json!("r89-elsewhere"));
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
     }
 }
