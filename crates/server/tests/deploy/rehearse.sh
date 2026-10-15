@@ -19,11 +19,13 @@
 #      CATALOG_VERSION), read from the file so the rehearsal cannot drift from the deploy. The
 #      secrets are placeholders: the server checks their shape at boot, and nothing here calls out.
 #      render.yaml must carry no buildCommand and no startCommand: the image is the whole deploy.
-#   3. The readiness probe Render uses, GET /api/catalog: it must answer within READY_SECONDS with
-#      render.yaml's catalog version and, in its x-deployed-commit header, the commit Render hands
-#      the service in RENDER_GIT_COMMIT (deploy-watch.yml compares that header with each push); the
-#      container runs under the free instance's INSTANCE_MEMORY_MB and must use less than
-#      MEMORY_LIMIT_MB of it (headroom); and a second boot must migrate nothing.
+#   3. The readiness probe Render uses, render.yaml's healthCheckPath (/readyz, which asks
+#      Postgres): it must answer within READY_SECONDS, followed by /api/catalog's version and, in
+#      its x-deployed-commit header, the commit Render hands the service in RENDER_GIT_COMMIT
+#      (deploy-watch.yml compares that header with each push); the container runs under the free
+#      instance's INSTANCE_MEMORY_MB and must use less than MEMORY_LIMIT_MB of it (headroom); and
+#      a second boot must migrate nothing. Each boot is stopped with SIGTERM (docker stop; tini
+#      forwards it) and must exit 0.
 #   4. CATALOG_VERSION cannot stop a deploy (docs/v0.3.0/SURFACE.md §11.3, #488): the binary
 #      compiles its catalog version in from crates/cards/patches/patches.json and serves it whatever
 #      the environment says. So a last boot with a stale value, as one left in Render's dashboard
@@ -82,8 +84,9 @@ RUNTIME=$(yaml_field runtime)
 DOCKERFILE=$(yaml_field dockerfilePath)
 CONTEXT=$(yaml_field dockerContext)
 CATALOG_VERSION=$(yaml_value CATALOG_VERSION)
-if [ "$RUNTIME" != "docker" ] || [ -z "$DOCKERFILE" ] || [ -z "$CONTEXT" ] || [ -z "$CATALOG_VERSION" ]; then
-  echo "FAIL: could not read runtime: docker, dockerfilePath, dockerContext and CATALOG_VERSION from render.yaml" >&2
+HEALTH_CHECK_PATH=$(yaml_field healthCheckPath)
+if [ "$RUNTIME" != "docker" ] || [ -z "$DOCKERFILE" ] || [ -z "$CONTEXT" ] || [ -z "$CATALOG_VERSION" ] || [ -z "$HEALTH_CHECK_PATH" ]; then
+  echo "FAIL: could not read runtime: docker, dockerfilePath, dockerContext, CATALOG_VERSION and healthCheckPath from render.yaml" >&2
   exit 1
 fi
 if grep -Eq '^ *(buildCommand|startCommand):' "$REPO/render.yaml"; then
@@ -92,6 +95,7 @@ if grep -Eq '^ *(buildCommand|startCommand):' "$REPO/render.yaml"; then
 fi
 echo "image: $DOCKERFILE (context $CONTEXT)"
 echo "catalog version: $CATALOG_VERSION"
+echo "health check: $HEALTH_CHECK_PATH"
 
 # REHEARSAL_DEPS_ONLY (above) builds the `deps` stage alone, left in the build cache and written to
 # REHEARSAL_CACHE_TO, with no image to tag or load.
@@ -204,6 +208,7 @@ save_log() { docker logs "$SERVER" > "$SERVER_LOG" 2>&1 || true; }
 stop_server() {
   docker stop -t 30 "$SERVER" >/dev/null 2>&1 || true
   save_log
+  exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$SERVER" 2>/dev/null || echo unknown)
   docker rm -f "$SERVER" >/dev/null 2>&1 || true
   i=0
   while curl -fs -o /dev/null "http://localhost:$PORT_UNDER_TEST/api/catalog"; do
@@ -212,6 +217,7 @@ stop_server() {
     sleep 1
   done
   SERVER_UP=""
+  if [ "$exit_code" != "0" ]; then echo "FAIL: the server exited $exit_code after SIGTERM, not 0: its drain did not finish"; cat "$SERVER_LOG"; exit 1; fi
 }
 
 # The container's memory in whole MB, from `docker stats` ("12.3MiB / 512MiB").
@@ -227,20 +233,21 @@ memory_mb() {
   }'
 }
 
-# Waits for /api/catalog, checks its version, its commit header and the server's memory. $1 is the
-# boot's log.
+# Waits for the healthCheckPath probe, then /api/catalog, and checks its version, its commit
+# header and the server's memory. $1 is the boot's log.
 check_boot() {
   i=0
-  until curl -fs -D "$1.headers" -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; do
+  until curl -fs -o /dev/null "http://localhost:$PORT_UNDER_TEST$HEALTH_CHECK_PATH"; do
     i=$((i + 1))
     if ! running || [ "$i" -ge "$READY_SECONDS" ]; then
-      echo "FAIL: /api/catalog never answered (the server exited, or ${READY_SECONDS}s passed)"
+      echo "FAIL: $HEALTH_CHECK_PATH never answered (the server exited, or ${READY_SECONDS}s passed)"
       save_log
       cat "$1"
       exit 1
     fi
     sleep 1
   done
+  if ! curl -fs -D "$1.headers" -o "$1.catalog.json" "http://localhost:$PORT_UNDER_TEST/api/catalog"; then echo "FAIL: $HEALTH_CHECK_PATH answered but /api/catalog did not"; save_log; cat "$1"; exit 1; fi
   served=$(grep -o '"version":"[^"]*"' "$1.catalog.json" | head -n 1 | sed 's/^"version":"\(.*\)"$/\1/')
   echo "ready after ${i}s; serving catalog $served"
   if [ "$served" != "$CATALOG_VERSION" ]; then

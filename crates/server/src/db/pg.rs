@@ -1670,7 +1670,7 @@ pub fn create_postgres_store(options: &PostgresStoreOptions) -> Result<PgPool, S
         .map_err(db_error)
 }
 
-/// Closes the pool. Nothing in `app.rs` calls it; tests and a graceful shutdown do.
+/// Closes the pool: `Db::close` calls it, for the CLIs and for `app::serve_until`'s drain.
 pub async fn close(pool: &PgPool) {
     pool.close().await;
 }

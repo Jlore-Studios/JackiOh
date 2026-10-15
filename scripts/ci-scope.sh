@@ -66,7 +66,8 @@
 #    (the engine's and the server's export tests write it) engine and server; docs/radiant-audit.md
 #    (radiant_standard.rs) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example, render.yaml and apps/web/.env.production (the catalog version's
-#    sites, which the tools' patches tests read) tools, wasm, the first as well as server; and
+#    sites, which the tools' patches tests read) tools, wasm, the first as well as server;
+#    render.yaml too (the server's tests/api/health.rs reads its healthCheckPath, #861) server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23) and every Rust source for a file it includes from outside its crate, so a diff there that
@@ -202,7 +203,8 @@ for file in $files; do
     apps/web/src/wire/*) on rust_engine rust_server ;;
     docs/radiant-audit.md) on rust_cards ;;
     e2e/support/config.ts) on rust_server ;;
-    render.yaml | apps/web/.env.production | packages/* | apps/server/* | ladder/*) on rust_tools_wasm ;;
+    render.yaml) on rust_server rust_tools_wasm ;;
+    apps/web/.env.production | packages/* | apps/server/* | ladder/*) on rust_tools_wasm ;;
   esac
 
   case "$file" in
