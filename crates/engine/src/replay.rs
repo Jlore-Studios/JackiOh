@@ -804,6 +804,12 @@ pub struct ReplayInput {
     /// R678: the same Glitch boards the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R923000: the same sandbox flag the live createGame had.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<bool>,
+    /// R915006: the same custom cards the live createGame had.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_cards: Option<Vec<crate::wire::CustomCard>>,
 }
 
 pub type FoldArgs = ReplayInput;
@@ -857,6 +863,8 @@ fn opening(input: &ReplayInput) -> GameState {
         dealt: input.dealt.clone(),
         last_boards: input.last_boards.clone(),
         glitch_boards: input.glitch_boards.clone(),
+        sandbox: input.sandbox,
+        custom_cards: input.custom_cards.clone(),
     });
     crate::reduce::begin_game(&start).state
 }

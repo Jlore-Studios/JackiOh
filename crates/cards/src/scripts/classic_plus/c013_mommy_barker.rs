@@ -3,7 +3,27 @@
 //!   Radiant: Reborn, and the same Death, which fires on both deaths (§4.5).
 //! The pool is C+ #12's, the eight Pancake tokens, on their base faces (R60); a full hand burns it.
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-013";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        death: Some(hook(|ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "tags": ["Pancake", "Token"] },
+                "count": param(&*ctx, "tokens"),
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // Reborn is catalog data; the Death is the same.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C+ #13 Mommy Barker — SPEC §8.7 row 13, BUILD M9 Classic+ row C+ 13: "Death adds 1 random Pancake
 // token (C+ #12.1–#12.8) to your hand, hidden from the opponent (R97); exile or a bounce adds nothing; a
@@ -13,6 +33,7 @@ pub const ID: &str = "classicplus-013";
 /// `describe("C+ #13 Mommy Barker")`.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

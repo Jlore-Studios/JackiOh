@@ -10,7 +10,51 @@
 //! and lowers nothing permanently; §7 names this card as why `stats_override` is not the mechanism. Keyed
 //! on the def id, so it touches only Rush Tokens (`core-t-rush`) this card's controller controls.
 
+use jackioh_engine::effects::summon;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-058";
+
+/// §7's shared Rush Token, 3/3 with Rush. The aura and the summon must name the same def.
+const RUSH_TOKEN: &str = "core-t-rush";
+
+fn start_of_turn() -> Hook {
+    hook(|_ctx| vec![summon(json_as(json!({ "defId": RUSH_TOKEN })))])
+}
+
+/// §10.4 layer 5. `applies` reads instance data only — `controller` and `def_id`, never `unit_view` —
+/// because the layer stack would recurse otherwise (see `aura_mods` in engine/src/layers.rs).
+/// `ctx.self_.controller` rather than the owner: control is what "your" means on the field (R12).
+fn rush_token_aura() -> AuraHook {
+    aura_hook(|ctx| {
+        // "+3/+3": the declared number `buff` (R386).
+        let buff = param(&ctx, "buff");
+        let controller = ctx.self_.controller;
+        vec![AuraEntry {
+            applies: Box::new(move |unit: &CardInstance| unit.controller == controller && unit.def_id == RUSH_TOKEN),
+            mod_: StatMod {
+                attack: Some(buff),
+                max_health: Some(buff),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let start_of_turn = start_of_turn();
+    CardScripts {
+        base: Script {
+            start_of_turn: Some(start_of_turn.clone()),
+            ..Script::default()
+        },
+        radiant: Script {
+            start_of_turn: Some(start_of_turn),
+            aura: Some(rush_token_aura()),
+            ..Script::default()
+        },
+    }
+}
 
 // #58 Rush Token Farm (SPEC §8.3, BUILD M4-T4 row 58: token each start of turn; radiant +3/+3 aura only on
 // Rush Tokens). Proved here: R62 and §6.2 (start of turn fires on the controller's turn only, after the

@@ -53,6 +53,34 @@ describe("R668 the practice game to resume, on the device", () => {
     }
   });
 
+  it("R924000 a random deck's pick is kept, a game kept before the picker reads as it was, and a bad pick is malformed", () => {
+    const picked: PracticeStartConfig = { ...CONFIG, deck: { kind: "random", leanSet: "Classic" } };
+    writePracticeResume(picked);
+    expect(readPracticeResume()).toEqual(picked);
+
+    const kept = { ...CONFIG, deck: { kind: "random", leanNewest: true } };
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
+    expect(readPracticeResume()).toEqual(kept);
+
+    for (const deck of [
+      { kind: "random", leanSet: "Boss" },
+      { kind: "random", leanSet: true },
+      { kind: "random", leanNewest: "yes" },
+    ]) {
+      window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, deck }));
+      expect(readPracticeResume(), JSON.stringify(deck)).toBeNull();
+    }
+  });
+
+  it("R923000 a sandbox game is kept as one, and a sandbox flag that is not true is malformed", () => {
+    writePracticeResume({ ...CONFIG, sandbox: true });
+    expect(readPracticeResume()).toEqual({ ...CONFIG, sandbox: true });
+    writePracticeResume(CONFIG);
+    expect(readPracticeResume(), "a game that is no sandbox keeps no flag").toEqual(CONFIG);
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, sandbox: false }));
+    expect(readPracticeResume()).toBeNull();
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });
@@ -91,5 +119,26 @@ describe("R668 the practice game to resume, on the device", () => {
       writePracticeResume(CONFIG);
     }).not.toThrow();
     expect(readPracticeResume()).toBeNull();
+  });
+
+  it("R915006 a game with custom cards is kept with them, a Try it deck reads back, and malformed cards are no game", () => {
+    const card = {
+      id: "custom-ember-imp",
+      version: 1,
+      frame: { name: "Ember Imp", type: "Unit", cost: 1, rarity: "Common", attack: 1, health: 2, text: "" },
+      source: "",
+    } as const;
+    const custom: PracticeStartConfig = { ...CONFIG, deck: { kind: "try", card: card.id }, customCards: [card] };
+    writePracticeResume(custom);
+    expect(readPracticeResume()).toEqual(custom);
+    writePracticeResume({ ...CONFIG, customCards: [] });
+    expect(readPracticeResume(), "an empty list is no custom card, and is not kept").toEqual(CONFIG);
+
+    for (const customCards of [[], "custom-ember-imp", [{ version: 1 }], [null]]) {
+      window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, customCards }));
+      expect(readPracticeResume(), JSON.stringify(customCards)).toBeNull();
+    }
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, deck: { kind: "try" } }));
+    expect(readPracticeResume(), "a Try it deck names its card").toBeNull();
   });
 });

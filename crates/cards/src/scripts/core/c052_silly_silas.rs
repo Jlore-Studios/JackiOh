@@ -24,7 +24,55 @@
 //!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65); cards crossing
 //!     onto this side still cross and change control (R14, R171).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-052";
+
+/// R81: the declared direction, enumerated by `legal_actions` and answered in the `play` action.
+const DIRECTIONS: [&str; 2] = ["left", "right"];
+
+fn direction_decl() -> ModeDecl {
+    ModeDecl {
+        kind: PromptKind::Direction,
+        options: DIRECTIONS.iter().map(|direction| direction.to_string()).collect(),
+    }
+}
+
+/// The declared pick, narrowed rather than cast. `chosen_options(ctx)` reads a prompt answer's mode
+/// first and `ctx.modes` second, so one reader covers both an ordinary play and an Echo repeat of
+/// this Cry. R90 keeps the play legal with the answers that exist, so a play that carried no
+/// direction fizzles here instead of guessing a side for the whole board.
+fn direction_of(ctx: &EffectContext<'_>) -> Option<&'static str> {
+    let chosen = chosen_options(ctx);
+    let picked = chosen.first().map(String::as_str);
+    DIRECTIONS.iter().copied().find(|direction| Some(*direction) == picked)
+}
+
+/// §8: one step around each ring, in the direction the play declared.
+fn silas(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    match direction_of(ctx) {
+        None => vec![],
+        Some(direction) => vec![rotate(json_as(json!({ "direction": direction })))],
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            modes: vec![direction_decl()],
+            cry: Some(hook(silas)),
+            ..Script::default()
+        },
+        // The same declaration and the same hook: the radiant difference is `ctx.radiant`, which the
+        // rotation subsystem reads for itself (R14's "radiant bounces go to the card's controller's
+        // hand", R747).
+        radiant: Script {
+            modes: vec![direction_decl()],
+            cry: Some(hook(silas)),
+            ..Script::default()
+        },
+    }
+}
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
 // R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes

@@ -8,9 +8,16 @@
 //! gives §4.3 step 1 alone and Divine Shield is spent on the first hit. An empty Script is the whole
 //! card; a hook that re-granted a printed keyword would be a second source of it (§10.4 layer 4).
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-020";
 
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script::default(),
+        radiant: Script::default(),
+    }
+}
 
 // #20 Pointmaster — SPEC §8.1 row 20, BUILD M4-T4 row 20.
 //

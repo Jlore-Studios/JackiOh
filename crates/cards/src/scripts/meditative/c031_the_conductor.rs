@@ -17,12 +17,50 @@
 //!   over `{ tags: [Prime] }` — every Prime card is a token, so Prime joins the pool's token tags,
 //!   R1421). That card is Created, so the same Cry draws it.
 
+use jackioh_engine::effects::{ForEachCardArgs, for_each_card, shuffle_random_from_catalog};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-031";
+
+/// One named draw per Created card in the controller's library, top down (MD-B7, R944).
+fn draw_created() -> Effect {
+    for_each_card(ForEachCardArgs {
+        cards: Arc::new(|ctx: &mut EffectContext<'_>| -> Vec<String> {
+            created_in_library(ctx.state, ctx.controller)
+        }),
+        each: Arc::new(|instance_id: &str| draw_from_library(json_as(json!({ "instanceId": instance_id })))),
+    })
+}
+
+fn conductor(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            if !radiant {
+                return vec![draw_created()];
+            }
+            vec![
+                shuffle_random_from_catalog(json_as(json!({
+                    "query": { "tags": ["Prime"] },
+                    "count": 1,
+                }))),
+                draw_created(),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: conductor(false),
+        radiant: conductor(true),
+    }
+}
 
 // M #31 The Conductor — SPEC §8.8 row 31, BUILD M10 row M 31.
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::effects::cast_new;
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

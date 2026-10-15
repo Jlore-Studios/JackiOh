@@ -30,8 +30,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, PerPlayer, PlayerId,
-    PortraitId, SourceFilter, Winner,
+    Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
+    GameRecord, LeanPick, PerPlayer, PlayerId, PortraitId, SourceFilter, Winner,
 };
 
 use super::{fake, pg};
@@ -453,6 +453,58 @@ impl From<UpsertOutcome> for TrioUpsertOutcome {
     }
 }
 
+// Custom cards on the account (SPEC §12.9, R915008; migration 0037). Private to their owner: a
+// profile reads its own and the server alone writes them, each checked by the engine's validator
+// (R915001) first. The store counts the versions: a create is version 1, and an update names the
+// version it replaces and is refused when another save came first.
+
+/// R915008: one custom card as its owner's account keeps it: the engine's `CustomCard` (its id,
+/// version, frame, source and builder's model) and when it was made and last saved.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedCustomCard {
+    pub profile_id: String,
+    pub card: CustomCard,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+/// R915008: what a create or an update writes: a custom card but its version, which the store
+/// counts (§12.1).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomCardWrite {
+    /// `custom-…` (R915000), minted by the server at the first save.
+    pub id: String,
+    pub profile_id: String,
+    pub frame: CustomFrame,
+    pub source: String,
+    pub builder: Option<Value>,
+    /// Epoch ms: `updated_at`, and `created_at` too on a create.
+    pub at: i64,
+}
+
+store_union! {
+    /// R915008: what a create did: `created` (at version 1), or `limit` — the profile already holds
+    /// its cap of cards (`CUSTOM_CARDS_PER_ACCOUNT`) and nothing was written.
+    pub enum CustomCardCreateOutcome {
+        Created = "created",
+        Limit = "limit",
+    }
+}
+
+store_union! {
+    /// R915008: what an update did: `updated` (the card replaced whole, its version counted),
+    /// `stale` (its version is no longer the one the save replaces: another save came first) or
+    /// `missing` (the profile has no card with that id; another profile's card answers the same).
+    /// Nothing is written unless `updated`.
+    pub enum CustomCardUpdateOutcome {
+        Updated = "updated",
+        Stale = "stale",
+        Missing = "missing",
+    }
+}
+
 // Queue modes (SPEC §9.5, R257) and what a ticket or a room freezes.
 
 store_union! {
@@ -647,10 +699,11 @@ pub struct Room {
     pub host_portrait: Option<Option<String>>,
     /// The host's frozen trio in a Conquest room; null otherwise.
     pub host_trio: Option<FrozenTrio>,
-    /// R1372: an All Random host's "More cards from the newest set", for the deck dealt to their seat
-    /// when the room is joined (`matches.room_lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub host_lean_newest: bool,
+    /// R1372, R924000: an All Random host's "More cards from" pick, for the deck dealt to their seat
+    /// when the room is joined (`matches.room_lean_set`, migrations 0027 and 0036). None in the other
+    /// modes.
+    #[serde(rename = "hostLeanSet", default, skip_serializing_if = "Option::is_none")]
+    pub host_lean: Option<LeanPick>,
     pub catalog_version: String,
     pub created_at: i64,
     pub expires_at: i64,
@@ -683,10 +736,10 @@ pub struct Ticket {
     pub portrait: Option<Option<String>>,
     /// R259: a Conquest ticket's frozen trio; null in the other two modes.
     pub trio: Option<FrozenTrio>,
-    /// R1372: an All Random ticket's "More cards from the newest set", for the deck dealt to its seat
-    /// when it is paired (`tickets.lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub lean_newest: bool,
+    /// R1372, R924000: an All Random ticket's "More cards from" pick, for the deck dealt to its seat
+    /// when it is paired (`tickets.lean_set`, migrations 0027 and 0036). None in the other modes.
+    #[serde(rename = "leanSet", default, skip_serializing_if = "Option::is_none")]
+    pub lean: Option<LeanPick>,
     pub catalog_version: String,
     pub enqueued_at: i64,
     pub status: TicketStatus,
@@ -1553,7 +1606,8 @@ impl Tx<'_> {
     }
 
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
-    /// trios, tutorial progress, its age check and terms acceptances (R757000, R757001), queue
+    /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
+    /// (R757000, R757001), queue
     /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
     /// player, with this profile's seat left empty (migration 0012). False when there was no such
     /// profile. The caller refuses a profile in a live match or series first.
@@ -1705,6 +1759,51 @@ impl Tx<'_> {
 
     pub async fn trios_remove(&mut self, profile_id: &str, trio_id: &str) -> StoreResult<bool> {
         dispatch!(self, trios_remove(profile_id, trio_id))
+    }
+
+    // custom cards (R915008, migration 0037)
+
+    /// R915008: a profile's custom cards, oldest first: `created_at`, then `id`.
+    pub async fn custom_cards_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedCustomCard>> {
+        dispatch!(self, custom_cards_list(profile_id))
+    }
+
+    /// R915008: the profile's own card with this id, or none; another profile's card is none.
+    pub async fn custom_cards_get(
+        &mut self,
+        profile_id: &str,
+        card_id: &str,
+    ) -> StoreResult<Option<SavedCustomCard>> {
+        dispatch!(self, custom_cards_get(profile_id, card_id))
+    }
+
+    /// R915008: a new card at version 1, `created_at` and `updated_at` both `card.at`; `limit` when
+    /// the profile already holds `max_cards`, counted under a lock on the profile so two creates at
+    /// once cannot both pass it (`app.create_custom_card`, migration 0037). An id already held is an
+    /// error: the server mints 128 random bits.
+    pub async fn custom_cards_create(
+        &mut self,
+        card: &CustomCardWrite,
+        max_cards: i64,
+    ) -> StoreResult<CustomCardCreateOutcome> {
+        dispatch!(self, custom_cards_create(card, max_cards))
+    }
+
+    /// R915008: replaces the frame, source and builder of the profile's own card whose version is
+    /// still `replaces`, counting the save (`replaces + 1`) and stamping `updated_at` (its
+    /// `created_at` is kept); `stale` or `missing` otherwise (`app.update_custom_card`).
+    pub async fn custom_cards_update(
+        &mut self,
+        card: &CustomCardWrite,
+        replaces: i32,
+    ) -> StoreResult<CustomCardUpdateOutcome> {
+        dispatch!(self, custom_cards_update(card, replaces))
+    }
+
+    /// R915008: deletes the profile's own card. False when the profile has no card with this id.
+    /// The decks that name it keep naming it (§12.9).
+    pub async fn custom_cards_remove(&mut self, profile_id: &str, card_id: &str) -> StoreResult<bool> {
+        dispatch!(self, custom_cards_remove(profile_id, card_id))
     }
 
     // matches

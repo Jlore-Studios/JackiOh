@@ -7,7 +7,29 @@
 //! state check. The Cry is X (2X) separate Upgrades of itself (R386), each drawn from what fits it on
 //! the field: its X has resolved there, so only the stats and keyword rows remain (R396).
 
+use jackioh_engine::effects::upgrade;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-069";
+
+/// The Radiant face's "2X times".
+const RADIANT_UPGRADES_PER_X: i32 = 2;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| vec![upgrade(json_as(json!({ "target": { "of": "self" }, "times": ctx.x })))])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            vec![upgrade(json_as(json!({ "target": { "of": "self" }, "times": RADIANT_UPGRADES_PER_X * ctx.x })))]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #69 Buff Billy — SPEC §8.7 row 69, BUILD M9 row C+ 69: X at least 1 (R348), chosen with the play;
 // a 3X/3X from its `xStats`; its Cry Upgrades it X times, each its own draw from what fits it now
@@ -99,7 +121,7 @@ mod tests {
         assert_eq!(json["tags"], json!(["Human"]));
         assert_eq!(js(&def.base.x_stats), json!({ "attack": 3, "health": 3 }));
         assert_eq!(js(&def.radiant.x_stats), json!({ "attack": 7, "health": 7 }));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
     }

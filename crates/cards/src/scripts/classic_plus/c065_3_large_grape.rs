@@ -7,7 +7,34 @@
 //! costs (0) (`costOverride`, R65), which an X-cost card's X never minds. A card cast on draw, a burned
 //! card, a fatigue draw and a limited draw get nothing (`drawPriced`, effects/fruit.ts).
 
+use jackioh_engine::effects::{damage_enemy_or_heal_friend, draw_priced};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-065-3";
+
+/// §8.7: "an enemy or an ally" — any Unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+/// §8.7: "Each costs (0)": the declared number `setCost` (R386), less being better.
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let mut effects = vec![damage_enemy_or_heal_friend(json_as(json!({ "amount": param(ctx, "amount") })))];
+            let cost = param(ctx, "setCost");
+            effects.extend((0..param(ctx, "draw")).map(|_| draw_priced(json_as(json!({ "costOverride": cost })))));
+            effects
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 10 and 2 are its declared `amount` and `draw`, which `param` reads.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #65.3 Large Grape — SPEC §8.7 row 65.3, BUILD M9 Classic+ row C+ 65.3: "As Normal Grape with 5 and
 // 5, and the drawn card costs (0) (`costOverride` 0); amount and draw read through `param()`; radiant 10
@@ -16,7 +43,6 @@ pub const ID: &str = "classicplus-065-3";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -63,7 +89,7 @@ mod tests {
         assert_eq!(js(&def.cost), json!(3));
         assert_eq!(js(&def.tags), json!(["Fruit", "Token"]));
         assert_eq!(js(&def.printed_rarity), json!("Rare"));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert_eq!(
             js(&base.targets),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])

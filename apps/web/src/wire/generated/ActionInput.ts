@@ -3,6 +3,7 @@ import type { EmoteId } from "./EmoteId";
 import type { PlagueSpend } from "./PlagueSpend";
 import type { PlayerId } from "./PlayerId";
 import type { RevealAt } from "./RevealAt";
+import type { SandboxOp } from "./SandboxOp";
 import type { Selection } from "./Selection";
 import type { ZoneChoice } from "./ZoneChoice";
 
@@ -29,4 +30,4 @@ plague?: PlagueSpend,
  * (`cloaked`, the one way offered since patch v0.3.7). Absent, the card is played as it is
  * printed.
  */
-faceDown?: RevealAt, } | { "type": "attack", attackerId: string, targetId: string, } | { "type": "switchPosition", instanceId: string, } | { "type": "activate", instanceId: string, ability?: string, targets?: Array<Selection>, modes?: Array<string>, tributes?: Array<string>, } | { "type": "activatePower", instanceId: string, targets?: Array<Selection>, } | { "type": "answer", choiceId: string, selection: Array<Selection>, } | { "type": "offerDraw" } | { "type": "answerDraw", accept: boolean, } | { "type": "emote", emote: EmoteId, } | { "type": "concede" } | { "type": "endTurn" } | { "type": "setAutoEndTurn", enabled: boolean, } | { "type": "timeout" } | { "type": "disconnectExpired", player: PlayerId, } | { "type": "ceilingReached" });
+faceDown?: RevealAt, } | { "type": "attack", attackerId: string, targetId: string, } | { "type": "switchPosition", instanceId: string, } | { "type": "activate", instanceId: string, ability?: string, targets?: Array<Selection>, modes?: Array<string>, tributes?: Array<string>, } | { "type": "activatePower", instanceId: string, targets?: Array<Selection>, } | { "type": "answer", choiceId: string, selection: Array<Selection>, } | { "type": "offerDraw" } | { "type": "answerDraw", accept: boolean, } | { "type": "emote", emote: EmoteId, } | { "type": "concede" } | { "type": "endTurn" } | { "type": "setAutoEndTurn", enabled: boolean, } | { "type": "sandbox", op: SandboxOp, } | { "type": "timeout" } | { "type": "disconnectExpired", player: PlayerId, } | { "type": "ceilingReached" });

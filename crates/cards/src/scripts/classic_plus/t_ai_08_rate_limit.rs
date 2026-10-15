@@ -11,14 +11,52 @@
 //! only" is the count being exactly N, on their own turn (casts they make on yours leave it set). E10's
 //! `end_turn` puts R456's rider on their turn: it ends once everything their action set off has resolved.
 
+use jackioh_engine::effects::end_turn;
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-t-ai-08";
+
+#[derive(Clone, Copy)]
+struct ByFacePlay {
+    base: i32,
+    radiant: i32,
+}
+
+/// §8.7: "their 3rd card", Radiant "their 2nd". An AI card declares no params (B8).
+const NTH_PLAY: ByFacePlay = ByFacePlay { base: 3, radiant: 2 };
+
+/// The trap's `TriggerDef`: its `when` is the condition (R99).
+fn rate_limit(nth: i32) -> TriggerDef {
+    TriggerDef::new("rate-limit", &[GameEventType::CardPlayed], |_ctx, _event| {
+        vec![end_turn(json_as(json!({ "player": "enemy" })))]
+    })
+    .with_when(move |ctx, event| match event {
+        GameEvent::CardPlayed { player, .. } => {
+            *player != ctx.controller
+                && ctx.state.active == *player
+                && cards_played_this_turn(&*ctx.state, *player) == nth
+        }
+        _ => false,
+    })
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![rate_limit(NTH_PLAY.base)],
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![rate_limit(NTH_PLAY.radiant)],
+            ..Script::default()
+        },
+    }
+}
 
 // T-AI-8 Rate Limit — SPEC §8.7 row T-AI-8, BUILD M9 Classic+ row T-AI-8: their 3rd play (casts count, R70)
 // fires it and their turn then ends (`endTurnAfter`, §6.3); hidden until it fires (R33, R97); radiant 2nd.
 //
 // Every case sets the trap face-down in p1's backrow and makes p2 the active player.
-
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -89,7 +127,7 @@ mod tests {
             assert_eq!(def.type_, CardType::Trap);
             assert_eq!(js(&def.cost), json!(1));
             assert_eq!(js(&def.tags), json!(["AI", "Token"]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert!(scripts.base.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
             assert!(scripts.radiant.triggers.first().is_some_and(|trigger| trigger.when.is_some()));
         }

@@ -19,9 +19,34 @@
 //! once, damage and buffs stay and no Cry re-fires (R22). It resolves the selection by instance id,
 //! so the steal having moved the card between zones cannot make it miss.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-049";
 
+/// §6.3: a permanent is a Unit, Field Spell, Trap or Field Trap, so both enemy rows are on offer.
+fn enemy_permanent() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit", "backrow"] }))]
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            targets: enemy_permanent(),
+            cry: Some(hook(|_ctx| vec![steal(json_as(json!({ "target": { "of": "chosen" } })))])),
+            ..Script::default()
+        },
+        radiant: Script {
+            targets: enemy_permanent(),
+            cry: Some(hook(|_ctx| {
+                vec![
+                    steal(json_as(json!({ "target": { "of": "chosen" } }))),
+                    set_radiant(json_as(json!({ "target": { "of": "chosen" } }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // #49 Snom Bunny Mind Control — SPEC §8.2, BUILD M4-T4: "Steal placement per R15; radiant sets the
 // flag on the stolen card".
@@ -208,7 +233,7 @@ mod tests {
             assert_eq!(def.id, MIND_CONTROL);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Spell"));
             assert_eq!(serde_json::to_value(def.cost).unwrap(), json!(4));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert_eq!(
                     serde_json::to_value(&face.targets).unwrap(),

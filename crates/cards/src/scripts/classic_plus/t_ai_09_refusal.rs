@@ -12,7 +12,83 @@
 //! carried Unit included, R446), or on the Radiant face your hero, your field and your hand. A cast is
 //! announced like a play (R70).
 
+use jackioh_engine::effects::{counter_play, draw};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-t-ai-09";
+
+/// §8.7: the Radiant face's "Draw 1". An AI card declares no params (B8).
+const RADIANT_DRAW: i32 = 1;
+
+/// Which of the announced ids reach your side: a plain `fn`, so both the trigger's `when` and its
+/// `run` can carry it.
+type Reaches = fn(&GameState, PlayerId, &str) -> bool;
+
+/// "One of your Units": a Unit of yours on the field, as the announce names it.
+fn your_unit(state: &GameState, you: PlayerId, id: &str) -> bool {
+    active_units_of(state, you).iter().any(|unit| unit.id == id)
+}
+
+/// "You or one of your cards": your hero, or a card you control on the field or hold in your hand.
+fn you_or_yours(state: &GameState, you: PlayerId, id: &str) -> bool {
+    if id == format!("hero-{you}") {
+        return true;
+    }
+    match find_instance(state, id) {
+        Some(card) => matches!(card.zone.z(), ZoneName::Field | ZoneName::Hand) && card.controller == you,
+        None => false,
+    }
+}
+
+/// The opponent's announced Spell whose declared targets `reaches` one of yours, or `None`.
+fn refused(event: &GameEvent, state: &GameState, you: PlayerId, reaches: Reaches) -> Option<String> {
+    let GameEvent::CardAnnounced {
+        player,
+        card_type,
+        targets,
+        instance_id,
+        ..
+    } = event
+    else {
+        return None;
+    };
+    if *player == you || *card_type != CardType::Spell {
+        return None;
+    }
+    if targets.iter().any(|id| reaches(state, you, id)) {
+        Some(instance_id.clone())
+    } else {
+        None
+    }
+}
+
+/// The trap's `TriggerDef`: its `when` is the condition (R99).
+fn refusal(reaches: Reaches, drawn: i32) -> TriggerDef {
+    TriggerDef::new("refusal", &[GameEventType::CardAnnounced], move |ctx, event| {
+        let countered = refused(event, &*ctx.state, ctx.controller, reaches).unwrap_or_default();
+        let mut effects = vec![counter_play(json_as(json!({
+            "target": { "of": "instance", "instanceId": countered },
+        })))];
+        if drawn > 0 {
+            effects.push(draw(json_as(json!({ "count": drawn }))));
+        }
+        effects
+    })
+    .with_when(move |ctx, event| refused(event, &*ctx.state, ctx.controller, reaches).is_some())
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            triggers: vec![refusal(your_unit, 0)],
+            ..Script::default()
+        },
+        radiant: Script {
+            triggers: vec![refusal(you_or_yours, RADIANT_DRAW)],
+            ..Script::default()
+        },
+    }
+}
 
 // T-AI-9 Refusal — SPEC §8.7 row T-AI-9, BUILD M9 Classic+ row T-AI-9: in §10.5's announce window a Spell
 // whose declared targets include one of your Units is Countered and treated as never played (no count,
@@ -108,7 +184,7 @@ mod tests {
             assert_eq!(def.type_, CardType::Trap);
             assert_eq!(js(&def.cost), json!(1));
             assert_eq!(js(&def.tags), json!(["AI", "Token"]));
-            let scripts = crate::scripts_of()[super::super::ID].clone();
+            let scripts = super::super::script();
             assert_eq!(
                 scripts.base.triggers.first().map(|trigger| trigger.on.clone()),
                 Some(vec![GameEventType::CardAnnounced])

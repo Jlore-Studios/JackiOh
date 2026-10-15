@@ -10,7 +10,38 @@
 //! face. Tribute and Windfury are catalog data; the aura it brings ("a declared attack keeps its
 //! window; a forced one stays forced") is the engine's.
 
+use jackioh_engine::effects::shuffle_into;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-091";
+pub const PRIME: &str = "meditative-091-1";
+
+fn windfast(radiant_prime: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(1),
+            attack_from_hand: Some(true),
+            // The base face bounces the substitute afterwards if it survives; the Radiant face keeps it.
+            bounce_attacker: if radiant_prime { None } else { Some(true) },
+            ..Default::default()
+        }),
+        death: Some(hook(move |_| {
+            vec![shuffle_into(json_as(json!({
+                "defId": PRIME,
+                "count": 1,
+                "radiant": radiant_prime,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: windfast(false),
+        radiant: windfast(true),
+    }
+}
 
 // M #91 Windfast — SPEC §8.8 row 91, BUILD M10 row M 91: "Tribute 1 and melee only, Windfury on both
 // faces; whenever it would attack, declared or forced, its controller summons a Unit from their
@@ -27,9 +58,6 @@ mod tests {
     use super::*;
 
     use jackioh_engine::testkit::*;
-
-    /// M #91.1 Windfurious Prime, which the Death shuffles in.
-    const PRIME: &str = "meditative-091-1";
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;

@@ -95,6 +95,8 @@ export const paths = {
   leaderboard: "/leaderboard",
   /** R654: public card and player statistics. */
   stats: "/stats",
+  /** #920: the card creator, the account's custom cards (SPEC §12.9). */
+  creator: "/creator",
   /** R768000: the recent games and their replays. */
   replays: "/replays",
   hotseat: "/dev/hotseat",
@@ -130,6 +132,11 @@ export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode
   if (options.mode === "forgot") query.set("mode", "forgot");
   const search = query.toString();
   return search.length === 0 ? paths.login : `${paths.login}?${search}`;
+}
+
+/** #921: the creator's "Try it": `/practice?try=<id>` deals a random deck around that custom card (R915005). */
+export function tryPath(customId: string): string {
+  return `${paths.practice}?try=${encodeURIComponent(customId)}`;
 }
 
 function queryValue(search: string, key: string): string | null {

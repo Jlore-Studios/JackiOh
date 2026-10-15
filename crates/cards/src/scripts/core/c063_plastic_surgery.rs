@@ -16,7 +16,49 @@
 //! and fizzle. A cast still fizzles (R70, a cast is never refused), so both effects resolve
 //! `{ of: "chosen" }` and do nothing when it is empty.
 
+use jackioh_engine::effects::{buff, grant_random_keywords};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-063";
+
+/// "Target unit": either side, §8's Conventions, and no narrowing in either cell.
+fn targets() -> Vec<TargetDecl> {
+    vec![
+        // R656: a buff and a keyword help, so a random cast that targets enemies aims this at friends.
+        // R703: and the play needs it, so no Unit to target means no play.
+        json_as(json!({
+            "kind": "target",
+            "min": 1,
+            "max": 1,
+            "filter": { "side": "any", "of": ["unit"] },
+            "aim": "help",
+            "required": true,
+        })),
+    ]
+}
+
+/// The radiant face is the same card at doubled numbers, so one script carries both: the declared
+/// numbers `buff` (3, 6) and `keywords` (1, 2), R386.
+fn surgery() -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let stat = param(&*ctx, "buff");
+            let keywords = param(&*ctx, "keywords");
+            vec![
+                buff(json_as(json!({ "target": { "of": "chosen" }, "attack": stat, "health": stat }))),
+                grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": keywords }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = surgery();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #63 Plastic Surgery — SPEC §8.3, BUILD M4-T4 row 63.
 //

@@ -1,7 +1,82 @@
 //! C+ #25 Soul Shot (SPEC §8.7 row 25): destroy a random enemy Unit a Spell may affect; Lucky X picks X
 //! more and keeps the best by R414's comparator.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-025";
+
+/// R414: higher attack plus current health, then higher cost, then lower lane.
+fn better(state: &GameState) -> impl Fn(CardInstance, CardInstance) -> CardInstance + '_ {
+    let worth = move |card: &CardInstance| -> i32 {
+        let view = unit_view(state, card);
+        view.attack + view.health
+    };
+    // TS `?? Number.MAX_SAFE_INTEGER`: a card on no lane sorts after every lane.
+    let lane = move |card: &CardInstance| -> i32 { slot_of(state, card).map_or(i32::MAX, |at| at.lane) };
+    move |a, b| {
+        if worth(&a) != worth(&b) {
+            return if worth(&a) > worth(&b) { a } else { b };
+        }
+        if cost_now(state, &a) != cost_now(state, &b) {
+            return if cost_now(state, &a) > cost_now(state, &b) {
+                a
+            } else {
+                b
+            };
+        }
+        if lane(&b) < lane(&a) { b } else { a }
+    }
+}
+
+/// One random enemy Unit a Spell may affect, Lucky X picks keeping the best; none on an empty board.
+fn pick(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    let pool = cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })));
+    if pool.is_empty() {
+        return Vec::new();
+    }
+    // R987: the controller's Luck rolls extra times beside the card's own Lucky.
+    let lucky = match ctx.live_self() {
+        None => 0,
+        Some(me) => numbered_sum(&card_keywords(&*ctx.state, me), KeywordKind::Lucky).unwrap_or(0),
+    } + luck_of(&*ctx.state, ctx.controller);
+    // The state and the rng are two fields of the sink: the comparator reads the one while the rolls draw
+    // from the other.
+    let sink = &mut ctx.sink;
+    let state: &GameState = &*sink.state;
+    let rng: &mut Rng = &mut *sink.rng;
+    let roll = |rng: &mut Rng| -> Option<CardInstance> { rng.pick(&pool).cloned() };
+    let chosen = if lucky > 0 {
+        rng.lucky(lucky, roll, |a, b| match (a, b) {
+            (None, b) => b,
+            (a, None) => a,
+            (Some(a), Some(b)) => Some(better(state)(a, b)),
+        })
+    } else {
+        roll(rng)
+    };
+    chosen.map(|card| vec![card.id]).unwrap_or_default()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(pick),
+                each: Arc::new(|instance_id: &str| {
+                    destroy(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+                    ))
+                }),
+            })]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: Lucky 1 is the Radiant face's catalog keyword, which `pick` reads.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #25 Soul Shot — SPEC §8.7 row 25, BUILD M9 Classic+ row C+ 25: "Destroys one random enemy Unit
 // (R60), an Indestructible one knocked to Attack Position instead (R46); no enemy Unit, nothing and no
@@ -12,7 +87,6 @@ pub const ID: &str = "classicplus-025";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -64,7 +138,7 @@ mod tests {
         fn is_a_2_spell_with_no_play_time_choice_the_radiant_face_prints_lucky_1() {
             let def = crate::card_def(ID);
             assert_eq!(def.cost, CardCost::Fixed(2));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(Arc::ptr_eq(
                 scripts.base.cry.as_ref().expect("base cry"),

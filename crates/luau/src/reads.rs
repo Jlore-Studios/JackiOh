@@ -12,7 +12,7 @@ use mlua::{
 };
 
 use crate::numbers::arg;
-use crate::sandbox::MemoryCap;
+use crate::sandbox::uncapped;
 
 /// Helper to serialize a value to Luau. A Rust `None` hands Luau `nil`, not mlua's truthy
 /// `null`: `serialize_none_to_null` is off, so an absent answer is falsy and `type(x) == "table"`
@@ -88,12 +88,13 @@ impl<T: 'static> Readers<'_, T> {
     {
         self.0
             .add_function(name, move |lua, (this, args): (AnyUserData, A)| {
-                // The answer is built with the memory cap lifted (`MemoryCap`); a hook the reader
+                // The answer is built with the memory cap lifted (`uncapped`); a hook the reader
                 // runs puts it back for its own call.
-                let _uncapped = MemoryCap::lift(lua);
-                this.borrow_mut_scoped::<Live<T>, _>(|live| {
-                    method(lua, live.get(), args)?.into_lua_multi(lua)
-                })?
+                uncapped(lua, || {
+                    this.borrow_mut_scoped::<Live<T>, _>(|live| {
+                        method(lua, live.get(), args)?.into_lua_multi(lua)
+                    })?
+                })
             });
     }
 }

@@ -4,7 +4,7 @@
 
 import { validator } from "../wasm/index.ts";
 
-import type { CardDefs } from "./index.ts";
+import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
 
 /** §9.4: exactly 3 decks per loadout (Rust's `validator::LOADOUT_DECKS`). */
 export const LOADOUT_DECKS = 3;
@@ -31,7 +31,7 @@ export type LoadoutInput = {
   collection: Collection;
 };
 
-export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6";
+export type LoadoutRule = "L1" | "L2" | "L3" | "L4" | "L5" | "L6" | "L7";
 
 export type LoadoutError = {
   rule: LoadoutRule;
@@ -158,4 +158,14 @@ export function checkTrioDraft(input: TrioDraftInput): DraftIssue<TrioDraftRule>
 /** R340: whether an import fits under both caps, and the sentence when it does not. */
 export function checkImportRoom(input: ImportRoomInput): ImportRoom {
   return validator<ImportRoom>("checkImportRoom", input);
+}
+
+/** R915001: every way a custom card breaks §12.2's limits, each with its field; empty when valid. */
+export function validateCustomCard(card: CustomCard): CustomIssue[] {
+  return validator<CustomIssue[]>("validateCustomCard", card);
+}
+
+/** R915000: the definition a custom card's frame builds, which the deck builder and the creator draw. */
+export function customDef(card: CustomCard): CardDef {
+  return validator<CardDef>("customDef", card);
 }

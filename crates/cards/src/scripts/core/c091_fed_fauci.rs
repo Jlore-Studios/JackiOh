@@ -13,7 +13,88 @@
 //! start of turn, `mana_now` off its own Plague Counters, which travel on its public view (§10.8); a
 //! card in hand holds none (R78).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-091";
+
+/// §8: "+1 Plague Counter" — one per damage instance.
+const TOKENS_PER_DAMAGE: i32 = 1;
+
+// §8: base "+1 mana per Plague Counter"; radiant "+2 mana per token" — the declared number `mana`
+// (R386), read off the face that is up.
+
+/// "Whenever THIS takes damage": the event carries the target, so a hit this card DEALT — its own
+/// strike-back, its Trample overflow — is not a hit it took.
+fn is_hit_on_self(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(self_) = ctx.self_.as_ref() else {
+        return false;
+    };
+    match event {
+        GameEvent::Damage { target_id, .. } => *target_id == self_.id,
+        _ => false,
+    }
+}
+
+/// "+1 Plague Counter". `plague` defaults its target to `{ of: "self" }`, which is this card.
+fn takes_damage() -> TriggerDef {
+    TriggerDef::new("fed-fauci-plague", &[GameEventType::Damage], |ctx, event| {
+        if is_hit_on_self(ctx, event) {
+            vec![plague(json_as(json!({ "amount": TOKENS_PER_DAMAGE })))]
+        } else {
+            vec![]
+        }
+    })
+    .with_when(is_hit_on_self)
+}
+
+/// R280: the formula as the face prints it, with its rate as it stands, which the preview labels its
+/// number with.
+fn formula(per_token: i32) -> String {
+    format!("+{per_token} mana per Plague Counter")
+}
+
+/// The mana the start-of-turn hook gains now: its own Plague Counters times the face's rate.
+fn mana_now(self_: Option<&CardInstance>, per_token: i32) -> i32 {
+    self_.and_then(|card| card.counters.plague).unwrap_or(0).max(0) * per_token
+}
+
+/// "Start of turn: +N mana per Plague Counter" (§2.2, R62: after the refresh, before the draw). With
+/// no tokens the card gains nothing and returns no effect at all, so it emits no `manaChanged` for a
+/// change of zero.
+fn mana_from_tokens() -> Hook {
+    hook(|ctx| {
+        let amount = mana_now(ctx.self_.as_ref(), param(&*ctx, "mana"));
+        if amount <= 0 {
+            vec![]
+        } else {
+            vec![gain_mana(json_as(json!({ "amount": amount })))]
+        }
+    })
+}
+
+fn fed_fauci() -> Script {
+    Script {
+        triggers: vec![takes_damage()],
+        start_of_turn: Some(mana_from_tokens()),
+        preview: Some(condition_hook(|ctx| {
+            let per_token = param(&ctx, "mana");
+            vec![PreviewValue {
+                label: formula(per_token),
+                value: mana_now(Some(ctx.self_), per_token),
+                display: None,
+                ids: None,
+            }]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: fed_fauci(),
+        radiant: fed_fauci(),
+    }
+}
 
 // #91 Fed Fauci (SPEC §8.4, BUILD M4-T4 row 91: "One Plague Counter per damage instance; +1 mana per
 // token at start of turn (radiant +2); counters reset on leaving").
@@ -24,6 +105,7 @@ pub const ID: &str = "core-091";
 // the engine auto-ends the turn (R82) and fires the start-of-turn hook more than once.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

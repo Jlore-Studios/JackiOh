@@ -33,15 +33,294 @@
 //! The radiant Echo is `StaticFlags.echo` (R30), the count of EXTRA resolutions, 1 here: `echo_step`
 //! queues an `EchoRepeat` (§6.2, §10.5 step 6) that re-enters `cry`, opening its own fresh prompts.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-051";
+
+/// #51.1, the token the empty-library path adds (§8.3, §7).
+const NOTEBOOK: &str = "core-051-1";
+
+/// §6.3 Discover: 1 of 3, so three library cards are revealed.
+const REVEAL_COUNT: i32 = 3;
+
+/// One of the four type options.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum TypeOption {
+    Spell,
+    Unit,
+    FieldSpell,
+    Trap,
+}
+
+impl TypeOption {
+    /// The option as the prompt prints it and the answer names it.
+    fn as_str(self) -> &'static str {
+        match self {
+            TypeOption::Spell => "Spell",
+            TypeOption::Unit => "Unit",
+            TypeOption::FieldSpell => "Field Spell",
+            TypeOption::Trap => "Trap",
+        }
+    }
+}
+
+/// The four type options, in the §8 row's printed order.
+const TYPE_OPTIONS: [TypeOption; 4] = [
+    TypeOption::Spell,
+    TypeOption::Unit,
+    TypeOption::FieldSpell,
+    TypeOption::Trap,
+];
+
+/// One of the four cost brackets.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BracketOption {
+    ZeroToOne,
+    Two,
+    Three,
+    FourPlus,
+}
+
+impl BracketOption {
+    /// The bracket as the prompt prints it and the answer names it.
+    fn as_str(self) -> &'static str {
+        match self {
+            BracketOption::ZeroToOne => "0-1",
+            BracketOption::Two => "2",
+            BracketOption::Three => "3",
+            BracketOption::FourPlus => "4+",
+        }
+    }
+}
+
+/// The four cost brackets, in the §8 row's printed order.
+const BRACKET_OPTIONS: [BracketOption; 4] = [
+    BracketOption::ZeroToOne,
+    BracketOption::Two,
+    BracketOption::Three,
+    BracketOption::FourPlus,
+];
+
+/// The key the chosen type travels under, from the bracket step to the reveal step (§10.6).
+const TYPE_KEY: &str = "type";
+
+/// R65's out-of-play cost range a bracket means.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct BracketRange {
+    min: Option<i32>,
+    max: Option<i32>,
+}
+
+impl BracketRange {
+    /// The `costRange` literal the reveal's filter takes: only the bounds the bracket has.
+    fn to_json(self) -> Value {
+        let mut range = json!({});
+        if let Some(min) = self.min {
+            range["min"] = json!(min);
+        }
+        if let Some(max) = self.max {
+            range["max"] = json!(max);
+        }
+        range
+    }
+}
+
+/// Which card types one option covers. Engine cell: "Field Trap counts as Trap"; every other option
+/// is its own type, so "Spell" never reaches a Field Spell and "Field Spell" never a Spell.
+fn types_for(option: TypeOption) -> Vec<CardType> {
+    match option {
+        TypeOption::Trap => vec![CardType::Trap, CardType::FieldTrap],
+        TypeOption::Spell => vec![CardType::Spell],
+        TypeOption::Unit => vec![CardType::Unit],
+        TypeOption::FieldSpell => vec![CardType::FieldSpell],
+    }
+}
+
+/// R65's out-of-play cost range a bracket means; "4+" has no upper bound.
+fn range_for(bracket: BracketOption) -> BracketRange {
+    match bracket {
+        BracketOption::ZeroToOne => BracketRange {
+            min: Some(0),
+            max: Some(1),
+        },
+        BracketOption::Two => BracketRange {
+            min: Some(2),
+            max: Some(2),
+        },
+        BracketOption::Three => BracketRange {
+            min: Some(3),
+            max: Some(3),
+        },
+        BracketOption::FourPlus => BracketRange {
+            min: Some(4),
+            max: None,
+        },
+    }
+}
+
+fn matches_type(ctx: &EffectContext<'_>, card: &CardInstance, option: TypeOption) -> bool {
+    let type_: CardType = def_of(Some(&*ctx.state), &card.def_id).type_;
+    types_for(option).contains(&type_)
+}
+
+/// R65: the library card's own cost (`effective_cost`), as #30 and #94 read theirs (R24, R66).
+fn matches_bracket(ctx: &EffectContext<'_>, card: &CardInstance, bracket: BracketOption) -> bool {
+    let cost = effective_cost(&*ctx.state, card, Default::default());
+    let range = range_for(bracket);
+    if let Some(min) = range.min
+        && cost < min
+    {
+        return false;
+    }
+    range.max.is_none_or(|max| cost <= max)
+}
+
+/// "Your library" (§8 Conventions: "your" means the controller), top card first, as a read-only copy.
+/// R218: a unit-token card in the library (#33's copy of a played Rush Token card, R34) leaves it only
+/// by being drawn or played (R11), and "choose one to hand" is neither, so the Tutor passes over it —
+/// as the reveal does (`discover_from_library`) — and never offers a type or a bracket only it matches.
+fn library_cards(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let state: &GameState = &*ctx.state;
+    zone_cards(state, ctx.controller, OffFieldZone::Library)
+        .into_iter()
+        .filter(|card| !is_unit_token(state, card))
+        .collect()
+}
+
+/// A `chosen_options` answer narrowed back to the option it must be, or `None` (never a cast).
+fn type_option_of(picked: Option<&str>) -> Option<TypeOption> {
+    TYPE_OPTIONS.iter().copied().find(|option| Some(option.as_str()) == picked)
+}
+
+fn bracket_option_of(picked: Option<&str>) -> Option<BracketOption> {
+    BRACKET_OPTIONS.iter().copied().find(|option| Some(option.as_str()) == picked)
+}
+
+/// §10.6's captured data is JSON, so what comes back out is narrowed, not asserted.
+fn captured_type(ctx: &EffectContext<'_>) -> Option<TypeOption> {
+    let stored = ctx.data.get(TYPE_KEY).and_then(Value::as_str);
+    type_option_of(stored)
+}
+
+/// Step 1 (the spell's own resolution, §10.5 step 5): offer the types that have a match in the
+/// library. No type does — an empty library — so the Notebook is added instead.
+fn start_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let ctx: &EffectContext<'_> = ctx;
+    let library = library_cards(ctx);
+    let options: Vec<&'static str> = TYPE_OPTIONS
+        .iter()
+        .copied()
+        .filter(|option| library.iter().any(|card| matches_type(ctx, card, *option)))
+        .map(TypeOption::as_str)
+        .collect();
+    if options.is_empty() {
+        return vec![add_to_hand(json_as(json!({ "defId": NOTEBOOK })))];
+    }
+
+    vec![choose_mode(json_as(json!({
+        "options": options,
+        "step": "bracket",
+        "prompt": "Choose a card type",
+    })))]
+}
+
+/// Step 2: the type is answered, so offer the cost brackets that have a match FOR THAT TYPE, and
+/// carry the type forward — the reveal step needs it and `ctx.targets` will by then hold the
+/// bracket answer instead.
+fn bracket_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let ctx: &EffectContext<'_> = ctx;
+    let Some(type_) = type_option_of(chosen_options(ctx).first().map(String::as_str)) else {
+        return vec![];
+    };
+
+    let matching: Vec<CardInstance> = library_cards(ctx)
+        .into_iter()
+        .filter(|card| matches_type(ctx, card, type_))
+        .collect();
+    let options: Vec<&'static str> = BRACKET_OPTIONS
+        .iter()
+        .copied()
+        .filter(|bracket| matching.iter().any(|card| matches_bracket(ctx, card, *bracket)))
+        .map(BracketOption::as_str)
+        .collect();
+    if options.is_empty() {
+        return vec![];
+    }
+
+    vec![choose_mode(json_as(json!({
+        "options": options,
+        "step": "reveal",
+        "data": { TYPE_KEY: type_.as_str() },
+        "prompt": format!("Choose a cost bracket for {}", type_.as_str()),
+    })))]
+}
+
+/// Step 3: both halves of the filter are known, so reveal three random matching library cards. The
+/// options are the library's own instances, which is what keeps §10.8's "revealed only as an option
+/// of the prompt that reveals it" true.
+fn reveal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let ctx: &EffectContext<'_> = ctx;
+    let type_ = captured_type(ctx);
+    let bracket = bracket_option_of(chosen_options(ctx).first().map(String::as_str));
+    let (Some(type_), Some(bracket)) = (type_, bracket) else {
+        return vec![];
+    };
+
+    vec![discover_from_library(json_as(json!({
+        "step": "take",
+        "count": REVEAL_COUNT,
+        "player": "self",
+        "filter": { "type": types_for(type_), "costRange": range_for(bracket).to_json() },
+        // R373: the prompt is a player's to read, and players read the rules' library as the Deck.
+        "prompt": "Reveal 3 cards from your deck; choose one to add to your hand",
+    })))]
+}
+
+/// Step 4: "choose one to hand" — the revealed instance moves library → hand (§6.3, R4).
+fn take_step(_ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![add_to_hand(json_as(json!({ "instance": { "of": "chosen" } })))]
+}
+
+/// The three named continuations a prompt answer re-enters (`RESUME_HOOK`, §10.6).
+fn steps() -> IndexMap<&'static str, Hook> {
+    IndexMap::from([
+        ("bracket", hook(bracket_step)),
+        ("reveal", hook(reveal_step)),
+        ("take", hook(take_step)),
+    ])
+}
+
+/// "Echo (resolves a second time)": one EXTRA resolution, driven by §10.5 step 6.
+fn radiant_flags() -> StaticFlags {
+    StaticFlags {
+        echo: Some(1),
+        ..StaticFlags::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let steps = steps();
+    let base = Script {
+        cry: Some(hook(start_step)),
+        resume: steps.clone(),
+        ..Script::default()
+    };
+    // The radiant face is the same four steps — each repeat re-enters `cry` and opens its own fresh
+    // prompts (§6.2 Echo X, §10.5 step 6) — plus the count of repeats it owes.
+    let radiant = Script {
+        cry: Some(hook(start_step)),
+        resume: steps,
+        static_flags: Some(radiant_flags()),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #51 KY's Private Tutor — SPEC §8.3 row 51, §6.3 (Discover), §10.5 steps 5-6, §10.6, §10.8, §5.1;
 // R4, R60, R65, R113. BUILD M4-T4 row 51: "Only types and brackets with a match offered; 3 random
 // matches revealed; no match → Notebook; Field Trap counts as Trap; radiant runs twice".
 // Cases are chains (play, then `answer` per prompt): R113's rule that a paused sequence is never
 // dropped, and §9.3's pause that survives a JSON round trip.
-
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -252,7 +531,7 @@ mod tests {
         #[test]
         fn s10_9_both_faces_are_a_cry_plus_the_same_three_named_continuations_s10_6() {
             crate::register_all();
-            let CardScripts { base, radiant } = crate::scripts_of()[super::super::ID].clone();
+            let CardScripts { base, radiant } = super::super::script();
             assert_eq!(keys_of(&base), vec!["cry", "resume"]);
             assert_eq!(step_names(&base), vec!["bracket", "reveal", "take"]);
             assert_eq!(step_names(&radiant), vec!["bracket", "reveal", "take"]);
@@ -264,7 +543,7 @@ mod tests {
         #[test]
         fn s8_3_the_radiant_cell_is_echo_so_the_radiant_face_is_the_same_steps_plus_one_repeat() {
             crate::register_all();
-            let CardScripts { base, radiant } = crate::scripts_of()[super::super::ID].clone();
+            let CardScripts { base, radiant } = super::super::script();
             assert_eq!(
                 serde_json::to_value(&radiant.static_flags).unwrap(),
                 json!({ "echo": 1 })

@@ -15,7 +15,18 @@
 //!
 //! So both faces run the empty script, as the Rush Token's do.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-t-ghoul";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    CardScripts {
+        // R349: the fallback Radiant face is data and an engine rule; there is no text for a script to carry.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // T-ghoul Ghoul Token (SPEC §7; R11, R346, R349, R353; §4.4, §5.1, §10.4).
 //
@@ -173,7 +184,7 @@ mod tests {
             fn s7_needs_no_script_for_either_face_and_the_radiant_script_is_the_base_script() {
                 crate::register_all();
                 // Both faces are the empty Script.
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert!(set_fields(&scripts.base).is_empty());
                 assert!(set_fields(&scripts.radiant).is_empty());
             }

@@ -11,7 +11,96 @@
 //! §5.1 and R68: the spell returns from the graveyard at the end of its turn. No verb sets
 //! `returnToHandAtEndOfTurn` yet, so the hook gates on the flag OR this turn's play log (see #23).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-024";
+
+// The three §8.2 modes, in the order the cell lists them. A card file exports only
+// `{ ID, script }` (§10.9), so the mode names live in the declaration below and the test
+// reads them back off `base.modes`.
+const MODE_DAMAGE: &str = "damage";
+const MODE_HEAL: &str = "heal";
+const MODE_MANA: &str = "mana";
+
+fn modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec![MODE_DAMAGE.to_string(), MODE_HEAL.to_string(), MODE_MANA.to_string()],
+    }]
+}
+
+/// R81: the target travels with the play, for the damage and heal modes alone (`forModes`). §8's
+/// Conventions pick "a target" from every legal unit and hero and only an EMPTY set fizzles; a hero
+/// always stands, so those modes always name one and the mana mode names none (R90). With `min: 0`
+/// for every mode, a damage or heal play could name nobody and pay its X for nothing.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl {
+        for_modes: Some(vec![MODE_DAMAGE.to_string(), MODE_HEAL.to_string()]),
+        ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))
+    }]
+}
+
+/// "Gain floor(X/2) mana next turn": one mana for every two X.
+const X_PER_MANA: i32 = 2;
+
+/// The base face uses X as it was paid; the radiant face uses 2X ("Uses 2X", R275) for its mana mode.
+const BASE_USES: i32 = 1;
+const RADIANT_USES: i32 = 2;
+
+/// The X the modes read: the X paid (never below 0), times the face's multiple.
+fn amount_x(ctx: &EffectContext<'_>, uses: i32) -> i32 {
+    ctx.x.max(0) * uses
+}
+
+/// `uses` is the mana mode's radiant difference. The damage and heal modes' multiples are the declared
+/// numbers `damage` and `heal` (R386): X and 2X, 2X and 4X on the Radiant face, where `damage` is
+/// tuned alone (R749: the base face's "Deal X damage" prints no number and is always 1X).
+fn dividend(uses: i32) -> Script {
+    Script {
+        modes: modes(),
+        targets: targets(),
+        cry: Some(hook(move |ctx| {
+            let paid = ctx.x.max(0);
+            let x = amount_x(ctx, uses);
+            let mode = chosen_options(ctx).into_iter().next();
+            match mode.as_deref() {
+                Some(MODE_DAMAGE) => {
+                    let amount = param(&*ctx, "damage") * paid;
+                    vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+                }
+                Some(MODE_HEAL) => {
+                    let amount = param(&*ctx, "heal") * paid;
+                    vec![heal(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+                }
+                // floor(x / 2) on a non-negative x.
+                Some(MODE_MANA) => {
+                    vec![next_turn_mana(json_as(json!({ "amount": x / X_PER_MANA, "player": "self" })))]
+                }
+                // No mode named: nothing to resolve, and the spell still counts as played (§8 Conventions).
+                _ => vec![],
+            }
+        })),
+        end_of_turn: Some(hook(|ctx| {
+            // The live `ctx.self`: the card as it stands now.
+            let Some(self_) = ctx.live_self() else {
+                return vec![];
+            };
+            let played = was_played_this_turn(ctx.state, self_.controller, self_);
+            if self_.return_to_hand_at_end_of_turn != Some(true) && !played {
+                return vec![];
+            }
+            vec![bounce(json_as(json!({ "target": { "of": "self" } })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: dividend(BASE_USES),
+        radiant: dividend(RADIANT_USES),
+    }
+}
 
 // #24 Efficiency Dividend — SPEC §8.2, BUILD M4-T4 row 24: "X chosen with the play, bounded by
 // mana (R81); three modes; next-turn mana +floor(X/2); returns to hand". Radiant (R275) uses 2X, still
@@ -21,7 +110,7 @@ pub const ID: &str = "core-024";
 // `mana.nextTurnMod` shows as current mana above 4 while max mana stays 4 (§2.3: temporary mana).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -63,7 +152,7 @@ mod tests {
 
         #[test]
         fn r81_declares_three_modes_and_the_damage_and_heal_modes_target_both_read_off_the_play() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let base = &scripts.base;
             assert_eq!(
                 serde_json::to_value(&base.modes).unwrap(),

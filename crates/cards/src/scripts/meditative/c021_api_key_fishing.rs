@@ -15,7 +15,56 @@
 //! generated card isn't Radiant unless said, §5.2; R805). Both numbers are declared and read
 //! through `param` (R386).
 
+use jackioh_engine::effects::{add_to_hand, give_from_hand};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-021";
+
+/// A percent roll is out of a hundred.
+const PERCENT: i32 = 100;
+
+/// §5.1 and R68, as Core #23 Reoccurring Dream reads them: at the end of the turn it was played on,
+/// the spell adds its copy from the graveyard — flagged for the return, or in this turn's play log.
+fn returns_this_turn(ctx: &EffectContext<'_>) -> bool {
+    let Some(self_) = ctx.live_self() else {
+        return false;
+    };
+    if self_.return_to_hand_at_end_of_turn == Some(true) {
+        return true;
+    }
+    was_played_this_turn(&*ctx.state, self_.controller, self_)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            // R129: with no hand to steal, there is nothing to roll for.
+            if zone_count(&*ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand) == 0 {
+                return vec![];
+            }
+            let key = if ctx.embiggened { "paidChance" } else { "chance" };
+            let odds = f64::from(param(&*ctx, key)) / f64::from(PERCENT);
+            if ctx.rng.chance(odds) {
+                vec![give_from_hand(json_as(json!({ "from": "enemy", "cards": "all" })))]
+            } else {
+                vec![]
+            }
+        })),
+        end_of_turn: Some(hook(|ctx| {
+            if returns_this_turn(ctx) {
+                vec![add_to_hand(json_as(json!({ "defId": ID })))]
+            } else {
+                vec![]
+            }
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared numbers, read through `param`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // M #21 API Key Fishing — SPEC §8.8 row 21, BUILD M10 row M 21: "A {chance}% roll steals the whole
 // hand (paid (1): {paidChance}%); at end of turn a new base copy is added and the card stays in the
@@ -23,6 +72,7 @@ pub const ID: &str = "meditative-021";
 // rolls nothing (R129); its tuned numbers read through `param()` (R386)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

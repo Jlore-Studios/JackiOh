@@ -11,7 +11,50 @@
 //! `viruses` CN-Viruses (Core #90.1), the opponent's cards, Radiant on the Radiant face; the shuffle-in
 //! is public and recorded in their list (R311), and a full deck refuses it (R80).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-095-1";
+
+/// §7: the CN-Virus it shuffles in.
+const CN_VIRUS: &str = "core-090-1";
+
+/// "Whenever this destroys a Unit, shuffle {viruses} CN-Virus into your opponent's deck."
+fn on_kill(radiant: bool) -> TriggerDef {
+    TriggerDef::new("cn-golem-kill", &[GameEventType::Destroyed], move |ctx, event| {
+        let killed_by_me = match (event, ctx.self_.as_ref()) {
+            (
+                GameEvent::Destroyed {
+                    killer_id: Some(killer),
+                    ..
+                },
+                Some(me),
+            ) => *killer == me.id,
+            _ => false,
+        };
+        if killed_by_me {
+            vec![shuffle_into(json_as(json!({
+                "defId": CN_VIRUS,
+                "count": param(&*ctx, "viruses"),
+                "player": "enemy",
+                "radiant": radiant,
+            })))]
+        } else {
+            Vec::new()
+        }
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![on_kill(false)],
+        ..Script::default()
+    };
+    let radiant = Script {
+        triggers: vec![on_kill(true)],
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // M #95.1 CN Golem — SPEC §8.8 row 95.1, R1245: "Rush, Poisonous, Cleave, Pierce, 10/10; whenever it is
 // R42's killer of a Unit, Cleave kills included, while it still stands on the field, `viruses` CN-Viruses
@@ -19,7 +62,7 @@ pub const ID: &str = "meditative-095-1";
 // with Windfury (R636), and the viruses Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{CN_VIRUS, ID};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -27,8 +70,6 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // Mr. Vanilla, 4/4, no text; 12/12 Radiant
     const FILLER: &str = "core-005";
-    /// §7: the CN-Virus it shuffles in.
-    const CN_VIRUS: &str = "core-090-1";
 
     /// The Golem in p1's lane 3 (`golem` is its field entry), p2's units `enemies`, p2's library
     /// `library` fillers long.

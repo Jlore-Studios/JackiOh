@@ -6,6 +6,12 @@
 /// within a few milliseconds.
 pub const LUAU_HOOK_INTERRUPTS: u32 = 1_000_000;
 
+/// R915004 (K7): a custom card's hook call's budget, in the same interrupts. A tenth of an official
+/// script's: the kit's verbs and readers spend a few hundred, a question's re-run a few thousand, so
+/// a card that does what the kit offers never nears it, and one that loops stops within a millisecond
+/// or two, doing nothing, while a turn's AI search runs its hooks thousands of times.
+pub const CUSTOM_HOOK_INTERRUPTS: u32 = 100_000;
+
 /// #442 L5: how deep hook calls may nest (a hook running another card's hook from a reader) before
 /// the innermost is stopped, naming its card. A reader nests a level or two; a hook that runs itself
 /// would otherwise go on until the thread's stack overflowed, which aborts the process, well before

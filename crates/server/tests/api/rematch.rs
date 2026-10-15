@@ -14,6 +14,7 @@
 //!    socket, false once it closes or the actor is gone.
 //!  - **R1372**: an All Random rematch leans the deck of each seat whose latest offer asked, and the
 //!    status names the mode the rematch plays.
+//!  - **R924000**: each seat's latest offer picks the set its deck leans on.
 //!
 //! Everything runs on tokio's paused clock through `test_app()`, with the real registry: the
 //! created rematch is asserted off the store and off `Registry::has`. Presence and call order are
@@ -190,6 +191,18 @@ async fn lean_offer(app: &Arc<App>, token: &str, match_id: &str, lean_newest: bo
         &format!("/api/matches/{match_id}/rematch"),
         token,
         Some(json!({ "stakes": STAKE_NORMAL, "leanNewest": lean_newest })),
+    )
+    .await
+}
+
+/// R924000: a normal offer whose "More cards from" picks `lean` (`"newest"` or a set's name).
+async fn pick_offer(app: &Arc<App>, token: &str, match_id: &str, lean: &str) -> (u16, Value) {
+    request(
+        app,
+        "POST",
+        &format!("/api/matches/{match_id}/rematch"),
+        token,
+        Some(json!({ "stakes": STAKE_NORMAL, "leanSet": lean })),
     )
     .await
 }
@@ -576,6 +589,39 @@ mod rematch_offers {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn r924000_an_all_random_rematch_leans_each_seat_on_the_set_its_latest_offer_picked() {
+        use jackioh_engine::SetName;
+        let app = test_app().await;
+        let (a, b, finished_id) = names("pick-rematch");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        finished_match(&app, &finished_id, &a, &b, json!({})).await;
+        paired_tickets(&app, &finished_id, [&a, &b], "random").await;
+
+        // A refuses a set that does not ship, then picks Core, then Classic: the latest stands.
+        let (code, _) = pick_offer(&app, &token_a, &finished_id, "Boss").await;
+        assert_eq!(code, 400);
+        pick_offer(&app, &token_a, &finished_id, "Core").await;
+        pick_offer(&app, &token_a, &finished_id, "Classic").await;
+        let (_, created) = pick_offer(&app, &token_b, &finished_id, "Meditative").await;
+        let rematch = match_row(
+            &app,
+            created["matchId"]
+                .as_str()
+                .expect("premise: the rematch was created"),
+        )
+        .await;
+        let seed = rematch["seed"].as_str().expect("a seed").to_string();
+        assert_eq!(
+            rematch["decks"],
+            json!([
+                deal_random_deck(&format!("{seed}:p1-deck"), Some(SetName::Classic)),
+                deal_random_deck(&format!("{seed}:p2-deck"), Some(SetName::Meditative))
+            ])
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r1372_a_best_of_1_rematch_replays_its_decks_whatever_an_offer_asks() {
         let app = test_app().await;
         let (a, b, finished_id) = names("lean-bo1");
@@ -740,6 +786,39 @@ mod rematch_creation_guards {
 
 mod rematch_refusals {
     use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r915005_a_best_of_1_rematch_of_a_deck_with_a_custom_card_is_refused_l7_creating_nothing() {
+        let app = test_app().await;
+        let (a, b, finished) = names("custom-card");
+        let token_a = active_profile(&app, &a, 1000.0).await;
+        let token_b = active_profile(&app, &b, 1000.0).await;
+        // A finished match whose frozen deck holds a custom card, as no queue or room would ever
+        // freeze (they ask L7 first): the rematch asks it again rather than replay the deck.
+        let custom = "custom-0123456789abcdef0123456789abcdef";
+        let (mut one, two) = real_decks();
+        one[0] = custom.to_string();
+        finished_match(&app, &finished, &a, &b, json!({ "decks": [one, two] })).await;
+        paired_tickets(&app, &finished, [&a, &b], "bo1").await;
+
+        offer(&app, &token_a, &finished, STAKE_NORMAL).await;
+        let (code, refused) = offer(&app, &token_b, &finished, STAKE_NORMAL).await;
+        assert_eq!(code, 422, "{refused}");
+        assert_eq!(refused["error"]["code"], "loadout_invalid");
+        let details = refused["error"]["details"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(details.len(), 1, "{refused}");
+        assert_eq!(details[0]["rule"], "L7");
+        assert_eq!(details[0]["cardId"], custom);
+        assert_eq!(refused["error"]["message"], details[0]["message"]);
+        assert!(live_ids(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, &a).await, Value::Null);
+        assert_eq!(in_match_of(&app, &b).await, Value::Null);
+        // The claim was let go: the status shows no game made.
+        assert_eq!(status(&app, &token_a, &finished).await.1["matchId"], Value::Null);
+    }
 
     #[tokio::test(start_paused = true)]
     async fn a_non_seat_gets_404_on_both_endpoints_like_for_a_missing_match() {

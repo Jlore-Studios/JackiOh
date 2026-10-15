@@ -11,7 +11,69 @@
 //! her after she left the field, so it never names `self`; "all your units" is `activeUnitsOf` (top of
 //! each pile only, R13, §3.2; R23 keeps Immutable units legal).
 
+use indexmap::IndexSet;
+use jackioh_engine::effects::set_radiant;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-081";
+
+/// "All your units become Radiant", as one `setRadiant` per unit named by instance id — nobody chose
+/// these cards, so there is no `TargetSpec` to resolve (R81). `includeSelf` is R22's ruling for the
+/// Cry; the ids are de-duplicated so the effect list has one entry per card even when `self` is
+/// already standing in a unit zone.
+fn radiate_your_units(ctx: &EffectContext<'_>, include_self: bool) -> Vec<Effect> {
+    let mut ids: Vec<String> = Vec::new();
+    if include_self
+        && let Some(self_) = &ctx.self_
+    {
+        ids.push(self_.id.clone());
+    }
+    ids.extend(active_units_of(ctx.state, ctx.controller).iter().map(|unit| unit.id.clone()));
+    ids.into_iter()
+        .collect::<IndexSet<String>>()
+        .into_iter()
+        .map(|instance_id| set_radiant(json_as(json!({ "instanceId": instance_id }))))
+        .collect()
+}
+
+/// R78: by the time Death runs she is in the graveyard, so "your OTHER units" is simply everyone left
+/// standing, and the `false` below is that word. She has no Cry: on Death alone the same effect is
+/// paid for with her body. `includeSelf` stays a parameter, and passing `false` at the one call site
+/// is what R78 is about.
+fn death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    radiate_your_units(ctx, false)
+}
+
+/// "…and every card in your hand": the controller's hand, read through `zoneCards` (a copy) and named
+/// card by card, as #29 does. Every card, so no rng is drawn (§9.3), and a card already Radiant is
+/// still named — `setRadiant` cues it without changing it (R177), which is what hides the hand's
+/// faces from the opponent.
+fn radiate_your_hand(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
+        .iter()
+        .map(|card| set_radiant(json_as(json!({ "instanceId": card.id }))))
+        .collect()
+}
+
+/// Radiant Death: the board first, in the order the text names it, then the hand.
+fn radiant_death(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let mut effects = radiate_your_units(ctx, false);
+    effects.extend(radiate_your_hand(ctx));
+    effects
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            death: Some(hook(death)),
+            ..Script::default()
+        },
+        radiant: Script {
+            death: Some(hook(radiant_death)),
+            ..Script::default()
+        },
+    }
+}
 
 // BUILD M4-T4's must-pass row: "Death makes every other unit you control Radiant; no Reborn, so she
 // dies once; radiant also every card in your hand, hidden from the opponent (R177)". Her Cry is cut
@@ -23,6 +85,7 @@ pub const ID: &str = "core-081";
 // the harness records no events for setup, so those cases assert state, not the log.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

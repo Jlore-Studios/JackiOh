@@ -8,7 +8,44 @@
 //! may affect is marked at once (an Immune to Spells Unit is not among them), the one state check after
 //! the list collecting them together (R59). An Indestructible Unit survives either way (R46).
 
+use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, destroy, for_each_card};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-032-1";
+
+/// R81: one damaged Unit, either side.
+fn damaged_unit() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"], "damaged": true }))]
+}
+
+/// §4: damage above 0.
+fn damaged_enemy_units(ctx: &mut EffectContext<'_>) -> Vec<String> {
+    cards_in_scope(ctx, &json_as(json!({ "side": "enemy" })))
+        .iter()
+        .filter(|unit| unit.damage > 0)
+        .map(|unit| unit.id.clone())
+        .collect()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: damaged_unit(),
+        cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|_ctx| {
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(|ctx: &mut EffectContext<'_>| damaged_enemy_units(ctx)),
+                each: Arc::new(|instance_id: &str| {
+                    destroy(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #32.1 Execute — SPEC §8.7 row 32.1, BUILD M9 Classic+ row C+ 32.1: "Destroys a target damaged Unit
 // (damage above 0) on either side, an Indestructible one knocked down instead (R46); an undamaged Unit is
@@ -16,7 +53,7 @@ pub const ID: &str = "classicplus-032-1";
 // radiant destroys every damaged enemy Unit, no target".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -57,7 +94,7 @@ mod tests {
             crate::register_all();
             assert_eq!(ID, EXECUTE);
             assert_eq!(crate::card_def(ID).id, EXECUTE);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit"], "damaged": true } }])

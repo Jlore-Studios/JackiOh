@@ -1,6 +1,37 @@
 //! C+ #20 Mushroom Power (SPEC §8.7 row 20): Cry gives the Units beside it (§3.1) +{buff}/+{buff}.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-020";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "buff");
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(|each: &mut EffectContext<'_>| {
+                    adjacent_to(each, &json_as(json!({ "of": "self" })), &BoardScope::default())
+                        .into_iter()
+                        .map(|card| card.id)
+                        .collect()
+                }),
+                each: Arc::new(move |instance_id: &str| {
+                    buff(json_as(json!({
+                        "target": { "of": "instance", "instanceId": instance_id },
+                        "attack": amount,
+                        "health": amount,
+                    })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant +4/+4 is its declared `buff`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C+ #20 Mushroom Power — SPEC §8.7 row 20, BUILD M9 Classic+ row C+ 20: "Cry gives the Units in the
 // unit zones beside it on its side (lanes N−1 and N+1) +2/+2 permanently: one neighbour in lane 1 or 5,
@@ -10,7 +41,6 @@ pub const ID: &str = "classicplus-020";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -41,7 +71,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(def.id, MUSHROOM);
             assert_eq!(def.cost, CardCost::Fixed(1));
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.targets.is_empty());
             assert!(Arc::ptr_eq(
                 scripts.base.cry.as_ref().expect("base cry"),

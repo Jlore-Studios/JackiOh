@@ -12,9 +12,58 @@
 //!
 //! Cost 6 is catalog data. MAX_MANA is 4, so the card needs temporary mana (#6, #94, #95); §2.3 lets current mana exceed max.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-029";
 
+/// Your hand, through the read-only `zoneCards`, which hands back a copy. The card itself sits in
+/// the `resolving` zone while its script runs (§10.5), so it does not flag itself.
+fn hand_of(ctx: &EffectContext<'_>) -> Vec<String> {
+    zone_cards(ctx.state, ctx.controller, OffFieldZone::Hand)
+        .iter()
+        .map(|card| card.id.clone())
+        .collect()
+}
+
+/// Your permanents: units (top of each pile only, R13) then backrow, in lane order.
+fn permanents_of(ctx: &EffectContext<'_>) -> Vec<String> {
+    let backrow: Vec<String> = slots_of(ctx.controller, Row::Backrow)
+        .iter()
+        .filter_map(|slot| card_at(ctx.state, slot).map(|card| card.id.clone()))
+        .collect();
+    let mut ids: Vec<String> = active_units_of(ctx.state, ctx.controller)
+        .iter()
+        .map(|card| card.id.clone())
+        .collect();
+    ids.extend(backrow);
+    ids
+}
+
+/// One `setRadiant` per card the hook named by id: the hook reads, never writes.
+fn make_radiant(cards: &[String]) -> Vec<Effect> {
+    cards
+        .iter()
+        .map(|id| set_radiant(json_as(json!({ "instanceId": id }))))
+        .collect()
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| make_radiant(&hand_of(ctx)))),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            let mut cards = hand_of(ctx);
+            cards.extend(permanents_of(ctx));
+            make_radiant(&cards)
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // #29 GIGA Glowy Jelly Bean (SPEC §8.2, BUILD M4-T4 row 29): "Uncastable at 4 mana, castable at 6
 // after gains; whole hand radiant; radiant also permanents".

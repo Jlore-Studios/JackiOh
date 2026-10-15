@@ -14,14 +14,110 @@
 //! field (§3.2, R13). The Spell itself is resolving, in no pile, and is spared; graveyards and exile
 //! are untouched.
 
+use jackioh_engine::effects::{ForEachCardArgs, cards_in_scope, exile, for_each_card, sides_of};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-018";
+
+/// The fixed range the number is chosen from (BUILD §2's `GLITCH_NUMBERS`), as the choice's options.
+fn glitch_options() -> Vec<String> {
+    GLITCH_NUMBERS.iter().map(|number| number.to_string()).collect()
+}
+
+fn number_choice() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Number,
+        options: glitch_options(),
+    }]
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Whose {
+    Any,
+    Enemy,
+}
+
+impl Whose {
+    /// The `BoardScope.side` literal.
+    fn side(self) -> &'static str {
+        match self {
+            Whose::Any => "any",
+            Whose::Enemy => "enemy",
+        }
+    }
+}
+
+/// The number the play carried, or null (§10.6's choices are strings).
+fn chosen_number(ctx: &EffectContext<'_>) -> Option<i32> {
+    let picked = ctx.modes.first()?;
+    if !glitch_options().contains(picked) {
+        return None;
+    }
+    picked.parse::<i32>().ok()
+}
+
+/// Every card on the field and in the hands and decks of `whose` sides, the Spell's controller first,
+/// or the field alone (the whole board) when `field_only`, the base face's scope (balance patch 1).
+fn reachable(ctx: &EffectContext<'_>, whose: Whose, field_only: bool) -> Vec<CardInstance> {
+    let scope: BoardScope = json_as(json!({ "side": whose.side(), "rows": ["units", "backrow"] }));
+    let field = cards_in_scope(ctx, &scope);
+    if field_only {
+        return field;
+    }
+    let players: Vec<PlayerId> = match whose {
+        Whose::Enemy => sides_of(ctx, Some(ScopeSide::Enemy)),
+        Whose::Any => {
+            let mut players = vec![ctx.controller];
+            players.extend(sides_of(ctx, Some(ScopeSide::Enemy)));
+            players
+        }
+    };
+    let piles: Vec<CardInstance> = players
+        .iter()
+        .flat_map(|&player| {
+            let mut cards = zone_cards(&*ctx.state, player, OffFieldZone::Hand);
+            cards.extend(zone_cards(&*ctx.state, player, OffFieldZone::Library));
+            cards
+        })
+        .collect();
+    field.into_iter().chain(piles).collect()
+}
+
+fn glitch(whose: Whose, field_only: bool) -> Script {
+    Script {
+        modes: number_choice(),
+        cry: Some(hook(move |ctx| {
+            let Some(number) = chosen_number(ctx) else {
+                return vec![];
+            };
+            vec![for_each_card(ForEachCardArgs {
+                cards: Arc::new(move |read: &mut EffectContext<'_>| -> Vec<String> {
+                    reachable(read, whose, field_only)
+                        .into_iter()
+                        .filter(|card| cost_now(&*read.state, card) == number)
+                        .map(|card| card.id)
+                        .collect()
+                }),
+                each: Arc::new(|instance_id: &str| {
+                    exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                }),
+            })]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: glitch(Whose::Any, true),
+        radiant: glitch(Whose::Enemy, false),
+    }
+}
 
 // C #18 Glitch in the System — SPEC §8.6 row 18, BUILD M9 Classic row C 18: the number is chosen with
 // the play (R81) from `GLITCH_NUMBERS`; the base face exiles that cost on the Field alone (balance
 // patch 1), the Radiant the opponent's field, hand and deck; costs read per R65 (R396). No tuned
 // numbers. An X card on the field was "played for X": a Buff Billy with `CardInstance.x` set (§2.3).
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,7 +218,7 @@ mod tests {
         fn declares_no_numbers_and_the_number_choice_as_a_mode_of_kind_number_0_to_10() {
             crate::register_all();
             let def = crate::card_def(ID);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(def.params.is_none());
             assert_eq!(
                 serde_json::to_value(&scripts.base.modes).unwrap(),

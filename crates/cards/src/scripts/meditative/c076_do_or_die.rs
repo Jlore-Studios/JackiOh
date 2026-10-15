@@ -19,7 +19,72 @@
 //! - **Hidden information:** the hand's owner sees the mark on each marked card; this player sees
 //!   only how many (`SideView.handMarked`, R1141) and meets each card as it reaches their hand (R97).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-076";
+
+/// The step the delayed steal re-enters at the start of this player's next turn (§10.6, R62).
+const STEAL_STEP: &str = "steal";
+
+/// R437, R1141: the pending steal's mark, purple as #50 K-Pop Fanatic's.
+fn steal_mark() -> Value {
+    json!({ "mark": "steal", "color": "purple" })
+}
+
+/// The cards the watch still holds as it comes due, in the order they were picked.
+fn still_watched(ctx: &EffectContext<'_>) -> Vec<String> {
+    ctx.data
+        .get(HAND_WATCH_KEY)
+        .and_then(Value::as_array)
+        .map(|ids| ids.iter().filter_map(Value::as_str).map(str::to_string).collect())
+        .unwrap_or_default()
+}
+
+/// R12, R1140: each watched card still in their hand becomes this player's, in hand order.
+fn steal_step(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let ids = still_watched(ctx);
+    if ids.is_empty() {
+        return vec![];
+    }
+    vec![give_from_hand(json_as(json!({ "from": "enemy", "ids": ids })))]
+}
+
+/// `every` is the Radiant face: every card of their hand, not `marks` of them.
+fn do_or_die(every: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let hand: Vec<String> = zone_cards(ctx.state, opponent_of(ctx.controller), OffFieldZone::Hand)
+                .into_iter()
+                .map(|card| card.id)
+                .collect();
+            if hand.is_empty() {
+                return vec![];
+            }
+            let picked: Vec<String> = if every {
+                hand
+            } else {
+                let marks = param(&*ctx, "marks").max(0) as usize;
+                ctx.rng.shuffle(&hand).into_iter().take(marks).collect()
+            };
+            vec![delay(json_as(json!({
+                "at": { "phase": "start", "player": "self" },
+                "step": STEAL_STEP,
+                "hook": RESUME_HOOK,
+                "handWatch": picked,
+                "mark": steal_mark(),
+            })))]
+        })),
+        resume: IndexMap::from([(STEAL_STEP, hook(steal_step))]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: do_or_die(false),
+        radiant: do_or_die(true),
+    }
+}
 
 // M #76 Do or Die — SPEC §8.8 row 76, BUILD M10 row M 76: "Marks two different random cards of the
 // opponent's hand (all of them if fewer); at the start of your next turn each still in that hand

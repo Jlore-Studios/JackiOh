@@ -2,7 +2,16 @@
 //! Rush, Lifesteal, Poisonous (Radiant: plus Reborn): keywords only, printed in the catalog and applied
 //! by the layers (§10.4), so neither face has anything to run.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-006";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    // The Radiant face adds Reborn and doubles the stats: catalog data only.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #6 Wrong-House Attacker — SPEC §8.7 row 6, BUILD M9 Classic+ row C+ 6: "Rush, Lifesteal,
 // Poisonous: attacks a unit on its summon turn but not the hero, its hit destroys any unit it damages
@@ -10,7 +19,7 @@ pub const ID: &str = "classicplus-006";
 // Reborn". Keywords only: both faces are catalog data, applied by the layers (§10.4).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -95,7 +104,7 @@ mod tests {
             kinds(&def.radiant.keywords),
             vec![KeywordKind::Rush, KeywordKind::Lifesteal, KeywordKind::Poisonous, KeywordKind::Reborn]
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(is_empty_script(&scripts.base));
         // TS `expect(radiant).toBe(base)`: the one empty script runs both faces.
         assert!(is_empty_script(&scripts.radiant));

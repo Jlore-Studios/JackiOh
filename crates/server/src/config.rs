@@ -610,7 +610,8 @@ pub const DECK_NAME_MAX_LENGTH: usize = 40;
 /// SPEC §11 R250: the most draft issues one refused save lists in its `details`. A real deck of at
 /// most `DECK_SIZE` cards can break D1–D4 about forty times; a request body of junk ids could break
 /// D3 thousands of times and turn a 64 KiB request into a far larger answer. The first issue is
-/// still the error's message, so nothing a player could fix is hidden.
+/// still the error's message, so nothing a player could fix is hidden. A refused custom card's
+/// issues are capped the same way (R915008): a frame of junk keywords breaks §12.2 once per keyword.
 pub const DRAFT_ISSUES_REPORTED_MAX: usize = 50;
 /// SPEC §11 R255: the deck-code format's version. Version 2 (patch v0.2.0, docs/classic-sets.md B2.2)
 /// writes each card's set with its number (`CATALOG_NUMBER_SET_OFFSETS`); a code naming a version
@@ -665,6 +666,18 @@ pub const TRIO_CODE_CORE_ONLY_VERSION: i32 = 1;
 /// and under 1,100 at the very worst (four-byte characters filling every name to its limit), so this
 /// leaves room for whatever a chat client wraps around a pasted code.
 pub const TRIO_CODE_MAX_INPUT_LENGTH: usize = 2048;
+
+// ---------------------------------------------------------------------------------------------
+// Custom cards on the account (SPEC §12.9, R915008). PUBLIC: the card creator imports the cap.
+// A card's own limits (its frame's, `CUSTOM_SOURCE_MAX_BYTES` of source and
+// `CUSTOM_BUILDER_MAX_BYTES` of builder) are the engine's (`jackioh_engine::config`), which the
+// validator applies; the request that carries one is held to `API_MAX_BODY_BYTES` like every body,
+// since the router reads a body before it picks the handler. A card at every limit fits it as JSON
+// unless most of its source is characters JSON escapes (`tests/api/custom_cards.rs`).
+// ---------------------------------------------------------------------------------------------
+
+/// SPEC §12.9, R915008: how many custom cards an account keeps. Mirrored in `app.settings` (0037).
+pub const CUSTOM_CARDS_PER_ACCOUNT: usize = 50;
 
 // ---------------------------------------------------------------------------------------------
 // Queue modes and the Conquest series (SPEC §9.5, R257–R264, R330–R338).

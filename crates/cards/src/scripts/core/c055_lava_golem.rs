@@ -14,7 +14,42 @@
 //!
 //! R65/§6.3: a mana price of 0 does not touch the Tribute (#41 Sheepish's free copy still needs three units).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-055";
+
+/// §8: "Tribute 3", counted with the Sheep Token worth 2 (§3.2).
+const TRIBUTE_COST: i32 = 3;
+
+/// The Radiant face: its Tribute, and the permission to pay it with opposing units (R101).
+fn radiant_flags() -> StaticFlags {
+    StaticFlags {
+        tribute: Some(TRIBUTE_COST),
+        tribute_enemies: Some(true),
+        ..StaticFlags::default()
+    }
+}
+
+/// The base face adds its price: paid with an opposing unit, it is summoned for the opponent (R360).
+fn base_flags() -> StaticFlags {
+    StaticFlags {
+        enemy_tribute_hands_over: Some(true),
+        ..radiant_flags()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            static_flags: Some(base_flags()),
+            ..Script::default()
+        },
+        radiant: Script {
+            static_flags: Some(radiant_flags()),
+            ..Script::default()
+        },
+    }
+}
 
 // #55 Lava Golem (SPEC §8.3, §6.3 Tribute/Sacrifice, §3.2, §6.1, §4.2; R11, R12, R65, R81, R90,
 // R101, R360).

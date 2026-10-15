@@ -1,12 +1,12 @@
 // Rematch offers after an online match (SPEC §9.5, R672).
 // UI sends server intent and renders server status only (CLAUDE.md rule 7).
-// R1372: All Random offers may carry the player's `leanNewest`; Best-of-1 offers do not.
+// R1372, R924000: All Random offers may carry the player's "More cards from" pick; Best-of-1 offers do not.
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 
 import { SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { ConnectionState } from "../game/net.ts";
-import { LeanNewestToggle, readPlayLeanNewest, writePlayLeanNewest } from "../game/LeanNewest.tsx";
+import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
 import { t } from "../i18n/i18n.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import {
@@ -80,7 +80,7 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
   const [status, setStatus] = useState<RematchStatusResponse | null>(null);
   const [offering, setOffering] = useState<RematchStakes | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [leanNewest, setLeanNewest] = useState(readPlayLeanNewest);
+  const [lean, setLean] = useState(readPlayLean);
 
   useRematchStatus(token, matchId, (answer) => {
     setStatus(answer);
@@ -97,8 +97,8 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
     setOffering(stakes);
     setError(null);
     try {
-      const answer = await (random && leanNewest
-        ? rematchOffer(token, matchId, stakes, true)
+      const answer = await (random && lean !== null
+        ? rematchOffer(token, matchId, stakes, lean)
         : rematchOffer(token, matchId, stakes));
       if (answer.matchId !== null) navigate(paths.match(answer.matchId));
       else {
@@ -150,13 +150,13 @@ export default function RematchButtons({ token, matchId, connection, ranked }: R
       </div>
       {ranked ? null : <p className="rematch-note">{t("Double-or-nothing needs a ranked match.")}</p>}
       {random ? (
-        <LeanNewestToggle
-          checked={leanNewest}
+        <LeanSetPicker
+          value={lean}
           disabled={offering !== null}
           testid={rematchTestid.leanNewest}
-          onChange={(on) => {
-            setLeanNewest(on);
-            writePlayLeanNewest(on);
+          onChange={(pick) => {
+            setLean(pick);
+            writePlayLean(pick);
           }}
         />
       ) : null}

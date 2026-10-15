@@ -162,8 +162,16 @@ pub const MIGRATIONS: &[(&str, &str)] = &[
         include_str!("../../migrations/0035_replay_final_hash.sql"),
     ),
     (
-        "0036_moderation_switch_grant.sql",
-        include_str!("../../migrations/0036_moderation_switch_grant.sql"),
+        "0036_lean_set.sql",
+        include_str!("../../migrations/0036_lean_set.sql"),
+    ),
+    (
+        "0037_custom_cards.sql",
+        include_str!("../../migrations/0037_custom_cards.sql"),
+    ),
+    (
+        "0038_moderation_switch_grant.sql",
+        include_str!("../../migrations/0038_moderation_switch_grant.sql"),
     ),
 ];
 

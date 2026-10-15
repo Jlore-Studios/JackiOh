@@ -9,7 +9,48 @@
 //! no fatigue (Exile is no draw, §6.3). It answers at step 4, before the played card resolves. Rush is
 //! catalog data, so the Radiant face's script is the base's.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-003";
+
+fn after_opponent_plays() -> TriggerDef {
+    TriggerDef::new("jlockwork-machine-exile", &[GameEventType::CardPlayed], |ctx, event| {
+        let GameEvent::CardPlayed { player, .. } = event else {
+            return vec![];
+        };
+        if *player == ctx.controller {
+            return vec![];
+        }
+        let me = ctx.controller;
+        let count = param(&*ctx, "exiles").max(0) as usize;
+        vec![for_each_card(ForEachCardArgs {
+            cards: Arc::new(move |at: &mut EffectContext<'_>| {
+                zone_cards(at.state, me, OffFieldZone::Library)
+                    .into_iter()
+                    .take(count)
+                    .map(|card| card.id)
+                    .collect()
+            }),
+            each: Arc::new(|instance_id: &str| {
+                exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+            }),
+        })]
+    })
+}
+
+fn jlockwork_machine() -> Script {
+    Script {
+        triggers: vec![after_opponent_plays()],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: jlockwork_machine(),
+        radiant: jlockwork_machine(),
+    }
+}
 
 // M #3 Jlockwork Machine — SPEC §8.8 row 3, BUILD M10 row M 3: "A trigger on the opponent's `cardPlayed` that
 // exiles the top 3 cards of its controller's deck, by Frozen Wastes' pattern: a cast counts (R70) and a

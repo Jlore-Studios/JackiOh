@@ -1,6 +1,6 @@
 // `/practice`: B32 and B33 (docs/polish/3-ai.md).
 
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mock } from "vitest";
 
@@ -879,43 +879,100 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(screen.queryByTestId(T.setup)).toBeNull();
   });
 
-  it("R1373 the Random deck's switch travels on the deck choice, and a preset never carries it", async () => {
+  it("R1373 R924000 the Random deck's pick travels on the deck choice, and a preset never carries it", async () => {
     const host = routeHost();
     renderRoute(host);
     await settle();
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
-    const toggle = screen.getByTestId(practiceTestid.leanNewest);
-    expect(toggle).not.toBeChecked();
-    expect(toggle.closest("label")).toHaveTextContent(`More cards from the newest set (${newestShippedSet()})`);
-    fireEvent.click(toggle);
+    const picker = screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement;
+    expect(picker.value).toBe("");
+    expect(picker.closest("label")).toHaveTextContent("More cards from");
+    expect(within(picker).getByText(`The newest set (${newestShippedSet()})`)).toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: "Classic+" } });
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     expect(screen.queryByTestId(practiceTestid.leanNewest)).toBeNull();
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "random" } });
-    expect(screen.getByTestId(practiceTestid.leanNewest)).toBeChecked();
+    expect((screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement).value).toBe("Classic+");
     fireEvent.click(screen.getByTestId(T.start));
     await screen.findByTestId(T.hud);
 
-    expect(host.starts()[0]?.deck).toEqual({ kind: "random", leanNewest: true });
+    expect(host.starts()[0]?.deck).toEqual({ kind: "random", leanSet: "Classic+" });
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toEqual({
       difficulty: "easy",
       deck: "random",
-      leanNewest: true,
+      leanSet: "Classic+",
     });
   });
 
-  it("R1373 the remembered switch comes back on the next visit, and a preset started with it on keeps it for later", async () => {
+  it("R1373 R924000 the remembered pick comes back on the next visit, R1373's switch as newest, and a preset started with it keeps it for later", async () => {
     window.localStorage.setItem(PRACTICE_SETUP_KEY, JSON.stringify({ difficulty: "easy", deck: "random", leanNewest: true }));
     const host = routeHost();
     renderRoute(host);
     await settle();
-    expect(screen.getByTestId(practiceTestid.leanNewest)).toBeChecked();
+    expect((screen.getByTestId(practiceTestid.leanNewest) as HTMLSelectElement).value).toBe("newest");
 
     fireEvent.change(screen.getByTestId(T.deck), { target: { value: "preset:humans" } });
     fireEvent.click(screen.getByTestId(T.start));
     await screen.findByTestId(T.hud);
     expect(host.starts()[0]?.deck).toEqual({ kind: "preset", id: "humans" });
-    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toMatchObject({ leanNewest: true });
+    expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toMatchObject({ leanSet: "newest" });
+  });
+
+  it("R923000 the Sandbox box starts a sandbox game: the HUD says so and its dev tools go to the host as acts", async () => {
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(T.start));
+    const hud = await screen.findByTestId(T.hud);
+    const [config] = host.starts();
+    expect(config?.sandbox).toBe(true);
+    expect(hud).toHaveTextContent("Sandbox");
+    expect(screen.getByTestId(practiceTestid.sandboxPanel)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxDraw));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({
+        type: "act",
+        action: { type: "sandbox", op: { kind: "draw", player: config?.humanSeat, count: 1 } },
+      });
+    });
+  });
+
+  it("R923000 a game started without the box is no sandbox and shows no tools", async () => {
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+    fireEvent.click(screen.getByTestId(T.start));
+    const hud = await screen.findByTestId(T.hud);
+    expect(host.starts()[0]?.sandbox).toBeUndefined();
+    expect(hud).not.toHaveTextContent("Sandbox");
+    expect(screen.queryByTestId(practiceTestid.sandboxPanel)).toBeNull();
+    expect(screen.queryByTestId(practiceTestid.sandboxToggle)).toBeNull();
+  });
+
+  it("R923000 the panel's hold keeps the AI's next step back until it is let go", async () => {
+    const host = routeHost({ aiToAct: true });
+    const gap = 200;
+    renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
+    await settle();
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
+    expect(screen.getByTestId(practiceTestid.sandboxHold)).toBeChecked();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, gap * 3));
+    });
+    expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the AI is held").toEqual([]);
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({ type: "aiStep" });
+    });
   });
 
   it("B33 a saved deck chosen in setup travels as that deck's cards", async () => {

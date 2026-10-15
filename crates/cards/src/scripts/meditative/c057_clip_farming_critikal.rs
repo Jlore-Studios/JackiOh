@@ -8,7 +8,65 @@
 //! R747), a unit token vanishing; anywhere else nothing happens. A full hand burns it. Radiant:
 //! then `set_radiant` on it, in hand — before the Bounce, so the Bounce carries it home.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-057";
+
+fn critikal(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // Combo 1 (§6.2): one or more cards played earlier this turn, read at play time.
+            let at = played_earlier(ctx.state, ctx.controller, ctx.live_self());
+            if at < 1 {
+                return vec![];
+            }
+            let ids = played_ids_this_turn(ctx.state, ctx.controller);
+            let Some(prev) = ids.get((at - 1) as usize).cloned() else {
+                return vec![];
+            };
+            let Some(card) = find_instance(ctx.state, &prev).cloned() else {
+                return vec![];
+            };
+            // From your graveyard or exile it moves to your hand ("Return … to hand", R746).
+            if matches!(card.zone, Zone::Graveyard { player } | Zone::Exile { player } if player == ctx.controller)
+            {
+                return vec![add_to_hand(json_as(json!({
+                    "instance": { "of": "instance", "instanceId": card.id },
+                    "radiant": radiant,
+                })))];
+            }
+            // A permanent you control is Bounced (R692, R747); the Radiant face makes it Radiant
+            // first, so the Bounce carries it home. Anywhere else nothing happens.
+            if matches!(card.zone, Zone::Field { .. }) && card.controller == ctx.controller {
+                if radiant {
+                    return vec![
+                        set_radiant(json_as(json!({ "instanceId": card.id }))),
+                        bounce(json_as(json!({
+                            "target": { "of": "instance", "instanceId": card.id },
+                        }))),
+                    ];
+                }
+                return vec![bounce(json_as(json!({
+                    "target": { "of": "instance", "instanceId": card.id },
+                })))];
+            }
+            vec![]
+        })),
+        // R195: hand only, the same read as the Cry, so the glow and the return cannot disagree.
+        condition_met: Some(condition_hook(|ctx: ConditionContext<'_>| {
+            ctx.zone == ConditionZone::Hand
+                && played_earlier(ctx.state, ctx.controller, ctx.self_) >= 1
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: critikal(false),
+        radiant: critikal(true),
+    }
+}
 
 // M #57 Clip-Farming Critikal — SPEC §8.8 row 57, BUILD M10 row M 57: "Combo: played after another
 // card this turn, that previous play (a cast counting, R70) returns from your graveyard or exile
@@ -18,6 +76,7 @@ pub const ID: &str = "meditative-057";
 // Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

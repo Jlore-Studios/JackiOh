@@ -9,7 +9,53 @@
 //! cards, named, so no pool and no R387. The prompt is the controller's; a timeout answers it with
 //! the AI policy (R79); the opponent sees a prompt open and a hidden card arrive.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-085";
+
+/// C+ #71 Book of Buff, the first mode.
+const BUFF_BOOK: &str = "classicplus-071";
+/// C+ #72 Book of Nerf, the second mode.
+const NERF_BOOK: &str = "classicplus-072";
+
+/// The two modes, worded as the faces print them. The same labels on both faces.
+const BUFF: &str = "Book of Buff";
+const NERF: &str = "Book of Nerf";
+
+/// The resume step the mode prompt re-enters (§10.6).
+const STEP_BOOK: &str = "book";
+
+fn playtester(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(|_ctx| {
+            vec![choose_mode(json_as(json!({
+                "options": [BUFF, NERF],
+                "step": STEP_BOOK,
+                "prompt": "Playtester: choose one",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            STEP_BOOK,
+            hook(move |ctx| {
+                let picked = chosen_options(ctx).into_iter().next();
+                let id = match picked.as_deref() {
+                    Some(NERF) => NERF_BOOK,
+                    _ => BUFF_BOOK,
+                };
+                let n = param(&*ctx, "books").max(0) as usize;
+                (0..n)
+                    .map(|_| add_to_hand(json_as(json!({ "defId": id, "radiant": radiant }))))
+                    .collect()
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // The Radiant face's Book is Radiant; the option labels are the same on both faces.
+    CardScripts { base: playtester(false), radiant: playtester(true) }
+}
 
 // M #85 Playtester — SPEC §8.8 row 85, BUILD M10 row M 85: "At your start of turn only, a mode
 // prompt for its controller: Book of Buff (C+ 71) or Book of Nerf (C+ 72) to hand (MD-E8), hidden
@@ -25,15 +71,6 @@ mod tests {
 
     const PLAYTESTER: &str = "meditative-085";
     const FILLER: &str = "core-005";
-
-    /// C+ #71 Book of Buff, the first mode.
-    const BUFF_BOOK: &str = "classicplus-071";
-    /// C+ #72 Book of Nerf, the second mode.
-    const NERF_BOOK: &str = "classicplus-072";
-
-    /// The two modes, worded as the faces print them. The same labels on both faces.
-    const BUFF: &str = "Book of Buff";
-    const NERF: &str = "Book of Nerf";
 
     fn filler(count: usize) -> Value {
         json!(vec!["core-005"; count])

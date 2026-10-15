@@ -238,3 +238,43 @@
     flex-direction: column;
   }
 }
+
+/* ---- a custom card's script failed (R915004, ScriptFailedNotice.tsx) ---------------------------- */
+
+/* Information, not a refusal: the neutral frame `attack-reason` wears, with a way to put it away. */
+.board-notices > .script-failed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: none;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px dashed var(--line-bright);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-size: 0.82em;
+  font-weight: 650;
+  text-align: center;
+}
+
+.script-failed__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.board-notices > .script-failed > .script-failed__dismiss {
+  flex: none;
+  min-width: 0;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.board-notices > .script-failed > .script-failed__dismiss:hover {
+  color: var(--text);
+}

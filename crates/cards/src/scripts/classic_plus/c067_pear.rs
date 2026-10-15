@@ -10,7 +10,38 @@
 //! nearly full board takes one and a full one none. The pool's cost is R65's out-of-play cost, which is
 //! what `cost` in a catalog query reads (an X-cost card reads 0, never 1).
 
+use jackioh_engine::effects::summon_random;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-067";
+
+/// §8.7: the printed cost of the Units it summons.
+const UNIT_COST: i32 = 1;
+
+fn pear(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            (0..param(ctx, "units"))
+                .map(|_| {
+                    let mut args = json!({ "query": { "type": "Unit", "cost": UNIT_COST, "rarity": "Common" } });
+                    if radiant {
+                        args["radiant"] = json!(true);
+                    }
+                    summon_random(json_as(args))
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = pear(false);
+
+    let radiant = pear(true);
+
+    CardScripts { base, radiant }
+}
 
 // C+ #67 Pear — SPEC §8.7 row 67, BUILD M9 Classic+ row C+ 67: "Summons 2 random non-token Units of any
 // set printed at (1) Cost and Common rarity (R380; out-of-play cost, R65), no Cry (R1), repeats allowed;
@@ -65,7 +96,7 @@ mod tests {
         assert_eq!(def.id, PEAR);
         assert_eq!(js(&def.cost), json!(2));
         assert!(def.tags.contains(&Tag::Fruit));
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.cry.is_some());
         assert!(radiant.cry.is_some());
     }

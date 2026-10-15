@@ -10,12 +10,13 @@
 
 import type { ReactElement, ReactNode } from "react";
 
-import type { Tag } from "@jackioh/shared";
+import type { SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { CardDetail } from "../../cards/index.ts";
 import { t } from "../../i18n/i18n.ts";
 import FilterBar from "./FilterBar.tsx";
+import { CUSTOM_SET } from "./loadout.ts";
 import type { PoolFilter, PoolSort } from "./filters.ts";
 import PoolGrid, { type PoolGridDeckProps } from "./PoolGrid.tsx";
 import { DB_EMPTY } from "./testids.ts";
@@ -41,6 +42,9 @@ export type CardBrowserProps = {
   ownedUnavailable?: boolean;
   /** FilterBar's: the tag chips, the deck builder's when absent. */
   tags?: readonly Tag[];
+  /** FilterBar's: the set chips, and what follows them (the deck builder's "Custom" chip and creator link). */
+  sets?: readonly SetName[];
+  setsAfter?: ReactNode;
   /** The grid's deck half; absent, the grid is read-only. */
   deck?: PoolGridDeckProps;
   /** Under the filters, over the pool: the deck editor's status toast. */
@@ -55,7 +59,7 @@ export type CardBrowserProps = {
 };
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
-  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, showStats } = props;
+  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, setsAfter, showStats } = props;
   const { deck, status, onInspect, detail, onCloseDetail } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
@@ -70,6 +74,8 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
         ownedControl={ownedControl}
         ownedUnavailable={ownedUnavailable}
         tags={tags}
+        sets={sets}
+        setsAfter={setsAfter}
       />
       {status}
       {/* The frame is what the pool's cards are sized against on a desktop (deckbuilder.css): its
@@ -88,7 +94,14 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
       </div>
       {/* A dialog in a portal on document.body, so where it sits in this tree changes nothing. */}
       {detail === null || detailDef === undefined ? null : (
-        <CardDetail def={detailDef} onClose={onCloseDetail} meta={detail.meta} actions={detail.actions} showStats={showStats} />
+        <CardDetail
+          def={detailDef}
+          onClose={onCloseDetail}
+          meta={detail.meta}
+          actions={detail.actions}
+          // R915005: a custom card is private and plays in no game the statistics count.
+          showStats={showStats === true && detailDef.set !== CUSTOM_SET}
+        />
       )}
     </section>
   );

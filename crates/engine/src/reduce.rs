@@ -31,6 +31,8 @@
 //!   mulligan         → `setup.answerMulligan`, refused by `setup.whyMulliganRefused` (§2.1, R265)
 //!   draws, concede, endTurn, the turn cap → `turn.ts` (§2.2, §2.5, R36)
 //!   setAutoEndTurn   → the sender's own `autoEndTurn`, read by `endDueTurns` below (R82, R345)
+//!   sandbox          → `sandbox.apply_sandbox`, refused by `sandbox.why_sandbox_refused`; accepted
+//!                      only by a sandbox game and never listed (R923000–R923003)
 //!
 //! After the action the resolution loop of §10.3 runs (`triggers.settle`): it dispatches the events
 //! the action emitted, drains whatever a prompt left owed in `state.work`, runs the state check and
@@ -348,6 +350,8 @@ fn apply_action(sink: &mut EngineSink<'_>, action: &Action) -> Result<(), Engine
             concede(sink, action.player_id);
             Ok(())
         }
+        // R923000: a practice-sandbox tool, refused outside a sandbox game (`sandbox.rs` owns the rule).
+        ActionBody::Sandbox { op } => crate::sandbox::apply_sandbox(sink, op),
         ActionBody::EndTurn => {
             end_turn(sink);
             Ok(())

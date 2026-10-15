@@ -7,7 +7,40 @@
 //! lives in hand like a real card and goes to the graveyard once played (R11). The opponent sees three
 //! cards added and never which (R97).
 
+use jackioh_engine::effects::add_to_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-032";
+
+/// §8.7 C+ #32: Execute, Brawl, Blade Storm — the order they are added in. TS read each id off its
+/// catalog definition (`cardDef(id).id`), which only proved the three exist; the tests below add all
+/// three by these ids.
+const TOKENS: [&str; 3] = ["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"];
+
+fn otherworldly_removal(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            TOKENS
+                .iter()
+                .map(|def_id| {
+                    let mut args = json!({ "defId": def_id });
+                    if radiant {
+                        args["radiant"] = json!(true);
+                    }
+                    add_to_hand(json_as(args))
+                })
+                .collect()
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: otherworldly_removal(false),
+        radiant: otherworldly_removal(true),
+    }
+}
 
 // C+ #32 Otherworldly Removal — SPEC §8.7 row 32, BUILD M9 Classic+ row C+ 32: "Adds Execute, Brawl
 // and Blade Storm (C+ #32.1–#32.3) to your hand in that order, a full hand burning what doesn't fit

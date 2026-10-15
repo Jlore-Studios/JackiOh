@@ -8,6 +8,7 @@ use std::panic::AssertUnwindSafe;
 use jackioh_engine::CardScripts;
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::query::hero_of;
+use jackioh_engine::script::ActivationUses;
 use jackioh_engine::testkit::{
     CardDef, CardDefs, EffectContext, EngineSink, IndexMap, PlayerId, Rng, catalog_override, json_as,
     register_catalog, register_scripts, scenario,
@@ -305,6 +306,47 @@ fn an_allocation_past_the_memory_cap_fails_naming_the_card() {
         text.contains("fixture-huge-load base load: out of memory, past"),
         "{text}"
     );
+}
+
+#[test]
+fn an_allocation_past_the_memory_cap_after_a_reader_fails_naming_the_card() {
+    // A reader builds its answer with the cap lifted (`sandbox::uncapped`) and puts it back as it
+    // returns, so the hook's next allocation past the cap fails as it would without the reader.
+    let code = bytecode(
+        "read_then_huge.luau",
+        &format!(
+            "return {{ base = {{ cry = function(ctx)\n\tlocal me = ctx:controller()\n\tlocal s = string.rep(\"x\", {})\n\treturn nil\nend }} }}\n",
+            LUAU_MEMORY_BYTES + 1
+        ),
+    );
+    let text = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-read-then-huge", Face::Base, "cry"), code, ctx)
+    }));
+    let expected =
+        format!("fixture-read-then-huge base cry: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)");
+    assert!(text.contains(&expected), "{text}");
+}
+
+#[test]
+fn a_reader_whose_answer_leaves_the_vm_past_the_memory_cap_fails_naming_the_card() {
+    // `ctx:rng_shuffle` answers a new list as long as the one it is handed, built with the cap
+    // lifted. A hook that keeps eight of them without allocating in between would hold nine lists,
+    // over twice the cap, were the reader not failed once its answer leaves the VM past the cap.
+    // A list of a sixty-fourth of the cap's entries is a quarter of the cap at Luau's 16 bytes an
+    // entry: under the cap alone, past it by the third answer.
+    let entries = LUAU_MEMORY_BYTES / 64;
+    let code = bytecode(
+        "shuffled_lists.luau",
+        &format!(
+            "return {{ base = {{ cry = function(ctx)\n\tlocal list = table.create({entries}, true)\n\tlocal a, b, c, d = ctx:rng_shuffle(list), ctx:rng_shuffle(list), ctx:rng_shuffle(list), ctx:rng_shuffle(list)\n\tlocal e, f, g, h = ctx:rng_shuffle(list), ctx:rng_shuffle(list), ctx:rng_shuffle(list), ctx:rng_shuffle(list)\n\treturn nil\nend }} }}\n"
+        ),
+    );
+    let text = error_text(with_ctx(|ctx| {
+        call_hook(site("fixture-shuffled-lists", Face::Base, "cry"), code, ctx)
+    }));
+    let expected =
+        format!("fixture-shuffled-lists base cry: out of memory, past {LUAU_MEMORY_BYTES} bytes (L5)");
+    assert!(text.contains(&expected), "{text}");
 }
 
 #[test]
@@ -700,6 +742,38 @@ fn load_card_reads_the_declared_hooks() {
         error_text(load_card("fixture-value", not_a_function)),
         "fixture-value: radiant cry is of type integer, not a function"
     );
+}
+
+#[test]
+fn an_activations_uses_crosses_as_an_i32_or_the_card_does_not_load() {
+    // A count is a number leaving Luau like any other (L6, #871): one that is not an `i32` is
+    // refused at load, naming the card and face, where a cast once made 1.5 one use and 2^32 + 1
+    // one too.
+    let module = |face: Face, uses: &str| {
+        let declared = format!(
+            "{{ activations = {{ {{ id = \"a\", label = \"A\", uses = {uses}, run = function(ctx) return nil end }} }} }}"
+        );
+        match face {
+            Face::Base => format!("return {{ base = {declared} }}\n"),
+            Face::Radiant => format!("return {{ base = {{}}, radiant = {declared} }}\n"),
+        }
+    };
+    for (card, face, uses) in [
+        ("fixture-uses-fraction", Face::Base, "1.5"),
+        ("fixture-uses-past-i32", Face::Radiant, "4294967297"),
+    ] {
+        let code = bytecode("uses.luau", &module(face, uses));
+        let error = LuauError::Number {
+            site: site(card, face, "load"),
+            value: uses.into(),
+        };
+        assert_eq!(load_card(card, code).err(), Some(error), "{card}");
+    }
+    let code = bytecode("uses.luau", &module(Face::Radiant, "2"));
+    let Ok(scripts) = load_card("fixture-uses-two", code) else {
+        panic!("a whole count loads");
+    };
+    assert_eq!(scripts.radiant.activations[0].uses, ActivationUses::Count(2));
 }
 
 #[test]

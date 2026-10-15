@@ -7,10 +7,29 @@
 //! burns it (§2.4). R1: the Cry fires when played or cast only — recruited, it adds no Rock.
 //! Tunes: none. 赌石 (dǔshí) is jade gambling, buying uncut stones in the hope of jade.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-039";
 
 /// The token this adds: Auspicious Rock (M #39.1).
 pub const ROCK: &str = "meditative-039-1";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| {
+                vec![add_to_hand(json_as(json!({ "defId": ROCK })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| {
+                vec![add_to_hand(json_as(json!({ "defId": ROCK, "radiant": true })))]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // Meditative #39 赌石 Addict — SPEC §8.8 row 39, BUILD M10 row M 39: "Cry (played or cast, R1):
 // adds one base Auspicious Rock (M 39.1) to your hand, hidden from the opponent, burned at a full

@@ -11,7 +11,34 @@
 //!   that ships (R380, R382, R1420), never this card (R387), repeats allowed (R60), each on its base
 //!   face at its printed cost; the Radiant face's are Radiant (§5.2).
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-077";
+
+fn bulk_booster(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let room = hand_cap_of(ctx.state, ctx.controller) - zone_count(ctx.state, ctx.controller, OffFieldZone::Hand);
+            if room <= 0 {
+                return vec![];
+            }
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "rarity": "Common" },
+                "count": room,
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: bulk_booster(false),
+        radiant: bulk_booster(true),
+    }
+}
 
 // M #77 Bulk Booster — SPEC §8.8 row 77, BUILD M10 row M 77: "Adds random non-token Common cards of
 // any set, never itself, until your hand holds your hand cap (10, or 12 after M 79), counted as it

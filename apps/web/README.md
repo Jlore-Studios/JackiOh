@@ -243,6 +243,9 @@ src/practice/
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
+  sandbox.ts SandboxPanel.tsx sandbox.css
+                      a sandbox game's dev tools (R923000–R923003): the card search, the cards the
+                      human can name, and the panel that sends each tool as a `sandbox` act
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
 ```
 
@@ -277,9 +280,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, sandbox, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
+  whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
+  its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.
@@ -445,6 +452,31 @@ strings go in and out; the state is an opaque JSON object the client hands back 
 - Two files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
   (hotseat's port) and `practice/core.ts` (the practice worker's game, and the only caller of the AI's
   `decide`), with `tutorial/harness.ts` for tests.
+- **The Luau module** (#919, SPEC §12.10, R915009) is a second build of the engine with the card kit,
+  for custom cards: `scripts/build-wasm.sh` writes it into `src/wasm/pkg/luau/`
+  (`crates/wasm/README.md`). Only `src/wasm/luau.ts` imports it, and only `src/wasm/index.ts` imports
+  that, dynamically: `useLuauModule(on)` switches the bindings every engine call goes through, which
+  the practice worker does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it
+  for the creator without switching. A normal game never loads it (`wasm/luau.test.ts` holds that no
+  other file imports it), and the normal module refuses a game with custom cards.
+
+## Custom cards (SPEC §12)
+
+- **The creator**, `/creator` (`routes/creator.tsx`, `creator/`): the account's custom cards, read and
+  saved through `net/customCards.ts` (`/api/custom-cards`, R915008), and an editor for one. The frame is
+  `creator/FrameForm.tsx`; the script is written in the no-code builder (`creator/builder.ts` is its
+  vocabulary and the kit Luau it writes, `BuilderView.tsx` its blocks) or the code view (`CodeView.tsx`,
+  highlighted by `highlight.ts`). `creator/draft.ts` is the editor's state and the pure steps between
+  the views (R915010). The frame's issues come from the validator (`validateCustomCard`), the script's
+  from the Luau module's `checkCustomCard`, and the preview draws `customDef`'s definition.
+- **The deck builder** puts the account's custom cards (`creator/useCustomCards.ts`) in its catalog
+  under a "Custom" set, owned once each; a deck naming one is marked practice only by the validator's
+  L7 (R915005), and the play lobby offers it disabled.
+- **Practice** starts a saved deck with its custom cards on the config (`customCards`), and
+  `/practice?try=<id>` (`tryPath`) deals a random deck around one card. Such a game runs in the Luau
+  module, records no card statistics, and keeps its custom cards in its save, its replay and its
+  debug snapshot (R915006). A script that fails shows on the board (`game/ScriptFailedNotice.tsx`) and
+  in the log.
 
 ## Internationalisation
 
