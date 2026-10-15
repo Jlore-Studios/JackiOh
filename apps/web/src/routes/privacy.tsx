@@ -37,7 +37,7 @@ import {
 } from "@jackioh/server-config";
 
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
-import { CONTACT_URL } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -79,8 +79,8 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-who">Who runs JackiOh</h3>
           <p>
             JackiOh is run by its developer, who publishes its code at{" "}
-            <a href="https://github.com/jgoetzmann/JackiOh">github.com/jgoetzmann/JackiOh</a>. You can reach us
-            through the contact link at the end of this page.
+            <a href="https://github.com/Jlore-Studios/JackiOh">github.com/Jlore-Studios/JackiOh</a>. You can reach us
+            at the email address at the end of this page.
           </p>
         </section>
 
@@ -291,7 +291,7 @@ export default function PrivacyRoute(): ReactElement {
             friends sent you included.
           </p>
           <p>
-            To ask for a copy of your data, contact us. Please don&rsquo;t put your email address or other
+            To ask for a copy of your data, email us. Please don&rsquo;t put your email address or other
             personal details in a public GitHub issue.
           </p>
         </section>
@@ -318,7 +318,7 @@ export default function PrivacyRoute(): ReactElement {
         <section aria-labelledby="privacy-contact">
           <h3 id="privacy-contact">Contact</h3>
           <p>
-            Questions about your data, or a request about it: <a href={CONTACT_URL}>contact us on GitHub</a>.
+            Questions about your data, or a request about it: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>
         </section>
       </article>

@@ -3,8 +3,8 @@
 // JackiOh.
 //
 // On the landing page and the sign-in screen, where a visitor decides whether to hand over an
-// email address. Kept off the board. The contact is the repository's public issue tracker until
-// the owner names a private address.
+// email address. Kept off the board. The contact is the owner's email address, the one the Terms,
+// the Privacy Policy, the Copyright and Accessibility pages and `security.txt` name too.
 
 import type { ReactElement } from "react";
 
@@ -14,8 +14,10 @@ import { followInApp } from "./nav.tsx";
 
 import "./site-footer.css";
 
-/** Where a player reaches the people who run JackiOh. */
-export const CONTACT_URL = "https://github.com/jgoetzmann/JackiOh/issues";
+/** Where a player reaches the people who run JackiOh, for questions, legal notices and data requests. */
+export const CONTACT_EMAIL = "jmgoetzmann6@gmail.com";
+/** `CONTACT_EMAIL` as a link. */
+export const CONTACT_URL = `mailto:${CONTACT_EMAIL}`;
 
 export const siteFooterTestid = {
   root: "site-footer",
@@ -62,8 +64,8 @@ export function SiteFooter(): ReactElement {
         <a href={paths.replays} data-testid={siteFooterTestid.replays} onClick={followInApp(paths.replays)}>
           {t("Replays")}
         </a>
-        <a href={CONTACT_URL} data-testid={siteFooterTestid.contact} rel="noopener noreferrer">
-          {t("Contact us on GitHub")}
+        <a href={CONTACT_URL} data-testid={siteFooterTestid.contact}>
+          {t("Contact us")}
         </a>
       </nav>
     </footer>

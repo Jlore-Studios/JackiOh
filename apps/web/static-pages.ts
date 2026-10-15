@@ -158,7 +158,7 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
         "<p>Deleting your account also deletes everything of yours on Play together: your friends, friend " +
         "requests, blocks, challenges, co-op rooms and replay shares, and your chats, the messages your " +
         "friends sent you included.</p>" +
-        "<p>To ask for a copy of your data, contact us. Please don&rsquo;t put your email address or " +
+        "<p>To ask for a copy of your data, email us. Please don&rsquo;t put your email address or " +
         "other personal details in a public GitHub issue.</p>",
     ),
   [paths.terms]:

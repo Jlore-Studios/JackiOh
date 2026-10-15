@@ -26,7 +26,7 @@ import CopyrightRoute, { COPYRIGHT_LAST_UPDATED, copyrightTestid } from "./copyr
 import LandingRoute from "./landing.tsx";
 import LoginRoute, { signUpPrivacyTestid } from "./login.tsx";
 import PrivacyRoute, { PRIVACY_LAST_UPDATED, privacyTestid } from "./privacy.tsx";
-import { CONTACT_URL, siteFooterTestid } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL, siteFooterTestid } from "./SiteFooter.tsx";
 import TermsRoute, { TERMS_LAST_UPDATED, termsTestid } from "./terms.tsx";
 
 const { App, canonicalUrlFor, documentTitleFor } = await import("../main.tsx");
@@ -99,7 +99,7 @@ describe("the privacy policy", () => {
     for (const fact of [/email address and password/i, /IP address/, /Supabase/, /Render/, /Cloudflare/, /Vercel/, /no cookies/i, /Do Not Track/, /Delete my account/, /card statistics/]) {
       expect(page.textContent).toMatch(fact);
     }
-    expect(within(page).getByRole("link", { name: /contact us on GitHub/i })).toHaveAttribute("href", CONTACT_URL);
+    expect(within(page).getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", CONTACT_URL);
   });
 
     it("names Cloudflare as the website's host and Vercel as its test copy's (#770)", () => {
@@ -252,6 +252,24 @@ describe("the legal pages", () => {
     expect(page.querySelector('[data-owner-slot="dmca-agent"]')).not.toBeNull();
     expect(screen.getByRole("region", { name: /if your content was removed/i })).toHaveTextContent(/counter-notice/);
     expect(screen.getByRole("region", { name: /repeat infringers/i })).toHaveTextContent(/close the accounts/);
+  });
+
+  it("name the contact email, and no GitHub issue tracker, on every page", () => {
+    for (const [Page, name] of [
+      [TermsRoute, "Contact"],
+      [PrivacyRoute, "Contact"],
+      [CopyrightRoute, "Contact"],
+      [AccessibilityRoute, "Report an issue"],
+    ] as const) {
+      render(<Page />);
+      const section = screen.getByRole("region", { name });
+      expect(within(section).getByRole("link", { name: CONTACT_EMAIL })).toHaveAttribute("href", CONTACT_URL);
+      expect(document.body.innerHTML).not.toMatch(/github\.com\/[^"]*\/issues/);
+      cleanup();
+    }
+    expect(CONTACT_URL).toBe(`mailto:${CONTACT_EMAIL}`);
+    const security = readFileSync(join(HERE, "../../public/.well-known/security.txt"), "utf8");
+    expect(security).toContain(`Contact: ${CONTACT_URL}`);
   });
 
   it("serves /terms, /accessibility and /copyright with no account needed", async () => {
