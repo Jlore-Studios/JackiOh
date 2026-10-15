@@ -6023,6 +6023,7 @@
     "884": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-14T20:04:24Z",
         "difficulty": "hard",
