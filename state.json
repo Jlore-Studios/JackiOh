@@ -6827,11 +6827,13 @@
         "by": "`claude` (strong)",
         "sha": "fefde383af60345ca2fdfd50e779df7c9a7a35d5"
       },
+      "closed_at": "2026-10-15T01:43:01Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-10-14T23:52:47Z",
       "issue": 892,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
