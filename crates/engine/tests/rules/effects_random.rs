@@ -1242,15 +1242,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
 
         // A rule only `subsystems/rotation.rs` implements: since patch v0.3.9 a Lock refuses plays,
         // not a rotation (R831000), so the card enters the locked zone and nothing is bounced.
-        assert_eq!(where_is(&state, &blocked), "field");
-        assert_eq!(
-            find_instance(&state, &blocked.id).map(|card| card.zone.clone()),
-            Some(Zone::Field {
-                player: PlayerId::P1,
-                row: Row::Units,
-                lane: 2
-            })
-        );
+        assert_eq!(where_is(&state, &blocked), "p1 units 2");
         assert!(ids_of_type(&ran.events, "bounced").is_empty());
     }
 

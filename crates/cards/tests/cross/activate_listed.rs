@@ -31,6 +31,7 @@ const POWER_TO_THRIVE: &str = "classic-081";
 const LOCKDOWN: &str = "classic-084";
 const FUSION_LAB: &str = "classicplus-031";
 const DOCTORS_ORDERS: &str = "classicplus-060";
+const KYS_GIFT: &str = "classicplus-042-1";
 const BROTHER_PING: &str = "classicplus-076-1";
 const WISHING_WELL: &str = "meditative-097-2";
 const SCHOOL: &str = "meditative-097-3";
@@ -45,7 +46,7 @@ const MAESTRO: &str = "meditative-069";
 const EVER_GROWING_TREE: &str = "meditative-075";
 
 /// Every card or token whose base or Radiant text has an Activate ability, each with a case below.
-const ACTIVATE_CARDS: [&str; 25] = [
+const ACTIVATE_CARDS: [&str; 26] = [
     HEROIC_POWER,
     INFINISCEPTER,
     NOSE_HUNTER,
@@ -59,6 +60,7 @@ const ACTIVATE_CARDS: [&str; 25] = [
     LOCKDOWN,
     FUSION_LAB,
     DOCTORS_ORDERS,
+    KYS_GIFT,
     BROTHER_PING,
     WISHING_WELL,
     SCHOOL,
@@ -745,6 +747,40 @@ mod c_n60_doctors_orders {
     #[test]
     fn r384_radiant_adds_a_radiant_all_purpose_apple() {
         adds_an_apple(true);
+    }
+}
+
+mod c_n42_1_kys_gift {
+    use super::*;
+
+    /// Patch v0.3.9 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
+    /// its controller the declared mana and adds the four cards, which cost (0).
+    fn opens(radiant: bool) {
+        let mut s = scenario(json!({
+            "p1": { "backrow": [on(KYS_GIFT, radiant)], "hand": [STOCKPILE], "library": [X, X] },
+            "p2": { "hand": [MENACE, FILLER], "library": [X, X] },
+        }));
+        let before = s.state().players.p1.mana.current;
+        activate_listed(&mut s, KYS_GIFT, any);
+        let mana = if radiant { 2 } else { 1 };
+        assert_eq!(s.state().players.p1.mana.current, before + mana);
+        let added: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| card.cost_override == Some(0))
+            .collect();
+        assert_eq!(added.len(), 4);
+        assert!(added.iter().all(|card| card.radiant == radiant));
+    }
+
+    #[test]
+    fn r384_base_gains_mana_and_adds_four_cards_at_0() {
+        opens(false);
+    }
+
+    #[test]
+    fn r384_radiant_adds_four_radiant_cards_at_0() {
+        opens(true);
     }
 }
 

@@ -176,7 +176,8 @@ mod tests {
         #[test]
         fn r831005_r70_a_cast_is_the_next_play_too() {
             let mut s = casting("prestige-cast", false);
-            s.play(PRESTIGE, json!({}));
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
             let events = by_hand(&mut s, vec![jackioh_engine::effects::cast_new(json_as(json!({ "def": FILLER })))]);
             assert!(events.iter().any(|event| matches!(event, GameEvent::RadiantSet { def_id, .. } if def_id == FILLER)));
             assert!(!next_play_radiant(&s));
@@ -199,7 +200,8 @@ mod tests {
         #[test]
         fn r831005_your_view_names_the_modifier_on_a_badge() {
             let mut s = casting("prestige-badge", false);
-            s.play(PRESTIGE, json!({}));
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
             let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("the view serialises");
             assert!(mine.contains("The next card you play becomes Radiant"));
         }
@@ -315,7 +317,7 @@ mod tests {
                 "seed": "prestige-base-text",
                 "p1": {
                     "mana": 10,
-                    "hand": [PRESTIGE, { "def": MR_TOKEN, "radiant": true }, FILLER],
+                    "hand": [PRESTIGE, { "def": MR_TOKEN, "radiant": true }, FILLER, FILLER],
                     "library": filler(4),
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
@@ -326,6 +328,8 @@ mod tests {
                 .find(|card| card.def_id == MR_TOKEN)
                 .expect("Mr Token");
             s.play(PRESTIGE, pick(&held.id));
+            // A Stockpile spends the next play's Radiant (R831005), so Mr Token is played as it stands.
+            play_one(&mut s, FILLER);
             // Played now, it runs its base Cry: one Rush Token, not the Radiant face's three.
             s.play(&held.id, json!({ "zone": 1 }));
             let p1_units = (1..=UNIT_ZONES)
@@ -342,7 +346,7 @@ mod tests {
                 "seed": "prestige-hidden",
                 "p1": {
                     "mana": 10,
-                    "hand": [PRESTIGE, { "def": PRESTIGE }, { "def": VANILLA, "radiant": true }],
+                    "hand": [PRESTIGE, { "def": PRESTIGE }, { "def": VANILLA, "radiant": true }, FILLER],
                     "field": [{ "def": VANILLA, "radiant": true }],
                     "library": filler(4),
                 },
@@ -371,9 +375,11 @@ mod tests {
                 json!("hidden"),
                 "a hand card's stays hidden"
             );
+            // A Stockpile spends the next play's Radiant (R831005), so the second Prestige is base too.
+            play_one(&mut s, FILLER);
             let unit = must_unit(&s, "p1", 1);
             s.play(PRESTIGE, pick(&unit.id));
-            // The view keeps the earlier action's events too: the new one comes last.
+            // The view keeps the earlier actions' events too: the new one comes last.
             let seen = deradianted(&s);
             assert_eq!(seen.len(), 2);
             assert_eq!(seen[1]["instanceId"], json!(unit.id), "a field card's is public");

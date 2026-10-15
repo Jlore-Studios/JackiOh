@@ -2980,8 +2980,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::FieldTrap,
         &[],
         R::Mythic,
-        NO_STATS,
-        NO_STATS,
+        st(0, 1),
+        st(0, 2),
     ),
     row(
         "75",

@@ -50,7 +50,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_an_epic_catalyst_1_cost_1_1_with_tribute_1_and_windfury() {
+            fn is_an_epic_catalyst_1_cost_1_1_with_tribute_1_rush_and_windfury() {
                 crate::register_all();
                 let def = crate::card_def(ID);
                 assert_eq!(def.cost, CardCost::Fixed(1));
@@ -64,7 +64,7 @@ mod tests {
                 assert!(def.radiant.keywords.contains(&Keyword::Windfury));
                 assert_eq!(
                     def.base.text,
-                    "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
                 );
                 assert_eq!(def.refs, Some(vec![PRIME.to_string()]));
                 let all = registered_scripts();
@@ -188,7 +188,7 @@ mod tests {
                 let def = crate::card_def(ID);
                 assert_eq!(
                     def.radiant.text,
-                    "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
                 );
                 let all = registered_scripts();
                 let flags = all[ID].radiant.static_flags.as_ref().expect("flags");
