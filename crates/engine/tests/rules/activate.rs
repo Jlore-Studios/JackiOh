@@ -443,6 +443,56 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
     }
 
     #[test]
+    fn r884000_a_tuned_or_set_activate_n_counts_at_most_activate_unlimited_cap_uses_a_turn() {
+        let mut state = playing("capped");
+        let twice = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        let surge_decl = abilities_of(&state, &twice)
+            .into_iter()
+            .next()
+            .expect("no ability");
+
+        // Buffs' steps and KY's Constant's value both stop at the cap; below it the tuned count stands.
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "x": { "Activate": ACTIVATE_UNLIMITED_CAP * 3 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP
+        );
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP + 1 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP
+        );
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP - 1 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP - 1
+        );
+
+        // The refusal reads the capped count: the cap-th use spends the turn's uses.
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP * 3 } }),
+        ));
+        let turn = state.turn;
+        card_mut(&mut state, &twice.id).memory.insert(
+            "activations".to_string(),
+            json!({ "turn": turn, "count": ACTIVATE_UNLIMITED_CAP - 1 }),
+        );
+        let next = act(&state, activate(P1, &twice.id, json!({}))).0;
+        assert_eq!(
+            why_not(&next, P1, &twice.id, None),
+            Some(format!(
+                "that ability has been used {ACTIVATE_UNLIMITED_CAP} times this turn"
+            ))
+        );
+    }
+
+    #[test]
     fn r384_r78_leaving_the_field_resets_the_uses_so_a_card_bounced_and_played_again_starts_fresh() {
         let mut state = playing("bounced");
         let card = put(&mut state, &pinger.id, slot(P1, Row::Backrow, 1), json!({}));

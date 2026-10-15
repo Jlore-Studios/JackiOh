@@ -4,7 +4,8 @@
 //! The rules, in B3.2's order, and where each one lives here:
 //!   1. "Activate" is once per turn, "Activate N" N times, "Activate ♾️" any number of times, bounded
 //!      by `ACTIVATE_UNLIMITED_CAP` (rule 7). Degrade and Upgrade move N by the tuning key "Activate"
-//!      (`tuning::tuned_count`, rule 9), never ♾️. `uses_allowed`.
+//!      (`tuning::tuned_count`, rule 9), never ♾️, and N counts at most `ACTIVATE_UNLIMITED_CAP` too
+//!      (R884000). `uses_allowed`.
 //!   2. Who and when: the card's controller, in their own main phase, with no prompt open and the game
 //!      not over, while the card acts on the field — the top of its pile, or a face-up backrow card
 //!      (`is_acting_on_field`). Summoning sickness and exertion do not apply: activating is not attacking.
@@ -301,12 +302,15 @@ pub fn uses_this_turn(state: &GameState, card: &CardInstance) -> i32 {
 }
 
 /// B3.2 rules 1, 7, 9: how many uses the ability allows each turn. "Activate N" is N moved by Degrade
-/// and Upgrade (never below 1, R386's floor); "Activate ♾️" is `ACTIVATE_UNLIMITED_CAP`, which no
-/// tuning moves.
+/// and Upgrade (never below 1, R386's floor, and never above `ACTIVATE_UNLIMITED_CAP`, R884000);
+/// "Activate ♾️" is `ACTIVATE_UNLIMITED_CAP`, which no tuning moves.
 pub fn uses_allowed(card: &CardInstance, decl: &ActivationDecl) -> i32 {
     match decl.uses {
         ActivationUses::Unlimited => ACTIVATE_UNLIMITED_CAP,
-        ActivationUses::Count(n) => tuned_count(card, ACTIVATE_TUNING_KEY, n.max(1)),
+        // R884000: a Buff or KY's Constant never takes N past ♾️'s own bound.
+        ActivationUses::Count(n) => {
+            tuned_count(card, ACTIVATE_TUNING_KEY, n.max(1)).min(ACTIVATE_UNLIMITED_CAP)
+        }
     }
 }
 

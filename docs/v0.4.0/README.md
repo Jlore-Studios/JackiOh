@@ -402,7 +402,10 @@ Part 28 took classic-026, -030 and -035. The rest are in section 4.
   list its game never ends on either build. A logging parent build showed M #97.6 University
   activating `study` 25 times on one turn though its `uses` is 1; a build of `e374658dc`, before
   batch 19 ported University, stalls the same, so the stall is the card's or the engine's, not a
-  port's. The face bug that kept Mind Games was latent in six ported cards of the batch (CN in a
+  port's. The cause (#884): each use's own Buffs stepped University's Activate N and its `times`, so
+  every use funded more uses and more Buffs per use; R884000 caps the uses at
+  `ACTIVATE_UNLIMITED_CAP` a turn and `times` at 5, and its tests replay the loop in a reduced
+  scenario. The face bug that kept Mind Games was latent in six ported cards of the batch (CN in a
   bottle, both Knowledge Breakers, Do or Die, Meditative Journey, Disruptive Disruptor); none
   differed in its 400 games, so they stayed ported.
 - **Batch 19.** First restored Felinor Fuser's Rust (`5e292a8`'s file) and removed `/fullsend`'s
