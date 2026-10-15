@@ -51,3 +51,36 @@ maps the client's `@jackioh/*` imports onto those functions and the generated ty
 sh scripts/build-wasm.sh
 cargo build -p jackioh-wasm --release --target wasm32-unknown-unknown
 ```
+
+## The Luau module (`luau/`, #919)
+
+`crates/wasm/luau` (`jackioh-wasm-luau`) is the same engine, cards, AI and validator with the card
+kit's host (`jackioh_luau::custom::KitHost`) lent to the engine around every call, so a game whose
+state carries custom cards runs their scripts (SPEC §12, R915009). It is a second module, loaded only
+for a practice game whose human deck holds a custom card and for the card creator; a normal game,
+practice or online, never loads it, and the normal module refuses a game with custom cards.
+
+- **Its target** is `wasm32-unknown-emscripten`, the one WebAssembly target `mlua` builds Luau for.
+  The crate is a binary whose `main` does nothing; each binding is an `extern "C"` function over
+  UTF-8 C strings (`_create_game`, `_reduce`, …), the same names and JSON as the bindings above, plus
+  `check_custom_card(card)`: the engine validator's issues with the frame, the Luau module's problems
+  with the script (the lint, Luau's compiler and the kit's own checks, each with its line when it has
+  one) and the definition the frame builds, `{ frame, script, def }`, which the creator shows. A
+  binding's error is kept for `_jackioh_last_error`, and every string it returns is freed with
+  `_jackioh_free`. `.cargo/config.toml` holds the `emcc` link's `-s` flags, `EXPORTED_FUNCTIONS`
+  among them.
+- **Its build** is the second half of `scripts/build-wasm.sh`, unless `JACKIOH_WASM_LUAU=0`: it adds
+  the target, clones and installs the pinned emsdk (`EMSDK_VERSION`) into `.cache/emsdk` when it is
+  missing (CI's setup action caches that directory, keyed on the pin), builds the crate with
+  `emcc`/`em++` on `PATH` (Luau itself is C++), and copies the MODULARIZE factory and its `.wasm` into
+  `apps/web/src/wasm/pkg/luau/`, with a `.d.ts` it writes for the factory. Inside `pkg/`, it is
+  gitignored, linted by nothing and carried by CI's `web-build` artifact with the normal module.
+- **Its seam** is `apps/web/src/wasm/luau.ts`, imported only dynamically by `wasm/index.ts`:
+  `useLuauModule(on)` switches the bindings every engine call goes through, which the practice worker
+  does per request (`PracticeCore.needsLuau`), and `checkCustomCard(card)` loads it for the creator
+  without switching. `apps/web/src/wasm/luau.test.ts` holds that no other file imports it.
+
+```
+sh scripts/build-wasm.sh                                  # both modules
+JACKIOH_WASM_LUAU=0 sh scripts/build-wasm.sh              # the normal module alone
+```

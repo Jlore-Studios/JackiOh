@@ -255,6 +255,11 @@ fn r915001_a_valid_card_has_no_issue_and_each_limit_names_its_field() {
         vec!["text"]
     );
     assert_eq!(
+        fields(&|c| c.frame.text = "Draw {cards|card|cards}.".to_string()),
+        Vec::<String>::new(),
+        "a plural form names its key"
+    );
+    assert_eq!(
         fields(&|c| c.frame.params[0].key = "Bad Key".to_string()),
         vec!["params", "text"]
     );

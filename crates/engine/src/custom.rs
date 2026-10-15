@@ -94,7 +94,7 @@ fn param_key_well_formed(key: &str) -> bool {
         && bytes.all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
 
-/// The `{key}`s a text names, in order, each once.
+/// The `{key}`s a text names, in order, each once: a plural form `{key|card|cards}` names `key`.
 fn text_keys(text: &str) -> Vec<String> {
     let mut keys: Vec<String> = Vec::new();
     let mut rest = text;
@@ -103,7 +103,7 @@ fn text_keys(text: &str) -> Vec<String> {
         let Some(close) = after.find('}') else {
             break;
         };
-        let key = &after[..close];
+        let key = after[..close].split('|').next().unwrap_or_default();
         if !keys.iter().any(|known| known == key) {
             keys.push(key.to_string());
         }

@@ -10,7 +10,17 @@
 // human's `viewFor` at each step (R768): never its log, seed or decks.
 
 import { LEAN_NEWEST } from "@jackioh/shared";
-import type { Action, ActionBody, CardDefs, DistributiveOmit, LeanPick, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type {
+  Action,
+  ActionBody,
+  CardDefs,
+  CustomCard,
+  DistributiveOmit,
+  LeanPick,
+  PlayerId,
+  PlayerView,
+  PortraitId,
+} from "@jackioh/shared";
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
@@ -24,7 +34,12 @@ export type PracticeDeckChoice =
   | { kind: "random"; leanSet?: LeanPick; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null }
+  /**
+   * #920: the creator's "Try it": a fresh random deck of one card fewer, and the custom card `card`
+   * (one of the config's `customCards`).
+   */
+  | { kind: "try"; card: string };
 
 /** R924000: the pick a random deck leans on, R1373's `leanNewest` read as "newest"; `null` for none. */
 export function randomDeckLean(choice: PracticeDeckChoice & { kind: "random" }): LeanPick | null {
@@ -56,6 +71,12 @@ export type PracticeStartConfig = {
    * lesson.
    */
   sandbox?: true;
+  /**
+   * R915006: the custom cards the human's deck names (SPEC §12), frame and source, which the game
+   * carries and its replay folds with. A game with any runs in the Luau module (R915009) and records
+   * no card statistics (§12.10). Never a lesson's or the AI's.
+   */
+  customCards?: CustomCard[];
 };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
@@ -118,6 +139,8 @@ export type PracticeDebug = {
   dealt?: PlayerId[];
   /** R923000: present when the game is a sandbox, which its fold must be told. */
   sandbox?: true;
+  /** R915006: the game's custom cards, which its fold must be given; absent when it has none. */
+  customCards?: CustomCard[];
 };
 
 export type PracticeRequest =

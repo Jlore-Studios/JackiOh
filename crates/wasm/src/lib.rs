@@ -658,6 +658,16 @@ pub fn validator(call: &str, input_json: &str) -> Result<String, JsError> {
             let raw: String = parse(call, input_json)?;
             to_json(&validator::normalize_name(&raw))
         }
+        // R915001, R915000: a custom card's frame judged, and the definition it builds (the deck
+        // builder and the creator draw it), with no Luau: the script is the Luau module's to check.
+        "validateCustomCard" => {
+            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
+            to_json(&jackioh_engine::custom::validate_custom_card(&card))
+        }
+        "customDef" => {
+            let card: jackioh_engine::CustomCard = parse(call, input_json)?;
+            to_json(&jackioh_engine::custom::custom_def(&card))
+        }
         other => Err(JsError::new(&format!("validator: no such call {other:?}"))),
     }
 }

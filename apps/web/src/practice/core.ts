@@ -58,7 +58,7 @@ import {
 } from "@jackioh/engine";
 import { AI_DIFFICULTY, AI_TUTORIAL, DECK_SIZE, type Handicap } from "@jackioh/engine/config";
 import { AI_BUDGET, aiToAct, buildAiDeck, decide, type SearchBudget } from "@jackioh/ai";
-import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type PlayerId } from "@jackioh/shared";
+import { DEFAULT_PORTRAIT, leanSetOf, opponentOf, type Action, type ActionBody, type CustomCard, type PlayerId } from "@jackioh/shared";
 
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
@@ -92,8 +92,21 @@ export type PracticeCoreEnv = {
   saves?: PracticeSaveStore;
 };
 
-/** `handle` never throws: anything that goes wrong comes back as `"failed"`. */
-export type PracticeCore = { handle(request: PracticeRequest): PracticeResponse };
+/**
+ * `handle` never throws: anything that goes wrong comes back as `"failed"`. `needsLuau` is what the
+ * worker asks first (R915009): whether `request` runs on the Luau module (a game with custom cards,
+ * started, resumed or replayed), on the normal one, or on whichever is in use (`null`), so it can
+ * switch before the synchronous `handle`.
+ */
+export type PracticeCore = {
+  handle(request: PracticeRequest): PracticeResponse;
+  needsLuau(request: PracticeRequest): boolean | null;
+};
+
+/** R915006: whether a game's setup carries custom cards. */
+export function hasCustomCards(config: PracticeStartConfig): boolean {
+  return config.customCards !== undefined && config.customCards.length > 0;
+}
 
 type PracticeGame = {
   config: PracticeStartConfig;
@@ -155,6 +168,12 @@ function humanDeckFor(seed: string, choice: PracticeDeckChoice): string[] {
     }
     case "saved":
       return [...choice.cards];
+    case "try":
+      // #920: the creator's "Try it": the custom card and a random deck around it.
+      return [
+        choice.card,
+        ...buildAiDeck(createRng(`${seed}:human-deck`), DECK_SIZE - 1, { banned: [], gatedSets: [] }),
+      ];
   }
 }
 
@@ -183,7 +202,9 @@ function decksAndHandicap(config: PracticeStartConfig): { humanDeck: string[]; a
  * library from itself. A lesson plays its fixed decks, whatever `deck` says.
  */
 function dealtSeats(config: PracticeStartConfig): PlayerId[] {
-  return config.lesson === undefined && config.deck.kind === "random" ? [config.humanSeat] : [];
+  // R433: the human was dealt a random deck, or (#920's "Try it") a random deck around their custom card.
+  const dealt = config.deck.kind === "random" || config.deck.kind === "try";
+  return config.lesson === undefined && dealt ? [config.humanSeat] : [];
 }
 
 function startGame(config: PracticeStartConfig): PracticeGame {
@@ -208,6 +229,8 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     ...(dealt.length === 0 ? {} : { dealt }),
     // R923000: the one game whose dev tools the engine takes.
     ...(config.sandbox === true ? { sandbox: true } : {}),
+    // R915006: the custom cards the human's deck names, which only the Luau module runs (R915009).
+    ...(hasCustomCards(config) ? { customCards: config.customCards } : {}),
   });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
@@ -353,6 +376,7 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
     ...(dealt.lastBoards === undefined ? {} : { lastBoards: dealt.lastBoards }),
     ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
     ...(replay.config.sandbox === true ? { sandbox: true } : {}),
+    ...(hasCustomCards(replay.config) ? { customCards: replay.config.customCards } : {}),
     log: replay.log,
   };
 }
@@ -524,6 +548,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
       ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
       ...(active.config.sandbox === true ? { sandbox: true } : {}),
+      ...(hasCustomCards(active.config) ? { customCards: JSON.parse(JSON.stringify(active.config.customCards)) as CustomCard[] } : {}),
     };
   }
 
@@ -589,6 +614,23 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
         return handleUnsafe(request);
       } catch (cause) {
         return { id: request.id, type: "failed", message: messageOf(cause) };
+      }
+    },
+    needsLuau(request: PracticeRequest): boolean | null {
+      switch (request.type) {
+        case "start":
+          return hasCustomCards(request.config);
+        case "resume": {
+          // The save, not the page's memory, says what the game carries.
+          const save = env.saves?.read() ?? null;
+          return save === null ? false : hasCustomCards(save.config);
+        }
+        case "replay": {
+          const kept = env.saves?.readReplays().find((replay) => replay.summary.game === request.game);
+          return kept === undefined ? null : hasCustomCards(kept.config);
+        }
+        default:
+          return null;
       }
     },
   };

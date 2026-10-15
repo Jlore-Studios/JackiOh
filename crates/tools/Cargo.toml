@@ -15,6 +15,8 @@ path = "src/main.rs"
 jackioh-engine = { workspace = true, features = ["testkit"] }
 jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
+# `replay` folds a practice game with custom cards (R915006) through the card kit's host.
+jackioh-luau = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 indexmap = { workspace = true }

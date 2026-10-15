@@ -25,40 +25,16 @@
 // illegal action: the refusal is `error` on the result. A panic is an engine invariant broken; the
 // panic hook prints it on the console, and the call throws "the engine panicked".
 
-import initWasm, {
-  ai_decide,
-  ai_to_act,
-  begin_game,
-  build_ai_deck,
-  catalog,
-  catalog_version,
-  choose_action,
-  constants,
-  craft_preview,
-  create_game,
-  deal_emote_hand,
-  engine_tables,
-  find_instance,
-  fold as fold_log,
-  hash_state,
-  init as init_engine,
-  initSync,
-  last_board_for,
-  legal_actions,
-  preview_sets,
-  reduce as reduce_action,
-  replay_open,
-  replay_page,
-  seat_played_by,
-  seat_to_act,
-  validator as validator_call,
-  view_for,
-} from "./pkg/jackioh_wasm.js";
+import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
+import * as normal from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { LuauBindings } from "./luau.ts";
+
+import type { Action, ActionBody, CardDef, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { CustomCard } from "../wire/generated/CustomCard.ts";
+import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -67,6 +43,62 @@ import type { ReplayPage } from "../wire/generated/ReplayPage.ts";
 import type { ReplayRecord } from "../wire/generated/ReplayRecord.ts";
 import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
+
+// ---------------------------------------------------------------------------------------------
+// the module in use (R915009)
+// ---------------------------------------------------------------------------------------------
+
+/** The bindings every call below goes through: the normal module's exports, or the Luau module's. */
+type Bindings = Omit<LuauBindings, "check_custom_card">;
+
+const NORMAL: Bindings = normal;
+
+let engine: Bindings = NORMAL;
+let luau: Promise<LuauBindings> | null = null;
+
+/** The Luau module, imported and instantiated the first time anything asks (`luau.ts`). */
+function luauBindings(bytes?: BufferSource): Promise<LuauBindings> {
+  luau ??= import("./luau.ts")
+    .then(({ loadLuauBindings }) => loadLuauBindings(bytes))
+    .catch((cause: unknown) => {
+      luau = null;
+      throw cause;
+    });
+  return luau;
+}
+
+/**
+ * R915009: from now on run every engine, AI and validator call through the Luau module (`true`),
+ * which runs custom cards' scripts, or through the normal module (`false`, the default). The practice
+ * worker turns it on for a game with a custom card and off for any other, so a normal game never runs
+ * on Luau. `bytes`: the Luau module's, in jsdom tests.
+ */
+export async function useLuauModule(on: boolean, bytes?: BufferSource): Promise<void> {
+  engine = on ? await luauBindings(bytes) : NORMAL;
+}
+
+/** Whether the Luau module is the one in use. */
+export function luauModuleInUse(): boolean {
+  return engine !== NORMAL;
+}
+
+/**
+ * The creator's check of one custom card (#913, #919): the frame's issues, the script's problems and
+ * the definition the frame builds, which the preview draws.
+ */
+export type CustomCardCheck = { frame: CustomIssue[]; script: ScriptProblem[]; def: CardDef };
+
+/** One problem with a custom card's script: its line, when it has one, and what is wrong. */
+export type ScriptProblem = { line?: number; message: string };
+
+/**
+ * #919: check a custom card's frame (the engine's validator) and its script (the lint, Luau's
+ * compiler and the kit's own checks) in the Luau module, loading it if no one has. Starts no game.
+ */
+export async function checkCustomCard(card: CustomCard, bytes?: BufferSource): Promise<CustomCardCheck> {
+  const bindings = await luauBindings(bytes);
+  return parsed<CustomCardCheck>(bindings.check_custom_card(json(card)));
+}
 
 // ---------------------------------------------------------------------------------------------
 // loading
@@ -78,7 +110,7 @@ const onLoad: (() => void)[] = [];
 
 function ready(): void {
   if (loaded) return;
-  init_engine();
+  engine.init();
   loaded = true;
   for (const run of onLoad.splice(0)) run();
 }
@@ -212,73 +244,73 @@ function reduceResult(text: string, input: GameState): ReduceResult {
 }
 
 export function createGame(args: CreateGameArgs): GameState {
-  return call("createGame", () => parsed<GameState>(create_game(json(args))));
+  return call("createGame", () => parsed<GameState>(engine.create_game(json(args))));
 }
 
 export function beginGame(state: GameState): ReduceResult {
-  return call("beginGame", () => reduceResult(begin_game(stateJson(state)), state));
+  return call("beginGame", () => reduceResult(engine.begin_game(stateJson(state)), state));
 }
 
 export function reduce(state: GameState, action: Action): ReduceResult {
-  return call("reduce", () => reduceResult(reduce_action(stateJson(state), json(action)), state));
+  return call("reduce", () => reduceResult(engine.reduce(stateJson(state), json(action)), state));
 }
 
 /** Everything `player` may legally do now. The client greys out the rest (BUILD M5-T2). */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
-  return call("legalActions", () => parsed<ActionBody[]>(legal_actions(stateJson(state), player)));
+  return call("legalActions", () => parsed<ActionBody[]>(engine.legal_actions(stateJson(state), player)));
 }
 
 /** The only window the client has onto the game (SPEC §10.8). */
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
-  return call("viewFor", () => parsed<PlayerView>(view_for(stateJson(state), player)));
+  return call("viewFor", () => parsed<PlayerView>(engine.view_for(stateJson(state), player)));
 }
 
 /** The seat that owes the next action, or null when none does. */
 export function seatToAct(state: GameState): PlayerId | null {
   return call("seatToAct", () => {
-    const seat = seat_to_act(stateJson(state));
+    const seat = engine.seat_to_act(stateJson(state));
     return seat === "" ? null : (seat as PlayerId);
   });
 }
 
 /** SURFACE §5.2's hash: eight hex digits, TypeScript's `hashState` bit for bit. */
 export function hashState(state: GameState): string {
-  return call("hashState", () => hash_state(stateJson(state)));
+  return call("hashState", () => engine.hash_state(stateJson(state)));
 }
 
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
 export function fold(input: FoldInput): FoldResult {
-  return call("fold", () => parsed<FoldResult>(fold_log(json(input))));
+  return call("fold", () => parsed<FoldResult>(engine.fold(json(input))));
 }
 
 /** R768: a finished game's replay, its log checked against its catalog version and final hash. */
 export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
-  return call("replayOpen", () => parsed<ReplayOpen>(replay_open(json(input), json(record))));
+  return call("replayOpen", () => parsed<ReplayOpen>(engine.replay_open(json(input), json(record))));
 }
 
 /** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
 export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
-  return call("replayPage", () => parsed<ReplayPage>(replay_page(json(checkpoints), seat, from, count)));
+  return call("replayPage", () => parsed<ReplayPage>(engine.replay_page(json(checkpoints), seat, from, count)));
 }
 
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
-  return call("lastBoardFor", () => parsed<LastBoardCard[]>(last_board_for(stateJson(state), seat)));
+  return call("lastBoardFor", () => parsed<LastBoardCard[]>(engine.last_board_for(stateJson(state), seat)));
 }
 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
-  return call("seatPlayedBy", () => seat_played_by(stateJson(state), home) as PlayerId);
+  return call("seatPlayedBy", () => engine.seat_played_by(stateJson(state), home) as PlayerId);
 }
 
 /** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(find_instance(stateJson(state), instanceId)) ?? undefined);
+  return call("findInstance", () => parsed<CardInstance | null>(engine.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
-  return call("dealEmoteHand", () => parsed<EmoteId[]>(deal_emote_hand(seed, seat)));
+  return call("dealEmoteHand", () => parsed<EmoteId[]>(engine.deal_emote_hand(seed, seat)));
 }
 
 /**
@@ -289,7 +321,7 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
  */
 export function previewSets(sets: readonly SetName[]): void {
   call("previewSets", () => {
-    preview_sets(json(sets));
+    engine.preview_sets(json(sets));
   });
 }
 
@@ -298,14 +330,14 @@ let catalogCache: CardDefs | null = null;
 /** The registered catalog (TypeScript's `registeredCatalog()`): the same object on every call. */
 export function registeredCatalog(): CardDefs {
   return call("registeredCatalog", () => {
-    catalogCache ??= parsed<CardDefs>(catalog());
+    catalogCache ??= parsed<CardDefs>(engine.catalog());
     return catalogCache;
   });
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 export function catalogVersion(): string {
-  return call("catalogVersion", () => catalog_version());
+  return call("catalogVersion", () => engine.catalog_version());
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -313,7 +345,7 @@ export function catalogVersion(): string {
 // ---------------------------------------------------------------------------------------------
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
-  return call("aiToAct", () => ai_to_act(stateJson(state), seat));
+  return call("aiToAct", () => engine.ai_to_act(stateJson(state), seat));
 }
 
 /** The AI's own stream as it crosses: its seed and where it stands. */
@@ -330,7 +362,7 @@ export type DecideResult = { decision: Decision | null; rngCursor: number };
  * state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
-  return call("decide", () => parsed<DecideResult>(ai_decide(stateJson(state), seat, json(request), deadlineMs)));
+  return call("decide", () => parsed<DecideResult>(engine.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
 }
 
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
@@ -353,13 +385,13 @@ export type AiDeckRequest = StreamAt & {
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
-  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(build_ai_deck(json(request))));
+  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(engine.build_ai_deck(json(request))));
 }
 
 /** §10.7's random policy (`subsystems.chooseAction`), drawing from `(rngSeed, rngCursor)`. */
 export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt): { action: ActionBody | null; rngCursor: number } {
   return call("chooseAction", () =>
-    parsed<{ action: ActionBody | null; rngCursor: number }>(choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
+    parsed<{ action: ActionBody | null; rngCursor: number }>(engine.choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
 }
 
@@ -369,7 +401,7 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
  * nothing (CLAUDE.md rule 7).
  */
 export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
-  return call("craftPreview", () => parsed<CraftPreview>(craft_preview(json(recipe), cost)));
+  return call("craftPreview", () => parsed<CraftPreview>(engine.craft_preview(json(recipe), cost)));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
@@ -408,7 +440,7 @@ let constantsCache: AiConstants | null = null;
 /** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
   return call("constants", () => {
-    constantsCache ??= parsed<AiConstants>(constants());
+    constantsCache ??= parsed<AiConstants>(engine.constants());
     return constantsCache;
   });
 }
@@ -433,7 +465,7 @@ let tablesCache: EngineTables | null = null;
 
 export function engineTables(): EngineTables {
   return call("engineTables", () => {
-    tablesCache ??= parsed<EngineTables>(engine_tables());
+    tablesCache ??= parsed<EngineTables>(engine.engine_tables());
     return tablesCache;
   });
 }
@@ -451,9 +483,11 @@ export type ValidatorCall =
   | "checkTrioDraft"
   | "checkImportRoom"
   | "trioConflicts"
-  | "normalizeName";
+  | "normalizeName"
+  | "validateCustomCard"
+  | "customDef";
 
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
-  return call(name, () => parsed<T>(validator_call(name, json(input))));
+  return call(name, () => parsed<T>(engine.validator(name, json(input))));
 }
