@@ -233,12 +233,19 @@ fn ask_cell(points: Vec<PapayaPoint>) -> Effect {
             .filter(|x| !used.contains(x))
             .flat_map(|x| (0..PAPAYA_ROWS).map(move |y| PapayaPoint { x, y }))
             .collect();
-        let mut offered: Vec<PapayaPoint> =
-            ctx.sink.rng.shuffle(&free).into_iter().take(PAPAYA_OFFERS.max(0) as usize).collect();
+        let mut offered: Vec<PapayaPoint> = ctx
+            .sink
+            .rng
+            .shuffle(&free)
+            .into_iter()
+            .take(PAPAYA_OFFERS.max(0) as usize)
+            .collect();
         offered.sort_by_key(|point| (point.x, point.y));
         let mut options: Vec<String> = offered.iter().map(cell_option).collect();
-        let mut labels: serde_json::Map<String, Value> =
-            offered.iter().map(|point| (cell_option(point), json!(cell_label(point)))).collect();
+        let mut labels: serde_json::Map<String, Value> = offered
+            .iter()
+            .map(|point| (cell_option(point), json!(cell_label(point))))
+            .collect();
         if !points.is_empty() {
             options.push(PAPAYA_DONE.to_string());
             labels.insert(PAPAYA_DONE.to_string(), json!("Done"));
@@ -289,7 +296,10 @@ pub fn papaya_answered(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         return Vec::new();
     }
     let player = ctx.controller;
-    let cells: Vec<ZoneRef> = cells_on_curve(&points).iter().map(|cell| zone_of_point(player, cell)).collect();
+    let cells: Vec<ZoneRef> = cells_on_curve(&points)
+        .iter()
+        .map(|cell| zone_of_point(player, cell))
+        .collect();
     let mut effects = vec![Effect::new("curveDrawn", move |ctx| {
         ctx.events.push(GameEvent::CurveDrawn {
             player,
@@ -299,7 +309,11 @@ pub fn papaya_answered(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     effects.extend(
         cards_on_curve(ctx.sink.state, ctx.controller, &points, ctx.radiant)
             .into_iter()
-            .map(|instance_id| exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))),
+            .map(|instance_id| {
+                exile(json_as(
+                    json!({ "target": { "of": "instance", "instanceId": instance_id } }),
+                ))
+            }),
     );
     effects
 }

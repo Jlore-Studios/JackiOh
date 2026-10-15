@@ -856,7 +856,9 @@ pub fn would_counter_hook(
 pub type ModeAllowedHook = Arc<dyn Fn(&GameState, PlayerId, &str) -> bool + Send + Sync>;
 
 /// Builds a `ModeAllowedHook`.
-pub fn mode_allowed_hook(f: impl Fn(&GameState, PlayerId, &str) -> bool + Send + Sync + 'static) -> ModeAllowedHook {
+pub fn mode_allowed_hook(
+    f: impl Fn(&GameState, PlayerId, &str) -> bool + Send + Sync + 'static,
+) -> ModeAllowedHook {
     Arc::new(f)
 }
 

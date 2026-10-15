@@ -523,7 +523,12 @@ mod r831013_an_equip_a_price_grants {
     #[test]
     fn r831013_is_offered_only_at_that_price_and_reduce_agrees() {
         let mut state = playing("equip-paid");
-        put(&mut state, &host().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            &mut state,
+            &host().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
         state.players.p1.mana.current = 5;
         let card = in_hand(&mut state, &paid().id, PlayerId::P1, 1).remove(0);
         // Every Equip play listed is at the embiggen price; the base price lists plain plays only.

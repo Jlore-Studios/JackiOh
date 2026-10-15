@@ -57,10 +57,10 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod,
-    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TuneMultiplier,
-    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, mode_allowed_hook, read_hook, target_check,
-    would_counter_hook,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
+    SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
+    TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook,
+    mode_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1205,7 +1205,10 @@ fn combine_objects(records: &[Script]) -> Script {
 /// R831008: a fusion allows a mode option only when every ingredient's check allows it; a check
 /// allows every option it does not know (Meditative #98 Showdown's reads only its `lane-N`).
 fn fused_mode_allowed(records: &[Script]) -> Option<ModeAllowedHook> {
-    let checks: Vec<ModeAllowedHook> = records.iter().filter_map(|record| record.mode_allowed.clone()).collect();
+    let checks: Vec<ModeAllowedHook> = records
+        .iter()
+        .filter_map(|record| record.mode_allowed.clone())
+        .collect();
     if checks.is_empty() {
         return None;
     }

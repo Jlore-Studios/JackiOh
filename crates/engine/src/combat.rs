@@ -1265,14 +1265,13 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
 
     // R1202: a forced attack Windfast would make, its substitute makes instead.
     let since = crate::stays::exit_mark(sink.state);
-    let (attacker, instead_of, bounce) =
-        match crate::attack_summon::replace_attacker(sink, &attacker) {
-            crate::attack_summon::Replaced::By(unit) => {
-                let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
-                (*unit, Some(attacker.id.clone()), bounce)
-            }
-            crate::attack_summon::Replaced::No => (attacker, None, false),
-        };
+    let (attacker, instead_of, bounce) = match crate::attack_summon::replace_attacker(sink, &attacker) {
+        crate::attack_summon::Replaced::By(unit) => {
+            let bounce = crate::scripts::flags_of(sink.state, &attacker).bounce_attacker == Some(true);
+            (*unit, Some(attacker.id.clone()), bounce)
+        }
+        crate::attack_summon::Replaced::No => (attacker, None, false),
+    };
 
     // R1203: the Prime's joiners attack first, then its own combat.
     if crate::scripts::flags_of(sink.state, &attacker).attack_joiners == Some(true) {

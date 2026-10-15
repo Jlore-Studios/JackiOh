@@ -520,7 +520,10 @@ mod c_42_kys_test_the_rewards_r420 {
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
         assert_eq!(hand_ids(&state, P1), vec![gift().id]);
-        assert_eq!(state.players.p1.hand.first().and_then(|card| card.cost_override), None);
+        assert_eq!(
+            state.players.p1.hand.first().and_then(|card| card.cost_override),
+            None
+        );
     }
 
     #[test]

@@ -254,7 +254,10 @@ mod c_plus_c74s_field_trap_r425 {
                 .any(|card| card.id == second.card.id)
         );
         let kept = trap_of(&second.state, &trap_id);
-        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![spell().id, forward().id]));
+        assert_eq!(
+            ingredient_defs(&second.state, &kept.def_id),
+            Some(vec![spell().id, forward().id])
+        );
         assert_eq!(kept.face_up, Some(true));
     }
 
@@ -270,11 +273,16 @@ mod c_plus_c74s_field_trap_r425 {
         // R227: the trap was set under a fresh id, the one its play announced; it is still there.
         let set_id = plays_of(&second.events).first().map(|(_, id)| id.clone());
         assert_eq!(
-            second.state.players.p2.backrow[0].as_ref().map(|card| card.id.clone()),
+            second.state.players.p2.backrow[0]
+                .as_ref()
+                .map(|card| card.id.clone()),
             set_id
         );
         let kept = trap_of(&second.state, &trap_id);
-        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![trap().id, forward().id]));
+        assert_eq!(
+            ingredient_defs(&second.state, &kept.def_id),
+            Some(vec![trap().id, forward().id])
+        );
         assert_eq!(active_brittle_count(kept), Some(3));
     }
 
@@ -303,7 +311,10 @@ mod c_plus_c74s_field_trap_r425 {
         assert_eq!(events_of_type(&second.events, GameEventType::TrapFired).len(), 1);
         // No Brittle sits on an unrevealed card: the fire reveals it first, then the gain lands on the started 2.
         assert_eq!(kept.face_up, Some(true));
-        assert_eq!(ingredient_defs(&second.state, &kept.def_id), Some(vec![self_exiler().id, forward().id]));
+        assert_eq!(
+            ingredient_defs(&second.state, &kept.def_id),
+            Some(vec![self_exiler().id, forward().id])
+        );
         assert_eq!(active_brittle_count(kept), Some(3));
         // Revealed, the opponent reads the card now.
         let theirs = serde_json::to_string(&view_for(&second.state, PlayerId::P2)).expect("serialises");
@@ -329,7 +340,10 @@ mod c_plus_c74s_field_trap_r425 {
             ingredient_defs(&first.state, &trap_of(&first.state, &trap_id).def_id),
             Some(vec![spell().id, forward().id])
         );
-        assert_eq!(first_fused_ids(&first.events).and_then(|ids| ids.last().cloned()), Some(trap_id.clone()));
+        assert_eq!(
+            first_fused_ids(&first.events).and_then(|ids| ids.last().cloned()),
+            Some(trap_id.clone())
+        );
         assert!(
             first
                 .state

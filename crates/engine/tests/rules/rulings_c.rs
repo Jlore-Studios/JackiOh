@@ -3903,9 +3903,17 @@ mod spec_11_r131_r136_layer_2_pools_grades_and_event_windows_m3_gate {
             &mut sink,
             &mut state,
             P1,
-            vec![effects::exile_matching(json_as(json!({ "zones": ["library"], "maxCost": 2 })))],
+            vec![effects::exile_matching(json_as(
+                json!({ "zones": ["library"], "maxCost": 2 }),
+            ))],
         );
-        let kept: Vec<String> = state.players.p1.library.iter().map(|card| card.def_id.clone()).collect();
+        let kept: Vec<String> = state
+            .players
+            .p1
+            .library
+            .iter()
+            .map(|card| card.def_id.clone())
+            .collect();
         assert_eq!(kept, vec![TRIBUTE_TWO, FUSE_PRICEY, FUSE_DEAR]);
         let exiled: Vec<String> = sink
             .events

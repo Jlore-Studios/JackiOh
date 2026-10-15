@@ -59,8 +59,8 @@ use crate::multipliers::{Multiplied, extra_runs};
 use crate::play_choices::{
     DECLARATION_SLICES_KEY, active_target_decls, chooses_x, declaration_slices, declared_modes,
     declared_targets, default_zone_for, equip_host_at, in_declared_order, interceptor_fits_decl,
-    legal_selections_for, mode_option_allowed, play_made_radiant, play_uses, plays_on_stack, resolving_face, targeting_decls_of,
-    targeting_discards_required, targets_follow_modes, why_choices_refused,
+    legal_selections_for, mode_option_allowed, play_made_radiant, play_uses, plays_on_stack, resolving_face,
+    targeting_decls_of, targeting_discards_required, targets_follow_modes, why_choices_refused,
 };
 use crate::play_counts::record_play;
 use crate::prompts::{

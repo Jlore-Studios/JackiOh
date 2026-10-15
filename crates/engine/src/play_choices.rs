@@ -332,7 +332,8 @@ pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstanc
 /// R831005: whether a live `radiantNextPlay` modifier of the player makes their next play Radiant.
 pub fn radiant_next_play(state: &GameState, player: PlayerId) -> bool {
     state.players[player].mods.iter().any(|modifier| {
-        matches!(modifier.kind, ModifierKind::RadiantNextPlay) && crate::mana::modifier_is_live(state, modifier)
+        matches!(modifier.kind, ModifierKind::RadiantNextPlay)
+            && crate::mana::modifier_is_live(state, modifier)
     })
 }
 

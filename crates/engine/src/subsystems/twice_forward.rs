@@ -195,7 +195,9 @@ pub fn twice_forward_trigger(args: TwiceForwardArgs) -> TriggerDef {
     TriggerDef {
         id: "twice-forward".to_string(),
         on: vec![GameEventType::CardPlayed, GameEventType::CardResolved],
-        when: Some(Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| watch(ctx, event))),
+        when: Some(Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| {
+            watch(ctx, event)
+        })),
         run: Arc::new(move |ctx: &mut EffectContext<'_>, event: &GameEvent| fire(radiant_copy, ctx, event)),
     }
 }

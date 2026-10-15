@@ -651,7 +651,16 @@ const CORE: &[SpecRow] = &[
         st(10, 5),
         st(20, 10),
     ),
-    row("56", "Jilliax", emb(2, 3), T::Unit, &[], R::Common, st(3, 2), st(6, 4)),
+    row(
+        "56",
+        "Jilliax",
+        emb(2, 3),
+        T::Unit,
+        &[],
+        R::Common,
+        st(3, 2),
+        st(6, 4),
+    ),
     row(
         "57",
         "Conjure KY",

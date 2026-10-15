@@ -553,6 +553,7 @@ mod generator {
             Position,
             PlayerId,
             ZoneName,
+            ZoneRef,
             OffFieldZone,
             TargetSpec,
             TargetAim,
