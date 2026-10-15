@@ -7198,6 +7198,9 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "strong",
+      "ci_reruns": {
+        "5756219f1984810c63c7f805576408e2fb136db5": 1
+      },
       "cleared": {
         "at": "2026-10-15T20:27:28Z",
         "by": "`claude` (strong)",
