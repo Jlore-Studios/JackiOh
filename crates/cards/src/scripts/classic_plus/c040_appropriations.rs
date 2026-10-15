@@ -14,12 +14,81 @@
 //! (R177, R581): every card is rolled, a Radiant one too, so neither the draws nor the cues count the
 //! hidden Radiant cards; a library card made Radiant is listed as it went in (R311). Tunes: none beyond X.
 
+use jackioh_engine::effects::{
+    buff_cards, chosen_options, grant_keyword_cards, radiant_chance, shuffle_random_from_catalog,
+};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-040";
+
+const MODES: &[&str] = &["Military", "Education", "Culture", "Healthcare"];
+
+/// One face's multiples of X: attack, Books, percent, health, Armor.
+#[derive(Clone, Copy)]
+struct Face {
+    attack: i32,
+    books: i32,
+    percent: i32,
+    health: i32,
+    armor: i32,
+}
+
+const BASE: Face = Face { attack: 2, books: 2, percent: 10, health: 2, armor: 1 };
+const RADIANT: Face = Face { attack: 5, books: 5, percent: 25, health: 7, armor: 2 };
+const ALL: i32 = 100;
+
+/// Your Units on the field, in your hand and in your deck (an E38 card scope).
+fn units() -> Value {
+    json!({ "side": "self", "zones": ["field", "hand", "library"], "rows": ["units"], "types": ["Unit"] })
+}
+
+fn appropriations(face: Face) -> Script {
+    Script {
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: MODES.iter().map(|mode| mode.to_string()).collect(),
+        }],
+        cry: Some(hook(move |ctx| {
+            let x = ctx.x;
+            match chosen_options(ctx).first().map(String::as_str) {
+                Some("Military") => vec![
+                    buff_cards(json_as(json!({ "scope": units(), "attack": face.attack * x }))),
+                    grant_keyword_cards(json_as(json!({ "scope": units(), "keyword": { "kind": "Rush" } }))),
+                ],
+                Some("Education") => vec![shuffle_random_from_catalog(json_as(json!({
+                    "query": { "tags": ["Book"] },
+                    "count": face.books * x,
+                    "radiant": true,
+                    "enchantments": [{ "kind": "castOnDraw" }, { "kind": "targetEnemies" }],
+                })))],
+                Some("Culture") => vec![radiant_chance(json_as(json!({
+                    "zone": ["field", "hand", "library"],
+                    "chance": f64::min(1.0, f64::from(face.percent * x) / f64::from(ALL)),
+                })))],
+                Some("Healthcare") => vec![
+                    buff_cards(json_as(json!({ "scope": units(), "health": face.health * x }))),
+                    grant_keyword_cards(json_as(json!({
+                        "scope": units(),
+                        "keyword": { "kind": "Armor", "n": face.armor * x },
+                    }))),
+                ],
+                _ => vec![],
+            }
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: appropriations(BASE),
+        radiant: appropriations(RADIANT),
+    }
+}
 
 // C+ #40 Appropriations — SPEC §8.7 row 40, E38, E39, R60, R80, R81, R97, R177, R311, R348, R380,
 // R440, R581, BUILD M9 row C+ 40. Education's verb is proved in packages/engine/test/shuffle-random.test.ts
 // (a Book it made is cast as it is drawn, R58), the grants and buffs in the engine's E38 tests.
-
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -98,7 +167,7 @@ mod tests {
         let def = crate::card_def(APPROPRIATIONS);
         assert_eq!(def.id, APPROPRIATIONS);
         assert_eq!(serde_json::to_value(def.cost).expect("a cost is JSON"), json!("X"));
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
                 serde_json::to_value(&face.modes).expect("modes are JSON"),

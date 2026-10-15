@@ -1,7 +1,7 @@
 // Lesson data (SPEC §9.10, R291); ../lessons.ts defines its fields and ../scripts/basics.ts is the coach.
 // Deck order determines this seed's deal (`scripts/lesson-deal.ts basics`); changing it changes the
 // scripted opening. The human gets units for turns 1–4, while Lesson 1's AI gets plain units only
-// (R291): The Coin and Archivist first, then Moths to the Flame. Patch v0.3.9 gave Moths Pierce, and
+// (R291): The Coin and Archivist first, then Moths to the Flame. Patch v0.3.10 gave Moths Pierce, and
 // the AI then played it, in Defense Position, at once: Moths now sits where Gary the Gambler did, a
 // draw later, and Gary where Big D-fender did.
 

@@ -3,14 +3,77 @@
 //! Base:    "Activate: Choose 1 of 2 random Field Spells. Fuse it into this."
 //! Radiant: "Activate: Choose 1 of 2 random Radiant Field Spells. Fuse it into this."
 //! Engine: Activate (R384, once a turn). A Discover of two (`discover_from_catalog`, R831012; the
-//! Activate fused one random Field Spell until patch v0.3.9, #831) over the non-token Field Spells of
+//! Activate fused one random Field Spell until patch v0.3.10, #831) over the non-token Field Spells of
 //! every set, never this card or an ingredient already in it (R387), then `fuse_cards` of the one
 //! chosen with the Tree as the kept instance (R77, R102), its cost kept; on the Radiant face the pick
 //! goes in on its Radiant face (R469). With no Field Spell to offer nothing happens. A Cry
 //! never runs, auras and turn lines run, fused Activates share the Tree's count, and a fused
 //! keyword applies at once (R1087).
 
+use jackioh_engine::effects::fuse_cards;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-075";
+
+/// Patch v0.3.10 (#831): "Choose 1 of 2 random Field Spells", a Discover of two (R831012).
+const TREE_OFFERS: i32 = 2;
+
+/// The resume step the choice re-enters (§10.6).
+const PICKED: &str = "picked";
+
+/// C+ #31 Fusion Lab's shape: one Activate, once a turn, fusing a Field Spell into self (R77, R102),
+/// never this card or an ingredient already in it (R387), the Tree's cost kept; on the Radiant face the
+/// pick goes in on its Radiant face (R469). The two on offer are random; the one fused is chosen.
+fn tree(radiant: bool) -> Script {
+    let prompt = if radiant {
+        "Ever Growing Tree: choose a Radiant Field Spell to fuse into it"
+    } else {
+        "Ever Growing Tree: choose a Field Spell to fuse into it"
+    };
+    let grow = ActivationDecl {
+        id: "grow".to_string(),
+        label: "Fuse one of 2 random Field Spells into this".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |_ctx| {
+            vec![discover_from_catalog(json_as(json!({
+                "step": PICKED,
+                "count": TREE_OFFERS,
+                "query": { "type": "Field Spell" },
+                "prompt": prompt,
+            })))]
+        }),
+    };
+    Script {
+        activations: vec![grow],
+        resume: IndexMap::from([(
+            PICKED,
+            hook(move |ctx| {
+                let picked = chosen_options(ctx).into_iter().next();
+                let (Some(picked), Some(me)) = (picked, ctx.self_.as_ref()) else {
+                    return vec![];
+                };
+                let mut args = json!({ "defIds": [picked], "targetInstanceId": me.id, "keepCost": true });
+                if radiant {
+                    args["radiantIngredients"] = json!(true);
+                }
+                vec![fuse_cards(json_as(args))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: tree(false),
+        radiant: tree(true),
+    }
+}
 
 // M #75 Ever Growing Tree — SPEC §8.8 row 75, BUILD M10 row M 75: "Activate, once a turn in your
 // main phase: the non-token Field Spell you choose of two random ones (never itself or one already
@@ -19,6 +82,7 @@ pub const ID: &str = "meditative-075";
 // survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -237,7 +301,7 @@ mod tests {
 
             #[test]
             fn r1087_a_fused_aura_works_from_then_on() {
-                // Jlockeed's Weapons: "Aura: Your Units have +4 attack, Rush and First Strike."
+                // Jlockeed's Weapons: "Aura: Your Units have +4 Attack, Rush and First Strike."
                 let mut s = narrowed("tree-aura", &[WEAPONS]);
                 assert_eq!(s.stats(VANILLA).attack, 4);
                 let tree = s.card(TREE).id.clone();

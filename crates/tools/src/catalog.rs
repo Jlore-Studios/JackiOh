@@ -212,7 +212,7 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Ky => 9 + meditative(6),
         Tag::Cn => 7 + meditative(33),
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
-        // patch v0.3.9 (#831).
+        // patch v0.3.10 (#831).
         Tag::Fruit => 14 + meditative(2),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
@@ -223,10 +223,10 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Pancake => 10,
         Tag::Ai => 10,
         Tag::Plague => 17 + meditative(2),
-        // Meditative #45, #49 (patch v0.3.9, #831) and #91; their Primes #45.1, #49.1 and #91.1.
+        // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
         Tag::Catalyst => 2 + meditative(3),
         Tag::Prime => 2 + meditative(3),
-        // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.9 (#831).
+        // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
         Tag::Acclaimed => 2 + meditative(2),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         Tag::Wincon => meditative(2),
@@ -1743,7 +1743,7 @@ pub enum CatalogCommand {
     Check,
     /// Print a card script's lines of code (SURFACE §7.5), for a card added after v0.3.0.
     Loc {
-        /// The card's script: its `.luau`, or the `.rs` of a card that stays in Rust.
+        /// The card's `.rs` script file (a `.luau` script counts by Luau's comment rules).
         path: PathBuf,
     },
 }
@@ -2141,13 +2141,6 @@ local LONG = [[
 return { base = { cry = cry }, radiant = "base" }
 "##;
         assert_eq!(count_luau_loc(source), 8);
-    }
-
-    #[test]
-    fn catalog_loc_of_a_ported_card_counts_its_luau() {
-        let path = repo_root().join("crates/cards/src/scripts/core/c002_bigot.luau");
-        let source = std::fs::read_to_string(path).unwrap();
-        assert!(count_luau_loc(&source) > 0);
     }
 
     #[test]

@@ -2,7 +2,7 @@
 //!   Both faces: "Activate: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
 //!   — the multiplier is 1 on the base face and 2 on the Radiant face (a declared number).
 //!
-//! Activate (R384): once a turn (patch v0.3.9, #831; Activate ♾️ before). The cost is a pick
+//! Activate (R384): once a turn (patch v0.3.10, #831; Activate ♾️ before). The cost is a pick
 //! carried in the `activate` action (`tributes`), never Turtinator itself (R683,
 //! `cost.tributeExcludesSelf`). The Tribute is a Sacrifice: a death (Death fires, §6.3) that bypasses
 //! Indestructible. One unit is one Tribute: a Sheep's "worth 2" is only a play's Tribute X (§6.3), and
@@ -10,11 +10,54 @@
 //! (last-known, R78; `subsystems.activationPaid` records it, the unit being reset by then) times the
 //! multiplier, from Turtinator (§4.4). An amount of 0 is no hit at all (R63).
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-021";
+
+fn eat() -> ActivationDecl {
+    ActivationDecl {
+        id: "eat".to_string(),
+        label: "Tribute another Unit. Deal damage equal to {multiplier}× its Attack".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: Some(ActivationCost {
+            tribute: Some(1),
+            tribute_excludes_self: Some(true),
+            ..ActivationCost::default()
+        }),
+        targets: vec![TargetDecl::target(1, 1, json!({ "of": ["unit", "hero"] }))],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| {
+            let attack = subsystems::activation_paid(&*ctx)
+                .tributed
+                .first()
+                .map_or(0, |tributed| tributed.attack);
+            let amount = attack * param(&*ctx, "multiplier");
+            if amount > 0 {
+                vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))]
+            } else {
+                vec![]
+            }
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![eat()],
+        ..Script::default()
+    };
+    // The same script: the Radiant face's "twice its Attack" is its declared multiplier (2), which
+    // `param` reads off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // BUILD M9 Classic row C 21: the Tribute is paid as it activates, then one hit from Turtinator on the
 // declared target for that Unit's attack as it stood (R78); 0 attack, no hit (R63); radiant 10/8: twice
-// that attack; numbers via `param()` (R386); once a turn (patch v0.3.9). Turtinator is always one of its controller's Units when
+// that attack; numbers via `param()` (R386); once a turn (patch v0.3.10). Turtinator is always one of its controller's Units when
 // activated, so the cost refuses a missing Tribute or one that is not that controller's own Unit.
 #[cfg(test)]
 mod tests {
@@ -31,7 +74,7 @@ mod tests {
     const POINTMASTER: &str = "core-020"; // 7/1.
     const D_FENDER: &str = "core-001"; // 0/7.
     const SAINTESS: &str = "core-081"; // 2/2, "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +4 attack, Rush and First Strike."
+    const WEAPONS: &str = "core-014"; // Field Spell, "Aura: Your Units have +4 Attack, Rush and First Strike."
     const SHEEP: &str = "core-t-sheep"; // 1/1, worth 2 Tributes.
     const ROCK: &str = "core-066"; // 10/10 Indestructible.
 
@@ -77,12 +120,11 @@ mod tests {
 
     mod c_n21_turtinator {
         use super::*;
-        use std::sync::Arc;
 
         #[test]
         fn r384_declares_one_activate_whose_cost_is_one_tribute_with_a_declared_unit_or_hero_target() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, TURTLE);
             // The Radiant face is the base script itself, so its ability's hook is the very same
             // closure.
@@ -255,7 +297,7 @@ mod tests {
                 eat(&mut s, POINTMASTER, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
                 s.expect_stats(&menace, json!({ "health": 2 }));
 
-                // Once a turn (patch v0.3.9), so the hero target is a second board.
+                // Once a turn (patch v0.3.10), so the hero target is a second board.
                 let mut s = setup(json!({ "field": [TURTLE, VANILLA] }), json!({}));
                 eat(&mut s, VANILLA, json!([{ "pick": "hero", "player": "p1" }]), TURTLE);
                 s.expect_health(P1, 26);
@@ -273,7 +315,7 @@ mod tests {
 
             #[test]
             fn r384_activates_once_a_turn_and_again_on_the_next() {
-                // Activate (patch v0.3.9; Activate ♾️ before): the second use in a turn is refused.
+                // Activate (patch v0.3.10; Activate ♾️ before): the second use in a turn is refused.
                 crate::register_all();
                 let mut s = setup(
                     json!({ "field": [TURTLE, TIMMY, VANILLA], "hand": [FILLER, FILLER], "library": [FILLER, FILLER] }),

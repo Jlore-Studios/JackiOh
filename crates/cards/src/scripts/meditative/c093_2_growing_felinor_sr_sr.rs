@@ -15,19 +15,43 @@
 //! - **A token:** a unit token vanishes when it leaves the field and still fires its Death (R11). The
 //!   designer's base face summoned a Sr, a size down; R1180 reads it as a copy slip.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-093-2";
+
+/// The next size up the chain, which this card's Death summons (R1180).
+const NEXT: &str = "meditative-093-3";
+
+fn growing(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        death: Some(hook(move |_ctx| {
+            vec![summon(json_as(
+                json!({ "defId": NEXT, "player": "self", "radiant": radiant }),
+            ))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: growing(false),
+        radiant: growing(true),
+    }
+}
 
 // M #93.2 Growing Felinor Sr Sr — SPEC §8.8 row 93.2, BUILD M10 row M 93.2: "It can't switch to
 // Defense; its Death summons a base Growing Felinor Super Senior (M 93.3) (MD-E19); radiant 6/6,
 // Divine Shield, Rush, and the Super Senior is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, NEXT, script};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
-
-    /// The next size up the chain, which this card's Death summons (R1180).
-    const NEXT: &str = "meditative-093-3";
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -73,7 +97,7 @@ mod tests {
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(6), Some(6)]);
             assert!(def.base.keywords.is_empty());
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)

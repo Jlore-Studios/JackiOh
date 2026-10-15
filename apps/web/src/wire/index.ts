@@ -10,9 +10,9 @@
 // face-down zone; the client's also admits `null`, an empty zone, as TypeScript's always did).
 //
 // THE HELPERS ARE HAND-KEPT. The runtime values the client imports (`keywordKey`, `fillParams`,
-// `readCodeInput`, `emoteGate`, `parseAim`, the stats formatters, …) are the TypeScript sources the
-// server's Rust port was made from, kept here as the client's own (`./catalog.ts`, `./codes.ts`,
-// `./emotes.ts`, `./aim.ts`, `./stats.ts`). The server's copies are `crates/engine/src/wire/*.rs`;
+// `readCodeInput`, `emoteGate`, `parseAim`, …) are the TypeScript sources the server's Rust port
+// was made from, kept here as the client's own (`./catalog.ts`, `./codes.ts`, `./emotes.ts`,
+// `./aim.ts`). The server's copies are `crates/engine/src/wire/*.rs`;
 // both read `crates/engine/tests/fixtures/code-input-cases.json` (`./codes.test.ts`), so the reading
 // of a typed code cannot drift between them.
 
@@ -48,6 +48,10 @@ export type { CraftRecipe } from "./generated/CraftRecipe.ts";
 export type { CraftVerb } from "./generated/CraftVerb.ts";
 export type { CraftVerbPrice } from "./generated/CraftVerbPrice.ts";
 export type { CreditView } from "./generated/CreditView.ts";
+export type { CustomCard } from "./generated/CustomCard.ts";
+export type { CustomFrame } from "./generated/CustomFrame.ts";
+export type { CustomIssue } from "./generated/CustomIssue.ts";
+export type { CustomParam } from "./generated/CustomParam.ts";
 export type { Enchantment } from "./generated/Enchantment.ts";
 export type { FusedIngredient } from "./generated/FusedIngredient.ts";
 export type { GameEvent } from "./generated/GameEvent.ts";
@@ -77,11 +81,13 @@ export type { QuestView } from "./generated/QuestView.ts";
 export type { Rarity } from "./generated/Rarity.ts";
 export type { RevealAt } from "./generated/RevealAt.ts";
 export type { Row } from "./generated/Row.ts";
+export type { SandboxOp } from "./generated/SandboxOp.ts";
 export type { SecretChoice } from "./generated/SecretChoice.ts";
 export type { SecretView } from "./generated/SecretView.ts";
 export type { Selection } from "./generated/Selection.ts";
 export type { SetName } from "./generated/SetName.ts";
 export type { SideView } from "./generated/SideView.ts";
+export type { SpawnZone } from "./generated/SpawnZone.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TargetDecl } from "./generated/TargetDecl.ts";
 export type { TargetFilter } from "./generated/TargetFilter.ts";
@@ -190,7 +196,8 @@ export const GAME_EVENT_TYPES = [
   "secretChosen",
   "secretRevealed",
   "predicted",
-  // Patch v0.3.9 (C+ #62 KY's Papaya, R831003).
+  "scriptFailed",
+  // #831's patch (C+ #62 KY's Papaya, R831003).
   "curveDrawn",
 ] as const satisfies readonly GameEventType[];
 
@@ -211,20 +218,23 @@ export type GameEventTypesAreExhaustive = NoneMissing<Exclude<GameEventType, (ty
 // declares its own copies only for its functions' signatures, which are the same shapes.
 export {
   KEYWORD_KINDS,
+  LEAN_NEWEST,
   PARAM_PLACEHOLDER,
   PLAYER_IDS,
   SHIPPED_SETS,
-  armorOf,
   fillParams,
   hasKeyword,
+  isLeanPick,
   keywordKey,
+  leanPicks,
+  leanSetOf,
   newestShippedSet,
   opponentOf,
   paramPlaceholders,
   setShips,
 } from "./catalog.ts";
+export type { LeanPick } from "./catalog.ts";
 
 export * from "./codes.ts";
 export * from "./emotes.ts";
 export * from "./aim.ts";
-export * from "./stats.ts";

@@ -5,13 +5,89 @@
 //!   Engine:  Play from graveyard (§6.3) for a Unit, armed by the Activate. Token payment spends at least 1
 //!            counter, rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
 //!
-//! Patch v0.3.9 (#831): the Cry places {tokens} (R386; the once-a-turn Activate did before), and the
+//! Patch v0.3.10 (#831): the Cry places {tokens} (R386; the once-a-turn Activate did before), and the
 //! Activate (R384) arms the graveyard permission for one play that turn (R831015): it remembers the
 //! turn, the permission holds only while that is this turn, and the play from the graveyard it allowed
 //! spends it. That play is a play (Cry fires, counts as played; not R70 cast); spent tokens are removed;
 //! other cards' tokens pay; R78 clears them on leave.
 
+use jackioh_engine::effects::{place_plague, remember};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-074";
+
+/// Patch v0.3.10 (#831): the Activate arms one play from the graveyard this turn (R831015), the turn it
+/// was armed on remembered here; the play that uses it, or the turn's end, disarms it.
+const ARMED: &str = "armed";
+
+/// Whether a remembered turn is this very turn.
+fn is_this_turn(state: &GameState, value: Option<&Value>) -> bool {
+    value.and_then(Value::as_i64) == Some(i64::from(state.turn))
+}
+
+/// Activate, once per turn (R384): arm the graveyard permission below for one play.
+fn plant() -> ActivationDecl {
+    ActivationDecl {
+        id: "plant".to_string(),
+        label: "Play a Unit from your graveyard".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| vec![remember(json_as(json!({ "key": ARMED, "value": ctx.state.turn })))]),
+    }
+}
+
+/// The play from your graveyard that the arming allowed spends it. A field trigger's `when` is not read
+/// (only a trap's reveal condition is), so `run` asks it.
+fn spent() -> TriggerDef {
+    TriggerDef::new("plantation-spent", &[GameEventType::CardPlayed], |ctx, event| {
+        let GameEvent::CardPlayed { player, from, .. } = event else {
+            return vec![];
+        };
+        if *player != ctx.controller || *from != Some(PlayedFrom::Graveyard) {
+            return vec![];
+        }
+        if !is_this_turn(ctx.state, recalled(ctx, ARMED).as_ref()) {
+            return vec![];
+        }
+        vec![remember(json_as(json!({ "key": ARMED, "value": 0 })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        // Cry: place the declared `tokens` on this (R386); a Field Spell's Cry fires as it is played or
+        // cast (R1).
+        cry: Some(hook(|ctx| {
+            vec![place_plague(json_as(json!({
+                "target": { "of": "self" },
+                "amount": param(&*ctx, "tokens"),
+            })))]
+        })),
+        activations: vec![plant()],
+        // A Unit from your graveyard, paid with Plague Counters (§6.3 Play), while armed.
+        graveyard_play: Some(read_hook(|args| {
+            if !is_this_turn(args.state, args.self_.memory.get(ARMED)) {
+                return vec![];
+            }
+            vec![GraveyardPlayPermission {
+                units: Some(true),
+                plague: Some(true),
+                ..GraveyardPlayPermission::default()
+            }]
+        })),
+        triggers: vec![spent()],
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the Radiant face's 4 tokens are its declared `tokens`.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // The harness's `play` takes a card from a hand, so a graveyard play is sent to `reduce` as
 // `legalActions` offers it and read back off its result (as C #28 Second Wind's test does).
@@ -21,7 +97,6 @@ pub const ID: &str = "classic-074";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -149,7 +224,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "tokens", "base": 2, "radiant": 4, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let grant = scripts.base.graveyard_play.as_ref().expect("a graveyard permission");
         let answer = |s: &Scenario| {
             js(&grant(HookArgs {

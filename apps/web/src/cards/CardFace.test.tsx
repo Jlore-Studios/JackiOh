@@ -350,8 +350,9 @@ describe("B10: RulesText marks terms in bold", () => {
 
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute"]);
+    // R910000: "Can use enemy Units as Tributes" bolds its plural too.
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3", "Tributes"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute", "Tribute"]);
   });
 
   it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {
@@ -431,12 +432,12 @@ describe("B10: RulesText marks terms in bold", () => {
   it("B10 lower-case or glued words are not bolded", () => {
     const plain: CardDef = {
       ...def("core-005"),
-      base: { keywords: [], text: "taunt the Locked Rushing units" },
-      radiant: { keywords: [], text: "taunt the Locked Rushing units" },
+      base: { keywords: [], text: "taunt the Locking Rushing units" },
+      radiant: { keywords: [], text: "taunt the Locking Rushing units" },
     };
     const cf = renderFace({ defId: plain.id, def: plain, radiant: false });
     expect(cf.querySelectorAll("strong")).toHaveLength(0);
-    expect(one(cf, ".card-text").textContent).toBe("taunt the Locked Rushing units");
+    expect(one(cf, ".card-text").textContent).toBe("taunt the Locking Rushing units");
   });
 
   it(
@@ -540,14 +541,14 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 attack per heads and +2 health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 7 coins. Gain +2 Attack per heads and +2 Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
     expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["7", "+2", "+2"]);
   });
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    // Patch v0.3.9 adds "Paid (3): Equip." to both faces, below the keyword line.
+    // Patch v0.3.10 adds "Paid (3): Equip." to both faces, below the keyword line.
     expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nPaid (3): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
@@ -672,7 +673,7 @@ describe("B15: length tiers, and useFitText without layout", () => {
       ["core-008", true, "s"],
       ["core-t-felinor", true, "s"],
       ["core-052", false, "l"],
-      // Patch v0.3.9 shortened Silly Silas's Radiant text by a tier.
+      // Patch v0.3.10 shortened Silly Silas's Radiant text by a tier.
       ["core-052", true, "l"],
       ["core-051", false, "l"],
       ["core-051", true, "xl"],
@@ -923,7 +924,7 @@ describe("R1382: a card with every tribal tag prints All Tribes", () => {
 
 describe("R1107: a granted Death ability prints on its own line", () => {
   it("R1107 prints a granted ability after the gained keywords and inside the printed text", () => {
-    const grant = "Death: Add 1 random Book card to your hand.";
+    const grant = "Death: Add 1 random Book to your hand.";
     const cf = catalogFace("meditative-058", false, "full", { inPlay: { grants: [grant] } });
     const text = one(cf, ".card-text");
     const granted = text.querySelectorAll(".cf-text-granted");
@@ -978,11 +979,18 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     }
   });
 
-  it("a shortened Summit keeps its whole text in the rules box's tooltip", () => {
+  it("#912: with hover previews on (the default) the rules box has no tooltip, the preview has the whole text", () => {
     const box = summitBox(10);
     expect(box.getAttribute("data-short")).toBe("true");
     expect(box.textContent).toContain("Ascent 10: Win the game.");
     expect(box.textContent).not.toContain("Ascent 0:");
+    expect(box.hasAttribute("title")).toBe(false);
+  });
+
+  it("#912: with hover previews off, a shortened Summit keeps its whole text in the rules box's tooltip", () => {
+    writeCardSettings({ hoverPreviews: false });
+    const box = summitBox(10);
+    expect(box.getAttribute("data-short")).toBe("true");
     const whole = faceModel({ defId: SUMMIT, def: def(SUMMIT), radiant: false }).text.full;
     expect(box.getAttribute("title")).toBe(whole);
     expect(box.getAttribute("title")).toContain("Ascent 0:");
@@ -993,7 +1001,6 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     expect(whole.hasAttribute("data-short")).toBe(false);
     expect(whole.textContent).toContain("Ascent 0:");
     expect(whole.textContent).toContain("Ascent 10:");
-    expect(whole.getAttribute("title")).toContain("Ascent 10:");
     cleanup();
 
     // A level past the printed lines falls back to the whole text rather than hiding any.
@@ -1008,7 +1015,6 @@ describe("issue #814: long faces truncate with an ellipsis and keep their whole 
     const heroic = one(container, ".card-text");
     expect(heroic.hasAttribute("data-short")).toBe(false);
     expect(heroic.textContent).toContain("Gain one of 13 random powers");
-    expect(heroic.getAttribute("title")).toBe(faceModel({ defId: "core-098", def: def("core-098"), radiant: false }).text.full);
   });
 });
 

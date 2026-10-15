@@ -401,7 +401,7 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
 
 #[test]
 fn r1202_r831006_several_units_ask_nothing_a_random_one_makes_the_attack_and_seeds_reach_each() {
-    // Patch v0.3.9: the Unit is the match rng's, not the controller's pick.
+    // Patch v0.3.10: the Unit is the match rng's, not the controller's pick.
     let mut seen: Vec<String> = Vec::new();
     for n in 0..12 {
         let mut state = playing(&format!("mb22-pick-{n}"));

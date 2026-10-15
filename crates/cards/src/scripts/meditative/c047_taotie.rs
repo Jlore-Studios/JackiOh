@@ -11,7 +11,40 @@
 //! and texts joined; the eaten card ceases to exist with no Death. With no enemy permanent, nothing
 //! is fused; an Immutable 饕餮 eats nothing (R23).
 
+use jackioh_engine::effects::fuse_cards;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-047";
+
+fn taotie(radiant: bool) -> Script {
+    Script {
+        end_of_turn: Some(hook(move |ctx| {
+            let Some(me) = ctx.live_self() else {
+                return vec![];
+            };
+            let id = me.id.clone();
+            let mut fusions = vec![fuse_cards(json_as(json!({
+                "targetInstanceId": id,
+                "randomIngredient": { "side": "enemy", "zones": ["field"] },
+            })))];
+            if radiant {
+                fusions.push(fuse_cards(json_as(json!({
+                    "targetInstanceId": id,
+                    "randomIngredient": { "side": "enemy", "zones": ["library"] },
+                }))));
+            }
+            fusions
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: taotie(false),
+        radiant: taotie(true),
+    }
+}
 
 // M #47 饕餮 — SPEC §8.8 row 47, BUILD M10 row M 47: "At your end of turn only, one random enemy
 // permanent (tops of piles, both rows, face-down ones included, never an Immutable one) is fused
@@ -383,7 +416,7 @@ mod tests {
                 assert_eq!(after.id, before.id);
                 // Both fusions summed their stats (R77), and the kept card is Radiant, so it shows
                 // the fusion's radiant form, the sum of the radiant forms: 16 + 6 + 6 attack and
-                // 16 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.9).
+                // 16 + 8 + 8 health (a Radiant Duplicating Felinors is 6/8 since patch v0.3.10).
                 assert!(after.radiant);
                 s.expect_stats(&after, json!({ "attack": 28, "health": 32 }));
             }

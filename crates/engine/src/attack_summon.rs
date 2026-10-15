@@ -2,7 +2,7 @@
 //! attack pipeline (§4.2).
 //!
 //! A replacement (R1202; MD-E14): on every attack Windfast makes, declared or forced, a random Unit
-//! of its controller's hand (the match rng's; patch v0.3.9, R831006: their pick before) is summoned
+//! of its controller's hand (the match rng's; patch v0.3.10, R831006: their pick before) is summoned
 //! into the leftmost open unit zone (R64, no Cry, R1) and makes that attack on the same target as a
 //! forced attack (R53), with its own trap window and combat; Windfast neither strikes nor is struck. The
 //! base face bounces the substitute after its combat if it is still on the field. With no Unit in

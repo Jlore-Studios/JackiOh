@@ -1240,7 +1240,7 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
 
         let ran = run(&mut state, &[turning("right")], as_p1());
 
-        // A rule only `subsystems/rotation.rs` implements: since patch v0.3.9 a Lock refuses plays,
+        // A rule only `subsystems/rotation.rs` implements: since patch v0.3.10 a Lock refuses plays,
         // not a rotation (R831000), so the card enters the locked zone and nothing is bounced.
         assert_eq!(where_is(&state, &blocked), "p1 units 2");
         assert!(ids_of_type(&ran.events, "bounced").is_empty());

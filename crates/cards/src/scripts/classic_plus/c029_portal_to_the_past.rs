@@ -4,17 +4,43 @@
 //! The board is the caster's last board, a setup input frozen into the match (B5 E30,
 //! `subsystems/lastBoards`); an empty one (hotseat, a first game) gives nothing (R129).
 
+use jackioh_engine::effects::{add_from_last_board, add_random_from_last_board, discover_from_last_board};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-029";
+
+/// The step the Discover's answer re-enters (§10.6).
+const PICKED: &str = "picked";
+
+/// "It costs (0)", "Each costs (0)": the declared number `setCost` (R386), less being better.
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|_ctx| vec![discover_from_last_board(json_as(json!({ "step": PICKED })))])),
+        resume: IndexMap::from([(
+            PICKED,
+            hook(|ctx| vec![add_from_last_board(json_as(json!({ "costOverride": param(&*ctx, "setCost") })))]),
+        )]),
+        ..Script::default()
+    };
+    let radiant = Script {
+        cry: Some(hook(|ctx| {
+            vec![add_random_from_last_board(json_as(json!({
+                "count": param(&*ctx, "cards"),
+                "costOverride": param(&*ctx, "setCost"),
+            })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C+ #29 Portal to the Past — SPEC §8.7 row 29, R417, R564; BUILD M9 Classic+ row C+ 29. The last
 // board is a setup input frozen into the match (B5 E30); `scenario({ lastBoards })` hands it to
 // `createGame` as the server does. The engine's own proofs (the reader, the freeze, the fold) are in
 // packages/engine/test/lastBoards.test.ts.
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -97,7 +123,7 @@ mod tests {
                     { "key": "setCost", "base": 0, "radiant": 0, "better": "down", "step": 1, "min": 0 }
                 ])
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(!scripts.base.resume.is_empty());
             assert!(scripts.radiant.resume.is_empty());
         }

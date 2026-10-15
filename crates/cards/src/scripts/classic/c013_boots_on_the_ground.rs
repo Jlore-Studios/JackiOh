@@ -14,7 +14,28 @@
 //! with no Cry (R1), a Trap face-down (R33); nothing when there is none or its row is full. The
 //! numbers are the declared `draw` and `recruits` (R386), read through `param`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-013";
+
+pub fn script() -> CardScripts {
+    // "After this attacks, draw {draw}."
+    let base = Script {
+        after_attack: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        ..Script::default()
+    };
+
+    // "After this attacks, Recruit {recruits|card|cards}.": one top-down scan per recruit.
+    let radiant = Script {
+        after_attack: Some(hook(|ctx| {
+            (0..param(&*ctx, "recruits"))
+                .map(|_| recruit(json_as(json!({ "player": "self" }))))
+                .collect()
+        })),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // C #13 Boots on the Ground — SPEC §8.6 row 13, BUILD M9 Classic row C 13: draws 1 after each combat it
 // attacked in, forced ones included, even when it died (last-known state, R78); defending draws nothing.
@@ -72,7 +93,7 @@ mod tests {
     #[test]
     fn declares_its_text_as_an_afterattack_hook_on_each_face_and_no_trigger() {
         assert_eq!(crate::card_def(ID).id, BOOTS);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert!(base.after_attack.is_some());
         assert!(radiant.after_attack.is_some());
         assert!(base.triggers.is_empty());

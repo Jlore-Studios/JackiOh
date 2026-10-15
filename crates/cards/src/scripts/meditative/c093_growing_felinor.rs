@@ -12,19 +12,43 @@
 //!   (R64): a fresh card, on its Radiant face when this is the Radiant face (R1180). With no zone open it
 //!   summons nothing. A named token, so no pool and no R387.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-093";
+
+/// The next size up the chain, which this card's Death summons (R1180).
+const NEXT: &str = "meditative-093-1";
+
+fn growing(radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            never_defense: Some(true),
+            ..StaticFlags::default()
+        }),
+        death: Some(hook(move |_ctx| {
+            vec![summon(json_as(
+                json!({ "defId": NEXT, "player": "self", "radiant": radiant }),
+            ))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: growing(false),
+        radiant: growing(true),
+    }
+}
 
 // M #93 Growing Felinor — SPEC §8.8 row 93, BUILD M10 row M 93: "It can't switch to Defense; its
 // Death summons a base Growing Felinor Sr (M 93.1) into your leftmost open zone (MD-E19), none at
 // a full board; radiant 2/2, Divine Shield, Rush, and the Sr is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, NEXT, script};
     use jackioh_engine::layers::keywords_of;
     use jackioh_engine::testkit::*;
-
-    /// The next size up the chain, which this card's Death summons (R1180).
-    const NEXT: &str = "meditative-093-1";
 
     const P1: PlayerId = PlayerId::P1;
 
@@ -69,7 +93,7 @@ mod tests {
             assert_eq!([def.radiant.attack, def.radiant.health], [Some(2), Some(2)]);
             assert!(def.base.keywords.is_empty());
             assert_eq!(def.radiant.keywords, vec![Keyword::DivineShield, Keyword::Rush]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.never_defense),
                 Some(true)

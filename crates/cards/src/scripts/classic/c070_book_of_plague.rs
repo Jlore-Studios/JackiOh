@@ -5,7 +5,24 @@
 //! over every permanent on the field (face-down cards offered by id alone, R177); with none on the field
 //! nothing is placed. Placements are individual (C #53 answers each; C #27 multiplies). Count is `tokens` (R386).
 
+use jackioh_engine::effects::place_plague_tokens;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-070";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![place_plague_tokens(json_as(json!({ "count": param(&*ctx, "tokens") })))]
+        })),
+        ..Script::default()
+    };
+    CardScripts {
+        // The same script: the Radiant face's 10 is its declared `tokens`.
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #70 Book of Plague — SPEC §8.6 row 70, BUILD M9 Classic row C 70: Five placements of one Plague
 // Token on the permanent a single prompt names (R689), face-down ones by id alone (R177); with no
@@ -14,7 +31,6 @@ pub const ID: &str = "classic-070";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -105,7 +121,7 @@ mod tests {
             json!([{ "key": "tokens", "base": 5, "radiant": 10, "better": "up", "step": 1, "min": 1 }])
         );
         // The Radiant face is the base face, its Cry the same one.
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.base.cry.as_ref().expect("a Cry"),
             scripts.radiant.cry.as_ref().expect("a Cry")

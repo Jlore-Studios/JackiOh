@@ -177,6 +177,7 @@ thread_local! {
     static SCRIPTS_OVERRIDE: Cell<Option<&'static IndexMap<String, CardScripts>>> = const { Cell::new(None) };
     static WIN_RATES_OVERRIDE: Cell<Option<&'static crate::win_rates::WinRateTable>> =
         const { Cell::new(None) };
+    static SHIPPED_OVERRIDE: Cell<Option<&'static [crate::catalog::ShippedCatalog]>> = const { Cell::new(None) };
 }
 
 /// TS `registerCatalog(defs)` for this thread: the catalog `catalog::registered_catalog()` answers
@@ -227,6 +228,18 @@ pub fn win_rates_override() -> Option<&'static crate::win_rates::WinRateTable> {
     WIN_RATES_OVERRIDE.with(Cell::get)
 }
 
+/// R767000: the shipped catalogs `catalog::shipped_catalog()` finds by version on this thread, in
+/// place of the build's, until the thread ends or `clear_overrides()` runs. Leaked, like the catalog.
+pub fn register_shipped(catalogs: Vec<crate::catalog::ShippedCatalog>) {
+    let catalogs: &'static [crate::catalog::ShippedCatalog] = Box::leak(catalogs.into_boxed_slice());
+    SHIPPED_OVERRIDE.with(|cell| cell.set(Some(catalogs)));
+}
+
+/// The shipped catalogs this thread registered, if any.
+pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
+    SHIPPED_OVERRIDE.with(Cell::get)
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {
@@ -234,6 +247,7 @@ pub fn clear_overrides() {
     CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(None));
     SCRIPTS_OVERRIDE.with(|cell| cell.set(None));
     WIN_RATES_OVERRIDE.with(|cell| cell.set(None));
+    SHIPPED_OVERRIDE.with(|cell| cell.set(None));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -508,6 +522,10 @@ pub struct ScenarioOptions {
     /// R678: the two other games' boards a Glitch may lay down, the `create_game` input (seat order).
     #[serde(default)]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R915006: the game's custom cards, the `create_game` input, which the sides may then name by
+    /// id. Their scripts run only under a host lent with `custom::with_custom_scripts`.
+    #[serde(default)]
+    pub custom: Option<Vec<crate::wire::CustomCard>>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -538,6 +556,7 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
             state
                 .transient_defs
                 .get(&card.def_id)
+                .or_else(|| state.custom_defs.get(&card.def_id))
                 .map(|def| def.name.as_str())
         })
         .unwrap_or("?");
@@ -550,11 +569,13 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
     )
 }
 
-/// Every def the engine can see: the registered catalog plus this state's transient defs (Fuse).
+/// Every def the engine can see: the registered catalog plus this state's transient defs (Fuse) and
+/// custom cards' (R915000).
 fn visible_defs(state: &GameState) -> Vec<&CardDef> {
     registered()
         .values()
         .chain(state.transient_defs.values())
+        .chain(state.custom_defs.values())
         .collect()
 }
 
@@ -1087,6 +1108,7 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
         decks: (deck.clone(), deck),
         last_boards: opts.last_boards.clone(),
         glitch_boards: opts.glitch_boards.clone(),
+        custom_cards: opts.custom.clone(),
         ..CreateGameOptions::default()
     });
 

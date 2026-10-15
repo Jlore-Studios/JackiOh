@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::wire::{
     CardElement, CardType, CraftHatKind, CraftHatPrice, CraftKeywordPrice, CraftVerb, CraftVerbPrice,
-    GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
+    DuosTeamRules, GlitchOutcome, KeywordKind, Rarity, Tag, string_union,
 };
 
 /// §2.6
@@ -463,6 +463,7 @@ pub const LAST_FACE_UP_SKIPPED_TAGS: &[Tag] = &[Tag::Ai];
 /// B3.2 rule 7, R384: "Activate ♾️" is any number of uses per card per turn, bounded here so a game
 /// still ends (a fuzz game's random policy may keep activating). Every ♾️ card in the sets is bounded
 /// by a resource too (units to Tribute, Plague Counters to consume).
+/// R884000: an "Activate N" a Buff or KY's Constant took past it counts this many uses too.
 pub const ACTIVATE_UNLIMITED_CAP: i32 = 100;
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
@@ -695,7 +696,7 @@ pub const KY_TEST_REWARDS: KyTestRewards = KyTestRewards {
 pub const PAPAYA_ROWS: i32 = 4;
 /// R422: the most cells a curve is drawn through — four fix a cubic, the highest degree it may have.
 pub const PAPAYA_MAX_CELLS: i32 = 4;
-/// R831003: how many random cells each Discover of the curve offers (patch v0.3.9).
+/// R831003: how many random cells each Discover of the curve offers (patch v0.3.10).
 pub const PAPAYA_OFFERS: i32 = 3;
 
 // Classic+ #65 Two Grapes and #66 Vine of Grapes (SPEC §8.7, R382, BUILD §2).
@@ -712,7 +713,7 @@ pub struct GrapeOdds {
 pub type RollOdds = GrapeOdds;
 
 /// R960: Auspicious Rock's table (Meditative #39.1, MD-C1): Dud 20, Jade 75, Red Jade 5 (patch
-/// v0.3.9, #831; Jade 70 and Red Jade 10 before), ordered
+/// v0.3.10, #831; Jade 70 and Red Jade 10 before), ordered
 /// worst to best (Dud < Jade < Red Jade). A distribution, so config and not params: the odds must
 /// add to 100.
 pub const AUSPICIOUS_ROCK_ODDS: &[RollOdds] = &[
@@ -1509,9 +1510,126 @@ pub const OVERCOMING_CYCLE: [CardElement; 5] = [
     CardElement::Metal,
 ];
 
+/// R923002: the most health the practice sandbox's tools may set a hero to (`sandbox.rs`). A hero's
+/// health is set at least to 1: the tools arrange a board, and a hero at 0 would end the game.
+pub const SANDBOX_HERO_HEALTH_MAX: i32 = 99;
+/// R923002: the most Armor the sandbox's tools may give a hero.
+pub const SANDBOX_ARMOR_MAX: i32 = 99;
+/// R923002: the most mana, current or maximum, the sandbox's tools may set. More than `MAX_MANA`, so a
+/// board that needs a big turn can be tried; the next refresh reads the maximum as it reads any other.
+pub const SANDBOX_MANA_MAX: i32 = 10;
+/// R923002: the most cards one of the sandbox's draws takes.
+pub const SANDBOX_DRAW_MAX: i32 = 10;
+
+// ---------------------------------------------------------------------------------------------
+// Custom cards (#915, SPEC §12, R915000–R915009)
+// ---------------------------------------------------------------------------------------------
+
+/// R915000: what every custom card's id begins with. No catalog id does.
+pub const CUSTOM_ID_PREFIX: &str = "custom-";
+/// R915000: the longest custom id, the prefix included: room for the server's 32 hex digits and more.
+pub const CUSTOM_ID_MAX_LENGTH: usize = 64;
+/// R915001: the longest custom card name, in characters, as a deck's (`DECK_NAME_MAX_LENGTH`).
+pub const CUSTOM_NAME_MAX_LENGTH: usize = 40;
+/// R915001: the longest custom card text, in characters: two lines of a card face.
+pub const CUSTOM_TEXT_MAX_LENGTH: usize = 240;
+/// R915001: the most a custom card costs, as the catalog's dearest cards (mana past `MAX_MANA` is gained).
+pub const CUSTOM_COST_MAX: i32 = 10;
+/// R915001: the highest attack a custom Unit prints.
+pub const CUSTOM_ATTACK_MAX: i32 = 12;
+/// R915001: the highest health a custom Unit prints.
+pub const CUSTOM_HEALTH_MAX: i32 = 12;
+/// R915001: the highest attack or health a custom Unit's Radiant face prints, twice the base caps.
+pub const CUSTOM_RADIANT_STAT_MAX: i32 = 24;
+/// R915001: the most keywords a custom Unit prints.
+pub const CUSTOM_KEYWORDS_MAX: usize = 4;
+/// R915001: the keywords a custom Unit may print, and the card kit may give: the game's own simple
+/// combat keywords, none of which takes a number.
+pub const CUSTOM_KEYWORDS: &[KeywordKind] = &[
+    KeywordKind::Taunt,
+    KeywordKind::Rush,
+    KeywordKind::Charge,
+    KeywordKind::FirstStrike,
+    KeywordKind::Poisonous,
+    KeywordKind::Lifesteal,
+    KeywordKind::Reborn,
+    KeywordKind::DivineShield,
+    KeywordKind::Trample,
+    KeywordKind::Windfury,
+    KeywordKind::Ranged,
+    KeywordKind::Flying,
+];
+/// R915001: the most numbers (`{key}`s) a custom card prints.
+pub const CUSTOM_PARAMS_MAX: usize = 6;
+/// R915001: the longest name of a custom card's number.
+pub const CUSTOM_PARAM_KEY_MAX_LENGTH: usize = 16;
+/// R915001: the highest value a custom card's number prints, on either face.
+pub const CUSTOM_PARAM_MAX: i32 = 20;
+/// R915001: the longest card-kit script, in bytes of UTF-8.
+pub const CUSTOM_SOURCE_MAX_BYTES: usize = 8_192;
+/// R915001: the longest builder's model a custom card keeps, in bytes of JSON.
+pub const CUSTOM_BUILDER_MAX_BYTES: usize = 16_384;
+
+// ---------------------------------------------------------------------------------------------
+// Duos co-op (#936, fullsend SPEC S1): two 1v1 duels side by side whose teams share a life pool and
+// pass cards to each other (`crate::duos`, `crate::duos_life`).
+// ---------------------------------------------------------------------------------------------
+
+/// B12: each Duos player's own HP, its duel hero's health.
+pub const DUOS_OWN_HEALTH: i32 = 20;
+/// B12: a team's shared pool, which its seats draw on once their own HP is spent (B13).
+pub const DUOS_POOL_HEALTH: i32 = 20;
+/// B30: the Hard AI team's pool.
+pub const DUOS_POOL_HEALTH_HARD: i32 = 30;
+/// B19, B20: the mana a pass costs its passer.
+pub const DUOS_PASS_COST: i32 = 1;
+/// B30: what a pass costs the Medium and Hard AI teams: nothing.
+pub const DUOS_FREE_PASS_COST: i32 = 0;
+/// B19: the passes a seat may make in one round.
+pub const DUOS_PASS_CAP: i32 = 10;
+/// The rules a human team plays by, and the Easy AI team (B30).
+pub const DUOS_HUMAN_TEAM: DuosTeamRules = DuosTeamRules {
+    own_health: DUOS_OWN_HEALTH,
+    pool_health: DUOS_POOL_HEALTH,
+    pass_cost: DUOS_PASS_COST,
+    pass_cap: DUOS_PASS_CAP,
+};
+
+/// The AI team's rules by difficulty (B30): Easy = DUOS_HUMAN_TEAM; Medium = pass_cost 0;
+/// Hard = pass_cost 0 and pool_health DUOS_POOL_HEALTH_HARD. Each AI seat keeps §9.9's
+/// `AI_DIFFICULTY` handicap besides.
+pub fn duos_ai_team(difficulty: Difficulty) -> DuosTeamRules {
+    match difficulty {
+        Difficulty::Easy => DUOS_HUMAN_TEAM,
+        Difficulty::Medium => DuosTeamRules {
+            pass_cost: DUOS_FREE_PASS_COST,
+            ..DUOS_HUMAN_TEAM
+        },
+        Difficulty::Hard => DuosTeamRules {
+            pass_cost: DUOS_FREE_PASS_COST,
+            pool_health: DUOS_POOL_HEALTH_HARD,
+            ..DUOS_HUMAN_TEAM
+        },
+    }
+}
+
+/// The most passes `duos::reduce`'s settle makes after one action: each pass opens a round or ends a
+/// seat's turn, and a round takes each duel at least one player-turn on, so the duels' own turn cap
+/// (R2) ends the game well inside it. A backstop, as `end_due_turns`' guard is.
+pub const DUOS_SETTLE_CAP: usize = 4 * TURN_CAP_PLAYER_TURNS as usize;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_ai_teams_rules_follow_their_tier() {
+        assert_eq!(duos_ai_team(Difficulty::Easy), DUOS_HUMAN_TEAM);
+        assert_eq!(duos_ai_team(Difficulty::Medium).pass_cost, DUOS_FREE_PASS_COST);
+        assert_eq!(duos_ai_team(Difficulty::Medium).pool_health, DUOS_POOL_HEALTH);
+        assert_eq!(duos_ai_team(Difficulty::Hard).pool_health, DUOS_POOL_HEALTH_HARD);
+        assert_eq!(duos_ai_team(Difficulty::Hard).pass_cap, DUOS_PASS_CAP);
+    }
 
     #[test]
     fn fib_clamps_and_fatigue_is_n() {

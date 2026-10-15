@@ -254,11 +254,12 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_writes_a_count_with_the_words_that_agree_with_it_so_the_text_reads_right_at_every_value() {
-        let pickle = card_def("classic-008"); // Pickle: "they discard {discard|card|cards}"
-        assert!(pickle.base.text.contains("{discard|card|cards}"));
-        assert!(fill_params(&pickle, FaceKind::Base, None).contains("they discard 1 card,"));
-        assert!(fill_params(&pickle, FaceKind::Radiant, None).contains("they discard 2 cards,"));
-        assert!(filled_with(&pickle, FaceKind::Base, "discard", 3).contains("they discard 3 cards,"));
+        // Pickle: "they discard {discard|random card|random cards}" (#911 says the discard is random).
+        let pickle = card_def("classic-008");
+        assert!(pickle.base.text.contains("{discard|random card|random cards}"));
+        assert!(fill_params(&pickle, FaceKind::Base, None).contains("they discard 1 random card,"));
+        assert!(fill_params(&pickle, FaceKind::Radiant, None).contains("they discard 2 random cards,"));
+        assert!(filled_with(&pickle, FaceKind::Base, "discard", 3).contains("they discard 3 random cards,"));
         assert_eq!(
             serde_json::to_value(param_placeholders("Draw {draw|card|cards}, then {damage}."))
                 .expect("placeholders serialise"),
@@ -450,7 +451,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen marked
         // before (C #46's and C #54's among them, R749), less C #59's tokens, which both faces print
-        // since patch v0.3.9; and the Meditative set's twenty-three, less M #1's draw, printed on both
+        // since patch v0.3.10; and the Meditative set's twenty-three, less M #1's draw, printed on both
         // faces since then too.
         let meditative = radiant_only
             .iter()

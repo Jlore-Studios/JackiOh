@@ -230,18 +230,6 @@ fn label_of(state: &GameState, selection: &Selection, chooser: PlayerId) -> Stri
     }
 }
 
-fn key_of(selection: &Selection) -> String {
-    match selection {
-        Selection::Instance { instance_id } => format!("instance:{instance_id}"),
-        Selection::Hero { player } => format!("hero:{player}"),
-        Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
-        Selection::Mode { option } => format!("mode:{option}"),
-        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
-        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
-        Selection::None => "none".to_string(),
-    }
-}
-
 /// The mode declarations still to ask; false while one is waiting (R81).
 fn ask_modes(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> bool {
     let modes = declared_modes(sink.state, card);
@@ -333,7 +321,7 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
         let prompt_options: Vec<PromptOption> = options
             .iter()
             .map(|selection| PromptOption {
-                key: key_of(selection),
+                key: crate::prompts::option_key(selection),
                 label: label_of(sink.state, selection, run.controller),
                 selection: selection.clone(),
                 cost: None,

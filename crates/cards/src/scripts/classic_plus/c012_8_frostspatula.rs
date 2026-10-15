@@ -117,7 +117,7 @@ pub fn script() -> CardScripts {
 // and its Death, as a Unit or destroyed in the backrow (§4.5), summons a fresh copy of each for you,
 // tokens included, until your board is full, the originals staying in their owners' graveyards (R409);
 // `animated` and `deanimated` are public; radiant 14/6 and the copies are Radiant" (10/3 and 20/6
-// before patch v0.3.9).
+// before patch v0.3.10).
 
 /// `describe("C+ #12.8 Frostspatula")`.
 #[cfg(test)]

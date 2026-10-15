@@ -228,7 +228,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
-  // Patch v0.3.9 (C+ #62, R831003).
+  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
+  // #831's patch (C+ #62, R831003).
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
 };
 
@@ -315,6 +316,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   secretChosen: "trapSet",
   secretRevealed: "trapSting",
   predicted: "notify",
+  // #915 (R915004).
+  scriptFailed: "notify",
   curveDrawn: "whoosh",
 };
 

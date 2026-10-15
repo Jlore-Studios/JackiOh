@@ -59,7 +59,7 @@ mod tests {
     /// Meditative set shipping, this card (R1240, R1420).
     const EDITIONS: [&str; 3] = [CORE_CHAOS, PLUS_CHAOS, ID];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (patch
-    /// v0.3.9, #831) and M #91.1.
+    /// v0.3.10, #831) and M #91.1.
     const PRIME_TOKENS: [&str; 5] = [
         "classicplus-038-1",
         "classicplus-046-1",

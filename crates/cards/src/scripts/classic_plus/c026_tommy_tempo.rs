@@ -1,10 +1,65 @@
 //! C+ #26 Tommy Tempo (SPEC §8.7 row 26): (3) Unit, Human, Common, 5/5 → 10/10. Taunt, cast on draw;
 //! that cast ends your turn (Radiant: after {actions} more action, R415). No open zone: to the hand
-//! uncast (R560). Patch v0.3.9 (#831): 5/5 (9/9 before), and "Cry: Lose all your mana. Gain
+//! uncast (R560). Patch v0.3.10 (#831): 5/5 (9/9 before), and "Cry: Lose all your mana. Gain
 //! +{per}/+{per} for each mana lost": played or cast on draw (R1), it loses the mana left once its price
 //! is paid, all of it on a free cast, and grows by it (R831010; Radiant +2/+2 a mana).
 
+use jackioh_engine::effects::{buff, gain_mana};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-026";
+
+/// Patch v0.3.10 (#831): "Lose all your mana. Gain +{per}/+{per} for each mana lost", the mana left
+/// once the play's price is paid, on a cast on draw too (R831010).
+fn tempo(ctx: &EffectContext<'_>) -> Vec<Effect> {
+    let lost = unspent_mana_of(&*ctx.state, ctx.controller);
+    if lost <= 0 {
+        return vec![];
+    }
+    let gain = lost * param(ctx, "per");
+    vec![
+        gain_mana(json_as(json!({ "amount": -lost }))),
+        buff(json_as(json!({ "target": { "of": "self" }, "attack": gain, "health": gain }))),
+    ]
+}
+
+fn cast_on_draw(ctx: &EffectContext<'_>) -> bool {
+    ctx.self_.as_ref().is_some_and(|me| is_cast_on_draw(&*ctx.state, me))
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            let mut effects = tempo(ctx);
+            if cast_on_draw(ctx) {
+                effects.push(end_turn(json_as(json!({}))));
+            }
+            effects
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            cast_on_draw: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| {
+            let mut effects = tempo(ctx);
+            if cast_on_draw(ctx) {
+                effects.push(end_turn_after_actions(json_as(json!({ "actions": param(&*ctx, "actions") }))));
+            }
+            effects
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C+ #26 Tommy Tempo (SPEC §8.7 row 26): Taunt; cast on draw (R70: free, counts as played) into
 // leftmost open unit zone, then your turn ends once the drawing effect's list resolves, as if you had
@@ -105,7 +160,7 @@ mod tests {
                 [Some(5), Some(5), Some(10), Some(10)]
             );
             assert_eq!(def.base.keywords, vec![Keyword::Taunt]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
             assert_eq!(scripts.radiant.static_flags.as_ref().and_then(|flags| flags.cast_on_draw), Some(true));
         }

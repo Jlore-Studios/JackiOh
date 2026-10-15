@@ -1147,7 +1147,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
             backrow_card.id
         );
 
-        // A Locked destination takes the card (R831000; it bounced it before patch v0.3.9).
+        // A Locked destination takes the card (R831000; it bounced it before patch v0.3.10).
         let mut locked = game("r14b");
         let entering = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
         lock_zone(&mut locked, slot(P1, UNITS, 3));

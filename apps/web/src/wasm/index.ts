@@ -10,38 +10,38 @@
 // the engine's `GameState` as plain JSON; the client keeps it behind its opaque `EngineState` brand
 // and never reads it (CLAUDE.md rule 7, SPEC §10.8).
 //
-// THE STRINGS. The module is an emscripten `MODULARIZE` factory (`crates/wasm`): its boundary is C,
-// so a string crosses as a pointer. `put` copies one into the module (`stringToNewUTF8`, on the one
-// emscripten heap Rust's allocator shares, so `jackioh_free` frees argument buffers and answers
-// alike); `take` reads an answer back (`UTF8ToString`) and frees it. Every call runs inside
-// `withArgs`, which frees every argument pointer after, thrown or returned. A binding that would
-// have thrown answers NULL instead, and `take` throws the message the binding stowed for
-// `jackioh_last_error` — which already names the binding, as the old thrown `Error` did.
-//
 // LOADING. Nothing here works until the module is instantiated:
-//   - `loadWasm()` fetches its bytes (as an asset beside the glue, in the page's bundle and in the
-//     practice worker's alike) and instantiates it (idempotent; one fetch however many callers).
-//     The page starts it at boot, and `main.tsx`'s `EngineGate` holds every screen that calls the
-//     engine until it resolves (#778), because the deck builder calls the validator synchronously;
-//     the practice worker awaits it before it handles a message.
-//   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a
-//     file URL, so `test/setup.ts` reads `pkg/jackioh_wasm.wasm` from disk and hands it over.
+//   - `loadWasm()` fetches and instantiates it (idempotent; one fetch however many callers). The page
+//     starts it at boot, and `main.tsx`'s `EngineGate` holds every screen that calls the engine until
+//     it resolves (#778), because the deck builder calls the validator synchronously; the practice
+//     worker awaits it before it handles a message.
+//   - `loadWasmSync(bytes)` instantiates it from bytes already in hand: jsdom has no fetch of a file
+//     URL, so `test/setup.ts` reads `pkg/jackioh_wasm_bg.wasm` from disk and hands it over.
 // Both call the module's own `init()` once, which registers the catalog and the card scripts with the
 // engine (what TypeScript's `registerAll()` did; nothing is left for the web to register).
 //
 // ERRORS. Where the TypeScript engine threw (a deck `createGame` refuses, a malformed argument), the
-// binding answers NULL and the wrapper throws an `Error` with the engine's message. `reduce` and
-// `beginGame` never throw on an illegal action: the refusal is `error` on the result. A panic is an
-// engine invariant broken; the panic hook prints it on the console, and the call throws "the engine
-// panicked".
+// binding throws an `Error` with the engine's message. `reduce` and `beginGame` never throw on an
+// illegal action: the refusal is `error` on the result. A panic is an engine invariant broken; the
+// panic hook prints it on the console, and the call throws "the engine panicked".
 
-import createModule from "./pkg/jackioh_wasm.js";
-import type { JackiohWasmModule } from "./pkg/jackioh_wasm.js";
+import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
+import * as normal from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type { LuauBindings } from "./luau.ts";
+
+import type { Action, ActionBody, CardDef, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
+import type { CustomCard } from "../wire/generated/CustomCard.ts";
+import type { CustomIssue } from "../wire/generated/CustomIssue.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
+import type { DuosAction } from "../wire/generated/DuosAction.ts";
+import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
+import type { DuosEvent } from "../wire/generated/DuosEvent.ts";
+import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
+import type { DuosTeamRules } from "../wire/generated/DuosTeamRules.ts";
+import type { DuosView } from "../wire/generated/DuosView.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
 import type { ReplayOpen } from "../wire/generated/ReplayOpen.ts";
@@ -51,18 +51,72 @@ import type { Handicap } from "../wire/engineConfig.ts";
 import type { Decision, SearchBudget } from "../wire/ai.ts";
 
 // ---------------------------------------------------------------------------------------------
+// the module in use (R915009)
+// ---------------------------------------------------------------------------------------------
+
+/** The bindings every call below goes through: the normal module's exports, or the Luau module's. */
+type Bindings = Omit<LuauBindings, "check_custom_card">;
+
+const NORMAL: Bindings = normal;
+
+let engine: Bindings = NORMAL;
+let luau: Promise<LuauBindings> | null = null;
+
+/** The Luau module, imported and instantiated the first time anything asks (`luau.ts`). */
+function luauBindings(bytes?: BufferSource): Promise<LuauBindings> {
+  luau ??= import("./luau.ts")
+    .then(({ loadLuauBindings }) => loadLuauBindings(bytes))
+    .catch((cause: unknown) => {
+      luau = null;
+      throw cause;
+    });
+  return luau;
+}
+
+/**
+ * R915009: from now on run every engine, AI and validator call through the Luau module (`true`),
+ * which runs custom cards' scripts, or through the normal module (`false`, the default). The practice
+ * worker turns it on for a game with a custom card and off for any other, so a normal game never runs
+ * on Luau. `bytes`: the Luau module's, in jsdom tests.
+ */
+export async function useLuauModule(on: boolean, bytes?: BufferSource): Promise<void> {
+  engine = on ? await luauBindings(bytes) : NORMAL;
+}
+
+/** Whether the Luau module is the one in use. */
+export function luauModuleInUse(): boolean {
+  return engine !== NORMAL;
+}
+
+/**
+ * The creator's check of one custom card (#913, #919): the frame's issues, the script's problems and
+ * the definition the frame builds, which the preview draws.
+ */
+export type CustomCardCheck = { frame: CustomIssue[]; script: ScriptProblem[]; def: CardDef };
+
+/** One problem with a custom card's script: its line, when it has one, and what is wrong. */
+export type ScriptProblem = { line?: number; message: string };
+
+/**
+ * #919: check a custom card's frame (the engine's validator) and its script (the lint, Luau's
+ * compiler and the kit's own checks) in the Luau module, loading it if no one has. Starts no game.
+ */
+export async function checkCustomCard(card: CustomCard, bytes?: BufferSource): Promise<CustomCardCheck> {
+  const bindings = await luauBindings(bytes);
+  return parsed<CustomCardCheck>(bindings.check_custom_card(json(card)));
+}
+
+// ---------------------------------------------------------------------------------------------
 // loading
 // ---------------------------------------------------------------------------------------------
 
-let mod: JackiohWasmModule | null = null;
 let loaded = false;
 let loading: Promise<void> | null = null;
 const onLoad: (() => void)[] = [];
 
 function ready(): void {
   if (loaded) return;
-  if (mod === null) throw new Error("the engine is not instantiated");
-  mod._init();
+  engine.init();
   loaded = true;
   for (const run of onLoad.splice(0)) run();
 }
@@ -87,35 +141,23 @@ export function loadWasm(): Promise<void> {
   if (loading === null) {
     // The literal `new URL(…, import.meta.url)` is what Vite recognises and emits as an asset, in
     // the page's bundle and in the practice worker's alike.
-    loading = (async (): Promise<void> => {
-      const response = await fetch(new URL("./pkg/jackioh_wasm.wasm", import.meta.url));
-      if (!response.ok) throw new Error(`the engine could not be fetched: ${response.status}`);
-      mod = await createModule({ wasmBinary: await response.arrayBuffer() });
-      ready();
-    })().catch((cause: unknown) => {
-      loading = null;
-      throw cause;
-    });
+    loading = initWasm({ module_or_path: new URL("./pkg/jackioh_wasm_bg.wasm", import.meta.url) })
+      .then(() => {
+        ready();
+      })
+      .catch((cause: unknown) => {
+        loading = null;
+        throw cause;
+      });
   }
   return loading;
 }
 
-/**
- * Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent: a second call
- * resolves at once. Async: emscripten's factory always instantiates asynchronously.
- */
-export function loadWasmSync(bytes: BufferSource): Promise<void> {
-  if (loaded) return Promise.resolve();
-  if (loading === null) {
-    loading = (async (): Promise<void> => {
-      mod = await createModule({ wasmBinary: bytes });
-      ready();
-    })().catch((cause: unknown) => {
-      loading = null;
-      throw cause;
-    });
-  }
-  return loading;
+/** Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent. */
+export function loadWasmSync(bytes: BufferSource): void {
+  if (loaded) return;
+  initSync({ module: bytes });
+  ready();
 }
 
 /** Whether `loadWasm` or `loadWasmSync` has finished. */
@@ -124,57 +166,17 @@ export function wasmLoaded(): boolean {
 }
 
 /** Every call goes through here: a clear error before loading, and a panic named as one. */
-function call<T>(name: string, run: (m: JackiohWasmModule) => T): T {
-  if (!loaded || mod === null) {
+function call<T>(name: string, run: () => T): T {
+  if (!loaded) {
     throw new Error(`the engine is not loaded: await loadWasm() before calling ${name}`);
   }
   try {
-    return run(mod);
+    return run();
   } catch (cause) {
     if (typeof WebAssembly !== "undefined" && cause instanceof WebAssembly.RuntimeError) {
       throw new Error(`the engine panicked in ${name} (the console has its message): ${cause.message}`, { cause });
     }
     throw cause;
-  }
-}
-
-/**
- * Run `run` with an allocator for argument strings: every pointer it takes is freed after, thrown
- * or returned, through the module's one free function (see the header: arguments and answers share
- * the emscripten heap).
- */
-function withArgs<T>(name: string, run: (m: JackiohWasmModule, put: (value: string) => number) => T): T {
-  return call(name, (m) => {
-    const owned: number[] = [];
-    try {
-      return run(m, (value) => {
-        const ptr = m.stringToNewUTF8(value);
-        owned.push(ptr);
-        return ptr;
-      });
-    } finally {
-      for (const ptr of owned) m._jackioh_free(ptr);
-    }
-  });
-}
-
-/**
- * Read the answer at `ptr` and free it. NULL is the binding's failure: throw the message it stowed
- * for `jackioh_last_error`, which names the binding already.
- */
-function take(m: JackiohWasmModule, ptr: number): string {
-  if (ptr === 0) {
-    throw new Error(m.UTF8ToString(m._jackioh_last_error()));
-  }
-  const text = m.UTF8ToString(ptr);
-  m._jackioh_free(ptr);
-  return text;
-}
-
-/** A status answer: 0 is success, anything else throws the stowed message. */
-function check(m: JackiohWasmModule, status: number): void {
-  if (status !== 0) {
-    throw new Error(m.UTF8ToString(m._jackioh_last_error()));
   }
 }
 
@@ -186,10 +188,13 @@ function json(value: unknown): string {
 const STATE_MARK = "\u00A0";
 
 /**
- * A state as it crosses: `["\u00a0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
- * `state_of`). The mark dates to the `wasm-bindgen` glue and buys nothing on emscripten's
- * `stringToNewUTF8`, which walks the whole string either way; it stays so both sides keep one
- * shape, and no caller above this file ever sees it.
+ * A state as it crosses: `["\u00A0",<the state's JSON>]`, which the bindings unwrap (`crates/wasm`'s
+ * `state_of`). wasm-bindgen's glue copies a string into the module one character at a time up to its
+ * first non-ASCII character and hands the rest to `TextEncoder.encodeInto`, and a state's JSON is all
+ * ASCII, so its ~80 KB went through the per-character loop on every call (0.18 ms of a 0.24 ms crossing,
+ * measured in Node). The no-break space third in this text sends all but two characters through
+ * `encodeInto`. One `JSON.stringify` writes it, so no second string is built, and it stays one byte a
+ * character (a mark outside Latin-1, or one added with `+`, cost more than it saved).
  */
 function stateJson(state: GameState): string {
   return JSON.stringify([STATE_MARK, state]);
@@ -221,6 +226,10 @@ export type CreateGameArgs = {
   lastBoards?: readonly [readonly LastBoardCard[], readonly LastBoardCard[]];
   /** R678: the boards of two other games a Glitch may put on the field, in seat order. */
   glitchBoards?: readonly [readonly LastBoardCard[], readonly LastBoardCard[]];
+  /** R923000: a practice sandbox, whose dev tools (`sandbox` actions) only it accepts. */
+  sandbox?: boolean;
+  /** R915006: the game's custom cards, which only the Luau module runs (R915009); this one refuses them. */
+  customCards?: readonly CustomCard[];
 };
 
 /** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
@@ -241,91 +250,73 @@ function reduceResult(text: string, input: GameState): ReduceResult {
 }
 
 export function createGame(args: CreateGameArgs): GameState {
-  return withArgs("createGame", (m, put) => parsed<GameState>(take(m, m._create_game(put(json(args))))));
+  return call("createGame", () => parsed<GameState>(engine.create_game(json(args))));
 }
 
 export function beginGame(state: GameState): ReduceResult {
-  return withArgs("beginGame", (m, put) => reduceResult(take(m, m._begin_game(put(stateJson(state)))), state));
+  return call("beginGame", () => reduceResult(engine.begin_game(stateJson(state)), state));
 }
 
 export function reduce(state: GameState, action: Action): ReduceResult {
-  return withArgs("reduce", (m, put) =>
-    reduceResult(take(m, m._reduce(put(stateJson(state)), put(json(action)))), state),
-  );
+  return call("reduce", () => reduceResult(engine.reduce(stateJson(state), json(action)), state));
 }
 
 /** Everything `player` may legally do now. The client greys out the rest (BUILD M5-T2). */
 export function legalActions(state: GameState, player: PlayerId): ActionBody[] {
-  return withArgs("legalActions", (m, put) =>
-    parsed<ActionBody[]>(take(m, m._legal_actions(put(stateJson(state)), put(player)))),
-  );
+  return call("legalActions", () => parsed<ActionBody[]>(engine.legal_actions(stateJson(state), player)));
 }
 
 /** The only window the client has onto the game (SPEC §10.8). */
 export function viewFor(state: GameState, player: PlayerId): PlayerView {
-  return withArgs("viewFor", (m, put) =>
-    parsed<PlayerView>(take(m, m._view_for(put(stateJson(state)), put(player)))),
-  );
+  return call("viewFor", () => parsed<PlayerView>(engine.view_for(stateJson(state), player)));
 }
 
 /** The seat that owes the next action, or null when none does. */
 export function seatToAct(state: GameState): PlayerId | null {
-  return withArgs("seatToAct", (m, put) => {
-    const seat = take(m, m._seat_to_act(put(stateJson(state))));
+  return call("seatToAct", () => {
+    const seat = engine.seat_to_act(stateJson(state));
     return seat === "" ? null : (seat as PlayerId);
   });
 }
 
 /** SURFACE §5.2's hash: eight hex digits, TypeScript's `hashState` bit for bit. */
 export function hashState(state: GameState): string {
-  return withArgs("hashState", (m, put) => take(m, m._hash_state(put(stateJson(state)))));
+  return call("hashState", () => engine.hash_state(stateJson(state)));
 }
 
 /** Fold a recorded log from scratch (SPEC §9.2, §9.3). Throws on a setup `createGame` refuses. */
 export function fold(input: FoldInput): FoldResult {
-  return withArgs("fold", (m, put) => parsed<FoldResult>(take(m, m._fold(put(json(input))))));
+  return call("fold", () => parsed<FoldResult>(engine.fold(json(input))));
 }
 
 /** R768: a finished game's replay, its log checked against its catalog version and final hash. */
 export function replayOpen(input: FoldInput, record: ReplayRecord): ReplayOpen {
-  return withArgs("replayOpen", (m, put) =>
-    parsed<ReplayOpen>(take(m, m._replay_open(put(json(input)), put(json(record))))),
-  );
+  return call("replayOpen", () => parsed<ReplayOpen>(engine.replay_open(json(input), json(record))));
 }
 
 /** R768: steps [from, from + count) as `seat` saw them; continue at `from + steps.length`. */
 export function replayPage(checkpoints: ReplayCheckpoints, seat: PlayerId, from: number, count: number): ReplayPage {
-  return withArgs("replayPage", (m, put) =>
-    parsed<ReplayPage>(take(m, m._replay_page(put(json(checkpoints)), put(seat), from, count))),
-  );
+  return call("replayPage", () => parsed<ReplayPage>(engine.replay_page(json(checkpoints), seat, from, count)));
 }
 
 /** R417, R508: the board `seat` takes away. */
 export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] {
-  return withArgs("lastBoardFor", (m, put) =>
-    parsed<LastBoardCard[]>(take(m, m._last_board_for(put(stateJson(state)), put(seat)))),
-  );
+  return call("lastBoardFor", () => parsed<LastBoardCard[]>(engine.last_board_for(stateJson(state), seat)));
 }
 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
-  return withArgs("seatPlayedBy", (m, put) =>
-    take(m, m._seat_played_by(put(stateJson(state)), put(home))) as PlayerId,
-  );
+  return call("seatPlayedBy", () => engine.seat_played_by(stateJson(state), home) as PlayerId);
 }
 
 /** The card with this instance id, wherever it is, or undefined (TypeScript's `findInstance`). */
 export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return withArgs("findInstance", (m, put) =>
-    parsed<CardInstance | null>(take(m, m._find_instance(put(stateJson(state)), put(instanceId)))) ?? undefined,
-  );
+  return call("findInstance", () => parsed<CardInstance | null>(engine.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 /** R1341: the emote hand `seat` is dealt in the game seeded `seed`, as the server's actor deals it. */
 export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
-  return withArgs("dealEmoteHand", (m, put) =>
-    parsed<EmoteId[]>(take(m, m._deal_emote_hand(put(seed), put(seat)))),
-  );
+  return call("dealEmoteHand", () => parsed<EmoteId[]>(engine.deal_emote_hand(seed, seat)));
 }
 
 /**
@@ -335,8 +326,8 @@ export function dealEmoteHand(seed: string, seat: PlayerId): EmoteId[] {
  * built without it and throws). The hotseat route calls it for its E2E injection's `preview` alone.
  */
 export function previewSets(sets: readonly SetName[]): void {
-  withArgs("previewSets", (m, put) => {
-    check(m, m._preview_sets(put(json(sets))));
+  call("previewSets", () => {
+    engine.preview_sets(json(sets));
   });
 }
 
@@ -344,15 +335,98 @@ let catalogCache: CardDefs | null = null;
 
 /** The registered catalog (TypeScript's `registeredCatalog()`): the same object on every call. */
 export function registeredCatalog(): CardDefs {
-  return withArgs("registeredCatalog", (m) => {
-    catalogCache ??= parsed<CardDefs>(take(m, m._catalog()));
+  return call("registeredCatalog", () => {
+    catalogCache ??= parsed<CardDefs>(engine.catalog());
     return catalogCache;
   });
 }
 
 /** The catalog version compiled into the module (the newest entry of patches.json). */
 export function catalogVersion(): string {
-  return withArgs("catalogVersion", (m) => take(m, m._catalog_version()));
+  return call("catalogVersion", () => engine.catalog_version());
+}
+
+let carriedCache: readonly string[] | null = null;
+
+/**
+ * R767000: the older shipped versions the module carries, oldest first, so a practice game played on
+ * one of them replays under its own cards: those from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM`
+ * on. The same array on every call.
+ */
+export function carriedVersions(): readonly string[] {
+  return call("carriedVersions", () => {
+    carriedCache ??= parsed<string[]>(engine.carried_versions());
+    return carriedCache;
+  });
+}
+
+// ---------------------------------------------------------------------------------------------
+// Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat
+// ---------------------------------------------------------------------------------------------
+
+declare const duosStateBrand: unique symbol;
+
+/**
+ * The engine's `DuosState` (two `GameState`s and the wrapper's own fields), opaque: it holds all four
+ * hands and libraries, so the client passes it back and never reads it (CLAUDE.md rule 7). It crosses
+ * in the same envelope as a `GameState` (`stateJson`).
+ */
+export type DuosState = { readonly [duosStateBrand]: never };
+
+/** `duosCreate`'s options (the engine's `DuosCreateOptions`): four decks, one per seat. */
+export type DuosCreateArgs = {
+  seed: string;
+  decks: { a1: readonly string[]; a2: readonly string[]; b1: readonly string[]; b2: readonly string[] };
+  /** Deal from these definitions instead of the registered catalog (tests). */
+  catalog?: CardDefs;
+  /** Each team's rules; absent, DUOS_HUMAN_TEAM for both. */
+  teams?: { a: DuosTeamRules; b: DuosTeamRules };
+  /** §9.9's per-seat handicaps; an absent seat is a human's. */
+  handicaps?: Partial<Record<DuosSeat, Handicap>>;
+  /** R433: the seats whose deck was dealt rather than built. */
+  dealt?: readonly DuosSeat[];
+};
+
+/** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */
+export type DuosReduceResult = { state: DuosState; events: DuosEvent[]; error?: string };
+
+function duosStateJson(state: DuosState): string {
+  return JSON.stringify([STATE_MARK, state]);
+}
+
+/** As `reduceResult`: a refusal hands back the caller's own state object and no events. */
+function duosReduceResult(text: string, input: DuosState): DuosReduceResult {
+  const result = parsed<{ state: DuosState; events: DuosEvent[]; error?: string | null }>(text);
+  if (result.error === undefined || result.error === null) return { state: result.state, events: result.events };
+  return { state: input, events: [], error: result.error };
+}
+
+// The Duos bindings live in the normal module alone (`crates/wasm`'s `duos` feature, which only the
+// dev server's build turns on): a Duos game holds no custom card, so it never runs on the Luau module.
+
+/** A begun-able Duos game: two duels, seeded `<seed>:duel0` and `<seed>:duel1`. Throws on a deck it refuses. */
+export function duosCreate(args: DuosCreateArgs): DuosState {
+  return call("duosCreate", () => parsed<DuosState>(normal.duos_create(json(args))));
+}
+
+/** Both duels' setups, all four mulligans open at once (B1, B2). */
+export function duosBegin(state: DuosState): DuosReduceResult {
+  return call("duosBegin", () => duosReduceResult(normal.duos_begin(duosStateJson(state)), state));
+}
+
+/** One seat's action; an illegal one is refused in `error`, never thrown. */
+export function duosReduce(state: DuosState, action: DuosAction): DuosReduceResult {
+  return call("duosReduce", () => duosReduceResult(normal.duos_reduce(duosStateJson(state), json(action)), state));
+}
+
+/** Everything `seat` may do now: its duel's moves wrapped as `duel`, its passes, its concede. */
+export function duosLegalActions(state: DuosState, seat: DuosSeat): DuosActionBody[] {
+  return call("duosLegalActions", () => parsed<DuosActionBody[]>(normal.duos_legal_actions(duosStateJson(state), seat)));
+}
+
+/** The seat's `DuosView`: its own duel, its teammate's from the teammate's seat, both teams' life (B23). */
+export function duosViewFor(state: DuosState, seat: DuosSeat): DuosView {
+  return call("duosViewFor", () => parsed<DuosView>(normal.duos_view_for(duosStateJson(state), seat)));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -360,11 +434,7 @@ export function catalogVersion(): string {
 // ---------------------------------------------------------------------------------------------
 
 export function aiToAct(state: GameState, seat: PlayerId): boolean {
-  return withArgs("aiToAct", (m, put) => {
-    const answer = m._ai_to_act(put(stateJson(state)), put(seat));
-    if (answer < 0) throw new Error(m.UTF8ToString(m._jackioh_last_error()));
-    return answer !== 0;
-  });
+  return call("aiToAct", () => engine.ai_to_act(stateJson(state), seat));
 }
 
 /** The AI's own stream as it crosses: its seed and where it stands. */
@@ -381,9 +451,7 @@ export type DecideResult = { decision: Decision | null; rngCursor: number };
  * state, the stream and the budget.
  */
 export function decide(state: GameState, seat: PlayerId, request: DecideRequest, deadlineMs: number): DecideResult {
-  return withArgs("decide", (m, put) =>
-    parsed<DecideResult>(take(m, m._ai_decide(put(stateJson(state)), put(seat), put(json(request)), deadlineMs))),
-  );
+  return call("decide", () => parsed<DecideResult>(engine.ai_decide(stateJson(state), seat, json(request), deadlineMs)));
 }
 
 /** `buildAiDeck`'s options as they cross (`AiDeckOptions` plus the stream and the size). */
@@ -406,17 +474,13 @@ export type AiDeckRequest = StreamAt & {
 };
 
 export function buildAiDeck(request: AiDeckRequest): { deck: string[]; rngCursor: number } {
-  return withArgs("buildAiDeck", (m, put) =>
-    parsed<{ deck: string[]; rngCursor: number }>(take(m, m._build_ai_deck(put(json(request))))),
-  );
+  return call("buildAiDeck", () => parsed<{ deck: string[]; rngCursor: number }>(engine.build_ai_deck(json(request))));
 }
 
 /** §10.7's random policy (`subsystems.chooseAction`), drawing from `(rngSeed, rngCursor)`. */
 export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt): { action: ActionBody | null; rngCursor: number } {
-  return withArgs("chooseAction", (m, put) =>
-    parsed<{ action: ActionBody | null; rngCursor: number }>(
-      take(m, m._choose_action(put(stateJson(state)), put(seat), put(stream.rngSeed), stream.rngCursor)),
-    ),
+  return call("chooseAction", () =>
+    parsed<{ action: ActionBody | null; rngCursor: number }>(engine.choose_action(stateJson(state), seat, stream.rngSeed, stream.rngCursor)),
   );
 }
 
@@ -426,9 +490,7 @@ export function chooseAction(state: GameState, seat: PlayerId, stream: StreamAt)
  * nothing (CLAUDE.md rule 7).
  */
 export function craftPreview(recipe: CraftRecipe, cost: number): CraftPreview {
-  return withArgs("craftPreview", (m, put) =>
-    parsed<CraftPreview>(take(m, m._craft_preview(put(json(recipe)), cost))),
-  );
+  return call("craftPreview", () => parsed<CraftPreview>(engine.craft_preview(json(recipe), cost)));
 }
 
 /** The deck builder's numbers (`crates/ai/src/deck.rs`'s `AI_DECK`, SPEC §9.9, R1370), as it states them. */
@@ -466,8 +528,8 @@ let constantsCache: AiConstants | null = null;
 
 /** The AI's budgets, its shadow-ban ids and its deck builder's numbers, as the Rust AI states them. */
 export function aiConstants(): AiConstants {
-  return withArgs("constants", (m) => {
-    constantsCache ??= parsed<AiConstants>(take(m, m._constants()));
+  return call("constants", () => {
+    constantsCache ??= parsed<AiConstants>(engine.constants());
     return constantsCache;
   });
 }
@@ -491,8 +553,8 @@ export type EngineTables = {
 let tablesCache: EngineTables | null = null;
 
 export function engineTables(): EngineTables {
-  return withArgs("engineTables", (m) => {
-    tablesCache ??= parsed<EngineTables>(take(m, m._engine_tables()));
+  return call("engineTables", () => {
+    tablesCache ??= parsed<EngineTables>(engine.engine_tables());
     return tablesCache;
   });
 }
@@ -510,9 +572,11 @@ export type ValidatorCall =
   | "checkTrioDraft"
   | "checkImportRoom"
   | "trioConflicts"
-  | "normalizeName";
+  | "normalizeName"
+  | "validateCustomCard"
+  | "customDef";
 
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
-  return withArgs(name, (m, put) => parsed<T>(take(m, m._validator(put(name), put(json(input))))));
+  return call(name, () => parsed<T>(engine.validator(name, json(input))));
 }

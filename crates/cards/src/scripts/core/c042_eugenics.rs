@@ -1,8 +1,8 @@
 //! #42 Eugenics (SPEC §8.2). Spell, cost 2, Common.
 //!   Base:    "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a 30%
-//!             chance to become Radiant." (patch v0.3.9; it exiled 7 random cards before)
+//!             chance to become Radiant." (patch v0.3.10; it exiled 7 random cards before)
 //!   Radiant: "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes
-//!             Radiant." (patch v0.3.9: 100%, and no Lucky, since nothing is left to chance)
+//!             Radiant." (patch v0.3.10: 100%, and no Lucky, since nothing is left to chance)
 //!   Engine:  `exile_matching` over the library with `maxCost` 2 (R831014): each card's cost read per R65
 //!            as the clause resolves, so an X card out of play counts as 0, an embiggen card at its base
 //!            price, and a card's cost changes count; each exile is its own (R135). Then
@@ -14,7 +14,47 @@
 //! deck"), so an exiled card is never rolled. Two effects in one list is the right shape for that:
 //! §4.5/R59 puts the state check after the whole list, never between two effects of it.
 
+use jackioh_engine::effects::{exile_matching, radiant_chance};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-042";
+
+/// Patch v0.3.10 (#831): "Exile all cards in your deck that cost (2) or less", on both faces, each card's
+/// cost read per R65 as the clause resolves (an X card out of play is 0, an embiggen card its base
+/// price, R831014). It exiled 7 random cards before.
+const EUGENICS_MAX_COST: i32 = 2;
+
+/// "a 30% chance" on the base face; the Radiant face makes every card left Radiant, so nothing is left
+/// to chance there and it prints no Lucky (patch v0.3.10). The per-card probability `rng.chance` reads.
+const BASE_CHANCE: f64 = 0.3;
+const RADIANT_CHANCE: f64 = 1.0;
+
+/// The faces differ only in the chance (§6.1). Any Lucky given (`given_lucky_on`, R1438) still rolls the
+/// base face's chance twice a card. The exile runs first and the chance rolls over what is left.
+fn eugenics(chance: f64) -> Script {
+    Script {
+        // A Spell's script hangs off `cry`: that is its on-resolve hook (§10.9).
+        cry: Some(hook(move |ctx| {
+            let lucky = ctx.live_self().map_or(0, given_lucky_on);
+            let mut chance_args = json!({ "zone": "library", "chance": chance });
+            if lucky > 0 {
+                chance_args["lucky"] = json!(lucky);
+            }
+            vec![
+                exile_matching(json_as(json!({ "zones": ["library"], "maxCost": EUGENICS_MAX_COST }))),
+                radiant_chance(json_as(chance_args)),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: eugenics(BASE_CHANCE),
+        radiant: eugenics(RADIANT_CHANCE),
+    }
+}
 
 // #42 Eugenics (SPEC §8.2, §5.2, §6.1 Lucky, §10.7; R60, R65, R80, R831014).
 //
@@ -23,7 +63,7 @@ pub const ID: &str = "core-042";
 
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -159,7 +199,7 @@ mod tests {
         #[test]
         fn s10_9_the_base_face_is_one_exile_effect_followed_by_one_chance_effect_in_that_order() {
             assert_eq!(
-                effect_kinds(crate::scripts_of()[ID].clone().base.cry.as_ref()),
+                effect_kinds(script().base.cry.as_ref()),
                 vec!["exileMatching", "radiantChance"],
             );
         }
@@ -202,7 +242,7 @@ mod tests {
         }
 
         #[test]
-        fn r831014_it_prints_no_lucky_since_patch_v0_3_9() {
+        fn r831014_it_prints_no_lucky_since_patch_v0_3_10() {
             crate::register_all();
             let def = crate::card_def(ID);
             assert!(def.radiant.keywords.is_empty());
@@ -212,7 +252,7 @@ mod tests {
         #[test]
         fn s10_9_the_radiant_face_is_the_same_pair_of_effects_so_only_the_chance_changed() {
             assert_eq!(
-                effect_kinds(crate::scripts_of()[ID].clone().radiant.cry.as_ref()),
+                effect_kinds(script().radiant.cry.as_ref()),
                 vec!["exileMatching", "radiantChance"],
             );
         }

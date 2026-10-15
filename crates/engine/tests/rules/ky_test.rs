@@ -4,14 +4,12 @@
 //!
 //! Port of `packages/engine/test/kyTest.test.ts`.
 
-use serde::Serialize;
-
 use jackioh_engine::subsystems::ky_test::easy_problem;
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{in_hand, setup_catalog};
+use crate::rules::fixtures::harness::{in_hand, json_of, setup_catalog};
 use crate::rules::fixtures::ky_test::{
     FIXTURE_BANK, book, coin, four, gift, ky_test, ky_test_qd, ky_two, legend, register_ky_test_fixtures,
 };
@@ -83,10 +81,6 @@ fn hand_ids(state: &GameState, player: PlayerId) -> Vec<String> {
         .iter()
         .map(|card| card.def_id.clone())
         .collect()
-}
-
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn input(body: Value) -> ActionInput {
@@ -516,7 +510,7 @@ mod c_42_kys_test_the_rewards_r420 {
 
     #[test]
     fn r420_hard_kys_gift_at_its_printed_cost() {
-        // Patch v0.3.9 (#831): the Gift costs (4) and arrives at it, no longer at (0).
+        // Patch v0.3.10 (#831): the Gift costs (4) and arrives at it, no longer at (0).
         let mut state = offered("kt-gift", false);
         take(&mut state, "Hard", true);
         assert_eq!(hand_ids(&state, P1), vec![gift().id]);

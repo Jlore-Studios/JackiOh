@@ -11,7 +11,44 @@
 //! is no draw. Radiant's hand card is `exileRandomFromHand` (R60; empty hand: nothing). Exiled cards are
 //! public (§3.2); no event names a deck position.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-015";
+
+/// "Exile the bottom {exile} card(s) of your opponent's deck" (Radiant: "… and a random card from their hand").
+fn hunt(ctx: &EffectContext<'_>, from_hand: bool) -> Vec<Effect> {
+    let bottom = exile_bottom_of_library(json_as(json!({ "player": "enemy", "count": param(ctx, "exile") })));
+    if from_hand {
+        vec![bottom, exile_random_from_hand(json_as(json!({ "player": "enemy", "count": 1 })))]
+    } else {
+        vec![bottom]
+    }
+}
+
+fn ability(from_hand: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "hunt".into(),
+        label: if from_hand {
+            "Discard a random card. Exile the bottom of your opponent's deck and a random card from their hand".into()
+        } else {
+            "Discard a random card. Exile the bottom of your opponent's deck".into()
+        },
+        uses: ActivationUses::Unlimited,
+        cost: Some(ActivationCost { discard_random: Some(1), ..ActivationCost::default() }),
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |ctx| hunt(ctx, from_hand)),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script { activations: vec![ability(false)], ..Script::default() };
+
+    let radiant = Script { activations: vec![ability(true)], ..Script::default() };
+    CardScripts { base, radiant }
+}
 
 // C #15 Nose Hunter — SPEC §8.6 row 15, BUILD M9 Classic row C 15: Activate Infinity (R392, R384): its
 // cost, a random discard, is paid as it activates, so an empty hand can't activate it; then exile the
@@ -77,7 +114,7 @@ mod tests {
     #[test]
     fn declares_one_activate_infinity_ability_on_each_face_whose_cost_is_a_random_discard() {
         assert_eq!(crate::card_def(ID).id, NOSE);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         for face in [&base, &radiant] {
             assert_eq!(face.activations.len(), 1);
             assert_eq!(face.activations.first().map(|decl| decl.uses), Some(ActivationUses::Unlimited));

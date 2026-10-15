@@ -12,7 +12,7 @@
 //!          every replay sees the same lots.
 //!   deal   each answer is one deal (R1000): a lot bought arrives in the caster's hand at its printed
 //!          cost, hidden per zone (R97), and the market reopens (R113) with its price taken off. Every
-//!          lot is sold on either face (patch v0.3.9, R831002): its base face at its price, or its
+//!          lot is sold on either face (patch v0.3.10, R831002): its base face at its price, or its
 //!          Radiant face at its Radiant price (`YUAN_RADIANT_MULTIPLIER` times as much). On the Radiant
 //!          face a barter exiles a hand card, in public, and adds its price to the yuan (R1001); Leave
 //!          closes it, and the yuan left is lost. With nothing to buy or barter the market closes on its

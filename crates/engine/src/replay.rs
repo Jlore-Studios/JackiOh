@@ -12,6 +12,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::catalog::{ShippedCatalog, shipped_catalog, with_shipped};
 use crate::config::{Handicap, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS};
 use crate::state::{CreateGameOptions, GameState, LastBoardInput, create_game};
 use crate::view_for::view_for;
@@ -803,6 +804,12 @@ pub struct ReplayInput {
     /// R678: the same Glitch boards the live createGame had.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R923000: the same sandbox flag the live createGame had.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sandbox: Option<bool>,
+    /// R915006: the same custom cards the live createGame had.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_cards: Option<Vec<crate::wire::CustomCard>>,
 }
 
 pub type FoldArgs = ReplayInput;
@@ -856,54 +863,99 @@ fn opening(input: &ReplayInput) -> GameState {
         dealt: input.dealt.clone(),
         last_boards: input.last_boards.clone(),
         glitch_boards: input.glitch_boards.clone(),
+        sandbox: input.sandbox,
+        custom_cards: input.custom_cards.clone(),
     });
     crate::reduce::begin_game(&start).state
 }
 
-/// R768: fold a finished game once and check it before any step is shown: another catalog version
-/// than `build_version` is refused as `earlier_patch` before anything is folded, a log that does not
-/// fold to `record.final_hash` as `rules_changed`. Otherwise the answer holds the step count (step 0
-/// is the state after `begin_game`, step k the one after the k-th accepted action; a rejected one is
-/// no step) and a state every `REPLAY_CHECKPOINT_EVERY` accepted actions. As with `fold`, a setup
+/// R767000: the catalog a game played on `played_on` folds under in a build of `build_version`:
+/// `None` for the build's own, the shipped one when the build carries it, and `earlier_patch` for any
+/// other version.
+pub fn catalog_for(
+    played_on: &str,
+    build_version: &str,
+) -> Result<Option<&'static ShippedCatalog>, ReplayRefusal> {
+    if played_on == build_version {
+        return Ok(None);
+    }
+    match shipped_catalog(played_on) {
+        Some(shipped) => Ok(Some(shipped)),
+        None => Err(ReplayRefusal::EarlierPatch),
+    }
+}
+
+/// R768, R767000: fold a finished game once and check it before any step is shown: a catalog version
+/// `build_version` neither is nor carries is refused as `earlier_patch` before anything is folded, a
+/// log that does not fold to `record.final_hash` as `rules_changed`. A carried version folds under its
+/// own catalog, which the checkpoints name. Otherwise the answer holds the step count (step 0 is the
+/// state after `begin_game`, step k the one after the k-th accepted action; a rejected one is no
+/// step) and a state every `REPLAY_CHECKPOINT_EVERY` accepted actions. As with `fold`, a setup
 /// `create_game` refuses panics; the WASM binding checks it first.
 pub fn replay_open(input: &ReplayInput, record: &ReplayRecord, build_version: &str) -> ReplayOpen {
-    if record.catalog_version != build_version {
-        return ReplayOpen::Refused {
-            reason: ReplayRefusal::EarlierPatch,
-        };
-    }
-    let mut state = opening(input);
-    let mut checkpoints = ReplayCheckpoints {
-        accepted: Vec::new(),
-        states: vec![state.clone()],
+    let shipped = match catalog_for(&record.catalog_version, build_version) {
+        Ok(shipped) => shipped,
+        Err(reason) => return ReplayOpen::Refused { reason },
     };
-    for action in &input.log {
-        let result = crate::reduce::reduce(&state, action);
-        if result.error.is_some() {
-            continue;
-        }
-        state = result.state;
-        checkpoints.accepted.push(action.clone());
-        if checkpoints.accepted.len().is_multiple_of(REPLAY_CHECKPOINT_EVERY) {
-            checkpoints.states.push(state.clone());
-        }
-    }
-    if hash_state(&state) != record.final_hash {
-        return ReplayOpen::Refused {
-            reason: ReplayRefusal::RulesChanged,
+    with_shipped(shipped, || {
+        let mut state = opening(input);
+        let mut checkpoints = ReplayCheckpoints {
+            accepted: Vec::new(),
+            states: vec![state.clone()],
+            catalog_version: shipped.map(|shipped| shipped.version().to_string()),
         };
-    }
-    ReplayOpen::Ready {
-        steps: checkpoints.accepted.len() + 1,
-        checkpoints,
-    }
+        for action in &input.log {
+            let result = crate::reduce::reduce(&state, action);
+            if result.error.is_some() {
+                continue;
+            }
+            state = result.state;
+            checkpoints.accepted.push(action.clone());
+            if checkpoints.accepted.len().is_multiple_of(REPLAY_CHECKPOINT_EVERY) {
+                checkpoints.states.push(state.clone());
+            }
+        }
+        if hash_state(&state) != record.final_hash {
+            return ReplayOpen::Refused {
+                reason: ReplayRefusal::RulesChanged,
+            };
+        }
+        ReplayOpen::Ready {
+            steps: checkpoints.accepted.len() + 1,
+            checkpoints,
+        }
+    })
+}
+
+/// R767000: `run` under the catalog an opened replay's checkpoints were folded under, so a `reduce`
+/// past a kept state reads the cards the fold read. Checkpoints naming a version this build does not
+/// carry run under the build's own; `replay_page` gives them no step.
+pub fn under_checkpoints<T>(checkpoints: &ReplayCheckpoints, run: impl FnOnce() -> T) -> T {
+    let shipped = checkpoints.catalog_version.as_deref().and_then(shipped_catalog);
+    with_shipped(shipped, run)
 }
 
 /// R768: steps `[from, from + count)` of an opened replay as `seat` saw them, each `view_for` (never
 /// the clock's) and its turn. `count` is capped at REPLAY_PAGE_STEPS and at the last step, and the
 /// page ends early rather than make more than REPLAY_CHECKPOINT_EVERY `reduce` calls, so the next
 /// page starts at `from + steps.len()`. `reduces` counts them (a pure crate keeps no counter).
+/// R767000: the steps are reached under the catalog the checkpoints name, and checkpoints naming a
+/// version this build does not carry give none.
 pub fn replay_page(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
+    if let Some(version) = &checkpoints.catalog_version
+        && shipped_catalog(version).is_none()
+    {
+        return ReplayPage {
+            from,
+            steps: Vec::new(),
+            reduces: 0,
+        };
+    }
+    under_checkpoints(checkpoints, || page_of(checkpoints, seat, from, count))
+}
+
+/// `replay_page`'s walk, under the catalog `under_checkpoints` set.
+fn page_of(checkpoints: &ReplayCheckpoints, seat: PlayerId, from: usize, count: usize) -> ReplayPage {
     let total = checkpoints.accepted.len() + 1;
     let wanted = count.min(REPLAY_PAGE_STEPS).min(total.saturating_sub(from));
     let mut page = ReplayPage {

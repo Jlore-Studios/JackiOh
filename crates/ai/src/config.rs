@@ -44,6 +44,14 @@ pub const AI_BUDGET: SearchBudget = SearchBudget {
 /// algorithm, if CI ever needs them faster.
 pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 
+/// #936 B32: the games the Duos gate plays by default (`cargo jackioh gate --duos`): the Easy AI team
+/// (`duos_decide` at AI_GATE_BUDGET) against a team on §10.7's random policy, `duos.rs`'s `duos_gate`.
+pub const DUOS_GATE_GAMES_SMOKE: usize = 20;
+
+/// #936 B32: the share of its games the Easy AI team must win against the random-policy team. Only
+/// wins count; a draw is reported beside them.
+pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
+
 /// `AI_SEARCH`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -52,6 +60,9 @@ pub struct AiSearch {
     pub zone_variants: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
+    /// Answers tried for each auto-answered prompt, in `legal_actions` order, before the answerer's
+    /// best is committed (`simulate`'s and the opponent's reply's auto-answers, #891): each one node.
+    pub max_auto_answer_options: i32,
     /// Deepest line the lethal solver explores.
     pub lethal_max_depth: i32,
     /// Nodes of the lethal allowance its depth-first walk in move order gets before the best-first walk
@@ -96,6 +107,7 @@ pub struct AiSearch {
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     max_auto_answers: 8,
+    max_auto_answer_options: 4,
     lethal_max_depth: 10,
     lethal_quick_nodes: 40,
     lethal_width: 60,
@@ -283,9 +295,6 @@ pub struct EvalWeights {
     pub closing_weight: f64,
 }
 
-/// SURFACE §4.2's name for `AI_EVAL`'s struct; TS already named the shape `EvalWeights`.
-pub type AiEval = EvalWeights;
-
 pub const AI_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -465,9 +474,6 @@ pub const AI_REPLY: AiReply = AiReply {
 pub struct AiMulligan {
     pub keep_max_cost: i32,
 }
-
-/// SURFACE §4.2's name for `GREEDY_MULLIGAN`'s struct: the same shape as `AI_MULLIGAN`'s.
-pub type GreedyMulligan = AiMulligan;
 
 pub const AI_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 

@@ -18,7 +18,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, new_game, put, round_trip, set_library, slot,
+};
 use crate::rules::fixtures::scripts::double_edge;
 
 // The sink starts its rng at the state's cursor, as reduce does. `EngineSink` borrows the state, so
@@ -47,10 +49,6 @@ fn controlled_by(player: PlayerId) -> HookOptions {
         controller: Some(player),
         ..HookOptions::default()
     }
-}
-
-fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
-    serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
 // Fixtures.

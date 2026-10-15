@@ -32,7 +32,7 @@
 
 use crate::catalog::def_of;
 use crate::damage::DamageTarget;
-use crate::layers::{unit_has, unit_view};
+use crate::layers::{AuraTable, unit_has};
 use crate::script::EffectContext;
 use crate::state::{CardInstance, EngineError, GameState, Position};
 use crate::wire::{CardType, KeywordKind, Row, Zone, has_keyword};
@@ -176,6 +176,16 @@ pub fn attack_restriction(
     attacker: &CardInstance,
     target: &DamageTarget,
 ) -> Result<(), EngineError> {
+    attack_restriction_in(&AuraTable::per_read(state), attacker, target)
+}
+
+/// `attack_restriction` read through a sweep's `AuraTable` (#892).
+pub fn attack_restriction_in(
+    auras: &AuraTable<'_>,
+    attacker: &CardInstance,
+    target: &DamageTarget,
+) -> Result<(), EngineError> {
+    let state = auras.state();
     if cannot_attack(state, attacker) {
         return Err(EngineError::new("that unit cannot attack"));
     }
@@ -197,7 +207,7 @@ pub fn attack_restriction(
             return Err(EngineError::new("only a unit in its lane may attack that unit"));
         }
     }
-    if flies_out_of_reach(state, attacker, defender) {
+    if flies_out_of_reach(auras, attacker, defender) {
         return Err(EngineError::new(
             "only a Flying or Ranged unit may attack that unit",
         ));
@@ -207,12 +217,12 @@ pub fn attack_restriction(
 
 /// R783002, R783003: a Flying unit in Attack Position may be attacked only by a unit with Flying or
 /// Ranged; in Defense Position it has landed, and anything may attack it.
-fn flies_out_of_reach(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> bool {
-    let view = unit_view(state, defender);
+fn flies_out_of_reach(auras: &AuraTable<'_>, attacker: &CardInstance, defender: &CardInstance) -> bool {
+    let view = auras.unit_view(defender);
     if !has_keyword(&view.keywords, KeywordKind::Flying) || view.position == Position::Def {
         return false;
     }
-    !unit_has(state, attacker, KeywordKind::Flying) && !unit_has(state, attacker, KeywordKind::Ranged)
+    !auras.unit_has(attacker, KeywordKind::Flying) && !auras.unit_has(attacker, KeywordKind::Ranged)
 }
 
 // ---------------------------------------------------------------------------

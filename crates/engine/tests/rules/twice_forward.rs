@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use jackioh_engine::subsystems::twice_forward::{TWICE_FORWARD_PLAYS_KEY, twice_forward_plays};
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, round_trip, slot};
 use crate::rules::fixtures::twice_forward::{
     CRIER_DAMAGE, TURNER_DAMAGE, TWICE_FORWARD_SCRIPTS, caster, crier, forward, self_exiler, spell, trap,
     turner, twice_forward_catalog,
@@ -166,11 +166,6 @@ fn index_of(types: &[GameEventType], kind: GameEventType) -> i64 {
         .iter()
         .position(|each| *each == kind)
         .map_or(-1, |index| index as i64)
-}
-
-/// A value through a JSON round trip.
-fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
-    serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
 mod c_plus_c74s_field_trap_r425 {

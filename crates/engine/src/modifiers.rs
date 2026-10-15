@@ -264,10 +264,6 @@ pub fn drop_delayed(state: &mut GameState, id: &str) {
 /// TS `Extract<PlayerModifier, { kind: "turnEnds" }>`: a `PlayerModifier` whose kind is `TurnEnds`.
 pub type TurnEndsModifier = PlayerModifier;
 
-/// TS `Extract<PlayerModifier, { kind: "startOfTurnEffect" }>`: a `PlayerModifier` whose kind is
-/// `StartOfTurnEffect`.
-pub type StartOfTurnEffectModifier = PlayerModifier;
-
 /// B5 E10, R456: the "your turn ends" rider on `player` for the turn running now, or null.
 pub fn turn_ends_of(state: &GameState, player: PlayerId) -> Option<&TurnEndsModifier> {
     for modifier in &state.players[player].mods {

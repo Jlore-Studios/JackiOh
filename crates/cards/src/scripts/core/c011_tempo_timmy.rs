@@ -8,9 +8,15 @@
 //! `[Charge, First Strike]`) and §10.4 layer 1 reads them off the running face, so re-granting them
 //! here would double them up. An empty Script is the whole card.
 
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-011";
 
+pub fn script() -> CardScripts {
+    let base = Script::default();
+    let radiant = Script::default();
+    CardScripts { base, radiant }
+}
 
 // #11 Tempo Timmy (SPEC §8.1, BUILD M4-T4 row 11): "Attacks a unit on summon turn, not the hero;
 // kills a 3-health unit unharmed; radiant may hit the hero".
@@ -24,7 +30,7 @@ pub const ID: &str = "core-011";
 // `play_radiant` below.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     /// HARNESS GAP (see the header): make the hand copy radiant, then play it.
@@ -156,7 +162,7 @@ mod tests {
             let def = crate::card_def(ID);
             assert_eq!(kinds(&def.base.keywords), vec!["Rush", "First Strike"]);
             assert_eq!(kinds(&def.radiant.keywords), vec!["Charge", "First Strike"]);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(is_empty_script(&scripts.base));
             assert!(is_empty_script(&scripts.radiant));
         }

@@ -108,6 +108,10 @@ pub const SERVER_ONLY_ACTION_TYPES: &[ActionType] = &[
     ActionType::Emote,
 ];
 
+/// R923000: the actions only a practice game takes, which no match the server runs is: the sandbox's
+/// tools. A socket that sends one is answered `malformed`, naming it a practice tool.
+pub const PRACTICE_ONLY_ACTION_TYPES: &[ActionType] = &[ActionType::Sandbox];
+
 /// Everything else in the §10.2 union that a socket may carry: every type `legal_actions` can list
 /// among them. R384's `activate` is the one every Activate ability and, since R752, every Heroic
 /// Power's power is listed as, so a whitelist without it refused them all online (#491).
@@ -437,6 +441,13 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
     if parsed.is_some_and(|kind| SERVER_ONLY_ACTION_TYPES.contains(&kind)) {
         return Err(malformed(format!(r#""{type_}" is a server-only action (R79)"#)));
     }
+    // R923000: the practice sandbox's tools work in a practice game alone; no match the server runs is
+    // a sandbox, and none takes one.
+    if parsed.is_some_and(|kind| PRACTICE_ONLY_ACTION_TYPES.contains(&kind)) {
+        return Err(malformed(
+            r#""sandbox" is a practice tool, never an action of a match (R923000)"#,
+        ));
+    }
     let Some(kind) = parsed.filter(|kind| CLIENT_ACTION_TYPES.contains(kind)) else {
         return Err(malformed(format!(r#""{type_}" is not an action type"#)));
     };
@@ -641,7 +652,8 @@ fn parse_action_body(raw: &Map<String, Value>) -> Result<ActionBody, MalformedMe
         ActionType::Timeout
         | ActionType::DisconnectExpired
         | ActionType::CeilingReached
-        | ActionType::Emote => Err(malformed(format!(r#""{type_}" is not an action type"#))),
+        | ActionType::Emote
+        | ActionType::Sandbox => Err(malformed(format!(r#""{type_}" is not an action type"#))),
     }
 }
 
@@ -758,3 +770,13 @@ pub fn parse_client_message(text: &str) -> Result<ClientMessage, MalformedMessag
         other => Err(malformed(format!(r#""{other}" is not a client message"#))),
     }
 }
+
+// ---- Social: watching and shared replays (#939, #940) ----
+
+/// B51: `{"type":"watchers","count":n}`, sent to the players' own match sockets when the number of
+/// sockets watching the match changes (S7). A frame of its own rather than a `ServerMessage`: it
+/// carries nothing about the game, and no other frame changes for it.
+pub fn watchers_frame(count: usize) -> String {
+    format!(r#"{{"type":"watchers","count":{count}}}"#)
+}
+// ---- end Social: watching and shared replays ----

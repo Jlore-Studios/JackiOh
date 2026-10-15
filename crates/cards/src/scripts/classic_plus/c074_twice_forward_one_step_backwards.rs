@@ -1,6 +1,6 @@
 //! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, B7). (2) Field Trap, Mythic, 0/1 → 0/2.
 //!   Base:    "Animated, Brittle 2 / Every {plays|card|cards} your opponent plays, fuse a copy of the
-//!            last into this and gain +{brittleGain} Brittle." (balance patch 1; patch v0.3.9)
+//!            last into this and gain +{brittleGain} Brittle." (balance patch 1; patch v0.3.10)
 //!   Radiant: "Animated, Brittle 4 / Every {plays|card|cards} your opponent plays, fuse a Radiant copy
 //!            of the last into this and gain +{brittleGain} Brittle."
 //!   Engine:  A Field Trap (R425), so it is not consumed when it fires. No Brittle while unrevealed
@@ -69,7 +69,7 @@ mod tests {
     const RAPID: &str = "core-010"; // (0) Spell
     const TRUE_STRIKE: &str = "core-044"; // (1) Spell: Pierce. Deal 4 damage. Exile this.
     const BEAR: &str = "core-060"; // (1) Trap
-    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy Unit and the enemy hero.
+    const SHREDDER: &str = "core-013"; // (3) Unit: End of turn: deal 2 damage to each enemy.
     const FELINORS: &str = "core-012"; // (2) Unit: Cry: Summon a copy of this.
     const TIGER_DOJO: &str = "core-014"; // (4) Field Spell: Aura: your Units have +4 attack, Rush and First Strike.
     const HIT_JOB: &str = "core-016"; // (3) Spell: Destroy target Unit.

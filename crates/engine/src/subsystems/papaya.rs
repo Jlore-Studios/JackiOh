@@ -5,7 +5,7 @@
 //! is the Lagrange polynomial through 1 to `PAPAYA_MAX_CELLS` cells in different lanes, in exact
 //! rationals so "y = p(x) exactly" is an integer test; a cell is on it when p(x) is a whole row 0 to 3 (R422).
 //!
-//! Cells are Discovered one prompt at a time (patch v0.3.9, R831003): each is a `mode` prompt of
+//! Cells are Discovered one prompt at a time (patch v0.3.10, R831003): each is a `mode` prompt of
 //! `PAPAYA_OFFERS` cells drawn from the match rng among the unused lanes' cells (option `"x,y"`, in lane
 //! order) and, after the first, "done", so `legal_actions`, the fuzz suite and the AI reach every answer
 //! while the player's control over the curve stays limited. The cells so far ride the prompt's resume

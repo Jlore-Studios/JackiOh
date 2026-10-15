@@ -11,6 +11,8 @@ mod arena;
 mod board;
 mod catalog;
 mod dealt_fit;
+mod duos_fuzz;
+mod duos_gate;
 mod fuzz;
 mod gate;
 mod golden;

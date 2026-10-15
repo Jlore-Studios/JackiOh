@@ -1,7 +1,7 @@
 //! M #80 Aluneth (SPEC §8.8 row 80). (2) Field Spell, tags Quickdraw, Legendary.
 //!
-//! Base:    "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3 cards."
-//! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3 cards."
+//! Base:    "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3."
+//! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3."
 //! Engine:  "Quickdraw (R640) deals it in the opening hand. An Indestructible Field Spell that draws
 //!          3 at its controller's end of turn, each draw its own (burning past the cap, fatigue past
 //!          the deck). Immutable blocks Transform, Vanilla, Fuse-onto, Buff, Nerf and KY's Constant
@@ -14,7 +14,45 @@
 //! one `draw` of 3, which burns past the cap and takes fatigue past the deck card by card (§2.4);
 //! Quickdraw is the static flag `setup.rs` reads (R640), beside the catalog tag filters see.
 
+use jackioh_engine::effects::{draw, exile};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-080";
+
+/// What the end of its controller's turn draws.
+const DRAWS: i32 = 3;
+
+fn aluneth(radiant: bool) -> Script {
+    let mut script = Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        end_of_turn: Some(hook(|_ctx| vec![draw(json_as(json!({ "count": DRAWS })))])),
+        ..Script::default()
+    };
+    if radiant {
+        script.activations = vec![ActivationDecl {
+            id: "exile".to_string(),
+            label: "Exile this".to_string(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![],
+            can_activate: None,
+            has: None,
+            run: hook(|_ctx| vec![exile(json_as(json!({ "target": { "of": "self" } })))]),
+        }];
+    }
+    script
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: aluneth(false),
+        radiant: aluneth(true),
+    }
+}
 
 // M #80 Aluneth — SPEC §8.8 row 80, BUILD M10 row M 80: "Quickdraw: in the opening hand (R640); at
 // your end of turn only, three draws, burning past the cap and taking fatigue past the deck;
@@ -24,15 +62,12 @@ pub const ID: &str = "meditative-080";
 // Activate: exile this".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{DRAWS, ID, script};
     use jackioh_engine::effects::{TuneDirection, applicable_changes, transform};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
-
-    /// What the end of its controller's turn draws.
-    const DRAWS: i32 = 3;
 
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-016";
@@ -60,7 +95,7 @@ mod tests {
                 crate::register_all();
                 // R640: `setup` deals every library card carrying `quickdraw` into the opening hand,
                 // the base face and the Radiant one alike.
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert_eq!(scripts.base.flags().quickdraw, Some(true));
                 assert_eq!(scripts.radiant.flags().quickdraw, Some(true));
                 // Plain Core Units, then Aluneth: one copy of each (§2.6 L3).

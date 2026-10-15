@@ -4,13 +4,15 @@
 //!
 //! `packages/shared/src/index.ts` re-exported every module whole; so does this barrel. Written
 //! once by part 1; `actions`, `catalog_types`, `events` and `view` are part 1's type freeze
-//! (SURFACE §6.4), `aim`, `codes`, `emotes` and `stats` are part 5's.
+//! (SURFACE §6.4), `aim`, `codes`, `emotes` and `stats` are part 5's, and `duos` is Duos co-op's (#936).
 
 pub mod actions;
 pub mod aim;
 pub mod catalog_types;
 pub mod codes;
 pub mod craft;
+pub mod custom;
+pub mod duos;
 pub mod emotes;
 pub mod events;
 pub mod replays;
@@ -22,6 +24,8 @@ pub use aim::*;
 pub use catalog_types::*;
 pub use codes::*;
 pub use craft::*;
+pub use custom::*;
+pub use duos::*;
 pub use emotes::*;
 pub use events::*;
 pub use replays::*;

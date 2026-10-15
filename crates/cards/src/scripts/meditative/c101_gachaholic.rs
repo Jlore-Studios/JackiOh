@@ -11,7 +11,43 @@
 //! - **Radiant:** the same pull as an Activate (R384): once a turn, in your main phase, at no cost,
 //!   the turn it is played included. It has no Cry.
 
+use jackioh_engine::effects::{AddRandomFromCatalogArgs, add_random_from_catalog};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-101";
+
+/// "Add a random Luck-based card to your hand. Give it Lucky {lucky}."
+fn pull(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    vec![add_random_from_catalog(AddRandomFromCatalogArgs {
+        query: Some(crate::query::luck_based()),
+        lucky: Some(param(&*ctx, "lucky")),
+        ..AddRandomFromCatalogArgs::default()
+    })]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(pull)),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        activations: vec![ActivationDecl {
+            id: "pull".to_string(),
+            label: "Add a random Luck-based card to your hand".to_string(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: Vec::new(),
+            modes: Vec::new(),
+            can_activate: None,
+            has: None,
+            run: hook(pull),
+        }],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // M #101 Gachaholic — SPEC §8.8 row 101, BUILD M10 row M 101: "Its Cry adds one random non-token
 // card that prints Lucky or flips a coin, of the sets that ship, on its base face at its printed cost
@@ -20,7 +56,7 @@ pub const ID: &str = "meditative-101";
 // an Activate once a turn, the turn it is played included (R384)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -32,7 +68,7 @@ mod tests {
     /// The pool from the sets that ship: the non-token cards that print Lucky or flip a coin (MD-G1,
     /// R1444), the Meditative set's among them since it ships: #36 CN Peptides, #86 Mayor Medinamogger
     /// and #102 Catboy Maid SSR+ (#65 Keymaster Keenus left it with patch v0.3.7, R781004, and Core #42
-    /// Eugenics with patch v0.3.9, R831014).
+    /// Eugenics with patch v0.3.10, R831014).
     const SHIPPED_POOL: [&str; 10] = [
         "core-004",
         "core-023",
@@ -157,7 +193,7 @@ mod tests {
 
             #[test]
             fn radiant_has_no_cry() {
-                let scripts = crate::scripts_of()[ID].clone();
+                let scripts = script();
                 assert!(scripts.radiant.cry.is_none());
                 assert!(scripts.base.activations.is_empty());
                 let mut s = holding("gachaholic-radiant-play", true, 1);

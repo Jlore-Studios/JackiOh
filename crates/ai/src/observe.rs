@@ -473,7 +473,7 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             Some(effective_cost(&next, card, CostOptions::default()))
         };
         // R471: Plague Counters are public wherever they sit, a face-down backrow card's included,
-        // so its placeholder keeps the count the view shows (patch v0.3.9, #831, found them dropped).
+        // so its placeholder keeps the count the view shows (patch v0.3.10, #831, found them dropped).
         let plague = if matches!(place, Place::Backrow(_)) {
             card.counters.plague
         } else {
@@ -589,6 +589,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // A kept fusion of a fusion names its older ingredient in its id (R179), so that ingredient's
     // definition stays too: the id already says what it is, and its faces are public, summed into
     // the kept def's own.
+    // R915007: a custom card is known only once a card the seat may read names it: its definition and
+    // its script go with the rest of what a hidden card would tell.
+    next.custom_defs.retain(|def_id, _| referenced.contains(def_id));
+    next.custom_cards.retain(|def_id, _| referenced.contains(def_id));
     let mut transient: IndexSet<String> = IndexSet::new();
     let mut keep: Vec<String> = referenced
         .into_iter()

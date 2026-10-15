@@ -22,16 +22,84 @@
 //! Both numbers are declared and read through `param` (R386): the draw count, and the kept threshold
 //! ("↑": an Upgrade keeps more).
 
+use jackioh_engine::effects::{ForEachCardArgs, draw, exile, for_each_card, remember, set_cost_mod};
+use jackioh_engine::prelude::*;
+use indexmap::IndexSet;
 
 pub const ID: &str = "classic-079";
+
+/// Where the resolving card notes its controller's library as the Spell begins.
+const LIBRARY_KEY: &str = "riskyDieLibrary";
+
+/// "They": the cards in its controller's hand now that were in their library as the Spell began.
+fn drawn_into_hand(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let noted = recalled(ctx, LIBRARY_KEY);
+    let library: IndexSet<String> = noted
+        .as_ref()
+        .and_then(|value| value.as_array())
+        .map(|ids| ids.iter().filter_map(|id| id.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+    zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Hand)
+        .iter()
+        .filter(|card| library.contains(&card.id))
+        .map(CardInstance::clone)
+        .collect()
+}
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let library: Vec<String> = zone_cards(&*ctx.state, ctx.controller, OffFieldZone::Library)
+        .iter()
+        .map(|card| card.id.clone())
+        .collect();
+    // "They cost (1) less": the declared number `discount` (R386).
+    let discount = param(&*ctx, "discount");
+    vec![
+        remember(json_as(json!({ "key": LIBRARY_KEY, "value": library }))),
+        draw(json_as(json!({ "count": param(&*ctx, "draw") }))),
+        for_each_card(ForEachCardArgs {
+            cards: Arc::new(|now: &mut EffectContext<'_>| {
+                drawn_into_hand(now).into_iter().map(|card| card.id).collect()
+            }),
+            each: Arc::new(move |instance_id: &str| {
+                set_cost_mod(json_as(json!({
+                    "target": { "of": "instance", "instanceId": instance_id },
+                    "amount": -discount
+                })))
+            }),
+        }),
+        for_each_card(ForEachCardArgs {
+            cards: Arc::new(|now: &mut EffectContext<'_>| {
+                drawn_into_hand(now)
+                    .into_iter()
+                    .filter(|card| effective_cost(&*now.state, card, Default::default()) > param(now, "threshold"))
+                    .map(|card| card.id)
+                    .collect()
+            }),
+            each: Arc::new(|instance_id: &str| {
+                exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+            }),
+        }),
+    ]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(cry)),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs only in its declared threshold (1), read through `param`.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.6 row 79: Draw 3; drawn hand cards get `costMod` −1 (R78) and exile if
 // cost exceeds threshold (0 base, 1 radiant; R65). Kept cards hidden, exiled public
 // (R97). Tuned numbers read via `param()` (R386).
-
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -46,7 +114,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1.
+    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
     const VANILLA: &str = "core-008"; // (1) Unit
 
     use crate::scenario;
@@ -95,7 +163,7 @@ mod tests {
                 { "key": "discount", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1 }
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(Arc::ptr_eq(
             scripts.base.cry.as_ref().expect("a Cry"),
             scripts.radiant.cry.as_ref().expect("a Cry")

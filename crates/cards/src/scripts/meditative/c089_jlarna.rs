@@ -135,7 +135,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
                 }));
                 s.play(ID, json!({ "zone": 1 }));
-                // Jlarna cost 4 of 4 (3 before patch v0.3.9); a (1) vanilla now borrows 1 of the line.
+                // Jlarna cost 4 of 4 (3 before patch v0.3.10); a (1) vanilla now borrows 1 of the line.
                 s.play(VANILLA, json!({ "zone": 1 }));
                 assert_eq!(s.state().players.p1.turn_log.mana_borrowed, Some(1));
                 s.end_turn();

@@ -4,20 +4,80 @@
 //!   Radiant: the same text — 2 tokens, draw 2
 //!
 //! The Cry places on a permanent on either side, itself included, picked in a prompt as it resolves
-//! (patch v0.3.9, #831: "another permanent", a declared target, before; R831016), so placing on itself
+//! (patch v0.3.10, #831: "another permanent", a declared target, before; R831016), so placing on itself
 //! wakes its own draw; face-down cards are offered by id alone (R177). "Whenever Plague Counters are placed on this" triggers once per placement naming
 //! it, however many tokens and whoever placed them (removal draws nothing). The condition is the trigger's
 //! `when` (R99), checked again in `run`.
 //! Tuned numbers `tokens` and `draw` (R386) read through `param` on the running face.
 
+use jackioh_engine::effects::{choose_target, draw, place_plague};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-053";
+
+/// The Cry's resume step: the permanent picked as it resolves.
+const PLACED_STEP: &str = "placed";
+
+/// A placement of Plague Counters on this card: `counterChanged` for `plague` with `placed`, naming it.
+fn placed_on_this(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(me) = &ctx.self_ else {
+        return false;
+    };
+    matches!(
+        event,
+        GameEvent::CounterChanged { counter: CounterKind::Plague, instance_id, placed, .. }
+            if *instance_id == me.id && placed.unwrap_or(0) > 0
+    )
+}
+
+fn draw_on_placement() -> TriggerDef {
+    TriggerDef::new("plague-crawler-placed", &[GameEventType::CounterChanged], |ctx, event| {
+        if !placed_on_this(ctx, event) {
+            return vec![];
+        }
+        let count = param(&*ctx, "draw");
+        vec![draw(json_as(json!({ "count": count })))]
+    })
+    .with_when(placed_on_this)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        // "a permanent": the top of any unit pile or any backrow card, either side, this one included
+        // (patch v0.3.10, #831; "another permanent", a declared target, before), so the pick is a prompt
+        // made once this stands on the field (R831016).
+        cry: Some(hook(|_ctx| {
+            vec![choose_target(json_as(json!({
+                "step": PLACED_STEP,
+                "scope": { "side": "any", "of": ["unit", "backrow"] },
+                "prompt": "Plague Crawler: place Plague Counters on a permanent",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            PLACED_STEP,
+            hook(|ctx| {
+                let amount = param(&*ctx, "tokens");
+                vec![place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+            }),
+        )]),
+        triggers: vec![draw_on_placement()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 2 tokens and draw 2 are its declared numbers, which `param`
+    // reads off the running face.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // C #53 — SPEC §8.6 row 53, BUILD M9 Classic row C 53: Cry places plague tokens on a permanent picked as
 // it resolves, itself included (R831016; face-down carries only id, R177); draws on placement on it; tuned numbers read via `param()` (R386).
 // Fusing Crawler onto C #27 Pestilent Slime (R77) tests multiplier and trigger sitting on one card.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -75,7 +135,7 @@ mod tests {
     }
 
     /// Plays `crawler` and answers its Cry's prompt with `target`: the pick is made as the Cry
-    /// resolves (patch v0.3.9, #831; a declared target before), so the Crawler itself may be it (R831016).
+    /// resolves (patch v0.3.10, #831; a declared target before), so the Crawler itself may be it (R831016).
     fn crawl(s: &mut Scenario, crawler: impl Into<CardRef>, target: &CardInstance) {
         s.play(crawler, json!({}));
         s.answer(json!(target.id));
@@ -101,7 +161,7 @@ mod tests {
             crate::register_all();
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], CRAWLER);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // The pick is a prompt as the Cry resolves (R831016), not a declared target.
             assert!(scripts.base.targets.is_empty());
             assert!(scripts.base.resume.contains_key("placed"));

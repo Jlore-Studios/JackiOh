@@ -2,20 +2,85 @@
 //!
 //! Base:    "Whenever you spend mana, place 1 Plague Counter on this.
 //!          Activate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy
-//!          cards} from each of the opponent's field, hand, deck, and graveyard zones."
+//!          cards} from each of your opponent's field, hand, deck and graveyard."
 //! Radiant: the same text, two exiles per zone.
 //! Engine: the `manaSpent` event (MD-D26) — a field trigger answers the controller's own spending
 //! with one placement per mana (R212 already keeps the Maestro from answering its own play, and the
 //! opponent's spending is never its controller's); the Activate refuses below {price} Plague
 //! Counters and exiles {exiles} per zone (MD-D27), two per zone on the Radiant face.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-069";
+
+/// "Whenever you spend mana, place 1 Plague Counter on this": one placement per mana the
+/// controller spent — never the opponent's, never the Maestro's own play (R212: it was not on the
+/// field yet).
+fn mana_trigger() -> TriggerDef {
+    TriggerDef::new("maestro-mana-spent", &[GameEventType::ManaSpent], |ctx, event| {
+        let GameEvent::ManaSpent { player, amount, .. } = event else {
+            return vec![];
+        };
+        if *player != ctx.controller {
+            return vec![];
+        }
+        (0..*amount)
+            .map(|_| place_plague(json_as(json!({ "amount": 1 }))))
+            .collect()
+    })
+}
+
+/// "Activate: Spend ({price}) Plague Counters: Exile {exiles} from each of the opponent's field,
+/// hand, deck, and graveyard zones."
+fn exile_ability(price: i32, exiles: i32) -> ActivationDecl {
+    ActivationDecl {
+        id: "maestro-exile".to_string(),
+        label: format!("Spend ({price}) Plague Counters: exile {exiles} from each enemy zone"),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: Some(condition_hook(move |c| {
+            plague_on(c.self_) >= param_value(c.state, Some(c.self_), "price", ParamValueOptions::default())
+        })),
+        has: None,
+        run: hook(move |ctx| {
+            let price = param(&*ctx, "price");
+            let exiles = param(&*ctx, "exiles");
+            let mut effects = vec![consume_plague(json_as(json!({ "amount": price })))];
+            for from in ["field", "hand", "library", "graveyard"] {
+                effects.push(exile_random_from(json_as(json!({
+                    "player": "enemy",
+                    "from": from,
+                    "count": exiles,
+                }))));
+            }
+            effects
+        }),
+    }
+}
+
+fn maestro(radiant: bool) -> Script {
+    Script {
+        triggers: vec![mana_trigger()],
+        activations: vec![exile_ability(4, if radiant { 2 } else { 1 })],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: maestro(false),
+        radiant: maestro(true),
+    }
+}
 
 // M #69 The Maestro — SPEC §8.8 row 69, BUILD M10 row M 69: "Counters per mana (MD-D26: its own
 // play and the opponent's spending not counted); refused below 4; one exile per zone, empty zones
 // skipped (MD-D27); two per zone on the Radiant face".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const MAESTRO: &str = "meditative-069";

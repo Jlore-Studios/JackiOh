@@ -115,7 +115,7 @@ describe("R277 the word diff", () => {
     // minimum price as its Radiant face, so its Radiant face is its base text less the exile
     // replacement. Meditative #89 Jlarna's Radiant face is the designer's: its base text less the
     // end-of-turn Tribute (R1225). So are #22.1 Fortify Mind's (no penalty when discarded, R862) and
-    // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.9's Classic #29 Book of Vital
+    // #48 Tranquility's (it does not end the turn, R1021), and patch v0.3.10's Classic #29 Book of Vital
     // Kill's (its Radiant face does not end the turn either).
     expect(silent).toEqual([
       "core-055",

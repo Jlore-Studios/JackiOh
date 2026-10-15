@@ -5,7 +5,42 @@
 //!   Engine:  "A Field Spell (R421). The Apple is C+ #59, named, so no pool; the hand cap burns it
 //!            (§2.4). No Fruit tag. Tunes: apples 1 ↑."
 
+use jackioh_engine::effects::add_to_hand;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-060";
+
+/// TS `cardDef("classicplus-059").id`.
+const APPLE: &str = "classicplus-059";
+
+fn doctors_orders(radiant: bool) -> Script {
+    let order = ActivationDecl {
+        id: "order".to_string(),
+        label: "Add an All Purpose Apple to your hand".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: Vec::new(),
+        modes: Vec::new(),
+        can_activate: None,
+        has: None,
+        run: hook(move |ctx| {
+            (0..param(&*ctx, "apples"))
+                .map(|_| add_to_hand(json_as(json!({ "defId": APPLE, "radiant": radiant }))))
+                .collect()
+        }),
+    };
+    Script {
+        activations: vec![order],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: doctors_orders(false),
+        radiant: doctors_orders(true),
+    }
+}
 
 // C+ #60 Doctors Orders — SPEC §8.7 row 60, BUILD M9 Classic+ row C+ 60: "A Field Spell with no stats
 // (R421): one Activate (balance patch 1: the Cry and the start-of-turn trigger became one Activate,

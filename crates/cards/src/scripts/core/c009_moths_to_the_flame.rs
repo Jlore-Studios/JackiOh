@@ -12,7 +12,7 @@
 //!
 //! Armor is not this card's business either: §4.4 step 2 subtracts the defender's armor from each
 //! incoming hit, so the radiant face's printed Armor 1 reduces every forced attack by 1 on its own. Pierce,
-//! printed on both faces since patch v0.3.9, is the layer's too: the hits it strikes back with skip
+//! printed on both faces since patch v0.3.10, is the layer's too: the hits it strikes back with skip
 //! the attackers' Armor.
 //!
 //! A card file returns `Vec<Effect>` and never touches state (CLAUDE.md rule 5), so it cannot call
@@ -21,7 +21,26 @@
 //! `EffectContext` derefs to an `EngineSink`, so the wrapper names the enemy's units in lane order
 //! and hands the rest to `force_attacks_on`, and R53 stays in one place.
 
+use jackioh_engine::effects::forced_attacks_on;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-009";
+
+/// Both faces: every enemy unit, in enemy lane order, is forced to attack this card (R53).
+fn moths() -> Script {
+    Script {
+        start_of_turn: Some(hook(|_ctx| {
+            vec![forced_attacks_on(json_as(json!({ "target": { "of": "self" }, "attackers": "enemy" })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = moths();
+    let radiant = moths();
+    CardScripts { base, radiant }
+}
 
 // #9 Moths to the Flame — SPEC §8.1 row 9, BUILD M4-T4 must-pass: "Each enemy unit attacks it in
 // lane order at controller's start of turn, no exertion spent, sick units included, each attack is
@@ -120,7 +139,7 @@ mod tests {
                 "seed": "core-009-exertion",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // A Defense Position unit cannot legally attack at all (§4.2 step 1), and its position
-                // gives it Armor 1, which Moths' Pierce (patch v0.3.9) goes through.
+                // gives it Armor 1, which Moths' Pierce (patch v0.3.10) goes through.
                 "p2": { "field": [{ "def": "core-012", "position": "DEF" }] }
             }));
             let felinors = s.card("core-012").clone();
@@ -146,7 +165,7 @@ mod tests {
                 "seed": "core-009-stops",
                 "p1": { "field": ["core-009"], "library": LIBRARY },
                 // 6 then 8 is lethal to a 1/14 after two combats; lane 3 never gets to attack. Bigot is
-                // set to its old 6/1 (it prints 4/1 since patch v0.3.9).
+                // set to its old 6/1 (it prints 4/1 since patch v0.3.10).
                 "p2": { "field": [{ "def": "core-002", "statsOverride": { "attack": 6, "health": 1 } }, "core-013", "core-007"] }
             }));
             let moths = s.card("core-009").clone();

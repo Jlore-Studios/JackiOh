@@ -10,21 +10,42 @@
 //!            Plot's flag read at placement since the Plot is dormant by the time any trigger could
 //!            answer (MD-F12). Tunes: buffs 1 ↑, on the Radiant face only."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-1";
+
+/// On the Radiant face, the Unit is Buffed (Upgraded) once as it lands.
+const BUFFS: i32 = 1;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            stack_base: Some(true),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = Script {
+        static_flags: Some(StaticFlags {
+            stack_base: Some(true),
+            stack_base_buffs: Some(BUFFS),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // M 97.1 Empty Plot — SPEC §8.8 row 97.1, BUILD M10 row M 97.1: "Can't attack; while it tops its
 // zone, you may play any Unit onto it as if the Unit had Stack (MD-F12), the Plot dormant beneath
 // until the pile above is gone, then resuming; a Locked or reserved zone refuses; a summon never
-// stacks onto it, and the opponent's Units cannot; radiant 0/6 (0/8 before patch v0.3.9), and the Unit is Buffed once as it
+// stacks onto it, and the opponent's Units cannot; radiant 0/6 (0/8 before patch v0.3.10), and the Unit is Buffed once as it
 // lands, before its Cry".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{BUFFS, ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
-
-    /// On the Radiant face, the Unit is Buffed (Upgraded) once as it lands.
-    const BUFFS: i32 = 1;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -62,7 +83,7 @@ mod tests {
         );
         assert_eq!(js(&def.base.keywords), json!([{ "kind": "Can't attack" }]));
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Can't attack" }]));
-        let s = crate::scripts_of()[ID].clone();
+        let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.stack_base), Some(true));
         assert_eq!(s.radiant.static_flags.as_ref().and_then(|f| f.stack_base_buffs), Some(BUFFS));
     }

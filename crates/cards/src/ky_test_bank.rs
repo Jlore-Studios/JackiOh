@@ -3,7 +3,7 @@
 //! shipped in the client bundle, and versioned with the catalog (R388), so changing a problem is a patch.
 //! Each entry has four different options, one of them its `answer` (test/classic-plus/042-kys-test.test.ts
 //! proves the floor of `KY_TEST_MIN_PROBLEMS` per difficulty). Plain text with Unicode maths. Patch
-//! v0.3.9 (#831) made each Hard problem one step harder in its own topic, its id kept.
+//! v0.3.10 (#831) made each Hard problem one step harder in its own topic, its id kept.
 //!
 //! Port of `packages/cards/src/kyTestBank.ts`. TS's `KY_TEST_BANK` array of objects cannot be a `const`
 //! (a problem holds `String`s), so it is a read-only `LazyLock`, built once on first use like the

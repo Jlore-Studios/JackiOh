@@ -11,7 +11,31 @@
 //! included, except Wildfire) in its place in the hand on the same face, carrying the swap (`swapsBook`)
 //! so it keeps changing each turn.
 
+use jackioh_engine::effects::damage;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-055";
+
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "hero"] }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") })))]
+        })),
+        hand_triggers: vec![book_swap_trigger()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face differs in its declared damage (8), read through `param`, and in
+    // the face of the Book it becomes, which the swap reads off the card.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: targeted hit on any unit or hero
 // (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a (1) Cost Spell;
@@ -19,7 +43,7 @@ pub const ID: &str = "classic-055";
 // random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -115,7 +139,7 @@ mod tests {
                 def["params"],
                 json!([{ "key": "damage", "base": 4, "radiant": 8, "better": "up", "step": 1, "min": 1 }]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),
@@ -151,7 +175,7 @@ mod tests {
         fn r381_nothing_names_it_c_23_names_book_of_flame_c_16_never_book_of_wildfire() {
             crate::register_all();
             assert_eq!(js(&crate::card_def("classic-023"))["refs"], json!(["classic-016"]));
-            // C #29 named C #16 too until patch v0.3.9 (#831).
+            // C #29 named C #16 too until patch v0.3.10 (#831).
             assert!(js(&crate::card_def("classic-029")).get("refs").is_none());
             assert_eq!(crate::card_def("classic-016").name, "Book of Flame");
             assert_eq!(crate::card_def(ID).name, "Book of Wildfire");

@@ -12,7 +12,58 @@
 //!   asked, the printed text never says Chinese.
 //! - A target that is CN by the time the Spell resolves fails its filter and fizzles (§10.5).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-035";
+
+fn rcta() -> Script {
+    Script {
+        targets: vec![TargetDecl {
+            aim: Some(TargetAim::Help),
+            required: Some(true),
+            ..TargetDecl::target(
+                1,
+                1,
+                json!({ "side": "any", "of": ["unit", "backrow"], "notTags": ["CN"] }),
+            )
+        }],
+        cry: Some(hook(|ctx| {
+            let Some(target) = instance_of(&*ctx, &TargetSpec::Chosen { index: None }) else {
+                return vec![];
+            };
+            // A target that is CN by the time the Spell resolves fails its filter (§10.5): the
+            // effect fizzles on it (MD-B16, R924).
+            if tags_of(&*ctx.state, &target).contains(&Tag::Cn) {
+                return vec![];
+            }
+            let id = target.id.clone();
+            let stats = param(&*ctx, "stats");
+            let times = param(&*ctx, "times");
+            vec![
+                grant_tag(json_as(json!({ "instanceId": id, "tag": "CN" }))),
+                translate(json_as(json!({ "instanceId": id }))),
+                buff(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                    "attack": stats,
+                    "health": stats,
+                }))),
+                upgrade(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                    "times": times,
+                }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces share the one script: the declared `stats` (2, radiant 5) and `times` (1,
+    // radiant 2) are what differ.
+    let base = rcta();
+    let radiant = rcta();
+    CardScripts { base, radiant }
+}
 
 // M #35 RCTA (CN) — SPEC §8.8 row 35, BUILD M10 row M 35: "The declared target is a non-CN
 // permanent on either side, a face-down card its chooser cannot read always offered (MD-B16); it
@@ -23,7 +74,7 @@ pub const ID: &str = "meditative-035";
 // radiant +5/+5 and two Buffs".
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::effects::{bounce, destroy, summon_copy, transform};
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

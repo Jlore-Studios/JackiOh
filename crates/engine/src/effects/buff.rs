@@ -19,9 +19,7 @@ use crate::config::RANDOM_KEYWORD_POOL;
 use crate::damage::DamageTarget;
 use crate::effects::card_scope::{CardScope, Readers, cards_in_card_scope};
 use crate::effects::radiant::RadiantTarget;
-use crate::effects::targets::{
-    PlayerSpec, TargetSpec, instance_of, instance_on_its_stay, player_of, resolve_target,
-};
+use crate::effects::targets::{PlayerSpec, TargetSpec, instance_by_id_or_spec, player_of, resolve_target};
 use crate::layers::unit_view;
 use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, Grant, find_instance, find_instance_mut};
@@ -263,17 +261,11 @@ pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
     Effect::new("grantAbility", move |ctx| {
         // R174: as `setRadiant` resolves it, a card named by id is aimed at the stay it had when
         // the run began, else the first chosen selection.
-        let card = match &args.target.instance_id {
-            Some(instance_id) => instance_on_its_stay(ctx, instance_id),
-            None => instance_of(
-                ctx,
-                &args
-                    .target
-                    .target
-                    .clone()
-                    .unwrap_or(TargetSpec::Chosen { index: None }),
-            ),
-        };
+        let card = instance_by_id_or_spec(
+            ctx,
+            args.target.instance_id.as_deref(),
+            args.target.target.as_ref(),
+        );
         let Some(card) = card else {
             return;
         };

@@ -13,12 +13,35 @@
 //! §5.1 names this the example of a Field Spell with a Cry and §3.2 makes a played Field Spell public,
 //! so nothing here touches `face_up`. The Cry fires only when played from hand or cast (R1).
 
+use jackioh_engine::effects::draw;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-073";
+
+/// The cap is read by the pipeline (`damage::hero_damage_cap`) as the card's declared number `cap`
+/// (R386), 5 and 3 on the Radiant face, and the Cry's "draw 1" (radiant "draw 2") is the declared
+/// number `draw`: both faces run this one script.
+fn anti_oneshot_armor() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            anti_oneshot: Some(true),
+            ..StaticFlags::default()
+        }),
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = anti_oneshot_armor();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
 // hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
 // The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
-// v0.3.9): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
+// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
 // 5 fits under the base cap of 5, so only the radiant face can tell a clamp from a bypass.
 #[cfg(test)]
 mod tests {

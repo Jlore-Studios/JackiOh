@@ -8,13 +8,24 @@
 //! Nothing to script: both faces' stats are the catalog's (§10.4 layer 1), and a card made Radiant on
 //! the field takes its Radiant face at once (§5.2). Its proof: `test/classic/086-genn.test.ts`.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-086";
+
+pub fn script() -> CardScripts {
+    let base = Script::default();
+
+    // The same empty script: the Radiant face's 42/42 is catalog data (R276).
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #86 Genn (SPEC §8.6 row 86; BUILD M9 row C 86). (4) Unit, Common, 14/14 → 42/42: no text, a vanilla
 // Unit like #8 Mr. Vanilla; the Radiant face is its tripled stats (R276).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const GENN: &str = "classic-086";
@@ -93,7 +104,7 @@ mod tests {
             s.expect_stats(GENN, json!({ "attack": 14, "health": 14 }));
             assert!(s.stats(GENN).keywords.is_empty());
             assert_eq!(json!([def().base.text, js(&def().base.keywords)]), json!(["", []]));
-            assert!(is_empty_script(&crate::scripts_of()[ID].base));
+            assert!(is_empty_script(&script().base));
         }
     }
 
@@ -108,7 +119,7 @@ mod tests {
             s.expect_stats(GENN, json!({ "attack": 42, "health": 42 }));
             assert_eq!(json!([def().radiant.text, js(&def().radiant.keywords)]), json!(["", []]));
             // TS `expect(radiant).toBe(base)`: the one empty script on both faces.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(is_empty_script(&scripts.radiant) && is_empty_script(&scripts.base));
         }
 

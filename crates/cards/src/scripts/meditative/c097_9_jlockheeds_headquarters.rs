@@ -8,12 +8,69 @@
 //!            Cry (R1); the Radiant face's second activation in a turn fills what the first left empty
 //!            (R1261). Indestructible (R46; never Taunt, R347)."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-9";
+
+/// §8.8: "Activate" is once a turn, the Radiant face's "Activate 2" twice.
+const BASE_USES: i32 = 1;
+const RADIANT_USES: i32 = 2;
+
+/// §6.3 "Tribute 5": five of your Units, or Sheep Tokens worth as many (§3.2).
+const TRIBUTE_COST: i32 = 5;
+
+/// "Jlockheed Units": the Jlockeed-tagged Units of every set (R278, R380).
+fn jlockeed_units() -> Value {
+    json!({ "type": "Unit", "tags": ["Jlockeed"] })
+}
+
+fn fill(uses: i32, radiant: bool) -> ActivationDecl {
+    ActivationDecl {
+        id: "fill".to_string(),
+        label: "Fill your board".to_string(),
+        uses: ActivationUses::Count(uses),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(move |ctx| {
+            fill_board_zones(ctx.state, ctx.controller)
+                .iter()
+                .map(|zone| {
+                    summon_random(json_as(json!({
+                        "query": jlockeed_units(),
+                        "lane": zone.lane,
+                        "radiant": radiant,
+                    })))
+                })
+                .collect()
+        }),
+    }
+}
+
+fn headquarters(uses: i32, radiant: bool) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            ..StaticFlags::default()
+        }),
+        activations: vec![fill(uses, radiant)],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: headquarters(BASE_USES, false),
+        radiant: headquarters(RADIANT_USES, true),
+    }
+}
 
 // M 97.9 Jlockheed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
 // Can't attack; Activate, once a turn: each empty, unlocked unit zone of yours, left to right, gets a
 // random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full or Locked board summons nothing and
-// draws nothing; radiant 0/40 (0/50 before patch v0.3.9), Activate 2 (a second use fills what the
+// draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use fills what the
 // first left empty), and the Units are Radiant".
 //
 // The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockheed's Lobbyist
@@ -22,18 +79,11 @@ pub const ID: &str = "meditative-097-9";
 // Every scenario keeps spare cards in each hand and library, so R82 does not end the turn after a use.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{BASE_USES, ID, RADIANT_USES, TRIBUTE_COST, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
-
-    /// §8.8: "Activate" is once a turn, the Radiant face's "Activate 2" twice.
-    const BASE_USES: i32 = 1;
-    const RADIANT_USES: i32 = 2;
-
-    /// §6.3 "Tribute 5": five of your Units, or Sheep Tokens worth as many (§3.2).
-    const TRIBUTE_COST: i32 = 5;
 
     const FILLER: &str = "core-010"; // (0) Spell.
     const SPARE: &str = "core-005"; // (1) Spell: library spare.
@@ -100,7 +150,7 @@ mod tests {
         assert_eq!(js(&def.base.keywords), keywords);
         assert_eq!(js(&def.radiant.keywords), keywords);
         assert_eq!(def.params, None);
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         for face in [&scripts.base, &scripts.radiant] {
             assert_eq!(
                 face.static_flags.as_ref().and_then(|flags| flags.tribute),

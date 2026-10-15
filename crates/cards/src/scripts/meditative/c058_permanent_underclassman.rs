@@ -1,15 +1,65 @@
 //! M #58 Permanent Underclassman (SPEC §8.8 row 58): (2) Unit, Human, Common, 3/3 → 6/6.
 //!
-//! Base:    "Cry: Summon a random (1) Unit. It gains "Death: Add {books|random Book card|random Book
-//! cards} to your hand.""
-//! Radiant: "Cry: Summon a random Radiant (1) Unit. It gains "Death: Add {books|random Radiant Book
-//! card|random Radiant Book cards} to your hand."" (the granted Death quoted in its sentence, R1445)
+//! Base:    "Cry: Summon a random (1) Cost Unit. It gains "Death: Add {books|random Book|random Books}
+//! to your hand.""
+//! Radiant: "Cry: Summon a random Radiant (1) Cost Unit. It gains "Death: Add {books|random Radiant
+//! Book|random Radiant Books} to your hand."" (the granted Death quoted in its sentence, R1445)
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) — the summoned Unit is granted
 //! `meditative-058#bookDeath` with the face's numbers, as plain data naming the hook this file
 //! registers beside its faces; `grants::death_hook_of` runs it after the Unit's own Death, for the
 //! controller at the death. Both faces carry the quoted ability in `grants`, so the view prints it.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-058";
+
+/// The granted Death, as both faces quote it and the grant map keys it.
+pub const BOOK_DEATH: &str = "meditative-058#bookDeath";
+
+/// Summon a random (1) Unit, then grant every Unit this Cry summoned the Book Death with the
+/// face's numbers (one summon, read off `summoned_so_far` as C+ #19 does).
+fn underclassman(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let books = param(&*ctx, "books");
+            vec![
+                summon_random(json_as(json!({
+                    "query": { "type": "Unit", "cost": 1 },
+                    "radiant": radiant,
+                }))),
+                for_each_card(ForEachCardArgs {
+                    cards: Arc::new(|ctx: &mut EffectContext<'_>| summoned_so_far(ctx)),
+                    each: Arc::new(move |instance_id: &str| {
+                        grant_ability(json_as(json!({
+                            "instanceId": instance_id,
+                            "grant": BOOK_DEATH,
+                            "radiant": radiant,
+                            "params": { "books": books },
+                        })))
+                    }),
+                }),
+            ]
+        })),
+        grants: IndexMap::from([(
+            "bookDeath",
+            hook(move |ctx| {
+                vec![add_random_from_catalog(json_as(json!({
+                    "query": { "tags": ["Book"] },
+                    "count": grant_param(ctx, "books"),
+                    "radiant": radiant,
+                })))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: underclassman(false),
+        radiant: underclassman(true),
+    }
+}
 
 // M #58 Permanent Underclassman — SPEC §8.8 row 58, BUILD M10 row M 58: "Cry: summon a random (1)
 // Unit (Radiant: a random Radiant one) and grant it the face's Death (MD-D13, R1420); the grant
@@ -18,7 +68,7 @@ pub const ID: &str = "meditative-058";
 // engine level); a full board summons nothing and grants nothing".
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::prelude::*;
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const UNDERCLASSMAN: &str = "meditative-058";

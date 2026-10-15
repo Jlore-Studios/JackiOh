@@ -1,15 +1,72 @@
 //! C+ #12.7 Legion of the Hungry (SPEC §8.7 row 12.7, R408): (2) Spell, Pancake, Token (printed Legendary),
-//! a Field Spell until patch v0.3.9 (#831), whose text was its Cry.
+//! a Field Spell until patch v0.3.10 (#831), whose text was its Cry.
 //!   Base:    "Exile {cards} random cards from your deck. Summon the Units among them."
 //!   Radiant: "… Summon the Units among them and make them Radiant."
 //! R408's reading, now the Spell's resolution (the script's `cry`, as every Spell's). Five different cards (R60), all of them if fewer; the Units among them are
 //! summoned out of exile in the order they were exiled (no Cry, R1), per R64, until the board is full,
 //! the rest staying exiled; a unit-token card exiled from a deck has ceased to exist (R11).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-7";
 
+/// `forEachCard`'s `cards`, typed (TS `(ctx) => readonly (CardInstance | string)[]`, ids here).
+fn cards_of(f: impl Fn(&mut EffectContext<'_>) -> Vec<String> + Send + Sync + 'static) -> ForEachCardCards {
+    Arc::new(f)
+}
+
+/// `forEachCard`'s `each`, typed (TS `(instanceId) => Effect`).
+fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEach {
+    Arc::new(f)
+}
+
+fn legion(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // R408's reading, the Spell's resolution (a Field Spell's Cry until patch v0.3.10, #831).
+            // maxi-tail: the picks are drawn as it resolves; nothing in this list can pause between them.
+            let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
+            let shuffled = ctx.rng.shuffle(&library);
+            let count = param(&*ctx, "cards").max(0) as usize;
+            let picks: Vec<CardInstance> = shuffled.into_iter().take(count).collect();
+            let units: Vec<String> = picks
+                .iter()
+                .filter(|card| card_type_of(ctx.state, card) == CardType::Unit)
+                .map(|card| card.id.clone())
+                .collect();
+            let pick_ids: Vec<String> = picks.iter().map(|card| card.id.clone()).collect();
+            vec![
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |_| pick_ids.clone()),
+                    each: each_of(|instance_id| {
+                        exile(json_as(json!({ "target": { "of": "instance", "instanceId": instance_id } })))
+                    }),
+                }),
+                // A summon that finds no zone leaves the card in exile, and on its old face.
+                for_each_card(ForEachCardArgs {
+                    cards: cards_of(move |_| units.clone()),
+                    each: each_of(move |instance_id| {
+                        summon(json_as(json!({
+                            "instance": { "of": "instance", "instanceId": instance_id },
+                            "radiant": radiant,
+                        })))
+                    }),
+                }),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: legion(false),
+        radiant: legion(true),
+    }
+}
+
 // C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Spell
-// (patch v0.3.9; a Field Spell whose unlabelled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
+// (patch v0.3.10; a Field Spell whose unlabelled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
 // R60), then summons the Units among them out of exile into your leftmost open zones, no Cry (R1),
 // until your board is full, the rest staying exiled; an empty deck does nothing and draws nothing
 // (R129); the exiles are public and the deck's order stays hidden (R97); the card count reads through
@@ -142,7 +199,7 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(LEGION, json!({}));
             assert_eq!(s.state().rng_cursor, cursor);
-            // A Spell since patch v0.3.9: it goes to the graveyard, no backrow card.
+            // A Spell since patch v0.3.10: it goes to the graveyard, no backrow card.
             assert!(s.backrow(P1, 1).is_none());
             s.expect_in_zone(LEGION, "graveyard");
         }

@@ -95,12 +95,22 @@ export const paths = {
   leaderboard: "/leaderboard",
   /** R654: public card and player statistics. */
   stats: "/stats",
+  /** #920: the card creator, the account's custom cards (SPEC §12.9). */
+  creator: "/creator",
+  /** R768000: the recent games and their replays. */
+  replays: "/replays",
+  /** #936 S8: Play together: friends, requests, challenges, chat and shared replays. */
+  together: "/together",
   hotseat: "/dev/hotseat",
-  /** #511: the replay player's dev list; production serves a 404 there, as at the hotseat. */
-  devReplays: "/dev/replays",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games: the score, the sealed picks and the pick clock. */
   series: (seriesId: string): string => `/series/${seriesId}`,
+  /** #936 S8 (B50): a friend's live game, watched from their seat; the friend rides on `?friend=`. */
+  watch: (matchId: string): string => "/watch/" + matchId,
+  /** #936 B61–B64: a Duos co-op match against the AI team. */
+  duos: (matchId: string): string => `/duos/${matchId}`,
+  /** #936 B65: the four-seat Duos hotseat over WASM; production serves a 404 there, as at `hotseat`. */
+  duosDev: "/dev/duos",
 } as const;
 
 function idUnder(path: string, first: string): string | null {
@@ -117,6 +127,16 @@ export function seriesIdOf(path: string): string | null {
   return idUnder(path, "series");
 }
 
+/** #936 S8: the match a `/watch/:matchId` path watches, or null. */
+export function watchIdOf(path: string): string | null {
+  return idUnder(path, "watch");
+}
+
+/** #936: the match id of a `/duos/:matchId` path, or null. */
+export function duosIdOf(path: string): string | null {
+  return idUnder(path, "duos");
+}
+
 // Sign-in screen entry states.
 // `/login` permits only exact expiry and password-reset tokens, so URL input cannot carry a destination,
 // message or address (B35, R193). A sign-in always lands on a `paths` value.
@@ -130,6 +150,11 @@ export function loginPath(options: { reason?: LoginReason; mode?: LoginEntryMode
   if (options.mode === "forgot") query.set("mode", "forgot");
   const search = query.toString();
   return search.length === 0 ? paths.login : `${paths.login}?${search}`;
+}
+
+/** #921: the creator's "Try it": `/practice?try=<id>` deals a random deck around that custom card (R915005). */
+export function tryPath(customId: string): string {
+  return `${paths.practice}?try=${encodeURIComponent(customId)}`;
 }
 
 function queryValue(search: string, key: string): string | null {

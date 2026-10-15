@@ -3486,7 +3486,7 @@ The five Grapes (`classicplus-065-1` … `-5`), Fruit Spell Tokens that any Frui
   the kept instance and stays a Field Trap; the opponent's card ceases to exist), then +1 Brittle. The
   texts fused in work for you where they can: a fused unit's end-of-turn line runs on your side, a
   fused aura covers your side; a fused Cry never runs, since this is already on the field. It turns
-  face-up the first time it fuses (R33: a fired Field Trap is public). Patch v0.3.9 (R831011): it is
+  face-up the first time it fuses (R33: a fired Field Trap is public). Patch v0.3.10 (R831011): it is
   Animated, 0/1 (Radiant 0/2), fusing a copy of the card's definition and never the card itself, and it
   animates into its lane's unit zone as the last step of each firing.
 - **Rulings (CL46):** a Trap is consumed when it fires, which would leave nothing to gain Brittle, so it

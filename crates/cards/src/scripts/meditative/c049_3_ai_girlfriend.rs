@@ -12,7 +12,55 @@
 //! (MD-C26): after each combat it was the target of, declared or forced, the attacker still on the
 //! field is Nerfed (a Cleave splash is no attack on it).
 
+use jackioh_engine::effects::{degrade, forced_attacks_on};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-049-3";
+
+/// Whether this stands animated in a unit zone: a backrow card's forced attacks find no target.
+fn animated(ctx: &EffectContext) -> bool {
+    matches!(
+        ctx.live_self().map(|me| &me.zone),
+        Some(Zone::Field { row: Row::Units, .. })
+    )
+}
+
+fn girlfriend() -> Script {
+    // Both faces share the one script: the Radiant face's two Nerfs are its declared `times`.
+    Script {
+        start_of_turn: Some(hook(|ctx| {
+            if !animated(ctx) {
+                return vec![];
+            }
+            vec![forced_attacks_on(json_as(json!({
+                "target": { "of": "self" },
+                "attackers": "enemy",
+            })))]
+        })),
+        after_attacked: Some(hook(|ctx| {
+            let Some(facts) = after_attacked_of(&*ctx) else {
+                return vec![];
+            };
+            // MD-C26: Nerf the attacker only if it is still on the field.
+            if !facts.attacker_survived {
+                return vec![];
+            }
+            vec![degrade(json_as(json!({
+                "instanceId": facts.attacker_id,
+                "times": param(&*ctx, "times"),
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = girlfriend();
+    CardScripts {
+        base: base.clone(),
+        radiant: base,
+    }
+}
 
 // M #49.3 AI Girlfriend — SPEC §8.8 row 49.3, BUILD M10 row M 49.3.
 #[cfg(test)]

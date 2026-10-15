@@ -24,7 +24,7 @@
 //! A fit with fewer than `TIMING_FIT_MIN_SAMPLES` observations behind it prints a comment instead,
 //! and the row's prior stays.
 
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use indexmap::IndexMap;
 
 use jackioh_engine::wire::GameOverReason;
@@ -32,6 +32,7 @@ use jackioh_engine::{ActionType, PlayerId};
 
 use crate::bots::persona::reply_key_of;
 use crate::cli::card_stats::literal;
+use crate::cli::{connect_one, database_url};
 use crate::config::{
     ConcedeFit, DrawAnswerFit, EmoteDelayFit, EmoteReplyKey, PERSONA_NAMES, PersonaName, PersonaWeights,
     RematchFit, ScalarFit, TIMING_FIT_CONCEDE_TURN_QUANTILE, TIMING_FIT_DELAY_QUANTILES,
@@ -598,17 +599,9 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     if let Some(arg) = args.first() {
         bail!("Unrecognised argument {}.\n\n{USAGE}", quoted(arg));
     }
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
     // One connection: this process runs one read and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let read = telemetry(&db).await;
     db.close().await;
     let read = read?;

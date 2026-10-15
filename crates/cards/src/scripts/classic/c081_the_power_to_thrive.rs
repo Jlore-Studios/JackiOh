@@ -6,20 +6,83 @@
 //!            Activate. Tunes: heal 3 ↑; draw 1 ↑; discount 1 ↑."
 //!
 //! One ability, once per turn, its mode carried in the `activate` action. Heal has no cap on a hero (R19).
-//! The third mode gained temporary mana until patch v0.3.9 (#831); it now reduces the Cost of a card in
+//! The third mode gained temporary mana until patch v0.3.10 (#831); it now reduces the Cost of a card in
 //! your hand, a `costMod` (R65, R78) on the card its controller picks as the activation resolves, and
 //! with an empty hand it does nothing (R831009). The three numbers are declared (R386).
 
+use jackioh_engine::effects::{choose_from_hand, draw, heal, set_cost_mod};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-081";
+
+/// One ability, once per turn, its mode carried in the `activate` action (R81). The third mode reduces
+/// the Cost of a card in your hand (patch v0.3.10, #831; it gained mana before): the card is chosen as
+/// the activation resolves, a prompt the `resume` step answers (R831009).
+const MODES: [&str; 3] = ["heal", "draw", "reduce"];
+
+/// The resume step of the third mode's hand pick.
+const REDUCE_STEP: &str = "reduce";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![ActivationDecl {
+            id: "thrive".into(),
+            label: "Choose one".into(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![ModeDecl {
+                kind: PromptKind::Mode,
+                options: MODES.iter().map(|mode| mode.to_string()).collect(),
+            }],
+            can_activate: None,
+            has: None,
+            run: hook(|ctx| {
+                let mode = ctx.modes.first().cloned();
+                if mode.as_deref() == Some("heal") {
+                    return vec![heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": param(&*ctx, "heal") })))];
+                }
+                if mode.as_deref() == Some("draw") {
+                    return vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))];
+                }
+                if mode.as_deref() == Some("reduce") {
+                    vec![choose_from_hand(json_as(json!({
+                        "step": REDUCE_STEP,
+                        "count": 1,
+                        "prompt": "The Power to Thrive: choose a card",
+                    })))]
+                } else {
+                    vec![]
+                }
+            }),
+        }],
+        resume: IndexMap::from([(
+            REDUCE_STEP,
+            hook(|ctx| {
+                vec![set_cost_mod(json_as(json!({
+                    "target": { "of": "chosen" },
+                    "amount": -param(&*ctx, "discount"),
+                    "inHandOnly": true,
+                })))]
+            }),
+        )]),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 6, 2 and 2 are its declared numbers.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #81 The Power to Thrive — SPEC §8.6 row 81, BUILD M9 Classic row C 81: "Activate, once per turn
 // (R384), the mode carried in the `activate` action: heal your hero 3 (no cap, R19), draw 1, or a card of
-// your hand costs (1) less (patch v0.3.9); usable the turn it is played; a second activation that turn is
+// your hand costs (1) less (patch v0.3.10); usable the turn it is played; a second activation that turn is
 // refused; not a play; radiant: heal 6, draw 2, or (2) less; its tuned numbers (heal, draw, discount) read
 // through `param()` (R386)".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::sync::Arc;
 
@@ -95,7 +158,7 @@ mod tests {
                 { "key": "discount", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let abilities: Vec<Value> = scripts
             .base
             .activations

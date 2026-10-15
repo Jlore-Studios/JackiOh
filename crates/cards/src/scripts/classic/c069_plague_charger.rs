@@ -175,7 +175,7 @@ mod tests {
         #[test]
         fn both_follow_the_tokens_as_they_go_c_n78_mutate_spells_removals_take_the_bonus_then_first_strike() {
             let mut s = scenario(json!({
-                // The Radiant Mutate Spell: Activate ♾️ since patch v0.3.9, so it removes twice in a turn.
+                // The Radiant Mutate Spell: Activate ♾️ since patch v0.3.10, so it removes twice in a turn.
                 "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [{ "def": MUTATE, "radiant": true }] },
                 "p2": { "hand": [FILLER], "health": 30 },
             }));

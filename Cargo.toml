@@ -2,11 +2,11 @@
 # here and named with `{ workspace = true }` by the crates; nobody adds one that is not on this
 # list during Waves 1–3.
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "crates/wasm/luau"]
 resolver = "3"
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.97.0"
 publish = false
@@ -18,15 +18,17 @@ jackioh-cards = { path = "crates/cards" }
 jackioh-ai = { path = "crates/ai" }
 jackioh-luau = { path = "crates/luau" }
 
-# Third-party crates (SURFACE §2), versions as written; `=` for mlua.
+# Third-party crates (SURFACE §2), versions as written; `=` for wasm-bindgen and mlua.
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151" }
 indexmap = { version = "2.14.2", features = ["serde"] }
 ts-rs = { version = "12.0.1", features = ["serde-compat", "no-serde-warnings", "indexmap-impl", "serde-json-impl"] }
+wasm-bindgen = { version = "=0.2.129" }
+js-sys = { version = "0.3.106" }
+console_error_panic_hook = { version = "0.1.7" }
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1.53.2", features = ["full", "test-util"] }
 tower = { version = "0.5.3", features = ["util"] }
-tower-http = { version = "0.7.1", features = ["cors", "trace"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "json", "time", "uuid"] }
 jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
@@ -86,3 +88,12 @@ opt-level = 2
 # (78f131c^:.fullsend/notes/perf.md: "s" 12.64 MB, 2.38 MB gzipped; 3 12.38 MB, 2.31 MB).
 [profile.release]
 lto = "thin"
+
+# The AI in one codegen unit. Over the default 16, rustc groups its 20 modules by their sizes and the
+# inlined items they share, so growing one module can regroup others, and LLVM then inlines and
+# duplicates differently across the crate. #891's simulate.rs change did: the browser module grew
+# 3,912 B gzipped, 638 B over #442 L12's cap (`apps/web/src/wasm/size.test.ts`). In one unit the
+# module is 3,937,232 B gzipped before #891 and 3,937,326 B after (3,990,864 B before at 16), and
+# the AI's release build takes about 9 s longer.
+[profile.release.package.jackioh-ai]
+codegen-units = 1

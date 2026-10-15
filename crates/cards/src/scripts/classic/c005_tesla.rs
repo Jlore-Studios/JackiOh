@@ -11,10 +11,86 @@
 //! Defense Position (Animated, B3.1, R383): its own lane when open, else the leftmost open, unlocked,
 //! unreserved zone (R64); with none open it stays face-up in its backrow zone. A Field Trap is never
 //! consumed. Face-down it is hidden until it first fires (R33). The condition lives in `when` (R99).
-//! It zaps only the Unit that reveals it (R831007, patch v0.3.9, #831): the first firing remembers
+//! It zaps only the Unit that reveals it (R831007, patch v0.3.10, #831): the first firing remembers
 //! `revealed`, and the trigger answers nothing after that, wherever the card stands.
 
+use jackioh_engine::effects::{animate, damage, remember};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-005";
+
+/// The instance id of the opponent's Unit this event summons (or resolves, for a play), or None.
+fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
+    match event {
+        GameEvent::Summoned { player, row, exits_from, instance_id, .. } => {
+            if *player == ctx.controller || *row != Row::Units {
+                return None;
+            }
+            // A play's own placement (§10.5 step 4) is answered when the play resolves, below.
+            if exits_from.is_some() {
+                return None;
+            }
+            Some(instance_id.clone())
+        }
+        GameEvent::CardResolved { permanent, def_id, instance_id, .. } => {
+            let state: &GameState = &*ctx.state;
+            if !*permanent || def_of(Some(state), def_id).type_ != CardType::Unit {
+                return None;
+            }
+            let unit = find_instance(state, instance_id)?;
+            if unit.zone.z() != ZoneName::Field || unit.controller == ctx.controller {
+                return None;
+            }
+            Some(instance_id.clone())
+        }
+        _ => None,
+    }
+}
+
+/// What Tesla keeps once it has revealed: it zaps only the Unit that revealed it (patch v0.3.10, #831).
+const REVEALED: &str = "revealed";
+
+fn has_revealed(ctx: &EffectContext<'_>) -> bool {
+    recalled(ctx, REVEALED) == Some(Value::Bool(true))
+}
+
+fn zap() -> TriggerDef {
+    TriggerDef::new("tesla-zap", &[GameEventType::Summoned, GameEventType::CardResolved], |ctx, event| {
+        let Some(target) = arrival(ctx, event) else {
+            return vec![];
+        };
+        if has_revealed(ctx) {
+            return vec![];
+        }
+        // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
+        // animates but deals it nothing.
+        let state: &GameState = &*ctx.state;
+        let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
+        let mut effects = vec![remember(json_as(json!({ "key": REVEALED, "value": true })))];
+        if !shielded {
+            effects.push(damage(json_as(json!({
+                "to": { "of": "instance", "instanceId": target },
+                "amount": param(&*ctx, "damage"),
+            }))));
+        }
+        effects.push(animate(json_as(json!({ "position": "DEF" }))));
+        effects
+    })
+    .with_when(|ctx, event| !has_revealed(ctx) && arrival(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![zap()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 8 is its declared damage, which `param` reads off the face;
+    // its 2/8 body and keywords are printed on the catalog face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #5 Tesla — SPEC §8.6 row 5, BUILD M9 Classic row C 5: face-down, read by its controller only (R33);
 // fires on a Unit summoned on the opponent's side, not on a steal (R171) or an animating card (R383); a
@@ -26,7 +102,6 @@ pub const ID: &str = "classic-005";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -36,7 +111,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // (1) 3/3.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const TOKEN_MAN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token (3/3).
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 (1) Cost or less Units.
+    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
     const FEELINGS: &str = "classic-032"; // (1) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
@@ -78,7 +153,7 @@ mod tests {
             let kinds: Vec<KeywordKind> = def.base.keywords.iter().map(Keyword::kind).collect();
             assert_eq!(kinds, vec![KeywordKind::Animated, KeywordKind::Lifesteal]);
             // The radiant face is the very same script.
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(scripts.base.triggers.len(), scripts.radiant.triggers.len());
             for (base, radiant) in scripts.base.triggers.iter().zip(&scripts.radiant.triggers) {
                 assert!(Arc::ptr_eq(&base.run, &radiant.run));

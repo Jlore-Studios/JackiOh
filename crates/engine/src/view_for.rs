@@ -65,7 +65,7 @@ use serde_json::{Map, Value};
 use crate::animated::is_animated;
 use crate::announce::announced_face_down_to;
 use crate::catalog::registered_catalog;
-use crate::combat::{ExertionKind, has_exertion, is_asleep, why_cannot_declare};
+use crate::combat::{ExertionKind, has_exertion_in, is_asleep, why_cannot_declare_in};
 use crate::condition::condition_active;
 use crate::config::VIEW_EVENT_LIMIT;
 use crate::cost_rules::{cost_rule_text, enchant_next_spell_label};
@@ -74,7 +74,7 @@ use crate::damage::hero_armor_of;
 use crate::echo::echo_grant_of;
 use crate::faces::card_type_of;
 use crate::instance_view::{hand_keywords_view, instance_data_view};
-use crate::layers::{stats_with_buffs, unit_view as unit_layers};
+use crate::layers::{AuraTable, stats_with_buffs};
 use crate::mana::{NEXT_REFRESH_MODIFIER_ID, effective_cost, modifier_is_live};
 use crate::marks::marks_on;
 use crate::own_library::own_library_view;
@@ -460,9 +460,14 @@ fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> 
 
 /// The card that acts in a unit zone: the top of the pile (§3.2). `buried` is how many dormant cards
 /// sit under it (R13) — a count, so no buried identity reaches either player.
-fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> Option<UnitView> {
+fn unit_view_of(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    pile: &[CardInstance],
+    viewer: PlayerId,
+) -> Option<UnitView> {
     let top = pile.first()?;
-    let layers = unit_layers(state, top);
+    let layers = auras.unit_view(top);
     // B3.1, R383: a Field Spell, Trap or Field Trap standing here as a Unit, and the backrow lane an
     // "Animated on your turn" card will go back to (that zone is `reserved` meanwhile).
     let home: Option<i32> = if is_animated(state, top) {
@@ -496,7 +501,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         activations: card.activations,
         quest: card.quest,
         copies: card.copies,
-        condition_targets: condition_targets_of(state, top, viewer),
+        condition_targets: condition_targets_of(state, auras, top, viewer),
         owner: top.owner,
         controller: top.controller,
         attack: layers.attack,
@@ -507,7 +512,7 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         position: layers.position,
         counters: top.counters,
         buried: pile.len() as i32 - 1,
-        can_act: can_act(state, top),
+        can_act: can_act(state, auras, top),
         // R243, §6.3 Vanilla: the text is gone, which the definition the client reads does not say.
         vanilla: if top.vanilla { Some(true) } else { None },
         animated,
@@ -530,28 +535,38 @@ fn unit_view_of(state: &GameState, pile: &[CardInstance], viewer: PlayerId) -> O
         } else {
             None
         },
-        attack_reason: attack_reason_of(state, top, viewer),
+        attack_reason: attack_reason_of(state, auras, top, viewer),
     })
 }
 
 /// R849000: why the viewer's own unit that may act now cannot declare an attack, gated as
 /// `condition_targets_of`. Which targets it may attack stays `legal_actions`' answer.
-fn attack_reason_of(state: &GameState, top: &CardInstance, viewer: PlayerId) -> Option<String> {
-    if top.controller != viewer || !can_act(state, top) {
+fn attack_reason_of(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    top: &CardInstance,
+    viewer: PlayerId,
+) -> Option<String> {
+    if top.controller != viewer || !can_act(state, auras, top) {
         return None;
     }
-    why_cannot_declare(state, top).err().map(|error| error.message)
+    why_cannot_declare_in(auras, top).err().map(|error| error.message)
 }
 
 /// MD-D5, R1121: the yellow a dragged attack paints — the enemy Units an `attack_mods` entry would
 /// apply to if this Unit attacked them now, in `attack_targets` order. Only on the viewer's own
 /// attackers that may act now (their main phase, no prompt open, as R195's flag), and `None` when
 /// the list is empty. Tags are public (§10.8), so the field reveals nothing.
-fn condition_targets_of(state: &GameState, top: &CardInstance, viewer: PlayerId) -> Option<Vec<String>> {
-    if top.controller != viewer || !can_act(state, top) {
+fn condition_targets_of(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    top: &CardInstance,
+    viewer: PlayerId,
+) -> Option<Vec<String>> {
+    if top.controller != viewer || !can_act(state, auras, top) {
         return None;
     }
-    let targets: Vec<String> = crate::combat::attack_targets(state, top)
+    let targets: Vec<String> = crate::combat::attack_targets_in(auras, top)
         .into_iter()
         .filter_map(|target| match target {
             crate::damage::DamageTarget::Unit { instance } => {
@@ -573,7 +588,7 @@ fn condition_targets_of(state: &GameState, top: &CardInstance, viewer: PlayerId)
 /// that cannot attack may still switch back. `combat::has_exertion` owns that rule, Deft's
 /// two exertions included (R49); *which* of the two is legal is `combat::can_attack`'s answer and
 /// `legal_actions`', never the view's.
-fn can_act(state: &GameState, card: &CardInstance) -> bool {
+fn can_act(state: &GameState, auras: &AuraTable<'_>, card: &CardInstance) -> bool {
     if state.result.is_some() || state.phase != crate::wire::Phase::Main {
         return false;
     }
@@ -583,7 +598,7 @@ fn can_act(state: &GameState, card: &CardInstance) -> bool {
     if state.active != card.controller {
         return false;
     }
-    has_exertion(state, card, ExertionKind::Attack) || has_exertion(state, card, ExertionKind::Switch)
+    has_exertion_in(auras, card, ExertionKind::Attack) || has_exertion_in(auras, card, ExertionKind::Switch)
 }
 
 /// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter). A private
@@ -675,7 +690,12 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
 }
 
 /// R446: the Units this side's carriers hold, by backrow lane, or nothing when none holds one.
-fn carried_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option<Vec<Option<UnitView>>> {
+fn carried_view(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    player: PlayerId,
+    viewer: PlayerId,
+) -> Option<Vec<Option<UnitView>>> {
     if carried_units_of(state, player).is_empty() {
         return None;
     }
@@ -684,7 +704,7 @@ fn carried_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> Option
             .into_iter()
             .map(|zone_ref| {
                 let unit: Option<CardInstance> = carried_at(state, zone_ref).cloned();
-                unit.and_then(|unit| unit_view_of(state, &[unit], viewer))
+                unit.and_then(|unit| unit_view_of(state, auras, &[unit], viewer))
             })
             .collect(),
     )
@@ -764,6 +784,7 @@ fn find_def_in<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     state
         .transient_defs
         .get(def_id)
+        .or_else(|| state.custom_defs.get(def_id))
         .or_else(|| registered_catalog().get(def_id))
 }
 
@@ -952,7 +973,7 @@ fn credit_view(state: &GameState, player: PlayerId) -> Option<CreditView> {
     })
 }
 
-fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView {
+fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer: PlayerId) -> SideView {
     let side: &PlayerState = &state.players[player];
     let powers = hero_powers_of(state, player);
     // R667: asked only for the viewer's own hand, the one hand a warning may ride.
@@ -1002,6 +1023,8 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
             armor: hero_armor_of(state, player),
             power: powers.first().cloned(),
             powers,
+            // #936 S3: a Duos duel's pool and spent flag, public on both seats (absent in 1v1).
+            duos: side.duos,
         },
         // R987: the side's Luck, read as the hero's armor is above — absent at 0 (D14).
         luck: match crate::query::luck_of(state, player) {
@@ -1042,14 +1065,17 @@ fn side_view(state: &GameState, player: PlayerId, viewer: PlayerId) -> SideView 
         units: side
             .units
             .iter()
-            .map(|pile| pile.as_ref().and_then(|pile| unit_view_of(state, pile, viewer)))
+            .map(|pile| {
+                pile.as_ref()
+                    .and_then(|pile| unit_view_of(state, auras, pile, viewer))
+            })
             .collect(),
         backrow: side
             .backrow
             .iter()
             .map(|card| backrow_view(state, card.as_ref(), viewer))
             .collect(),
-        carried: carried_view(state, player, viewer),
+        carried: carried_view(state, auras, player, viewer),
         hand_cap: side.hand_cap,
         hand_marked: hand_marked_view(state, player, viewer),
         credit: credit_view(state, player),
@@ -1564,6 +1590,16 @@ fn redact_event(
     let instance = text_at(&shown, "instanceId");
 
     match event.event_type() {
+        // R915004: a custom card's failure names the card as the card itself is named: a viewer who may
+        // not read it learns that a script failed, never whose or why.
+        GameEventType::ScriptFailed => {
+            if !instance.is_empty() && hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
+                shown.insert("message".to_string(), Value::String("a script failed".to_string()));
+            }
+            rebuild(shown)
+        }
+
         // A card named with its definition: both go, or neither.
         //
         // `cardResolved` (§10.5 step 7) is one of these rather than a public event: R97 judges a card
@@ -2181,13 +2217,15 @@ pub fn view_for(state: &GameState, player_id: PlayerId) -> PlayerView {
 /// The engine never reads a clock, so the caller passes the number in and it is `None` whenever
 /// nobody is counting.
 pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Option<i32>) -> PlayerView {
+    // #892: one aura table for the whole view.
+    let auras = AuraTable::new(state);
     let mut view = PlayerView {
         viewer: player_id,
         turn: state.turn,
         active: state.active,
         phase: state.phase,
-        you: side_view(state, player_id, player_id),
-        opponent: side_view(state, opponent_of(player_id), player_id),
+        you: side_view(state, &auras, player_id, player_id),
+        opponent: side_view(state, &auras, opponent_of(player_id), player_id),
         pending: pending_view(state, player_id),
         events: recent_events(state, player_id),
         result: state.result.as_ref().map(|result| GameResult {
@@ -2238,6 +2276,9 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
                 }
                 if let Some(def) = state.transient_defs.get(text) {
                     defs.insert(text.clone(), def.clone());
+                } else if let Some(def) = state.custom_defs.get(text) {
+                    // R915000: a custom card's definition, which no client catalog holds either.
+                    defs.insert(text.clone(), def.clone());
                 }
             }
             Value::Array(items) => {
@@ -2254,7 +2295,7 @@ fn match_defs_in(state: &GameState, view: &PlayerView) -> IndexMap<String, CardD
         }
     }
     let mut defs: IndexMap<String, CardDef> = IndexMap::new();
-    if state.transient_defs.is_empty() {
+    if state.transient_defs.is_empty() && state.custom_defs.is_empty() {
         return defs;
     }
     match serde_json::to_value(view) {

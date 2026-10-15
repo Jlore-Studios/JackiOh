@@ -30,8 +30,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::wire::{
-    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, PerPlayer, PlayerId,
-    PortraitId, SourceFilter, Winner,
+    Action, ActionType, CustomCard, CustomFrame, EmoteId, GameEventType, GameMode, GameOverReason,
+    GameRecord, LeanPick, PerPlayer, PlayerId, PortraitId, SourceFilter, Winner,
 };
 
 use super::{fake, pg};
@@ -453,6 +453,58 @@ impl From<UpsertOutcome> for TrioUpsertOutcome {
     }
 }
 
+// Custom cards on the account (SPEC §12.9, R915008; migration 0037). Private to their owner: a
+// profile reads its own and the server alone writes them, each checked by the engine's validator
+// (R915001) first. The store counts the versions: a create is version 1, and an update names the
+// version it replaces and is refused when another save came first.
+
+/// R915008: one custom card as its owner's account keeps it: the engine's `CustomCard` (its id,
+/// version, frame, source and builder's model) and when it was made and last saved.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedCustomCard {
+    pub profile_id: String,
+    pub card: CustomCard,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+/// R915008: what a create or an update writes: a custom card but its version, which the store
+/// counts (§12.1).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomCardWrite {
+    /// `custom-…` (R915000), minted by the server at the first save.
+    pub id: String,
+    pub profile_id: String,
+    pub frame: CustomFrame,
+    pub source: String,
+    pub builder: Option<Value>,
+    /// Epoch ms: `updated_at`, and `created_at` too on a create.
+    pub at: i64,
+}
+
+store_union! {
+    /// R915008: what a create did: `created` (at version 1), or `limit` — the profile already holds
+    /// its cap of cards (`CUSTOM_CARDS_PER_ACCOUNT`) and nothing was written.
+    pub enum CustomCardCreateOutcome {
+        Created = "created",
+        Limit = "limit",
+    }
+}
+
+store_union! {
+    /// R915008: what an update did: `updated` (the card replaced whole, its version counted),
+    /// `stale` (its version is no longer the one the save replaces: another save came first) or
+    /// `missing` (the profile has no card with that id; another profile's card answers the same).
+    /// Nothing is written unless `updated`.
+    pub enum CustomCardUpdateOutcome {
+        Updated = "updated",
+        Stale = "stale",
+        Missing = "missing",
+    }
+}
+
 // Queue modes (SPEC §9.5, R257) and what a ticket or a room freezes.
 
 store_union! {
@@ -647,10 +699,11 @@ pub struct Room {
     pub host_portrait: Option<Option<String>>,
     /// The host's frozen trio in a Conquest room; null otherwise.
     pub host_trio: Option<FrozenTrio>,
-    /// R1372: an All Random host's "More cards from the newest set", for the deck dealt to their seat
-    /// when the room is joined (`matches.room_lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub host_lean_newest: bool,
+    /// R1372, R924000: an All Random host's "More cards from" pick, for the deck dealt to their seat
+    /// when the room is joined (`matches.room_lean_set`, migrations 0027 and 0036). None in the other
+    /// modes.
+    #[serde(rename = "hostLeanSet", default, skip_serializing_if = "Option::is_none")]
+    pub host_lean: Option<LeanPick>,
     pub catalog_version: String,
     pub created_at: i64,
     pub expires_at: i64,
@@ -683,10 +736,10 @@ pub struct Ticket {
     pub portrait: Option<Option<String>>,
     /// R259: a Conquest ticket's frozen trio; null in the other two modes.
     pub trio: Option<FrozenTrio>,
-    /// R1372: an All Random ticket's "More cards from the newest set", for the deck dealt to its seat
-    /// when it is paired (`tickets.lean_newest`, migration 0027). False in the other modes.
-    #[serde(default)]
-    pub lean_newest: bool,
+    /// R1372, R924000: an All Random ticket's "More cards from" pick, for the deck dealt to its seat
+    /// when it is paired (`tickets.lean_set`, migrations 0027 and 0036). None in the other modes.
+    #[serde(rename = "leanSet", default, skip_serializing_if = "Option::is_none")]
+    pub lean: Option<LeanPick>,
     pub catalog_version: String,
     pub enqueued_at: i64,
     pub status: TicketStatus,
@@ -1401,10 +1454,27 @@ impl Db {
         }
     }
 
-    /// Lets the pool's connections go, for a CLI about to exit. A no-op on the fake.
+    /// Lets the pool's connections go, for a CLI about to exit, and for `app::serve_until`'s
+    /// drain. A no-op on the fake.
     pub async fn close(&self) {
         if let Db::Pg(pool) = self {
-            pool.close().await;
+            pg::close(pool).await;
+        }
+    }
+
+    /// `/readyz`'s question (#861): whether the store answers. The pool connects lazily, so this
+    /// is what finds a database that died after boot. The fake answers once its tables' lock is
+    /// free.
+    pub async fn ping(&self) -> Result<(), StoreError> {
+        match self {
+            Db::Pg(pool) => {
+                sqlx::query("select 1").execute(pool).await?;
+                Ok(())
+            }
+            Db::Fake(data) => {
+                drop(data.lock().await);
+                Ok(())
+            }
         }
     }
 }
@@ -1526,17 +1596,29 @@ impl Tx<'_> {
         dispatch!(self, profiles_answer_username_prompt(profile_id))
     }
 
-    /// Pass `None` to clear. §9.5: every terminal reason clears both players'.
+    /// Seats the profile in `match_id`, compare-and-set (R890000): setting `Some` writes only
+    /// while the seat is free and answers `false` without writing when another match holds it, so
+    /// a queue pair, room join, rematch or series game can never seat a player twice — the first
+    /// writer wins. `Err` only when the profile is missing. Clearing with `None` is
+    /// unconditional. §9.5: every terminal reason clears both players'.
     pub async fn profiles_set_in_match(
         &mut self,
         profile_id: &str,
         match_id: Option<&str>,
-    ) -> StoreResult<()> {
+    ) -> StoreResult<bool> {
         dispatch!(self, profiles_set_in_match(profile_id, match_id))
     }
 
+    /// Clears the seat only while it points at `match_id` (R890000): a start-failure cleanup that
+    /// never wipes a rival match's flag. Always `Ok`, even when the seat points elsewhere or the
+    /// profile is missing.
+    pub async fn profiles_clear_in_match(&mut self, profile_id: &str, match_id: &str) -> StoreResult<()> {
+        dispatch!(self, profiles_clear_in_match(profile_id, match_id))
+    }
+
     /// Deletes the profile and everything that is only its own: collection and its ledger, decks,
-    /// trios, tutorial progress, its age check and terms acceptances (R757000, R757001), queue
+    /// trios, custom cards (R915008), tutorial progress, its age check and terms acceptances
+    /// (R757000, R757001), queue
     /// tickets, rooms it opened that nobody joined, and its invite-code attempts' link to it. Finished matches, results and series stay for the other
     /// player, with this profile's seat left empty (migration 0012). False when there was no such
     /// profile. The caller refuses a profile in a live match or series first.
@@ -1676,6 +1758,51 @@ impl Tx<'_> {
         dispatch!(self, trios_remove(profile_id, trio_id))
     }
 
+    // custom cards (R915008, migration 0037)
+
+    /// R915008: a profile's custom cards, oldest first: `created_at`, then `id`.
+    pub async fn custom_cards_list(&mut self, profile_id: &str) -> StoreResult<Vec<SavedCustomCard>> {
+        dispatch!(self, custom_cards_list(profile_id))
+    }
+
+    /// R915008: the profile's own card with this id, or none; another profile's card is none.
+    pub async fn custom_cards_get(
+        &mut self,
+        profile_id: &str,
+        card_id: &str,
+    ) -> StoreResult<Option<SavedCustomCard>> {
+        dispatch!(self, custom_cards_get(profile_id, card_id))
+    }
+
+    /// R915008: a new card at version 1, `created_at` and `updated_at` both `card.at`; `limit` when
+    /// the profile already holds `max_cards`, counted under a lock on the profile so two creates at
+    /// once cannot both pass it (`app.create_custom_card`, migration 0037). An id already held is an
+    /// error: the server mints 128 random bits.
+    pub async fn custom_cards_create(
+        &mut self,
+        card: &CustomCardWrite,
+        max_cards: i64,
+    ) -> StoreResult<CustomCardCreateOutcome> {
+        dispatch!(self, custom_cards_create(card, max_cards))
+    }
+
+    /// R915008: replaces the frame, source and builder of the profile's own card whose version is
+    /// still `replaces`, counting the save (`replaces + 1`) and stamping `updated_at` (its
+    /// `created_at` is kept); `stale` or `missing` otherwise (`app.update_custom_card`).
+    pub async fn custom_cards_update(
+        &mut self,
+        card: &CustomCardWrite,
+        replaces: i32,
+    ) -> StoreResult<CustomCardUpdateOutcome> {
+        dispatch!(self, custom_cards_update(card, replaces))
+    }
+
+    /// R915008: deletes the profile's own card. False when the profile has no card with this id.
+    /// The decks that name it keep naming it (§12.9).
+    pub async fn custom_cards_remove(&mut self, profile_id: &str, card_id: &str) -> StoreResult<bool> {
+        dispatch!(self, custom_cards_remove(profile_id, card_id))
+    }
+
     // matches
 
     pub async fn matches_create(&mut self, row: &MatchRow) -> StoreResult<()> {
@@ -1794,6 +1921,13 @@ impl Tx<'_> {
         at: i64,
     ) -> StoreResult<Option<Room>> {
         dispatch!(self, rooms_claim(code, guest_profile_id, match_id, at))
+    }
+
+    /// Counts the host's unclaimed unexpired open rooms (R890000): the advisory half of the
+    /// per-host open-room cap, so one host cannot amplify into unbounded rooms. Advisory only;
+    /// the seat compare-and-set is the guard.
+    pub async fn rooms_count_open_by_host(&mut self, host_profile_id: &str, at: i64) -> StoreResult<i64> {
+        dispatch!(self, rooms_count_open_by_host(host_profile_id, at))
     }
 
     // tickets
@@ -2291,3 +2425,420 @@ impl Tx<'_> {
         dispatch!(self, play_telemetry_unfolded())
     }
 }
+
+// ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
+// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, challenges and chat,
+// and the spectator setting on the profile. The rules are `social/*`; these are their rows, and
+// the methods below the one `impl Tx` they need.
+
+/// B43: a pending friend request (`public.friend_requests`), one per direction and pair.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendRequestRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub created_at: i64,
+}
+
+/// B45: two friends (`public.friendships`), the pair in the store's order (`a < b`), and since when.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendshipRow {
+    pub a: String,
+    pub b: String,
+    pub since: i64,
+}
+
+impl FriendshipRow {
+    /// The friend of `profile_id` in this pair.
+    pub fn other(&self, profile_id: &str) -> &str {
+        if self.a == profile_id { &self.b } else { &self.a }
+    }
+}
+
+/// B46: one block (`public.blocks`): `blocker` blocked `blocked`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockRow {
+    pub blocker: String,
+    pub blocked: String,
+    pub created_at: i64,
+}
+
+store_union! {
+    /// B48, B49: where a challenge stands (`challenges.state`). Only an open one may be answered.
+    pub enum ChallengeState {
+        Open = "open",
+        Accepted = "accepted",
+        Declined = "declined",
+        Cancelled = "cancelled",
+        Expired = "expired",
+    }
+}
+
+/// B48: a challenge to a friend and the room it opened (`public.challenges`). The room expires
+/// with the challenge (`expires_at`), and `mode` is the room's.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChallengeRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub room_code: String,
+    pub mode: QueueMode,
+    pub created_at: i64,
+    pub expires_at: i64,
+    pub state: ChallengeState,
+}
+
+/// B53: one chat message (`public.chat_messages`), its body as stored (trimmed and filtered), and
+/// when its recipient read it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatMessageRow {
+    pub id: String,
+    pub from_profile: String,
+    pub to_profile: String,
+    pub body: String,
+    pub created_at: i64,
+    pub read_at: Option<i64>,
+}
+
+/// B53: one report of a chat message (`public.chat_reports`), one per message and reporter.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatReportRow {
+    pub id: String,
+    pub message_id: String,
+    pub reporter: String,
+    pub reason: String,
+    pub created_at: i64,
+}
+
+impl Tx<'_> {
+    // friends (B43–B45)
+
+    /// Every pending request `profile_id` sent or received, oldest first, the id breaking a tie.
+    pub async fn friends_requests_of(&mut self, profile_id: &str) -> StoreResult<Vec<FriendRequestRow>> {
+        dispatch!(self, friends_requests_of(profile_id))
+    }
+
+    /// One request, or `None` for an id no request holds.
+    pub async fn friends_request_get(&mut self, request_id: &str) -> StoreResult<Option<FriendRequestRow>> {
+        dispatch!(self, friends_request_get(request_id))
+    }
+
+    /// The request `from` sent `to`, if any (this direction only).
+    pub async fn friends_request_between(
+        &mut self,
+        from: &str,
+        to: &str,
+    ) -> StoreResult<Option<FriendRequestRow>> {
+        dispatch!(self, friends_request_between(from, to))
+    }
+
+    /// B43: writes the request. False, and nothing written, when its sender already has one to its
+    /// recipient (the unique key).
+    pub async fn friends_request_create(&mut self, row: &FriendRequestRow) -> StoreResult<bool> {
+        dispatch!(self, friends_request_create(row))
+    }
+
+    /// B45: deletes one request; false when there was none.
+    pub async fn friends_request_delete(&mut self, request_id: &str) -> StoreResult<bool> {
+        dispatch!(self, friends_request_delete(request_id))
+    }
+
+    /// B46: deletes every request between the two, either way; answers how many went.
+    pub async fn friends_requests_delete_between(&mut self, x: &str, y: &str) -> StoreResult<i64> {
+        dispatch!(self, friends_requests_delete_between(x, y))
+    }
+
+    /// Every friendship `profile_id` is in, oldest first.
+    pub async fn friends_of(&mut self, profile_id: &str) -> StoreResult<Vec<FriendshipRow>> {
+        dispatch!(self, friends_of(profile_id))
+    }
+
+    /// B43: how many friends `profile_id` holds, for `MAX_FRIENDS`.
+    pub async fn friends_count(&mut self, profile_id: &str) -> StoreResult<i64> {
+        dispatch!(self, friends_count(profile_id))
+    }
+
+    /// The two's friendship, whichever order they are named in, or `None`.
+    pub async fn friends_get(&mut self, x: &str, y: &str) -> StoreResult<Option<FriendshipRow>> {
+        dispatch!(self, friends_get(x, y))
+    }
+
+    /// B44, B45: makes the two friends from `at` (a pair already friends keeps its row and its
+    /// date) and deletes every request between them, either way. Answers the friendship.
+    pub async fn friends_make(&mut self, x: &str, y: &str, at: i64) -> StoreResult<FriendshipRow> {
+        dispatch!(self, friends_make(x, y, at))
+    }
+
+    /// B45, B46: ends the two's friendship; false when they were not friends.
+    pub async fn friends_remove(&mut self, x: &str, y: &str) -> StoreResult<bool> {
+        dispatch!(self, friends_remove(x, y))
+    }
+
+    // blocks (B46)
+
+    /// The blocks `blocker` made, oldest first.
+    pub async fn blocks_of(&mut self, blocker: &str) -> StoreResult<Vec<BlockRow>> {
+        dispatch!(self, blocks_of(blocker))
+    }
+
+    /// B46: whether either of the two blocked the other.
+    pub async fn blocks_between(&mut self, x: &str, y: &str) -> StoreResult<bool> {
+        dispatch!(self, blocks_between(x, y))
+    }
+
+    /// B46: records the block; a block already made keeps its date.
+    pub async fn blocks_add(&mut self, blocker: &str, blocked: &str, at: i64) -> StoreResult<()> {
+        dispatch!(self, blocks_add(blocker, blocked, at))
+    }
+
+    /// Lifts `blocker`'s block of `blocked`; false when there was none.
+    pub async fn blocks_remove(&mut self, blocker: &str, blocked: &str) -> StoreResult<bool> {
+        dispatch!(self, blocks_remove(blocker, blocked))
+    }
+
+    // presence (B47)
+
+    /// A heartbeat: `profile_id` was seen at `at` (a later beat never moves it back).
+    pub async fn presence_touch(&mut self, profile_id: &str, at: i64) -> StoreResult<()> {
+        dispatch!(self, presence_touch(profile_id, at))
+    }
+
+    /// Each named profile's last heartbeat, by profile id; one that never beat is left out.
+    pub async fn presence_last_seen(&mut self, profile_ids: &[String]) -> StoreResult<IndexMap<String, i64>> {
+        dispatch!(self, presence_last_seen(profile_ids))
+    }
+
+    /// B47, one read for a whole friends list: those of the named profiles a Conquest series that
+    /// is not over holds (either side), in the order named.
+    pub async fn presence_in_series(&mut self, profile_ids: &[String]) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_in_series(profile_ids))
+    }
+
+    /// B47, one read for a whole friends list: the live co-op match holding each named profile (the
+    /// newest, as `duos_matches_live_for` answers one), by profile id in the order named; a profile
+    /// in none is left out.
+    pub async fn presence_in_duos(
+        &mut self,
+        profile_ids: &[String],
+    ) -> StoreResult<IndexMap<String, String>> {
+        dispatch!(self, presence_in_duos(profile_ids))
+    }
+
+    /// B50, one read for a whole friends list: those of the named profiles whose live 1v1 match
+    /// (their in-match flag) `viewer` may watch as the store judges it: the two are friends with
+    /// neither blocking the other, the match is live, not ranked, seats the friend and not `viewer`,
+    /// and the friend allows spectators. In the order named. Room (`SPECTATORS_PER_MATCH`) is the
+    /// actor's to judge.
+    pub async fn presence_watchable(
+        &mut self,
+        viewer: &str,
+        profile_ids: &[String],
+    ) -> StoreResult<Vec<String>> {
+        dispatch!(self, presence_watchable(viewer, profile_ids))
+    }
+
+    // profiles (B46, B50)
+
+    /// The profile a client named by id, or `None`: `profiles_get_by_id` for an id that came off
+    /// the wire, which may be no id at all (Postgres answers `None` for a text that is not a UUID
+    /// rather than failing the cast).
+    pub async fn profiles_find(&mut self, profile_id: &str) -> StoreResult<Option<Profile>> {
+        dispatch!(self, profiles_find(profile_id))
+    }
+
+    /// B50: whether friends may watch `profile_id`'s live unranked games: true unless they turned
+    /// it off (`GET`/`PUT /api/settings`' `allowSpectators`); false for an id no profile holds.
+    pub async fn profiles_allows_spectators(&mut self, profile_id: &str) -> StoreResult<bool> {
+        dispatch!(self, profiles_allows_spectators(profile_id))
+    }
+
+    /// B50: `PUT /api/settings`' `allowSpectators`. An unknown profile is an error.
+    pub async fn profiles_set_allow_spectators(&mut self, profile_id: &str, allow: bool) -> StoreResult<()> {
+        dispatch!(self, profiles_set_allow_spectators(profile_id, allow))
+    }
+
+    // challenges (B48, B49)
+
+    /// B48: writes the open challenge. A challenge of the same pair (this direction) still open
+    /// but lapsed by `now` is marked expired first; one still open and live makes this false, with
+    /// nothing written (`challenges_open_pair_key`).
+    pub async fn challenges_create(&mut self, row: &ChallengeRow, now: i64) -> StoreResult<bool> {
+        dispatch!(self, challenges_create(row, now))
+    }
+
+    /// One challenge, whatever its state, or `None`.
+    pub async fn challenges_get(&mut self, challenge_id: &str) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_get(challenge_id))
+    }
+
+    /// B48: the open challenges `profile_id` sent or received that have not lapsed by `now`,
+    /// oldest first.
+    pub async fn challenges_open_of(&mut self, profile_id: &str, now: i64) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_open_of(profile_id, now))
+    }
+
+    /// B49: the open challenge, not lapsed by `now`, that opened the room `code`, if any.
+    pub async fn challenges_open_for_room(
+        &mut self,
+        code: &str,
+        now: i64,
+    ) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_open_for_room(code, now))
+    }
+
+    /// B49: moves an open challenge to `state` (declined or cancelled) and answers it as it now
+    /// stands; `None`, and nothing written, when it is not open.
+    pub async fn challenges_close(
+        &mut self,
+        challenge_id: &str,
+        state: ChallengeState,
+    ) -> StoreResult<Option<ChallengeRow>> {
+        dispatch!(self, challenges_close(challenge_id, state))
+    }
+
+    /// B46: moves every open challenge between the two, either way, to `state`; answers them.
+    pub async fn challenges_close_between(
+        &mut self,
+        x: &str,
+        y: &str,
+        state: ChallengeState,
+    ) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_close_between(x, y, state))
+    }
+
+    /// B49: the room `code` was joined by `guest`: the open challenge to `guest` that opened it,
+    /// not lapsed by `now`, is accepted. False when no such challenge exists.
+    pub async fn challenges_accept_room(&mut self, code: &str, guest: &str, now: i64) -> StoreResult<bool> {
+        dispatch!(self, challenges_accept_room(code, guest, now))
+    }
+
+    /// B49: marks every open challenge lapsed by `now` expired; answers them.
+    pub async fn challenges_expire(&mut self, now: i64) -> StoreResult<Vec<ChallengeRow>> {
+        dispatch!(self, challenges_expire(now))
+    }
+
+    /// B49: deletes every challenge lapsed by `now` (`expires_at <= now`), open or closed, so none
+    /// outlives its `CHALLENGE_TTL_MS`; answers how many went.
+    pub async fn challenges_purge(&mut self, now: i64) -> StoreResult<i64> {
+        dispatch!(self, challenges_purge(now))
+    }
+
+    // rooms
+
+    /// B49: frees an unjoined room: its code is open to the next room at once, and joining it is
+    /// the miss an unknown code is. A room someone has joined is never touched. False when there
+    /// was no unjoined room under the code.
+    pub async fn rooms_release(&mut self, code: &str) -> StoreResult<bool> {
+        dispatch!(self, rooms_release(code))
+    }
+
+    // chat (B53)
+
+    pub async fn chat_insert(&mut self, row: &ChatMessageRow) -> StoreResult<()> {
+        dispatch!(self, chat_insert(row))
+    }
+
+    /// One message, or `None`.
+    pub async fn chat_get(&mut self, message_id: &str) -> StoreResult<Option<ChatMessageRow>> {
+        dispatch!(self, chat_get(message_id))
+    }
+
+    /// B53: the newest `limit` messages between the two (either way) sent before `before` (epoch
+    /// ms; every one when `None`), newest LAST, the id breaking a tie.
+    pub async fn chat_page(
+        &mut self,
+        x: &str,
+        y: &str,
+        before: Option<i64>,
+        limit: i64,
+    ) -> StoreResult<Vec<ChatMessageRow>> {
+        dispatch!(self, chat_page(x, y, before, limit))
+    }
+
+    /// B53: `reader` read these messages at `at`: each one sent to `reader` and not yet read.
+    pub async fn chat_mark_read(&mut self, reader: &str, message_ids: &[String], at: i64) -> StoreResult<()> {
+        dispatch!(self, chat_mark_read(reader, message_ids, at))
+    }
+
+    /// B53: how many unread messages each sender has sent `profile_id`, by sender id.
+    pub async fn chat_unread(&mut self, profile_id: &str) -> StoreResult<IndexMap<String, i64>> {
+        dispatch!(self, chat_unread(profile_id))
+    }
+
+    /// B53: stores the report; false, and nothing written, when its reporter already reported the
+    /// message.
+    pub async fn chat_report(&mut self, row: &ChatReportRow) -> StoreResult<bool> {
+        dispatch!(self, chat_report(row))
+    }
+
+    /// B53: deletes every message sent before `before` (epoch ms), and their reports; answers how
+    /// many messages went.
+    pub async fn chat_purge(&mut self, before: i64) -> StoreResult<i64> {
+        dispatch!(self, chat_purge(before))
+    }
+}
+// ---- end Social ----
+// ---- Social: watching and shared replays (#939, #940) ----
+//
+// Migration 0038's `friendships`, `blocks`, `replay_shares` and `profiles.allow_spectators`, as
+// watching a friend's game (B50) and sharing a replay with one (B52) read and write them.
+
+/// B52: one replay share (`public.replay_shares`): `sharer`, who held a seat in the finished match
+/// `match_id`, shares its replay with `friend`.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReplayShare {
+    pub match_id: String,
+    pub sharer: String,
+    pub friend: String,
+    pub created_at: i64,
+}
+
+/// B52: a share its friend may read now, as `GET /api/replays/shared` lists it: the sharer held a
+/// seat in the match, which is over (`ended_at` its end, when the row has one), and the two are still
+/// friends with neither blocking the other.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedReplayRow {
+    pub match_id: String,
+    pub sharer: String,
+    pub created_at: i64,
+    pub ended_at: Option<i64>,
+}
+
+impl Tx<'_> {
+    /// B52: records a share; one already held is left as it was (its first `created_at`).
+    pub async fn shares_put(&mut self, share: &ReplayShare) -> StoreResult<()> {
+        dispatch!(self, shares_put(share))
+    }
+
+    /// B52: removes `sharer`'s share of `match_id` with `friend`; a no-op when there is none.
+    pub async fn shares_remove(&mut self, match_id: &str, sharer: &str, friend: &str) -> StoreResult<()> {
+        dispatch!(self, shares_remove(match_id, sharer, friend))
+    }
+
+    /// B46, B52: deletes every share between the two, either way: an unfriend or a block ends them
+    /// for good, so making friends again restores none. Answers how many went.
+    pub async fn shares_remove_between(&mut self, x: &str, y: &str) -> StoreResult<i64> {
+        dispatch!(self, shares_remove_between(x, y))
+    }
+
+    /// B52: who shared the finished match `match_id` with `friend` and may still be read through: each
+    /// held a seat in it and is still `friend`'s friend, neither blocking the other. First shared
+    /// first.
+    pub async fn shares_sharers(&mut self, match_id: &str, friend: &str) -> StoreResult<Vec<String>> {
+        dispatch!(self, shares_sharers(match_id, friend))
+    }
+
+    /// B52: every share `friend` may read now (as `shares_sharers` judges each), newest first.
+    pub async fn shares_for(&mut self, friend: &str) -> StoreResult<Vec<SharedReplayRow>> {
+        dispatch!(self, shares_for(friend))
+    }
+}
+// ---- end Social: watching and shared replays ----

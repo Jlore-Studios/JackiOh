@@ -20,7 +20,34 @@
 //! instance (R57), and the flag decides which face runs on the draw (§5.2): a Radiant CN-Virus casts
 //! its radiant text and shuffles 3 copies instead of 2, with the flag copied onto them.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-090";
+
+/// #90.1 CN-Virus, the token this card shuffles (§7). `build.rs` proves the id is a catalog entry (SURFACE §7.4).
+const VIRUS: &str = "core-090-1";
+
+/// `radiantVirus` is the whole of the radiant text.
+fn injection(radiant_virus: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![shuffle_into(json_as(json!({
+                "defId": VIRUS,
+                "count": 1,
+                "player": "enemy",
+                "radiant": radiant_virus,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: injection(false),
+        radiant: injection(true),
+    }
+}
 
 // #90 CN-Viral Injection and #90.1 CN-Virus (SPEC §8 rows 90 / 90.1, §7, §2.4, §4.4, §9.2;
 // R11, R12, R57, R58, R63, R70, R80, R316, R350).
@@ -33,6 +60,7 @@ pub const ID: &str = "core-090";
 // viruses the library already held: 21 in a library cost exactly 20 health and leave the 21st uncast.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -492,7 +520,7 @@ mod tests {
         #[test]
         fn s4_4_step_2_its_pierce_goes_through_armor_2_the_1_damage_lands_and_the_copies_still_land() {
             crate::register_all();
-            // Pierce (patch v0.3.9) skips §4.4 step 2's Armor, so Going Long (#84) no longer reduces it;
+            // Pierce (patch v0.3.10) skips §4.4 step 2's Armor, so Going Long (#84) no longer reduces it;
             // the two clauses stay independent.
             let mut s = scenario(json!({
                 "seed": "core-090-1-armor",

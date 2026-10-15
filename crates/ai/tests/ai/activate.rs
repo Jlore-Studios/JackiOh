@@ -69,7 +69,7 @@ fn pricey() -> Script {
     }
 }
 
-/// C #21 Turtinator as it was before patch v0.3.9 (#831) made its Activate once a turn: the same card
+/// C #21 Turtinator as it was before patch v0.3.10 (#831) made its Activate once a turn: the same card
 /// with an Activate ♾️, which no shipped Tribute card has now. A token, like `PRICEY`.
 const TURTINATOR_INFINITE: &str = "ai-test-turtinator-infinite";
 
@@ -286,7 +286,7 @@ mod b3_2_activations_are_first_class_candidates {
      {
         install_pricey();
         // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator (Turtinator's Activate is
-        // once a turn since patch v0.3.9), Gary the Gambler and Jewelosco Scarab
+        // once a turn since patch v0.3.10), Gary the Gambler and Jewelosco Scarab
         // (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
         // Turtinator pings one dead. Two uses, then the turn ends. Both libraries hold cards, so no
         // fatigue race (R82's auto-ended turns of an empty side) makes throwing Turtinator away a win.

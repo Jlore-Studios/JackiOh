@@ -549,7 +549,7 @@ mod c_n42_transmutable_toxins {
 mod c_n74_corpse_plantation {
     use super::*;
 
-    /// The Activate arms one play from the graveyard this turn (patch v0.3.9; its Cry places the
+    /// The Activate arms one play from the graveyard this turn (patch v0.3.10; its Cry places the
     /// counters now), remembering the turn it was armed on.
     fn arms(radiant: bool) {
         let mut s = scenario(json!({
@@ -601,7 +601,7 @@ mod c_n78_mutate_spell {
         activate_listed(&mut s, MUTATE_SPELL, at(well.clone()));
         assert_eq!(s.hand(P1).len(), hand + 2);
         assert_eq!(s.card(&well).counters.plague.unwrap_or(0), 0);
-        // Activate, once a turn (patch v0.3.9): not listed again, though the enemy has a counter.
+        // Activate, once a turn (patch v0.3.10): not listed again, though the enemy has a counter.
         let id = s.card(MUTATE_SPELL).id.clone();
         assert!(listed(&s, &id).is_empty(), "once per turn");
         let mut s = mutate(false);
@@ -626,7 +626,7 @@ mod c_n78_mutate_spell {
 mod c_n81_the_power_to_thrive {
     use super::*;
 
-    /// The third mode, a card of your hand costing less (patch v0.3.9; it gained mana before).
+    /// The third mode, a card of your hand costing less (patch v0.3.10; it gained mana before).
     fn reduces(radiant: bool, discount: i32) {
         let mut s = scenario(json!({
             "p1": { "backrow": [on(POWER_TO_THRIVE, radiant)], "hand": [STOCKPILE], "mana": 3 },
@@ -753,7 +753,7 @@ mod c_n60_doctors_orders {
 mod c_n42_1_kys_gift {
     use super::*;
 
-    /// Patch v0.3.9 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
+    /// Patch v0.3.10 (#831): the Gift's start-of-turn effects became its Activate. Used once, it gains
     /// its controller the declared mana and adds the four cards, which cost (0).
     fn opens(radiant: bool) {
         let mut s = scenario(json!({
@@ -942,7 +942,7 @@ mod m_n97_4_mega_church {
 mod m_n97_6_university {
     use super::*;
 
-    /// The University beside one Vanilla: it Buffs its other permanents, never itself (patch v0.3.9).
+    /// The University beside one Vanilla: it Buffs its other permanents, never itself (patch v0.3.10).
     fn campus(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "field": [on(UNIVERSITY, radiant), VANILLA], "hand": [FILLER], "library": [X, X] },
@@ -1223,7 +1223,7 @@ mod m_n75_ever_growing_tree {
     }
 
     /// Activates the Tree as `legalActions` lists it and takes the first of the two Field Spells it
-    /// offers (patch v0.3.9); the events of the pick.
+    /// offers (patch v0.3.10); the events of the pick.
     fn grow(s: &mut Scenario) -> Vec<GameEvent> {
         activate_listed(s, EVER_GROWING_TREE, any);
         let offered: Vec<String> = s

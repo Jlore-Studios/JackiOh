@@ -8,20 +8,41 @@
 //!            §4.3) and in any forced attack, which skips Can't attack (§4.2); Cleave hits into other
 //!            lanes and every non-combat damage are not multiplied (MD-F14). The view may show the in-lane
 //!            number as a `preview` (R280). The designer's Radiant face printed 5/30, not doubling the
-//!            attack; R275's stat half made it 10/30 (⚠ designer), patch v0.3.9 10/20 with Armor 6, 30
+//!            attack; R275's stat half made it 10/30 (⚠ designer), patch v0.3.10 10/20 with Armor 6, 30
 //!            in its lane. Tunes: multiplier 3 ↑ (step 1); Armor 3 ↑ (Radiant 6); Tribute 2 ↓ (never
 //!            below 1)."
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-5";
+
+/// §8.8: "Tribute 2".
+const TRIBUTE_COST: i32 = 2;
+
+/// Multiplies attack by 3 when striking across its own lane.
+const MULTIPLIER: i32 = 3;
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(TRIBUTE_COST),
+            lane_multiplier: Some(MULTIPLIER),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M 97.5 Bunker — SPEC §8.8 row 97.5, BUILD M10 row M 97.5: "Tribute 2, Armor 3, Can't attack, First Strike;
 // attacked by the Unit across from it, it strikes first for 15 (MD-F14), through that Unit's Armor and Divine
 // Shield; attacked from another lane, it strikes for 5; a forced attack (M 49.3) still multiplies in its
 // lane; non-combat damage is never multiplied; multiplier reads through `param()`; radiant 10/20 and Armor 6
-// (10/30 and Armor 5 before patch v0.3.9), 30 in its lane".
+// (10/30 and Armor 5 before patch v0.3.10), 30 in its lane".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -71,7 +92,7 @@ mod tests {
                 { "kind": "First Strike" }
             ])
         );
-        let s = crate::scripts_of()[ID].clone();
+        let s = script();
         assert_eq!(s.base.static_flags.as_ref().and_then(|f| f.tribute), Some(2));
         assert_eq!(
             s.base.static_flags.as_ref().and_then(|f| f.lane_multiplier),

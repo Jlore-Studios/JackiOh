@@ -160,3 +160,28 @@ pub fn play_random_game(seed: &str, deck_pair: Option<(Vec<String>, Vec<String>)
 
     RandomGame { state, log, decks }
 }
+
+/// A value as JSON, the shape the tests compare (the TS tests' `JSON.parse(JSON.stringify(…))`).
+pub fn json_of(value: impl serde::Serialize) -> serde_json::Value {
+    serde_json::to_value(value).expect("serialises")
+}
+
+/// A value through JSON and back, as a paused state crosses a socket or a store (§10.1).
+pub fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
+    serde_json::from_value(json_of(value)).expect("parses back")
+}
+
+/// TS `toMatchObject`: every key the expected object names matches, recursively; an array matches
+/// element for element and in length; anything else is equal.
+pub fn matches_object(actual: &serde_json::Value, expected: &serde_json::Value) -> bool {
+    use serde_json::Value;
+    match (actual, expected) {
+        (Value::Object(actual), Value::Object(expected)) => expected
+            .iter()
+            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
+        (Value::Array(actual), Value::Array(expected)) => {
+            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
+        }
+        _ => actual == expected,
+    }
+}

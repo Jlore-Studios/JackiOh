@@ -11,7 +11,41 @@
 //! Placements go in R68's order to every permanent (the firing trap included, R550, R78), unrevealed to
 //! players who may not read them (R97). Both numbers are declared `tokens` and `draw` (R386).
 
+use jackioh_engine::effects::{draw, place_plague_each};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-063";
+
+/// "At the start of your turn": its controller's `turnStarted`.
+fn your_turn_starts(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    matches!(event, GameEvent::TurnStarted { player, .. } if *player == ctx.controller)
+}
+
+fn dusting() -> TriggerDef {
+    TriggerDef::new("crop-dusting", &[GameEventType::TurnStarted], |ctx, _event| {
+        vec![
+            place_plague_each(json_as(json!({
+                "scope": { "side": "any", "rows": ["units", "backrow"] },
+                "amount": param(ctx, "tokens"),
+            }))),
+            draw(json_as(json!({ "count": param(ctx, "draw") }))),
+        ]
+    })
+    .with_when(your_turn_starts)
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        triggers: vec![dusting()],
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 3 counters and draw 3 are its declared numbers, which `param` reads
+    // off the running face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #63 Crop Dusting — SPEC §8.6 row 63, BUILD M9 Classic row C 63: face-down (R33), fires at start of
 // your next turn with start-of-turn triggers (R62) and goes to graveyard. Places 1 Plague Counter on each
@@ -21,7 +55,7 @@ pub const ID: &str = "classic-063";
 // The C #27 Pestilent Slime case needs C #27's script (cards-classic-a) registered.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -97,7 +131,7 @@ mod tests {
             let def = js(&crate::card_def(ID));
             assert_eq!(def["id"], DUSTING);
             assert_eq!(def["type"], "Trap");
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             let declared: Vec<Value> = scripts
                 .base
                 .triggers

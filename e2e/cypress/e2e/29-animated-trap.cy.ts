@@ -89,7 +89,7 @@ describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and b
         ensureSeat("p1");
         cy.handCardByName("Mr. Vanilla").then((vanilla) => {
           cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 2 } });
-          // R831007: Tesla zaps only the Unit that revealed it (patch v0.3.9).
+          // R831007: Tesla zaps only the Unit that revealed it (patch v0.3.10).
           cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(vanilla))).should("exist");
           cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
           cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH + TESLA_DAMAGE)).should("exist");

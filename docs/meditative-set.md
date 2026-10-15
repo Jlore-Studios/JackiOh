@@ -1546,7 +1546,7 @@ The others are `c025_blue_eyes_white_felinor`, `c026_alternate_fate`, `c027_clip
   you put a card into that lane, cast Book of Buff on it.
 - **Engine:**
   - **The lane** is a play-time choice: five `modes`, "lane-1" to "lane-5" (R81). A random cast picks
-    one at random. Patch v0.3.9 offers only an empty lane, all four of its zones empty, so with none
+    one at random. Patch v0.3.10 offers only an empty lane, all four of its zones empty, so with none
     the card cannot be played and a cast resolves into nothing (`Script.mode_allowed`, R831008).
   - **The Lock:** the hook locks every zone of the four other lanes, both sides and both rows, that is
     not already Locked (`lock` per zone). Under §6.3 Lock and R688 this refuses plays only; summons
@@ -3685,7 +3685,7 @@ Jlarna is played too.
   Death: `shuffle_into` a fresh `meditative-091-1` (Radiant: `radiant: true`) at a random position,
   R80's cap turning it away, as C+ #38 Solarius's. The attack replacement is **NEW: ME-ATTACKSUMMON**:
   on every attack Windfast makes (declared, spending its exertion, or forced), before `attackDeclared`,
-  a random Unit in its controller's hand (no prompt since patch v0.3.9, R831006) is summoned into the
+  a random Unit in its controller's hand (no prompt since patch v0.3.10, R831006) is summoned into the
   leftmost open unit zone (R64, no Cry, R1; a summon, so traps that answer one fire, C #5 Tesla) and
   makes the attack on the same target as a forced attack (R53: no sickness, no exertion, §4.2 step 2's restrictions holding), with
   its own trap window and combat; Windfast neither strikes nor is struck. Base: after that combat's
@@ -3693,7 +3693,7 @@ Jlarna is played too.
   R78's reset; a unit token vanishes, R11).
 - **Rulings:** **MD-E14:** with no Unit in hand or no open unit zone the replacement can't happen and
   Windfast attacks itself; a summoned Unit that dies or leaves before its combat makes no attack, and
-  Windfast's attack is spent either way; each of Windfury's two attacks summons its own. Patch v0.3.9
+  Windfast's attack is spent either way; each of Windfury's two attacks summons its own. Patch v0.3.10
   made the Unit a random one (R831006).
 - **Numbers:** none (Tribute 1 is a numbered keyword a Buff's X row moves).
 - **Check:** R275: stats doubled, the summoned Unit stays, and the Prime it shuffles is Radiant.

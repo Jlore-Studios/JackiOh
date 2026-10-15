@@ -154,7 +154,7 @@ mod s2_3_a_one_shot_refresh_rider_moves_current_mana_not_max_mana {
     #[test]
     fn s2_3_efficiency_dividends_next_turn_mana_and_hinders_lower_refresh_leave_max_mana_at_min_turns_4_as_mana_wells_gain_does_s6_3_mana()
      {
-        // Efficiency Dividend, X = 4, mana mode: X = 4 more at p1's next refresh (patch v0.3.9; floor(X/2)
+        // Efficiency Dividend, X = 4, mana mode: X = 4 more at p1's next refresh (patch v0.3.10; floor(X/2)
         // before).
         let mut dividend = setup(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).

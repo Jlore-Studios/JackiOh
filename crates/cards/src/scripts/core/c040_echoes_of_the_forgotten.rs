@@ -11,7 +11,77 @@
 //! number into the `damage` effect. The bottom card goes through `exileBottomOfLibrary` (shared with #65):
 //! `exile` takes a `TargetSpec`, which cannot name a library card, and the clause is not a choice (R81).
 
+use jackioh_engine::effects::{damage, exile_bottom_of_library};
+use jackioh_engine::prelude::*;
+use jackioh_engine::query::zone_count;
+use jackioh_engine::zones::OffFieldZone;
+
 pub const ID: &str = "core-040";
+
+/// One value per face (SURFACE §4.2's constant object).
+#[derive(Clone, Copy)]
+struct PerFace<T: Copy> {
+    base: T,
+    radiant: T,
+}
+
+impl<T: Copy> PerFace<T> {
+    fn of(&self, face: FaceKind) -> T {
+        match face {
+            FaceKind::Base => self.base,
+            FaceKind::Radiant => self.radiant,
+        }
+    }
+}
+
+/// How many damage each card in your exile is worth: "equal to the cards", radiant "twice the cards".
+const PER_EXILED_CARD: PerFace<i32> = PerFace { base: 1, radiant: 2 };
+
+/// R280: the formula as each face prints it, which the preview labels its number with.
+const FORMULA: PerFace<&str> = PerFace {
+    base: "the cards in your exile",
+    radiant: "twice the cards in your exile",
+};
+
+/// The damage the hook deals if it runs now. R72: your own exile pile, read before anything new
+/// enters it, through the engine's read-only `zoneCount` rather than off `PlayerState` (BUILD M3-T1).
+fn damage_now(state: &GameState, controller: PlayerId, per_card: i32) -> i32 {
+    per_card * zone_count(state, controller, OffFieldZone::Exile)
+}
+
+/// The two faces differ only by what each card in the exile is worth.
+fn echoes_of_the_forgotten(face: FaceKind) -> Script {
+    let per_card = PER_EXILED_CARD.of(face);
+    let formula = FORMULA.of(face);
+    Script {
+        start_of_turn: Some(hook(move |ctx| {
+            vec![
+                damage(json_as(json!({
+                    "to": { "of": "enemyHero" },
+                    "amount": damage_now(&*ctx.state, ctx.controller, per_card),
+                }))),
+                // "then exile the bottom card of your library" — after the count, so it pays out next turn.
+                exile_bottom_of_library(json_as(json!({ "player": "self" }))),
+            ]
+        })),
+        preview: Some(condition_hook(move |ctx| {
+            vec![PreviewValue {
+                label: formula.to_string(),
+                value: damage_now(ctx.state, ctx.controller, per_card),
+                display: None,
+                ids: None,
+            }]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: echoes_of_the_forgotten(FaceKind::Base),
+        radiant: echoes_of_the_forgotten(FaceKind::Radiant),
+    }
+}
 
 // #40 Echoes of the Forgotten — SPEC §8.2 row 40, BUILD M4-T4 row 40: "Start of turn: damage = exile
 // count, then bottom card exiled; empty library → no exile, no fatigue"; Radiant: twice the count (R275).

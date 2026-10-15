@@ -24,10 +24,105 @@
 //!   - Radiant: every such Spell, with no question, counted in `memory.stolen`; once it has stolen
 //!     ({threshold}) Palantir Tributes itself — never before.
 //!
-//! Patch v0.3.9 (#831): it cost (1) and answered only Books (the Radiant face every Spell, until the
+//! Patch v0.3.10 (#831): it cost (1) and answered only Books (the Radiant face every Spell, until the
 //! costs it had stolen reached (2)), and it kept the stolen card in your hand.
 
+use jackioh_engine::effects::{cast, counter_play, remember, sacrifice};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-004";
+
+/// Where the Radiant face counts the Spells it has stolen so far.
+const STOLEN: &str = "stolen";
+
+/// Patch v0.3.10 (#831): the Spells it answers are the (1) Cost ones (R65: a card's own cost as it
+/// stands out of play, an X Spell 0), Books or not.
+const STOLEN_COST: i32 = 1;
+
+/// The opponent's announced (1) Cost Spell, or None: the announced card's instance id, which is what
+/// this answers.
+fn answered(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
+    let GameEvent::CardAnnounced { player, instance_id, card_type, .. } = event else {
+        return None;
+    };
+    if *player == ctx.controller || *card_type != CardType::Spell {
+        return None;
+    }
+    let cost = find_instance(&*ctx.state, instance_id).and_then(|card| own_cost(&*ctx.state, card));
+    if cost != Some(STOLEN_COST) {
+        return None;
+    }
+    Some(instance_id.clone())
+}
+
+/// TS `const drawLimit: Script["drawLimit"]`: the opponent may draw `drawLimit` cards a turn.
+fn draw_limit() -> DrawLimitHook {
+    read_hook(|args| {
+        vec![DrawLimit {
+            player: DrawLimitPlayer::Enemy,
+            count: param(&args, "drawLimit"),
+        }]
+    })
+}
+
+/// "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
+/// random but aimed in your favour (R831001, R452, R656).
+fn steal_and_cast(spell: &str) -> Vec<Effect> {
+    let card = json!({ "of": "instance", "instanceId": spell });
+    vec![
+        counter_play(json_as(json!({ "to": "thief", "target": card.clone() }))),
+        cast(json_as(json!({ "target": card, "random": true, "targetEnemies": true }))),
+    ]
+}
+
+/// Base: "Tribute this to steal it" — no question, the price is paid to steal.
+fn steal_one() -> TriggerDef {
+    TriggerDef::new("palantir-steal", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(spell) = answered(ctx, event) else {
+            return vec![];
+        };
+        let mut effects = vec![sacrifice(json_as(json!({ "target": { "of": "self" } })))];
+        effects.extend(steal_and_cast(&spell));
+        effects
+    })
+    .with_when(|ctx, event| answered(ctx, event).is_some())
+}
+
+/// Radiant: steal each one, count them, and Tribute this once it has stolen {threshold}.
+fn steal_some() -> TriggerDef {
+    TriggerDef::new("palantir-spells", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(spell) = answered(ctx, event) else {
+            return vec![];
+        };
+        let before = recalled(ctx, STOLEN);
+        // The count so far, 0 before the first steal.
+        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + 1;
+        let mut effects = steal_and_cast(&spell);
+        effects.push(remember(json_as(json!({ "key": STOLEN, "value": total }))));
+        if total >= param(&*ctx, "threshold") {
+            effects.push(sacrifice(json_as(json!({ "target": { "of": "self" } }))));
+        }
+        effects
+    })
+    .with_when(|ctx, event| answered(ctx, event).is_some())
+}
+
+pub fn script() -> CardScripts {
+    let limit = draw_limit();
+    let base = Script {
+        draw_limit: Some(limit.clone()),
+        triggers: vec![steal_one()],
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        draw_limit: Some(limit),
+        triggers: vec![steal_some()],
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4: "Aura: the opponent's draws beyond 1 in a
 // turn, on either player's turn and the start-of-turn draw included, do not happen at all: no card
@@ -123,7 +218,7 @@ mod tests {
         fn both_faces_set_a_draw_limit_on_the_opponent() {
             crate::register_all();
             assert_eq!(ID, PALANTIR);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.draw_limit.is_some());
             assert!(scripts.radiant.draw_limit.is_some());
         }

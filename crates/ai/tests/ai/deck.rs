@@ -656,7 +656,7 @@ mod r1370_a_deck_that_leans_on_a_set {
         register_cards();
         // Dealt by the deck builder before R1370, with the cursor its rng stopped at: before the Meditative
         // set was in any pool, so the literals gate it (R1390: a gate deals what the draw dealt before).
-        // Re-dealt for patch v0.3.9 (#831), whose costs move the builder's curve: the same seeds stop
+        // Re-dealt for patch v0.3.10 (#831), whose costs move the builder's curve: the same seeds stop
         // at the same cursors.
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
@@ -899,6 +899,29 @@ mod r1370_a_deck_that_leans_on_a_set {
                 None,
                 100,
             );
+        }
+    }
+
+    #[test]
+    fn r924000_every_pick_resolves_to_a_shipped_set_the_deal_leans_on_and_newest_to_the_newest() {
+        use jackioh_engine::LeanPick;
+        let picks = LeanPick::choices();
+        assert_eq!(picks.len(), SHIPPED_SETS.len() + 1);
+        assert_eq!(picks[0], LeanPick::Newest);
+        assert_eq!(LeanPick::Newest.resolve(), newest_shipped_set());
+        for pick in picks {
+            assert_eq!(LeanPick::parse(pick.as_str()), Some(pick));
+            assert!(SHIPPED_SETS.contains(&pick.resolve()), "{pick:?}");
+            every_floor_holds(
+                DECK_SIZE,
+                json!({ "banned": [], "gatedSets": [] }),
+                pick.resolve(),
+                None,
+                25,
+            );
+        }
+        for junk in ["Boss", "Boss-X", "NEWEST", "", "Classic+ "] {
+            assert_eq!(LeanPick::parse(junk), None, "{junk:?}");
         }
     }
 

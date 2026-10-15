@@ -66,7 +66,7 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
         .collect()
 }
 
-/// Whether a destination can take a rotating card. A Locked zone accepts one (R831000, patch v0.3.9:
+/// Whether a destination can take a rotating card. A Locked zone accepts one (R831000, patch v0.3.10:
 /// a rotation moves what is on the field, which R688's Lock does not stop, as it evicts nothing; it
 /// refused one before, #52's card-specific override of R688), while a zone reserved for a dying
 /// Reborn unit counts as occupied for every other card (§3.2, R64).

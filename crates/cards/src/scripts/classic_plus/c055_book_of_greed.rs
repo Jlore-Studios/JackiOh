@@ -5,7 +5,30 @@
 //!            "Token" and its `printedRarity` never feeds a pool (§5), so none is found; repeats allowed
 //!            (R60); the hand cap burns extras. Tunes: cards 3 ↑."
 
+use jackioh_engine::effects::add_random_from_catalog;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-055";
+
+fn book_of_greed(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![add_random_from_catalog(json_as(json!({
+                "query": { "rarity": ["Legendary", "Mythic"] },
+                "count": param(&*ctx, "cards"),
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: book_of_greed(false),
+        radiant: book_of_greed(true),
+    }
+}
 
 // C+ #55 Book of Greed — SPEC §8.7 row 55, BUILD M9 Classic+ row C+ 55: "Adds 3 random non-token
 // Legendary or Mythic cards of any set, a token's printed rarity never counting (no Pancake, Loser or

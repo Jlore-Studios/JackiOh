@@ -2,9 +2,18 @@
 //!   Base:    "Animated on your turn, First Strike"
 //!   Radiant: "Animated on your turn, Pierce, First Strike"
 //! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only
-//! (First Strike on both faces since patch v0.3.9).
+//! (First Strike on both faces since patch v0.3.10).
+
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-066";
+
+pub fn script() -> CardScripts {
+    // Keywords only: the faces' printed stats and keywords are catalog data.
+    let base = Script::default();
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // M #66 Fiery Waraxe — SPEC §8.8 row 66, BUILD M10 row M 66.
 #[cfg(test)]

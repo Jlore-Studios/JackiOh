@@ -20,9 +20,35 @@
 //! reproduces both (§10.7). With Lucky X every coin takes 1 + X draws. Stats first, rider second:
 //! the draw prefix is unchanged.
 
+use jackioh_engine::effects::{flip_coin_keyword, flip_coins};
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-004";
 
+/// The coins and the gain per side are the declared numbers `coins`, `perHeads` and `perTails`
+/// (R386): 5, 1 and 1, and 7, 2 and 2 on the Radiant face, read off the face that is up.
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            vec![
+                flip_coins(json_as(json!({
+                    "target": { "of": "self" },
+                    "coins": param(&*ctx, "coins"),
+                    "perHeads": { "attack": param(&*ctx, "perHeads") },
+                    "perTails": { "health": param(&*ctx, "perTails") }
+                }))),
+                flip_coin_keyword(json_as(json!({
+                    "target": { "of": "self" },
+                    "headsKeyword": { "kind": "Divine Shield" },
+                    "tailsKeyword": { "kind": "Rush" }
+                }))),
+            ]
+        })),
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // SPEC §8.1 #4 Gary the Gambler. BUILD M4-T4 row 4: "Fixed seed → fixed stats; heads+tails = 5
 // (radiant 7 at +2 each); second coin grants Divine Shield on heads, Rush on tails, identical on

@@ -1,11 +1,52 @@
 //! C+ #12.1 Devour (SPEC §8.7 row 12.1): (0) Spell, Pancake, Token (printed Legendary).
-//!   Base:    "Destroy a Unit. Your hero takes damage equal to its health."
-//!   Radiant: "Destroy a Unit. Heal your hero by its health."
+//!   Base:    "Destroy a Unit. Your hero takes damage equal to its Health."
+//!   Radiant: "Destroy a Unit. Heal your hero by its Health."
 //! A target Unit on either side; its current health is read before the destroy. The self-hit is one
 //! instance from Devour through §4.4 (your Armor, caps and Spell Damage apply); the gain is a Heal. An
 //! Indestructible target survives (R46) and the damage or heal still happens (Hearthstone's Obliterate).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-012-1";
+
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
+/// The chosen Unit's health now, before the destroy marks it; 0 when it is gone (nothing then).
+fn health_of_chosen(ctx: &EffectContext<'_>) -> i32 {
+    match instance_of(ctx, &json_as::<TargetSpec>(json!({ "of": "chosen" }))) {
+        None => 0,
+        Some(unit) => unit_view(ctx.state, &unit).health.max(0),
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            targets: targets(),
+            cry: Some(hook(|ctx| {
+                vec![
+                    destroy(json_as(json!({ "target": { "of": "chosen" } }))),
+                    damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": health_of_chosen(ctx) }))),
+                ]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            targets: targets(),
+            cry: Some(hook(|ctx| {
+                let health = health_of_chosen(ctx);
+                let mut effects = vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))];
+                if health > 0 {
+                    effects.push(heal(json_as(json!({ "target": { "of": "selfHero" }, "amount": health }))));
+                }
+                effects
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // C+ #12.1 Devour — SPEC §8.7 row 12.1, BUILD M9 Classic+ row C+ 12.1: "Destroys a target Unit and your
 // hero takes damage equal to that Unit's current health read before the destroy, one instance from

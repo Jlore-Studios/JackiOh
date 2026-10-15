@@ -11,7 +11,54 @@
 //!
 //! Rulings: R33, R46, R70, R119, R384.
 
+use jackioh_engine::effects::lock_played_zone;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-084";
+
+fn lock_after_play(opponent_only: bool) -> TriggerDef {
+    TriggerDef::new("lock-played-zone", &[GameEventType::CardPlayed], move |ctx, event| {
+        let GameEvent::CardPlayed { player, instance_id, .. } = event else {
+            return vec![];
+        };
+        // R119: not its own arrival.
+        if ctx.self_.as_ref().is_some_and(|me| me.id == *instance_id) {
+            return vec![];
+        }
+        if opponent_only && *player == ctx.controller {
+            return vec![];
+        }
+        vec![lock_played_zone(json_as(json!({ "event": event })))]
+    })
+}
+
+fn lockdown(opponent_only: bool) -> Script {
+    Script {
+        triggers: vec![lock_after_play(opponent_only)],
+        activations: vec![ActivationDecl {
+            id: "tribute".into(),
+            label: "Tribute this".into(),
+            uses: ActivationUses::Count(1),
+            cost: Some(ActivationCost {
+                tribute_self: Some(true),
+                ..ActivationCost::default()
+            }),
+            targets: vec![],
+            modes: vec![],
+            can_activate: None,
+            has: None,
+            run: hook(|_ctx| vec![]),
+        }],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: lockdown(false),
+        radiant: lockdown(true),
+    }
+}
 
 // C #84 Lockdown (SPEC §8.6 row 84). (2) Field Spell, Rare: Indestructible; after a permanent is
 // played, Lock its zone; Activate: Tribute this. Radiant: after your opponent plays a permanent.

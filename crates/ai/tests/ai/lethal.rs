@@ -131,7 +131,8 @@ fn moves_but_lanes(state: &GameState, seat: PlayerId) -> Vec<String> {
 
 /// Plays `line` on `state` through `simulate`; panics on a refusal.
 fn play_out(state: &GameState, line: &[ActionBody]) -> GameState {
-    let counter = create_node_counter(line.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
+    let per_action = 1 + AI_SEARCH.max_auto_answers as usize * AI_SEARCH.max_auto_answer_options as usize;
+    let counter = create_node_counter(line.len() * per_action, None);
     let mut current = state.clone();
     for action in line {
         match simulate(&current, AI, action, &counter) {

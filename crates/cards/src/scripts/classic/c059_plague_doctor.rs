@@ -3,7 +3,7 @@
 //!            the number of Plague Counters on the field." — 1 token (Radiant 2)
 //!   Engine:  "A declared target (R81); one hit of N, N = every Plague Counter on both sides, counted as it
 //!            resolves, after the Cry's own placement (N = 0 is no hit, R63). A `preview` (R280) shows N.
-//!            Tunes: tokens 1 ↑ (Radiant 2)." The base face places since patch v0.3.9 (#831), as the
+//!            Tunes: tokens 1 ↑ (Radiant 2)." The base face places since patch v0.3.10 (#831), as the
 //!            Radiant face did alone before.
 //!
 //! The target is declared with the play (R81): a Unit (the top of a unit pile, either side) or a hero. N
@@ -19,13 +19,95 @@
 //! public on every permanent, a face-down one's included (§10.8), so the number reveals nothing. The
 //! number is the declared `tokens` (R386), read through `param` on both faces.
 
+use jackioh_engine::effects::{damage, place_plague};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-059";
+
+/// R280: the formula as both faces print it.
+pub const DOCTOR_LABEL: &str = "the number of Plague Counters on the field";
+
+/// "a target": a Unit on either side, or either hero (R81).
+fn targets() -> Vec<TargetDecl> {
+    json_as(json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]))
+}
+
+/// What the Cry's `EffectContext` and the preview's `ConditionContext` both carry. `tokens` is called
+/// only where needed: it refuses a read with no card to read it on.
+pub struct Read<'a> {
+    pub state: &'a GameState,
+    pub self_: Option<&'a CardInstance>,
+    pub radiant: bool,
+    pub controller: PlayerId,
+    pub tokens: &'a dyn Fn() -> i32,
+}
+
+/// Every Plague Counter on the field: each permanent on both sides, face-down ones included, the top of
+/// each pile only (R13). Walked from the controller's side, so the read never asks whose turn it is.
+fn tokens_on_field(read: &Read) -> i32 {
+    permanents_on_field(read.state, read.controller).iter().fold(0, |sum, card| sum + plague_on(card))
+}
+
+/// The Plague Counters the Cry's own placement puts on the Doctor: the declared number times its own
+/// multiplier (a Doctor fused onto a C #27 Pestilent Slime doubles it), in hand as it would once played.
+/// Both faces place since patch v0.3.10 (#831), the Radiant face alone before. A preview is asked only of a Doctor acting on the field or in a hand (R13), and its Cry runs
+/// as it arrives on top of its zone, so the Doctor always carries the placement.
+fn tokens_it_places(read: &Read) -> i32 {
+    match read.self_ {
+        Some(self_) => (read.tokens)().max(0) * plague_multiplier_of(read.state, self_),
+        None => 0,
+    }
+}
+
+/// N: every Plague Counter on the field, plus the Cry's own placement, as the Cry resolves now.
+pub fn damage_now(read: &Read) -> i32 {
+    tokens_on_field(read) + tokens_it_places(read)
+}
+
+fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    // The Cry only reads the board while it builds its list.
+    let ctx: &EffectContext<'_> = ctx;
+    let amount = damage_now(&Read {
+        state: ctx.state,
+        self_: ctx.self_.as_ref(),
+        radiant: ctx.radiant,
+        controller: ctx.controller,
+        tokens: &|| param(ctx, "tokens"),
+    });
+    let hit = if amount > 0 { vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": amount })))] } else { vec![] };
+    let mut effects = vec![place_plague(json_as(json!({ "target": { "of": "self" }, "amount": param(ctx, "tokens") })))];
+    effects.extend(hit);
+    effects
+}
+
+fn preview(read: ConditionContext<'_>) -> Vec<PreviewValue> {
+    let value = damage_now(&Read {
+        state: read.state,
+        self_: Some(read.self_),
+        radiant: read.radiant,
+        controller: read.controller,
+        tokens: &|| param(&read, "tokens"),
+    });
+    vec![json_as(json!({ "label": DOCTOR_LABEL, "value": value }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(cry)),
+        preview: Some(condition_hook(preview)),
+        ..Script::default()
+    };
+
+    // The placement is the declared `tokens`: 1 on the base face, 2 on the Radiant face.
+    CardScripts { radiant: base.clone(), base }
+}
 
 // C #59 Plague Doctor, SPEC §8.6 row 59: N = 0 is no hit (R63); the preview is N (R280), which includes
 // its own placement; its tuned number (tokens) reads through `param()` (R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{script, ID};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -74,7 +156,7 @@ mod tests {
             crate::register_all();
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], DOCTOR);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 js(&scripts.base.targets),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }]),

@@ -12,7 +12,7 @@ What the other crates call:
 
 | Function | Answers |
 | --- | --- |
-| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678) and dealt seats (R433) |
+| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433) and the practice sandbox flag (R923000) |
 | `begin_game(&GameState) -> ReduceResult` | setup run (§2.1): the opening draws and the mulligan prompts |
 | `reduce(&GameState, &Action) -> ReduceResult` | the next state and its events, or `error: Some(reason)` with the input state unchanged and no events |
 | `legal_actions(&GameState, PlayerId) -> Vec<ActionBody>` | every action that player may send now |
@@ -24,6 +24,7 @@ What the other crates call:
 | `last_board_for`, `seat_played_by`, `seats_swapped`, `mulligan_owed` | the facts the server and practice read at the edges of a game (R417, R677, R265) |
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |
 | `validator::*` | deck and trio checks (§9.4: D1–D4, T1–T3, L1–L6, R250–R253, R340), shared by the server and, through WASM, the client |
+| `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`) | a Duos game (§13): two 1v1 games side by side, below |
 
 `reduce` never panics on an illegal action. It takes no `rng`: the match rng is rebuilt from
 `(state.seed, state.rng_cursor)` and the cursor written back, so `(seed, decks, log)` folds to the
@@ -58,9 +59,12 @@ mutable static. Two things hold it:
 
 Every random draw goes through `Rng` (`rng.rs`, seeded, its cursor in the state), in the same order
 on every run. Every player choice is a `PendingChoice` in the state. The only statics are the
-catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`;
-under the `testkit` feature a thread-local override lets a test install fixture cards, the one
-allowed `RefCell`.
+catalog and the script registry, each a `OnceLock` set once by `jackioh_cards::register_all()`
+(with where the older shipped catalogs are found, `register_shipped`, R767000); under the `testkit`
+feature a thread-local override lets a test install fixture cards, the one allowed `RefCell`. One
+more thread-local, `catalog.rs`'s `FOLDING`, names the shipped catalog a replay is folding under:
+`with_shipped` sets it for that one call and puts the previous one back after it, a panic included,
+so a fold of a game played on an older catalog version reads that version's cards (R767000).
 
 ## Effects, reads and scripts
 
@@ -81,11 +85,48 @@ The engine never depends on `jackioh-cards` (only its tests do). An engine test 
 behaviour uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
 same case again.
 
+## Duos (§13)
+
+Duos is not a four-seat engine. `duos/` wraps two plain 1v1 `GameState`s, the duels, in a
+`DuosState`: duel 0 is A1 (`PlayerId::P1`) against B1 (`P2`), duel 1 is A2 (`P1`) against B2 (`P2`),
+each created with the seed `{seed}:duel{d}`. Every card already sees a 1v1 game, so no card script
+knows about Duos. The wrapper adds exactly three things, and `duos_reduce` applies a `DuosAction` (a
+seat, a nonce and a `DuosActionBody`) through them:
+
+- **The round** (§13.3). A seat takes its duel's main-phase actions only while it is that duel's
+  round seat and has not ended. A round seat's `endTurn` is held until the other duel's round seat has
+  ended too; then `endTurn` is applied to duel 0, then duel 1, the game is judged once, and the next
+  round opens. Those turn ends run under nonces in the wrapper's own namespace (`DUOS_NONCE_PREFIX`,
+  `duos:`), which `duos_reduce` refuses on a seat's action, and a duel that has already applied one
+  refuses it rather than taking a replay as the turn's end. A duel's players carry
+  `auto_end_turn = Some(false)` and the wrapper applies R82 itself: a round seat left with nothing but
+  `endTurn` in its duel and no pass it may make is ended for it. Draw offers, their answers and a
+  duel's own `concede` are refused; `Concede` is the team's, offered and confirmed, one offer per team
+  (`DuosState.concede_offer` is a `PerTeam`).
+- **The shared life** (§13.4). A duel side's `PlayerState.duos` (`DuosLife`: `pool`, `pool_cap`,
+  `spent`) is absent outside Duos and skipped when absent, so a 1v1 state serializes, hashes and
+  folds exactly as before and every golden trace and fuzz seed is unchanged. Every write to a hero's
+  health (`damage.rs`'s deal, heal, lose and set, `effects/swap.rs`) goes through `duos_life.rs`
+  (`hero_loses`, `hero_heals`, `hero_set`, `effective_life`), which without `duos` is exactly the 1v1
+  arithmetic. After every step the wrapper copies each team's pool into the other duel.
+- **Passing** (§13.5). `Pass { instance_id }` moves a hand card to the teammate's hand under a new id,
+  owned and controlled by the teammate, for the team's `pass_cost`, up to `pass_cap` a round.
+
+`duos_view_for(state, seat)` is the seat's own duel's `view_for`, the teammate's duel's `view_for`
+from the teammate's seat, and both teams' life, with the enemy team's `ended` and `passes_left`
+blanked (§13.6). `duos_fold` replays a `DuosReplayInput` (the create options and the log) to the
+state and `duos_hash` live play reached, stopping at the first refused action. The wire types are
+`wire/duos.rs` (`Team`, `DuosSeat`, `PerTeam`, `DuosTeamRules`, `DuosAction`, `DuosView`,
+`DuosEvent`, …), exported to TypeScript like the others. Under the `testkit` feature, `duos::duos_scenario` begins a
+Duos game from four decks with the mulligans kept and round 1 open.
+
 ## Constants (CLAUDE.md rule 9)
 
 Every rules number is a named constant in `src/config.rs` (BUILD §2), the "decide" rulings (R1, R4,
 R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
-`TRAINING_UNBAN`: each lane's games, pairing and wins). The ones the web reads are written to
+`TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
+`DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
+`DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`). The ones the web reads are written to
 `apps/web/src/wire/engineConfig.ts` by `tests/export_config.rs`.
 
 ## Generated TypeScript
@@ -103,7 +144,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs, the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override, the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override, the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests

@@ -9,11 +9,32 @@
 //! §8's Conventions: "target" is any unit or hero on either side, and a bare `target` declaration is
 //! units only (R90), so the heroes are named. The pick travels in the play action (R81). The hit is
 //! one §4.4 instance, so Armor, Divine Shield, the anti-oneshot cap and Indestructible all apply.
-//! Trample (patch v0.3.9) is printed on the Spell, as on C #83 Flame Lance: a Unit's excess goes on
+//! Trample (patch v0.3.10) is printed on the Spell, as on C #83 Flame Lance: a Unit's excess goes on
 //! to its hero (§4.4 step 9).
 //! The amount is the declared `damage` (R386), read through `param`; both faces run this one script.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-016";
+
+/// §8 Conventions: any unit or hero, either side.
+fn targets() -> Vec<TargetDecl> {
+    vec![json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }))]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": param(&*ctx, "damage") })))]
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's 8 is its declared `damage`, which `param` reads off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #16 Book of Flame — SPEC §8.6 row 16, BUILD M9 Classic row C 16: "One targeted hit of 4 on any
 // Unit or hero, either side; it is the Book of Flame C #23 and C #29 make (`classic-016`, R381);
@@ -22,7 +43,6 @@ pub const ID: &str = "classic-016";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     use crate::scenario;
 
@@ -59,7 +79,7 @@ mod tests {
     #[test]
     fn declares_one_target_any_unit_or_hero_on_either_side_and_runs_one_script_on_both_faces() {
         assert_eq!(crate::card_def(ID).id, BOOK);
-        let CardScripts { base, radiant } = crate::scripts_of()[ID].clone();
+        let CardScripts { base, radiant } = script();
         assert_eq!(
             serde_json::to_value(&base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "hero"] } }])
@@ -82,7 +102,7 @@ mod tests {
 
     #[test]
     fn r279_r381_c_23_devil_s_pact_names_this_card_and_no_entry_names_book_of_wildfire_for_it() {
-        // C #29 Book of Vital Kill named it too until patch v0.3.9 (#831) took its Radiant add away.
+        // C #29 Book of Vital Kill named it too until patch v0.3.10 (#831) took its Radiant add away.
         assert!(refs_of("classic-023").contains(&BOOK.to_string()));
         assert!(!refs_of("classic-029").contains(&BOOK.to_string()));
         assert!(!refs_of("classic-023").contains(&"classic-055".to_string()));

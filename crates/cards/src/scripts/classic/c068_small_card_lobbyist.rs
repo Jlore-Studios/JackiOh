@@ -21,14 +21,49 @@
 //! Both numbers are declared and read through `param` (R386); "threshold ↓" moves toward harder for a
 //! Degrade: up, so fewer cards are caught.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-068";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cost_aura: Some(read_hook(|args: CostAuraArgs<'_>| -> Vec<CostAura> {
+            vec![CostAura {
+                rule: CostRule {
+                    min_cost: Some(param(&args, "threshold")),
+                    amount: Some(param(&args, "surcharge")),
+                    ..CostRule::default()
+                },
+                whose: CostAuraWhose::All,
+                ban: None,
+            }]
+        })),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        cost_aura: Some(read_hook(|args: CostAuraArgs<'_>| -> Vec<CostAura> {
+            vec![CostAura {
+                rule: CostRule {
+                    min_cost: Some(param(&args, "threshold")),
+                    ..CostRule::default()
+                },
+                whose: CostAuraWhose::Opponents,
+                ban: Some(true),
+            }]
+        })),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #68 Small Card Lobbyist (SPEC §8.6 row 68). Aura: (3)+ Cost cards cost (1) more (R65, R363, R70);
 // hidden hand costChanged shows −1 (R177). Radiant: opponent can't play (3)+ Cost cards (R65);
 // tuned numbers read through param (R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,7 +127,7 @@ mod tests {
                     { "key": "threshold", "base": 3, "radiant": 3, "better": "down", "step": 1, "min": 1 },
                 ]),
             );
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert!(scripts.base.cost_aura.is_some());
             assert!(scripts.radiant.cost_aura.is_some());
         }

@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, new_game, put, round_trip, slot};
 
 // The sink: its rng starts at the state's cursor, as reduce's does. `EngineSink` borrows the state,
 // so the event list and the rng live here and each call borrows the state again.
@@ -38,10 +38,6 @@ impl SinkFor {
     fn on<'a>(&'a mut self, state: &'a mut GameState) -> EngineSink<'a> {
         EngineSink::new(state, &mut self.events, &mut self.rng)
     }
-}
-
-fn round_trip<T: serde::Serialize + serde::de::DeserializeOwned>(value: &T) -> T {
-    serde_json::from_value(serde_json::to_value(value).expect("serialises")).expect("deserialises")
 }
 
 // Fixtures.

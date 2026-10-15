@@ -1,8 +1,8 @@
 //! M #2 Rampaging Rhino (SPEC §8.8 row 2, R59, R63, R174, R212, R386, R682, R780, R800): (2) Unit, Common,
 //! 5/9 → 10/18, Rush and Windfury (Radiant: First Strike, Rush, Windfury).
 //!
-//! Base:    "Whenever this takes damage, discard {discards|card|cards}."
-//! Radiant: "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|card|cards}."
+//! Base:    "Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
+//! Radiant: "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
 //! Engine: a trigger on `damage` aimed at this card, as Core #91 Fed Fauci's, returning
 //! `discard_random { count: discards, player: self }`. Every damage instance is one discard, and each hit
 //! of a sweep is its own (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no
@@ -11,10 +11,49 @@
 //! number (R129); on the opponent's turn the discard is a forced one, which M #1 Disruptive Disruptor's
 //! guard stops (R800). A hit that kills it discards nothing: the state check removes it before its trigger
 //! pops, and a trigger of a card that has left the field ends there (R153, R174, R780). Its keywords are
-//! catalog data, so the Radiant face's script is the base's. Patch v0.3.9 (#831) gave both faces Rush
+//! catalog data, so the Radiant face's script is the base's. Patch v0.3.10 (#831) gave both faces Rush
 //! and Windfury and the Radiant face First Strike in place of its Trample, at 10/18 (11/20 before).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-002";
+
+/// "Whenever THIS takes damage": the event carries the target, so a hit this card dealt (its strike-back,
+/// its Trample overflow) is not a hit it took.
+fn is_hit_on_self(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(self_) = ctx.self_.as_ref() else {
+        return false;
+    };
+    match event {
+        GameEvent::Damage { target_id, .. } => *target_id == self_.id,
+        _ => false,
+    }
+}
+
+fn takes_damage() -> TriggerDef {
+    TriggerDef::new("rampaging-rhino-discard", &[GameEventType::Damage], |ctx, event| {
+        if is_hit_on_self(ctx, event) {
+            vec![discard_random(json_as(json!({ "count": param(&*ctx, "discards"), "player": "self" })))]
+        } else {
+            vec![]
+        }
+    })
+    .with_when(is_hit_on_self)
+}
+
+fn rampaging_rhino() -> Script {
+    Script {
+        triggers: vec![takes_damage()],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: rampaging_rhino(),
+        radiant: rampaging_rhino(),
+    }
+}
 
 // M #2 Rampaging Rhino — SPEC §8.8 row 2, BUILD M10 row M 2: "A trigger on `damage` aimed at it, one random
 // discard per damage instance from the hand of whoever controls it as the hit lands (R212, R682); a sweep
@@ -102,7 +141,7 @@ mod tests {
             crate::js(&def.params),
             json!([{ "key": "discards", "base": 1, "radiant": 1, "better": "down", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert_eq!(scripts.base.triggers.len(), 1);
         assert_eq!(scripts.radiant.triggers.len(), 1);
     }

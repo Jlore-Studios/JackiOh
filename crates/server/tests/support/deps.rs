@@ -16,7 +16,7 @@
 //! - **The catalog.** The real one (`crates/cards/catalog.json`), at the compiled-in version: the
 //!   server runs the real validator (`jackioh_engine::validator`), so TS's synthetic 24-card
 //!   catalog and its permissive and strict validators have no port to plug into. A test that wants
-//!   a smaller catalog builds one with `create_test_catalog` and hands it to `test_app_with`.
+//!   another catalog hands it to `test_app_with`.
 //! - **Not ported**, because the server has no such port any more (SURFACE §11.3): `createFakeIds`
 //!   (ids are `uuid` + `getrandom`), `fakeRandomDealer` (All Random deals through the engine),
 //!   `createFakeMatchDirectory` (the registry is `actor::registry::Registry`), `testConfig` and
@@ -26,14 +26,11 @@
 //!   thread's default subscriber, which the current-thread runtime of `#[tokio::test]` shares with
 //!   every task it runs.
 
-#![allow(dead_code)]
-
 use std::fmt::Debug;
-use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
-use axum::extract::{ConnectInfo, Request};
+use axum::extract::Request;
 use axum::http::HeaderMap;
 use axum::response::Response;
 use indexmap::IndexMap;
@@ -43,7 +40,7 @@ use tracing::field::{Field, Visit};
 use tracing_subscriber::Layer;
 use tracing_subscriber::layer::{Context, SubscriberExt};
 
-use jackioh_server::api::catalog::{Catalog, LoadCatalogOptions, catalog_from, load_catalog};
+use jackioh_server::api::catalog::{Catalog, LoadCatalogOptions, load_catalog};
 use jackioh_server::app::{self, App};
 use jackioh_server::auth::{Auth, E2eAuth, E2eDeletion};
 use jackioh_server::env::Env;
@@ -51,13 +48,6 @@ use jackioh_server::env::Env;
 // ---------------------------------------------------------------------------
 // The fixtures (`e2e/support/config.ts`, SURFACE §11.3)
 // ---------------------------------------------------------------------------
-
-/// `e2e-p1`'s bearer token: an active fixture account that owns every card.
-pub const P1_TOKEN: &str = "e2e-token-p1";
-/// `e2e-p2`'s bearer token: the other active fixture account.
-pub const P2_TOKEN: &str = "e2e-token-p2";
-/// `e2e-pending`'s bearer token: pending, with a verified email.
-pub const PENDING_TOKEN: &str = "e2e-token-pending";
 
 /// The catalog version the test app runs: the compiled-in one, which `env.rs` requires
 /// `CATALOG_VERSION` to equal (TS's was the synthetic `"test-1"`).
@@ -104,7 +94,7 @@ pub struct TestAppOptions {
     pub e2e: bool,
     /// Environment variables over `test_env`'s.
     pub env: Vec<(String, String)>,
-    /// A catalog instead of the real one (`create_test_catalog`).
+    /// A catalog instead of the real one.
     pub catalog: Option<Catalog>,
     /// Leave the store empty: no fixture accounts, no fixture codes (TS `createTestDeps` started
     /// empty; R144's reseed is the end-to-end server's).
@@ -196,6 +186,8 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
         catalog,
         breaker: Mutex::new(jackioh_server::api::codes::create_breaker_state()),
         replays: jackioh_server::api::replays::Replays::default(),
+        queue_presence: jackioh_server::api::queue::QueuePresence::new(),
+        social: jackioh_server::social::Social::default(),
     });
     if options.e2e && !options.skip_fixtures && !restarted {
         jackioh_server::api::e2e::seed_e2e_fixtures(&app)
@@ -203,23 +195,6 @@ pub async fn test_app_with(options: TestAppOptions) -> Arc<App> {
             .unwrap_or_else(|error| panic!("R144's reseed: {error:?}"));
     }
     app
-}
-
-/// TS `createTestCatalog(version, count)`: the first `count` Core cards of the real catalog plus
-/// its first token, enough for L3/L6 tests without the whole catalog.
-pub fn create_test_catalog(version: &str, count: usize) -> Catalog {
-    let mut defs = jackioh_engine::CardDefs::new();
-    for (id, def) in jackioh_cards::CATALOG
-        .iter()
-        .filter(|(id, def)| id.starts_with("core-") && !def.token)
-        .take(count)
-    {
-        defs.insert(id.clone(), def.clone());
-    }
-    if let Some((id, def)) = jackioh_cards::CATALOG.iter().find(|(_, def)| def.token) {
-        defs.insert(id.clone(), def.clone());
-    }
-    catalog_from(defs, version)
 }
 
 // ---------------------------------------------------------------------------
@@ -237,11 +212,6 @@ pub fn fake_auth(app: &App) -> &E2eAuth {
 /// TS `FakeAuth.addUser`: registers a user and returns the bearer token that verifies as them.
 pub fn add_user(app: &App, user_id: &str, email: &str, email_verified: bool) -> String {
     fake_auth(app).add_user(user_id, email, email_verified)
-}
-
-/// TS `FakeAuth.setEmailVerified`.
-pub fn set_email_verified(app: &App, user_id: &str, verified: bool) {
-    fake_auth(app).set_email_verified(user_id, verified);
 }
 
 // ---------------------------------------------------------------------------
@@ -292,12 +262,6 @@ pub fn json_request(
         .unwrap_or_else(|error| panic!("a test request: {error}"))
 }
 
-/// The request as it would arrive on a socket from `peer` (R190's fallback address).
-pub fn with_peer(mut request: Request, peer: SocketAddr) -> Request {
-    request.extensions_mut().insert(ConnectInfo(peer));
-    request
-}
-
 /// TS `readJson(response)`: the body as JSON; `null` for an empty body, a string for a body that is
 /// not JSON.
 pub async fn read_json(response: Response) -> Value {
@@ -334,18 +298,6 @@ pub async fn call(
     send(app, json_request(method, path, &body, token, None)).await
 }
 
-/// `call` from another client address (the `X-Forwarded-For` entry).
-pub async fn call_from(
-    app: impl AppHandle,
-    ip: &str,
-    method: &str,
-    path: &str,
-    token: Option<&str>,
-    body: Value,
-) -> (u16, HeaderMap, Value) {
-    send(app, json_request(method, path, &body, token, Some(ip))).await
-}
-
 // ---------------------------------------------------------------------------
 // The log (TS `createRecordingLogger`)
 // ---------------------------------------------------------------------------
@@ -379,13 +331,6 @@ impl RecordingLogger {
             .into_iter()
             .filter(|entry| entry.event == event)
             .collect()
-    }
-
-    pub fn clear(&self) {
-        self.entries
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
-            .clear();
     }
 }
 

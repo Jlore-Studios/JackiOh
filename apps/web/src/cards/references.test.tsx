@@ -140,7 +140,7 @@ describe("R279 a reference that is a control opens the card it names", () => {
     const tooltip = screen.getByTestId(REF_TOOLTIP_TESTID);
     expect(tooltip).toHaveAttribute("data-ref-face", "radiant");
     expect(tooltip.querySelector(".cf")).toHaveAttribute("data-radiant-face", "true");
-    // Its keyword line and its text are two lines of the face (Pierce since patch v0.3.9), read as one.
+    // Its keyword line and its text are two lines of the face (Pierce since patch v0.3.10), read as one.
     expect(tooltip.querySelector(".card-text")).toHaveTextContent(fillParams(def("core-090-1"), "radiant").replace(/\s+/g, " "));
   });
 

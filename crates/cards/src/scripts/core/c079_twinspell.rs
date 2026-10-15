@@ -10,7 +10,30 @@
 //! turn-scoped, so it is `{ until: "used" }`. R70: a CAST spell uses Twinspell's Echo though it never
 //! uses a cost discount.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-079";
+
+/// The two faces differ only in how many extra resolutions the next spell gets. The engine reads the
+/// amount off the face the card wears when a Spell takes it, so a Twinspell made Radiant on the field
+/// (#49 radiant) grants "Echo +2" from then on (§5.2, R209). It is declared as `echoGain` (R386), read
+/// through `params::declared_or`, so a Degrade or an Upgrade moves it.
+fn twinspell(amount: i32) -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            echo_grant: Some(amount),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: twinspell(1),
+        radiant: twinspell(2),
+    }
+}
 
 // BUILD M4-T4: "Next spell echoes once (radiant twice); consumed to GY on use (R30); survives
 // cleanup".
@@ -22,6 +45,7 @@ pub const ID: &str = "core-079";
 // is random (R354), so it opens no prompt.
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

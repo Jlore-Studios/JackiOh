@@ -1,11 +1,11 @@
 //! #56 Jilliax (SPEC §8.3): (2), Paid (3); 3/2 → 6/4, "Rush, Taunt, Lifesteal, Divine Shield / Paid
 //! (3): Equip." / radiant "Rush, Taunt, Lifesteal, Divine Shield, Reborn / Paid (3): Equip.".
 //!
-//! Patch v0.3.9 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
+//! Patch v0.3.10 (#831) gave it an embiggen price of (3), at which it is also Equip (ME-EQUIP, R1086):
 //! the script's `conditionalKeywords` returns Equip on a card stamped embiggened, so `legalActions`
 //! offers the Equip play only at that price and the refusal reads the same stamp (R831013).
 //!
-//! Its printed keywords need no script. §10.4's keyword layer reads the printed keywords off the
+//! Its four printed keywords need no script. §10.4's keyword layer reads the printed keywords off the
 //! running face of the def (`face_of` in engine/src/layers.rs), and each keyword is a rule the engine
 //! owns (§6.1): Rush (`why_cannot_declare`, §4.1, §4.2 step 1), Taunt (`taunt_wall`, §4.2 step 3),
 //! Lifesteal (§4.4 step 8), Divine Shield (damage pipeline step 1), Reborn. Re-stating any would be a
@@ -17,7 +17,27 @@
 //! Indestructible unit goes to Attack Position and loses Taunt for the turn instead of dying, and is
 //! still collected at 0 max health; Sacrifice and Exile go around it (§6.3).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-056";
+
+/// "Paid (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
+/// price (R831013).
+fn paid_equip(args: HookArgs<'_>) -> Vec<Keyword> {
+    if args.self_.embiggened == Some(true) { vec![Keyword::Equip] } else { Vec::new() }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        conditional_keywords: Some(read_hook(paid_equip)),
+        ..Script::default()
+    };
+    // One script: the Radiant face adds Reborn to the printed list, and pays for Equip the same way.
+    CardScripts {
+        radiant: base.clone(),
+        base,
+    }
+}
 
 // #56 Jilliax (SPEC §8.3, BUILD M4-T4 row 56: "All four keywords; radiant all four plus Reborn").
 // A keywords-only card, so every test asserts either the computed keyword set (§10.4's keyword

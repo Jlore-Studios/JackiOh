@@ -46,7 +46,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::script::{EngineSink, TriggerDef};
-use crate::state::{CardInstance, GameState, Resume, WorkItem, find_instance, find_instance_mut};
+use crate::state::{
+    CardInstance, GameState, Resume, WorkItem, active_first, find_instance, find_instance_mut,
+};
 use crate::stays::LaterMoves;
 use crate::wire::{GameEvent, GameEventType, PlayerId, Row, ZoneName};
 
@@ -172,11 +174,7 @@ fn acts_as_trap(state: &GameState, instance: &CardInstance) -> bool {
 /// text, so it fires from there, in the unit lanes of R68's order (Classic #5 Tesla keeps zapping). Only
 /// the card acting in a zone is one (§3.2): a trap dormant under a backrow pile never fires (R447).
 pub fn traps_in_order(state: &GameState) -> Vec<CardInstance> {
-    let sides: [PlayerId; 2] = if state.active == PlayerId::P1 {
-        [PlayerId::P1, PlayerId::P2]
-    } else {
-        [PlayerId::P2, PlayerId::P1]
-    };
+    let sides = active_first(state);
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
         for slot in crate::zones::slots_of(player, Row::Units) {

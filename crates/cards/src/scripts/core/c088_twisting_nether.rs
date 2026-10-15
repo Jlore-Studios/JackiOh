@@ -12,7 +12,58 @@
 //! Position and suppresses Taunt only if the mark was applied, and one with max health 0 or less dies
 //! anyway (R69).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-088";
+
+/// The radiant face's choice, in the order §8's cell lists it: enemy only, or everything.
+const MODE_ENEMY: &str = "enemy";
+const MODE_ALL: &str = "all";
+
+fn modes() -> Vec<ModeDecl> {
+    vec![ModeDecl {
+        kind: PromptKind::Mode,
+        options: vec![MODE_ENEMY.to_string(), MODE_ALL.to_string()],
+    }]
+}
+
+/// Which side the destroy reaches. The base face has no choice to read and always hits both sides;
+/// the radiant face hits what the play named, and a play carrying no mode fizzles rather than
+/// guessing — the spell still counts as played (§6.3, §8 Conventions).
+fn side_for(mode_name: Option<&str>, modal: bool) -> Option<&'static str> {
+    if !modal {
+        return Some("any");
+    }
+    if mode_name == Some(MODE_ENEMY) {
+        return Some("enemy");
+    }
+    if mode_name == Some(MODE_ALL) {
+        return Some("any");
+    }
+    None
+}
+
+/// `modal` is the whole of the radiant text.
+fn nether(modal: bool) -> Script {
+    Script {
+        modes: if modal { modes() } else { vec![] },
+        cry: Some(hook(move |ctx| {
+            let chosen = chosen_options(ctx);
+            let Some(side) = side_for(chosen.first().map(String::as_str), modal) else {
+                return vec![];
+            };
+            // §6.3: a permanent is a Unit, Field Spell, Trap or Field Trap, so both rows.
+            vec![destroy_all(json_as(json!({ "side": side, "rows": ["units", "backrow"] })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = nether(false);
+    let radiant = nether(true);
+    CardScripts { base, radiant }
+}
 
 // #88 Twisting Nether (SPEC §8.5, BUILD M4-T4 row 88): "Every permanent on both rows destroyed,
 // Indestructibles survive; radiant enemy-only mode".
@@ -54,14 +105,14 @@ mod tests {
         #[test]
         fn r81_the_base_face_has_no_choice_to_make() {
             crate::register_all();
-            assert!(crate::scripts_of()[ID].clone().base.modes.is_empty());
+            assert!(script().base.modes.is_empty());
         }
 
         #[test]
         fn r81_the_radiant_face_declares_the_side_as_a_play_time_mode_not_a_prompt() {
             crate::register_all();
             assert_eq!(
-                js(&crate::scripts_of()[ID].clone().radiant.modes),
+                js(&script().radiant.modes),
                 json!([{ "kind": "mode", "options": ["enemy", "all"] }])
             );
         }

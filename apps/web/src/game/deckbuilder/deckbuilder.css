@@ -301,6 +301,14 @@
   background: color-mix(in srgb, var(--you) 45%, var(--bg-raised));
 }
 
+/* #920: the way to the card creator, after the set chips: a link dressed as a chip, dashed. */
+.deckbuilder.app-shell .db-chip--link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px dashed var(--line-bright);
+  text-decoration: none;
+}
+
 /* Cost chips read as little mana crystals. */
 .deckbuilder.app-shell .db-chip--cost {
   min-width: 30px;

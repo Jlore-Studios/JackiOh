@@ -43,7 +43,7 @@ fn one_of_each_cost() -> GameState {
 /// Vanilla 4 + Timmy 3 is exactly 7, so the two swings are lethal. Doom Shroom exiles both attackers
 /// on the first swing. Groom Shroom lets the first swing hit (R405) and walls the second behind
 /// Taunts. So no world at (3) has a lethal. Do not cut this to one attacker: a Groom world would
-/// then still be lethal. C #9 Income Tax, a Trap at (3) since patch v0.3.9 (#831) that stops no swing,
+/// then still be lethal. C #9 Income Tax, a Trap at (3) since patch v0.3.10 (#831) that stops no swing,
 /// lies in p2's graveyard: seen, it is no world's face-down card (a deck holds no card twice).
 fn shroomed(trap: bool) -> GameState {
     register_cards();

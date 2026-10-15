@@ -821,18 +821,6 @@ fn is_minimal_tribute(state: &GameState, units: &[&CardInstance], need: i32) -> 
 // Declared targets: the options one declaration admits
 // ---------------------------------------------------------------------------
 
-fn selection_key(selection: &Selection) -> String {
-    match selection {
-        Selection::Instance { instance_id } => format!("instance:{instance_id}"),
-        Selection::Hero { player } => format!("hero:{player}"),
-        Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
-        Selection::Mode { option } => format!("mode:{option}"),
-        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
-        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
-        Selection::None => "none".to_string(),
-    }
-}
-
 /// The sides a declaration reaches, the chooser's own first so the offered order is stable.
 ///
 /// A Tribute defaults to the chooser's side — §6.3 reads "sacrifice X of *your* units" — and every
@@ -1061,7 +1049,7 @@ pub fn legal_selections_for(
     let mut seen: IndexSet<String> = IndexSet::new();
 
     let mut offer = |selection: Selection| {
-        let key = selection_key(&selection);
+        let key = crate::prompts::option_key(&selection);
         if seen.contains(&key) {
             return;
         }
@@ -1374,10 +1362,10 @@ pub fn in_declared_order(
     {
         let order: Vec<String> = offered
             .get(index)
-            .map(|options| options.iter().map(selection_key).collect())
+            .map(|options| options.iter().map(crate::prompts::option_key).collect())
             .unwrap_or_default();
         let rank = |selection: &Selection| -> usize {
-            let key = selection_key(selection);
+            let key = crate::prompts::option_key(selection);
             order
                 .iter()
                 .position(|offered| *offered == key)
@@ -2368,10 +2356,10 @@ fn refuse_targets(
             ));
         }
 
-        let keys: IndexSet<String> = options.iter().map(selection_key).collect();
+        let keys: IndexSet<String> = options.iter().map(crate::prompts::option_key).collect();
         let mut used: IndexSet<String> = IndexSet::new();
         for selection in got {
-            let key = selection_key(selection);
+            let key = crate::prompts::option_key(selection);
             if !keys.contains(&key) {
                 return refuse(format!("that is not a legal target for {name}"));
             }

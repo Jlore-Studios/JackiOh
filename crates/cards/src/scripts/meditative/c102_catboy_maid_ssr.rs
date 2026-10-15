@@ -15,18 +15,56 @@
 //! The ranges are the printed text's, not declared numbers (as Book of Tokens' count is not), so a
 //! Nerf or a Buff moves only the Lucky.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-102";
 
-/// The printed "Draw 1-2": the fewest and most cards one Cry draws. The script
-/// (`c102_catboy_maid_ssr.luau`) states both ranges too; the tests read them here.
-pub const MIN_DRAWS: i32 = 1;
-pub const MAX_DRAWS: i32 = 2;
+/// The printed "Draw 1-2": the fewest and most cards one Cry draws.
+const MIN_DRAWS: i32 = 1;
+const MAX_DRAWS: i32 = 2;
 
 /// The printed "Add 1-3" (base) and "Add 1-6" (Radiant): the least and most one Cry adds (patch
-/// v0.3.9, #831; 1-4 and 1-10 before).
+/// v0.3.10, #831; 1-4 and 1-10 before).
 pub const MIN_JADE: i32 = 1;
 pub const MAX_JADE: i32 = 3;
 pub const MAX_JADE_RADIANT: i32 = 6;
+
+/// One uniform roll over `low..=high`.
+fn uniform(rng: &mut Rng, low: i32, high: i32) -> i32 {
+    low + rng.int(high - low + 1)
+}
+
+fn catboy_maid(max_jade: i32) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            // R1438, R987: the Lucky on the card as it stands, and its controller's Luck.
+            let lucky = ctx.live_self().map_or(0, |card| lucky_on(&*ctx.state, card))
+                + luck_of(&*ctx.state, ctx.controller);
+            let draws = ctx.rng.lucky(
+                lucky,
+                |rng| uniform(rng, MIN_DRAWS, MAX_DRAWS),
+                |a, b| a.max(b),
+            );
+            let jade = ctx.rng.lucky(
+                lucky,
+                |rng| uniform(rng, MIN_JADE, max_jade),
+                |a, b| a.max(b),
+            );
+            vec![
+                draw(json_as(json!({ "count": draws }))),
+                add_jade(json_as(json!({ "amount": jade }))),
+            ]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: catboy_maid(MAX_JADE),
+        radiant: catboy_maid(MAX_JADE_RADIANT),
+    }
+}
 
 // M #102 Catboy Maid SSR+ — SPEC §8.8 row 102, BUILD M10 row M 102: "Lucky 1; Cry (played): draws 1
 // or 2 and adds 1 to 4 to your Jade Counter, every value seen over the seeds (MD-G3); each roll is two

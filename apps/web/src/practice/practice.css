@@ -315,6 +315,37 @@
   background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
 }
 
+/* R923000: the sandbox checkbox, beside Start, with its note under its label. */
+.practice-setup__sandbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 320px;
+  color: var(--tavern-parchment, #efe0bf);
+  font-size: 14px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.practice-setup__sandbox input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--tavern-brass, #c9a25b);
+}
+
+.practice-setup__sandbox-label {
+  display: block;
+  font-weight: 600;
+}
+
+.practice-setup__sandbox-note {
+  display: block;
+  font-size: 12px;
+  color: var(--tavern-text-dim, #b8a98a);
+}
+
 .practice-setup__deck {
   display: flex;
   flex: 1 1 300px;
@@ -1139,6 +1170,22 @@
   font-weight: 650;
 }
 
+/* R768000: a kept game's replay and its last turn's GIF, a row beneath the main actions. */
+.practice-result__replay {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.practice-result__replay > * {
+  flex: 1 1 0;
+}
+
+.practice .practice-result__replay .practice-result__secondary {
+  min-height: 44px;
+  font-size: 14px;
+}
+
 .practice .practice-result__view {
   align-self: center;
   min-height: 44px;
@@ -1575,7 +1622,8 @@
 }
 
 @media (max-width: 420px) {
-  .practice-result__actions {
+  .practice-result__actions,
+  .practice-result__replay {
     flex-direction: column;
   }
 

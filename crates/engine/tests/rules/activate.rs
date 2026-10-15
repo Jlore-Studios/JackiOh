@@ -27,7 +27,8 @@ use crate::rules::fixtures::activate::{
 };
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot,
+    events_of_type, in_hand, json_of, matches_object, new_game, put, round_trip, set_library, setup_catalog,
+    slot,
 };
 
 // Harness
@@ -104,10 +105,6 @@ fn activate(player: PlayerId, instance_id: &str, extra: Value) -> ActionInput {
     input(body)
 }
 
-fn round_trip(state: &GameState) -> GameState {
-    serde_json::from_value(json_of(state)).unwrap()
-}
-
 /// Answer the one open prompt with its first option, whoever holds it.
 fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
     let pending = state.pending.as_ref().expect("expected a prompt");
@@ -122,24 +119,6 @@ fn answer(state: &GameState) -> (GameState, Vec<GameEvent>) {
             player_id: pending.player_id,
         },
     )
-}
-
-fn json_of<T: serde::Serialize>(value: T) -> Value {
-    serde_json::to_value(value).unwrap()
-}
-
-/// Every key the expected object names matches, recursively; an array
-/// matches element for element and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn lacks(value: &Value, key: &str) -> bool {
@@ -460,6 +439,56 @@ mod r384_b3_2_rules_1_3_7_9_how_many_uses {
         assert_eq!(
             why_not(&next, P1, &once.id, None).as_deref(),
             Some("that ability has been used 2 times this turn")
+        );
+    }
+
+    #[test]
+    fn r884000_a_tuned_or_set_activate_n_counts_at_most_activate_unlimited_cap_uses_a_turn() {
+        let mut state = playing("capped");
+        let twice = put(&mut state, &sentry.id, slot(P1, Row::Units, 1), json!({}));
+        let surge_decl = abilities_of(&state, &twice)
+            .into_iter()
+            .next()
+            .expect("no ability");
+
+        // Buffs' steps and KY's Constant's value both stop at the cap; below it the tuned count stands.
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "x": { "Activate": ACTIVATE_UNLIMITED_CAP * 3 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP
+        );
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP + 1 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP
+        );
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP - 1 } }),
+        ));
+        assert_eq!(
+            uses_allowed(card(&state, &twice.id), &surge_decl),
+            ACTIVATE_UNLIMITED_CAP - 1
+        );
+
+        // The refusal reads the capped count: the cap-th use spends the turn's uses.
+        card_mut(&mut state, &twice.id).tuning = Some(json_as(
+            json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP * 3 } }),
+        ));
+        let turn = state.turn;
+        card_mut(&mut state, &twice.id).memory.insert(
+            "activations".to_string(),
+            json!({ "turn": turn, "count": ACTIVATE_UNLIMITED_CAP - 1 }),
+        );
+        let next = act(&state, activate(P1, &twice.id, json!({}))).0;
+        assert_eq!(
+            why_not(&next, P1, &twice.id, None),
+            Some(format!(
+                "that ability has been used {ACTIVATE_UNLIMITED_CAP} times this turn"
+            ))
         );
     }
 

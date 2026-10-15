@@ -9,19 +9,42 @@
 // page may read the summaries of the finished games the worker kept and, for one of them, the
 // human's `viewFor` at each step (R768): never its log, seed or decks.
 
-import type { Action, ActionBody, CardDefs, DistributiveOmit, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import { LEAN_NEWEST } from "@jackioh/shared";
+import type {
+  Action,
+  ActionBody,
+  CardDefs,
+  CustomCard,
+  DistributiveOmit,
+  LeanPick,
+  PlayerId,
+  PlayerView,
+  PortraitId,
+} from "@jackioh/shared";
 import type { ReplayRefusal, ReplayStep } from "@jackioh/engine";
 import type { Difficulty, Handicap } from "@jackioh/engine/config";
 
 export type PracticeDeckChoice =
   /**
-   * R1373: `leanNewest`, "More cards from the newest set": the worker deals the random deck leaning
-   * on the newest set that ships (R1370, R1371). Absent is off.
+   * R1373, R924000: `leanSet`, "More cards from": the worker deals the random deck leaning on that
+   * set, "newest" being the newest set that ships when it deals (R1370, R1371). Absent is no lean. A
+   * game kept before the picker (R668, R768) carries R1373's `leanNewest` instead, which is "newest"
+   * when true, so it deals the deck it always dealt (`randomDeckLean`).
    */
-  | { kind: "random"; leanNewest?: boolean }
+  | { kind: "random"; leanSet?: LeanPick; leanNewest?: boolean }
   | { kind: "preset"; id: string }
   /** `index` is the 1-based deck number the setup's `saved:<n>` value names. */
-  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null };
+  | { kind: "saved"; index: number; cards: string[]; portrait?: string | null }
+  /**
+   * #920: the creator's "Try it": a fresh random deck of one card fewer, and the custom card `card`
+   * (one of the config's `customCards`).
+   */
+  | { kind: "try"; card: string };
+
+/** R924000: the pick a random deck leans on, R1373's `leanNewest` read as "newest"; `null` for none. */
+export function randomDeckLean(choice: PracticeDeckChoice & { kind: "random" }): LeanPick | null {
+  return choice.leanSet ?? (choice.leanNewest === true ? LEAN_NEWEST : null);
+}
 
 export type PracticeStartConfig = {
   seed: string;
@@ -42,6 +65,18 @@ export type PracticeStartConfig = {
   lastBoard?: LastBoardCard[];
   /** R768: both seats' portraits as the page dealt them (R642), for a finished game's replay summary. Omitted: the default portrait on both. */
   portraits?: { p1: PortraitId; p2: PortraitId };
+  /**
+   * R923000: a sandbox game, whose dev tools (`sandbox` actions, sent as `act`) only it accepts:
+   * `createGame`'s and the fold's `sandbox`. It brings no last board and leaves none (R508). Never a
+   * lesson.
+   */
+  sandbox?: true;
+  /**
+   * R915006: the custom cards the human's deck names (SPEC §12), frame and source, which the game
+   * carries and its replay folds with. A game with any runs in the Luau module (R915009) and records
+   * no card statistics (§12.10). Never a lesson's or the AI's.
+   */
+  customCards?: CustomCard[];
 };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
@@ -62,6 +97,12 @@ export type PracticeSnapshot = {
    * the field as the human saw it, the AI's face-down cards left out). Absent otherwise.
    */
   lastBoard?: LastBoardCard[];
+  /**
+   * R768000: once a free game is over and kept on this device, the number it was kept under and its
+   * step count, which the result screen's "Watch the replay" opens. Absent before then, and for a
+   * lesson or a game Glitch voided, which are not kept.
+   */
+  replay?: Pick<PracticeReplaySummary, "game" | "steps">;
 };
 
 /** R768: one kept practice game as the replay list shows it: never its log, seed or decks. */
@@ -102,6 +143,10 @@ export type PracticeDebug = {
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
   /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none was. */
   dealt?: PlayerId[];
+  /** R923000: present when the game is a sandbox, which its fold must be told. */
+  sandbox?: true;
+  /** R915006: the game's custom cards, which its fold must be given; absent when it has none. */
+  customCards?: CustomCard[];
 };
 
 export type PracticeRequest =

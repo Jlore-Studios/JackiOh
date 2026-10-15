@@ -25,7 +25,7 @@
 //!                    by their sections' own sentences, the Grapes tagged Fruit, every token tagged
 //!                    Token and rated "Token", B2.5) and B8's table of the ten AI generated cards
 //!                    (tagged AI). Buff Billy's "3X/3X → 6X/6X" prints 0/0 (its `xStats` carry X).
-//!   patch v0.3.9   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
+//!   patch v0.3.10   — issue #831's costs, stats, types and tags, in every set's rows: the briefs'
 //!                    lines are what the designer first wrote, the patch what the cards are now.
 //!   radiant faces  — every entry has a Radiant face of its own (§5.2, R276), the Ghoul Token's
 //!                    being R349's fallback.
@@ -5421,7 +5421,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     #[test]
     fn tags_classic_plus_38_solarius_and_46_felinor_flagbearer_and_meditative_45_49_and_91_catalyst_and_no_other_entry()
      {
-        // Meditative #49 YileGPT Tamed since patch v0.3.9 (#831).
+        // Meditative #49 YileGPT Tamed since patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Catalyst),
             strings(&[
@@ -5448,7 +5448,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         );
         // Every entry named "<card> Prime" carries the tag, and each Prime is the token its Catalyst
         // defines. M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck, took the tag in
-        // patch v0.3.9 (#831) and kept its name.
+        // patch v0.3.10 (#831) and kept its name.
         let mut named: Vec<String> = entries()
             .into_iter()
             .filter(|entry| entry.name.ends_with(" Prime"))
@@ -5505,7 +5505,7 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
     fn tags_classic_80_boom_big_max_classic_plus_37_wardrum_and_meditative_49_yilegpt_tamed_and_yilegpt_unleashed_acclaimed_and_no_other_entry()
      {
         // §8.8 rows 49 and 49.1 print the tag on YileGPT Tamed and YileGPT Unleashed (the designer's
-        // "Acclaimed"); Yile's Virus and AI Girlfriend lost it in patch v0.3.9 (#831).
+        // "Acclaimed"); Yile's Virus and AI Girlfriend lost it in patch v0.3.10 (#831).
         assert_eq!(
             tagged(Tag::Acclaimed),
             strings(&[

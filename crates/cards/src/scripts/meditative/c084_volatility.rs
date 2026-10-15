@@ -5,17 +5,51 @@
 //! Engine: NEW: ME-TUNEMULT (R1160) — a static flag `tuneMultiplier`, read off the card's running
 //! face wherever it is (field, hand, deck), by which each Buff or Nerf application on this card is
 //! scaled: still one application and one draw, with the change N times as large. "Twice" and
-//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier. Patch v0.3.9
+//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier. Patch v0.3.10
 //! (#831) made it 1/1 and gave both faces "Cry: Buff this": one Upgrade of itself, which its own
 //! multiplier then doubles (triples on the Radiant face).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-084";
+
+/// Patch v0.3.10 (#831): "Cry: Buff this", one Buff on itself, which its own multiplier scales.
+fn buff_this() -> Hook {
+    hook(|_ctx| vec![upgrade(json_as(json!({ "target": { "of": "self" } })))])
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            static_flags: Some(StaticFlags {
+                tune_multiplier: Some(TuneMultiplier {
+                    upgrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                    degrade: Some(VOLATILITY_TUNE_MULTIPLIER),
+                }),
+                ..StaticFlags::default()
+            }),
+            cry: Some(buff_this()),
+            ..Script::default()
+        },
+        radiant: Script {
+            static_flags: Some(StaticFlags {
+                tune_multiplier: Some(TuneMultiplier {
+                    upgrade: Some(VOLATILITY_RADIANT_BUFF_MULTIPLIER),
+                    degrade: None,
+                }),
+                ..StaticFlags::default()
+            }),
+            cry: Some(buff_this()),
+            ..Script::default()
+        },
+    }
+}
 
 // M #84 Volatility — SPEC §8.8 row 84, BUILD M10 row M 84: "One Buff on it is one draw whose change
 // is doubled (MD-E7): a cost row of two steps (never below (0)), a stat split of twice the total,
 // two keywords, X +2; a Nerf likewise doubled, never removing a harmful keyword; still one
 // `upgraded` or `degraded` event; in hand and deck too; a +2/+2 stat buff and KY's Constant are not
-// doubled; radiant 6/6, Buffs tripled and Nerfs normal". Patch v0.3.9: 1/1 → 2/2, and its Cry Buffs it.
+// doubled; radiant 6/6, Buffs tripled and Nerfs normal". Patch v0.3.10: 1/1 → 2/2, and its Cry Buffs it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,7 +226,7 @@ mod tests {
 
         #[test]
         fn r1160_both_faces_carry_their_multipliers() {
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 scripts.base.static_flags.and_then(|flags| flags.tune_multiplier),
                 Some(TuneMultiplier {
@@ -430,7 +464,7 @@ mod tests {
         #[test]
         fn r1160_kys_constant_is_not_doubled() {
             // KY's Constant sets a random number on a hand card to 3: Volatility's numbers are its
-            // cost (1) and its 1/1 (patch v0.3.9), and the one picked goes to 3 outright, not twice as far.
+            // cost (1) and its 1/1 (patch v0.3.10), and the one picked goes to 3 outright, not twice as far.
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "vol-constant",

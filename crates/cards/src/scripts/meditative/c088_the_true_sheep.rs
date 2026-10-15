@@ -8,7 +8,7 @@
 //!          every set with a Tribute X play cost (R380; R1221's `tribute` catalog query, a script
 //!          flag, so the pool keeps up with every new Tribute card), three different options shown to
 //!          the chooser only (§6.3 Discover), Radiant on the Radiant face, the pick to your hand (MD-E12,
-//!          R1222: the Sheep stays on the field), costing (1) (Radiant (0)) since patch v0.3.9 (#831), a
+//!          R1222: the Sheep stays on the field), costing (1) (Radiant (0)) since patch v0.3.10 (#831), a
 //!          `costOverride`. Tunes: worth 5 ↑ (Radiant 500; step 1); setCost 1 ↓ (Radiant 0)."
 //!
 //! The worth is the static flag `playChoices.tributeValueOf` reads through the declared `worth`
@@ -88,7 +88,7 @@ pub fn script() -> CardScripts {
 
 // M #88 The True Sheep — SPEC §8.8 row 88, BUILD M10 row M 88: "Cry (played or cast): Discovers one
 // of three different non-token cards with a Tribute cost to your hand (R1221, R1222), shown to you
-// only, costing (1) (patch v0.3.9); the Sheep stays on the field; as a Tribute it pays a whole Tribute 2 or 3 alone, a set of
+// only, costing (1) (patch v0.3.10); the Sheep stays on the field; as a Tribute it pays a whole Tribute 2 or 3 alone, a set of
 // one (R101); worth reads through `param()`; radiant 2/2, worth 500, the Discovered card Radiant and
 // costing (0)".
 #[cfg(test)]
@@ -219,7 +219,7 @@ mod tests {
 
             #[test]
             fn r1222_the_pick_costs_1() {
-                // Patch v0.3.9 (#831): "It costs (1)", a `costOverride` read through `param()`.
+                // Patch v0.3.10 (#831): "It costs (1)", a `costOverride` read through `param()`.
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = holding("sheep-costs", false);
                 s.play(ID, json!({ "zone": 1 }));

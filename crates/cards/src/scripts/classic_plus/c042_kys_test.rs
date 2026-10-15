@@ -461,7 +461,7 @@ mod tests {
 
         #[test]
         fn r420_hard_kys_gift_at_its_printed_4() {
-            // Patch v0.3.9 (#831): no longer at (0).
+            // Patch v0.3.10 (#831): no longer at (0).
             let mut s = cast("kys-test-gift", false, &[FILLER]);
             take(&mut s, "Hard", true);
             assert_eq!(gained(&s), vec![json!({ "defId": GIFT, "radiant": false })]);

@@ -4,8 +4,6 @@
 //! face's enemy rows, what the other seat sees (R97, R177), a random cast (R452), and a pause that
 //! survives JSON and a game that replays (§9.2, §9.3).
 
-use serde::Serialize;
-
 use jackioh_engine::effects::cast_new;
 use jackioh_engine::subsystems::papaya::{
     PAPAYA_DONE, PAPAYA_LANES, PapayaPoint, cards_on_curve, cells_on_curve, curve_at, point_of_zone,
@@ -15,7 +13,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_deck;
-use crate::rules::fixtures::harness::{events_of_type, put, setup_catalog, sink_for, slot};
+use crate::rules::fixtures::harness::{events_of_type, json_of, put, setup_catalog, sink_for, slot};
 use crate::rules::fixtures::papaya::{
     body, curve, curve_quickdraw, field, register_papaya_fixtures, snare, token,
 };
@@ -127,10 +125,6 @@ fn full_board(state: &mut GameState) -> Vec<Vec<CardInstance>> {
             cards
         })
         .collect()
-}
-
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn events_json(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {

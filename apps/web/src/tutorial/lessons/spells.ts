@@ -5,7 +5,7 @@
 // no backrow or material beyond lesson 3. GIGA Glowy Jelly Bean is deliberately uncast: the tutorial
 // AI reaches at most 4 mana (cap 3 and The Coin).
 // Prem Panther draws only after attacking and surviving (R426), so it stays below the scripted deal.
-// Patch v0.3.9 gave Jilliax a (3) price at which it is Equip, and the AI paid it to equip a token on
+// Patch v0.3.10 gave Jilliax a (3) price at which it is Equip, and the AI paid it to equip a token on
 // its 3 mana: Jilliax now sits where Mr. Vanilla did, past the turns the coach teaches Taunt on.
 
 import type { TutorialLesson } from "../lessons.ts";

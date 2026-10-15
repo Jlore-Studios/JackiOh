@@ -4,7 +4,7 @@
 //!   Radiant: "… Exile every enemy card on the curve."
 //!
 //! The curve is the engine's (E32): the player Discovers 1 to 4 cells in different lanes, each among
-//! `PAPAYA_OFFERS` random cells of the lanes not used yet, then "done" (patch v0.3.9, R831003; it chose
+//! `PAPAYA_OFFERS` random cells of the lanes not used yet, then "done" (patch v0.3.10, R831003; it chose
 //! any cell on the board before). The curve is the lowest-degree polynomial through them in exact
 //! rationals, announced in a public `curveDrawn`, and the top card at every cell on it is exiled. The
 //! running face decides the rows: `papayaAnswered` reads `ctx.radiant` and keeps to the enemy's rows 2

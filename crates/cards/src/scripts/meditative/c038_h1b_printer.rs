@@ -7,7 +7,29 @@
 //! any one of the tags (R1422); the Printer itself is excluded (R387), and R673 applies. The cards
 //! it makes are not Chinese (⚠ designer).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-038";
+
+fn printer(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |_ctx| {
+            let mut args = json!({ "query": { "anyTags": ["KY", "CN"] }, "radiant": true });
+            if radiant {
+                args["costOverride"] = json!(0);
+            }
+            vec![add_random_from_catalog(json_as(args))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    // Both faces add a Radiant KY or CN card; the Radiant face's costs (0).
+    let base = printer(false);
+    let radiant = printer(true);
+    CardScripts { base, radiant }
+}
 
 // M #38 H1B Printer — SPEC §8.8 row 38, BUILD M10 row M 38: "At your start of turn only, adds one
 // random Radiant non-token card with the KY tag, the CN tag or both (`anyTags`, MD-B20), never
@@ -15,6 +37,7 @@ pub const ID: &str = "meditative-038";
 // hand cap burns it; hidden from the opponent; radiant it costs (0)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;

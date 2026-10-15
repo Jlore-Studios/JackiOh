@@ -1,15 +1,37 @@
 //! M #99 Paranoia (SPEC §8.8 row 99): (2) Field Spell, Epic.
 //!
 //! Base:    "Aura: Your Spells have Cloaked.
-//!           Cry: Draw {draw|card|cards}."
+//!           Cry: Draw {draw}."
 //! Radiant: "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.
-//!           Cry: Draw {draw|card|cards}."
+//!           Cry: Draw {draw}."
 //! Engine: Cloaked for the Spells in its controller's hand while it acts (`cloak_hand_aura`, R1044);
 //! the Radiant face's Echo +{echo} for each Spell its controller reveals while it acts, read as the
 //! Spell reveals (`reveal_echo`, R1045); the Cry draws. Until patch v0.3.7 it was ME-ALTPLAY's
 //! face-down play permission, each Spell revealing at a time chosen as it was set.
 
+use jackioh_engine::alt_play::cloak_hand_aura;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-099";
+
+fn paranoia(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let count = param(&*ctx, "draw");
+            vec![draw(json_as(json!({ "count": count })))]
+        })),
+        aura: Some(cloak_hand_aura(CardType::Spell)),
+        reveal_echo: radiant.then(|| -> RevealEchoHook { Arc::new(|args| param(&args, "echo")) }),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: paranoia(false),
+        radiant: paranoia(true),
+    }
+}
 
 // M #99 Paranoia — SPEC §8.8 row 99, BUILD M10 row M 99.
 #[cfg(test)]
@@ -460,9 +482,9 @@ mod tests {
             let def = crate::card_def(PARANOIA);
             assert_eq!(
                 def.radiant.text,
-                "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw|card|cards}."
+                "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
             );
-            assert_eq!(def.base.text, "Aura: Your Spells have Cloaked.\nCry: Draw {draw|card|cards}.");
+            assert_eq!(def.base.text, "Aura: Your Spells have Cloaked.\nCry: Draw {draw}.");
         }
     }
 }

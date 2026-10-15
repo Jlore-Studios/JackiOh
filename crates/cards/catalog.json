@@ -153,13 +153,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} attack per heads and +{perTails} health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
     }
   },
   "core-005": {
@@ -458,13 +458,13 @@
       "attack": 8,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal {damage} damage to each enemy."
     },
     "radiant": {
       "attack": 16,
       "health": 20,
       "keywords": [],
-      "text": "End of turn: Deal {damage} damage to each enemy Unit and the enemy hero."
+      "text": "End of turn: Deal {damage} damage to each enemy."
     }
   },
   "core-014": {
@@ -492,11 +492,11 @@
     "loc": 12,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Units have +{attack} attack, Rush and First Strike."
+      "text": "Aura: Your Units have +{attack} Attack, Rush and First Strike."
     }
   },
   "core-015": {
@@ -719,7 +719,7 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1."
+      "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard 1 random card."
     },
     "radiant": {
       "keywords": [],
@@ -1198,7 +1198,7 @@
       "attack": 4,
       "health": 5,
       "keywords": [],
-      "text": "Start of turn: Add a random card from your graveyard to your hand."
+      "text": "Start of turn: Return a random card from your graveyard to hand."
     },
     "radiant": {
       "attack": 8,
@@ -1551,7 +1551,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal an enemy permanent. It becomes Radiant."
+      "text": "Steal an enemy permanent. Make it Radiant."
     }
   },
   "core-050": {
@@ -1581,7 +1581,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it. It becomes Radiant."
+      "text": "Divine Shield\nCry: Choose an enemy permanent. At the start of your next turn, steal it and make it Radiant."
     }
   },
   "core-051": {
@@ -2163,13 +2163,13 @@
       "attack": 0,
       "health": 2,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units have −{drain} Attack."
     },
     "radiant": {
       "attack": 0,
       "health": 4,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} attack."
+      "text": "Can't be in Defense Position.\nAura: Your Units other than Spikey Pillows have −{drain} Attack."
     }
   },
   "core-066": {
@@ -2308,11 +2308,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Recruit 3 ({costLimit}) Cost or less Units."
+      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Recruit 3 ({costLimit}) Cost or less Units."
+      "text": "Recruit 3 Units of ({costLimit}) Cost or less."
     }
   },
   "core-070": {
@@ -3103,7 +3103,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, place a Plague Counter on this.\nStart of turn: +{mana} mana per Plague Counter."
     },
     "radiant": {
       "attack": 2,
@@ -3113,7 +3113,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +{mana} mana per Plague Counter."
+      "text": "Rush\nWhenever this takes damage, place a Plague Counter on this.\nStart of turn: +{mana} mana per Plague Counter."
     }
   },
   "core-092": {
@@ -4070,11 +4070,11 @@
     "loc": 84,
     "base": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
+      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent chooses {choices|time|times}: they discard {discard|card|cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw|card|cards}."
+      "text": "Your opponent chooses {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
     }
   },
   "classic-009": {
@@ -4513,11 +4513,11 @@
     "loc": 40,
     "base": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or choose a Unit, which is destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or choose a Unit, which is destroyed at the start of your next turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards}; or all enemy Units are destroyed at the start of your next turn."
+      "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or all enemy Units are destroyed at the start of your next turn."
     }
   },
   "classic-021": {
@@ -4624,11 +4624,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Discard {discards|card|cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
+      "text": "Cry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
     }
   },
   "classic-024": {
@@ -4724,11 +4724,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "Draw {draw}. Then discard {discard|card|cards}."
+      "text": "Draw {draw}. Then discard {discard|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw}. Then discard {discard|card|cards}."
+      "text": "Draw {draw}. Then discard {discard|random card|random cards}."
     }
   },
   "classic-027": {
@@ -6002,11 +6002,11 @@
     "loc": 24,
     "base": {
       "keywords": [],
-      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw that many."
+      "text": "End of turn: Discard 2 random cards.\nWhenever you discard cards, draw that many."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Discard 2 cards.\nWhenever you discard cards, draw your deck."
+      "text": "End of turn: Discard 2 random cards.\nWhenever you discard cards, draw your deck."
     }
   },
   "classic-065": {
@@ -6897,7 +6897,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Divine Shield\nTo target this with anything but an attack, a player must also discard {discard|card|cards}."
+      "text": "Divine Shield\nTo target this with anything but an attack, a player must also discard {discard|random card|random cards}."
     },
     "radiant": {
       "attack": 10,
@@ -6910,7 +6910,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Divine Shield, Reborn\nTo target this with anything but an attack, a player must also discard {discard|card|cards}."
+      "text": "Divine Shield, Reborn\nTo target this with anything but an attack, a player must also discard {discard|random card|random cards}."
     }
   },
   "classic-090": {
@@ -7373,11 +7373,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Destroy a Unit. Your hero takes damage equal to its health."
+      "text": "Destroy a Unit. Your hero takes damage equal to its Health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Destroy a Unit. Heal your hero by its health."
+      "text": "Destroy a Unit. Heal your hero by its Health."
     }
   },
   "classicplus-012-2": {
@@ -7407,11 +7407,11 @@
     "loc": 17,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours, heal it {amount}."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours, heal it {amount}."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
     }
   },
   "classicplus-012-3": {
@@ -7944,7 +7944,7 @@
       "attack": 10,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead (its \"Whenever this destroys a Unit\" triggers)."
+      "text": "End of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
     }
   },
   "classicplus-019-3": {
@@ -7991,7 +7991,7 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     },
     "radiant": {
       "attack": 10,
@@ -8002,7 +8002,7 @@
           "n": 1
         }
       ],
-      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gets +{heads}/+{heads}. Tails (Int): This gets −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
     }
   },
   "classicplus-019-4": {
@@ -8088,7 +8088,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      "text": "Rush, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
       "attack": 10,
@@ -8101,7 +8101,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gets +{attackGain} Attack.\nThis can't go Berserk."
+      "text": "Charge, First Strike\nWhenever this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
     }
   },
   "classicplus-020": {
@@ -8129,13 +8129,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Give the Units next to this +{buff}/+{buff}."
+      "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: Give the Units next to this +{buff}/+{buff}."
+      "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
     }
   },
   "classicplus-021": {
@@ -9018,11 +9018,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|random card|random cards}. Heal your hero {heal}. Add a random Book, a random KY card, a random Legendary card and a random (4) Cost card to your hand. They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|card|cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
+      "text": "Activate: Gain {mana} mana. Your opponent discards {discards|random card|random cards}. Heal your hero {heal}. Add a random Radiant Book, a random Radiant KY card, a random Radiant Legendary card and a random Radiant (4) Cost card to your hand. They cost ({setCost})."
     }
   },
   "classicplus-043": {
@@ -9548,11 +9548,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Your opponent discards {discards|card|cards}."
+      "text": "Your opponent discards {discards|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your opponent discards {discards|card|cards}."
+      "text": "Your opponent discards {discards|random card|random cards}."
     }
   },
   "classicplus-057": {
@@ -9906,11 +9906,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "Your hero loses {loss} health."
+      "text": "Lose {loss} health."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero loses {loss} health."
+      "text": "Lose {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -9956,11 +9956,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce its cost by ({discount})."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. It costs ({discount}) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. Reduce their cost by ({discount})."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. They cost ({discount}) less."
     }
   },
   "classicplus-065-3": {
@@ -10006,11 +10006,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it; if it's yours, heal it {amount}. Draw {draw}. Each costs ({setCost})."
+      "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
     }
   },
   "classicplus-065-4": {
@@ -10642,11 +10642,11 @@
     "loc": 13,
     "base": {
       "keywords": [],
-      "text": "End of turn: Add a random AI Generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random AI generated card to your hand. It costs (0)."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Add a random Radiant AI Generated card to your hand. It costs (0)."
+      "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs (0)."
     }
   },
   "classicplus-t-ai-01": {
@@ -10934,7 +10934,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards} and gain {mana} mana."
+      "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw} and gain {mana} mana."
     }
   },
   "meditative-002": {
@@ -10969,7 +10969,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Rush, Windfury\nWhenever this takes damage, discard {discards|card|cards}."
+      "text": "Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
     },
     "radiant": {
       "attack": 10,
@@ -10985,7 +10985,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|card|cards}."
+      "text": "First Strike, Rush, Windfury\nWhenever this takes damage, discard {discards|random card|random cards}."
     }
   },
   "meditative-003": {
@@ -11190,11 +11190,11 @@
     "loc": 49,
     "base": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw|card|cards}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
     }
   },
   "meditative-008": {
@@ -11263,11 +11263,11 @@
     "loc": 114,
     "base": {
       "keywords": [],
-      "text": "Ascent level: starts at 0. This costs (Ascent level).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+      "text": "Ascent level: starts at 0. This costs (Ascent level).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
     },
     "radiant": {
       "keywords": [],
-      "text": "Ascent level: starts at 0. This costs (Ascent level - 1), never less than (0).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw|card|cards}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+      "text": "Ascent level: starts at 0. This costs (Ascent level - 1), never less than (0).\nGain the effect of your Ascent level. Then your Ascent level goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
     }
   },
   "meditative-009": {
@@ -11585,11 +11585,11 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
+      "text": "Lose all mana next turn. Make a card in your hand Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Echo 1\nLose all mana next turn. Choose a card in your hand. It becomes Radiant."
+      "text": "Echo 1\nLose all mana next turn. Make a card in your hand Radiant."
     }
   },
   "meditative-019": {
@@ -11679,7 +11679,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw|card|cards}.\nYou can take only one extra turn from Temporal Rift each game."
+      "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw}.\nYou can take only one extra turn from Temporal Rift each game."
     }
   },
   "meditative-020": {
@@ -11737,7 +11737,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total.\nDraw {draw|card|cards}."
+      "text": "Choose one. For the rest of the game, you also win while it is true: your hero has {health} or more Health; your graveyard holds {graveyard} or more cards; or your Units have {board} or more Attack and {board} or more Health in total.\nDraw {draw}."
     }
   },
   "meditative-021": {
@@ -11853,11 +11853,11 @@
     "loc": 0,
     "base": {
       "keywords": [],
-      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand."
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw|card|cards}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
+      "text": "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain its reward.\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor.\nAdd a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
     }
   },
   "meditative-022-1": {
@@ -11925,7 +11925,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. Attack beats Greed, Greed beats Defend, Defend beats Attack. If yours wins, cancel their reward; if it loses, take its penalty; a tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor.\nWhen you discard this, take all three penalties."
     },
     "radiant": {
       "keywords": [
@@ -11933,7 +11933,7 @@
           "kind": "Temporary"
         }
       ],
-      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. If yours beats theirs (Attack beats Greed, Greed beats Defend, Defend beats Attack), cancel their reward. If you chose the same, nothing happens. If theirs beats yours, take your choice's penalty.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
+      "text": "Temporary\nChoose one: Greed, Attack or Defend, to guess your opponent's Mind Games. Attack beats Greed, Greed beats Defend, Defend beats Attack. If yours wins, cancel their reward; if it loses, take its penalty; a tie does nothing.\nGreed: You have {mana} less mana next turn. Discard {discards|random card|random cards}.\nAttack: Deal {damage} damage to your hero and each of your Units.\nDefend: Heal your opponent's hero and each of their Units {heal}. They gain +{armor} Armor."
     }
   },
   "meditative-023": {
@@ -11956,13 +11956,13 @@
       "attack": 3,
       "health": 5,
       "keywords": [],
-      "text": "Cry: Transform the Units next to this into Sheep Tokens."
+      "text": "Cry: Transform the Units adjacent to this into Sheep Tokens."
     },
     "radiant": {
       "attack": 6,
       "health": 10,
       "keywords": [],
-      "text": "Cry: Transform the Units next to this into Radiant Sheep Tokens."
+      "text": "Cry: Transform the Units adjacent to this into Radiant Sheep Tokens."
     }
   },
   "meditative-024": {
@@ -11985,7 +11985,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Transform a Unit and the Units next to it into Sheep Tokens."
+      "text": "Transform a Unit and the Units adjacent to it into Sheep Tokens."
     }
   },
   "meditative-025": {
@@ -12742,7 +12742,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYou summon this when your Jade Counter reaches 5."
+      "text": "Can't attack, Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYou summon this when your Jade Counter reaches 5."
     },
     "radiant": {
       "attack": 40,
@@ -12755,7 +12755,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit. At the start of your next turn they join your side, or die of heartbreak if you have no room.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
+      "text": "Indestructible, Immutable\nEnd of turn: Allure every enemy Unit.\nYour Jade Beauties become Radiant when your Jade Counter reaches 10."
     }
   },
   "meditative-040": {
@@ -13568,18 +13568,18 @@
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Summon a random (1) Unit. It gains \"Death: Add {books|random Book card|random Book cards} to your hand.\"",
+      "text": "Cry: Summon a random (1) Cost Unit. It gains \"Death: Add {books|random Book|random Books} to your hand.\"",
       "grants": {
-        "bookDeath": "Death: Add {books|random Book card|random Book cards} to your hand."
+        "bookDeath": "Death: Add {books|random Book|random Books} to your hand."
       }
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Summon a random Radiant (1) Unit. It gains \"Death: Add {books|random Radiant Book card|random Radiant Book cards} to your hand.\"",
+      "text": "Cry: Summon a random Radiant (1) Cost Unit. It gains \"Death: Add {books|random Radiant Book|random Radiant Books} to your hand.\"",
       "grants": {
-        "bookDeath": "Death: Add {books|random Radiant Book card|random Radiant Book cards} to your hand."
+        "bookDeath": "Death: Add {books|random Radiant Book|random Radiant Books} to your hand."
       }
     }
   },
@@ -13600,18 +13600,18 @@
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": "Cry: Summon a random (4) Unit. It gains \"Death: Fuse a random Book and AI card.\"",
+      "text": "Cry: Summon a random (4) Cost Unit. It gains \"Death: Fuse a random Book and a random AI generated card and add the result to your hand.\"",
       "grants": {
-        "fusedBookDeath": "Death: Fuse a random Book and AI card."
+        "fusedBookDeath": "Death: Fuse a random Book and a random AI generated card and add the result to your hand."
       }
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Cry: Summon a random Radiant (4) Unit. It gains \"Death: Fuse a random Radiant Book and AI card.\"",
+      "text": "Cry: Summon a random Radiant (4) Cost Unit. It gains \"Death: Fuse a random Radiant Book and a random Radiant AI generated card and add the result to your hand.\"",
       "grants": {
-        "fusedBookDeath": "Death: Fuse a random Radiant Book and AI card."
+        "fusedBookDeath": "Death: Fuse a random Radiant Book and a random Radiant AI generated card and add the result to your hand."
       }
     }
   },
@@ -13972,13 +13972,13 @@
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of your opponent's field, hand, deck and graveyard."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of the opponent's field, hand, deck, and graveyard zones."
+      "text": "Whenever you spend mana, place 1 Plague Counter on this.\nActivate: Spend ({price}) Plague Counters: Exile {exiles|random enemy card|random enemy cards} from each of your opponent's field, hand, deck and graveyard."
     }
   },
   "meditative-070": {
@@ -14367,13 +14367,13 @@
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}."
+      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}."
     },
     "radiant": {
       "attack": 8,
       "health": 8,
       "keywords": [],
-      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}. Each becomes Radiant."
+      "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}. Each becomes Radiant."
     }
   },
   "meditative-080": {
@@ -14401,7 +14401,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3 cards."
+      "text": "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3."
     },
     "radiant": {
       "keywords": [
@@ -14412,7 +14412,7 @@
           "kind": "Immutable"
         }
       ],
-      "text": "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3 cards."
+      "text": "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3."
     }
   },
   "meditative-081": {
@@ -14455,7 +14455,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw}.\nPaid (2): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
@@ -15238,7 +15238,7 @@
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Radiant Journey Complete into your deck. Draw {draw|card|cards}."
+      "text": "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a Radiant Journey Complete into your deck. Draw {draw}."
     }
   },
   "meditative-096-1": {
@@ -15481,7 +15481,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Tribute 5, Can't attack\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Take control of an enemy permanent."
+      "text": "Tribute 5, Can't attack\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Steal an enemy permanent."
     },
     "radiant": {
       "attack": 0,
@@ -15494,7 +15494,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Take control of an enemy permanent. It becomes Radiant."
+      "text": "Tribute 5, Can't attack, Divine Shield\nThis may Tribute any ({cheap}) Cost or less permanent on either side.\nActivate: Steal an enemy permanent. Make it Radiant."
     }
   },
   "meditative-097-5": {
@@ -15576,7 +15576,8 @@
         "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "max": 5
       }
     ],
     "loc": 28,
@@ -15785,11 +15786,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw|card|cards}."
+      "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw|card|cards}."
+      "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
     },
     "tags": []
   },

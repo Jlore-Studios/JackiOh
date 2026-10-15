@@ -8,7 +8,29 @@
 //! current one). It is a price for a play, so a Field Spell, a Trap and a Unit keep theirs, and a cast
 //! pays nothing (R70).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-015";
+
+fn smelly_steven() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            vec![add_cost_rule(json_as(json!({
+                "player": "enemy",
+                "rule": { "types": ["Spell"], "amount": param(&*ctx, "surcharge") },
+                "lasts": "theirNextTurn",
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: smelly_steven(),
+        radiant: smelly_steven(),
+    }
+}
 
 // M #15 Smelly Steven — SPEC §8.8 row 15, BUILD M10 row M 15: "A price rule on the opponent for Spells only,
 // lasting their next turn (R455): inert for the rest of your turn, live through theirs and gone at its
@@ -93,7 +115,7 @@ mod tests {
             js(&def.params),
             json!([{ "key": "surcharge", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = super::script();
         assert!(scripts.base.cry.is_some());
         assert!(scripts.radiant.cry.is_some());
     }

@@ -10,10 +10,98 @@
 //! on either side, or a Radiant card in your hand; the Radiant face clears every Radiant card of the
 //! opponent's field (MD-D8). Both faces then add a this-turn `radiantNextPlay` modifier (R831005): the
 //! next card its player plays, a cast included (R70), becomes Radiant as it is played (§10.5 step 3)
-//! and spends it. Patch v0.3.9 (#831): both faces added AI generated cards instead (R1421), and the
+//! and spends it. Patch v0.3.10 (#831): both faces added AI generated cards instead (R1421), and the
 //! Radiant face cleared the opponent's hand and deck too.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-053";
+
+/// The base face's pick: a Radiant Unit or face-up backrow card on either side, or a Radiant card
+/// in your hand.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(
+        1,
+        1,
+        json!({ "side": "any", "of": ["unit", "backrow", "hand"], "check": "radiant" }),
+    )]
+}
+
+fn target_checks() -> IndexMap<&'static str, TargetCheck> {
+    IndexMap::from([(
+        "radiant",
+        // A Radiant card that is not a face-down backrow card: hidden information never shows
+        // (R440), so a face-down card is not a "face-up backrow card".
+        target_check(|a| {
+            let Some(candidate) = a.candidate else {
+                return false;
+            };
+            if !candidate.radiant {
+                return false;
+            }
+            if matches!(
+                candidate.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    ..
+                }
+            ) && matches!(
+                card_type_of(a.state, candidate),
+                CardType::Trap | CardType::FieldTrap
+            ) && candidate.face_up != Some(true)
+                && candidate.revealed != Some(true)
+            {
+                return false;
+            }
+            true
+        }),
+    )])
+}
+
+/// R831005 (patch v0.3.10): "The next card you play this turn becomes Radiant", a this-turn modifier its
+/// next play spends (it added AI generated cards before).
+fn next_play(ctx: &EffectContext<'_>) -> Effect {
+    add_player_modifier(json_as(json!({
+        "mod": {
+            "kind": "radiantNextPlay",
+            "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+        },
+    })))
+}
+
+fn prestige() -> Script {
+    Script {
+        targets: targets(),
+        target_checks: target_checks(),
+        cry: Some(hook(|ctx| vec![clear_radiant(RadiantTarget::default()), next_play(ctx)])),
+        ..Script::default()
+    }
+}
+
+fn prestige_radiant() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
+            // MD-D8: every Radiant card of the opponent's field (patch v0.3.10: no longer their hand
+            // and deck).
+            let enemy = opponent_of(ctx.controller);
+            let mut effects: Vec<Effect> = permanents_on_field(ctx.state, enemy)
+                .iter()
+                .filter(|card| card.controller == enemy && card.radiant)
+                .map(|card| clear_radiant(json_as(json!({ "instanceId": card.id }))))
+                .collect();
+            effects.push(next_play(ctx));
+            effects
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: prestige(),
+        radiant: prestige_radiant(),
+    }
+}
 
 // M #53 Prestige — SPEC §8.8 row 53, BUILD M10 row M 53: "De-Radiant a Radiant Unit or face-up
 // backrow card on either side, or a Radiant card in your hand (MD-D6, R90); the Radiant face
@@ -21,6 +109,7 @@ pub const ID: &str = "meditative-053";
 // this turn Radiant, a cast included, once (R831005)".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::testkit::*;
 
     const PRESTIGE: &str = "meditative-053";
@@ -222,7 +311,7 @@ mod tests {
             let grave = radiant_off_field(&mut s, Zone::Graveyard { player: PlayerId::P2 });
             s.state_mut().players.p2.graveyard.push(grave);
             s.play(PRESTIGE, json!({}));
-            // Every enemy card on the field is De-Radianted (patch v0.3.9: the field alone).
+            // Every enemy card on the field is De-Radianted (patch v0.3.10: the field alone).
             assert!(!must_unit(&s, "p2", 1).radiant);
             assert!(s.hand("p2").iter().any(|card| card.radiant));
             assert!(s.pile("p2", "library").iter().any(|card| card.radiant));

@@ -1,7 +1,51 @@
 //! C+ #18 Gullible Treatler (SPEC §8.7 row 18): at its controller's start of turn it Tributes itself
 //! when its controller (Radiant: any player) controls no Field Spell, Trap or Field Trap in the backrow.
 
+use jackioh_engine::effects::sacrifice;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-018";
+
+/// "Field Spell or Trap": a Field Trap is a Trap too (§8 Conventions).
+const COUNTED: &[CardType] = &[CardType::FieldSpell, CardType::Trap, CardType::FieldTrap];
+
+fn controls_field_spell_or_trap(state: &GameState, player: PlayerId) -> bool {
+    slots_of(player, Row::Backrow).iter().any(|slot| match card_at(state, slot) {
+        Some(card) => COUNTED.contains(&card_type_of(state, card)),
+        None => false,
+    })
+}
+
+/// Base: its controller controls none. Radiant: no player controls one.
+fn tributes_itself(state: &GameState, controller: PlayerId, radiant: bool) -> bool {
+    let players: Vec<PlayerId> = if radiant { PLAYER_IDS.to_vec() } else { vec![controller] };
+    !players
+        .iter()
+        .any(|&player| controls_field_spell_or_trap(state, player))
+}
+
+fn treatler(radiant: bool) -> Script {
+    Script {
+        start_of_turn: Some(hook(move |ctx| {
+            if ctx.self_.is_some() && tributes_itself(&*ctx.state, ctx.controller, radiant) {
+                vec![sacrifice(json_as(json!({ "target": { "of": "self" } })))]
+            } else {
+                Vec::new()
+            }
+        })),
+        condition_met: Some(condition_hook(move |ctx| {
+            ctx.zone == ConditionZone::Field && tributes_itself(ctx.state, ctx.controller, radiant)
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: treatler(false),
+        radiant: treatler(true),
+    }
+}
 
 // C+ #18 Gullible Treatler — SPEC §8.7 row 18, BUILD M9 Classic+ row C+ 18: "At its controller's start
 // of turn, if they control no Field Spell, Trap or Field Trap (face-down cards count; an animated one
@@ -70,7 +114,7 @@ mod tests {
         assert_eq!(def.id, TREATLER);
         assert_eq!(js(&def.cost), json!(2));
         assert!(def.tags.contains(&Tag::Human));
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert!(scripts.base.start_of_turn.is_some());
         assert!(scripts.radiant.start_of_turn.is_some());
         assert!(scripts.base.targets.is_empty());
@@ -237,7 +281,7 @@ mod tests {
         #[test]
         fn base_lit_with_no_field_spell_or_trap_of_yours_and_the_start_of_turn_tributes_it() {
             let mut s = with_treatler(false, vec![], json!({ "backrow": [{ "def": FIELD_SPELL }] }), P1);
-            assert!(crate::scripts_of()[ID].clone().base.condition_met.is_some());
+            assert!(script().base.condition_met.is_some());
             assert!(glows(&s));
             s.end_turn().end_turn();
             assert!(treatler_at(&s).is_none());

@@ -178,7 +178,15 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
         if matches!(existing.status, crate::db::store::MatchStatus::Live) {
             // Started, and then the process stopped before the in-match flags were written: the match
             // itself rebuilds from its log when a socket arrives, so only the flags need healing.
-            mark_in_match(app, &seats, &match_id).await?;
+            // A seat another match holds meanwhile cannot be healed now; the game is reported as
+            // not started by this call either way, and a later transition retries it (R890000).
+            if !mark_in_match(app, &seats, &match_id).await? {
+                tracing::info!(
+                    event = "series.seat_taken",
+                    seriesId = %series.id,
+                    matchId = %match_id,
+                );
+            }
             return Ok(false);
         }
         // The match ended but the series still names it as the game in play. `results.rs` advances
@@ -221,7 +229,20 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
 
     // After the start, not before: for every game after the first the match row is what `profiles`'
     // in-match reference points at, and only the start writes it.
-    mark_in_match(app, &seats, &match_id).await?;
+    if !mark_in_match(app, &seats, &match_id).await? {
+        // A seat found another game mid-start: it keeps that game. Undo this one — stop the
+        // actor, then erase the live match with no result (R679), whose `on delete set null`
+        // releases the winner seat's flag while the taken seat is untouched — and report a game
+        // that never started, so the next transition retries with the same `next_match_id`.
+        tracing::info!(
+            event = "series.seat_taken",
+            seriesId = %series.id,
+            matchId = %match_id,
+        );
+        app.matches.stop(&match_id).await;
+        one_tx!(app.db, |t| t.matches_forget_voided(&match_id).await?)?;
+        return Ok(false);
+    }
     tracing::info!(
         event = "series.game_started",
         seriesId = %series.id,
@@ -232,18 +253,29 @@ async fn start_series_game(app: &Arc<App>, series: &SeriesRow) -> Result<bool, S
     Ok(true)
 }
 
-/// §9.5's in-match state for both players of a series game, in one transaction.
-async fn mark_in_match(app: &App, seats: &(MatchSeat, MatchSeat), match_id: &str) -> Result<(), SeriesError> {
+/// §9.5's in-match state for both players of a series game, in one transaction. Each seat is
+/// claimed compare-and-set (R890000): `false` when another match holds it, without writing. A
+/// flag already equal to `match_id` counts as success, for idempotent retry.
+async fn mark_in_match(
+    app: &App,
+    seats: &(MatchSeat, MatchSeat),
+    match_id: &str,
+) -> Result<bool, SeriesError> {
     let ids = vec![seats.0.profile_id.clone(), seats.1.profile_id.clone()];
-    one_tx!(app.db, |t| {
+    Ok(one_tx!(app.db, |t| {
         let profiles = t.profiles_get_many(&ids).await?;
+        let mut seated = true;
         for profile in &profiles {
-            if profile.in_match_id.as_deref() != Some(match_id) {
-                t.profiles_set_in_match(&profile.id, Some(match_id)).await?;
+            if profile.in_match_id.as_deref() == Some(match_id) {
+                continue;
+            }
+            if !t.profiles_set_in_match(&profile.id, Some(match_id)).await? {
+                seated = false;
+                break;
             }
         }
-    })?;
-    Ok(())
+        seated
+    })?)
 }
 
 /// After a commit that may have left the series `playing`, start its game. A failure is logged and
@@ -629,24 +661,6 @@ pub async fn run_sweeper(app: Arc<App>) {
         if let Err(error) = sweep_series(&app).await {
             tracing::warn!(event = "series.sweeper_failed", message = %error);
         }
-    }
-}
-
-/// The sweeper task's stop handle.
-pub struct SeriesSweeper {
-    handle: tokio::task::JoinHandle<()>,
-}
-
-impl SeriesSweeper {
-    pub fn stop(&self) {
-        self.handle.abort();
-    }
-}
-
-/// `run_sweeper` on its own task, with a handle to stop it.
-pub fn start_series_sweeper(app: Arc<App>) -> SeriesSweeper {
-    SeriesSweeper {
-        handle: tokio::spawn(run_sweeper(app)),
     }
 }
 

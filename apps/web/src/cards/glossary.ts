@@ -26,10 +26,22 @@
 // backrow clause, which R428 removed). SHORT_REMINDERS holds the two lines.
 //
 // `label` is what the rules-text tokenizer (rules.ts) looks for, case-sensitively, and `aliases`
-// are the other spellings cards use. Patch v0.2.1 (issue #45) retired spelled variants ("Start of
-// your turn", "End of your turn", "Start of Game", "Once per Turn", "Cannot be in Defense Position",
-// "Trigger the Cry", "Set a hero's health", "End your turn"), keeping only grammatical plurals
-// ("Plague Counters") and specific prompts ("Look at your opponent's hand").
+// are the other spellings cards use.
+//
+// What bolds (R910000, issue #910): every §6.2 trigger and §6.3 verb, and Radiant, bolds wherever a
+// card uses it as that term, in every case and inflection the cards print ("exile it", "exiled",
+// "steal it", "Locked", "Tributes", "Buffs and Nerfs"), each such spelling an alias below. A word
+// spelled like a term that names something else stays plain, listed in PLAIN_SPELLINGS: the exile
+// pile ("your exile", Lizard's Breath's "Exile," pile). A
+// §6.1 keyword bolds as the keyword a card has, so "you stack onto this" stays plain. Card types,
+// zones, stats, positions, rarities and the §6.3 rows rules.test.ts keeps rules-only (Summon, Draw,
+// Discard, Destroy, Damage, Heal, Add to hand, Shuffle into) stay plain, as Hearthstone prints them. rules.test.ts fails on
+// a card that prints a trigger or verb that neither bolds nor is a plain spelling.
+//
+// Patch v0.2.1 (issue #45) retired spelled variants ("Start of your turn", "End of your turn",
+// "Start of Game", "Once per Turn", "Cannot be in Defense Position", "Trigger the Cry", "Set a
+// hero's health", "End your turn"), keeping only grammatical plurals ("Plague Counters") and
+// specific prompts ("Look at your opponent's hand").
 //
 // Patch v0.2.0 adds the §6 rows its card texts print (R512):
 // - §6.1's statuses that are not keyword kinds (StatusTermId): "Can't be in Defense Position" (the
@@ -42,8 +54,8 @@
 // - Balance patch 1 adds §6.3's Bounce (R692), with "Bounced" as its alias.
 // - §6.3's Counter, Steal, Unlock, Flicker, Plague Counter (and "Plague Counters"), Redirect, Set health,
 //   End the turn, Trigger a Cry and Look at a hand ("Look at your opponent's hand"): each label is
-//   the spec's row name and each alias the words cards print. Only capitalised spellings match, so
-//   "steal it" mid-sentence stays plain.
+//   the spec's row name and each alias the words cards print. Only capitalised spellings matched, so
+//   "steal it" mid-sentence stayed plain, until R910000 gave the lower-case spellings aliases.
 // - §6.3's Nerf and Buff, one row and one entry each, since a card prints one word or the other. Patch
 //   v0.3.4 (R1320) renamed them from Degrade and Upgrade, the names the engine keeps; a plain stat buff
 //   ("+2/+2") stays plain words, since matching is case-sensitive and "buff" is lower-case there.
@@ -253,35 +265,36 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   Activate: trigger(
     "Activate",
     'Once per turn on your turn, click the card to do an effect; "Activate X" up to X times per turn, "Activate ♾️" any number of times',
-    { row: "Activate / Activate X / Activate ♾️" },
+    { row: "Activate / Activate X / Activate ♾️", aliases: ["activate"] },
   ),
 
   // §6.3 Actions and verbs
   Discover: verb("Discover", "Choose 1 of 3 options"),
   // Short (R500; see the header).
-  Tribute: verb("Tribute", SHORT_REMINDERS.Tribute, { row: "Tribute X" }),
+  Tribute: verb("Tribute", SHORT_REMINDERS.Tribute, { row: "Tribute X", aliases: ["Tributes"] }),
   Embiggen: verb("Embiggen", "Two prices, bigger effect for the bigger one"),
   Recruit: verb("Recruit", "Summon from deck, scanning top down"),
-  Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4"),
-  Transform: verb("Transform", "Replace a card with another in place"),
+  // R910000: the lower-case and past spellings the cards print mid-sentence.
+  Fuse: verb("Fuse", "Combine effects, stats and cost, cost capped at 4", { aliases: ["fuse", "fused"] }),
+  Transform: verb("Transform", "Replace a card with another in place", { aliases: ["transform", "transforms"] }),
   Vanilla: verb("Vanilla", "Remove a unit's text and return it to its printed stats"),
-  Lock: verb("Lock", "Zone can't be played into"),
+  Lock: verb("Lock", "Zone can't be played into", { aliases: ["Locked"] }),
   "Choose one": verb("Choose one", "Modal effect"),
   // Patch v0.2.0's verbs (R512, see the header).
   Counter: verb("Counter", "Cancel a card being played or cast"),
-  Steal: verb("Steal", "Take control"),
+  Steal: verb("Steal", "Take control", { aliases: ["steal"] }),
   Unlock: verb("Unlock", "A Locked zone accepts plays again"),
   Flicker: verb("Flicker", "The card leaves the field then re-enters the same zone at once"),
   // Balance patch 1 (R692): the printed word for a permanent's return from the field to its controller's hand (R746, R747).
-  Bounce: verb("Bounce", "Return to controller's hand", { aliases: ["Bounced"] }),
+  Bounce: verb("Bounce", "Return to controller's hand", { aliases: ["Bounced", "bounced"] }),
   // R386, R512, R1320: two rows of §6.3, one word each (the engine's Degrade and Upgrade).
-  Nerf: verb("Nerf", "Weaken a card: one change per application"),
-  Buff: verb("Buff", "Strengthen a card: one change per application"),
+  Nerf: verb("Nerf", "Weaken a card: one change per application", { aliases: ["Nerfs"] }),
+  Buff: verb("Buff", "Strengthen a card: one change per application", { aliases: ["Buffs"] }),
   "Plague Counter": verb("Plague Counter", "Counter on a permanent, any number, reset on leaving the field", {
     aliases: ["Plague Counters"],
   }),
   "Set health": verb("Set health", "A hero's health becomes N"),
-  Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another"),
+  Redirect: verb("Redirect", "A hit, a chosen target or an attack moves to another", { aliases: ["redirected"] }),
   "End the turn": verb("End the turn", "The turn ends from an effect"),
   "Trigger a Cry": verb("Trigger a Cry", "Run a unit's Cry again"),
   "Look at a hand": verb("Look at a hand", "See the opponent's hand in a prompt", {
@@ -289,14 +302,16 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
   }),
   Allure: verb(
     "Allure",
-    "Marked enemy Units join your side at the start of your next turn, or die if you have no room",
+    "Steal the marked enemy Units at the start of your next turn; one you have no room for dies",
   ),
   "Jade Counter": verb("Jade Counter", "A public count each player has, that only rises"),
   // R1384: §6.3's words the Meditative cards print; "hand size" matches as #79 prints it.
-  Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death"),
+  Exile: verb("Exile", "Send to the exile pile, from anywhere; it triggers no Death", {
+    aliases: ["exile", "exiles", "exiled"],
+  }),
   "Hand size": verb("Hand size", "How many cards a hand holds, set for the rest of the game", { aliases: ["hand size"] }),
   "Mark in a hand": verb("Mark in a hand", "Mark cards in a hand; a later effect acts on the ones still there", {
-    aliases: ["Mark"],
+    aliases: ["Mark", "marked"],
   }),
 
   // §5.2 Radiant: §6.3's "Make Radiant" rule, then §5.2's sentence about a card in hand or deck.
@@ -307,6 +322,21 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
     {},
   ),
 };
+
+/**
+ * R910000: spellings that hold a term's word but name something else, so the tokenizer prints them
+ * plain: the exile pile, which reads like Exile ("your exile", "from exile", Lizard's Breath's
+ * "Exile," among its piles). Corpse Plantation's "each counter" and "1 counter" went with its old
+ * text (patch v0.3.10), which now names its Plague Counters in full.
+ */
+export const PLAIN_SPELLINGS: readonly string[] = [
+  "your exile",
+  "their exile",
+  "from exile",
+  "graveyard and exile",
+  "graveyard or exile",
+  "Exile, deal",
+];
 
 /** The terms whose `rule` states their spec row's ruling instead of its Rule column (see the header). */
 export const RULED_TERMS: readonly GlossaryTermId[] = ["Cry"];

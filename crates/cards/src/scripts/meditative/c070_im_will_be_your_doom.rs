@@ -3,7 +3,31 @@
 //!   Radiant: "Cry: Summon a Ready… I'm for your opponent and a Radiant Ready… I'm for yourself."
 //! Engine: summons the token under the other seat (R360, MD-D35, R1066), then a Radiant one for you.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-070";
+
+const READY: &str = "meditative-070-1";
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: Script {
+            cry: Some(hook(|_ctx| {
+                vec![summon(json_as(json!({ "defId": READY, "player": "enemy" })))]
+            })),
+            ..Script::default()
+        },
+        radiant: Script {
+            cry: Some(hook(|_ctx| {
+                vec![
+                    summon(json_as(json!({ "defId": READY, "player": "enemy" }))),
+                    summon(json_as(json!({ "defId": READY, "radiant": true }))),
+                ]
+            })),
+            ..Script::default()
+        },
+    }
+}
 
 // M #70 I'M WILL BE YOUR DOOM — SPEC §8.8 row 70, BUILD M10 row M 70.
 #[cfg(test)]

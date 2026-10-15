@@ -2,16 +2,52 @@
 //!   Base:    "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
 //!   Radiant: "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
 //!   Engine:  "Activate (R384): separate Buffs (Upgrade, R386) on each other permanent acting on your side
-//!            (unit tops, backrow cards, face-down ones; itself left out since patch v0.3.9, #831), each application its own draw; an
+//!            (unit tops, backrow cards, face-down ones; itself left out since patch v0.3.10, #831), each application its own draw; an
 //!            Immutable card is left alone (R23); a face-down card's applications are reported as R440
-//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5)."
+//!            reports hidden ones. Tunes: times 2 ↑ (Radiant 5; never above 5, R884000)."
 //!
 //! One script serves both faces: only the declared `times` (2, Radiant 5) and the health differ.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097-6";
 
+/// §8.8: "Activate" is once a turn.
+const USES: i32 = 1;
+
+/// Activate (R384): separate Buffs (Upgrade, R386) on each other permanent acting on your side (unit
+/// tops, backrow cards, face-down ones; this one left out since patch v0.3.10, #831), each application
+/// its own draw; an Immutable card is left alone (R23).
+fn study() -> ActivationDecl {
+    ActivationDecl {
+        id: "study".to_string(),
+        label: "Buff your other permanents".to_string(),
+        uses: ActivationUses::Count(USES),
+        cost: None,
+        targets: vec![],
+        modes: vec![],
+        can_activate: None,
+        has: None,
+        run: hook(|ctx| {
+            vec![upgrade(json_as(json!({
+                "scope": { "side": "self", "zones": ["field"], "excludeSelf": true },
+                "times": param(&*ctx, "times"),
+            })))]
+        }),
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        activations: vec![study()],
+        ..Script::default()
+    };
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
 // M 97.6 University — SPEC §8.8 row 97.6, BUILD M10 row M 97.6: "Can't attack; Activate, once a turn: two
-// Buffs on each other permanent on your side (itself left out since patch v0.3.9), face-down cards included (the latter cued per R440), an
+// Buffs on each other permanent on your side (itself left out since patch v0.3.10), face-down cards included (the latter cued per R440), an
 // Immutable one unchanged; enemy cards untouched; times reads through `param()`; radiant 0/24 and five
 // Buffs each".
 //
@@ -19,7 +55,7 @@ pub const ID: &str = "meditative-097-6";
 // hand and spares in the libraries, so R82 does not end the turn after the Activate.
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
 
@@ -93,9 +129,9 @@ mod tests {
         assert_eq!(js(&def.radiant.keywords), json!([{ "kind": "Can't attack" }]));
         assert_eq!(
             js(&def.params),
-            json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1 }])
+            json!([{ "key": "times", "base": 2, "radiant": 5, "better": "up", "step": 1, "min": 1, "max": 5 }])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         let uses = |script: &Script| {
             script
                 .activations
@@ -107,6 +143,40 @@ mod tests {
         assert_eq!(uses(&scripts.radiant), vec![json!(1)]);
     }
 
+    #[test]
+    fn r884000_a_buff_steps_times_up_to_five_and_never_past_it() {
+        let mut s = setup(false);
+        for want in 3..=5 {
+            assert_eq!(crate::upgrade_number(&mut s, ID, "times"), want);
+        }
+        assert!(!crate::can_upgrade_number(&s, ID, "times"));
+        // The Radiant face prints the ceiling, so nothing steps it up.
+        assert!(!crate::can_upgrade_number(&setup(true), ID, "times"));
+    }
+
+    /// The loop #884 found: each use's own Buffs could step its Activate N and its `times`, each use
+    /// funding more, until one turn never ended. Now the turn's uses stop at the cap, and since patch
+    /// v0.3.10 (#831) its Buffs leave it out, so its `times` stays as printed.
+    #[test]
+    fn r884000_a_set_activate_n_stops_at_the_cap_its_own_buffs_never_feed_it_and_the_game_goes_on() {
+        let mut s = setup(false);
+        s.card_mut(ID).tuning = Some(json_as(json!({ "set": { "Activate": ACTIVATE_UNLIMITED_CAP * 10 } })));
+        let decl = subsystems::abilities_of(s.state(), s.card(ID))[0].clone();
+        assert_eq!(subsystems::uses_allowed(s.card(ID), &decl), ACTIVATE_UNLIMITED_CAP);
+        for _ in 0..ACTIVATE_UNLIMITED_CAP {
+            s.activate(ID, json!({}));
+        }
+        s.expect_refused_with(|s| s.activate(ID, json!({})), &format!("{ACTIVATE_UNLIMITED_CAP} times"));
+        assert_eq!(
+            param_value(s.state(), Some(s.card(ID)), "times", ParamValueOptions::default()),
+            2
+        );
+        // The turn ends and the next one starts its count afresh.
+        s.end_turn();
+        s.end_turn();
+        s.activate(ID, json!({}));
+    }
+
     mod base {
         use super::*;
 
@@ -114,7 +184,7 @@ mod tests {
         fn r386_buffs_each_of_your_other_permanents_twice_a_face_down_card_included_itself_never() {
             let mut s = setup(false);
             s.activate(ID, json!({}));
-            // The Vanilla and the face-down Trap twice; the University itself never (patch v0.3.9); the
+            // The Vanilla and the face-down Trap twice; the University itself never (patch v0.3.10); the
             // Immutable Menace never (R23); the enemy Vanilla never.
             assert_eq!(tally(&s), [0, 2, 0, 2, 0]);
         }

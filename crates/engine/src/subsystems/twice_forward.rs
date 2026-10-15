@@ -1,7 +1,7 @@
 //! C+ #74 Twice Forward One Step Backwards (SPEC §8.7 row 74, R425): an Animated Field Trap that counts
 //! the opponent's plays from the moment it is set and, on every `plays`-th one, once that card has
 //! resolved, fuses a copy of it (on the Radiant face a Radiant copy) into itself and gains Brittle. The
-//! played card is never consumed, so there is always a copy to fuse (patch v0.3.9, R831011).
+//! played card is never consumed, so there is always a copy to fuse (patch v0.3.10, R831011).
 //!
 //! The count is the card's own (`memory.plays`, §10.1), so it survives JSON, a replay and the Fuse that
 //! keeps this instance (R77; nothing here is a `remember` note, so a Fuse never re-roots it,
@@ -11,7 +11,7 @@
 //! (R33), while this one must stay face-down until it first activates. So the predicate counts each
 //! play (`cardPlayed`, §10.5 step 4), notes the card an even count names (`memory.fuseOn`), and admits
 //! that card's `cardResolved` (R831011: a copy is fused, so wherever the card went there is one to
-//! fuse; before patch v0.3.9 the base face fused the card itself, R589). Counting plays, not
+//! fuse; before patch v0.3.10 the base face fused the card itself, R589). Counting plays, not
 //! resolutions, keeps "every second card" right when a
 //! play casts a card that resolves before it (R70): the cast is the later play. The predicate writes
 //! the card, so its `when` takes `&mut EffectContext`.

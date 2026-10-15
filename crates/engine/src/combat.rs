@@ -28,6 +28,7 @@ use serde_json::{Value, json};
 
 use crate::config::{LANE_RESTRICTED_ATTACKS, WINDFURY_ATTACKS};
 use crate::damage::{DamageArgs, DamageFlags, DamageTarget, deal_damage};
+use crate::layers::AuraTable;
 use crate::script::{AttackMod, AttackModArgs, EngineSink, TargetedWhat};
 use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
@@ -137,14 +138,19 @@ fn engine_resume(hook: &str, step: &str, data: IndexMap<String, Value>) -> Resum
 /// R49: a unit with Deft has two exertions, one attack and one switch, where every other unit has
 /// one. The keyword is read through §10.4's layers, so a granted Deft counts the same as a printed
 /// one (patch v0.2.4 made R49's flag a keyword).
-fn has_two_exertions(state: &GameState, unit: &CardInstance) -> bool {
-    crate::layers::unit_has(state, unit, KeywordKind::Deft)
+fn has_two_exertions(auras: &AuraTable<'_>, unit: &CardInstance) -> bool {
+    auras.unit_has(unit, KeywordKind::Deft)
 }
 
 /// R636: how many attacks the unit may declare in a turn — two with Windfury, read through the layers
 /// (§10.4) so a keyword granted or lost mid-turn counts from that moment, one otherwise.
 pub fn attacks_per_turn(state: &GameState, unit: &CardInstance) -> i32 {
-    if crate::layers::unit_has(state, unit, KeywordKind::Windfury) {
+    attacks_per_turn_in(&AuraTable::per_read(state), unit)
+}
+
+/// `attacks_per_turn` read through a sweep's `AuraTable` (#892).
+pub fn attacks_per_turn_in(auras: &AuraTable<'_>, unit: &CardInstance) -> i32 {
+    if auras.unit_has(unit, KeywordKind::Windfury) {
         WINDFURY_ATTACKS
     } else {
         1
@@ -156,15 +162,20 @@ pub fn attacks_per_turn(state: &GameState, unit: &CardInstance) -> i32 {
 /// Windfury attacks again until it has declared `attacks_per_turn`, and the first of them already
 /// spends the exertion a switch needs.
 pub fn has_exertion(state: &GameState, unit: &CardInstance, kind: ExertionKind) -> bool {
+    has_exertion_in(&AuraTable::per_read(state), unit, kind)
+}
+
+/// `has_exertion` read through a sweep's `AuraTable` (#892).
+pub fn has_exertion_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: ExertionKind) -> bool {
     let spent = &unit.exertion;
     if kind == ExertionKind::Attack {
         let attacks = spent.attacks.unwrap_or(if spent.attacked { 1 } else { 0 });
-        if attacks >= attacks_per_turn(state, unit) {
+        if attacks >= attacks_per_turn_in(auras, unit) {
             return false;
         }
-        return has_two_exertions(state, unit) || !spent.switched;
+        return has_two_exertions(auras, unit) || !spent.switched;
     }
-    if has_two_exertions(state, unit) {
+    if has_two_exertions(auras, unit) {
         return !spent.switched;
     }
     !spent.attacked && !spent.switched
@@ -281,17 +292,23 @@ pub fn switch_position(
 /// with §3.2's "is it even on the field" first. The order is what decides which reason a unit that
 /// fails several ways reports, so R6's spent exertion is read before its position.
 pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<(), EngineError> {
+    why_cannot_declare_in(&AuraTable::per_read(state), attacker)
+}
+
+/// `why_cannot_declare` read through a sweep's `AuraTable` (#892).
+pub fn why_cannot_declare_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Result<(), EngineError> {
+    let state = auras.state();
     if !is_active_on_field(state, attacker) {
         return Err(EngineError::new("that unit is not on the field"));
     }
     if carried_out_of_combat(state, attacker) {
         return Err(EngineError::new("a Unit on a carrier cannot attack"));
     }
-    if !has_exertion(state, attacker, ExertionKind::Attack) {
+    if !has_exertion_in(auras, attacker, ExertionKind::Attack) {
         return Err(EngineError::new("that unit has already acted this turn"));
     }
 
-    let view = crate::layers::unit_view(state, attacker);
+    let view = auras.unit_view(attacker);
     if view.position != Position::Atk {
         return Err(EngineError::new("only Attack-Position units may attack"));
     }
@@ -313,17 +330,15 @@ pub fn why_cannot_declare(state: &GameState, attacker: &CardInstance) -> Result<
 /// could legally attack it, so a Taunt only its own lane may attack (Classic+ #19.1) leaves an attacker
 /// in another lane free, and one that cannot be attacked — a Unit a carrier holds (R446) among them —
 /// binds nobody.
-fn taunt_wall(state: &GameState, attacker: &CardInstance, enemy: PlayerId) -> Vec<CardInstance> {
+fn taunt_wall(auras: &AuraTable<'_>, attacker: &CardInstance, enemy: PlayerId) -> Vec<CardInstance> {
+    let state = auras.state();
     crate::zones::active_units_of(state, enemy)
         .into_iter()
         .filter(|unit| {
             !carried_out_of_combat(state, unit)
-                && has_keyword(
-                    &crate::layers::unit_view(state, unit).keywords,
-                    KeywordKind::Taunt,
-                )
-                && crate::restrictions::attack_restriction(
-                    state,
+                && has_keyword(&auras.unit_view(unit).keywords, KeywordKind::Taunt)
+                && crate::restrictions::attack_restriction_in(
+                    auras,
                     attacker,
                     &DamageTarget::Unit {
                         instance: (*unit).clone(),
@@ -343,7 +358,17 @@ pub fn why_cannot_attack(
     attacker: &CardInstance,
     target: &AttackTarget,
 ) -> Result<(), EngineError> {
-    why_cannot_declare(state, attacker)?;
+    why_cannot_attack_in(&AuraTable::per_read(state), attacker, target)
+}
+
+/// `why_cannot_attack` read through a sweep's `AuraTable` (#892).
+pub fn why_cannot_attack_in(
+    auras: &AuraTable<'_>,
+    attacker: &CardInstance,
+    target: &AttackTarget,
+) -> Result<(), EngineError> {
+    let state = auras.state();
+    why_cannot_declare_in(auras, attacker)?;
 
     // Step 2: an enemy unit, or the enemy hero.
     let enemy = opponent_of(attacker.controller);
@@ -378,22 +403,19 @@ pub fn why_cannot_attack(
     }
     // B5 E35: the unit restrictions — can't be attacked, attacked only from its own lane, can't attack
     // or be attacked — which a forced attack obeys as well (`force_attack`).
-    crate::restrictions::attack_restriction(state, attacker, target)?;
+    crate::restrictions::attack_restriction_in(auras, attacker, target)?;
 
     // §6.1: Rush lifts sickness for unit targets only, Charge for units and the hero. Step 1 has
     // already established that a sick attacker has one of the two.
     if matches!(target, DamageTarget::Hero { .. })
         && is_sick(state, attacker)
-        && !has_keyword(
-            &crate::layers::unit_view(state, attacker).keywords,
-            KeywordKind::Charge,
-        )
+        && !auras.unit_has(attacker, KeywordKind::Charge)
     {
         return Err(EngineError::new("Rush cannot hit the hero on its summon turn"));
     }
 
     // Step 3: while any enemy unit this attacker may attack has Taunt, the target must be one of them.
-    let wall = taunt_wall(state, attacker, enemy);
+    let wall = taunt_wall(auras, attacker, enemy);
     let in_wall = match target {
         DamageTarget::Unit { instance } => wall.iter().any(|unit| unit.id == instance.id),
         DamageTarget::Hero { .. } => false,
@@ -406,15 +428,25 @@ pub fn why_cannot_attack(
 }
 
 pub fn can_attack(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> bool {
-    why_cannot_attack(state, attacker, target).is_ok()
+    can_attack_in(&AuraTable::per_read(state), attacker, target)
+}
+
+/// `can_attack` read through a sweep's `AuraTable` (#892).
+pub fn can_attack_in(auras: &AuraTable<'_>, attacker: &CardInstance, target: &AttackTarget) -> bool {
+    why_cannot_attack_in(auras, attacker, target).is_ok()
 }
 
 /// Every target this attacker may legally declare on, enemy units in lane order and then the enemy
 /// hero (§4.2). Empty when the attacker cannot attack at all, which is what the action layer and the
 /// AI policy read instead of enumerating attacks themselves.
 pub fn attack_targets(state: &GameState, attacker: &CardInstance) -> Vec<AttackTarget> {
+    attack_targets_in(&AuraTable::per_read(state), attacker)
+}
+
+/// `attack_targets` read through a sweep's `AuraTable` (#892).
+pub fn attack_targets_in(auras: &AuraTable<'_>, attacker: &CardInstance) -> Vec<AttackTarget> {
     let enemy = opponent_of(attacker.controller);
-    let mut candidates: Vec<AttackTarget> = crate::zones::active_units_of(state, enemy)
+    let mut candidates: Vec<AttackTarget> = crate::zones::active_units_of(auras.state(), enemy)
         .into_iter()
         .cloned()
         .map(|instance| DamageTarget::Unit { instance })
@@ -422,7 +454,7 @@ pub fn attack_targets(state: &GameState, attacker: &CardInstance) -> Vec<AttackT
     candidates.push(DamageTarget::Hero { player: enemy });
     candidates
         .into_iter()
-        .filter(|target| can_attack(state, attacker, target))
+        .filter(|target| can_attack_in(auras, attacker, target))
         .collect()
 }
 

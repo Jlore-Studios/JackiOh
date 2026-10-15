@@ -1,7 +1,7 @@
 //! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 2, Rare.
-//!   Base:    "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards};
+//!   Base:    "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
 //!             or choose a Unit, which is destroyed at the start of your next turn."
-//!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards};
+//!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
 //!             or all enemy Units are destroyed at the start of your next turn."
 //!
 //! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`
@@ -12,7 +12,98 @@
 //! left (as R76), and as a destroy it spares an Indestructible Unit (R46). Units wear the red mark while it
 //! waits (R437; Radiant, every enemy Unit, R750).
 
+use jackioh_engine::effects::{damage, destroy_at_next_turn_start, discard_random};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-020";
+
+const DAMAGE_MODE: &str = "deal damage";
+const DISCARD_MODE: &str = "opponent discards";
+const DOOM_MODE: &str = "destroy a Unit at the start of your next turn";
+const DOOM_ALL_MODE: &str = "destroy all enemy Units at the start of your next turn";
+
+fn damage_target() -> TargetDecl {
+    json_as(json!({
+        "kind": "target",
+        "min": 1,
+        "max": 1,
+        "filter": { "of": ["unit", "hero"] },
+        "forModes": [DAMAGE_MODE],
+    }))
+}
+
+fn doom_target() -> TargetDecl {
+    json_as(json!({ "kind": "target", "min": 1, "max": 1, "filter": { "of": ["unit"] }, "forModes": [DOOM_MODE] }))
+}
+
+fn punish(ctx: &EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    match ctx.modes.first().map(String::as_str) {
+        Some(DAMAGE_MODE) => vec![damage(json_as(
+            json!({ "to": { "of": "chosen" }, "amount": param(ctx, "damage") }),
+        ))],
+        Some(DISCARD_MODE) => vec![discard_random(json_as(
+            json!({ "count": param(ctx, "discards"), "player": "enemy" }),
+        ))],
+        Some(DOOM_MODE) => {
+            // The unit marked for death wears #50 K-Pop Fanatic's aura, in red (R437).
+            if radiant {
+                vec![]
+            } else {
+                vec![destroy_at_next_turn_start(json_as(json!({
+                    "target": { "of": "chosen" },
+                    "mark": { "mark": "destroy", "color": "red" },
+                })))]
+            }
+        }
+        Some(DOOM_ALL_MODE) => {
+            if radiant {
+                vec![destroy_at_next_turn_start(json_as(json!({
+                    "scope": { "side": "enemy" },
+                    "mark": { "mark": "destroy", "color": "red" },
+                })))]
+            } else {
+                vec![]
+            }
+        }
+        _ => vec![],
+    }
+}
+
+fn face(radiant: bool) -> Script {
+    let ability = ActivationDecl {
+        id: "punish".to_string(),
+        label: "Choose one".to_string(),
+        uses: ActivationUses::Count(1),
+        cost: None,
+        targets: if radiant {
+            vec![damage_target()]
+        } else {
+            vec![damage_target(), doom_target()]
+        },
+        modes: vec![ModeDecl {
+            kind: PromptKind::Mode,
+            options: vec![
+                DAMAGE_MODE.to_string(),
+                DISCARD_MODE.to_string(),
+                (if radiant { DOOM_ALL_MODE } else { DOOM_MODE }).to_string(),
+            ],
+        }],
+        can_activate: None,
+        has: None,
+        run: hook(move |ctx| punish(ctx, radiant)),
+    };
+    Script {
+        activations: vec![ability],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(false),
+        radiant: face(true),
+    }
+}
 
 // BUILD M9 Classic row C 20: 2 damage; the opponent discards 1 at random (an empty hand: nothing); or a
 // Unit, either side, is destroyed at the start of your next turn; radiant: 4 damage; discards 2; or every
@@ -132,7 +223,7 @@ mod tests {
         #[test]
         fn r384_declares_one_activate_once_per_turn_with_three_modes_on_each_face() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, PUNISH);
             assert_eq!(scripts.base.activations[0].uses, ActivationUses::Count(1));
             assert_eq!(scripts.base.activations[0].modes[0].options, vec![DAMAGE, DISCARD, DOOM]);

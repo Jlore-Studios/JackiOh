@@ -45,6 +45,7 @@
 //! HOW TO RUN
 //!   cargo jackioh fuzz                              the gate: seeds 1–1000
 //!   cargo jackioh fuzz --handicap                   the handicapped wave: seeds 1–1000
+//!   cargo jackioh fuzz --duos                       Duos co-op games: seeds 1–200 (`duos_fuzz.rs`)
 //!   cargo test -p jackioh-tools fuzz                seeds 1–20 of each (see SWEEP_SEEDS)
 //!   cargo jackioh fuzz --from <seed> --seeds 1      one seed a report named
 //!
@@ -70,15 +71,15 @@ use jackioh_cards::{CATALOG, register_all};
 use jackioh_engine::testkit::{I6_GATE_STRIDE, create_invariant_monitor, preview_every_set, set_ships};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, CreateGameOptions, DECK_SIZE, Difficulty,
-    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, Tag,
-    begin_game, create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
+    FoldArgs, GameState, Handicap, PerPlayerOpt, Phase, PlayerId, Rng, TURN_CAP_PLAYER_TURNS, begin_game,
+    create_game, fold, hash_state, mulligan_owed, reduce, seat_to_act, subsystems,
 };
 use rayon::prelude::*;
 
 use crate::agent::panic_message;
 use crate::gate::MS_PER_SECOND;
 
-/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap]` (SURFACE §12).
+/// `cargo jackioh fuzz [--from N] [--seeds N] [--handicap | --duos]` (SURFACE §12).
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// The first seed of the wave (TS `JACKIOH_FUZZ_FROM`): 1 for the gate. `--from 700 --seeds 1`
@@ -93,12 +94,19 @@ pub struct Args {
     /// Hard, rotating by seed.
     #[arg(long)]
     pub handicap: bool,
+    /// Play random-policy Duos co-op games instead of the gate (#936 B25, `duos_fuzz.rs`): 200 seeds
+    /// unless `--seeds` says otherwise.
+    #[arg(long)]
+    pub duos: bool,
 }
 
-/// Runs the gate, or with `--handicap` the handicapped wave; prints its numbers and, when a seed
-/// failed, the report, and fails (exit 1).
+/// Runs the gate, or with `--handicap` the handicapped wave, or with `--duos` the Duos wave; prints its
+/// numbers and, when a seed failed, the report, and fails (exit 1).
 pub fn run(args: Args) -> anyhow::Result<()> {
     let from = first_seed(args.from);
+    if args.duos {
+        return crate::duos_fuzz::run(from, args.seeds);
+    }
     let ran = wave_size(args.seeds);
     if args.handicap {
         let wave = play_handicap_wave(from, ran);
@@ -221,7 +229,7 @@ static EXCLUDED_IDS: LazyLock<IndexSet<&'static str>> =
 pub static FUZZ_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .filter(|id| !EXCLUDED_IDS.contains(id.as_str()))
         .collect();
@@ -524,6 +532,7 @@ fn check_replay(seed: u32, run: &GameRun) -> Result<(), FuzzFailure> {
         dealt: None,
         last_boards: None,
         glitch_boards: None,
+        ..Default::default()
     });
 
     if let Some(first) = replayed.errors.first() {
@@ -1094,7 +1103,7 @@ impl Wave {
 static HANDICAP_POOL: LazyLock<Vec<String>> = LazyLock::new(|| {
     let mut pool: Vec<String> = CATALOG
         .iter()
-        .filter(|(_, def)| !def.token && !def.tags.contains(&Tag::Token))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .collect();
     pool.sort();
@@ -1258,6 +1267,7 @@ fn play_seed(seed: u32) -> Outcome {
             dealt: None,
             last_boards: None,
             glitch_boards: None,
+            ..Default::default()
         });
         if !replayed.errors.is_empty() {
             return Err(format!(

@@ -397,6 +397,22 @@ fn same_selection(a: &Selection, b: &Selection) -> bool {
     }
 }
 
+/// §10.6, §10.8: an option's key, what the client sends back to answer it. It is built from the
+/// selection, which is unique among the options by construction, and never from a label: two
+/// Duplicating Felinors in reach are two options, and a name would give both the same key (R177
+/// keeps names off what a view may not read).
+pub fn option_key(selection: &Selection) -> String {
+    match selection {
+        Selection::Instance { instance_id } => format!("instance:{instance_id}"),
+        Selection::Hero { player } => format!("hero:{player}"),
+        Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
+        Selection::Mode { option } => format!("mode:{option}"),
+        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
+        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
+        Selection::None => "none".to_string(),
+    }
+}
+
 /// §10.6: how a prompt names a hero or a board cell to the player it is for: theirs ("Your") or the
 /// other player's ("Enemy"), never by seat id, which no player sees anywhere else. Only that player
 /// is sent the options (R81), so "Your" always reads as the reader's own; the client's pickers word a
@@ -523,10 +539,6 @@ pub fn why_answer_refused(pending: &PendingChoice, answer: &AnswerInput) -> Resu
     }
     Ok(())
 }
-
-/// How an engine sequence answers a prompt it opened itself: validate, close, file the selection
-/// and go on, returning the refusal or null — the shape of `answerPrompt`.
-pub type PromptAnswerer = fn(&mut EngineSink<'_>, &AnswerInput) -> Result<(), EngineError>;
 
 /// R122, R113: a prompt an engine sequence opened for itself — the play pipeline's own questions, an
 /// Echo repeat's fresh picks and a cast's choices (§10.5 steps 4 and 6) — names that sequence as its

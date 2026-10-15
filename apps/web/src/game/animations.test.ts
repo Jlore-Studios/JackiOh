@@ -116,10 +116,12 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   secretChosen: 300,
   secretRevealed: 400,
   predicted: 400,
+  // #915 (R915004).
+  scriptFailed: 400,
   // Meditative batch 17 (MB17).
   deradianted: 400,
   manaSpent: 150,
-  // Patch v0.3.9 (C+ #62 KY's Papaya, R831003).
+  // Patch v0.3.10 (C+ #62 KY's Papaya, R831003).
   curveDrawn: 700,
 };
 
@@ -230,6 +232,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
+  scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
   curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
 };
 
@@ -301,7 +304,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(77);
+    expect(rows).toHaveLength(78);
   });
 
   it("gives every row an animation name and a testid template", () => {

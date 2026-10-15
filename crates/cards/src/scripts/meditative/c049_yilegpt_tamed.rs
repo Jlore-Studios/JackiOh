@@ -10,7 +10,56 @@
 //! died (ME-DECK-BOTTOM, never shuffled): R80's cap applies, and its owner's own-library list
 //! shows it (R310).
 
+use jackioh_engine::effects::{shuffle_into, summon};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-049";
+
+/// M #49.2 Yile's Virus, summoned for the opponent.
+const VIRUS: &str = "meditative-049-2";
+/// M #49.1 YileGPT Unleashed, put on the bottom of the deck.
+const UNLEASHED: &str = "meditative-049-1";
+
+/// The unit zone across from this: its lane, read as the Cry resolves.
+fn across(ctx: &EffectContext) -> Option<i32> {
+    match ctx.live_self().map(|me| &me.zone) {
+        Some(Zone::Field { lane, .. }) => Some(*lane),
+        _ => None,
+    }
+}
+
+fn tamed(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            let Some(lane) = across(ctx) else {
+                return vec![];
+            };
+            vec![summon(json_as(json!({
+                "defId": VIRUS,
+                "player": "enemy",
+                "lane": lane,
+                "radiant": radiant,
+            })))]
+        })),
+        death: Some(hook(move |_ctx| {
+            vec![shuffle_into(json_as(json!({
+                "defId": UNLEASHED,
+                "count": 1,
+                "player": "self",
+                "radiant": radiant,
+                "position": "bottom",
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: tamed(false),
+        radiant: tamed(true),
+    }
+}
 
 // M #49 YileGPT Tamed — SPEC §8.8 row 49, BUILD M10 row M 49: "Cry (played or cast): a base Yile's
 // Virus summoned for the opponent, owned by them, into the unit zone across from it; with that zone
@@ -105,7 +154,7 @@ mod tests {
                         "library": [FILLER, FILLER],
                     },
                     "p2": {
-                        // Bigot at its old 6/1 (it prints 4/1 since patch v0.3.9).
+                        // Bigot at its old 6/1 (it prints 4/1 since patch v0.3.10).
                         "field": [{ "def": BIGOT, "lane": 1, "statsOverride": { "attack": 6, "health": 1 } }],
                         "hand": [FILLER],
                         "library": [FILLER, FILLER],
@@ -140,7 +189,7 @@ mod tests {
                 assert!(virus.radiant);
 
                 // The Radiant Tamed is 4/12: a Radiant Bigot set to 12/2 (it prints 8/2 since patch
-                // v0.3.9) kills it where a 6/1 would not.
+                // v0.3.10) kills it where a 6/1 would not.
                 let mut s = scenario(json!({
                     "seed": "tamed-radiant-death",
                     "p1": {

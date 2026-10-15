@@ -15,7 +15,9 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
+};
 use crate::rules::fixtures::play_pipeline_a::{PA, with_play_a};
 
 static NONCE: AtomicU32 = AtomicU32::new(0);
@@ -116,23 +118,6 @@ fn field_of(events: &[GameEvent], kind: GameEventType, field: &str) -> Vec<Value
         .into_iter()
         .map(|event| event[field].clone())
         .collect()
-}
-
-/// `toMatchObject`: every key of `expected` is in `actual` with a matching value.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// `toMatch(/text/)` on an error that must be there.

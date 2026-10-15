@@ -11,7 +11,27 @@
 //! The filter is `type: "Unit"` and `costRange.max`: the scan reads each library card's cost out of
 //! play (R65: its own cost plus its `costMod`, no player discount; an X card 0, R396).
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-031";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| {
+            let filter = json!({ "type": "Unit", "costRange": { "max": param(&*ctx, "costLimit") } });
+            let units = param(&*ctx, "units");
+            (0..units)
+                .map(|_| recruit(json_as(json!({ "filter": filter.clone(), "player": "self" }))))
+                .collect()
+        })),
+        ..Script::default()
+    };
+
+    // The same script: the Radiant face's three scans are its declared `units`, which `param` reads off the running face.
+    let radiant = base.clone();
+
+    CardScripts { base, radiant }
+}
 
 // C #31 Cookie Guild — SPEC §8.6 row 31, BUILD M9 Classic row C 31: Cry: Recruit the first (2) Cost or
 // less Unit from the top of your deck (its cost in the deck per R65: an X Unit 0, skipped unless the only
@@ -21,7 +41,6 @@ pub const ID: &str = "classic-031";
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -67,7 +86,7 @@ mod tests {
         fn runs_one_script_on_both_faces() {
             crate::register_all();
             assert_eq!(crate::card_def(GUILD).id, GUILD);
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             // The Radiant face is the base Script itself, the same Cry.
             match (&scripts.base.cry, &scripts.radiant.cry) {
                 (Some(base), Some(radiant)) => assert!(Arc::ptr_eq(base, radiant)),

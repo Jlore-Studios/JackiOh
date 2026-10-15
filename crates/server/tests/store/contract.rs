@@ -46,12 +46,13 @@ use jackioh_server::config::PersonaName;
 use jackioh_server::config::USERNAME_CHANGE_COOLDOWN_MS;
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, Db, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks, MatchRow, NewBot,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions,
-    Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeriesRow, StoreError, TermsSource, Ticket,
-    TutorialMergeInput, TutorialProgressRow, Tx, UsernameClaim, UsernameClaimOutcome,
+    BotDeck, BotRating, BotRow, CodeAttempt, CollectionEntry, CollectionGrant, CustomCardWrite, Db,
+    FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, MatchActionRow, MatchClocks,
+    MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow,
+    PlayerStatsListOptions, Profile, ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow,
+    RedeemInviteCodeInput, ResultRow, RetentionPurgeInput, Room, SavedCustomCard, SavedDeck, SavedTrio,
+    Season, SeriesRow, StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx,
+    UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{SeasonRank, fresh_rank};
@@ -395,7 +396,7 @@ pub const TRUNCATE: &str = "truncate
   public.game_records, public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
   public.series, public.results, public.match_actions, public.tickets, public.matches,
-  public.trios, public.decks,
+  public.trios, public.decks, public.custom_cards,
   public.loadout_deck_cards, public.loadout_decks, public.loadouts,
   public.collection_grants, public.collection,
   public.code_attempts, public.invite_codes, public.bots, public.profiles, auth.users
@@ -702,6 +703,60 @@ mod profiles {
         );
     }
 
+    async fn r890000_seat_claim_is_compare_and_set(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let first = id();
+        let second = id();
+        q!(harness, t => t.matches_create(&match_row(&first, &profile.id, &other.id, harness, harness.now())));
+        q!(harness, t => t.matches_create(&match_row(&second, &profile.id, &other.id, harness, harness.now())));
+
+        // The first writer wins.
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(first.as_str()))));
+        // A second seat over a taken one loses without writing.
+        assert!(!q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"],
+            first.as_str()
+        );
+
+        // A conditional clear for another match is a no-op; for the holding match it frees.
+        q!(harness, t => t.profiles_clear_in_match(&profile.id, &second));
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"],
+            first.as_str()
+        );
+        q!(harness, t => t.profiles_clear_in_match(&profile.id, &first));
+        assert!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"]
+                .is_null()
+        );
+
+        // A freed seat seats again, and clearing stays unconditional.
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, Some(second.as_str()))));
+        assert!(q!(harness, t => t.profiles_set_in_match(&profile.id, None)));
+        assert!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "profile"
+            ))["inMatchId"]
+                .is_null()
+        );
+
+        // A profile that was never there errors on set, never on clear.
+        assert!(call!(harness, t => t.profiles_set_in_match(&id(), Some(first.as_str()))).is_err());
+        q!(harness, t => t.profiles_clear_in_match(&id(), &first));
+    }
+
     /// R603: a new profile starts at Glickman's deviation and volatility, and both move with it.
     async fn r603_round_trips_the_whole_glicko_triple(harness: &StoreHarness) {
         let profile = active_profile(harness, None).await;
@@ -757,6 +812,7 @@ mod profiles {
         returns_null_for_an_unknown_profile,
         reads_many_profiles_at_once,
         moves_the_rating_and_the_in_match_pointer,
+        r890000_seat_claim_is_compare_and_set,
         r603_round_trips_the_whole_glicko_triple,
         r111_grants_one_copy_of_every_non_token_card_on_pending_active_idempotently,
     );
@@ -1895,6 +1951,296 @@ mod trios {
         r252_refuses_a_slot_naming_a_deck_that_is_not_this_profile_s,
         r252_refuses_one_deck_in_two_slots,
         r252_refuses_a_create_past_the_cap_and_another_profile_s_trio,
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Custom cards on the account (SPEC §12.9, R915008; migration 0037)
+// ---------------------------------------------------------------------------
+
+mod custom_cards {
+    use super::*;
+
+    /// A server-minted id (R915000): `custom-` and 32 lowercase hex digits.
+    fn custom_id() -> String {
+        format!("custom-{}", uuid::Uuid::new_v4().simple())
+    }
+
+    /// A Unit's frame within §12.2, with a keyword and a number, as the engine's `CustomFrame` reads it.
+    fn frame(name: &str) -> Value {
+        json!({
+            "name": name,
+            "type": "Unit",
+            "cost": 2,
+            "rarity": "Rare",
+            "attack": 2,
+            "health": 3,
+            "keywords": ["Taunt"],
+            "text": "Cry: Deal {dmg}.",
+            "params": [{ "key": "dmg", "base": 1, "radiant": 2 }],
+        })
+    }
+
+    fn write(harness: &StoreHarness, profile_id: &str, over: Value) -> CustomCardWrite {
+        from(spread(
+            json!({
+                "id": custom_id(),
+                "profileId": profile_id,
+                "frame": frame("Spark"),
+                "source": "return Card { cry = function(c, n) c:damage(\"an enemy\", n.dmg) end }",
+                "builder": { "trigger": "cry", "steps": [{ "verb": "damage", "n": "dmg" }] },
+                "at": harness.now(),
+            }),
+            over,
+        ))
+    }
+
+    /// The card a create of `card` makes: version 1, made and saved at `card.at`.
+    fn created(card: &CustomCardWrite) -> SavedCustomCard {
+        let shown = j(card);
+        from(json!({
+            "profileId": shown["profileId"],
+            "card": {
+                "id": shown["id"],
+                "version": 1,
+                "frame": shown["frame"],
+                "source": shown["source"],
+                "builder": shown["builder"],
+            },
+            "createdAt": shown["at"],
+            "updatedAt": shown["at"],
+        }))
+    }
+
+    async fn r915008_lists_nothing_before_a_card_is_made(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        assert!(q!(harness, t => t.custom_cards_list(&profile.id)).is_empty());
+        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &custom_id())).is_none());
+    }
+
+    async fn r915008_creates_a_card_at_version_1_and_reads_it_back_exactly(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let card = write(harness, &profile.id, json!({}));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_create(&card, 50))),
+            "created"
+        );
+        let expected = created(&card);
+        assert_eq!(
+            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+            Some(expected.clone())
+        );
+        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)), vec![expected]);
+
+        // A card with no builder's model and no script (a vanilla card) reads back as it was made.
+        let vanilla = write(harness, &profile.id, json!({ "source": "", "builder": null }));
+        q!(harness, t => t.custom_cards_create(&vanilla, 50));
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&profile.id, &vanilla.id)),
+            "the vanilla card",
+        );
+        assert_eq!(read, created(&vanilla));
+        assert!(absent(&j(&read.card), "builder"));
+    }
+
+    async fn r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let now = harness.now();
+        let second = write(harness, &a.id, json!({ "frame": frame("Second"), "at": now + 2 }));
+        let first = write(harness, &a.id, json!({ "frame": frame("First"), "at": now + 1 }));
+        q!(harness, t => t.custom_cards_create(&second, 50));
+        q!(harness, t => t.custom_cards_create(&first, 50));
+        let theirs = write(harness, &b.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&theirs, 50));
+        let names: Vec<Value> = q!(harness, t => t.custom_cards_list(&a.id))
+            .iter()
+            .map(|saved| j(saved)["card"]["frame"]["name"].clone())
+            .collect();
+        assert_eq!(names, vec![json!("First"), json!("Second")]);
+        // Another profile's card is not this one's to read.
+        assert!(q!(harness, t => t.custom_cards_get(&a.id, &theirs.id)).is_none());
+    }
+
+    async fn r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap(harness: &StoreHarness) {
+        let profile = active_profile(harness, None).await;
+        let cards = [
+            write(harness, &profile.id, json!({})),
+            write(harness, &profile.id, json!({})),
+        ];
+        for card in &cards {
+            assert_eq!(lit(&q!(harness, t => t.custom_cards_create(card, 2))), "created");
+        }
+        let third = write(harness, &profile.id, json!({}));
+        assert_eq!(lit(&q!(harness, t => t.custom_cards_create(&third, 2))), "limit");
+        assert_eq!(q!(harness, t => t.custom_cards_list(&profile.id)).len(), 2);
+        assert!(q!(harness, t => t.custom_cards_get(&profile.id, &third.id)).is_none());
+        // Another profile's cards do not count against this one's cap.
+        let other = active_profile(harness, None).await;
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_create(&write(harness, &other.id, json!({})), 2))),
+            "created"
+        );
+        // A save at the cap is not a create.
+        let edited: CustomCardWrite = from(spread(j(&cards[0]), json!({ "frame": frame("Renamed") })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
+            "updated"
+        );
+    }
+
+    async fn r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made(
+        harness: &StoreHarness,
+    ) {
+        let profile = active_profile(harness, None).await;
+        let card = write(harness, &profile.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let made_at = card.at;
+        let edited: CustomCardWrite = from(spread(
+            j(&card),
+            json!({
+                "frame": frame("Big Spark"),
+                "source": "return Card {}",
+                "builder": null,
+                "at": made_at + 5_000,
+            }),
+        ));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&edited, 1))),
+            "updated"
+        );
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+            "the saved card",
+        );
+        let expected: SavedCustomCard = from(spread(
+            j(&created(&edited)),
+            json!({
+                "card": spread(j(&created(&edited))["card"].clone(), json!({ "version": 2 })),
+                "createdAt": made_at,
+                "updatedAt": made_at + 5_000,
+            }),
+        ));
+        assert_eq!(read, expected);
+        assert!(absent(&j(&read.card), "builder"));
+
+        // And again: each save counts one more.
+        let again: CustomCardWrite = from(spread(j(&edited), json!({ "at": made_at + 9_000 })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&again, 2))),
+            "updated"
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.custom_cards_get(&profile.id, &card.id)),
+                "the card"
+            ))["card"]["version"],
+            3
+        );
+    }
+
+    async fn r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let first: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("First save") })));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&first, 1))),
+            "updated"
+        );
+
+        // Version 1 again, from a tab that never saw the first save: stale.
+        let late: CustomCardWrite = from(spread(j(&card), json!({ "frame": frame("Late save") })));
+        assert_eq!(lit(&q!(harness, t => t.custom_cards_update(&late, 1))), "stale");
+        // Another profile saving the owner's card, at its right version: missing.
+        let theirs: CustomCardWrite = from(spread(
+            j(&card),
+            json!({ "profileId": other.id, "frame": frame("Mine now") }),
+        ));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&theirs, 2))),
+            "missing"
+        );
+        // A card nobody made: missing.
+        let nobody = write(harness, &owner.id, json!({}));
+        assert_eq!(
+            lit(&q!(harness, t => t.custom_cards_update(&nobody, 1))),
+            "missing"
+        );
+
+        let read = must(
+            q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
+            "the owner's card",
+        );
+        assert_eq!(j(&read)["card"]["frame"]["name"], "First save");
+        assert_eq!(read.card.version, 2);
+        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &nobody.id)).is_none());
+    }
+
+    async fn r915008_refuses_an_id_already_held_whoever_holds_it(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        let clash: CustomCardWrite = from(spread(
+            j(&card),
+            json!({ "profileId": other.id, "frame": frame("Clash") }),
+        ));
+        assert!(call!(harness, t => t.custom_cards_create(&clash, 50)).is_err());
+        assert!(q!(harness, t => t.custom_cards_list(&other.id)).is_empty());
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.custom_cards_get(&owner.id, &card.id)),
+                "the card"
+            ))["card"]["frame"]["name"],
+            "Spark"
+        );
+    }
+
+    async fn r915008_deletes_only_the_owner_s_card(harness: &StoreHarness) {
+        let owner = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let card = write(harness, &owner.id, json!({}));
+        let kept = write(harness, &owner.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&card, 50));
+        q!(harness, t => t.custom_cards_create(&kept, 50));
+
+        assert!(!q!(harness, t => t.custom_cards_remove(&other.id, &card.id)));
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_some());
+        assert!(q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
+        assert!(q!(harness, t => t.custom_cards_get(&owner.id, &card.id)).is_none());
+        assert!(!q!(harness, t => t.custom_cards_remove(&owner.id, &card.id)));
+        let left: Vec<String> = q!(harness, t => t.custom_cards_list(&owner.id))
+            .into_iter()
+            .map(|saved| saved.card.id)
+            .collect();
+        assert_eq!(left, vec![kept.id.clone()]);
+    }
+
+    async fn r915008_deleting_an_account_deletes_its_cards(harness: &StoreHarness) {
+        let gone = active_profile(harness, None).await;
+        let stays = active_profile(harness, None).await;
+        q!(harness, t => t.custom_cards_create(&write(harness, &gone.id, json!({})), 50));
+        let kept = write(harness, &stays.id, json!({}));
+        q!(harness, t => t.custom_cards_create(&kept, 50));
+
+        assert!(q!(harness, t => t.profiles_remove(&gone.id)));
+        assert!(q!(harness, t => t.custom_cards_list(&gone.id)).is_empty());
+        assert_eq!(q!(harness, t => t.custom_cards_list(&stays.id)).len(), 1);
+    }
+
+    both_stores!(
+        r915008_lists_nothing_before_a_card_is_made,
+        r915008_creates_a_card_at_version_1_and_reads_it_back_exactly,
+        r915008_lists_a_profile_s_cards_oldest_first_and_only_its_own,
+        r915008_refuses_a_create_past_the_cap_and_still_saves_at_the_cap,
+        r915008_saves_a_card_whole_counting_its_version_and_keeping_when_it_was_made,
+        r915008_refuses_a_stale_save_and_another_profile_s_card_writing_nothing,
+        r915008_refuses_an_id_already_held_whoever_holds_it,
+        r915008_deletes_only_the_owner_s_card,
+        r915008_deleting_an_account_deletes_its_cards,
     );
 }
 
@@ -3216,7 +3562,7 @@ mod matches {
 mod rooms {
     use super::*;
 
-    fn room(harness: &StoreHarness, code: &str, host: &str, over: Value) -> Room {
+    pub(super) fn room(harness: &StoreHarness, code: &str, host: &str, over: Value) -> Room {
         let now = harness.now();
         from(spread(
             json!({
@@ -3281,25 +3627,35 @@ mod rooms {
         assert!(claimed["hostTrio"].is_null());
     }
 
-    /// R1372: an All Random host's "More cards from the newest set" waits with the room until the join
-    /// (`matches.room_lean_newest`, migration 0027), and a room that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random host's "More cards from" pick waits with the room until the
+    /// join (`matches.room_lean_set`, migration 0036), and a room that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed(harness: &StoreHarness) {
         let host = active_profile(harness, None).await;
         let guest = active_profile(harness, None).await;
         let leaning = room(
             harness,
             "DEF567",
             &host.id,
-            json!({ "mode": "random", "hostDeck": [], "hostLeanNewest": true }),
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "newest" }),
         );
         assert!(q!(harness, t => t.rooms_create(&leaning)));
         let found = j(&must(q!(harness, t => t.rooms_get("DEF567")), "the room"));
-        assert_eq!(found["hostLeanNewest"], true);
+        assert_eq!(found["hostLeanSet"], "newest");
         let claimed = j(&must(
             q!(harness, t => t.rooms_claim("DEF567", &guest.id, &id(), harness.now())),
             "the claim",
         ));
-        assert_eq!(claimed["hostLeanNewest"], true);
+        assert_eq!(claimed["hostLeanSet"], "newest");
+
+        let classic_plus = room(
+            harness,
+            "FGH789",
+            &host.id,
+            json!({ "mode": "random", "hostDeck": [], "hostLeanSet": "Classic+" }),
+        );
+        assert!(q!(harness, t => t.rooms_create(&classic_plus)));
+        let found = j(&must(q!(harness, t => t.rooms_get("FGH789")), "the room"));
+        assert_eq!(found["hostLeanSet"], "Classic+");
 
         let plain = room(
             harness,
@@ -3309,7 +3665,7 @@ mod rooms {
         );
         assert!(q!(harness, t => t.rooms_create(&plain)));
         let found = j(&must(q!(harness, t => t.rooms_get("EFG678")), "the room"));
-        assert_eq!(found["hostLeanNewest"], false);
+        assert!(found["hostLeanSet"].is_null(), "{found}");
     }
 
     async fn refuses_a_code_that_is_already_taken(harness: &StoreHarness) {
@@ -3453,7 +3809,7 @@ mod rooms {
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
         r264_keeps_a_room_s_mode_and_a_best_of_3_host_s_frozen_trio,
-        r1372_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
+        r1372_r924000_keeps_an_all_random_host_s_lean_until_the_room_is_claimed,
         refuses_a_code_that_is_already_taken,
         lets_exactly_one_guest_claim_a_room,
         refuses_a_claim_after_the_room_has_expired,
@@ -3615,36 +3971,46 @@ mod tickets {
         assert!(!q!(harness, t => t.tickets_claim_pair(&row.id, &row.id, &id(), harness.now())));
     }
 
-    /// R1372: an All Random ticket's "More cards from the newest set" waits in the ticket until it is
-    /// paired (`tickets.lean_newest`, migration 0027), and a ticket that asked nothing reads false.
-    async fn r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+    /// R1372, R924000: an All Random ticket's "More cards from" pick waits in the ticket until it is
+    /// paired (`tickets.lean_set`, migration 0036), and a ticket that asked nothing reads none.
+    async fn r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired(harness: &StoreHarness) {
+        use jackioh_engine::{LeanPick, SetName};
         let a = active_profile(harness, None).await;
         let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
         let leaning = ticket(
             harness,
             &a.id,
-            json!({ "mode": "random", "deck": [], "leanNewest": true }),
+            json!({ "mode": "random", "deck": [], "leanSet": "newest" }),
         );
         let plain = ticket(harness, &b.id, json!({ "mode": "random", "deck": [] }));
+        let classic = ticket(
+            harness,
+            &c.id,
+            json!({ "mode": "random", "deck": [], "leanSet": "Classic" }),
+        );
         q!(harness, t => t.tickets_insert(&leaning));
         q!(harness, t => t.tickets_insert(&plain));
+        q!(harness, t => t.tickets_insert(&classic));
         assert_eq!(
             q!(harness, t => t.tickets_get(&leaning.id)),
             Some(leaning.clone())
         );
-        assert!(leaning.lean_newest);
-        assert!(!plain.lean_newest);
-        let open = q!(harness, t => t.tickets_list_open());
-        let lean_of = |ticket_id: &str| {
-            open.iter()
-                .find(|row| row.id == ticket_id)
-                .map(|row| row.lean_newest)
-        };
-        assert_eq!(lean_of(&leaning.id), Some(true));
-        assert_eq!(lean_of(&plain.id), Some(false));
         assert_eq!(
-            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean_newest),
-            Some(true)
+            q!(harness, t => t.tickets_get(&classic.id)),
+            Some(classic.clone())
+        );
+        assert_eq!(leaning.lean, Some(LeanPick::Newest));
+        assert_eq!(plain.lean, None);
+        assert_eq!(classic.lean, Some(LeanPick::Set(SetName::Classic)));
+        let open = q!(harness, t => t.tickets_list_open());
+        let lean_of = |ticket_id: &str| open.iter().find(|row| row.id == ticket_id).map(|row| row.lean);
+        assert_eq!(lean_of(&leaning.id), Some(Some(LeanPick::Newest)));
+        assert_eq!(lean_of(&plain.id), Some(None));
+        assert_eq!(lean_of(&classic.id), Some(Some(LeanPick::Set(SetName::Classic))));
+        assert_eq!(
+            q!(harness, t => t.tickets_open_for_profile(&a.id)).map(|row| row.lean),
+            Some(Some(LeanPick::Newest))
         );
     }
 
@@ -3768,7 +4134,7 @@ mod tickets {
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
-        r1372_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
+        r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
         cancels_an_open_ticket_and_cancelling_twice_is_harmless,
         claims_a_pair_exactly_once,
@@ -5932,6 +6298,912 @@ mod bots {
     );
 }
 
+// ---------------------------------------------------------------------------
+// Play together (#936): migration 0038's social rows and 0039's co-op rows
+// ---------------------------------------------------------------------------
+
+/// SPEC S7 (migration 0038): friend requests, friendships, blocks, presence, the spectator setting,
+/// challenges, rooms freed by a challenge, chat and replay shares, as `social/*` reads and writes
+/// them.
+mod social {
+    use super::*;
+    use jackioh_engine::config::DUOS_HUMAN_TEAM;
+    use jackioh_server::db::store::{
+        ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, ReplayShare,
+    };
+    use jackioh_server::duos::store::DuosMatch;
+
+    fn request(from_profile: &str, to_profile: &str, at: i64) -> FriendRequestRow {
+        from(json!({ "id": id(), "fromProfile": from_profile, "toProfile": to_profile, "createdAt": at }))
+    }
+
+    fn challenge(from_profile: &str, to_profile: &str, code: &str, at: i64, expires_at: i64) -> ChallengeRow {
+        from(json!({
+            "id": id(),
+            "fromProfile": from_profile,
+            "toProfile": to_profile,
+            "roomCode": code,
+            "mode": "bo1",
+            "createdAt": at,
+            "expiresAt": expires_at,
+            "state": "open",
+        }))
+    }
+
+    fn message(from_profile: &str, to_profile: &str, body: &str, at: i64) -> ChatMessageRow {
+        from(json!({
+            "id": id(),
+            "fromProfile": from_profile,
+            "toProfile": to_profile,
+            "body": body,
+            "createdAt": at,
+            "readAt": null,
+        }))
+    }
+
+    fn state_of(row: Option<ChallengeRow>) -> ChallengeState {
+        must(row, "the challenge").state
+    }
+
+    /// B43–B45: one request per direction and pair, never to oneself, listed oldest first, and
+    /// deleted one at a time or every one between a pair.
+    async fn s7_friend_requests_are_one_per_direction_and_go_between_a_pair(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let ab = request(&a.id, &b.id, now - 2_000);
+        let ba = request(&b.id, &a.id, now - 1_000);
+        let ca = request(&c.id, &a.id, now);
+        assert!(q!(harness, t => t.friends_request_create(&ab)));
+        assert!(
+            !q!(harness, t => t.friends_request_create(&request(&a.id, &b.id, now))),
+            "a second request a to b"
+        );
+        assert!(q!(harness, t => t.friends_request_create(&ba)));
+        assert!(q!(harness, t => t.friends_request_create(&ca)));
+        assert!(
+            call!(harness, t => t.friends_request_create(&request(&a.id, &a.id, now))).is_err(),
+            "a request to oneself"
+        );
+
+        assert_eq!(q!(harness, t => t.friends_request_get(&ab.id)), Some(ab.clone()));
+        assert_eq!(q!(harness, t => t.friends_request_get(&id())), None);
+        assert_eq!(
+            q!(harness, t => t.friends_request_between(&a.id, &b.id)),
+            Some(ab.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.friends_request_between(&b.id, &a.id)),
+            Some(ba.clone())
+        );
+        assert_eq!(q!(harness, t => t.friends_request_between(&a.id, &c.id)), None);
+        assert_eq!(
+            q!(harness, t => t.friends_requests_of(&a.id)),
+            vec![ab.clone(), ba.clone(), ca.clone()]
+        );
+        assert_eq!(
+            q!(harness, t => t.friends_requests_of(&b.id)),
+            vec![ab.clone(), ba.clone()]
+        );
+
+        assert!(q!(harness, t => t.friends_request_delete(&ca.id)));
+        assert!(!q!(harness, t => t.friends_request_delete(&ca.id)));
+        assert_eq!(
+            q!(harness, t => t.friends_requests_delete_between(&b.id, &a.id)),
+            2
+        );
+        assert!(q!(harness, t => t.friends_requests_of(&a.id)).is_empty());
+    }
+
+    /// B44, B45: a friendship is one row per pair in the store's order, keeps its first date, takes
+    /// every request between the two with it, is counted for MAX_FRIENDS and is ended once.
+    async fn s7_friendships_are_one_per_pair_and_take_the_requests_with_them(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = q!(harness, t => t.friends_make(&b.id, &a.id, now - 2_000));
+        let (low, high) = if a.id < b.id {
+            (&a.id, &b.id)
+        } else {
+            (&b.id, &a.id)
+        };
+        assert_eq!((&made.a, &made.b, made.since), (low, high, now - 2_000));
+        assert_eq!(
+            q!(harness, t => t.friends_make(&a.id, &b.id, now)),
+            made,
+            "made again, the pair keeps its date"
+        );
+        assert_eq!(q!(harness, t => t.friends_get(&a.id, &b.id)), Some(made.clone()));
+        assert_eq!(q!(harness, t => t.friends_get(&b.id, &a.id)), Some(made.clone()));
+        assert_eq!(q!(harness, t => t.friends_get(&a.id, &c.id)), None);
+
+        assert!(q!(harness, t => t.friends_request_create(&request(&c.id, &a.id, now))));
+        let with_c = q!(harness, t => t.friends_make(&a.id, &c.id, now - 1_000));
+        assert!(
+            q!(harness, t => t.friends_request_between(&c.id, &a.id)).is_none(),
+            "the friendship took the request"
+        );
+        assert_eq!(
+            q!(harness, t => t.friends_of(&a.id)),
+            vec![made.clone(), with_c.clone()]
+        );
+        assert_eq!(q!(harness, t => t.friends_count(&a.id)), 2);
+        assert_eq!(q!(harness, t => t.friends_count(&b.id)), 1);
+        assert_eq!(made.other(&a.id), b.id);
+
+        assert!(
+            call!(harness, t => t.friends_make(&a.id, &a.id, now)).is_err(),
+            "a friend of oneself"
+        );
+        assert!(q!(harness, t => t.friends_remove(&b.id, &a.id)));
+        assert!(!q!(harness, t => t.friends_remove(&a.id, &b.id)));
+        assert_eq!(q!(harness, t => t.friends_count(&a.id)), 1);
+    }
+
+    /// B46: a block has a direction, is judged either way, keeps its first date, is never of
+    /// oneself, and is lifted once.
+    async fn s7_blocks_are_directed_and_judged_either_way(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.blocks_add(&a.id, &b.id, now - 2_000));
+        q!(harness, t => t.blocks_add(&a.id, &b.id, now));
+        q!(harness, t => t.blocks_add(&a.id, &c.id, now - 1_000));
+        let listed = j(&q!(harness, t => t.blocks_of(&a.id)));
+        assert_eq!(
+            listed,
+            json!([
+                { "blocker": a.id, "blocked": b.id, "createdAt": now - 2_000 },
+                { "blocker": a.id, "blocked": c.id, "createdAt": now - 1_000 },
+            ])
+        );
+        assert!(q!(harness, t => t.blocks_of(&b.id)).is_empty());
+        assert!(q!(harness, t => t.blocks_between(&b.id, &a.id)));
+        assert!(!q!(harness, t => t.blocks_between(&b.id, &c.id)));
+        assert!(
+            call!(harness, t => t.blocks_add(&a.id, &a.id, now)).is_err(),
+            "a block of oneself"
+        );
+
+        assert!(q!(harness, t => t.blocks_remove(&a.id, &b.id)));
+        assert!(!q!(harness, t => t.blocks_remove(&a.id, &b.id)));
+        assert!(!q!(harness, t => t.blocks_between(&a.id, &b.id)));
+    }
+
+    /// B47: a heartbeat never moves back; profiles that never beat are left out. The client's id is
+    /// found only when a profile holds it, and the spectator setting is on until turned off.
+    async fn s7_presence_profiles_find_and_the_spectator_setting(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.presence_touch(&a.id, now));
+        q!(harness, t => t.presence_touch(&a.id, now - 5_000));
+        q!(harness, t => t.presence_touch(&b.id, now - 1_000));
+        let seen = q!(harness, t => t.presence_last_seen(&[a.id.clone(), b.id.clone(), c.id.clone()]));
+        assert_eq!(
+            seen.into_iter().collect::<Vec<(String, i64)>>(),
+            vec![(a.id.clone(), now), (b.id.clone(), now - 1_000)]
+        );
+
+        assert_eq!(
+            must(q!(harness, t => t.profiles_find(&a.id)), "the profile").id,
+            a.id
+        );
+        assert!(q!(harness, t => t.profiles_find("not-a-uuid")).is_none());
+        assert!(q!(harness, t => t.profiles_find(&id())).is_none());
+
+        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
+        q!(harness, t => t.profiles_set_allow_spectators(&a.id, false));
+        assert!(!q!(harness, t => t.profiles_allows_spectators(&a.id)));
+        assert!(q!(harness, t => t.profiles_allows_spectators(&b.id)));
+        q!(harness, t => t.profiles_set_allow_spectators(&a.id, true));
+        assert!(q!(harness, t => t.profiles_allows_spectators(&a.id)));
+        assert!(
+            !q!(harness, t => t.profiles_allows_spectators(&id())),
+            "no profile allows nothing"
+        );
+        assert!(call!(harness, t => t.profiles_set_allow_spectators(&id(), false)).is_err());
+    }
+
+    /// B48, B49: one open, unlapsed challenge per challenger and friend; a lapsed one is expired by
+    /// the next; accepting is by the room's code and the challenged guest; closing moves only an
+    /// open one; a block closes every one between the pair.
+    async fn s7_challenges_open_close_accept_and_lapse(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let ab = challenge(&a.id, &b.id, "ABC234", now - 2_000, now + 60_000);
+        let ba = challenge(&b.id, &a.id, "BCD345", now - 1_000, now + 60_000);
+        assert!(q!(harness, t => t.challenges_create(&ab, now)));
+        assert!(
+            !q!(harness, t => t.challenges_create(&challenge(&a.id, &b.id, "CDE456", now, now + 60_000), now)),
+            "a second open challenge a to b"
+        );
+        assert!(q!(harness, t => t.challenges_create(&ba, now)));
+        assert_eq!(q!(harness, t => t.challenges_get(&ab.id)), Some(ab.clone()));
+        assert_eq!(
+            q!(harness, t => t.challenges_open_of(&a.id, now)),
+            vec![ab.clone(), ba.clone()]
+        );
+        assert_eq!(q!(harness, t => t.challenges_open_of(&c.id, now)), Vec::new());
+        assert_eq!(
+            q!(harness, t => t.challenges_open_for_room("ABC234", now)),
+            Some(ab.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.challenges_open_for_room("ABC234", now + 60_000)),
+            None
+        );
+        assert_eq!(q!(harness, t => t.challenges_open_for_room("ZZZ999", now)), None);
+
+        // Accepted by the challenged guest only, through the room's code.
+        assert!(!q!(harness, t => t.challenges_accept_room("ABC234", &c.id, now)));
+        assert!(q!(harness, t => t.challenges_accept_room("ABC234", &b.id, now)));
+        assert_eq!(
+            state_of(q!(harness, t => t.challenges_get(&ab.id))),
+            ChallengeState::Accepted
+        );
+        assert!(q!(harness, t => t.challenges_close(&ab.id, ChallengeState::Declined)).is_none());
+
+        let declined = must(
+            q!(harness, t => t.challenges_close(&ba.id, ChallengeState::Declined)),
+            "the declined challenge",
+        );
+        assert_eq!(declined.state, ChallengeState::Declined);
+        assert!(q!(harness, t => t.challenges_close(&ba.id, ChallengeState::Cancelled)).is_none());
+
+        // A lapsed open challenge is expired by the next one of its pair.
+        let lapsed = challenge(&a.id, &c.id, "DEF567", now - 10_000, now - 1);
+        assert!(q!(harness, t => t.challenges_create(&lapsed, now - 10_000)));
+        assert!(q!(harness, t => t.challenges_open_of(&a.id, now)).is_empty());
+        let next = challenge(&a.id, &c.id, "EFG678", now, now + 60_000);
+        assert!(q!(harness, t => t.challenges_create(&next, now)));
+        assert_eq!(
+            state_of(q!(harness, t => t.challenges_get(&lapsed.id))),
+            ChallengeState::Expired
+        );
+
+        // A block's sweep, then the sweeper's.
+        let closed = q!(harness, t => t.challenges_close_between(&c.id, &a.id, ChallengeState::Cancelled));
+        assert_eq!(ids_of(&closed), vec![next.id.clone()]);
+        assert_eq!(
+            state_of(q!(harness, t => t.challenges_get(&next.id))),
+            ChallengeState::Cancelled
+        );
+        let late = challenge(&b.id, &c.id, "FGH789", now, now + 1_000);
+        assert!(q!(harness, t => t.challenges_create(&late, now)));
+        assert!(q!(harness, t => t.challenges_expire(now)).is_empty());
+        assert_eq!(
+            ids_of(&q!(harness, t => t.challenges_expire(now + 1_000))),
+            vec![late.id.clone()]
+        );
+        assert_eq!(
+            state_of(q!(harness, t => t.challenges_get(&late.id))),
+            ChallengeState::Expired
+        );
+    }
+
+    /// B49: a declined, cancelled or blocked challenge frees its room: an unjoined room goes, a
+    /// joined one is never touched.
+    async fn s7_a_freed_room_goes_only_while_unjoined(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        q!(harness, t => t.rooms_create(&super::rooms::room(harness, "GHJ234", &host.id, json!({}))));
+        assert!(q!(harness, t => t.rooms_release("GHJ234")));
+        assert!(q!(harness, t => t.rooms_get("GHJ234")).is_none());
+        assert!(!q!(harness, t => t.rooms_release("GHJ234")));
+
+        q!(harness, t => t.rooms_create(&super::rooms::room(harness, "HJK345", &host.id, json!({}))));
+        must(
+            q!(harness, t => t.rooms_claim("HJK345", &guest.id, &id(), harness.now())),
+            "the claim",
+        );
+        assert!(!q!(harness, t => t.rooms_release("HJK345")));
+        assert!(q!(harness, t => t.rooms_get("HJK345")).is_some());
+    }
+
+    /// B53: a message of 1 to CHAT_MAX_CHARS characters; a page between two, newest last; reading
+    /// marks only the reader's own; unread counts by sender; one report per reporter; the purge
+    /// takes old messages with their reports.
+    async fn s7_chat_pages_reads_reports_and_purges(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let m1 = message(&a.id, &b.id, "hi", now - 3_000);
+        let m2 = message(&b.id, &a.id, "hello", now - 2_000);
+        let m3 = message(&a.id, &b.id, "gg?", now - 1_000);
+        let m4 = message(&a.id, &c.id, "hey", now);
+        for row in [&m1, &m2, &m3, &m4] {
+            q!(harness, t => t.chat_insert(row));
+        }
+        assert!(call!(harness, t => t.chat_insert(&message(&a.id, &b.id, "", now))).is_err());
+        let too_long = "x".repeat(jackioh_server::config::CHAT_MAX_CHARS + 1);
+        assert!(call!(harness, t => t.chat_insert(&message(&a.id, &b.id, &too_long, now))).is_err());
+        assert_eq!(q!(harness, t => t.chat_get(&m1.id)), Some(m1.clone()));
+        assert_eq!(q!(harness, t => t.chat_get(&id())), None);
+
+        assert_eq!(
+            ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, None, 10))),
+            vec![m1.id.clone(), m2.id.clone(), m3.id.clone()]
+        );
+        assert_eq!(
+            ids_of(&q!(harness, t => t.chat_page(&b.id, &a.id, None, 2))),
+            vec![m2.id.clone(), m3.id.clone()]
+        );
+        assert_eq!(
+            ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, Some(m3.created_at), 10))),
+            vec![m1.id.clone(), m2.id.clone()]
+        );
+
+        let unread = |rows: IndexMap<String, i64>| rows.into_iter().collect::<Vec<(String, i64)>>();
+        assert_eq!(
+            unread(q!(harness, t => t.chat_unread(&b.id))),
+            vec![(a.id.clone(), 2)]
+        );
+        assert_eq!(
+            unread(q!(harness, t => t.chat_unread(&a.id))),
+            vec![(b.id.clone(), 1)]
+        );
+        let read_at = now + 1_000;
+        q!(harness, t => t.chat_mark_read(&b.id, &[m1.id.clone(), m2.id.clone(), m3.id.clone()], read_at));
+        assert_eq!(
+            must(q!(harness, t => t.chat_get(&m1.id)), "m1").read_at,
+            Some(read_at)
+        );
+        assert_eq!(
+            must(q!(harness, t => t.chat_get(&m2.id)), "m2").read_at,
+            None,
+            "b cannot read a's inbox"
+        );
+        assert!(q!(harness, t => t.chat_unread(&b.id)).is_empty());
+        assert_eq!(
+            unread(q!(harness, t => t.chat_unread(&c.id))),
+            vec![(a.id.clone(), 1)]
+        );
+
+        let report = |reporter: &str, message_id: &str| -> ChatReportRow {
+            from(json!({
+                "id": id(),
+                "messageId": message_id,
+                "reporter": reporter,
+                "reason": "rude",
+                "createdAt": now,
+            }))
+        };
+        assert!(q!(harness, t => t.chat_report(&report(&b.id, &m1.id))));
+        assert!(
+            !q!(harness, t => t.chat_report(&report(&b.id, &m1.id))),
+            "reported once"
+        );
+        assert!(
+            call!(harness, t => t.chat_report(&report(&b.id, &id()))).is_err(),
+            "no such message"
+        );
+
+        assert_eq!(q!(harness, t => t.chat_purge(m2.created_at + 1)), 2);
+        assert!(q!(harness, t => t.chat_get(&m1.id)).is_none());
+        assert_eq!(
+            ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, None, 10))),
+            vec![m3.id.clone()]
+        );
+        assert!(q!(harness, t => t.chat_report(&report(&b.id, &m3.id))));
+    }
+
+    /// B52: a share is held once with its first date and read only while the sharer held a seat
+    /// in the finished match and the two are friends with neither blocking the other.
+    async fn s7_replay_shares_are_read_while_friends_and_unblocked(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now - 10_000));
+        q!(harness, t => t.friends_make(&c.id, &b.id, now - 10_000));
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_finish(&over, now - 5_000));
+        let live = id();
+        q!(harness, t => t.matches_create(&match_row(&live, &a.id, &c.id, harness, now - 9_000)));
+        let elsewhere = id();
+        q!(harness, t => t.matches_create(&match_row(&elsewhere, &b.id, &c.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_finish(&elsewhere, now - 5_000));
+
+        let share = |match_id: &str, sharer: &str, at: i64| -> ReplayShare {
+            from(json!({ "matchId": match_id, "sharer": sharer, "friend": b.id, "createdAt": at }))
+        };
+        q!(harness, t => t.shares_put(&share(&over, &a.id, now - 3_000)));
+        q!(harness, t => t.shares_put(&share(&over, &a.id, now)));
+        q!(harness, t => t.shares_put(&share(&live, &a.id, now - 2_000)));
+        // a held no seat in `elsewhere`; the row is kept and never read.
+        q!(harness, t => t.shares_put(&share(&elsewhere, &a.id, now - 1_000)));
+        assert!(
+            call!(harness, t => t.shares_put(&from::<ReplayShare>(json!({
+                "matchId": over, "sharer": a.id, "friend": id(), "createdAt": now,
+            }))))
+            .is_err(),
+            "a share with no profile"
+        );
+
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone()]
+        );
+        assert!(
+            q!(harness, t => t.shares_sharers(&live, &b.id)).is_empty(),
+            "a live match"
+        );
+        assert!(
+            q!(harness, t => t.shares_sharers(&elsewhere, &b.id)).is_empty(),
+            "not a seat"
+        );
+        assert_eq!(
+            j(&q!(harness, t => t.shares_for(&b.id))),
+            json!([{ "matchId": over, "sharer": a.id, "createdAt": now - 3_000, "endedAt": now - 5_000 }])
+        );
+
+        // c held a seat too, and shares later: both are read, first shared first.
+        q!(harness, t => t.shares_put(&share(&over, &c.id, now - 1_000)));
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone(), c.id.clone()]
+        );
+        assert_eq!(q!(harness, t => t.shares_for(&b.id)).len(), 2);
+
+        // Unfriended or blocked, a's share is not read; made friends again, it is.
+        assert!(q!(harness, t => t.friends_remove(&a.id, &b.id)));
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![c.id.clone()]
+        );
+        q!(harness, t => t.friends_make(&a.id, &b.id, now));
+        q!(harness, t => t.blocks_add(&b.id, &a.id, now));
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![c.id.clone()]
+        );
+        assert!(q!(harness, t => t.blocks_remove(&b.id, &a.id)));
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![a.id.clone(), c.id.clone()]
+        );
+
+        q!(harness, t => t.shares_remove(&over, &a.id, &b.id));
+        q!(harness, t => t.shares_remove(&over, &a.id, &b.id));
+        assert_eq!(
+            q!(harness, t => t.shares_sharers(&over, &b.id)),
+            vec![c.id.clone()]
+        );
+        assert!(q!(harness, t => t.shares_sharers("not-a-uuid", &b.id)).is_empty());
+    }
+
+    /// B47, B50 (#936 review): the friends list's set-based reads, one statement each however many
+    /// profiles are named: whom a series that is not over holds, each one's newest live co-op match,
+    /// and whose live 1v1 the viewer may watch (friends, unblocked, live, unranked, seating the friend
+    /// and not the viewer, the friend allowing it). Each answers in the order named.
+    async fn s7_presence_reads_many_profiles_at_once(harness: &StoreHarness) {
+        let viewer = active_profile(harness, None).await;
+        let rival = active_profile(harness, None).await;
+        let watched = active_profile(harness, None).await;
+        let ranked = active_profile(harness, None).await;
+        let shy = active_profile(harness, None).await;
+        let blocked = active_profile(harness, None).await;
+        let stranger = active_profile(harness, None).await;
+        let picking = active_profile(harness, None).await;
+        let coop = active_profile(harness, None).await;
+        let idle = active_profile(harness, None).await;
+        let now = harness.now();
+        for friend in [&watched, &ranked, &shy, &blocked, &picking, &coop, &idle] {
+            q!(harness, t => t.friends_make(&viewer.id, &friend.id, now));
+        }
+        q!(harness, t => t.blocks_add(&blocked.id, &viewer.id, now));
+        q!(harness, t => t.profiles_set_allow_spectators(&shy.id, false));
+        let live = |p1: &str, ranked: bool| -> MatchRow {
+            from(spread(
+                j(&match_row(&id(), p1, &rival.id, harness, now)),
+                json!({ "ranked": ranked }),
+            ))
+        };
+        for (player, is_ranked) in [
+            (&watched, false),
+            (&ranked, true),
+            (&shy, false),
+            (&blocked, false),
+            (&stranger, false),
+        ] {
+            let row = live(&player.id, is_ranked);
+            q!(harness, t => t.matches_create(&row));
+            q!(harness, t => t.profiles_set_in_match(&player.id, Some(row.id.as_str())));
+        }
+        // The viewer's own opponent: a seat the viewer holds is never watched.
+        let against = match_row(&id(), &viewer.id, &idle.id, harness, now);
+        q!(harness, t => t.matches_create(&against));
+        q!(harness, t => t.profiles_set_in_match(&idle.id, Some(against.id.as_str())));
+
+        let named: Vec<String> = [
+            &idle, &shy, &watched, &ranked, &blocked, &stranger, &picking, &coop,
+        ]
+        .iter()
+        .map(|profile| profile.id.clone())
+        .collect();
+        assert_eq!(
+            q!(harness, t => t.presence_watchable(&viewer.id, &named)),
+            vec![watched.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_watchable("not-a-uuid", &named)).is_empty());
+        assert!(q!(harness, t => t.presence_watchable(&viewer.id, &[])).is_empty());
+
+        q!(harness, t => t.series_create(&super::series::series_row(harness, &rival.id, &picking.id, json!({}))));
+        let finished = super::series::series_row(
+            harness,
+            &coop.id,
+            &idle.id,
+            json!({ "status": "over", "winner": "p1", "endReason": "forfeit", "endedAt": now }),
+        );
+        q!(harness, t => t.series_create(&finished));
+        assert_eq!(
+            q!(harness, t => t.presence_in_series(&named)),
+            vec![picking.id.clone()]
+        );
+        assert!(q!(harness, t => t.presence_in_series(&[])).is_empty());
+
+        let coop_match = |a1: &str, a2: &str, at: i64| -> DuosMatch {
+            from(json!({
+                "id": id(),
+                "seed": "seed-duos",
+                "a1": a1,
+                "a2": a2,
+                "difficulty": "easy",
+                "options": {
+                    "decks": { "a1": ["core-001"], "a2": ["core-002"], "b1": ["core-003"], "b2": ["core-004"] },
+                    "dealt": [],
+                    "teams": { "a": j(&DUOS_HUMAN_TEAM), "b": j(&DUOS_HUMAN_TEAM) },
+                    "handicaps": { "a1": null, "a2": null, "b1": null, "b2": null },
+                },
+                "createdAt": at,
+                "endedAt": null,
+                "result": null,
+            }))
+        };
+        let older = coop_match(&coop.id, &stranger.id, now - 2_000);
+        let newer = coop_match(&rival.id, &coop.id, now - 1_000);
+        let ended = coop_match(&idle.id, &rival.id, now - 500);
+        for row in [&older, &newer, &ended] {
+            q!(harness, t => t.duos_matches_create(row));
+        }
+        assert!(q!(harness, t => t.duos_matches_finish(&ended.id, &json!({ "outcome": "draw" }), now)));
+        assert_eq!(
+            q!(harness, t => t.presence_in_duos(&named))
+                .into_iter()
+                .collect::<Vec<(String, String)>>(),
+            vec![
+                (stranger.id.clone(), older.id.clone()),
+                (coop.id.clone(), newer.id.clone())
+            ]
+        );
+        assert!(q!(harness, t => t.presence_in_duos(&[])).is_empty());
+    }
+
+    /// B46, B52 (#936 review): an unfriend or a block deletes every share between the two, either
+    /// way, and no other.
+    async fn s7_shares_between_a_pair_go_together(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let over = id();
+        q!(harness, t => t.matches_create(&match_row(&over, &a.id, &b.id, harness, now - 9_000)));
+        q!(harness, t => t.matches_finish(&over, now - 5_000));
+        for (sharer, friend) in [(&a, &b), (&b, &a), (&a, &c), (&b, &c)] {
+            q!(harness, t => t.friends_make(&sharer.id, &friend.id, now - 10_000));
+            let share: ReplayShare = from(json!({
+                "matchId": over, "sharer": sharer.id, "friend": friend.id, "createdAt": now,
+            }));
+            q!(harness, t => t.shares_put(&share));
+        }
+
+        assert_eq!(q!(harness, t => t.shares_remove_between(&b.id, &a.id)), 2);
+        assert_eq!(q!(harness, t => t.shares_remove_between(&a.id, &b.id)), 0);
+        assert!(q!(harness, t => t.shares_sharers(&over, &a.id)).is_empty());
+        assert!(q!(harness, t => t.shares_sharers(&over, &b.id)).is_empty());
+        assert_eq!(
+            sorted(&q!(harness, t => t.shares_sharers(&over, &c.id))),
+            sorted(&[a.id.clone(), b.id.clone()])
+        );
+        assert_eq!(q!(harness, t => t.shares_remove_between("not-a-uuid", &a.id)), 0);
+    }
+
+    /// B49 (#936 review): the sweeper's purge deletes every challenge lapsed by now, open or
+    /// closed, and none that has not.
+    async fn s7_challenges_lapsed_by_now_are_purged_whatever_their_state(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        let open = challenge(&a.id, &b.id, "KLM234", now - 3_000, now - 1);
+        let declined = challenge(&b.id, &a.id, "LMN345", now - 3_000, now);
+        let live = challenge(&a.id, &c.id, "MNP456", now - 3_000, now + 1);
+        for row in [&open, &declined, &live] {
+            assert!(q!(harness, t => t.challenges_create(row, now - 3_000)));
+        }
+        assert!(q!(harness, t => t.challenges_close(&declined.id, ChallengeState::Declined)).is_some());
+
+        assert_eq!(q!(harness, t => t.challenges_purge(now)), 2);
+
+        assert!(q!(harness, t => t.challenges_get(&open.id)).is_none());
+        assert!(q!(harness, t => t.challenges_get(&declined.id)).is_none());
+        assert_eq!(q!(harness, t => t.challenges_get(&live.id)), Some(live.clone()));
+        assert_eq!(q!(harness, t => t.challenges_purge(now)), 0);
+    }
+
+    /// 0038's cascade: a deleted profile takes every social row that names it.
+    async fn s7_a_deleted_profile_takes_its_social_rows(harness: &StoreHarness) {
+        let a = active_profile(harness, None).await;
+        let b = active_profile(harness, None).await;
+        let c = active_profile(harness, None).await;
+        let now = harness.now();
+        q!(harness, t => t.friends_make(&a.id, &b.id, now));
+        q!(harness, t => t.friends_make(&b.id, &c.id, now));
+        assert!(q!(harness, t => t.friends_request_create(&request(&c.id, &a.id, now))));
+        q!(harness, t => t.blocks_add(&c.id, &a.id, now));
+        q!(harness, t => t.presence_touch(&a.id, now));
+        assert!(
+            q!(harness, t => t.challenges_create(&challenge(&b.id, &a.id, "JKL456", now, now + 60_000), now))
+        );
+        q!(harness, t => t.chat_insert(&message(&b.id, &a.id, "bye", now)));
+        q!(harness, t => t.chat_insert(&message(&b.id, &c.id, "stay", now)));
+
+        assert!(q!(harness, t => t.profiles_remove(&a.id)));
+        let left = q!(harness, t => t.friends_of(&b.id));
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].other(&b.id), c.id);
+        assert!(q!(harness, t => t.friends_requests_of(&c.id)).is_empty());
+        assert!(q!(harness, t => t.blocks_of(&c.id)).is_empty());
+        assert!(q!(harness, t => t.presence_last_seen(std::slice::from_ref(&a.id))).is_empty());
+        assert!(q!(harness, t => t.challenges_open_of(&b.id, now)).is_empty());
+        assert!(q!(harness, t => t.chat_page(&b.id, &a.id, None, 10)).is_empty());
+        assert_eq!(q!(harness, t => t.chat_page(&b.id, &c.id, None, 10)).len(), 1);
+    }
+
+    both_stores!(
+        s7_friend_requests_are_one_per_direction_and_go_between_a_pair,
+        s7_friendships_are_one_per_pair_and_take_the_requests_with_them,
+        s7_blocks_are_directed_and_judged_either_way,
+        s7_presence_profiles_find_and_the_spectator_setting,
+        s7_challenges_open_close_accept_and_lapse,
+        s7_a_freed_room_goes_only_while_unjoined,
+        s7_chat_pages_reads_reports_and_purges,
+        s7_replay_shares_are_read_while_friends_and_unblocked,
+        s7_a_deleted_profile_takes_its_social_rows,
+        s7_presence_reads_many_profiles_at_once,
+        s7_shares_between_a_pair_go_together,
+        s7_challenges_lapsed_by_now_are_purged_whatever_their_state,
+    );
+}
+
+/// SPEC S6 (migration 0039): co-op rooms, co-op matches and their log (`duos/store.rs`).
+mod duos {
+    use super::*;
+    use jackioh_engine::config::DUOS_HUMAN_TEAM;
+    use jackioh_server::duos::store::{DuosActionRow, DuosChoice, DuosMatch, DuosRoom};
+
+    fn room(code: &str, host: &str, at: i64, expires_at: i64) -> DuosRoom {
+        from(json!({
+            "code": code,
+            "host": host,
+            "guest": null,
+            "difficulty": "medium",
+            "hostChoice": { "kind": "random", "leanNewest": true },
+            "guestChoice": null,
+            "matchId": null,
+            "createdAt": at,
+            "expiresAt": expires_at,
+        }))
+    }
+
+    fn duos_match(a1: &str, a2: &str, at: i64) -> DuosMatch {
+        from(json!({
+            "id": id(),
+            "seed": "seed-duos",
+            "a1": a1,
+            "a2": a2,
+            "difficulty": "hard",
+            "options": {
+                "decks": { "a1": ["core-001"], "a2": ["core-002"], "b1": ["core-003"], "b2": ["core-004"] },
+                "dealt": ["a2"],
+                "teams": { "a": j(&DUOS_HUMAN_TEAM), "b": j(&DUOS_HUMAN_TEAM) },
+                "handicaps": { "a1": null, "a2": null, "b1": null, "b2": null },
+            },
+            "createdAt": at,
+            "endedAt": null,
+            "result": null,
+        }))
+    }
+
+    fn logged(match_id: &str, seq: i64, nonce: &str, at: i64) -> DuosActionRow {
+        from(json!({
+            "matchId": match_id,
+            "seq": seq,
+            "nonce": nonce,
+            "action": { "seat": "a1", "nonce": nonce, "body": { "kind": "concede" } },
+            "at": at,
+        }))
+    }
+
+    /// B33, B34: a code is held once; the claim is single-shot, never the host's and never past
+    /// the expiry; only the host deletes an unjoined room; the reaper keeps a joined one longer.
+    async fn s6_rooms_are_claimed_once_and_reaped(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let third = active_profile(harness, None).await;
+        let now = harness.now();
+        let made = room("DUOSAB", &host.id, now, now + 600_000);
+        assert!(q!(harness, t => t.duos_rooms_create(&made)));
+        assert!(!q!(harness, t => t.duos_rooms_create(&room("DUOSAB", &guest.id, now, now + 600_000))));
+        assert_eq!(q!(harness, t => t.duos_rooms_get("DUOSAB")), Some(made.clone()));
+        assert_eq!(q!(harness, t => t.duos_rooms_get("ZZZZZZ")), None);
+
+        let choice = DuosChoice::Random { lean: None };
+        let match_id = id();
+        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &host.id, &choice, &id(), now)).is_none());
+        let claimed = must(
+            q!(harness, t => t.duos_rooms_claim("DUOSAB", &guest.id, &choice, &match_id, now)),
+            "the claim",
+        );
+        assert_eq!(claimed.guest.as_deref(), Some(guest.id.as_str()));
+        assert_eq!(claimed.guest_choice, Some(choice.clone()));
+        assert_eq!(claimed.match_id.as_deref(), Some(match_id.as_str()));
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_get("DUOSAB")),
+            Some(claimed.clone())
+        );
+        assert!(q!(harness, t => t.duos_rooms_claim("DUOSAB", &third.id, &choice, &id(), now)).is_none());
+        assert!(
+            !q!(harness, t => t.duos_rooms_delete("DUOSAB", &host.id)),
+            "a joined room stays"
+        );
+
+        let lapsed = room("DUOSCD", &host.id, now - 700_000, now - 100_000);
+        assert!(q!(harness, t => t.duos_rooms_create(&lapsed)));
+        assert!(q!(harness, t => t.duos_rooms_claim("DUOSCD", &guest.id, &choice, &id(), now)).is_none());
+        let open = room("DUOSEF", &host.id, now, now + 600_000);
+        assert!(q!(harness, t => t.duos_rooms_create(&open)));
+        assert!(
+            !q!(harness, t => t.duos_rooms_delete("DUOSEF", &guest.id)),
+            "not the host"
+        );
+        assert!(!q!(harness, t => t.duos_rooms_delete("DUOSEF", "not-a-uuid")));
+        assert!(q!(harness, t => t.duos_rooms_delete("DUOSEF", &host.id)));
+        assert!(q!(harness, t => t.duos_rooms_get("DUOSEF")).is_none());
+
+        // The lapsed unjoined room goes at its expiry; the joined one only past the later cut.
+        assert_eq!(q!(harness, t => t.duos_rooms_reap(now, now)), 1);
+        assert!(q!(harness, t => t.duos_rooms_get("DUOSAB")).is_some());
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_reap(now + 600_000, now + 600_000)),
+            1
+        );
+        assert!(q!(harness, t => t.duos_rooms_get("DUOSAB")).is_none());
+    }
+
+    /// B40, B42: a match is live until its result is written, once; the live one names either
+    /// seat; the log is gapless by seq and deduped by nonce.
+    async fn s6_matches_finish_once_and_the_log_is_append_only(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        let row = duos_match(&a1.id, &a2.id, now - 1_000);
+        q!(harness, t => t.duos_matches_create(&row));
+        assert!(
+            call!(harness, t => t.duos_matches_create(&row)).is_err(),
+            "an id written twice"
+        );
+        assert_eq!(q!(harness, t => t.duos_matches_get(&row.id)), Some(row.clone()));
+        assert_eq!(q!(harness, t => t.duos_matches_get("not-a-uuid")), None);
+        assert_eq!(
+            q!(harness, t => t.duos_matches_live_for(&a1.id)),
+            Some(row.id.clone())
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_matches_live_for(&a2.id)),
+            Some(row.id.clone())
+        );
+        assert_eq!(q!(harness, t => t.duos_matches_live_for(&other.id)), None);
+        assert_eq!(q!(harness, t => t.duos_matches_live()), vec![row.id.clone()]);
+
+        let first = logged(&row.id, 1, "n-1", now);
+        q!(harness, t => t.duos_actions_append(&first));
+        q!(harness, t => t.duos_actions_append(&first));
+        assert!(matches!(
+            call!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-2", now))),
+            Err(StoreError::SeqClash(_))
+        ));
+        assert!(matches!(
+            call!(harness, t => t.duos_actions_append(&logged(&row.id, 2, "n-1", now))),
+            Err(StoreError::SeqClash(_))
+        ));
+        let second = logged(&row.id, 2, "n-2", now + 1);
+        q!(harness, t => t.duos_actions_append(&second));
+        assert!(call!(harness, t => t.duos_actions_append(&logged(&id(), 1, "n-1", now))).is_err());
+        assert_eq!(
+            q!(harness, t => t.duos_actions(&row.id)),
+            vec![first.clone(), second.clone()]
+        );
+
+        let result = json!({ "outcome": "win", "winner": "a", "reason": "poolEmptied" });
+        assert!(q!(harness, t => t.duos_matches_finish(&row.id, &result, now + 5_000)));
+        assert!(
+            !q!(harness, t => t.duos_matches_finish(&row.id, &json!({ "outcome": "draw" }), now + 6_000))
+        );
+        let ended = must(q!(harness, t => t.duos_matches_get(&row.id)), "the match");
+        assert_eq!((ended.ended_at, ended.result), (Some(now + 5_000), Some(result)));
+        assert_eq!(q!(harness, t => t.duos_matches_live_for(&a1.id)), None);
+        assert!(q!(harness, t => t.duos_matches_live()).is_empty());
+    }
+
+    /// 0039's cascade (0012's rule): a deleted account takes its rooms and its co-op matches with
+    /// their logs, and nothing of its teammate.
+    async fn s6_a_deleted_profile_takes_its_rooms_and_matches(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        assert!(q!(harness, t => t.duos_rooms_create(&room("DUOSGH", &a2.id, now, now + 600_000))));
+        assert!(q!(harness, t => t.duos_rooms_create(&room("DUOSJK", &a1.id, now, now + 600_000))));
+        let row = duos_match(&a1.id, &a2.id, now);
+        q!(harness, t => t.duos_matches_create(&row));
+        q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now)));
+
+        assert!(q!(harness, t => t.profiles_remove(&a2.id)));
+        assert!(q!(harness, t => t.duos_rooms_get("DUOSGH")).is_none());
+        assert!(q!(harness, t => t.duos_rooms_get("DUOSJK")).is_some());
+        assert!(q!(harness, t => t.duos_matches_get(&row.id)).is_none());
+        assert!(q!(harness, t => t.duos_actions(&row.id)).is_empty());
+        assert!(q!(harness, t => t.profiles_get_by_id(&a1.id)).is_some());
+    }
+
+    /// §13.9, the retention purge: a co-op match's log goes once the match ended before the cutoff,
+    /// as a 1v1 match's; a match that ended later, or is live, keeps its log; the row stays.
+    async fn s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff(harness: &StoreHarness) {
+        let a1 = active_profile(harness, None).await;
+        let a2 = active_profile(harness, None).await;
+        let now = harness.now();
+        let result = json!({ "outcome": "draw", "winner": null, "reason": "turnCap" });
+        let old = duos_match(&a1.id, &a2.id, now - 30_000);
+        let recent = duos_match(&a1.id, &a2.id, now - 20_000);
+        let live = duos_match(&a1.id, &a2.id, now - 10_000);
+        for row in [&old, &recent, &live] {
+            q!(harness, t => t.duos_matches_create(row));
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, 1, "n-1", now - 9_000)));
+            q!(harness, t => t.duos_actions_append(&logged(&row.id, 2, "n-2", now - 8_000)));
+        }
+        assert!(q!(harness, t => t.duos_matches_finish(&old.id, &result, now - 5_000)));
+        assert!(q!(harness, t => t.duos_matches_finish(&recent.id, &result, now - 1_000)));
+
+        assert_eq!(q!(harness, t => t.duos_actions_purge(now - 2_000)), 2);
+
+        assert!(q!(harness, t => t.duos_actions(&old.id)).is_empty());
+        assert_eq!(q!(harness, t => t.duos_actions(&recent.id)).len(), 2);
+        assert_eq!(q!(harness, t => t.duos_actions(&live.id)).len(), 2);
+        let kept = must(
+            q!(harness, t => t.duos_matches_get(&old.id)),
+            "the match row stays",
+        );
+        assert_eq!(kept.result, Some(result));
+    }
+
+    both_stores!(
+        s6_rooms_are_claimed_once_and_reaped,
+        s6_matches_finish_once_and_the_log_is_append_only,
+        s6_a_deleted_profile_takes_its_rooms_and_matches,
+        s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
+    );
+}
+
 mod tx {
     use super::*;
 
@@ -5975,4 +7247,14 @@ mod tx {
         joins_a_nested_transaction_rather_than_opening_a_second_one,
         returns_the_callback_s_value,
     );
+}
+
+mod ping {
+    use super::*;
+
+    async fn answers_while_the_store_is_up(harness: &StoreHarness) {
+        harness.db.ping().await.expect("the store answers");
+    }
+
+    both_stores!(answers_while_the_store_is_up);
 }

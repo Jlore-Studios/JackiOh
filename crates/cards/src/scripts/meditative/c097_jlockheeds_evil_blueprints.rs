@@ -9,7 +9,59 @@
 //! The nine are token cards, in no other pool but C+ #23's (R382), offered uniformly without replacement
 //! (R60).
 
+use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "meditative-097";
+
+/// The nine buildings of the blueprint (M #97.1 to M #97.9).
+pub const BUILDINGS: [&str; 9] = [
+    "meditative-097-1",
+    "meditative-097-2",
+    "meditative-097-3",
+    "meditative-097-4",
+    "meditative-097-5",
+    "meditative-097-6",
+    "meditative-097-7",
+    "meditative-097-8",
+    "meditative-097-9",
+];
+
+/// §6.3 Discover offers three different options.
+const OPTIONS: i32 = 3;
+
+/// The one resume step: the Discover's answer comes back here (§10.6, `prompts::RESUME_HOOK`).
+const PICKED: &str = "picked";
+
+fn blueprints(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(|_ctx| {
+            vec![discover_from_catalog(json_as(json!({
+                "step": PICKED,
+                "count": OPTIONS,
+                "query": { "defId": BUILDINGS, "withTokens": true },
+                "prompt": "Jlockheed's Evil Blueprints: Discover a building",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            PICKED,
+            hook(move |ctx| {
+                let Some(picked) = chosen_options(ctx).into_iter().next() else {
+                    return vec![];
+                };
+                vec![add_to_hand(json_as(json!({ "defId": picked, "radiant": radiant })))]
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: blueprints(false),
+        radiant: blueprints(true),
+    }
+}
 
 // M 97 Jlockheed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
 // different buildings out of the nine (M 97.1 to M 97.9), shown to you only (MD-F11), the pick to
@@ -17,22 +69,9 @@ pub const ID: &str = "meditative-097";
 // nine; the opponent sees a prompt and a hidden card; radiant the building is Radiant".
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{BUILDINGS, ID, script};
     use crate::js;
     use jackioh_engine::testkit::*;
-
-    /// The nine buildings of the blueprint (M #97.1 to M #97.9).
-    const BUILDINGS: [&str; 9] = [
-        "meditative-097-1",
-        "meditative-097-2",
-        "meditative-097-3",
-        "meditative-097-4",
-        "meditative-097-5",
-        "meditative-097-6",
-        "meditative-097-7",
-        "meditative-097-8",
-        "meditative-097-9",
-    ];
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -80,7 +119,7 @@ mod tests {
         assert_eq!(def.rarity, Rarity::Mythic);
         assert_eq!(def.tags, vec![Tag::Jlockeed]);
         assert_eq!(def.type_, CardType::Spell);
-        let s = crate::scripts_of()[ID].clone();
+        let s = script();
         assert!(s.base.cry.is_some());
         assert!(s.radiant.cry.is_some());
     }

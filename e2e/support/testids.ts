@@ -236,6 +236,8 @@ export function deckRowId(deckId: string): string {
 /** R250: deck creation is disabled at its cap. */
 export const DECK_NEW = "deck-new";
 export const DECK_CAP_REASON = "deck-cap-reason";
+/** R915005: "Practice only" on a deck row (`data-practice-only="true"`) and in the open deck's verdict. */
+export const DECK_PRACTICE_ONLY = "deck-practice-only";
 
 export const TRIO_LIST = "trio-list";
 export const TRIO_CAP = "trio-cap";
@@ -394,6 +396,10 @@ export const PRACTICE_DECK_CURVE = "practice-deck-curve";
 export function practiceDeckCardId(defId: string): string {
   return `practice-deck-card-${defId}`;
 }
+/** R915005, #921: a saved deck naming a custom card the account lacks, and `?try=`'s wait and miss. */
+export const PRACTICE_CUSTOM_BLOCKED = "practice-custom-blocked";
+export const PRACTICE_TRY_LOADING = "practice-try-loading";
+export const PRACTICE_TRY_MISSING = "practice-try-missing";
 export const PRACTICE_START = "practice-start";
 export const PRACTICE_LOADING = "practice-loading";
 export const PRACTICE_ERROR = "practice-error";
@@ -418,10 +424,26 @@ export const PRACTICE_RESULT = "practice-result";
 export const PRACTICE_PLAY_AGAIN = "practice-play-again";
 export const PRACTICE_CHANGE_SETUP = "practice-change-setup";
 export const PRACTICE_VIEW_BOARD = "practice-view-board";
+/** R768000: a kept game's replay, and its last turn's GIF, from the result dialog. */
+export const PRACTICE_WATCH_REPLAY = "practice-watch-replay";
+export const PRACTICE_SHARE_LAST_TURN = "practice-share-last-turn";
 export const PRACTICE_OUTCOME = "practice-outcome";
 /** R169: live-modifier count and panel. */
 export const PRACTICE_MODIFIERS = "practice-modifiers";
 export const PRACTICE_MODIFIERS_PANEL = "practice-modifiers-panel";
+/** R923000: the sandbox checkbox on the setup, and a sandbox game's dev tools. */
+export const PRACTICE_SANDBOX = "practice-sandbox";
+export const PRACTICE_SANDBOX_PANEL = "practice-sandbox-panel";
+export const PRACTICE_SANDBOX_TOGGLE = "practice-sandbox-toggle";
+export const PRACTICE_SANDBOX_HOLD = "practice-sandbox-hold";
+export const PRACTICE_SANDBOX_SEARCH = "practice-sandbox-search";
+export const PRACTICE_SANDBOX_RADIANT = "practice-sandbox-radiant";
+export function practiceSandboxResultId(defId: string): string {
+  return `practice-sandbox-result-${defId}`;
+}
+export const PRACTICE_SANDBOX_SPAWN_SEAT = "practice-sandbox-spawn-seat";
+export const PRACTICE_SANDBOX_SPAWN_WHERE = "practice-sandbox-spawn-where";
+export const PRACTICE_SANDBOX_SPAWN = "practice-sandbox-spawn";
 
 // Tutorial selectors mirror `apps/web/src/tutorial/testids.ts` (SPEC §9.10); lessons reuse the practice contract.
 
@@ -670,3 +692,171 @@ export const REMATCH_STATUS = "rematch-status";
 // R612's banner mirrors matchTestid in apps/web/src/routes/match.tsx: whether the game moves the rating.
 export const MATCH_RANKS = "match-ranks";
 
+
+// #920: the card creator's selectors mirror `creatorTestid` in `apps/web/src/creator/testids.ts`
+// (SPEC §12.11, R915010).
+
+export const CREATOR_SCREEN = "creator-screen";
+export const CREATOR_LIST_ITEM = "creator-list-item";
+export const CREATOR_NEW_CARD = "creator-new-card";
+export const CREATOR_NAME = "creator-name";
+export const CREATOR_COST = "creator-cost";
+export const CREATOR_TEXT = "creator-text";
+export const CREATOR_TARGET = "creator-target";
+export const CREATOR_ADD_HOOK = "creator-add-hook";
+export const CREATOR_ADD_STEP = "creator-add-step";
+export const CREATOR_STEP_VERB = "creator-step-verb";
+export const CREATOR_STEP_TARGET = "creator-step-target";
+export const CREATOR_STEP_AMOUNT = "creator-step-amount";
+export const CREATOR_VIEW_BUILDER = "creator-view-builder";
+export const CREATOR_VIEW_CODE = "creator-view-code";
+export const CREATOR_BUILDER = "creator-builder";
+export const CREATOR_CODE_INPUT = "creator-code-input";
+export const CREATOR_SCRIPT_PROBLEM = "creator-script-problem";
+export const CREATOR_CHECKING = "creator-checking";
+export const CREATOR_PREVIEW = "creator-preview";
+export const CREATOR_SAVE = "creator-save";
+export const CREATOR_SAVED = "creator-saved";
+// R768000: the replay selectors mirror `replayTestid` and `gifTestid` in `apps/web/src/replay/`, the
+// result panel's in `matchTestid` (`apps/web/src/routes/match.tsx`), and the recent games' in
+// `replaysTestid` (`apps/web/src/routes/replays.tsx`).
+
+export const MATCH_WATCH_REPLAY = "match-watch-replay";
+export const MATCH_SHARE_LAST_TURN = "match-share-last-turn";
+export const REPLAY_PLAYER = "replay-player";
+export const REPLAY_FORWARD_STEP = "replay-forward-step";
+export const REPLAY_BACK_STEP = "replay-back-step";
+export const REPLAY_READOUT = "replay-readout";
+export const REPLAY_BACK = "replay-back";
+export const REPLAY_GIF_TOGGLE = "replay-gif";
+export const REPLAY_GIF_SHARE = "replay-gif-share";
+export const REPLAYS_ROOT = "replays";
+
+export function replaysOnlineId(matchId: string): string {
+  return `replays-online-${matchId}`;
+}
+
+// #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`: the friends page,
+// the chat panel and the board rail's chat, the challenge toast, the watch screen and the replay share.
+
+export const LANDING_PLAY_TOGETHER = "landing-play-together";
+export const TOGETHER_ROOT = "together";
+export const TOGETHER_ADD_INPUT = "together-add-input";
+export const TOGETHER_ADD_SUBMIT = "together-add-submit";
+export const TOGETHER_ADD_ERROR = "together-add-error";
+export const TOGETHER_ADD_SENT = "together-add-sent";
+export const TOGETHER_ERROR = "together-error";
+/** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
+export const TOGETHER_FRIEND_ROW = "together-friend-row";
+export const TOGETHER_NO_FRIENDS = "together-no-friends";
+export const TOGETHER_CHALLENGE = "together-challenge";
+export const TOGETHER_WATCH = "together-watch";
+export const TOGETHER_CHAT_OPEN = "together-chat-open";
+export const TOGETHER_UNREAD = "together-unread";
+export const TOGETHER_REMOVE = "together-remove";
+export const TOGETHER_BLOCK = "together-block";
+export const TOGETHER_CONFIRM = "together-confirm";
+export const TOGETHER_KEEP = "together-keep";
+/** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`, `data-profile-id`. */
+export const TOGETHER_REQUEST_ROW = "together-request-row";
+export const TOGETHER_REQUEST_ACCEPT = "together-request-accept";
+export const TOGETHER_REQUEST_DECLINE = "together-request-decline";
+export const TOGETHER_REQUEST_CANCEL = "together-request-cancel";
+export const TOGETHER_REQUEST_BLOCK = "together-request-block";
+export const TOGETHER_BLOCKED_ROW = "together-blocked-row";
+export const TOGETHER_UNBLOCK = "together-unblock";
+export const TOGETHER_CHALLENGE_FORM = "together-challenge-form";
+export const TOGETHER_CHALLENGE_DECK = "together-challenge-deck";
+export const TOGETHER_CHALLENGE_TRIO = "together-challenge-trio";
+export const TOGETHER_CHALLENGE_SEND = "together-challenge-send";
+export const TOGETHER_CHALLENGE_CLOSE = "together-challenge-close";
+export const TOGETHER_CHALLENGE_ERROR = "together-challenge-error";
+/** One per open challenge the account sent: `data-challenge-id`, `data-room-code`. */
+export const TOGETHER_OUTGOING_CHALLENGE = "together-outgoing-challenge";
+export const TOGETHER_CANCEL_CHALLENGE = "together-cancel-challenge";
+/** One per replay shared with the account: `data-match-id`. */
+export const TOGETHER_SHARED_ROW = "together-shared-row";
+export const TOGETHER_SHARED_OPEN = "together-shared-open";
+export const TOGETHER_NO_SHARED = "together-no-shared";
+
+export function togetherChallengeModeId(mode: QueueMode): string {
+  return `together-challenge-mode-${mode}`;
+}
+
+/** `data-friend-id`. */
+export const CHAT_PANEL = "chat-panel";
+export const CHAT_INPUT = "chat-input";
+export const CHAT_SEND = "chat-send";
+/** One per message: `data-message-id`, `data-from` (`you|friend`). */
+export const CHAT_MESSAGE = "chat-message";
+export const CHAT_CLOSE = "chat-close";
+export const CHAT_ERROR = "chat-error";
+export const CHAT_EARLIER = "chat-earlier";
+export const CHAT_REPORT = "chat-report";
+export const CHAT_REPORT_REASON = "chat-report-reason";
+export const CHAT_REPORT_SEND = "chat-report-send";
+export const CHAT_REPORTED = "chat-reported";
+export const IN_MATCH_CHAT_TOGGLE = "in-match-chat-toggle";
+export const IN_MATCH_CHAT_LIST = "in-match-chat-list";
+export const IN_MATCH_CHAT_FRIEND = "in-match-chat-friend";
+export const IN_MATCH_CHAT_UNREAD = "in-match-chat-unread";
+
+/** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
+export const CHALLENGE_TOAST = "challenge-toast";
+export const CHALLENGE_ACCEPT = "challenge-accept";
+export const CHALLENGE_DECLINE = "challenge-decline";
+export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
+
+/** `data-connection` (`connecting|open|closed|refused`). */
+export const WATCH_SCREEN = "watch-screen";
+export const WATCH_WAITING = "watch-waiting";
+export const WATCH_REFUSED = "watch-refused";
+export const WATCH_STATUS = "watch-status";
+export const WATCH_BACK = "watch-back";
+
+export const SHARE_FRIEND_OPEN = "share-friend-open";
+/** One per friend: `data-profile-id`, `data-shared`. */
+export const SHARE_FRIEND_OPTION = "share-friend-option";
+export const SHARE_FRIEND_UNSHARE = "share-friend-unshare";
+export const SHARE_FRIEND_NONE = "share-friend-none";
+export const SHARE_FRIEND_ERROR = "share-friend-error";
+export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
+
+export const SETTING_ALLOW_SPECTATORS = "setting-allowSpectators";
+// #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65): the
+// co-op panel's, the board's (its life strip, teammate strip, portal, pass control and pings), and
+// the slice's own chrome after them.
+
+export const COOP_CREATE = "coop-create";
+export const COOP_DIFFICULTY = "coop-difficulty";
+export const COOP_CODE = "coop-code";
+export const COOP_JOIN_INPUT = "coop-join-input";
+export const COOP_JOIN_SUBMIT = "coop-join-submit";
+export const DUOS_PORTAL = "duos-portal";
+export const DUOS_PASS = "duos-pass";
+export const DUOS_POOL = "duos-pool";
+export const DUOS_OWN_HP = "duos-own-hp";
+export const DUOS_TEAMMATE_STRIP = "duos-teammate-strip";
+export const DUOS_PING_WHEEL = "duos-ping-wheel";
+export const DUOS_PING_MARKER = "duos-ping-marker";
+
+export type DuosPingKind = "thumbsUp" | "thumbsDown" | "portal" | "careful" | "killThis";
+
+export function duosPingId(kind: DuosPingKind): string {
+  return `duos-ping-${kind}`;
+}
+
+export const COOP_DECK = "coop-deck";
+export const COOP_ERROR = "coop-error";
+export const DUOS_BOARD = "duos-board";
+export const DUOS_CARD_ACTIONS = "duos-card-actions";
+export const DUOS_ROUND = "duos-round";
+export const DUOS_WAITING = "duos-waiting";
+export const DUOS_CONCEDE = "duos-concede";
+export const DUOS_CONCEDE_STATUS = "duos-concede-status";
+export const DUOS_RESULT = "duos-result";
+export const DUOS_LIFE_STRIP = "duos-life-strip";
+
+export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
+  return `duos-dev-seat-${seat}`;
+}

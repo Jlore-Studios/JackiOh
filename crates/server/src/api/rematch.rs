@@ -5,9 +5,12 @@
 //! (`Registry::presence_of`). Games of a Conquest series offer nothing: the series' continue flow
 //! owns what comes next. Surface contract: docs/v0.3.0/SURFACE.md §11.2.
 //!
-//! R1372: an All Random rematch deals fresh decks, each seat's offer carrying its player's "More
-//! cards from the newest set" (`leanNewest`, absent = off; the latest offer's stands). A Best-of-1
-//! rematch replays its frozen decks and reads no lean.
+//! R1372, R924000: an All Random rematch deals fresh decks, each seat's offer carrying its player's
+//! "More cards from" pick (`leanSet`, absent = none, or R1372's `leanNewest` from an older client; the
+//! latest offer's stands). A Best-of-1 rematch replays its frozen decks and reads no lean.
+//!
+//! R915005: the frozen decks are asked the validator's L7 before a rematch is made, so a deck with a
+//! custom card, which plays only in practice, is refused here as at the queue (`loadout_invalid`).
 //!
 //! The response carries only offer stakes, presence booleans and ids (CLAUDE.md rule 7).
 //!
@@ -20,12 +23,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 use indexmap::IndexMap;
-use jackioh_engine::PlayerId;
+use jackioh_engine::{LeanPick, PlayerId};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::api::collection::caller_profile;
-use crate::api::decks::lean_newest_of;
+use crate::api::decks::{assert_no_custom_cards, lean_of};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, json};
 use crate::api::queue::{discard_open, new_seed, new_uuid};
 use crate::app::{App, now_ms};
@@ -63,8 +66,8 @@ pub struct RematchStatusBody {
 struct OfferEntry {
     /// Seat -> the stakes it offered.
     offers: IndexMap<PlayerId, RematchStakes>,
-    /// R1372: seat -> its latest offer's "More cards from the newest set".
-    leans: IndexMap<PlayerId, bool>,
+    /// R1372, R924000: seat -> its latest offer's "More cards from" pick.
+    leans: IndexMap<PlayerId, Option<LeanPick>>,
     /// `now` of the latest offer; the sweep reads this.
     at: i64,
     /// The game equal stakes made, once made.
@@ -157,17 +160,23 @@ fn seat_of(match_row: &MatchRow, profile_id: &str) -> Option<PlayerId> {
 
 /// Creates the rematch both seats offered, as `queue.rs`'s `start_paired_match` makes a paired
 /// match: a Best-of-1 replays the frozen decks and portraits under a fresh seed, an All Random deals
-/// fresh decks from it, each leaning on the newest set when its seat asked (`leans`, R1372).
+/// fresh decks from it, each leaning on the set its seat picked, if any (`leans`, R1372, R924000).
 async fn create_rematch(
     app: &Arc<App>,
     finished: &MatchRow,
     mode: QueueMode,
     stakes: RematchStakes,
-    leans: (bool, bool),
+    leans: (Option<LeanPick>, Option<LeanPick>),
     match_id: &str,
 ) -> Result<(), ApiError> {
-    let seed = new_seed();
     let random = mode == QueueMode::Random;
+    // R915005: a deck with a custom card plays only in practice, so the frozen decks a Best-of-1
+    // rematch would replay are asked the validator's L7, as the queue asks it, before anything is
+    // claimed. All Random deals from the catalog, which holds no custom card.
+    if !random {
+        assert_no_custom_cards(&[&finished.decks.0, &finished.decks.1])?;
+    }
+    let seed = new_seed();
     let portrait_of = |at: usize| -> Option<String> {
         finished
             .portraits
@@ -307,7 +316,7 @@ async fn create_rematch(
                     .await
                     .map_err(|error| ApiError::internal(error.to_string()))?;
                 for bot in &bots {
-                    tx.profiles_set_in_match(bot, None)
+                    tx.profiles_clear_in_match(bot, match_id)
                         .await
                         .map_err(|error| ApiError::internal(error.to_string()))?;
                 }
@@ -325,30 +334,84 @@ async fn create_rematch(
     }
 
     // After the start, not before: the row is what the in-match reference points at
-    // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. A seat taken during
-    // the start keeps its game and tickets; a failure here is logged, not thrown.
-    let flagged = async {
-        let mut tx = app.db.begin(None).await.map_err(|error| ApiError::internal(error.to_string()))?;
+    // (`profiles_current_match_id_fkey`), so flagging first fails on Postgres. Each seat is
+    // claimed compare-and-set (R890000): a seat taken during the start loses here instead of
+    // being seated twice, and the taken seat keeps its game and tickets.
+    let seated = async {
+        let mut tx = app
+            .db
+            .begin(None)
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        let mut taken: Option<String> = None;
         for seat in [&seats.0, &seats.1] {
-            let found = tx.profiles_get_many(std::slice::from_ref(&seat.profile_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
-            let taken = found
+            // A seat the claim already holds (R639000's bots, seated for this match before the
+            // start) reads back as seated: only a flag pointing elsewhere loses. The read is
+            // only for equality; the compare-and-set stays the guard.
+            let held = tx
+                .profiles_get_many(std::slice::from_ref(&seat.profile_id))
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?;
+            let already = held
                 .first()
-                .is_some_and(|profile| profile.in_match_id.as_deref().is_some_and(|current| current != match_id));
-            if taken {
-                tracing::info!(event = "rematch.seat_taken", matchId = %match_id, profileId = %seat.profile_id);
-                continue;
+                .is_some_and(|profile| profile.in_match_id.as_deref() == Some(match_id));
+            if !already
+                && !tx
+                    .profiles_set_in_match(&seat.profile_id, Some(match_id))
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?
+            {
+                taken = Some(seat.profile_id.clone());
+                break;
             }
-            tx.profiles_set_in_match(&seat.profile_id, Some(match_id)).await.map_err(|error| ApiError::internal(error.to_string()))?;
             // A stray open ticket would block the re-queue M7-T1 promises after this game ends.
-            if let Some(ticket) = tx.tickets_open_for_profile(&seat.profile_id).await.map_err(|error| ApiError::internal(error.to_string()))? {
-                tx.tickets_cancel(&ticket.id, now_ms()).await.map_err(|error| ApiError::internal(error.to_string()))?;
+            if let Some(ticket) = tx
+                .tickets_open_for_profile(&seat.profile_id)
+                .await
+                .map_err(|error| ApiError::internal(error.to_string()))?
+            {
+                tx.tickets_cancel(&ticket.id, now_ms())
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
             }
         }
-        tx.commit().await.map_err(|error| ApiError::internal(error.to_string()))
+        tx.commit()
+            .await
+            .map_err(|error| ApiError::internal(error.to_string()))?;
+        Ok::<_, ApiError>(taken)
     }
     .await;
-    if let Err(error) = flagged {
-        tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
+    match seated {
+        Err(error) => {
+            tracing::error!(event = "rematch.in_match_failed", matchId = %match_id, message = %error.message);
+        }
+        Ok(Some(taken)) => {
+            // That seat found another game mid-start. Undo the rematch: stop the actor, then
+            // erase the live match with no result (R679), whose `on delete set null` releases
+            // the winner seat's flag and any bot flags `bots_claim_for_rematch` set, while the
+            // taken seat is untouched. The caller clears the offer claim and the seats re-offer.
+            tracing::info!(event = "rematch.seat_taken", matchId = %match_id, profileId = %taken);
+            app.matches.stop(match_id).await;
+            let voided = async {
+                let mut tx = app
+                    .db
+                    .begin(None)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.matches_forget_voided(match_id)
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))?;
+                tx.commit()
+                    .await
+                    .map_err(|error| ApiError::internal(error.to_string()))
+            }
+            .await;
+            if let Err(error) = voided {
+                tracing::error!(event = "rematch.void_failed", matchId = %match_id, message = %error.message);
+            }
+            return Err(already_in_match());
+        }
+        Ok(None) => {}
     }
     tracing::info!(event = "rematch.created", from = %finished.id, matchId = %match_id, stakes = stakes);
     Ok(())
@@ -431,10 +494,10 @@ pub async fn offer_rematch(app: &Arc<App>, req: Req) -> ApiResult {
 async fn offer_rematch_route(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let stakes = stakes_of(&req.body)?;
-    // R1372: absent is off, so an offer from a client before it is a plain rematch.
-    let lean_newest = lean_newest_of(&req.body)?;
+    // R1372, R924000: absent is no lean, so an offer from a client before it is a plain rematch.
+    let lean = lean_of(&req.body)?;
     let (match_row, seat) = callers_match(app, &req, &profile).await?;
-    let match_id = offer_as(app, &match_row, seat, stakes, lean_newest).await?;
+    let match_id = offer_as(app, &match_row, seat, stakes, lean).await?;
     let created = RematchOfferBody { match_id };
     Ok(json(
         200,
@@ -470,7 +533,7 @@ pub async fn offer_for_bot(
     let Some(match_row) = found else {
         return Ok(None);
     };
-    offer_as(app, &match_row, seat, stakes, false).await
+    offer_as(app, &match_row, seat, stakes, None).await
 }
 
 /// The offer of `seat` (the seat its account began the match in) once the caller is known: the
@@ -482,7 +545,7 @@ async fn offer_as(
     match_row: &MatchRow,
     seat: PlayerId,
     stakes: RematchStakes,
-    lean_newest: bool,
+    lean: Option<LeanPick>,
 ) -> Result<Option<String>, ApiError> {
     // R672: only a ranked match can spawn a double-or-nothing.
     if stakes == STAKE_DOUBLE && match_row.ranked != Some(true) {
@@ -526,11 +589,11 @@ async fn offer_as(
         };
         entry.at = now;
         entry.offers.insert(seat, stakes);
-        entry.leans.insert(seat, lean_newest);
+        entry.leans.insert(seat, lean);
         if entry.offers.get(&seat.opponent()) == Some(&stakes) && entry.match_id.is_none() {
             let new_id = new_uuid();
             entry.match_id = Some(new_id.clone());
-            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().unwrap_or(false);
+            let lean_of = |at: PlayerId| entry.leans.get(&at).copied().flatten();
             let leans = (lean_of(PlayerId::P1), lean_of(PlayerId::P2));
             (Some((new_id, entry.generation, leans)), None)
         } else {

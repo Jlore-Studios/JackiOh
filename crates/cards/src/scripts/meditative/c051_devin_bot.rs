@@ -5,16 +5,42 @@
 //! Engine: `fill_board_random` with `{ type: Unit, stats: {1, 1}, withTokens: true }` (R1080): every
 //! empty, unlocked unit zone, left to right, gets its own pick from the match rng, repeats allowed,
 //! from the Units whose printed base face is 1/1, tokens included, never Devin Bot itself (R387).
-//! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.9.
+//! Summons fire no Cry (R1). It has had no Reborn since patch v0.3.10.
+
+use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-051";
 
-// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "No Reborn (patch v0.3.9); Cry (played or
+fn devin_bot(radiant: bool) -> Script {
+    Script {
+        cry: Some(hook(move |_ctx| {
+            vec![fill_board_random(json_as(json!({
+                "query": {
+                    "type": "Unit",
+                    "stats": { "attack": 1, "health": 1 },
+                    "withTokens": true,
+                },
+                "radiant": radiant,
+            })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: devin_bot(false),
+        radiant: devin_bot(true),
+    }
+}
+
+// M #51 Devin Bot — SPEC §8.8 row 51, BUILD M10 row M 51: "No Reborn (patch v0.3.10); Cry (played or
 // cast, R1): each empty, unlocked unit zone of yours, left to right, gets its own random Unit whose
 // printed base face is 1/1, tokens included, never Devin Bot (R1080); a full board draws no random
 // number (R129); it dies for good; radiant 2/2 and the 1/1s are Radiant".
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jackioh_engine::effects::cast_new;
     use jackioh_engine::testkit::*;
     use jackioh_engine::zones::{ZoneSlot, lock_zone};
@@ -102,7 +128,7 @@ mod tests {
             }
 
             #[test]
-            fn has_no_reborn_since_patch_v0_3_9_so_it_dies_for_good() {
+            fn has_no_reborn_since_patch_v0_3_10_so_it_dies_for_good() {
                 let _guard = preview_sets(&[SetName::Meditative]);
                 let mut s = board(
                     "devin-reborn-keyword",
@@ -256,7 +282,7 @@ mod tests {
                 before.sort();
                 assert_eq!(before.len(), 5);
                 // Lunar Eclipse deals 3 to the 1/1 Bot itself: a deterministic kill. With no Reborn
-                // (patch v0.3.9) the four it summoned stay and nothing new arrives.
+                // (patch v0.3.10) the four it summoned stay and nothing new arrives.
                 s.end_turn();
                 let me = s.card(BOT).id.clone();
                 s.play(ECLIPSE, eclipse(&me));

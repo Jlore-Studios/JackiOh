@@ -1895,7 +1895,7 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
 
     #[test]
     fn r280_base_in_hand_it_previews_7_and_its_cry_then_deals_exactly_that() {
-        // 6 on the field and the 1 its Cry places (patch v0.3.9, #831).
+        // 6 on the field and the 1 its Cry places (patch v0.3.10, #831).
         in_hand_previews_the_hit(FaceKind::Base, 7);
     }
 

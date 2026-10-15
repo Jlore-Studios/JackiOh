@@ -6,17 +6,79 @@
 //!   Engine:  "Activate (once a turn) and Activate ♾️ (§6.2, R81, R384; R402 target in action): remove a
 //!            Plague Counter. Forced attack (R53, §4.2); the Radiant's second attack happens only if the
 //!            unit is still on the field (R96). Tunes: draw 2 ↑; attacks 1 ↑."
-//!   Patch v0.3.9 (#831): the base face activated without limit before, and the Radiant face fused an
+//!   Patch v0.3.10 (#831): the base face activated without limit before, and the Radiant face fused an
 //!   enemy permanent onto a card of yours; the Radiant face is now the old base face with doubled
 //!   numbers.
 
+use jackioh_engine::effects::{consume_plague, draw, exile, forced_attack_random, instance_of};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-078";
+
+const CHOSEN: TargetSpec = TargetSpec::Chosen { index: None };
+
+/// What the chosen permanent's side and row make of the removed Plague Counter, read as the activation
+/// runs: an enemy permanent is exiled; your backrow card draws; your Unit attacks a random enemy.
+fn outcome(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
+    let Some(card) = instance_of(&*ctx, &CHOSEN) else {
+        return vec![];
+    };
+    let Zone::Field { row, .. } = card.zone else {
+        return vec![];
+    };
+    if card.controller != ctx.controller {
+        return vec![exile(json_as(json!({ "target": CHOSEN })))];
+    }
+    if row == Row::Backrow {
+        return vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))];
+    }
+    vec![forced_attack_random(json_as(
+        json!({ "attacker": CHOSEN, "times": param(&*ctx, "attacks") }),
+    ))]
+}
+
+/// Patch v0.3.10 (#831): the base face activates once a turn, and the Radiant face, which fused an enemy
+/// permanent before, runs the base face's text with Activate ♾️.
+fn mutate(uses: ActivationUses) -> Script {
+    let ability = ActivationDecl {
+        id: "mutate".into(),
+        label: "Remove a Plague Counter".into(),
+        uses,
+        cost: None,
+        targets: vec![TargetDecl::target(
+            1,
+            1,
+            json!({ "side": "any", "of": ["unit", "backrow"], "plague": true }),
+        )],
+        modes: vec![],
+        can_activate: Some(condition_hook(|c| {
+            permanents_on_field(c.state, c.controller).iter().any(|card| plague_on(card) > 0)
+        })),
+        has: None,
+        run: hook(|ctx| {
+            let mut effects = vec![consume_plague(json_as(json!({ "target": CHOSEN })))];
+            effects.extend(outcome(ctx));
+            effects
+        }),
+    };
+    Script {
+        activations: vec![ability],
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: mutate(ActivationUses::Count(1)),
+        radiant: mutate(ActivationUses::Unlimited),
+    }
+}
 
 // SPEC §8.6 row 78: Field Spell (R402); Activate (Radiant ♾️, R384) removes Plague token:
 // enemy exiled; backrow draws 2 (Radiant 4); Unit forced-attacks random enemy (R53; R177, R386).
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::{ID, script};
     use jackioh_engine::testkit::*;
     use std::collections::BTreeSet;
 
@@ -110,7 +172,7 @@ mod tests {
                 { "key": "attacks", "base": 1, "radiant": 2, "better": "up", "step": 1, "min": 1 }
             ])
         );
-        let scripts = crate::scripts_of()[ID].clone();
+        let scripts = script();
         assert_eq!(js(&scripts.base.activations[0].uses), json!(1));
         assert_eq!(js(&scripts.radiant.activations[0].uses), json!("unlimited"));
         for face in [&scripts.base, &scripts.radiant] {
@@ -408,7 +470,7 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// R402 an enemy permanent is exiled, as on the base face (it was fused before patch v0.3.9)
+        /// R402 an enemy permanent is exiled, as on the base face (it was fused before patch v0.3.10)
         #[test]
         fn r402_an_enemy_permanent_is_exiled_with_no_prompt() {
             let mut s = scenario(json!({

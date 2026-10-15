@@ -10,7 +10,20 @@
 //! The count is the declared number `draw` (R386), 3 or 6, read through `param`; both faces run this
 //! one script.
 
+use jackioh_engine::effects::draw;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-024";
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        cry: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 6 is its declared `draw`, which `param` reads off the running face.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C #24 Book of Knowledge — SPEC §8.6 row 24, BUILD M9 Classic row C 24: "Draw 3: three draws, each
 // with its own cast-on-draw chain (R58), fatigue from an empty deck, a full hand burning (R317), a
@@ -18,14 +31,13 @@ pub const ID: &str = "classic-024";
 // radiant: draw 6; its tuned number (draw) reads through `param()` (R386)".
 //
 // The steal case puts C #4 Palantir in the opponent's backrow: the base face steals a (1) Cost Spell
-// with no "you may" (balance patch 1, mandatory) and casts it itself (patch v0.3.9, R831001), so the
+// with no "you may" (balance patch 1, mandatory) and casts it itself (patch v0.3.10, R831001), so the
 // Book draws its 3 for the opponent and never for you while Palantir stands. (The draw-limit half,
 // B5 E3, is proved in C #4's own test file.)
 #[cfg(test)]
 mod tests {
     use super::*;
     use jackioh_engine::testkit::*;
-    use std::sync::Arc;
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -61,7 +73,7 @@ mod tests {
         #[test]
         fn runs_one_script_on_both_faces() {
             crate::register_all();
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(crate::card_def(ID).id, BOOK);
             // TS `expect(radiant).toBe(base)`: the Radiant face is the base script itself.
             assert!(Arc::ptr_eq(

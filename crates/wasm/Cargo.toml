@@ -6,9 +6,8 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
-[[bin]]
-name = "jackioh-wasm"
-path = "src/main.rs"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
@@ -17,6 +16,11 @@ default = []
 # tests, the e2e client) and apps/web's `prebuild` turns it off for the production bundle
 # (`JACKIOH_WASM_PREVIEW=0`), so a module a player loads can preview nothing.
 preview = ["jackioh-engine/testkit"]
+# #936's Duos bindings (`duos_create`, …), for `/dev/duos` alone, which only a development build
+# serves: off by default, and only apps/web's `predev` turns it on (`JACKIOH_WASM_DUOS=1`,
+# scripts/build-wasm.sh), so no other module (the one a player loads, the e2e client's, the unit
+# tests') carries them. Without it each binding throws the reason.
+duos = []
 
 [dependencies]
 jackioh-engine = { workspace = true }
@@ -24,3 +28,6 @@ jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+wasm-bindgen = { workspace = true }
+js-sys = { workspace = true }
+console_error_panic_hook = { workspace = true }

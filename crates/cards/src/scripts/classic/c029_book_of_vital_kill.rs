@@ -3,7 +3,7 @@
 //!   Base:    "Set health of a hero to 13.\nEnd the turn."
 //!   Radiant: "Set health of a hero to 13."
 //!   Engine:  "Set health (§6.3) on either hero, a declared target (R81): no pipeline, not damage and
-//!            not a heal, like R18's lose health." Patch v0.3.9 (#831): the base face then ends the
+//!            not a heal, like R18's lose health." Patch v0.3.10 (#831): the base face then ends the
 //!            turn (§2.2, as C+ #26 Tommy Tempo's cast on draw does), and the Radiant face no longer
 //!            adds a Book of Flame: its edge is the turn it leaves you.
 //!
@@ -12,12 +12,38 @@
 //! The entry declares no `params`: a Degrade has nothing to move, as 13 is good or bad depending on
 //! whose hero it is.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classic-029";
+
+const VITAL_HEALTH: i32 = 13;
+
+fn set_vital_health() -> Effect {
+    set_health(json_as(json!({ "to": { "of": "chosen" }, "value": VITAL_HEALTH })))
+}
+
+pub fn script() -> CardScripts {
+    let targets = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["hero"] }))];
+
+    let base = Script {
+        targets: targets.clone(),
+        cry: Some(hook(|_ctx| vec![set_vital_health(), end_turn(json_as(json!({})))])),
+        ..Script::default()
+    };
+
+    let radiant = Script {
+        targets,
+        cry: Some(hook(|_ctx| vec![set_vital_health()])),
+        ..Script::default()
+    };
+
+    CardScripts { base, radiant }
+}
 
 // C #29 Book of Vital Kill — SPEC §8.6 row 29, BUILD M9 Classic row C 29: a declared hero target, either
 // side, set to 13 from above or below with Armor unchanged: not damage and not a heal, so hit caps, C #75,
 // Lifesteal, C #52's lethal window and Fed Fauci's tokens never see it; `healthSet` is public; the base
-// face then ends the turn, the Radiant face does not (patch v0.3.9).
+// face then ends the turn, the Radiant face does not (patch v0.3.10).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -28,7 +54,7 @@ mod tests {
 
     const VITAL: &str = "classic-029";
     const GAMBIT: &str = "classic-052"; // C #52 Final Gambit, (2) Trap: a hit that would bring your hero to 0 or less.
-    const FAUCI: &str = "core-091"; // (2) Unit: "Whenever this takes damage, it gets a Plague Counter."
+    const FAUCI: &str = "core-091"; // (2) Unit: "Whenever this takes damage, place a Plague Counter on this."
     const VANILLA: &str = "core-008"; // (1) Unit 4/4, no text.
     const ANTI_ONESHOT: &str = "core-073"; // (2) Field Spell: "Your hero can't take more than 5 damage at a time."
     const FILLER: &str = "core-005"; // (1) Spell, a spare card so a hand never runs out (§2.5).
@@ -54,7 +80,7 @@ mod tests {
             let def = crate::card_def(VITAL);
             assert_eq!(def.id, VITAL);
             assert!(def.params.is_none());
-            let scripts = crate::scripts_of()[ID].clone();
+            let scripts = script();
             assert_eq!(
                 serde_json::to_value(&scripts.base.targets).expect("declarations serialise"),
                 json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["hero"] } }])
@@ -240,7 +266,7 @@ mod tests {
             }
 
             #[test]
-            fn names_no_card_since_patch_v0_3_9() {
+            fn names_no_card_since_patch_v0_3_10() {
                 crate::register_all();
                 assert!(crate::card_def(VITAL).refs.is_none());
             }

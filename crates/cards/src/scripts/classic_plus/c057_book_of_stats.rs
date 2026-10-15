@@ -4,7 +4,32 @@
 //!   Engine:  "A target Unit on either side, declared at play (R81); a permanent buff (§10.4 layer 4).
 //!            Tunes: buff 5 ↑."
 
+use jackioh_engine::effects::buff;
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "classicplus-057";
+
+// R656: a buff helps, so a random cast that targets enemies aims this at friends.
+fn targets() -> Vec<TargetDecl> {
+    vec![TargetDecl {
+        aim: Some(TargetAim::Help),
+        ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))
+    }]
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        targets: targets(),
+        cry: Some(hook(|ctx| {
+            let amount = param(&*ctx, "buff");
+            vec![buff(json_as(json!({ "target": { "of": "chosen" }, "attack": amount, "health": amount })))]
+        })),
+        ..Script::default()
+    };
+    // The same script: the Radiant face's 10 is its declared `buff`, which `param` reads.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
 
 // C+ #57 Book of Stats — SPEC §8.7 row 57, BUILD M9 Classic+ row C+ 57: "A target Unit on either side
 // gets +5/+5 permanently, kept until it leaves the field; an Immune to Spells Unit is no legal target;
@@ -61,7 +86,7 @@ mod tests {
     fn is_a_1_spell_book_that_declares_one_unit_target_on_either_side() {
         crate::register_all();
         assert_eq!(crate::card_def(super::ID).id, BOOK);
-        let scripts = crate::scripts_of()[super::ID].clone();
+        let scripts = super::script();
         assert_eq!(
             serde_json::to_value(&scripts.base.targets).unwrap(),
             json!([{ "kind": "target", "min": 1, "max": 1, "aim": "help", "filter": { "side": "any", "of": ["unit"] } }])

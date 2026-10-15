@@ -14,7 +14,130 @@
 //! R18: "lose 3 health" is not damage: `lose_health` skips the §4.4 pipeline. R62: start-of-turn
 //! triggers run before the draw, so "the bottom card" is the bottom before this turn's draw.
 
+use jackioh_engine::effects::{choose_mode, chosen_options, exile_bottom_of_library, lose_health, summon};
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-065";
+
+/// #65.1, the token this card defines (§7, §8.3).
+const SPIKEY_PILLOW: &str = "core-065-1";
+
+// The option names, worded as §8.3's two cells list them and in that order. These are prompt
+// options, not declared modes (R81), so they reach the client through `state.pending.options` and a
+// test reads them back from there rather than off the Script.
+const EXILE_BOTTOM: &str = "exile bottom";
+const SUMMON_PILLOW: &str = "summon Spikey Pillow";
+const NOTHING: &str = "nothing";
+
+/// "lose 3", named with the health it loses: the declared number `loss` (R386), less being better,
+/// as the card stands when the prompt opens.
+fn lose_option(ctx: &EffectContext<'_>) -> String {
+    format!("lose {}", param(ctx, "loss"))
+}
+
+fn base_options(ctx: &EffectContext<'_>) -> Vec<String> {
+    vec![EXILE_BOTTOM.to_string(), lose_option(ctx), SUMMON_PILLOW.to_string()]
+}
+
+fn radiant_options(ctx: &EffectContext<'_>) -> Vec<String> {
+    vec![NOTHING.to_string(), EXILE_BOTTOM.to_string(), lose_option(ctx), SUMMON_PILLOW.to_string()]
+}
+
+/// The steps of the `resume` table (§10.6); the radiant face uses both.
+const STEP_FIRST: &str = "firstPick";
+const STEP_SECOND: &str = "secondPick";
+
+/// What one answered option does. "nothing" and an answer that named no option are both the empty
+/// list: the trigger still fired and the card stays on the field.
+fn effects_for(ctx: &EffectContext<'_>, option: Option<&str>) -> Vec<Effect> {
+    match option {
+        Some(EXILE_BOTTOM) => vec![exile_bottom_of_library(json_as(json!({ "player": "self" })))],
+        Some(SUMMON_PILLOW) => vec![summon(json_as(json!({ "defId": SPIKEY_PILLOW })))],
+        // R18: lost health, not damage.
+        Some(picked) if picked == lose_option(ctx) => {
+            vec![lose_health(json_as(json!({ "player": "self", "amount": param(ctx, "loss") })))]
+        }
+        _ => vec![],
+    }
+}
+
+/// The answered pick: §10.6 delivers a mode selection in `ctx.targets`, which is what this reads.
+fn pick_of(ctx: &EffectContext) -> Option<String> {
+    chosen_options(ctx).into_iter().next()
+}
+
+fn base() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        start_of_turn: Some(hook(|ctx| {
+            vec![choose_mode(json_as(json!({
+                "options": base_options(ctx),
+                "step": STEP_FIRST,
+                "prompt": "Masochism Mask: choose one",
+            })))]
+        })),
+        resume: IndexMap::from([(
+            STEP_FIRST,
+            hook(|ctx| {
+                let picked = pick_of(ctx);
+                effects_for(ctx, picked.as_deref())
+            }),
+        )]),
+        ..Script::default()
+    }
+}
+
+fn radiant() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            quickdraw: Some(true),
+            ..StaticFlags::default()
+        }),
+        start_of_turn: Some(hook(|ctx| {
+            vec![choose_mode(json_as(json!({
+                "options": radiant_options(ctx),
+                "step": STEP_FIRST,
+                "prompt": "Masochism Mask: choose twice (1 of 2)",
+            })))]
+        })),
+        resume: IndexMap::from([
+            // The first pick resolves, then the second prompt opens — the same option may be picked again,
+            // because these are two separate prompts and the "picked twice" check in `prompts.rs` is
+            // per-prompt.
+            (
+                STEP_FIRST,
+                hook(|ctx| {
+                    let picked = pick_of(ctx);
+                    let mut effects = effects_for(ctx, picked.as_deref());
+                    effects.push(choose_mode(json_as(json!({
+                        "options": radiant_options(ctx),
+                        "step": STEP_SECOND,
+                        "prompt": "Masochism Mask: choose twice (2 of 2)",
+                    }))));
+                    effects
+                }),
+            ),
+            (
+                STEP_SECOND,
+                hook(|ctx| {
+                    let picked = pick_of(ctx);
+                    effects_for(ctx, picked.as_deref())
+                }),
+            ),
+        ]),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: base(),
+        radiant: radiant(),
+    }
+}
 
 // #65 Masochism Mask — SPEC §8.3, §10.6, BUILD M4-T4 row 65.
 //
@@ -22,7 +145,7 @@ pub const ID: &str = "core-065";
 // radiant two picks including 'nothing'."
 #[cfg(test)]
 mod tests {
-    use super::ID;
+    use super::script;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -92,7 +215,7 @@ mod tests {
             // `setup.rs` reads the flag and swaps one opening draw for it; that placement is the engine's
             // own setup test. What this card owes is the flag, on both faces.
             crate::register_all();
-            let faces = crate::scripts_of()[ID].clone();
+            let faces = script();
             assert_eq!(faces.base.static_flags.and_then(|flags| flags.quickdraw), Some(true));
             assert_eq!(faces.radiant.static_flags.and_then(|flags| flags.quickdraw), Some(true));
         }

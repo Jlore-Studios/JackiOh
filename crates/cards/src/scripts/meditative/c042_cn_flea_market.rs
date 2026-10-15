@@ -1,5 +1,5 @@
 //! Meditative #42 CN Flea Market (SPEC §8.8 row 42, ME-MARKET, R1000–R1002, R831002). (1) Spell, CN,
-//! Legendary ((0) before patch v0.3.9).
+//! Legendary ((0) before patch v0.3.10).
 //!
 //!   Base:    "Open a night market. You have {yuan} yuan to buy its cards."
 //!   Radiant: "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards
@@ -10,7 +10,7 @@
 //! caster leaves, and the barter the Radiant face opens (it reads the face that cast it). This file
 //! hands it the shelves: three different random CN cards (never this one, R387), two Auspicious Rocks
 //! (M #39.1) and one random AI generated card (the ten C+ #78 names, read off their AI tag). Each lot
-//! is sold on its base face or, at its Radiant price, its Radiant face (patch v0.3.9, R831002). The
+//! is sold on its base face or, at its Radiant price, its Radiant face (patch v0.3.10, R831002). The
 //! yuan is the declared `yuan` (50, Radiant 80), so a Nerf or Buff moves it (R386).
 //!
 //! Voice audio is owed: the `card-audio.json5` entry is written, and a person with macOS renders it

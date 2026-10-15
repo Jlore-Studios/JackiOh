@@ -11,7 +11,58 @@
 //! a discard, burn or bounce emits another event. Units only, tokens excluded (R11); `def_of` is the layers' own catalog
 //! read, a transient Fuse def included (R77). The gain is a layer-4 `buff`, kept on entering the field.
 
+use jackioh_engine::prelude::*;
+
 pub const ID: &str = "core-089";
+
+/// `factor` is the whole of the radiant text: 1 gains its stats, 2 gains double (§8 Conventions).
+fn feed(factor: i32) -> TriggerDef {
+    TriggerDef::new("corpse-eater-feed", &[GameEventType::Destroyed], move |ctx, event| {
+        // `on` already narrows this, and the check is what gives the payload its type.
+        let GameEvent::Destroyed {
+            def_id,
+            attack,
+            max_health,
+            ..
+        } = event
+        else {
+            return vec![];
+        };
+
+        let dead = def_of(Some(&*ctx.state), def_id);
+        // A destroyed Field Spell or Trap emits the same event; only units feed it.
+        if dead.type_ != CardType::Unit {
+            return vec![];
+        }
+        // R11: a unit token ceases to exist and never reaches a graveyard, so it never died for this.
+        if dead.token {
+            return vec![];
+        }
+
+        // R38, R89: the attack and max health the layers computed at the moment it died. R219: a gain
+        // is never a loss, so a unit #46 starved below 0 max health gives nothing rather than shrinking
+        // the Eater (§10.4 floors attack at 0 already; max health below 0 is only the check's signal).
+        let gained_attack = (*attack).max(0) * factor;
+        let gained_health = (*max_health).max(0) * factor;
+        vec![buff(json_as(json!({
+            "target": { "of": "self" },
+            "attack": gained_attack,
+            "health": gained_health,
+        })))]
+    })
+}
+
+pub fn script() -> CardScripts {
+    let base = Script {
+        hand_triggers: vec![feed(1)],
+        ..Script::default()
+    };
+    let radiant = Script {
+        hand_triggers: vec![feed(2)],
+        ..Script::default()
+    };
+    CardScripts { base, radiant }
+}
 
 // #89 Corpse Eater (SPEC §8.5, BUILD M4-T4 row 89): "In hand it gains the dying unit's current
 // attack and max health from either side, tokens excluded (R11); stats per R38; stops once on the
@@ -25,7 +76,7 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
 
-    const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.9), cost 4
+    const EATER: &str = "core-089"; // 2/2 → 4/4 (6/6 before patch v0.3.10), cost 4
 
     // Inert fixtures: every unit below has a Cry and nothing else, and the harness's `field` setup
     // never fires a Cry.
