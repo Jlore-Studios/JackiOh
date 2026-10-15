@@ -7371,7 +7371,7 @@
     "993": {
       "action": "build",
       "asks": [],
-      "died": 1,
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-15T20:39:29Z",
         "difficulty": "medium",
