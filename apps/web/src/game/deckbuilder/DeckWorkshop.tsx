@@ -289,13 +289,17 @@ function DeckRow({ deck, catalog, collection, nameLength, current, unsynced, onO
         data-practice-only={practice ? "true" : undefined}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
-        aria-label={
-          unsynced ? t("{deck}, {count} of {size} cards, {status}, not saved yet", words) : t("{deck}, {count} of {size} cards, {status}", words)
-        }
         onClick={onOpen}
       >
-        <span className="ws-row-name">{label}</span>
-        <span className="ws-row-meta">
+        {/* A reader hears the row in words and the eye reads it drawn. An aria-label instead would hide
+            the drawn "20/20" from voice control, which axe's label-content-name-mismatch refuses. */}
+        <span className="ws-row-words">
+          {unsynced ? t("{deck}, {count} of {size} cards, {status}, not saved yet", words) : t("{deck}, {count} of {size} cards, {status}", words)}
+        </span>
+        <span className="ws-row-name" aria-hidden="true">
+          {label}
+        </span>
+        <span className="ws-row-meta" aria-hidden="true">
           <span className="ws-row-count">{`${String(deck.cards.length)}/${String(DECK_SIZE)}`}</span>
           <span className="ws-chip" data-status={status.kind}>
             {status.label}
@@ -337,13 +341,16 @@ function TrioRow({ trio, decks, catalog, collection, nameLength, current, unsync
         data-ready={ready ? "true" : "false"}
         data-unsynced={unsynced ? "true" : undefined}
         aria-current={current ? "true" : undefined}
-        aria-label={
-          unsynced ? t("{trio}, {count} of {size} decks, {status}, not saved yet", words) : t("{trio}, {count} of {size} decks, {status}", words)
-        }
         onClick={onOpen}
       >
-        <span className="ws-row-name">{label}</span>
-        <span className="ws-row-meta">
+        {/* As the deck row's: in words for a reader, drawn for the eye. */}
+        <span className="ws-row-words">
+          {unsynced ? t("{trio}, {count} of {size} decks, {status}, not saved yet", words) : t("{trio}, {count} of {size} decks, {status}", words)}
+        </span>
+        <span className="ws-row-name" aria-hidden="true">
+          {label}
+        </span>
+        <span className="ws-row-meta" aria-hidden="true">
           <span className="ws-row-count">{t("{count}/{size} decks", { count: filled, size: trio.deckIds.length })}</span>
           <span className="ws-chip" data-status={ready ? "ready" : "incomplete"}>
             {ready ? t("Ready") : t("Not ready")}

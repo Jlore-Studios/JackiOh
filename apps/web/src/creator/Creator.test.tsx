@@ -78,6 +78,28 @@ async function buildStrike(): Promise<void> {
   await waitFor(() => expect((screen.getByTestId(creatorTestid.save) as HTMLButtonElement).disabled).toBe(false));
 }
 
+describe("the builder's number fields", () => {
+  it("an emptied field stays empty until the next digit, so clearing it and typing 2 gives 2, not 20", async () => {
+    render(<Creator token={TOKEN} api={fakeServer().api} onTry={vi.fn()} />);
+    await screen.findByText("0 of 50 cards");
+    select(creatorTestid.target, "an enemy unit");
+    fireEvent.click(screen.getByTestId(creatorTestid.addHook));
+    fireEvent.click(screen.getByTestId(creatorTestid.addStep));
+    const amount = screen.getByTestId(creatorTestid.stepAmount) as HTMLInputElement;
+
+    fireEvent.change(amount, { target: { value: "" } });
+    expect(amount.value).toBe("");
+    fireEvent.change(amount, { target: { value: "2" } });
+    expect(amount.value).toBe("2");
+    expect(screen.getByTestId(creatorTestid.preview).textContent).toContain("Deal 2 damage to an enemy unit.");
+
+    // Left empty, the field shows the card's number again.
+    fireEvent.change(amount, { target: { value: "" } });
+    fireEvent.blur(amount);
+    expect(amount.value).toBe("2");
+  });
+});
+
 describe("R915010 the creator builds a card with blocks and saves it to the account", () => {
   it("R915010 the blocks write kit Luau, the code view shows it, and a save sends the frame, the script and the model", async () => {
     const server = fakeServer();
