@@ -6982,6 +6982,7 @@
       "planned_by_id": "muse",
       "planned_tier": "medium",
       "provider": "muse",
+      "question": "everything under `.github/` \u2014 the `ci.yml` matrix and job edits quoted verbatim in **Open questions**. A person applies those after the bot's pull request merges; the bot may not touch `.github/`.",
       "run_id": "38688252369",
       "started_at": "2026-10-15T05:43:19Z",
       "stop_requested": false,
