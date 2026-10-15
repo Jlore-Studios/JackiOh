@@ -4,7 +4,7 @@
 
 import { AI_GATE_BUDGET, type SearchBudget } from "@jackioh/ai";
 import { createRng } from "@jackioh/engine";
-import type { Action, ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { newEventsSince } from "../game/animations.ts";
 import { createPracticeCore, type PracticeCore } from "../practice/core.ts";
@@ -263,8 +263,4 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     humanActions,
     view: snapshot.view,
   };
-}
-
-export function humanLog(run: LessonRun): Action[] {
-  return run.debug.log.filter((action) => action.playerId === run.humanSeat);
 }

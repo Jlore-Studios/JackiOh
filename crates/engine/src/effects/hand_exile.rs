@@ -11,26 +11,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::effects::targets::{PlayerSpec, player_of};
-use crate::script::{Effect, EffectContext};
+use crate::script::Effect;
 use crate::state::CardInstance;
-use crate::wire::GameEvent;
-use crate::zones::{MoveResult, OffFieldZone, move_to_zone};
-
-/// One card to the exile pile, exactly as `library.ts` and `move.ts` exile one: the game exile counter
-/// counts only a card that gets there (R55); a unit-token card ceases to exist instead (R11); the
-/// `exiled` event reports the card leaving either way.
-fn exile_card(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    let mut card = card.clone();
-    let moved = move_to_zone(ctx.sink.state, &mut card, OffFieldZone::Exile, Default::default());
-    if matches!(moved, MoveResult::Moved) {
-        ctx.sink.state.counters.exiled += 1;
-    }
-    ctx.sink.events.push(GameEvent::Exiled {
-        instance_id: card.id.clone(),
-        def_id: card.def_id.clone(),
-        owner: card.owner,
-    });
-}
+use crate::zones::exile_to_pile;
 
 /// `exileRandomFromHand`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -58,8 +41,8 @@ pub fn exile_random_from_hand(args: ExileRandomFromHandArgs) -> Effect {
         }
 
         let picked: Vec<CardInstance> = ctx.sink.rng.shuffle(&hand).into_iter().take(count).collect();
-        for card in &picked {
-            exile_card(ctx, card);
+        for card in picked {
+            exile_to_pile(ctx, card);
         }
     })
 }

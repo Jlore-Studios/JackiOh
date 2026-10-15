@@ -14,7 +14,7 @@ use jackioh_engine::wire::PlayerId::{P1, P2};
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::combat::plain;
 use crate::rules::fixtures::harness::{
-    events_of_type, in_hand, new_game, put, set_library, setup_catalog, slot,
+    events_of_type, in_hand, json_of, matches_object, new_game, put, set_library, setup_catalog, slot,
 };
 use crate::rules::fixtures::prompt_harness::{answer_keys, open_as, round_trip};
 use crate::rules::fixtures::quests::{
@@ -117,24 +117,6 @@ fn play_quest_card(state: &mut GameState, def_id: &str, player: PlayerId) -> Pla
         state: step.state,
         events: step.events,
         card,
-    }
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialisable")
-}
-
-/// Every key the expected object names matches, recursively; an array matches element for element
-/// and in length.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
     }
 }
 

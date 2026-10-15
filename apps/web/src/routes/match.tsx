@@ -47,6 +47,8 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
+import OpenedReplay from "../replay/OpenedReplay.tsx";
+import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankWords } from "../rank/rank.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import RematchButtons, { RematchWatcher } from "./Rematch.tsx";
@@ -73,8 +75,14 @@ export const matchTestid = {
   connecting: "match-connecting",
   /** The sentence that stands in for a refused socket. */
   refused: "match-refused",
+  /** The button that retries at once while the connection line says Reconnecting…. */
+  reconnect: "match-reconnect",
   /** Both seats' visible ranks and whether this game moves them (R604, R612). */
   ranks: "match-ranks",
+  /** R768000: in a finished match's result panel, its replay from step 0. */
+  watchReplay: "match-watch-replay",
+  /** R768000: in a finished match's result panel, its last turn's GIF. */
+  shareLastTurn: "match-share-last-turn",
 } as const;
 
 /** A connection state in a player's words, for the match bar and the wait before the board. */
@@ -93,12 +101,22 @@ export function connectionWords(state: ConnectionState): string {
   }
 }
 
-/** The connection line: the words for a player, the raw state for tests. */
-function ConnectionLine({ state }: { state: ConnectionState }): ReactElement {
+/** The connection line: the words for a player, the raw state for tests, and a retry while reconnecting. */
+function ConnectionLine({ state, onReconnect }: { state: ConnectionState; onReconnect: () => void }): ReactElement {
   return (
-    <span data-testid={matchTestid.status} data-connection={state}>
-      {connectionWords(state)}
-    </span>
+    <>
+      <span data-testid={matchTestid.status} data-connection={state}>
+        {connectionWords(state)}
+      </span>
+      {state === "reconnecting" ? (
+        <>
+          {" "}
+          <button type="button" className="link-button" data-testid={matchTestid.reconnect} onClick={onReconnect}>
+            {t("Reconnect now")}
+          </button>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -206,6 +224,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // R336: a Conquest game shows its series' score and won decks, and once it is over the way to the next game.
   const series = useMatchSeries(token, matchId, match.view?.result != null);
   const lookup = useMemo(() => (defs === null ? null : lookupFromDefs(defs)), [defs]);
+  /**
+   * R768000: the finished match's replay, opened from its result panel at step 0, or at its last
+   * step making the last turn's GIF; null shows the board. Leaving goes back to the board and its
+   * result panel.
+   */
+  const [watching, setWatching] = useState<{ share: boolean } | null>(null);
 
   // BUILD M5-T3 / `e2e/support/types.ts`: `window.__jackioh` outside production builds. Installed
   // once, reading through a ref, so a spec that re-reads `handle.state` sees the current view and
@@ -327,7 +351,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
     return (
       <Loading what="Joining the match…" slow testId={matchTestid.connecting}>
         <p className="auth-hint">
-          <ConnectionLine state={match.connection} />
+          <ConnectionLine state={match.connection} onReconnect={match.connect} />
           {DEV_ONLY ? (
             <>
               {" "}
@@ -336,6 +360,22 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           ) : null}
         </p>
       </Loading>
+    );
+  }
+
+  if (watching !== null && view.result !== null) {
+    return (
+      <CatalogContext.Provider value={lookup}>
+        <OpenedReplay
+          key={watching.share ? "share" : "watch"}
+          load={() => openOnlineMatchReplay(token, matchId)}
+          start={watching.share ? "last" : "first"}
+          shareOnOpen={watching.share}
+          onLeave={() => {
+            setWatching(null);
+          }}
+        />
+      </CatalogContext.Provider>
     );
   }
 
@@ -384,6 +424,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
             />
           ) : null}
           <SeriesContinue series={series} matchId={matchId} />
+          <button type="button" data-testid={matchTestid.watchReplay} onClick={() => setWatching({ share: false })}>
+            {t("Watch the replay")}
+          </button>
+          <button type="button" data-testid={matchTestid.shareLastTurn} onClick={() => setWatching({ share: true })}>
+            {t("Share the last turn")}
+          </button>
           <button type="button" data-testid="result-back" onClick={() => navigate(paths.play)}>
             {t("Back to lobby")}
           </button>
@@ -403,7 +449,7 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
       }
       matchStatus={
         <>
-          {t("Online match")} · <ConnectionLine state={match.connection} />
+          {t("Online match")} · <ConnectionLine state={match.connection} onReconnect={match.connect} />
           {DEV_ONLY ? (
             <>
               {" "}· {t("match")} <code>{matchId}</code> · {t("seat")} <code>{view.viewer}</code>

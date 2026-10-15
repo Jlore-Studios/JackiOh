@@ -60,6 +60,9 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
+    /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
+    /// tests never share presence.
+    pub queue_presence: api::queue::QueuePresence,
 }
 
 // ---------------------------------------------------------------------------
@@ -496,11 +499,6 @@ pub static ROUTES: &[Route] = &[
     ),
 ];
 
-/// TS `allRoutes()`.
-pub fn all_routes() -> &'static [Route] {
-    ROUTES
-}
-
 // ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
@@ -570,6 +568,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),
+        queue_presence: api::queue::QueuePresence::new(),
     });
 
     if app.env.e2e {
@@ -589,8 +588,6 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
     }
     Ok(app)
 }
-
-const WS_PATH: &str = "/ws/match";
 
 /// A WebSocket handshake (`Upgrade: websocket`), which `actor::ws_server::handle` answers; anything
 /// else on the same path is an ordinary request for the API router (TS's `ws` server only ever saw
@@ -646,7 +643,7 @@ pub fn router(app: Arc<App>) -> Router {
     };
 
     Router::new()
-        .route(WS_PATH, axum::routing::any(socket))
+        .route(actor::ws_server::WS_PATH, axum::routing::any(socket))
         .fallback(fallback)
 }
 

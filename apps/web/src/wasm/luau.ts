@@ -17,6 +17,7 @@ export type LuauBindings = {
   init(): void;
   catalog(): string;
   catalog_version(): string;
+  carried_versions(): string;
   create_game(args: string): string;
   begin_game(state: string): string;
   reduce(state: string, action: string): string;
@@ -72,6 +73,7 @@ function adapt(m: JackiohWasmLuauModule): LuauBindings {
     init: () => m._init(),
     catalog: () => take(m._catalog()),
     catalog_version: () => take(m._catalog_version()),
+    carried_versions: () => take(m._carried_versions()),
     create_game: one((a) => m._create_game(a)),
     begin_game: one((a) => m._begin_game(a)),
     reduce: two((a, b) => m._reduce(a, b)),

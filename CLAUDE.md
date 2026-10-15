@@ -46,12 +46,14 @@ trap backrow. This file binds every agent, not only Claude.
    crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
    `ts` feature (the engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
-   `OnceLock`s set once by `jackioh_cards::register_all()`, `jackioh-luau`'s thread-local VM, which holds
-   compiled chunks and scripts and no game state (#442 L8), and the engine's custom-script host, a
-   thread-local lent for one call by `custom::with_custom_scripts` (#915, R915002). A Luau script is kept pure by its host: the sandbox (L5), the
-   integer boundary every value crosses (L6) and the lint (L6, L7), all in `crates/luau/README.md`. Data
-   reaches a pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs
-   the disk or a clock goes in `crates/tools`.
+   `OnceLock`s set once by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under
+   among them, each built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled
+   chunks and scripts and no game state (#442 L8), and two engine thread-locals, each set for one call and
+   put back after it: the shipped catalog a replay is folding under (R767000), and the custom-script host
+   `custom::with_custom_scripts` lends (#915, R915002). A Luau script is kept pure by its host: the sandbox
+   (L5), the integer boundary every value crosses (L6) and the lint (L6, L7), all in
+   `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
+   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return `Vec<Effect>` built from the engine's effects module (`jackioh_engine::effects`, in
    reach through `jackioh_engine::prelude`). Never mutate state in a card file: a hook reads its
    `EffectContext` and the engine's read helpers and returns effects. (A custom card's Luau script does the
@@ -76,6 +78,15 @@ trap backrow. This file binds every agent, not only Claude.
     files or more; **medium** for the rest. Torn between two, take the harder. The bot never changes your
     label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner rates
     it.
+12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
+    or has not run, and none calls a failure pre-existing or environmental without a link to the same check
+    failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
+    red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
+13. Never delete or disable anything called from outside this codebase without asking a person first: a
+    webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
+    or a person or another service calls (`/api/catalog` is Render's health check), or a `cargo jackioh`,
+    server or harness subcommand that a workflow, a deploy or a person runs. That nothing in the tree calls
+    it is no proof it is dead (#900).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
@@ -141,8 +152,8 @@ pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web te
 ```
 # Cypress; the root `pnpm install` covers e2e/
 E2E=1 pnpm --dir apps/web dev                  # http://localhost:5173, serves /dev/hotseat
-E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39
-cargo build --release -p jackioh-tools         # target/release/jackioh, whose `replay` specs 01, 13 and 39 fold the browser's log with
+E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40
+cargo build --release -p jackioh-tools         # target/release/jackioh, whose `replay` specs 01, 13 and 40 fold the browser's log with
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed
 pnpm --dir apps/web build:e2e && pnpm --dir apps/web exec vite preview --port 5173 --strictPort   # a built client, as CI serves it

@@ -15,7 +15,7 @@ export type ReplayHashPayload = {
   handicaps?: Partial<Record<"p1" | "p2", unknown>>;
   /** R433: the seats the game dealt (spec 13's practice random deck: the human's), passed to `fold` untouched. */
   dealt?: ("p1" | "p2")[];
-  /** R915006: a practice game's custom cards (spec 39), folded through the card kit by the CLI. */
+  /** R915006: a practice game's custom cards (spec 40), folded through the card kit by the CLI. */
   customCards?: unknown[];
 };
 

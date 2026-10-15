@@ -915,3 +915,139 @@ mod r768_bounded_cost {
         assert!(cache.get("m-new", ttl_ms).is_none());
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Older shipped versions (R767000)
+// ---------------------------------------------------------------------------------------------
+
+mod r767000_the_versions {
+    use super::*;
+
+    use indexmap::IndexMap;
+    use jackioh_engine::testkit::{
+        clear_overrides, register_catalog_as, register_shipped, registered_catalog,
+    };
+    use jackioh_engine::{CardDefs, ShippedCatalog, find_instance};
+
+    /// The version the matches below were played on: carried by this thread's build, not its own.
+    const PLAYED_ON: &str = "v-n";
+
+    /// A game that plays a card whenever it can, else attacks, else ends its turn, to its end or
+    /// `max` actions (then the seat to act concedes): one that puts units on the board.
+    fn played_with_plays(seed: &str, max: usize) -> Played {
+        install_test_cards();
+        let decks = decks_that_open_on_the_mulligans(&real_pool(), seed);
+        let mut state = begun_game(seed, decks.clone());
+        let mut log = Vec::new();
+        while state.result.is_none() && log.len() < max {
+            let seat = seat_to_act(&state).expect("a seat to act");
+            let legal = legal_actions(&state, seat);
+            let pick = |wanted: fn(&ActionBody) -> bool| legal.iter().find(|body| wanted(body)).cloned();
+            let body = pick(|body| matches!(body, ActionBody::Play { .. }))
+                .or_else(|| pick(|body| matches!(body, ActionBody::Attack { .. })))
+                .or_else(|| pick(|body| matches!(body, ActionBody::EndTurn)))
+                .or_else(|| legal.first().cloned())
+                .expect("a legal action");
+            state = act(&state, &mut log, seat, body);
+        }
+        if state.result.is_none() {
+            let seat = seat_to_act(&state).expect("a seat to act");
+            state = act(&state, &mut log, seat, ActionBody::Concede);
+        }
+        Played {
+            seed: seed.to_string(),
+            decks,
+            log,
+            last: state,
+        }
+    }
+
+    /// The catalog `played` ran under with the first unit it played one attack higher on both
+    /// faces, or `None` when it played none.
+    fn patched_unit(played: &Played, catalog: &CardDefs) -> Option<CardDefs> {
+        let unit = played.log.iter().enumerate().find_map(|(k, action)| {
+            let ActionBody::Play { instance_id, .. } = &action.body else {
+                return None;
+            };
+            let def_id = find_instance(&played.state_at(k), instance_id)?.def_id.clone();
+            catalog.get(&def_id)?.base.attack.map(|_| def_id)
+        })?;
+        let mut patched = catalog.clone();
+        let def = patched.get_mut(&unit)?;
+        def.base.attack = def.base.attack.map(|attack| attack + 1);
+        def.radiant.attack = def.radiant.attack.map(|attack| attack + 1);
+        Some(patched)
+    }
+
+    /// A game on `PLAYED_ON` whose fold under the build's patched catalog misses its hash, each
+    /// seat's every step as the live game showed it, recorded before the patch.
+    fn played_before_a_patch() -> (Played, [Vec<Value>; 2]) {
+        for n in 1..=8 {
+            let played = played_with_plays(&format!("replay-versions-{n}"), PLAYED_ACTIONS);
+            let original = registered_catalog().clone();
+            let Some(patched) = patched_unit(&played, &original) else {
+                continue;
+            };
+            let shown = [PlayerId::P1, PlayerId::P2].map(|seat| {
+                (0..played.steps())
+                    .map(|k| step_of(&played, k, seat))
+                    .collect::<Vec<_>>()
+            });
+            register_shipped(vec![ShippedCatalog::new(PLAYED_ON, original, IndexMap::new())]);
+            register_catalog_as(patched, "test");
+            let refolded = fold(&fold_args(
+                &played.seed,
+                &played.decks,
+                played.log.clone(),
+                None,
+                None,
+                None,
+            ));
+            if hash_state(&refolded.state) != hash_state(&played.last) {
+                return (played, shown);
+            }
+            clear_overrides();
+        }
+        panic!("no seed played a unit whose patch changes its game");
+    }
+
+    #[tokio::test]
+    async fn r767000_a_match_on_a_shipped_version_replays_step_for_step_after_a_patch() {
+        let (app, tokens) = app_with_players().await;
+        let (played, shown) = played_before_a_patch();
+        let finish = Finish {
+            row: json!({ "catalogVersion": PLAYED_ON }),
+            ..Finish::new("m-carried", &played, now_ms())
+        };
+        seed_finished(&app, finish, &played).await;
+
+        assert_eq!(all_steps(&app, "m-carried", &tokens.a).await, shown[0]);
+        assert_eq!(all_steps(&app, "m-carried", &tokens.b).await, shown[1]);
+        let (status, list) = get(&app, "/api/replays", &tokens.a).await;
+        assert_eq!(status, 200, "{list}");
+        assert_eq!(list["replays"][0]["matchId"], "m-carried");
+        assert!(list["replays"][0].get("unavailable").is_none(), "{list}");
+        clear_overrides();
+    }
+
+    #[tokio::test]
+    async fn r767000_a_match_on_a_shipped_version_whose_fold_misses_its_hash_is_rules_changed() {
+        let (app, tokens) = app_with_players().await;
+        let (played, _) = played_before_a_patch();
+        for (id, version, hash, reason) in [
+            ("m-missed", PLAYED_ON, "not-the-hash", "rules_changed"),
+            ("m-uncarried", "v-gone", "not-the-hash", "earlier_patch"),
+        ] {
+            let finish = Finish {
+                hash: Some(hash.to_string()),
+                row: json!({ "catalogVersion": version }),
+                ..Finish::new(id, &played, now_ms())
+            };
+            seed_finished(&app, finish, &played).await;
+            let (status, body) = get(&app, &format!("/api/replays/{id}"), &tokens.a).await;
+            assert_eq!(status, 422, "{id}: {body}");
+            assert_eq!(body["error"]["details"]["reason"], reason, "{id}");
+        }
+        clear_overrides();
+    }
+}

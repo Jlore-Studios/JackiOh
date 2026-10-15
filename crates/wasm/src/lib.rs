@@ -223,6 +223,13 @@ pub fn catalog_version() -> String {
     jackioh_cards::catalog_version().to_string()
 }
 
+/// R767000: the shipped versions this module carries for replays, oldest first: in the browser,
+/// those from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM` on.
+#[wasm_bindgen]
+pub fn carried_versions() -> Result<String, JsError> {
+    to_json(&jackioh_cards::carried_versions())
+}
+
 // ---------------------------------------------------------------------------------------------
 // The engine (SURFACE §6.1)
 // ---------------------------------------------------------------------------------------------
@@ -289,15 +296,16 @@ pub fn fold(args_json: &str) -> Result<String, JsError> {
     to_json(&engine::fold(&args))
 }
 
-/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, but only on this build's catalog
-/// version: a game of another is refused as `earlier_patch` before its decks are read.
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was
+/// played on (R767000): this build's own or one it carries. A game of any other version is refused as
+/// `earlier_patch` before its decks are read.
 #[wasm_bindgen]
 pub fn replay_open(args_json: &str, record_json: &str) -> Result<String, JsError> {
     let record: ReplayRecord = parse("replayOpen: the record", record_json)?;
     let build = jackioh_cards::catalog_version();
-    if record.catalog_version == build {
+    if let Ok(shipped) = engine::catalog_for(&record.catalog_version, build) {
         let setup: CreateGameArgs = parse("replayOpen", args_json)?;
-        check_setup(&setup)?;
+        engine::with_shipped(shipped, || check_setup(&setup))?;
     }
     let args: FoldArgs = parse("replayOpen", args_json)?;
     to_json(&engine::replay_open(&args, &record, build))

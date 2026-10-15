@@ -6,7 +6,7 @@ use jackioh_engine::mana::effective_cost;
 use jackioh_engine::modifiers::add_modifier;
 use jackioh_engine::testkit::*;
 
-use crate::rules::fixtures::harness::{events_of_type, put, slot};
+use crate::rules::fixtures::harness::{events_of_type, matches_object, put, slot};
 use crate::rules::fixtures::play_pipeline_b::{
     QUEST_REWARD_KEY, discover_spell, grave_spell, grave_trap, grave_unit, in_graveyard, lobbyist, monkey,
     only, pb_act, pb_playing, pb_reduce, plantation, plays_of, quest_card, round_trip, second_wind,
@@ -41,19 +41,6 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Vec<Value> {
 
 fn view_events_of(state: &GameState, viewer: PlayerId, kind: GameEventType) -> Vec<Value> {
     of_type(&view_for(state, viewer).events, kind)
-}
-
-/// Whether `actual` matches `expected` over JSON: objects by subset, arrays by length and element.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len() && actual.iter().zip(expected).all(|(a, e)| matches_object(a, e))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// A refusal's text (`""` when the action was not refused, which no pattern matches).

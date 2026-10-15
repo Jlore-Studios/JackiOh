@@ -5,8 +5,11 @@
 
 import type { PracticeHost } from "../practice/host.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
+import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
+
 import { ApiRequestError, getReplaySteps } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
+import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS } from "./config.ts";
 import { ReplayFailure, replayFailureOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 
@@ -24,8 +27,15 @@ export function practiceFailure(message: string): ReplayFailure {
   return new ReplayFailure("error", message);
 }
 
-/** A practice game kept on this device: `listing` is the row `replays` answered, `host` the worker that holds the game. */
-export function practiceReplaySource(host: PracticeHost, listing: Pick<PracticeReplaySummary, "game" | "steps">): ReplaySource {
+/**
+ * A practice game kept on this device: `listing` is the row `replays` answered (or the finished
+ * game's own snapshot's `replay`), `host` the worker that holds the game, or anything that sends it
+ * requests (the practice controller's queue).
+ */
+export function practiceReplaySource(
+  host: Pick<PracticeHost, "request">,
+  listing: Pick<PracticeReplaySummary, "game" | "steps">,
+): ReplaySource {
   return {
     total: listing.steps,
     async page(from, count) {
@@ -64,5 +74,34 @@ export function onlineReplaySource(token: string, listing: Pick<OnlineReplayList
         throw onlineFailure(cause);
       }
     },
+  };
+}
+
+/**
+ * R768000: the replay of `matchId`, which the account has just played and whose listing it does not
+ * hold: its first page is fetched to learn its length, and kept as step 0's page. A match whose result
+ * is still being written (409) is asked again, `REPLAY_OPEN_ATTEMPTS` times in all; otherwise it
+ * rejects with the first page's `ReplayFailure`.
+ */
+export async function openOnlineMatchReplay(
+  token: string,
+  matchId: string,
+  wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+): Promise<ReplaySource> {
+  let first: Awaited<ReturnType<typeof getReplaySteps>> | null = null;
+  for (let attempt = 1; first === null; attempt += 1) {
+    try {
+      first = await getReplaySteps(token, matchId, 0, REPLAY_PAGE_STEPS);
+    } catch (cause) {
+      // A 409 is a match whose result is still being written: ask again, a little later.
+      const finishing = cause instanceof ApiRequestError && cause.status === 409;
+      if (!finishing || attempt >= REPLAY_OPEN_ATTEMPTS) throw onlineFailure(cause);
+      await wait(REPLAY_OPEN_RETRY_MS);
+    }
+  }
+  const later = onlineReplaySource(token, { matchId, steps: first.total });
+  return {
+    total: first.total,
+    page: (from, count) => (from === 0 ? Promise.resolve(first.steps.slice(0, count)) : later.page(from, count)),
   };
 }

@@ -92,6 +92,7 @@ import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
 import { SandboxPanel } from "../practice/SandboxPanel.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
 import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
+import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../practice/PracticeSetup.tsx";
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
@@ -869,6 +870,31 @@ function PracticeScreen({
     setResultReadyFor(game);
   }, [game]);
 
+  /**
+   * R768000: the kept game the player is watching from its result dialog, and whether it opened at
+   * the last step to share that turn's GIF; null shows the board. Leaving goes back to the dialog.
+   */
+  const [watching, setWatching] = useState<{ game: PracticeStartConfig; share: boolean } | null>(null);
+  const kept = state.config === game ? state.snapshot?.replay : undefined;
+  const keptGame = kept?.game;
+  const keptSteps = kept?.steps;
+  const replaySource = useMemo(
+    () =>
+      controller === null || keptGame === undefined || keptSteps === undefined
+        ? null
+        : controller.replaySource({ game: keptGame, steps: keptSteps }),
+    [controller, keptGame, keptSteps],
+  );
+  const onWatchReplay = useCallback(() => {
+    if (game !== null) setWatching({ game, share: false });
+  }, [game]);
+  const onShareLastTurn = useCallback(() => {
+    if (game !== null) setWatching({ game, share: true });
+  }, [game]);
+  const onLeaveReplay = useCallback(() => {
+    setWatching(null);
+  }, []);
+
   const onAction = useCallback(
     (body: ActionBody) => {
       controller?.act(body);
@@ -1029,6 +1055,23 @@ function PracticeScreen({
     );
   }
 
+  if (watching !== null && watching.game === game && replaySource !== null) {
+    const player = (
+      <ReplayPlayer
+        key={watching.share ? "share" : "watch"}
+        source={replaySource}
+        start={watching.share ? "last" : "first"}
+        shareOnOpen={watching.share}
+        onLeave={onLeaveReplay}
+      />
+    );
+    return (
+      <Shell variant="game">
+        {lookup === null ? player : <CatalogContext.Provider value={lookup}>{player}</CatalogContext.Provider>}
+      </Shell>
+    );
+  }
+
   const board = (
     // The result panel is practice's own dialog (PracticeResult), so the board keeps to its chip.
     // R345: a lesson keeps R82's automatic turn end on, since its coach is written around it.
@@ -1185,6 +1228,7 @@ function PracticeScreen({
           onPlayAgain={onPlayAgain}
           onChangeSetup={onNewGame}
           onViewBoard={onViewBoard}
+          {...(replaySource === null ? {} : { onWatchReplay, onShareLastTurn })}
         />
       )}
     </Shell>

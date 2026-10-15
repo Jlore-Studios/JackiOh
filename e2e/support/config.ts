@@ -29,6 +29,8 @@ export const routes = {
   creator: () => env("creatorRoute", "/creator"),
   /** SPEC §9.9: practice against the AI. */
   practice: () => env("practiceRoute", "/practice"),
+  /** R768000: the recent games and their replays. */
+  replays: () => env("replaysRoute", "/replays"),
 };
 
 /** A6: `WS_PATH` is `/ws/match`; support type-checks without `apps/*`. */

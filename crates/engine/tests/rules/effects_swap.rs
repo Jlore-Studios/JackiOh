@@ -10,6 +10,7 @@ use serde::Serialize;
 use super::fixtures::catalog as catalog_fx;
 use super::fixtures::combat as combat_fx;
 use super::fixtures::harness::{events_of_type, new_game, put, set_library, slot};
+use crate::rules::fixtures::harness::matches_object;
 
 /// A face-down Trap for R33; #87's board swap moves the backrow too.
 fn trap() -> CardDef {
@@ -88,24 +89,6 @@ fn live_mut<'a>(state: &'a mut GameState, id: &str) -> &'a mut CardInstance {
 
 fn to_json<T: Serialize>(value: T) -> Value {
     serde_json::to_value(value).expect("serialises")
-}
-
-/// Every key `expected` names is in `actual` with a matching value (objects recursively, arrays
-/// element by element); `actual` may carry more.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn ids_of(cards: &[CardInstance]) -> Vec<String> {

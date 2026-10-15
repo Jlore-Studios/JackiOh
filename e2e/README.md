@@ -1,4 +1,4 @@
-# `e2e/` — the thirty-nine specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38` and the custom cards' `39`, plus seventeen component specs
+# `e2e/` — the forty specs: BUILD M8's seventeen, `18`–`28`, patch v0.2.0's `29`–`32`, the Card Almanac's `33`, the public Statistics page's `34`, the settings dialog's `35`, the Meditative play-through's `36`, the rematch offers' `37`, the accessibility check's `38`, the replays' `39` and the custom cards' `40`, plus seventeen component specs
 
 Cypress runs against `apps/web` in `E2E=1` mode: the `/dev/hotseat` route for the local specs and
 a test server with fixture accounts for the networked ones, the Rust `jackioh-server` started with
@@ -35,7 +35,7 @@ pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 be
 # 1. the client, in E2E mode
 E2E=1 pnpm --dir apps/web dev                  # must serve http://localhost:5173
 
-# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39
+# 2. the server, in E2E mode, for the networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39, 40
 E2E=1 cargo run --release -p jackioh-server    # http://localhost:8787 and ws://…/ws/match (WS_PATH)
 
 # 3. the suite
@@ -136,6 +136,7 @@ waiting helpers (`settled`, `expectAnimating`, `waitForPrompt`, `noPrompt`):
 | `installLoadout(account, fixtureId, { deckIndex })` | A12: the account's saved decks replaced by the fixture at `deckIndex` and two padding decks, plus a trio of the three; yields their ids. |
 | `savedDecks` / `clearDecks` / `saveDeck` / `saveTrio` | `GET /api/decks`; delete every deck and trio (yields the catalog version); one `PUT /api/decks/:id` or `PUT /api/trios/:id` under a client-minted id (R256), yielding it. |
 | `freeAccount(account)` / `concedeAs(account, matchId)` | The E2E server keeps its state for its whole life, so a networked spec starts by taking both accounts out of any queue ticket, live match or unfinished series (a concede, or a forfeit between games, R261). `concedeAs` connects, concedes and closes in one `wsPlayer` task, because the account's own browser would reclaim the seat between two. |
+| `stayQueued(account, everyMs)` | R897000: the queue cancels a ticket nobody has heard from for `QUEUE_TICKET_STALE_MS`, and a queued client polls `GET /api/auth/me` every `SERIES_POLL_SECONDS`. A seat a spec enqueues over HTTP and leaves waiting (specs 19 and 37; two accounts 320 apart, as one rated game between new players leaves them, pair only after the newer ticket has waited 50 s) polls through the `stayQueued` task, which ends itself once `queued` is no longer `true`; `before:spec` and `after:spec` clear any left. |
 | `dragCardToDeck(cardId)` | A11's whole gesture onto the open deck's `deck-drop` — `dragstart`, `dragover`, `drop`, `dragend`, one `DataTransfer` built in the app's window. |
 | `handIds(player)` / `unitIds(player)` | Which instance ids might I click. Setup only: assertions belong on the DOM, which is `viewFor` (CLAUDE.md rule 7). |
 | `advanceToTurn(turn)` | End turns until `turn`, R82-safe: a turn that ended by itself leaves nothing to press, only a device to hand over. |

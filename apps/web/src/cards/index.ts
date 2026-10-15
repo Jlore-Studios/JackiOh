@@ -4,7 +4,7 @@
 // by path and never through this barrel, so it cannot create an import cycle.
 
 export { ALL_TRIBES, faceModel } from "./model.ts";
-export type { FaceCost, FaceLayout, FaceModel, FaceSource, FaceStats, FaceText, InPlay, StatTone } from "./model.ts";
+export type { FaceCost, FaceModel, FaceSource, FaceStats, FaceText, InPlay, StatTone } from "./model.ts";
 
 // The three marks on a face's text (SPEC §10.10): the Radiant diff (R277), references (R279) and,
 // through FaceModel.values, what a formula comes to now (R280).

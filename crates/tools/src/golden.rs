@@ -47,7 +47,7 @@ use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::choose_action;
 use jackioh_engine::{
     Action, CreateGameArgs, FoldArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, PlayerId,
-    Tag, Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
+    Winner, begin_game, create_game, deckable, fold, hash_state, legal_actions, reduce, view_for,
 };
 
 use crate::fuzz::{
@@ -756,7 +756,7 @@ pub(crate) fn resolve_force(ids: &[String]) -> Result<Vec<String>> {
         let def = CATALOG
             .get(id)
             .ok_or_else(|| anyhow!("--force {id}: not in the catalog"))?;
-        let resolved = if def.token || def.tags.contains(&Tag::Token) {
+        let resolved = if def.is_token() {
             CATALOG
                 .iter()
                 .filter(|(_, carrier)| {

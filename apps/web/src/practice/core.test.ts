@@ -1099,7 +1099,11 @@ describe("R668 the practice save and resume", () => {
       if (ra === null || rb === null) break;
       a = snapshotOf(ra);
       b = snapshotOf(rb);
-      expect(b).toEqual(a);
+      // R768000: each core keeps a game that ends in the one store they share, under its own number.
+      const { replay: keptB, ...playedB } = b;
+      const { replay: keptA, ...playedA } = a;
+      expect(playedB).toEqual(playedA);
+      expect(keptB?.steps).toBe(keptA?.steps);
     }
     expect(debugOf(again).hash).toBe(debugOf(d).hash);
   });

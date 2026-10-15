@@ -424,6 +424,9 @@ export const PRACTICE_RESULT = "practice-result";
 export const PRACTICE_PLAY_AGAIN = "practice-play-again";
 export const PRACTICE_CHANGE_SETUP = "practice-change-setup";
 export const PRACTICE_VIEW_BOARD = "practice-view-board";
+/** R768000: a kept game's replay, and its last turn's GIF, from the result dialog. */
+export const PRACTICE_WATCH_REPLAY = "practice-watch-replay";
+export const PRACTICE_SHARE_LAST_TURN = "practice-share-last-turn";
 export const PRACTICE_OUTCOME = "practice-outcome";
 /** R169: live-modifier count and panel. */
 export const PRACTICE_MODIFIERS = "practice-modifiers";
@@ -714,3 +717,21 @@ export const CREATOR_CHECKING = "creator-checking";
 export const CREATOR_PREVIEW = "creator-preview";
 export const CREATOR_SAVE = "creator-save";
 export const CREATOR_SAVED = "creator-saved";
+// R768000: the replay selectors mirror `replayTestid` and `gifTestid` in `apps/web/src/replay/`, the
+// result panel's in `matchTestid` (`apps/web/src/routes/match.tsx`), and the recent games' in
+// `replaysTestid` (`apps/web/src/routes/replays.tsx`).
+
+export const MATCH_WATCH_REPLAY = "match-watch-replay";
+export const MATCH_SHARE_LAST_TURN = "match-share-last-turn";
+export const REPLAY_PLAYER = "replay-player";
+export const REPLAY_FORWARD_STEP = "replay-forward-step";
+export const REPLAY_BACK_STEP = "replay-back-step";
+export const REPLAY_READOUT = "replay-readout";
+export const REPLAY_BACK = "replay-back";
+export const REPLAY_GIF_TOGGLE = "replay-gif";
+export const REPLAY_GIF_SHARE = "replay-gif-share";
+export const REPLAYS_ROOT = "replays";
+
+export function replaysOnlineId(matchId: string): string {
+  return `replays-online-${matchId}`;
+}

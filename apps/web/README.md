@@ -146,18 +146,22 @@ installed on first use into `.cache/` and named in no manifest, so no one else p
 board up through `window.__jackioh`, waiting for animations, the viewports and the screenshots. It is
 for work on what a player sees, and nothing else.
 
-The dev replay route is `/dev/replays` (#511, SPEC §9.3, R768). It lists the practice games kept on the
-device and, signed in, the account's online replays (first page), and opens one in the replay player.
-Both the route and `src/replay/` are dev-only for now: `main.tsx` imports the route behind `DEV_ONLY`, a
-production build serves a 404 there and ships neither, and a test keeps every import of `src/replay/`
-inside it and the dev routes (the real entry points come with the result screens, #430).
+Replays (SPEC §9.3, §9.9, R768, R768000) open from three places: `/replays` (`routes/replays.tsx`) lists
+the practice games kept on the device and, signed in, the account's online games a page at a time; the
+practice result dialog and an online match's result panel offer "Watch the replay" (step 0) and "Share the
+last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
+the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
+match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
+The GIF code still loads on demand, never in the main bundle.
 
 ```
 src/replay/
   source.ts       ReplaySource (a total and pages of steps), ReplayFailure and the sentence each reason shows
   sources.ts      the two sources: the practice worker's `replay` requests, the server's replay routes
   steps.ts        the pages fetched so far, by step; load, prefetch, and the turn moves' search; a clip's ends
-  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot
+  ReplayPlayer.tsx  Game on a step's view with no legal action (`replay`), the controls in its notice slot;
+                  `start` and `shareOnOpen` for a result screen's two buttons (R768000)
+  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
@@ -186,13 +190,15 @@ routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random,
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767)
+                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        rejoin message (R897000)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers
+                        then the game), and useLiveGame, the live match or series the menus' banner offers;
+                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online game (Rejoin, on / and
                         /practice); game-banner.css draws it as the tavern's notice

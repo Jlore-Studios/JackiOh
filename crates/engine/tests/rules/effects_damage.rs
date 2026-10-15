@@ -14,6 +14,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::{armoured, plain, shielded};
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
+use crate::rules::fixtures::harness::json_of;
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -116,10 +117,6 @@ fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// One field of every `damage` event, in order (TS `eventsOfType(events, "damage").map((e) => e.<key>)`).
 fn damage_field(events: &[GameEvent], key: &str) -> Vec<Value> {
     events_of_type(events, GameEventType::Damage)
@@ -149,7 +146,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
             Some(self_card.id.clone())
         );
         assert_eq!(
-            json_of(&events_of_type(ctx.events, GameEventType::Damage)),
+            json_of(events_of_type(ctx.events, GameEventType::Damage)),
             json!([{ "type": "damage", "sourceId": self_card.id, "targetId": enemy.id, "amount": 3, "combat": false }])
         );
     }
@@ -290,7 +287,7 @@ mod the_damage_effect_s6_3_s4_4_r85_m3_t1 {
         );
         assert_eq!(stealing.state.players.p1.hero.health, 23);
         assert_eq!(
-            json_of(&events_of_type(stealing.events, GameEventType::Healed)),
+            json_of(events_of_type(stealing.events, GameEventType::Healed)),
             json!([{ "type": "healed", "targetId": "hero-p1", "amount": 3 }])
         );
     }

@@ -89,6 +89,9 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::CODE_STATUS_RECHECK_FLOOR_SECONDS),
         ),
         ("CUSTOM_CARDS_PER_ACCOUNT", json!(c::CUSTOM_CARDS_PER_ACCOUNT)),
+        // SPEC §11 R897000: the client counts reads, never compares times, so only the read count
+        // ships; QUEUE_TICKET_STALE_MS stays server-only.
+        ("QUEUE_ENDED_AFTER_READS", json!(c::QUEUE_ENDED_AFTER_READS)),
         ("DECK_AUTOSAVE_DEBOUNCE_MS", json!(c::DECK_AUTOSAVE_DEBOUNCE_MS)),
         (
             "DECK_AUTOSAVE_RETRY_SECONDS",
@@ -213,7 +216,7 @@ fn every_name_is_listed_once() {
          (R757000, R757001), REPLAY_LIST_PAGE and REPLAY_REQUESTS_PER_MINUTE (R768), and \
          CUSTOM_CARDS_PER_ACCOUNT (R915008), with \
          RATING_WINDOW_FULL_AFTER_SECONDS in place of the uncapped window's \
-         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001)"
+         RATING_WINDOW_UNCAPPED_AFTER_SECONDS (R640001), and QUEUE_ENDED_AFTER_READS (R897000)"
     );
 }
 

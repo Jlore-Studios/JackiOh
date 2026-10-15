@@ -16,7 +16,7 @@ use crate::wire::view::PlayerView;
 string_union! {
     /// R768: why a replay is refused, with no step given.
     pub enum ReplayRefusal {
-        /// The game was played on another catalog version than this build's.
+        /// The game was played on a catalog version this build neither is nor carries (R767000).
         EarlierPatch = "earlier_patch",
         /// The log folds to another final hash than the one recorded: a rule has changed since.
         RulesChanged = "rules_changed"
@@ -56,6 +56,10 @@ pub struct ReplayCheckpoints {
     pub accepted: Vec<Action>,
     /// The state every `REPLAY_CHECKPOINT_EVERY` accepted actions, step 0's first.
     pub states: Vec<GameState>,
+    /// R767000: the shipped catalog version the log was folded under; absent for the build's own.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub catalog_version: Option<String>,
 }
 
 /// R768: the answer to opening a replay.

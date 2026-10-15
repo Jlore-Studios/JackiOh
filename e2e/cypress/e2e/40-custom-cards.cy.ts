@@ -1,4 +1,4 @@
-// Spec 39 (#922): a custom card from the creator to a practice game against the AI (SPEC §12).
+// Spec 40 (#922): a custom card from the creator to a practice game against the AI (SPEC §12).
 // A fixture account builds "Cry: deal 2 damage to an enemy unit" with the no-code builder, reads it
 // in the code view and saves it (R915010, R915008); finds it again after a reload; puts it in a deck,
 // which the workshop marks practice only (R915005); starts practice with that deck, which runs in
@@ -49,7 +49,7 @@ function me(): E2EAccount {
   return accounts.p2();
 }
 
-const SEED = seedFor("39-custom-cards");
+const SEED = seedFor("40-custom-cards");
 
 /** The card the builder makes. */
 const NAME = "Spark Lancer";
@@ -232,7 +232,7 @@ function deckWith(customId: string): string[] {
   return [customId, ...allCardIds().slice(0, constants.DECK_SIZE - 1)];
 }
 
-describe("39 custom cards — made in the creator, kept on the account, played in practice and replayed", () => {
+describe("40 custom cards — made in the creator, kept on the account, played in practice and replayed", () => {
   before(() => {
     expect(SEED, "BUILD M8: every spec sets a seed").to.be.a("string").and.not.eq("");
   });
@@ -337,7 +337,7 @@ describe("39 custom cards — made in the creator, kept on the account, played i
           cy.task<{ replayHash: string; browserHash: string; errors: unknown[] }>(
             "replayHash",
             {
-              label: "39-custom-cards",
+              label: "40-custom-cards",
               seed: debug.seed,
               decks: debug.decks,
               log: debug.log,

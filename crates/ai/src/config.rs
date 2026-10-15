@@ -283,9 +283,6 @@ pub struct EvalWeights {
     pub closing_weight: f64,
 }
 
-/// SURFACE §4.2's name for `AI_EVAL`'s struct; TS already named the shape `EvalWeights`.
-pub type AiEval = EvalWeights;
-
 pub const AI_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -465,9 +462,6 @@ pub const AI_REPLY: AiReply = AiReply {
 pub struct AiMulligan {
     pub keep_max_cost: i32,
 }
-
-/// SURFACE §4.2's name for `GREEDY_MULLIGAN`'s struct: the same shape as `AI_MULLIGAN`'s.
-pub type GreedyMulligan = AiMulligan;
 
 pub const AI_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 

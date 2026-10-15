@@ -165,6 +165,13 @@ The post-merge promotion (`patches-ship.yml`) runs `cargo jackioh patches ship`:
 catalog at the fragment's first-parent commit, appends the shipped patch and bumps the catalog version
 wherever it is written; the binaries compile it in from `patches.json`.
 
+Replays fold a game under the version it was played on (R767000): the build carries every older
+shipped version's definitions, rebuilt from the snapshots, and runs its own scripts for them. A patch
+that changes what a card's script does, not only a number in its definition, keeps the script it
+replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
+`KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
+refused by their final hash rather than shown wrong.
+
 `loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script leaves it as it is. A new card's comes
 from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.rs` (its non-blank, non-comment, non-`use` lines above
 `#[cfg(test)]`), written into its entry by hand. In a patch split over several PRs, only the part that changes card data adds the

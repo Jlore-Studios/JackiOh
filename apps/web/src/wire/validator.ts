@@ -9,9 +9,6 @@ import type { CardDef, CardDefs, CustomCard, CustomIssue } from "./index.ts";
 /** §9.4: exactly 3 decks per loadout (Rust's `validator::LOADOUT_DECKS`). */
 export const LOADOUT_DECKS = 3;
 
-/** R252: a trio is §9.4's loadout of three decks, so it holds `LOADOUT_DECKS` of them. */
-export const TRIO_DECKS = LOADOUT_DECKS;
-
 export type CardId = string;
 
 export type LoadoutDeck = {
@@ -57,7 +54,7 @@ export type TrioConflict = { cardId: CardId; decks: readonly number[] };
 /** R250, R641: a saved deck's structural rules. */
 export type DraftRule = "D1" | "D2" | "D3" | "D4" | "D5";
 
-/** R252: a saved trio's rules. T1 a name as D1; T2 exactly `TRIO_DECKS` slots; T3 no deck twice. */
+/** R252: a saved trio's rules. T1 a name as D1; T2 exactly `LOADOUT_DECKS` slots; T3 no deck twice. */
 export type TrioDraftRule = "T1" | "T2" | "T3";
 
 export type DraftIssue<Rule extends string = DraftRule> = {

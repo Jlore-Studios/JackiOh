@@ -12,8 +12,6 @@
 use std::cmp::Ordering;
 use std::sync::atomic::{AtomicU32, Ordering as AtomicOrdering};
 
-use serde::Serialize;
-
 use jackioh_engine::effects::mana::refresh_mana;
 use jackioh_engine::subsystems::perfect_hand::{rank_perfect_hand, replace_hand_with_perfect};
 use jackioh_engine::subsystems::scorer::compare_scored;
@@ -21,7 +19,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
 use crate::rules::fixtures::catalog::vanilla_catalog;
-use crate::rules::fixtures::harness::{in_hand, new_game};
+use crate::rules::fixtures::harness::{in_hand, json_of, new_game};
 
 fn spread(mut base: Value, extra: Value) -> Value {
     if let (Value::Object(base), Value::Object(extra)) = (&mut base, extra) {
@@ -343,10 +341,6 @@ fn rank_ids(state: &GameState, radiant: bool) -> Vec<String> {
     .iter()
     .map(|scored| scored.def.id.clone())
     .collect()
-}
-
-fn json_of<T: Serialize>(value: T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn revive(state: &GameState) -> GameState {

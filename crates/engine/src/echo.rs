@@ -32,7 +32,7 @@ use crate::state::{
 use crate::stays::{exit_mark, left_field_after};
 use crate::subsystems::copied_text::copied_echo;
 use crate::wire::{CardType, GameEvent, PlayerId, Zone};
-use crate::zones::{MoveResult, MoveToZoneOptions, OffFieldZone, move_to_zone, report_graveyard_landing};
+use crate::zones::{MoveToZoneOptions, OffFieldZone, exile_to_pile, move_to_zone, report_graveyard_landing};
 
 /// TS `tuning.tunedCount(card, "Echo", printed)`, a private copy (fullsend rule 5). B3.4, R386: the
 /// value a numbered keyword has now — its printed value (or the value KY's Constant set outright,
@@ -364,21 +364,7 @@ pub fn land_after_resolution(sink: &mut EngineSink<'_>, resolved: &ResolvedCard)
             if let Some(live) = find_instance_mut(sink.state, &card.id) {
                 live.memory.shift_remove(EXILE_ON_LANDING);
             }
-            let mut card = snapshot(sink.state, &card.id).unwrap_or(card);
-            if move_to_zone(
-                sink.state,
-                &mut card,
-                OffFieldZone::Exile,
-                MoveToZoneOptions::default(),
-            ) == MoveResult::Moved
-            {
-                sink.state.counters.exiled += 1;
-            }
-            sink.events.push(GameEvent::Exiled {
-                instance_id: card.id.clone(),
-                def_id: card.def_id.clone(),
-                owner: card.owner,
-            });
+            exile_to_pile(sink, snapshot(sink.state, &card.id).unwrap_or(card));
         } else {
             // B5 E5: its graveyard, or wherever a replacement sends it (Classic #50's exile, #60's library).
             let moved = move_to_zone(

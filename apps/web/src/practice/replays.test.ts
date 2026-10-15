@@ -6,7 +6,8 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { REPLAY_PAGE_STEPS, createRng, fold, subsystems, viewFor } from "@jackioh/engine";
+import patchesJson from "../../../../crates/cards/patches/patches.json";
+import { REPLAY_PAGE_STEPS, carriedVersions, createRng, fold, hashState, subsystems, viewFor } from "@jackioh/engine";
 import type { GameState, ReplayStep } from "@jackioh/engine";
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import type { Action, PlayerId } from "@jackioh/shared";
@@ -286,6 +287,71 @@ describe("R768 practice replays", () => {
     expect((await page(host, 1, 0, 1)).game, "game 1, opened again since game 2, is held").toBe(1);
     tamper(2);
     expect(await failed(host, { type: "replay", game: 2, from: 0, count: 1 }), "game 2 was dropped and is folded again").toContain("rules_changed");
+  });
+
+  it("R767000 a kept game keeps its setup; on a carried version it folds under it, and with no setup or an uncarried version it is earlier_patch", async () => {
+    const source = memorySaveStore();
+    await concededGame(hostOn(source), "r767000-carried");
+    const [kept] = source.readReplays();
+    if (kept === undefined) throw new Error("the conceded game was not kept");
+    const setup = kept.setup;
+    if (setup === undefined) throw new Error("the kept game kept no setup");
+    // The setup is what `createGame` had: the log folds from it to the kept hash.
+    expect(hashState(fold({ seed: kept.config.seed, ...setup, log: kept.log }).state)).toBe(kept.hash);
+
+    // The module carries the newest of the older versions, in order, up to the one before its own
+    // (crates/cards/build.rs's BROWSER_CARRIED_FROM).
+    const shipped = (patchesJson as { version: string }[]).map((patch) => patch.version);
+    const carriedAll = carriedVersions();
+    expect(shipped.slice(shipped.length - 1 - carriedAll.length, -1)).toEqual(carriedAll);
+    const carried = carriedAll.at(-1);
+    if (carried === undefined) throw new Error("this build carries no older version");
+    const copy = (game: number, over: Partial<PracticeReplay>): PracticeReplay => ({
+      ...structuredClone(kept),
+      ...over,
+      summary: { ...kept.summary, game },
+    });
+    const { setup: _setup, ...setupless } = structuredClone(kept);
+    const saves = memorySaveStore(null, [
+      copy(1, { catalog: carried }),
+      { ...setupless, catalog: carried, summary: { ...kept.summary, game: 2 } },
+      copy(3, { catalog: "v0.0.0-earlier" }),
+    ]);
+    const host = hostOn(saves);
+    expect((await listed(host)).map((replay) => [replay.game, replay.unavailable])).toEqual([
+      [3, "earlier_patch"],
+      [2, "earlier_patch"],
+      [1, undefined],
+    ]);
+    expect(await failed(host, { type: "replay", game: 2, from: 0, count: 16 })).toContain("earlier_patch");
+    // Game 1 folds under the carried version's cards: the same game when none it played changed
+    // since, else refused by its hash, never as a version this build lacks.
+    const answer = await host.request({ type: "replay", game: 1, from: 0, count: REPLAY_PAGE_STEPS });
+    if (answer.type === "failed") {
+      expect(answer.message).toContain("rules_changed");
+    } else {
+      expect(answer.type).toBe("replay");
+    }
+  });
+
+  it("R768000 a kept game's final snapshot names the number and steps it was kept under; a game in progress or a lesson names none", async () => {
+    const saves = memorySaveStore();
+    const host = hostOn(saves);
+    const started = snapshotOf(await host.request({ type: "start", config: config("r768000-named") }));
+    expect(started.replay).toBeUndefined();
+    const done = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
+    const [kept] = saves.readReplays();
+    if (kept === undefined) throw new Error("the conceded game was not kept");
+    expect(done.replay).toEqual({ game: kept.summary.game, steps: kept.summary.steps });
+    const { steps } = await allSteps(host, kept.summary.game);
+    expect(steps.length).toBe(done.replay?.steps);
+
+    const lesson = TUTORIAL_LESSONS[0];
+    if (lesson === undefined) throw new Error("no tutorial lesson");
+    await host.request({ type: "start", config: config("r768000-lesson", { lesson: lesson.id }) });
+    const lessonDone = snapshotOf(await host.request({ type: "act", action: { type: "concede" } }));
+    expect(lessonDone.view.result).not.toBeNull();
+    expect(lessonDone.replay).toBeUndefined();
   });
 
   it("R768 a page follows the seat the human played at each step and stops at a Glitch swap (R677)", () => {

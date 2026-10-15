@@ -340,6 +340,20 @@ export function catalogVersion(): string {
   return call("catalogVersion", () => engine.catalog_version());
 }
 
+let carriedCache: readonly string[] | null = null;
+
+/**
+ * R767000: the older shipped versions the module carries, oldest first, so a practice game played on
+ * one of them replays under its own cards: those from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM`
+ * on. The same array on every call.
+ */
+export function carriedVersions(): readonly string[] {
+  return call("carriedVersions", () => {
+    carriedCache ??= parsed<string[]>(engine.carried_versions());
+    return carriedCache;
+  });
+}
+
 // ---------------------------------------------------------------------------------------------
 // the AI (SURFACE §9)
 // ---------------------------------------------------------------------------------------------

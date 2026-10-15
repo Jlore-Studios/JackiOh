@@ -16,10 +16,18 @@
 //!   (`CardDef.ingredients`, which a Fuse always writes) in `state.transient_defs`. So the readers of a
 //!   fused id's parts (`fused_id_specs`, `fused_id_parts`, `self_def_ids`, `excluding_def_id`) take the
 //!   state too; without one, a digest id reads as no fused id, as an unknown digest did in TS.
+//!
+//! R767000: a replay folds under the catalog version its game was played on. The build registers
+//! where its shipped catalogs are found (`register_shipped`, a `OnceLock` like the registry), and
+//! `with_shipped` sets the one a fold runs under on the calling thread for that call alone, putting
+//! the previous one back after it; while one is set, every reader here and `scripts::registered_entry`
+//! answer from it first.
 
+use std::cell::Cell;
 use std::cmp::Ordering;
 use std::sync::OnceLock;
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::config::{
@@ -27,6 +35,7 @@ use crate::config::{
     RollOdds,
 };
 use crate::rng::Rng;
+use crate::script::CardScripts;
 use crate::state::GameState;
 use crate::wire::{
     AttackHealth, CATALOG_SETS, CardCost, CardDef, CardDefs, CardType, CatalogQuery, CostRange,
@@ -107,8 +116,12 @@ fn test_override() -> Option<&'static CardDefs> {
     None
 }
 
-/// The catalog every reader searches: a test's override, else the registered one, else none.
+/// The catalog every reader searches: the shipped one a replay is folding under (R767000), else a
+/// test's override, else the registered one, else none.
 fn registered() -> &'static CardDefs {
+    if let Some(shipped) = folding() {
+        return &shipped.defs;
+    }
     if let Some(defs) = test_override() {
         return defs;
     }
@@ -161,8 +174,11 @@ pub fn def_by_index(set: SetName, index: &str) -> Option<&'static CardDef> {
 }
 
 /// The registered catalog's version: "0" before one is registered, and TS's default "test" while a
-/// test's override is in force.
+/// test's override is in force. While a replay folds under a shipped catalog, that one's (R767000).
 pub fn catalog_version() -> &'static str {
+    if let Some(shipped) = folding() {
+        return &shipped.version;
+    }
     if test_override().is_some() {
         return "test";
     }
@@ -183,12 +199,129 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     if crate::custom::is_custom_id(def_id) {
         return state.and_then(|state| state.custom_defs.get(def_id));
     }
+    if let Some(shipped) = folding() {
+        return shipped.find(def_id);
+    }
     if let Some(defs) = test_override() {
         return defs.get(def_id);
     }
     let registered = REGISTERED.get()?;
     let at = *registered.index.get(def_id)?;
     registered.defs.get_index(at).map(|(_, def)| def)
+}
+
+// ---------------------------------------------------------------------------
+// R767000: the shipped catalogs a replay folds under.
+// ---------------------------------------------------------------------------
+
+/// R767000: a shipped catalog version this build carries: its definitions, in order, where each id
+/// sits in them, and the scripts kept for it (`<id>@<version>`, R388). A card with no script kept
+/// runs the build's own.
+pub struct ShippedCatalog {
+    version: String,
+    defs: CardDefs,
+    index: IndexMap<String, usize, IdHash>,
+    scripts: IndexMap<String, CardScripts, IdHash>,
+}
+
+impl ShippedCatalog {
+    /// R767000: `version`'s catalog, indexed as `register_catalog` indexes the build's.
+    pub fn new(version: &str, defs: CardDefs, scripts: IndexMap<String, CardScripts>) -> ShippedCatalog {
+        let index = defs.keys().enumerate().map(|(at, id)| (id.clone(), at)).collect();
+        ShippedCatalog {
+            version: version.to_string(),
+            defs,
+            index,
+            scripts: scripts.into_iter().collect(),
+        }
+    }
+
+    /// The catalog version it is.
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    /// Its definitions, in catalog order.
+    pub fn defs(&self) -> &CardDefs {
+        &self.defs
+    }
+
+    fn find(&self, def_id: &str) -> Option<&CardDef> {
+        let at = *self.index.get(def_id)?;
+        self.defs.get_index(at).map(|(_, def)| def)
+    }
+}
+
+impl std::fmt::Debug for ShippedCatalog {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "ShippedCatalog({}: {} defs, {} kept scripts)",
+            self.version,
+            self.defs.len(),
+            self.scripts.len()
+        )
+    }
+}
+
+/// R767000: where the build finds a shipped catalog by version, set once by
+/// `jackioh_cards::register_all()`.
+static SHIPPED: OnceLock<fn(&str) -> Option<&'static ShippedCatalog>> = OnceLock::new();
+
+/// R767000: set where the shipped catalogs are found. Set once per process, like `register_catalog`:
+/// a second call is ignored.
+pub fn register_shipped(find: fn(&str) -> Option<&'static ShippedCatalog>) {
+    let _ = SHIPPED.set(find);
+}
+
+/// R767000: the testkit's thread-local shipped catalogs, when the calling thread's test set some.
+#[cfg(feature = "testkit")]
+fn shipped_override() -> Option<&'static [ShippedCatalog]> {
+    crate::testkit::scenario::shipped_override()
+}
+
+#[cfg(not(feature = "testkit"))]
+fn shipped_override() -> Option<&'static [ShippedCatalog]> {
+    None
+}
+
+/// R767000: the shipped catalog of `version`, when this build carries it: a test's, while one is set
+/// (it then stands for every version), else the build's.
+pub fn shipped_catalog(version: &str) -> Option<&'static ShippedCatalog> {
+    if let Some(catalogs) = shipped_override() {
+        return catalogs.iter().find(|catalog| catalog.version == version);
+    }
+    SHIPPED.get().and_then(|find| find(version))
+}
+
+// CLAUDE.md rule 4's scoped exception (R767000): the shipped catalog the calling thread's fold runs
+// under, set by `with_shipped` for that one call and put back after it, so a fold reads the same
+// catalog on any thread and nothing outlives the call.
+thread_local! {
+    static FOLDING: Cell<Option<&'static ShippedCatalog>> = const { Cell::new(None) };
+}
+
+/// R767000: the shipped catalog this thread is folding under, if any.
+pub(crate) fn folding() -> Option<&'static ShippedCatalog> {
+    FOLDING.with(Cell::get)
+}
+
+/// R767000: the script kept for `def_id` in the shipped catalog this thread is folding under.
+pub(crate) fn folding_script(def_id: &str) -> Option<&'static CardScripts> {
+    folding()?.scripts.get(def_id)
+}
+
+/// R767000: `run` under `shipped` (`None`: the build's own catalog), on this thread, for that call
+/// alone. The catalog it ran under before is put back after it, a panic included.
+pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnce() -> T) -> T {
+    struct Restore(Option<&'static ShippedCatalog>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            FOLDING.with(|cell| cell.set(self.0));
+        }
+    }
+    let _restore = Restore(FOLDING.with(|cell| cell.replace(shipped)));
+    run()
 }
 
 /// Panics when a def is missing: a card instance always has a definition.
@@ -330,10 +463,6 @@ fn asks_for_tokens(args: &CatalogQueryArgs) -> bool {
     !as_list(&args.def_id).is_empty()
 }
 
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.contains(&Tag::Token)
-}
-
 /// R382: a pool named by one of `POOL_TOKEN_TAGS` (a Fruit pool) holds that tag's tokens too — the
 /// five Grapes are Tokens "that can be generated by any Fruit card" — and so do a Prime pool and an
 /// AI pool, whose cards are all tokens (R1421). No other pool reaches them.
@@ -366,11 +495,11 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     if def.id == GLITCH_DEF_ID && !as_list(&args.def_id).contains(&def.id) {
         return false;
     }
-    if !tokens_allowed && is_token(def) && !tag_pool_takes_token(args, def) {
+    if !tokens_allowed && def.is_token() && !tag_pool_takes_token(args, def) {
         return false;
     }
     if let Some(token) = args.token
-        && is_token(def) != token
+        && def.is_token() != token
     {
         return false;
     }
@@ -625,7 +754,7 @@ pub fn set_is_open(set: SetName) -> bool {
 /// R1420, §2.6, §9.4 L3: whether a definition may be in a deck: a card, not a Token, of a set that is
 /// open (`set_is_open`). The validator, the deck builder and every random deck read this one test.
 pub fn deckable(def: &CardDef) -> bool {
-    !is_token(def) && set_is_open(def.set)
+    !def.is_token() && set_is_open(def.set)
 }
 
 /// §5.1's single source of random pools and Discover: every definition the filters allow, set by set

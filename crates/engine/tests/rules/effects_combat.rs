@@ -20,6 +20,7 @@ use jackioh_engine::{
 
 use super::fixtures::combat::{big_body, plain, taunter};
 use super::fixtures::harness::{events_of_type, in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::json_of;
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -368,10 +369,6 @@ fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
 
 fn live_mut<'a>(state: &'a mut GameState, card: &CardInstance) -> &'a mut CardInstance {
     find_instance_mut(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
-}
-
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
 }
 
 fn unused() -> Exertion {
@@ -898,7 +895,7 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
 
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::AttackCancelled)),
+            json_of(events_of_type(&sink.events, GameEventType::AttackCancelled)),
             json!([{ "type": "attackCancelled", "attackerId": attacker.id, "targetId": defender.id, "byInstanceId": trap.id }])
         );
         // R44: no combat resolved, and the exertion is gone either way.
@@ -1145,7 +1142,7 @@ mod redirect_attack_s6_3_redirect_an_attack_s4_2_step_4_r1122_r1123 {
         let _ = declare_attack(&mut sink.sink(), &attacker, &on_unit(&defender));
 
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::Redirected)),
+            json_of(events_of_type(&sink.events, GameEventType::Redirected)),
             json!([{ "type": "redirected", "what": "attack", "fromId": defender.id, "toId": neighbour.id, "byInstanceId": trap.id }])
         );
         assert_allies_fought(&sink, &attacker, &defender, &neighbour);

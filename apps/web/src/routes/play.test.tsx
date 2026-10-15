@@ -15,7 +15,12 @@ import { DECK_SIZE } from "@jackioh/engine/config";
 import { LEAN_NEWEST, newestShippedSet, type CardDef, type CardDefs } from "@jackioh/shared";
 import { validateDeck, validateTrio, type LoadoutResult } from "@jackioh/validator";
 
-import { DECK_NAME_MAX_LENGTH, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
+import {
+  DECK_NAME_MAX_LENGTH,
+  MAX_SAVED_DECKS,
+  MAX_SAVED_TRIOS,
+  QUEUE_ENDED_AFTER_READS,
+} from "@jackioh/server-config";
 import { readQueued, rememberQueued } from "../net/liveGame.ts";
 import {
   ApiRequestError,
@@ -846,6 +851,62 @@ describe("the lobby's queue state", () => {
     render(<PlayRoute token={TOKEN} />);
     expect(await screen.findByTestId(playTestid.status)).toHaveTextContent(MATCH_FOUND_STATUS);
     expect(readQueued()).toBeNull();
+  });
+
+  it("R897000 a queue the server no longer holds ends the wait with the rejoin message", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await screen.findByTestId(playTestid.searching);
+
+    // Two reads in a row name no ticket: the wait ends, and Find a match is the way back in.
+    await screen.findByText("Your queue expired. Find a match to queue again.", undefined, { timeout: 8000 });
+    expect(screen.queryByTestId(playTestid.searching)).toBeNull();
+    expect(screen.getByTestId(playTestid.queue)).not.toBeDisabled();
+    expect(readQueued()).toBeNull();
+  });
+
+  it("R897000 queued true keeps searching", async () => {
+    vi.mocked(enqueue).mockResolvedValue(openTicket("bo1"));
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: true });
+    await renderLobby();
+    fireEvent.click(screen.getByTestId(playTestid.queue));
+    await screen.findByTestId(playTestid.searching);
+
+    // Reads keep naming the ticket: still waiting, no expiry.
+    await waitFor(
+      () => {
+        expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThanOrEqual(2);
+      },
+      { timeout: 8000 },
+    );
+    expect(screen.getByTestId(playTestid.searching)).toBeInTheDocument();
+    expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(readQueued()).toBe("bo1");
+  });
+
+  it("R897000 a room wait holds no ticket, so ticketless reads never end it", async () => {
+    vi.mocked(createRoom).mockResolvedValue({ code: "QRST", expiresAt: 0, mode: "random" });
+    // The room host holds no queue ticket: every read says so, and no series has formed yet.
+    vi.mocked(getMe).mockResolvedValue({ ...me(null), queued: false });
+    await renderLobby();
+    pickMode("random");
+    fireEvent.click(screen.getByTestId(playTestid.createRoom));
+    await screen.findByTestId(playTestid.roomCode);
+
+    // Past the queue's ended threshold, all ticketless: still the room ticket, Find a match
+    // still locked, and no rejoin message.
+    await waitFor(
+      () => {
+        expect(vi.mocked(getMe).mock.calls.length).toBeGreaterThanOrEqual(QUEUE_ENDED_AFTER_READS + 1);
+      },
+      { timeout: 8000 },
+    );
+    expect(screen.getByTestId(playTestid.roomCode)).toHaveTextContent("QRST");
+    expect(screen.getByTestId(playTestid.queue)).toBeDisabled();
+    expect(screen.queryByText("Your queue expired. Find a match to queue again.")).toBeNull();
   });
 
   it("a join that pairs at once announces before navigating", async () => {

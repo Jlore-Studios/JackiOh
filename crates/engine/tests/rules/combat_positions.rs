@@ -10,33 +10,13 @@ use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{armoured, big_dfender, deft_duelist, plain, spikey_pillow, taunter};
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, json_of, matches_object, new_game, put, sink_for, slot,
+};
 
 /// An `ActionInput` from its TS object literal (SURFACE §8: an object literal ports as `json!`).
 fn input(body: Value) -> ActionInput {
     json_as(body)
-}
-
-fn json_of(value: impl Serialize) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively; an
-/// array matches element by element and in length; anything else is equal.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn expect_match(actual: impl Serialize, expected: Value) {

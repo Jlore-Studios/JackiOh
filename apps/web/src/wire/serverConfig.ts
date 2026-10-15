@@ -41,6 +41,7 @@ export const MULLIGAN_CLOCK_MS = 45000;
 export const PLAY_TELEMETRY_RETENTION_DAYS = 365;
 export const PROMPT_CLOCK_MS = 30000;
 export const PROMPT_CLOCK_SECONDS = 30;
+export const QUEUE_ENDED_AFTER_READS = 2;
 export const RATING_WINDOW_FULL_AFTER_SECONDS = 60;
 export const REDEMPTION_IDENTICAL_ERROR = "This invite code is invalid.";
 export const REDEMPTION_RESPONSE_FLOOR_MS = 250;

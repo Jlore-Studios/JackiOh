@@ -10,7 +10,7 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::effects::add_library_copies;
 
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, set_library};
+use crate::rules::fixtures::harness::{events_of_type, in_hand, matches_object, new_game, set_library};
 
 fn game(seed: &str) -> GameState {
     let mut state = new_game(seed, None);
@@ -43,23 +43,6 @@ fn run(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
 
 fn copies(args: Value) -> Effect {
     add_library_copies(json_as(args))
-}
-
-/// Jest's `toMatchObject`: every key `expected` names is in `actual` and matches, recursively.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
-    }
 }
 
 /// The `addedToHand` events' `[instanceId, defId]`.

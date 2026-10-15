@@ -1,5 +1,5 @@
 // Test IDs for the card creator (#920), which the vitest suites and the e2e spec read; e2e/support/testids.ts
-// mirrors the ones spec 39 uses.
+// mirrors the ones spec 40 uses.
 
 export const creatorTestid = {
   screen: "creator-screen",
