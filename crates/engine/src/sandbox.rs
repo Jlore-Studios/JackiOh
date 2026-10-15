@@ -1,7 +1,7 @@
-//! The practice sandbox's tools (issue #923, R923000–R923003): one action, `sandbox`, whose `op`
-//! spawns a card for either seat, sets a hero's health and Armor or a player's mana, draws, or
-//! destroys or removes a card. This module owns the rule: `why_sandbox_refused` is every refusal and
-//! `apply_sandbox` every change, and `reduce` calls the one after the other.
+//! The practice sandbox's tools (issue #923, R923000–R923003; #962, R962000): one action, `sandbox`,
+//! whose `op` spawns a card for either seat, sets a hero's health and Armor or a player's mana, draws,
+//! or destroys or removes a card. This module owns the rule: `why_sandbox_refused` is every refusal
+//! and `apply_sandbox` every change, and `reduce` calls the one after the other.
 //!
 //! - **Only in a sandbox** (R923000): a game created with `CreateGameOptions.sandbox` holds
 //!   `GameState.sandbox`, and no other game accepts a tool. `legal_actions` never lists one, so the
@@ -13,6 +13,8 @@
 //!   face-down, a Unit as summoning sick as any summon, no Cry), in the hand it is added (§2.4: a
 //!   full hand burns it), on top of the library it is put there (`draw::put_into_library`), and in
 //!   the graveyard it is a fresh card that enters it. No play is counted and nothing is paid.
+//! - **The game's own custom cards** (R962000): a spawn may also name a custom card the game was
+//!   created with; a custom id it does not carry is refused as an unshipped card is.
 //! - **Numbers in bounds** (R923002): a hero's health 1 to `SANDBOX_HERO_HEALTH_MAX`, its Armor 0 to
 //!   `SANDBOX_ARMOR_MAX`, mana 0 to `SANDBOX_MANA_MAX`, a draw 1 to `SANDBOX_DRAW_MAX` cards.
 //! - **Destroy and remove** (R923003): destroy marks a card on the field as a destroy effect does, so
@@ -40,10 +42,14 @@ pub fn is_sandbox(state: &GameState) -> bool {
 }
 
 /// R923001: the definition a spawn may make: a card or a token of a set a player may hold (R1420).
-/// A transient definition (a Fuse's, a crafted card's) is no card to spawn.
+/// A transient definition (a Fuse's, a crafted card's) is no card to spawn. R962000: a custom card
+/// is one only when it is one of the game's own (`GameState.custom_defs`).
 fn spawnable<'a>(state: &'a GameState, def_id: &str) -> Option<&'a CardDef> {
     if state.transient_defs.contains_key(def_id) {
         return None;
+    }
+    if crate::custom::is_custom_id(def_id) {
+        return state.custom_defs.get(def_id);
     }
     find_def(Some(state), def_id).filter(|def| set_is_open(def.set))
 }
