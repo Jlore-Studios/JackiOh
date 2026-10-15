@@ -213,6 +213,8 @@ describe("R831004: #82 KY's Trial's first Discover offers sets", () => {
   it("R831004 draws each set's mark beside its name, and picking one answers with that set", () => {
     const onAction = vi.fn();
     renderPrompt(setView(), onAction);
+    // A short `mode` prompt is drawn as a Discover pop-up, which is where e2e spec 17 looks for it.
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-kind", "discover");
     for (const set of SETS) {
       const option = screen.getByTestId(`prompt-option-mode:${set}`);
       expect(option).toHaveAttribute("data-set", set);

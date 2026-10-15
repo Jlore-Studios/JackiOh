@@ -381,7 +381,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     });
   });
 
-  it("R81 x — Efficiency Dividend asks for X, a mode and a target, and deals exactly X", () => {
+  it("R81 x — Efficiency Dividend asks for X, a mode and a target, and deals exactly X+1", () => {
     openGame(SEEDS.x);
     // X is bounded by current mana (§2.3).
     toP1Turn(2);
@@ -400,8 +400,8 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     pickerOpensOnce("target");
     cy.answerPrompt("target", { hero: "opponent" });
 
-    // §4.4 applies X = 2 without Armor.
-    cy.get(ts(heroId("opponent"))).find(healthIs(28)).should("exist");
+    // §4.4 applies X + 1 = 3 without Armor (§8 #24, patch v0.3.10: "Deal X+1 damage").
+    cy.get(ts(heroId("opponent"))).find(healthIs(27)).should("exist");
   });
 
   it("R81 embiggen — Suppressive Aura asks which price was paid and the aura matches that price", () => {

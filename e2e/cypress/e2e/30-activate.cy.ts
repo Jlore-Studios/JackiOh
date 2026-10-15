@@ -60,8 +60,9 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       cy.get(promptOf("discover")).find(ts(promptOptionId("reduce"))).click();
       // R831009: the hand card is chosen as the activation resolves.
       cy.waitForPrompt("hand");
+      // An engine prompt is answered in its picker, by PendingOption.key (`instance:<id>`), not on the hand.
       cy.handCardByName("Mr. Vanilla").then((vanilla) => {
-        cy.answerPrompt("hand", { cards: [vanilla] });
+        cy.answerPrompt("hand", { options: [`instance:${vanilla}`] });
       });
       cy.settled();
       manaIs(0);
