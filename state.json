@@ -6772,6 +6772,9 @@
       }
     },
     "980": {
+      "ci_reruns": {
+        "7d4e8d6d6f2aede1df88fed960095478ef3899ac": 1
+      },
       "cleared": {
         "at": "2026-10-15T16:01:32Z",
         "by": "`claude` (strong)",
