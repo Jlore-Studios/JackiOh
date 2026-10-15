@@ -17,6 +17,9 @@
 // drop has just played is marked `data-landing` (drag/landing.ts), which board.css takes out of
 // the fan while the board catches up with the play.
 //
+// A pointer on the viewer's own hand card is reported upward (`onHover`, #991) so the board can ring
+// what its preview counts. It is view state, never an action.
+//
 // R504: an empty hand keeps its place. Either seat's hand with no cards holds one card-sized
 // outline (`hand-empty-<side>`, "Hand empty") and says `data-empty="true"`, so its row keeps the
 // height a card gives it on every layout and the board does not jump when the last card leaves.
@@ -50,6 +53,8 @@ export type HandProps = {
   highlight?: Highlight;
   animating?: AnimatingMap;
   onClick?: (target: ClickTarget) => void;
+  /** #991: the viewer's own hand card under the pointer, or null once the pointer leaves it (Board.tsx). */
+  onHover?: (instanceId: string | null) => void;
   /** R318: the card a full hand burned, drawn over the hand (OverflowNotices.tsx `BurnNotice`). */
   notice?: ReactNode;
 };
@@ -156,6 +161,8 @@ export default function Hand(props: HandProps): ReactElement {
           data-lifted={lifted ? "true" : undefined}
           data-landing={yours && landing === card.instanceId ? "true" : undefined}
           onClickCapture={yours ? () => toggle(card.instanceId) : undefined}
+          onPointerEnter={yours ? () => props.onHover?.(card.instanceId) : undefined}
+          onPointerLeave={yours ? () => props.onHover?.(null) : undefined}
         >
           <Card
             testId={handTestid}

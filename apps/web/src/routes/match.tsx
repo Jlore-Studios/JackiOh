@@ -49,7 +49,7 @@ import { getCatalog, getMatchRanks, type MatchRanksResponse } from "../net/api.t
 import { navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
-import { rankWords } from "../rank/rank.ts";
+import { rankShortWords, rankWords } from "../rank/rank.ts";
 import { InMatchChat } from "../together/InMatchChat.tsx";
 import { ShareWithFriend } from "../together/ShareReplay.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -478,10 +478,19 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
           {view.result !== null && series === null ? <RematchWatcher token={token} matchId={matchId} /> : null}
           {ranks !== null ? (
             <p className="match-ranks" data-testid={matchTestid.ranks}>
-              {ranks.ranked ? t("Ranked match") : t("Unranked match")} · <Username name={ranks.seats.p1.username} />
-              {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
-              <Username name={ranks.seats.p2.username} />
-              {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
+              <span className="match-ranks__full">
+                {ranks.ranked ? t("Ranked match") : t("Unranked match")} ·{" "}
+                <Username name={ranks.seats.p1.username} />
+                {ranks.seats.p1.you ? t(" (you)") : ""} {rankWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                <Username name={ranks.seats.p2.username} />
+                {ranks.seats.p2.you ? t(" (you)") : ""} {rankWords(ranks.seats.p2.rank)}
+              </span>
+              <span className="match-ranks__short">
+                {ranks.ranked ? t("Ranked") : t("Unranked")} · <Username name={ranks.seats.p1.username} />
+                {ranks.seats.p1.you ? t(" (you)") : ""} {rankShortWords(ranks.seats.p1.rank)} {t("vs")}{" "}
+                <Username name={ranks.seats.p2.username} />
+                {ranks.seats.p2.you ? t(" (you)") : ""} {rankShortWords(ranks.seats.p2.rank)}
+              </span>
             </p>
           ) : null}
           {/* #936 B51: the server's `watchers {count}` frame, while anyone is watching. */}

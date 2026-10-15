@@ -624,14 +624,34 @@ describe("the match screen's ranks (R604, R612)", () => {
     expect(banner).toHaveTextContent("שרה Raisin");
   });
 
+  it("shows the full line on desktop and a compact line for phones, both with both seats", async () => {
+    stubFetch(ranksBody);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach({ legal: [{ type: "endTurn" }] });
+
+    const banner = await screen.findByTestId("match-ranks");
+    const full = banner.querySelector(".match-ranks__full");
+    expect(full).toHaveTextContent("Ranked match");
+    expect(full).toHaveTextContent("Normal Grape III · 1/3 pips");
+    const short = banner.querySelector(".match-ranks__short");
+    expect(short).toHaveTextContent("Normal III 1/3");
+    expect(short).toHaveTextContent("Raisin 2/5");
+    const names = [...(short?.querySelectorAll("bdi.username") ?? [])];
+    expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
+  });
+
   it("R1436 names both seats by username, isolated, and shows no profile id nor any slice of one", async () => {
     stubFetch(ranksBody);
     const { container } = render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach({ legal: [{ type: "endTurn" }] });
 
     const banner = await screen.findByTestId("match-ranks");
-    const names = [...banner.querySelectorAll("bdi.username")];
-    expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
+    // Both the full and the compact line name the seats the same isolated way.
+    for (const line of [".match-ranks__full", ".match-ranks__short"]) {
+      const names = [...(banner.querySelector(line)?.querySelectorAll("bdi.username") ?? [])];
+      expect(names.map((name) => name.getAttribute("title"))).toEqual(["Max#3", "שרה"]);
+    }
+    const names = [...(banner.querySelector(".match-ranks__full")?.querySelectorAll("bdi.username") ?? [])];
     expect(names[1]?.querySelector(":scope > bdi")).toHaveAttribute("dir", "auto");
     const text = container.textContent;
     for (const id of [P1_ID, P2_ID]) {

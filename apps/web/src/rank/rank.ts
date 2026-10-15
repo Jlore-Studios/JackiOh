@@ -26,6 +26,26 @@ export function tierName(tier: VisibleRank["tier"] | GrapeTier): string {
   }
 }
 
+/** Every tier a rank can name, shortened for a phone's rank line (no "Grape"). */
+export function tierShortName(tier: VisibleRank["tier"] | GrapeTier): string {
+  switch (tier) {
+    case "raisin":
+      return t("Raisin");
+    case "rotten":
+      return t("Rotten");
+    case "normal":
+      return t("Normal");
+    case "large":
+      return t("Large");
+    case "golden":
+      return t("Golden");
+    case "mythic":
+      return t("Mythic");
+    case "jlorious":
+      return t("Jlorious");
+  }
+}
+
 /** A Grape division (3 at the bottom, 1 at the top) as the numeral the client prints. */
 export function divisionNumeral(division: number): string {
   switch (division) {
@@ -51,6 +71,26 @@ export function rankWords(rank: VisibleRank): string {
   if (rank.tier === "jlorious") return t("Jlorious #{position}", { position: String(rank.position) });
   return t("{tier} {division} · {pips}/{total} pips", {
     tier: tierName(rank.tier),
+    division: divisionNumeral(rank.division),
+    pips: String(rank.pips),
+    total: String(rank.pipsPerDivision),
+  });
+}
+
+/**
+ * What a player is shown as on a phone's rank line: the same rank as `rankWords` with "Grape",
+ * "placements" and "pips" left out, so the board rail fits one row.
+ */
+export function rankShortWords(rank: VisibleRank): string {
+  if (rank.tier === "raisin") {
+    return t("Raisin {played}/{games}", {
+      played: String(rank.placementsPlayed),
+      games: String(rank.placementGames),
+    });
+  }
+  if (rank.tier === "jlorious") return t("Jlorious #{position}", { position: String(rank.position) });
+  return t("{tier} {division} {pips}/{total}", {
+    tier: tierShortName(rank.tier),
     division: divisionNumeral(rank.division),
     pips: String(rank.pips),
     total: String(rank.pipsPerDivision),
