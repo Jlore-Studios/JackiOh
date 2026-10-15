@@ -360,6 +360,8 @@ describe("37 rematch — offers after a finished match (§9.5, R672)", () => {
       }).should((response) => {
         expect(response.status, "R143: the queue takes an end-to-end seed").to.eq(200);
       });
+      // R897000: seat two is a queued client, so it polls like one while the rating window widens.
+      cy.stayQueued(seatTwo, SERIES_POLL_SECONDS * MS_PER_SECOND);
     });
     landedOn(MATCH_PATH, PAIRING_TIMEOUT_MS).then((id) => {
       matchId = id;

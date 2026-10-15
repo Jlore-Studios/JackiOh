@@ -190,13 +190,15 @@ routes/play.tsx         /play: the mode picker (Best of 1, Conquest, All Random,
                         own rank and links /leaderboard (R661); a queue it joined is remembered for the
                         tab, so the player may leave while they wait and it picks the wait up again (R765);
                         a room's ticket shares it as an invite link, and a lobby opened on one fills in
-                        its join form (R767)
+                        its join form (R767); a queue the server no longer holds ends the wait with a
+                        rejoin message (R897000)
 net/roomLink.ts         R767: the room link (/play?room=…&mode=…): built for the share sheet or the
                         clipboard, read once off the address bar into this tab, through a sign-in, for
                         the lobby
 net/liveGame.ts         R765: the player's online game, read off /api/auth/me: the queue this tab joined,
                         which main.tsx's useQueueFollow follows on every screen but /play ("Match found!",
-                        then the game), and useLiveGame, the live match or series the menus' banner offers
+                        then the game), and useLiveGame, the live match or series the menus' banner offers;
+                        an ended queue is forgotten after QUEUE_ENDED_AFTER_READS reads (R897000)
 routes/GameBanner.tsx   R765: the one banner atop a menu while there is a game to go back to: a saved
                         practice game (Resume, on /practice) and the live online game (Rejoin, on / and
                         /practice); game-banner.css draws it as the tavern's notice

@@ -3,6 +3,7 @@
 import { tutorialLessons } from "./lessons.ts";
 import { onlineReset } from "./onlineReset.ts";
 import { replayHash, type ReplayHashPayload } from "./replay.ts";
+import { stayQueued, stopQueued, type StayQueuedCommand } from "./stayQueued.ts";
 import { wsPlayer, type WsPlayerCommand } from "./wsPlayer.ts";
 
 export function registerTasks(
@@ -13,6 +14,10 @@ export function registerTasks(
     /** Spec 06 / M6 gate: the second player, driven from Node. */
     wsPlayer(command: WsPlayerCommand) {
       return wsPlayer(command);
+    },
+    /** Specs 19 and 37: a seat enqueued over HTTP keeps polling like a queued client (R897000). */
+    stayQueued(command: StayQueuedCommand) {
+      return stayQueued(command);
     },
     /** Spec 01: fold the recorded log through the engine and compare state hashes. */
     replayHash(payload: ReplayHashPayload) {
@@ -38,9 +43,11 @@ export function registerTasks(
 
   // Every spec file starts from a clean set of sockets.
   on("before:spec", async () => {
+    stopQueued();
     await wsPlayer({ action: "reset" });
   });
   on("after:spec", async () => {
+    stopQueued();
     await wsPlayer({ action: "reset" });
   });
 }
