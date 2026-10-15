@@ -272,7 +272,7 @@ declares less than runs, so strict scripts cast through `any`:
 Five of the 28 stay Rust for PORTING.md §5's second or third reason; their
 rows in `README.md` §4 say why. classic-036 Burn and meditative-022 Mind Games
 diverged under `luau diff` (a Radiant ingredient in a base fusion ran its base
-`cry`; the reconcile fixed the host, `script.rs` `shared_functions`, and
+`cry`; the reconcile fixed the host, `script.rs`'s direct hooks, and
 neither was ported again; Burn's other divergence is the `effective_cost` gap
 above). classic-088 Siphon Squad, core-014 Jlockeed's Weapons and core-065-1
 Spikey Pillow break `luau bench` with their auras; a cheaper aura call in
@@ -285,7 +285,8 @@ Added by #442's reconcile, with `main` merged in (`README.md` §7):
 `ctx:immutable_bars` (`reads.rs`; Classic #5 Tesla); `J.cloak_hand_aura`
 (`api/aura.rs`; Meditative #45, #45.1, #99); the `revealEcho` hook (above); and
 the face fix: only an adapter both faces share picks its face by `ctx.radiant`
-(`script.rs`, `shared_functions`).
+(`script.rs`'s direct hooks; since #871 only a hook both faces hold the function
+under shares one).
 
 ## Fixed in part 28 (#464): each gap's Luau form
 
@@ -386,7 +387,12 @@ forms — `PORTING.md` §5's first reason no longer holds for them.
     that must keep their own adapters (`!ptr_eq`) spell their hooks out as
     separate literals (or close over a per-face upvalue), as `core-t-coin`
     does; and a shared hook with per-face named sub-hooks still shares the
-    adapter — only the named resolution follows the run.
+    adapter — only the named resolution follows the run. The faces share an
+    adapter only under one hook key, since an adapter looks its function up
+    under the key it was built for (#871): a function under `cry` on the base
+    face and only under `death` on the Radiant face gets an adapter a face, each
+    running its own face's function
+    (`one_function_under_another_hook_on_each_face_runs_on_both_faces`).
 15. **`.luaurc`'s alias** (`crates/cards/src/scripts/.luaurc` maps `jackioh`
     to `"../../luau/jackioh"`, no extension). luau-analyze 0.740 refuses the
     extension as `Unknown require` under `--mode=strict`; without it the CLI

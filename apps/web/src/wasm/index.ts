@@ -58,6 +58,7 @@ import initWasm, {
 import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
+import type { CustomCard } from "../wire/generated/CustomCard.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import type { ReplayCheckpoints } from "../wire/generated/ReplayCheckpoints.ts";
@@ -187,6 +188,10 @@ export type CreateGameArgs = {
   lastBoards?: readonly [readonly LastBoardCard[], readonly LastBoardCard[]];
   /** R678: the boards of two other games a Glitch may put on the field, in seat order. */
   glitchBoards?: readonly [readonly LastBoardCard[], readonly LastBoardCard[]];
+  /** R923000: a practice sandbox, whose dev tools (`sandbox` actions) only it accepts. */
+  sandbox?: boolean;
+  /** R915006: the game's custom cards, which only the Luau module runs (R915009); this one refuses them. */
+  customCards?: readonly CustomCard[];
 };
 
 /** `{ state, events, error? }`: `error` is the engine's refusal, and then `state` is the input. */

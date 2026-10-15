@@ -98,15 +98,27 @@ fn to_calls(returned: &Value, site: Site) -> mlua::Result<Vec<EffectCall>> {
     api::effect_calls(&json, site).map_err(|e| mlua::Error::runtime(e.to_string()))
 }
 
-/// Turns a list of effect calls into engine Effects.
+/// Turns a list of effect calls into engine Effects. A custom card's that the host refuses fails the
+/// hook (R915004); any other card's panics, naming it.
 fn build_effects(calls: &[EffectCall], site: Site, bytecode: &'static [u8]) -> Vec<Effect> {
-    calls
-        .iter()
-        .map(|call| match api::effect_of(call, site, bytecode) {
-            Ok(eff) => eff,
-            Err(err) => panic!("{err}"),
-        })
-        .collect()
+    let mut effects = Vec::with_capacity(calls.len());
+    for call in calls {
+        match api::effect_of(call, site, bytecode) {
+            Ok(effect) => effects.push(effect),
+            Err(err) => return failed(site, &err),
+        }
+    }
+    effects
+}
+
+/// A hook that failed: a custom card's resolves `scriptFailed` and nothing else (R915004, SPEC §12.5);
+/// any other card's panics with its error, which names its card, face and hook (an engine hook has
+/// no error to return).
+fn failed(site: Site, err: &dyn std::fmt::Display) -> Vec<Effect> {
+    if crate::custom::is_custom_site(site) {
+        return vec![crate::custom::failure(site, &err.to_string())];
+    }
+    panic!("{err}")
 }
 
 /// `face[name]` as a function: a missing key reads as nil, never as an error.
@@ -265,7 +277,7 @@ pub fn adapt_hook(site: Site, bytecode: &'static [u8], across_faces: bool) -> Ho
             })
         }) {
             Ok(calls) => build_effects(&calls, runtime, bytecode),
-            Err(err) => panic!("{err}"),
+            Err(err) => failed(runtime, &err),
         }
     })
 }
@@ -275,6 +287,8 @@ pub fn adapt_aura_hook(site: Site, bytecode: &'static [u8]) -> AuraHook {
     Arc::new(
         move |args: HookArgs<'_>| match vm::call_aura_hook(site, bytecode, args) {
             Ok(entries) => entries,
+            // R915004: a custom card's aura that fails gives nothing.
+            Err(_) if crate::custom::is_custom_site(site) => Vec::new(),
             Err(err) => panic!("{err}"),
         },
     )
@@ -633,7 +647,7 @@ pub fn adapt_trigger_run(site: Site, bytecode: &'static [u8], key: &'static str,
             })
         }) {
             Ok(calls) => build_effects(&calls, site, bytecode),
-            Err(err) => panic!("{err}"),
+            Err(err) => failed(site, &err),
         }
     })
 }
@@ -669,7 +683,7 @@ pub fn adapt_activation_run(site: Site, bytecode: &'static [u8], index: usize) -
             })
         }) {
             Ok(calls) => build_effects(&calls, site, bytecode),
-            Err(err) => panic!("{err}"),
+            Err(err) => failed(site, &err),
         }
     })
 }
@@ -727,7 +741,7 @@ pub fn adapt_sub_hook(
             })
         }) {
             Ok(calls) => build_effects(&calls, site, bytecode),
-            Err(err) => panic!("{err}"),
+            Err(err) => failed(site, &err),
         }
     })
 }

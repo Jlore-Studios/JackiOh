@@ -86,6 +86,77 @@ pub enum RevealAt {
     Cloaked,
 }
 
+/// R923001: where the practice sandbox puts a card it spawns (`SandboxOp::Spawn`).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "zone", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum SpawnZone {
+    /// Into the hand, as a card added to it (§2.4: a full hand burns it).
+    Hand,
+    /// Onto the field in that lane: the unit row for a Unit, the backrow for a Trap, a Field Spell or
+    /// a Field Trap (a Trap face-down), as a summon puts it there. The zone must be open.
+    Field { row: Row, lane: i32 },
+    /// Into the graveyard.
+    Graveyard,
+    /// On top of the library, the next card drawn.
+    LibraryTop,
+}
+
+/// R923000: one practice-sandbox tool (issue #923). Legal only in a game created as a sandbox
+/// (`CreateGameOptions.sandbox`), never offered by `legalActions`, so no policy takes one, and refused
+/// by the server's match actor.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum SandboxOp {
+    /// R923001: a fresh card of `def_id`, base or Radiant, for `player`, placed where `to` says. Placed,
+    /// not played: no Cry, no play counted, no cost paid.
+    Spawn {
+        player: PlayerId,
+        def_id: String,
+        /// The Radiant form. Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        radiant: Option<bool>,
+        to: SpawnZone,
+    },
+    /// R923002: a hero's health (1 to `SANDBOX_HERO_HEALTH_MAX`) and Armor (0 to `SANDBOX_ARMOR_MAX`);
+    /// an absent one stays as it is.
+    SetHero {
+        player: PlayerId,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        health: Option<i32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        armor: Option<i32>,
+    },
+    /// R923002: a player's current and maximum mana (0 to `SANDBOX_MANA_MAX`); an absent one stays.
+    SetMana {
+        player: PlayerId,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        current: Option<i32>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        max: Option<i32>,
+    },
+    /// R923002: `count` draws for `player` (1 to `SANDBOX_DRAW_MAX`), each one a draw by §2.4.
+    Draw { player: PlayerId, count: i32 },
+    /// R923003: destroy a card on the field, as a destroy effect does (its Death runs).
+    Destroy { instance_id: String },
+    /// R923003: take a card out of play: it is exiled from wherever it is, its Death not run.
+    Remove { instance_id: String },
+}
+
 impl RevealAt {
     /// Every timing, in the order a turn meets them (none offered since patch v0.3.7). `Cloaked` is no
     /// timing and is not one of them.
@@ -198,6 +269,10 @@ pub enum ActionBody {
     SetAutoEndTurn {
         enabled: bool,
     },
+    /// R923000: a practice-sandbox tool, from either seat on either turn, in a sandbox game only.
+    Sandbox {
+        op: SandboxOp,
+    },
     // Server-only (R79): never sent by a client.
     Timeout,
     DisconnectExpired {
@@ -222,6 +297,7 @@ string_union! {
         Concede = "concede",
         EndTurn = "endTurn",
         SetAutoEndTurn = "setAutoEndTurn",
+        Sandbox = "sandbox",
         Timeout = "timeout",
         DisconnectExpired = "disconnectExpired",
         CeilingReached = "ceilingReached",
@@ -245,6 +321,7 @@ impl ActionBody {
             ActionBody::Concede => ActionType::Concede,
             ActionBody::EndTurn => ActionType::EndTurn,
             ActionBody::SetAutoEndTurn { .. } => ActionType::SetAutoEndTurn,
+            ActionBody::Sandbox { .. } => ActionType::Sandbox,
             ActionBody::Timeout => ActionType::Timeout,
             ActionBody::DisconnectExpired { .. } => ActionType::DisconnectExpired,
             ActionBody::CeilingReached => ActionType::CeilingReached,
@@ -316,6 +393,9 @@ pub const NON_ACTIVE_ACTION_TYPES: &[ActionType] = &[
     // MD-D29, R1127: either seat may emote while a card hears it.
     ActionType::Emote,
     ActionType::SetAutoEndTurn,
+    // R923000: the sandbox's tools arrange the board on either turn (`sandbox.rs` refuses them outside a
+    // sandbox game).
+    ActionType::Sandbox,
     ActionType::DisconnectExpired,
     ActionType::Timeout,
     ActionType::CeilingReached,

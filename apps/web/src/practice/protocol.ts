@@ -50,6 +50,12 @@ export type PracticeStartConfig = {
   lastBoard?: LastBoardCard[];
   /** R768: both seats' portraits as the page dealt them (R642), for a finished game's replay summary. Omitted: the default portrait on both. */
   portraits?: { p1: PortraitId; p2: PortraitId };
+  /**
+   * R923000: a sandbox game, whose dev tools (`sandbox` actions, sent as `act`) only it accepts:
+   * `createGame`'s and the fold's `sandbox`. It brings no last board and leaves none (R508). Never a
+   * lesson.
+   */
+  sandbox?: true;
 };
 
 /** R417: one card of a last board, its card and face only (the engine's `LastBoardEntry`). */
@@ -110,6 +116,8 @@ export type PracticeDebug = {
   lastBoards?: [LastBoardCard[], LastBoardCard[]];
   /** R433: the seats `createGame` was told were dealt (the human's, on the random deck); absent when none was. */
   dealt?: PlayerId[];
+  /** R923000: present when the game is a sandbox, which its fold must be told. */
+  sandbox?: true;
 };
 
 export type PracticeRequest =

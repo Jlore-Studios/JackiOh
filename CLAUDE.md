@@ -46,8 +46,9 @@ trap backrow. This file binds every agent, not only Claude.
    crate takes `jackioh-luau`: it is the custom-card host, #902 V4), `mlua` (`jackioh-luau`'s) and, behind a
    `ts` feature (the engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans
    what would break purity, tests included. The only statics are the catalog and the script registry,
-   `OnceLock`s set once by `jackioh_cards::register_all()`, and `jackioh-luau`'s thread-local VM, which holds
-   compiled chunks and no game state (#442 L8). A Luau script is kept pure by its host: the sandbox (L5), the
+   `OnceLock`s set once by `jackioh_cards::register_all()`, `jackioh-luau`'s thread-local VM, which holds
+   compiled chunks and scripts and no game state (#442 L8), and the engine's custom-script host, a
+   thread-local lent for one call by `custom::with_custom_scripts` (#915, R915002). A Luau script is kept pure by its host: the sandbox (L5), the
    integer boundary every value crosses (L6) and the lint (L6, L7), all in `crates/luau/README.md`. Data
    reaches a pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs
    the disk or a clock goes in `crates/tools`.

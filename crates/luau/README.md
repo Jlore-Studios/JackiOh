@@ -79,12 +79,17 @@ only on its context, on any thread. The cache needs no `RefCell`: it is a Lua ta
   looping (`string.rep`), which spends no interrupts, is bounded too. The allocation that would pass
   the cap fails, and the hook call with it, with an error naming the card, face and hook:
   `"<card> <face> <hook>: out of memory, past 67108864 bytes (L5)"`. Every hook call, a nested one
-  included, runs under the cap (`vm::BudgetGuard`), but a reader, `J.query` and `J.pool` lift it
-  while they build their answer (`sandbox::MemoryCap`): under a cap mlua runs each value the host
-  builds through a protected call, which cost a hook call about half its time, and what the
-  host builds is bounded by the state it reads, not by the script. It is still counted, so the
-  hook's next allocation past the cap fails. For the same reason `J`'s verbs are Luau closures, not
-  Rust functions. Luau collects nothing when an allocation fails, so an outermost hook call
+  included, runs under the cap (`vm::BudgetGuard`). A reader, `J.query` and `J.pool` lift it while
+  they build their answer (`sandbox::uncapped`), since under a cap mlua runs each value the host
+  builds through a protected call, which cost a hook call about half its time; for the same reason
+  `J`'s verbs are Luau closures, not Rust functions. So while a reader builds its answer the VM can
+  hold more than the cap, by what the reader allocates: the state it reads bounds that, or the
+  table the script hands it (`ctx:rng_shuffle`'s list, which the cap held), not anything the script
+  does meanwhile. The answer is counted like everything else: a reader that leaves the VM past the
+  cap fails as the allocation past it would, and the hook call with it, naming the card, face and
+  hook (#871), so a hook never goes on holding more than the cap, however many answers it keeps.
+  The script's own allocations stay capped, its next one past the cap after a reader returns
+  included. Luau collects nothing when an allocation fails, so an outermost hook call
   that finds the VM holding more than `LUAU_MEMORY_COLLECT_BYTES` (half the cap) first collects all
   its garbage: a call that ran out of memory does not fail the next one. `pcall` catches a memory
   error as it catches any Luau error; the allocation never happened, so the cap holds;
@@ -197,8 +202,13 @@ A `.luaurc` beside the scripts aliases `@jackioh` at the committed module, which
   fills those slots of `CardScripts` with closures that capture only the hook's `Site` (card, face
   and hook) and the `&'static` bytecode, so any thread's VM can load the chunk the first time it
   needs it. One function value named under two hooks — two hooks of one face, or one hook of
-  each face — fills both slots with one shared closure, which serves each run from the running
-  face's table (#464 gaps 10 and 14). No Lua value outlives a call.
+  both faces — fills both slots with one shared closure (#464 gaps 10 and 14). A closure looks its
+  function up under the hook it was built for, so it is shared only where the face it runs holds
+  the function under that hook (#871): a hook both faces hold the function under gets a closure
+  that serves each run from the running face's table, shared with every such hook; any other
+  hook's closure runs its own face's table, whatever face the context names, and is shared with
+  that face's other hooks holding the function. A function the base face holds under `cry` and
+  the Radiant face only under `death` gets one closure a face. No Lua value outlives a call.
 - A call runs the module afresh, takes `module[face][hook]` and calls it with `ctx`, a userdata
   scoped to the call (`Lua::scope`), so a script cannot keep it.
 - An effect is data. `J.<verb>(args)` returns `{ verb = "<verb>", args = args }` and touches

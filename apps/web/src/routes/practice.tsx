@@ -42,7 +42,7 @@ import {
 
 import { DIFFICULTIES, type Difficulty } from "@jackioh/engine/config";
 import { LEAN_NEWEST, isLeanPick } from "@jackioh/shared";
-import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView } from "@jackioh/shared";
+import type { ActionBody, CardDefs, LeanPick, PlayerId, PlayerView, SandboxOp } from "@jackioh/shared";
 
 import Game from "../game/Game.tsx";
 import { reducedMotionNow } from "../game/animations.ts";
@@ -79,6 +79,8 @@ import { usePracticeEmotes } from "../practice/emotes.ts";
 import type { PracticeDebug, PracticeDeckChoice, PracticeStartConfig } from "../practice/protocol.ts";
 import { clearPracticeResume, readPracticeResumeState, writePracticeResume } from "../practice/resume.ts";
 import { ModifierList } from "../practice/ModifierList.tsx";
+import { SANDBOX_HOLD, sandboxAction } from "../practice/sandbox.ts";
+import { SandboxPanel } from "../practice/SandboxPanel.tsx";
 import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.tsx";
 import { OUTCOME_TITLE, PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
 import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../practice/PracticeSetup.tsx";
@@ -237,6 +239,8 @@ function configFor(choice: PracticeSetupChoice, params: PracticeParams): Practic
     difficulty: choice.difficulty,
     humanSeat: params.seat ?? randomSeat(),
     deck: choice.deck,
+    // R923000: a sandbox game, with its dev tools.
+    ...(choice.sandbox === true ? { sandbox: true } : {}),
   };
 }
 
@@ -764,7 +768,7 @@ function PracticeScreen({
   /** The same difficulty and deck again, with a fresh seed and seat (unless the URL fixes them). */
   const onPlayAgain = useCallback(() => {
     if (game === null) return;
-    setGame(configFor({ difficulty: game.difficulty, deck: game.deck }, params));
+    setGame(configFor({ difficulty: game.difficulty, deck: game.deck, ...(game.sandbox === true ? { sandbox: true } : {}) }, params));
   }, [game, params]);
 
   /** The game whose result dialog the player closed to read the final board; null shows it. */
@@ -803,6 +807,27 @@ function PracticeScreen({
   const onAction = useCallback(
     (body: ActionBody) => {
       controller?.act(body);
+    },
+    [controller],
+  );
+
+  // R923000: a sandbox game's "Hold the AI's turn", one more reason the controller holds the AI's
+  // next step (as the board's animation and a voice line are), released with the game.
+  const [sandboxHeld, setSandboxHeld] = useState(false);
+  const onSandboxHold = useCallback(
+    (held: boolean) => {
+      setSandboxHeld(held);
+      controller?.setHold(SANDBOX_HOLD, held);
+    },
+    [controller],
+  );
+  useEffect(() => {
+    setSandboxHeld(false);
+    controller?.setHold(SANDBOX_HOLD, false);
+  }, [controller, state.config]);
+  const onSandboxTool = useCallback(
+    (op: SandboxOp) => {
+      controller?.act(sandboxAction(op));
     },
     [controller],
   );
@@ -930,8 +955,9 @@ function PracticeScreen({
       error={snapshot.error}
       resultForm="chip"
       emotes={emotes}
-      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not.
-      trackStats={config.lesson === undefined}
+      // R639: a practice game is the player's own game and is logged; a tutorial lesson is not, and
+      // R923000: nor is a sandbox game, which counts for nothing.
+      trackStats={config.lesson === undefined && config.sandbox !== true}
       {...(config.lesson === undefined ? {} : { autoEndTurn: true })}
     />
   );
@@ -976,7 +1002,7 @@ function PracticeScreen({
           <span className="practice-hud__tier">
             <TierCrest tier={config.difficulty} size="sm" />
             <span className="practice-hud__label">
-              <span className="practice-hud__mode">{t("Practice")}</span>
+              <span className="practice-hud__mode">{config.sandbox === true ? t("Sandbox") : t("Practice")}</span>
               <strong>{t(DIFFICULTY_LABEL[config.difficulty])}</strong>
             </span>
           </span>
@@ -1034,6 +1060,10 @@ function PracticeScreen({
       >
         {lookup === null ? board : <CatalogContext.Provider value={lookup}>{board}</CatalogContext.Provider>}
       </div>
+      {/* R923000: a sandbox game's dev tools, over the board's edge; while the game runs only. */}
+      {config.sandbox === true && result === null ? (
+        <SandboxPanel view={snapshot.view} defs={defs} held={sandboxHeld} onHold={onSandboxHold} onTool={onSandboxTool} />
+      ) : null}
       {leaveAskedFor !== null && leaveAskedFor.game === game && result === null ? (
         <PracticeLeave
           to={leaveAskedFor.to}

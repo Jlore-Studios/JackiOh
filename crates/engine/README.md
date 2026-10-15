@@ -12,7 +12,7 @@ What the other crates call:
 
 | Function | Answers |
 | --- | --- |
-| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678) and dealt seats (R433) |
+| `create_game(&CreateGameOptions) -> GameState` | a game at setup: seed, decks, and the optional catalog, handicaps (R180), last boards (R417), Glitch boards (R678), dealt seats (R433) and the practice sandbox flag (R923000) |
 | `begin_game(&GameState) -> ReduceResult` | setup run (§2.1): the opening draws and the mulligan prompts |
 | `reduce(&GameState, &Action) -> ReduceResult` | the next state and its events, or `error: Some(reason)` with the input state unchanged and no events |
 | `legal_actions(&GameState, PlayerId) -> Vec<ActionBody>` | every action that player may send now |

@@ -811,6 +811,17 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     testid: "hero-<side>",
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R915004: a custom card's hook failed and did nothing. The card fades once where it stands, or its
+  // controller's hero when the card is nowhere the viewer sees.
+  scriptFailed: {
+    animation: "jk-badge-fade",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    target: (e, view) =>
+      e.instanceId === null
+        ? testid.hero(sideOf(view, e.player))
+        : instanceOrPile(view, e.instanceId, testid.hero(sideOf(view, e.player))),
+  },
 };
 
 /**

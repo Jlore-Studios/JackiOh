@@ -72,6 +72,15 @@ describe("R668 the practice game to resume, on the device", () => {
     }
   });
 
+  it("R923000 a sandbox game is kept as one, and a sandbox flag that is not true is malformed", () => {
+    writePracticeResume({ ...CONFIG, sandbox: true });
+    expect(readPracticeResume()).toEqual({ ...CONFIG, sandbox: true });
+    writePracticeResume(CONFIG);
+    expect(readPracticeResume(), "a game that is no sandbox keeps no flag").toEqual(CONFIG);
+    window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify({ ...CONFIG, sandbox: false }));
+    expect(readPracticeResume()).toBeNull();
+  });
+
   it("R765 keeps where the player left the game: in it, or with Save and leave", () => {
     writePracticeResume(CONFIG);
     expect(readPracticeResumeState()).toEqual({ config: CONFIG, saved: false });

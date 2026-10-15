@@ -99,6 +99,10 @@ pub fn create_game_args(
         dealt,
         last_boards,
         glitch_boards,
+        // R923000: no match the server runs is a practice sandbox.
+        sandbox: None,
+        // R915005: nor holds a custom card, which plays only in practice.
+        custom_cards: None,
     }
 }
 
@@ -120,6 +124,9 @@ pub fn fold_args(
         dealt,
         last_boards,
         glitch_boards,
+        // R923000, R915005: as `create_game_args`, never a sandbox and no custom card.
+        sandbox: None,
+        custom_cards: None,
     }
 }
 

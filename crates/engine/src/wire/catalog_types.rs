@@ -225,7 +225,8 @@ string_union! {
 
 string_union! {
     /// §5: Core, Classic and Classic+ ship (R380); Meditative is in the catalog and ships with the
-    /// last part of its patch (R1420); Boss and Boss-X are reserved.
+    /// last part of its patch (R1420); Boss and Boss-X are reserved. Custom is a custom card's
+    /// (§12.1, R915000): never in the catalog and never shipped, so no pool or random deck finds one.
     pub enum SetName {
         Core = "Core",
         Classic = "Classic",
@@ -233,6 +234,7 @@ string_union! {
         Meditative = "Meditative",
         Boss = "Boss",
         BossX = "Boss-X",
+        Custom = "Custom",
     }
 }
 

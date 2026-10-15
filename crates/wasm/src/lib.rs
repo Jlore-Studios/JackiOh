@@ -168,6 +168,12 @@ fn reduce_result_json(result: ReduceResult) -> Result<String, JsError> {
 /// and a panic in WebAssembly is a trap the page cannot catch as the error TypeScript gave it. The
 /// functions are the engine's own (`state.rs`), so the messages are the engine's verbatim.
 fn check_setup(args: &CreateGameArgs) -> Result<(), JsError> {
+    // R915009: this module holds no Luau, so a game with custom cards runs in the Luau module.
+    if args.custom_cards.as_ref().is_some_and(|cards| !cards.is_empty()) {
+        return Err(JsError::new(
+            "a game with custom cards plays in the Luau module, not this one (R915009)",
+        ));
+    }
     let catalog: &CardDefs = match &args.catalog {
         Some(catalog) => catalog,
         None => engine::registered_catalog(),

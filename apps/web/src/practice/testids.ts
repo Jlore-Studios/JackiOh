@@ -57,4 +57,37 @@ export const practiceTestid = {
   modifiersPanel: "practice-modifiers-panel",
   /** In the HUD once the game is over: the outcome, which reopens the result dialog. */
   outcome: "practice-outcome",
+  /** R923000: on the setup, a checkbox: the game is a sandbox with dev tools. */
+  sandbox: "practice-sandbox",
+  /** R923000: a sandbox game's dev tools panel, and the button that shows and hides it. */
+  sandboxPanel: "practice-sandbox-panel",
+  sandboxToggle: "practice-sandbox-toggle",
+  /** A checkbox: hold the AI's next step while the board is arranged. */
+  sandboxHold: "practice-sandbox-hold",
+  /** The card search's `<input>`, its Radiant checkbox, and one button per card found. */
+  sandboxSearch: "practice-sandbox-search",
+  sandboxRadiant: "practice-sandbox-radiant",
+  sandboxResult: (defId: string): string => `practice-sandbox-result-${defId}`,
+  /** Spawn: whose (`you` or `opponent`), where (`hand`, `units:<lane>`, `backrow:<lane>`, `graveyard`, `libraryTop`), and the button. */
+  sandboxSpawnSeat: "practice-sandbox-spawn-seat",
+  sandboxSpawnWhere: "practice-sandbox-spawn-where",
+  sandboxSpawn: "practice-sandbox-spawn",
+  /** A hero's health and Armor. */
+  sandboxHeroSeat: "practice-sandbox-hero-seat",
+  sandboxHealth: "practice-sandbox-health",
+  sandboxArmor: "practice-sandbox-armor",
+  sandboxSetHero: "practice-sandbox-set-hero",
+  /** A player's current and maximum mana. */
+  sandboxManaSeat: "practice-sandbox-mana-seat",
+  sandboxManaCurrent: "practice-sandbox-mana-current",
+  sandboxManaMax: "practice-sandbox-mana-max",
+  sandboxSetMana: "practice-sandbox-set-mana",
+  /** A draw. */
+  sandboxDrawSeat: "practice-sandbox-draw-seat",
+  sandboxDrawCount: "practice-sandbox-draw-count",
+  sandboxDraw: "practice-sandbox-draw",
+  /** A card the human can see, and the two tools that take it. */
+  sandboxTarget: "practice-sandbox-target",
+  sandboxDestroy: "practice-sandbox-destroy",
+  sandboxRemove: "practice-sandbox-remove",
 } as const;

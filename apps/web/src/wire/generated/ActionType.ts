@@ -3,4 +3,4 @@
 /**
  * `ActionBody["type"]`.
  */
-export type ActionType = "mulligan" | "play" | "attack" | "switchPosition" | "activate" | "activatePower" | "answer" | "offerDraw" | "answerDraw" | "emote" | "concede" | "endTurn" | "setAutoEndTurn" | "timeout" | "disconnectExpired" | "ceilingReached";
+export type ActionType = "mulligan" | "play" | "attack" | "switchPosition" | "activate" | "activatePower" | "answer" | "offerDraw" | "answerDraw" | "emote" | "concede" | "endTurn" | "setAutoEndTurn" | "sandbox" | "timeout" | "disconnectExpired" | "ceilingReached";

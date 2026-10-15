@@ -403,7 +403,7 @@ use the same two functions.
 wire types, `effects` and `subsystems` as modules, and these entry points every other crate uses:
 
 ```rust
-pub fn create_game(args: &CreateGameArgs) -> GameState;            // TS createGame({seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt?})
+pub fn create_game(args: &CreateGameArgs) -> GameState;            // TS createGame({seed, decks, catalog?, handicaps?, lastBoards?, glitchBoards?, dealt?, sandbox?})
 pub fn begin_game(state: &GameState) -> ReduceResult;
 pub fn reduce(state: &GameState, action: &Action) -> ReduceResult;
 pub fn legal_actions(state: &GameState, player: PlayerId) -> Vec<ActionBody>;
@@ -998,7 +998,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | Command | Module | Part | Replaces | Does |
 |---|---|---|---|---|
 | `fuzz [--from N] [--seeds N] [--handicap]` | `fuzz.rs` | 22 | `pnpm fuzz`, `fuzz.test.ts`, `fuzz-handicap.test.ts` | random-policy games exactly as `fuzz.test.ts` seeds and deals them; I1–I4 each step; `fold(args, log)` hash equals the live hash; rayon-parallel |
-| `replay` | `replay.rs` | 22 | `e2e/support/tasks/replay-runner.ts`'s TS fold | reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?}` on stdin, prints `{"hash", "errors"}` |
+| `replay` | `replay.rs` | 22 | `e2e/support/tasks/replay-runner.ts`'s TS fold | reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?, sandbox?}` on stdin, prints `{"hash", "errors"}` |
 | `trace <matchup> <n>` | `trace.rs` | 22 | `packages/ai/scripts/trace.ts` | prints one gate game turn by turn |
 | `catalog check` | `catalog.rs` | 22 | `validate-catalog.ts`, the catalog/registry/references/params/radiant-standard tests | data checks |
 | `catalog loc <path>` | `catalog.rs` | 22 | `gen-loc.ts` | §7.5 |

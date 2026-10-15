@@ -120,8 +120,9 @@ type PracticeGame = {
 /** R188: the action types the AI never takes on its own, even as a fallback. */
 function isForbiddenAiAction(action: ActionBody): boolean {
   // MD-D29, R1127: the persona's emote is no AI decision — it arrives on its own request, and the
-  // random policy never emotes, so the gate answers it, never the search.
-  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote") return true;
+  // random policy never emotes, so the gate answers it, never the search. R923000: the sandbox's tools
+  // are the human's alone (`legalActions` never lists one, and this gate holds it twice).
+  if (action.type === "concede" || action.type === "offerDraw" || action.type === "emote" || action.type === "sandbox") return true;
   return action.type === "answerDraw" && action.accept;
 }
 
@@ -190,8 +191,9 @@ function startGame(config: PracticeStartConfig): PracticeGame {
   const { humanDeck, aiDeck, handicap } = decksAndHandicap(config);
   const decks: [string[], string[]] = config.humanSeat === "p1" ? [humanDeck, aiDeck] : [aiDeck, humanDeck];
   const handicaps: Partial<Record<PlayerId, Handicap>> = { [aiSeat]: { ...handicap } };
-  // R508: the human's last board, on a free game only; the AI's seat never has one.
-  const board = config.lesson === undefined ? (config.lastBoard ?? []) : [];
+  // R508: the human's last board, on a free game only; the AI's seat never has one. R923000: a sandbox
+  // game brings none.
+  const board = config.lesson === undefined && config.sandbox !== true ? (config.lastBoard ?? []) : [];
   const lastBoards: [LastBoardCard[], LastBoardCard[]] | undefined =
     board.length === 0 ? undefined : config.humanSeat === "p1" ? [[...board], []] : [[], [...board]];
   const dealt = dealtSeats(config);
@@ -204,6 +206,8 @@ function startGame(config: PracticeStartConfig): PracticeGame {
     handicaps,
     ...(lastBoards === undefined ? {} : { lastBoards }),
     ...(dealt.length === 0 ? {} : { dealt }),
+    // R923000: the one game whose dev tools the engine takes.
+    ...(config.sandbox === true ? { sandbox: true } : {}),
   });
   const begun = beginGame(created);
   if (begun.error !== undefined) throw new Error(`the engine refused to begin the game: ${begun.error}`);
@@ -282,8 +286,10 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
   // R677: the human sees, and acts from, the seat it plays now; the result reads from it too.
   const human = humanSeatNow(game);
   const result = game.state.result;
-  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none.
-  const keepsBoard = result !== null && result.reason !== "voided" && game.config.lesson === undefined;
+  // R508: the board the human takes away, once a free game is over; R679: a voided game leaves none,
+  // and R923000: a sandbox game, whose board its tools built, leaves none either.
+  const keepsBoard =
+    result !== null && result.reason !== "voided" && game.config.lesson === undefined && game.config.sandbox !== true;
   return {
     view: viewFor(game.state, human),
     legal: legalActions(game.state, human),
@@ -316,8 +322,9 @@ function saveOf(game: PracticeGame): PracticeSave | null {
 function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): PracticeGame {
   if (save === null) throw new Error("no practice game is saved on this device");
   // The page names the game it remembers; a save of any other game is not the one it asked for.
-  const { seed, humanSeat, difficulty } = save.config;
-  if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty) {
+  // R923000: a sandbox game is the page's only when it remembers a sandbox, whose panel it then shows.
+  const { seed, humanSeat, difficulty, sandbox } = save.config;
+  if (seed !== asked.seed || humanSeat !== asked.humanSeat || difficulty !== asked.difficulty || sandbox !== asked.sandbox) {
     throw new Error("the saved practice game is not the one the page remembers");
   }
   if (save.catalog !== CATALOG_VERSION) {
@@ -345,6 +352,7 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
     handicaps: dealt.handicaps,
     ...(dealt.lastBoards === undefined ? {} : { lastBoards: dealt.lastBoards }),
     ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
+    ...(replay.config.sandbox === true ? { sandbox: true } : {}),
     log: replay.log,
   };
 }
@@ -515,6 +523,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       ...(active.config.lesson === undefined ? {} : { lesson: active.config.lesson }),
       ...(active.lastBoards === undefined ? {} : { lastBoards: JSON.parse(JSON.stringify(active.lastBoards)) as [LastBoardCard[], LastBoardCard[]] }),
       ...(active.dealt === undefined ? {} : { dealt: [...active.dealt] }),
+      ...(active.config.sandbox === true ? { sandbox: true } : {}),
     };
   }
 

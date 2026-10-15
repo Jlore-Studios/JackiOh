@@ -422,6 +422,19 @@ export const PRACTICE_OUTCOME = "practice-outcome";
 /** R169: live-modifier count and panel. */
 export const PRACTICE_MODIFIERS = "practice-modifiers";
 export const PRACTICE_MODIFIERS_PANEL = "practice-modifiers-panel";
+/** R923000: the sandbox checkbox on the setup, and a sandbox game's dev tools. */
+export const PRACTICE_SANDBOX = "practice-sandbox";
+export const PRACTICE_SANDBOX_PANEL = "practice-sandbox-panel";
+export const PRACTICE_SANDBOX_TOGGLE = "practice-sandbox-toggle";
+export const PRACTICE_SANDBOX_HOLD = "practice-sandbox-hold";
+export const PRACTICE_SANDBOX_SEARCH = "practice-sandbox-search";
+export const PRACTICE_SANDBOX_RADIANT = "practice-sandbox-radiant";
+export function practiceSandboxResultId(defId: string): string {
+  return `practice-sandbox-result-${defId}`;
+}
+export const PRACTICE_SANDBOX_SPAWN_SEAT = "practice-sandbox-spawn-seat";
+export const PRACTICE_SANDBOX_SPAWN_WHERE = "practice-sandbox-spawn-where";
+export const PRACTICE_SANDBOX_SPAWN = "practice-sandbox-spawn";
 
 // Tutorial selectors mirror `apps/web/src/tutorial/testids.ts` (SPEC §9.10); lessons reuse the practice contract.
 

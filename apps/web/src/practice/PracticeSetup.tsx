@@ -34,8 +34,11 @@ import { practiceTestid } from "./testids.ts";
 import { DIFFICULTY_LABEL, DIFFICULTY_TAGLINE, TierCrest } from "./Tier.tsx";
 import "./practice.css";
 
-/** Selection passed to Start, including the random deck's "More cards from" pick (R1373, R924000). */
-export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanSet?: LeanPick | null };
+/**
+ * Selection passed to Start, including the random deck's "More cards from" pick (R1373, R924000) and
+ * whether the game is a sandbox with dev tools (R923000).
+ */
+export type PracticeSetupChoice = { difficulty: Difficulty; deck: PracticeDeckChoice; leanSet?: LeanPick | null; sandbox?: boolean };
 
 /**
  * What the player's account offers the deck picker, and why when it offers nothing, so the hint
@@ -172,6 +175,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
   const [difficulty, setDifficulty] = useState<Difficulty>(initial.difficulty);
   const [deck, setDeck] = useState<string>(initial.deck);
   const [lean, setLean] = useState<LeanPick | null>(initial.leanSet ?? null);
+  const [sandbox, setSandbox] = useState(false);
   const baseId = useId();
 
   const savedDecks = saved.kind === "ready" ? saved.decks : null;
@@ -186,7 +190,7 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    onStart({ difficulty, deck: choice, leanSet: lean });
+    onStart({ difficulty, deck: choice, leanSet: lean, ...(sandbox ? { sandbox: true } : {}) });
   }
 
   return (
@@ -276,6 +280,22 @@ export function PracticeSetup({ saved, initial, defs, defsFailed, onStart }: Pra
             defsFailed={defsFailed}
           />
         </div>
+
+        <label className="practice-setup__sandbox">
+          <input
+            type="checkbox"
+            data-testid={practiceTestid.sandbox}
+            checked={sandbox}
+            aria-describedby={`${baseId}-sandbox-note`}
+            onChange={(event) => setSandbox(event.currentTarget.checked)}
+          />
+          <span>
+            <span className="practice-setup__sandbox-label">{t("Sandbox")}</span>
+            <span className="practice-setup__sandbox-note" id={`${baseId}-sandbox-note`}>
+              {t("Dev tools to spawn any card and set up the board. The game counts for nothing.")}
+            </span>
+          </span>
+        </label>
 
         <button type="submit" className="practice-play button-primary" data-testid={practiceTestid.start}>
           {t("Start game")}

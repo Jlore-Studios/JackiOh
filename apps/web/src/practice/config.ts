@@ -55,3 +55,6 @@ export const PRACTICE_REPLAYS_KEPT = 10;
  * it no second time. Each holds a state every `REPLAY_CHECKPOINT_EVERY` steps.
  */
 export const PRACTICE_REPLAYS_CACHED = 5;
+
+/** R923001: the most cards the practice sandbox's search shows at once. */
+export const SANDBOX_RESULTS_MAX = 24;

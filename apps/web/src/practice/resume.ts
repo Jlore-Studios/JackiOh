@@ -36,6 +36,7 @@ function isConfig(value: unknown): value is PracticeStartConfig {
     (DIFFICULTIES as readonly unknown[]).includes(config.difficulty) &&
     (config.humanSeat === "p1" || config.humanSeat === "p2") &&
     isDeck(config.deck) &&
+    (config.sandbox === undefined || config.sandbox === true) &&
     config.lesson === undefined
   );
 }
@@ -71,8 +72,10 @@ export function writePracticeResume(config: PracticeStartConfig, options: { save
     clearPracticeResume();
     return;
   }
-  const { seed, difficulty, humanSeat, deck } = config;
-  const kept = options.saved === true ? { seed, difficulty, humanSeat, deck, saved: true } : { seed, difficulty, humanSeat, deck };
+  const { seed, difficulty, humanSeat, deck, sandbox } = config;
+  // R923000: a sandbox game is picked up as a sandbox.
+  const setup = { seed, difficulty, humanSeat, deck, ...(sandbox === true ? { sandbox } : {}) };
+  const kept = options.saved === true ? { ...setup, saved: true } : setup;
   try {
     window.localStorage.setItem(PRACTICE_RESUME_STORAGE_KEY, JSON.stringify(kept));
   } catch {

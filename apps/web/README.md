@@ -237,6 +237,9 @@ src/practice/
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   DeckPreview.tsx     the chosen deck's name, identity, mana curve and cards, before Start
   ModifierList.tsx    every live R169 modifier in full, one tap from the HUD
+  sandbox.ts SandboxPanel.tsx sandbox.css
+                      a sandbox game's dev tools (R923000–R923003): the card search, the cards the
+                      human can name, and the panel that sends each tool as a `sandbox` act
 routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unchanged inside the worker's catalog
 ```
 
@@ -271,9 +274,13 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
 - The one exception is `debug`, which carries the raw state, the log, the decks, the handicaps and
   the dealt seats for spec 13's replay check. The core answers it only when `MODE !== "production"`,
   and the route sets `window.__jackiohPractice` under the same condition, like `window.__jackioh`.
-- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, log)`: nonces are `h<n>` for the
+- A practice game replays exactly from `(seed, decks, handicaps, lastBoards, dealt, sandbox, log)`: nonces are `h<n>` for the
   human and `a<n>` for the AI, counted over accepted actions only, and the AI draws from its own
   stream (`${seed}:ai`), never the match rng.
+- A sandbox game (R923000, the setup's Sandbox box) is created with `sandbox: true`, the only game
+  whose engine takes the `sandbox` action. The panel's tools are the human's acts, logged as `h<n>`;
+  its "Hold the AI's turn" is one more `controller.setHold` reason. It records no statistics, brings
+  and leaves no last board, and resumes only as a sandbox.
 - The random deck is dealt, not built (R433): `createGame` is told the human's seat was dealt, so
   the human's deck pile lists only what they have been shown of it and a card back for the rest. A
   preset, a saved deck and a lesson's fixed deck are listed in full; the AI's seat is never dealt.

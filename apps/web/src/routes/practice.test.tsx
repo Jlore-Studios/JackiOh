@@ -889,6 +889,62 @@ describe("B33 starting renders the game under the practice HUD", () => {
     expect(JSON.parse(window.localStorage.getItem(PRACTICE_SETUP_KEY) ?? "null")).toMatchObject({ leanSet: "newest" });
   });
 
+  it("R923000 the Sandbox box starts a sandbox game: the HUD says so and its dev tools go to the host as acts", async () => {
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(T.start));
+    const hud = await screen.findByTestId(T.hud);
+    const [config] = host.starts();
+    expect(config?.sandbox).toBe(true);
+    expect(hud).toHaveTextContent("Sandbox");
+    expect(screen.getByTestId(practiceTestid.sandboxPanel)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxDraw));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({
+        type: "act",
+        action: { type: "sandbox", op: { kind: "draw", player: config?.humanSeat, count: 1 } },
+      });
+    });
+  });
+
+  it("R923000 a game started without the box is no sandbox and shows no tools", async () => {
+    const host = routeHost();
+    renderRoute(host);
+    await settle();
+    fireEvent.click(screen.getByTestId(T.start));
+    const hud = await screen.findByTestId(T.hud);
+    expect(host.starts()[0]?.sandbox).toBeUndefined();
+    expect(hud).not.toHaveTextContent("Sandbox");
+    expect(screen.queryByTestId(practiceTestid.sandboxPanel)).toBeNull();
+    expect(screen.queryByTestId(practiceTestid.sandboxToggle)).toBeNull();
+  });
+
+  it("R923000 the panel's hold keeps the AI's next step back until it is let go", async () => {
+    const host = routeHost({ aiToAct: true });
+    const gap = 200;
+    renderRoute(host, { pacing: { firstActionMs: gap, actionGapMs: gap, promptAnswerMs: gap } });
+    await settle();
+    fireEvent.click(screen.getByTestId(practiceTestid.sandbox));
+    fireEvent.click(screen.getByTestId(T.start));
+    await screen.findByTestId(T.hud);
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
+    expect(screen.getByTestId(practiceTestid.sandboxHold)).toBeChecked();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, gap * 3));
+    });
+    expect(host.requests.filter((body) => body.type === "aiStep"), "no step while the AI is held").toEqual([]);
+
+    fireEvent.click(screen.getByTestId(practiceTestid.sandboxHold));
+    await waitFor(() => {
+      expect(host.requests).toContainEqual({ type: "aiStep" });
+    });
+  });
+
   it("B33 a saved deck chosen in setup travels as that deck's cards", async () => {
     const host = routeHost();
     renderRoute(host, { account: signedIn("active"), loadDecks: vi.fn(() => Promise.resolve(decksResponse(SAVED))) });

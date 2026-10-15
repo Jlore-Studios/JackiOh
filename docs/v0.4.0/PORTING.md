@@ -93,9 +93,10 @@ the same face: `after_state_check` calls back `after_check` plus data,
 `draw_while` calls back `draw_more`, `for_each_card` calls back
 `each_cards` / `each_card`; a second use of one verb in the same face
 appends `_2`, `_3`, … (`each_cards_2`, Classic #39). One local named under
-two hooks — two hooks of one face, or one hook of each face — builds one
+two hooks — two hooks of one face, or the same hook of both faces — builds one
 adapter shared by an `Arc` (#464 gaps 10 and 14); the run resolves names on
-the running face. Two textually separate literals stay two adapters even
+the running face. Under different hooks of the two faces it builds one
+adapter a face (#871). Two textually separate literals stay two adapters even
 with identical bodies: Luau reuses one closure object for every evaluation
 of an upvalue-free literal, so a factory called twice is one value
 (`core-t-coin` spells its faces out). Triggers and

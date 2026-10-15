@@ -508,6 +508,10 @@ pub struct ScenarioOptions {
     /// R678: the two other games' boards a Glitch may lay down, the `create_game` input (seat order).
     #[serde(default)]
     pub glitch_boards: Option<LastBoardInput>,
+    /// R915006: the game's custom cards, the `create_game` input, which the sides may then name by
+    /// id. Their scripts run only under a host lent with `custom::with_custom_scripts`.
+    #[serde(default)]
+    pub custom: Option<Vec<crate::wire::CustomCard>>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -538,6 +542,7 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
             state
                 .transient_defs
                 .get(&card.def_id)
+                .or_else(|| state.custom_defs.get(&card.def_id))
                 .map(|def| def.name.as_str())
         })
         .unwrap_or("?");
@@ -550,11 +555,13 @@ fn describe_instance(state: &GameState, card: &CardInstance) -> String {
     )
 }
 
-/// Every def the engine can see: the registered catalog plus this state's transient defs (Fuse).
+/// Every def the engine can see: the registered catalog plus this state's transient defs (Fuse) and
+/// custom cards' (R915000).
 fn visible_defs(state: &GameState) -> Vec<&CardDef> {
     registered()
         .values()
         .chain(state.transient_defs.values())
+        .chain(state.custom_defs.values())
         .collect()
 }
 
@@ -1087,6 +1094,7 @@ fn build_state(opts: &ScenarioOptions) -> Result<GameState, String> {
         decks: (deck.clone(), deck),
         last_boards: opts.last_boards.clone(),
         glitch_boards: opts.glitch_boards.clone(),
+        custom_cards: opts.custom.clone(),
         ..CreateGameOptions::default()
     });
 

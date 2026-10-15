@@ -524,6 +524,7 @@ fn check_replay(seed: u32, run: &GameRun) -> Result<(), FuzzFailure> {
         dealt: None,
         last_boards: None,
         glitch_boards: None,
+        ..Default::default()
     });
 
     if let Some(first) = replayed.errors.first() {
@@ -1258,6 +1259,7 @@ fn play_seed(seed: u32) -> Outcome {
             dealt: None,
             last_boards: None,
             glitch_boards: None,
+            ..Default::default()
         });
         if !replayed.errors.is_empty() {
             return Err(format!(

@@ -25,16 +25,19 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
         let mut radiant_script = None;
         // One adapter for one function under two hooks, across both faces too (#464 gaps 10
         // and 14): when two hook keys hold the same Luau function value — two hooks of one
-        // face, or the base and Radiant faces' hooks, whose params differ — both share one
-        // `Arc`, so `Arc::ptr_eq` holds the way it does for a Rust script that clones one
-        // hook (`classicplus-070`; `classic-082` and `classicplus-047` across faces). The
-        // shared function reads `param` off the running face, so one adapter serves both.
-        // The cache lives here, not in `build_script`, so both faces draw from it.
-        let mut hook_cache: Vec<(*const std::ffi::c_void, Hook)> = Vec::new();
-        // The functions both faces hold: only an adapter shared across the faces picks the face it
-        // runs by `ctx.radiant`; any other runs its own face's function, as a Rust face runs its own
-        // closure whatever the context says (a Radiant ingredient fused into a base host, #765).
-        let shared = shared_functions(&module);
+        // face, or one hook of both faces, whose params differ — both share one `Arc`, so
+        // `Arc::ptr_eq` holds the way it does for a Rust script that clones one hook
+        // (`classicplus-070`; `classic-082` and `classicplus-047` across faces). The shared
+        // function reads `param` off the running face, so one adapter serves both. The cache
+        // lives here, not in `build_script`, so both faces draw from it.
+        let mut hook_cache: HookCache = Vec::new();
+        // Each face's table, so a face's hooks can ask whether the other face holds the same
+        // function under the same key (`build_script`): none for `radiant = "base"`.
+        let face_table = |face: Face| match module.raw_get::<Value>(face.key()) {
+            Ok(Value::Table(table)) => Some(table),
+            _ => None,
+        };
+        let (base_table, radiant_table) = (face_table(Face::Base), face_table(Face::Radiant));
 
         for pair in module.pairs::<String, Value>() {
             let (key, value) = pair.map_err(|error| refused(error.to_string()))?;
@@ -52,7 +55,7 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                         &table,
                         bytecode,
                         &mut hook_cache,
-                        &shared,
+                        radiant_table.as_ref(),
                     )?);
                 }
                 "radiant" => match value {
@@ -73,7 +76,7 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
                             &table,
                             bytecode,
                             &mut hook_cache,
-                            &shared,
+                            base_table.as_ref(),
                         )?);
                     }
                     _ => {
@@ -98,37 +101,22 @@ pub fn load_card(card: &'static str, bytecode: &'static [u8]) -> Result<CardScri
     })
 }
 
-/// The function values both faces of a module hold, by pointer: none when the Radiant face is
-/// `"base"` or either face is missing.
-fn shared_functions(module: &Table) -> Vec<*const std::ffi::c_void> {
-    let functions = |key: &str| -> Vec<*const std::ffi::c_void> {
-        let Ok(Value::Table(face)) = module.raw_get::<Value>(key) else {
-            return Vec::new();
-        };
-        face.pairs::<Value, Value>()
-            .filter_map(|pair| match pair {
-                Ok((_, Value::Function(func))) => Some(func.to_pointer()),
-                _ => None,
-            })
-            .collect()
-    };
-    let radiant = functions(Face::Radiant.key());
-    functions(Face::Base.key())
-        .into_iter()
-        .filter(|ptr| radiant.contains(ptr))
-        .collect()
-}
+/// The direct hooks' adapters a module's faces built so far: each with the pointer of the Luau
+/// function it runs and the face it runs, `None` for one that runs the face the context names
+/// (`build_script`).
+pub type HookCache = Vec<(*const std::ffi::c_void, Option<Face>, Hook)>;
 
 /// Builds one `Script` for a face from its table. `hook_cache` is `load_card`'s, shared by both
 /// faces, so one function value held by two hook keys gets one adapter (#464 gaps 10 and 14);
-/// `shared` names the function values both faces hold (`shared_functions`).
+/// `other` is the other face's table, none when the Radiant face is `"base"` or either face is
+/// missing.
 pub fn build_script(
     card: &'static str,
     face: Face,
     table: &Table,
     bytecode: &'static [u8],
-    hook_cache: &mut Vec<(*const std::ffi::c_void, Hook)>,
-    shared: &[*const std::ffi::c_void],
+    hook_cache: &mut HookCache,
+    other: Option<&Table>,
 ) -> Result<Script, LuauError> {
     let refused = |message: String| LuauError::Load {
         card: card.to_string(),
@@ -212,12 +200,15 @@ pub fn build_script(
             let id: String = act.raw_get("id").unwrap_or_default();
             let label: String = act.raw_get("label").unwrap_or_default();
 
+            // A count crosses the boundary as every number does (L6, #871): a fraction or a value
+            // outside `i32` is refused, naming the card and face.
             let uses = match act.raw_get::<Value>("uses") {
                 Ok(Value::String(s)) if s.to_str().is_ok_and(|v| v == "unlimited") => {
                     ActivationUses::Unlimited
                 }
-                Ok(Value::Integer(n)) => ActivationUses::Count(n as i32),
-                Ok(Value::Number(n)) => ActivationUses::Count(n as i32),
+                Ok(count @ (Value::Integer(_) | Value::Number(_))) => {
+                    ActivationUses::Count(numbers::to_i32(&count, site_load)?)
+                }
                 _ => ActivationUses::Count(1),
             };
 
@@ -409,11 +400,23 @@ pub fn build_script(
     // Direct hooks. One adapter for one function under two hooks (#464 gaps 10 and 14):
     // when two hook keys hold the same Luau function value, both share one `Arc`, so
     // `Arc::ptr_eq` holds the way it does for a Rust script that clones one hook. The cache
-    // is `load_card`'s, shared by both faces.
+    // is `load_card`'s, shared by both faces. An adapter looks its function up under the key it
+    // was built for, on the face it runs, so it is shared only where that face holds the function
+    // under that key (#871). A hook whose function the other face holds under the same key gets
+    // an adapter that runs the face the context names, shared with every such hook of either face;
+    // any other gets one that runs its own face's function, as a Rust face runs its own closure
+    // whatever the context says (a Radiant ingredient fused into a base host, #765), shared with
+    // its face's other hooks holding that function.
     let mut direct_hook = |key: &'static str| -> Option<Hook> {
         let func = hooks::get_fn(table, key).ok()?;
         let ptr = func.to_pointer();
-        if let Some((_, shared)) = hook_cache.iter().find(|(cached, _)| *cached == ptr) {
+        let across_faces =
+            other.is_some_and(|other| hooks::get_fn(other, key).is_ok_and(|held| held.to_pointer() == ptr));
+        let runs = (!across_faces).then_some(face);
+        if let Some((.., shared)) = hook_cache
+            .iter()
+            .find(|(cached, cached_runs, _)| *cached == ptr && *cached_runs == runs)
+        {
             return Some(shared.clone());
         }
         let site = Site {
@@ -421,8 +424,8 @@ pub fn build_script(
             face,
             hook: key,
         };
-        let adapter = hooks::adapt_hook(site, bytecode, shared.contains(&ptr));
-        hook_cache.push((ptr, adapter.clone()));
+        let adapter = hooks::adapt_hook(site, bytecode, across_faces);
+        hook_cache.push((ptr, runs, adapter.clone()));
         Some(adapter)
     };
 
