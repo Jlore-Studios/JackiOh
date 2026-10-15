@@ -6826,6 +6826,13 @@
     "977": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T17:20:57Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "hard covers the AI's search and design across crates; this touches crates/ai/src only in the match hook and the sweep's counters, never the search, and the plan fixes the cross-crate design, so medium (several crates plus a new ruling)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
