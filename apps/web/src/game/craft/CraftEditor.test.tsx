@@ -3,13 +3,15 @@
 // the reducer will say.
 
 import type { ActionBody } from "@jackioh/shared";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CraftRecipe, PendingOption, PendingPromptView } from "../../wire/index.ts";
+import { CRAFT_HAT_PRICES } from "../../wire/engineConfig.ts";
 import { INSPECT_SHEET, closeInspect } from "../../cards/index.ts";
 import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
 import { CraftEditor } from "./CraftEditor.tsx";
+import { HAT_LABELS } from "./recipe.ts";
 
 afterEach(cleanup);
 
@@ -210,6 +212,61 @@ describe("the block editor (R880)", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("R883 the palettes offer what the card's type takes", () => {
+  it("R883 on a Spell, Taunt's click is inert and aria-disabled while Lifesteal still toggles", () => {
+    const props = editorProps({ options: [presetOption(spellPreset(), 0)] });
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    const taunt = screen.getByRole("button", { name: /^Taunt ·/ });
+    const lifesteal = screen.getByRole("button", { name: /^Lifesteal ·/ });
+    expect(taunt.getAttribute("aria-disabled")).toBe("true");
+    expect(taunt.getAttribute("title")).toBe("A Spell cannot take Taunt");
+    expect(lifesteal.getAttribute("aria-disabled")).toBe("false");
+
+    fireEvent.click(taunt);
+    expect(taunt.getAttribute("aria-pressed")).toBe("false");
+    expect(screen.queryByLabelText("Chosen keywords")).toBeNull();
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    fireEvent.click(lifesteal);
+    expect(lifesteal.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByLabelText("Chosen keywords")).toHaveTextContent("Lifesteal");
+    expect(taunt.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("R883 a drag from an aria-disabled keyword still snaps a Give a unit a keyword effect under the hat", () => {
+    const props = editorProps({ options: [presetOption(spellPreset(), 0)] });
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    const taunt = screen.getByRole("button", { name: /^Taunt ·/ });
+    expect(taunt.getAttribute("aria-disabled")).toBe("true");
+    const restore = pointAt(screen.getByLabelText("When cast hat"));
+    try {
+      fireEvent.pointerDown(taunt, { clientX: 10, clientY: 10, pointerType: "mouse", button: 0 });
+      fireEvent.pointerMove(window, { clientX: 60, clientY: 60 });
+      fireEvent.pointerUp(window, { clientX: 60, clientY: 60 });
+    } finally {
+      restore();
+    }
+    expect(screen.getByLabelText("Give a unit a keyword under When cast")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Chosen keywords")).toBeNull();
+  });
+
+  it("R883 the hat palette offers only the hats the card's type takes", () => {
+    const props = editorProps({ options: [presetOption(spellPreset(), 0)] });
+    render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+
+    const offered = () =>
+      within(screen.getByRole("region", { name: "Hats" }))
+        .getAllByRole("button")
+        .map((button) => button.textContent?.split(" · ")[0]);
+    expect(offered()).toEqual(["When cast"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Unit" }));
+    expect(offered()).toEqual(CRAFT_HAT_PRICES.filter((row) => row.types.includes("Unit")).map((row) => HAT_LABELS[row.hat]));
   });
 });
 

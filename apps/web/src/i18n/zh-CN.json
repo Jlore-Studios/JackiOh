@@ -533,6 +533,7 @@
   "Decrease {label}": "减少{label}",
   "Increase {label}": "增加{label}",
   "Give a unit {keyword}": "使一个单位获得{keyword}",
+  "A {type} cannot take {keyword}": "{type}不能获得{keyword}",
   "Hats": "触发块",
   "Effects": "效果",
   "Your card": "你的卡牌",
