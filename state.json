@@ -7362,6 +7362,13 @@
     "993": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T20:39:29Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 5 fails (crates/ai/src), so not easy; not hard because the mulligan is decide's pre-search short-circuit, not the search, and the change is 4 small files, prototyped and verified"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
