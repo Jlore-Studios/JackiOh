@@ -1,4 +1,4 @@
-//! C+ #63 Fruit Tree (SPEC §8.7 row 63). (2) Field Spell, Fruit, Rare.
+//! C+ #63 Fruit Tree (SPEC §8.7 row 63). (3) Field Spell, Fruit, Rare.
 //!   Base:    "Start of Turn: Add a random Fruit to your hand. It costs (0)."
 //!   Radiant: "Start of Turn: Add a random Radiant Fruit to your hand. It costs (0)."
 //!   Engine:  "Its controller's start of turn (R62). The Fruit pool (R382) but Fruit Tree (R387);

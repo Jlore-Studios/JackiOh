@@ -141,7 +141,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BREATH: &str = "classic-019";
-    // Classic+ #26 Tommy Tempo, Radiant 18/18 Taunt: a big body no Immutable keeps a Spell off (R781001).
+    // Classic+ #26 Tommy Tempo, a Radiant Taunt set to 18/18 (`statsOverride`; it prints 10/10 since patch
+    // v0.3.10): a big body no Immutable keeps a Spell off (R781001).
     const BIG: &str = "classicplus-026";
     const FILLER: &str = "core-005";
     const ANCHOR: &str = "core-010";
@@ -189,7 +190,7 @@ mod tests {
         }
         scenario(json!({
             "p1": p1,
-            "p2": { "hand": [ANCHOR], "field": [{ "def": BIG, "radiant": true }] },
+            "p2": { "hand": [ANCHOR], "field": [{ "def": BIG, "radiant": true, "statsOverride": { "attack": 18, "health": 18 } }] },
         }))
     }
 

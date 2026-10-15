@@ -1,8 +1,8 @@
 //! C #21 Turtinator (SPEC §8.6 row 21). Unit 5/4 → 10/8, cost 2, Common.
-//!   Both faces: "Activate ♾️: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
+//!   Both faces: "Activate: Tribute another Unit. Deal damage equal to {multiplier}× its Attack."
 //!   — the multiplier is 1 on the base face and 2 on the Radiant face (a declared number).
 //!
-//! Activate ♾️ (R384): unlimited uses a turn, bounded by `ACTIVATE_UNLIMITED_CAP`. The cost is a pick
+//! Activate (R384): once a turn (patch v0.3.10, #831; Activate ♾️ before). The cost is a pick
 //! carried in the `activate` action (`tributes`), never Turtinator itself (R683,
 //! `cost.tributeExcludesSelf`). The Tribute is a Sacrifice: a death (Death fires, §6.3) that bypasses
 //! Indestructible. One unit is one Tribute: a Sheep's "worth 2" is only a play's Tribute X (§6.3), and
@@ -19,7 +19,7 @@ fn eat() -> ActivationDecl {
     ActivationDecl {
         id: "eat".to_string(),
         label: "Tribute another Unit. Deal damage equal to {multiplier}× its Attack".to_string(),
-        uses: ActivationUses::Unlimited,
+        uses: ActivationUses::Count(1),
         cost: Some(ActivationCost {
             tribute: Some(1),
             tribute_excludes_self: Some(true),
@@ -57,7 +57,7 @@ pub fn script() -> CardScripts {
 
 // BUILD M9 Classic row C 21: the Tribute is paid as it activates, then one hit from Turtinator on the
 // declared target for that Unit's attack as it stood (R78); 0 attack, no hit (R63); radiant 10/8: twice
-// that attack; numbers via `param()` (R386). Turtinator is always one of its controller's Units when
+// that attack; numbers via `param()` (R386); once a turn (patch v0.3.10). Turtinator is always one of its controller's Units when
 // activated, so the cost refuses a missing Tribute or one that is not that controller's own Unit.
 #[cfg(test)]
 mod tests {
@@ -130,7 +130,7 @@ mod tests {
             // closure.
             assert!(Arc::ptr_eq(&scripts.radiant.activations[0].run, &scripts.base.activations[0].run));
             let ability = &scripts.base.activations[0];
-            assert_eq!(ability.uses, ActivationUses::Unlimited);
+            assert_eq!(ability.uses, ActivationUses::Count(1));
             assert_eq!(serde_json::to_value(ability.cost).unwrap(), json!({ "tribute": 1, "tributeExcludesSelf": true }));
             assert_eq!(serde_json::to_value(&ability.targets[0].filter).unwrap(), json!({ "of": ["unit", "hero"] }));
         }
@@ -297,6 +297,8 @@ mod tests {
                 eat(&mut s, POINTMASTER, json!([{ "pick": "instance", "instanceId": menace.id }]), TURTLE);
                 s.expect_stats(&menace, json!({ "health": 2 }));
 
+                // Once a turn (patch v0.3.10), so the hero target is a second board.
+                let mut s = setup(json!({ "field": [TURTLE, VANILLA] }), json!({}));
                 eat(&mut s, VANILLA, json!([{ "pick": "hero", "player": "p1" }]), TURTLE);
                 s.expect_health(P1, 26);
             }
@@ -312,34 +314,25 @@ mod tests {
             }
 
             #[test]
-            fn r384_activate_many_uses_in_one_turn_each_paying_its_own_tribute() {
+            fn r384_activates_once_a_turn_and_again_on_the_next() {
+                // Activate (patch v0.3.10; Activate ♾️ before): the second use in a turn is refused.
                 crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, TIMMY, VANILLA, POINTMASTER] }), json!({}));
+                let mut s = setup(
+                    json!({ "field": [TURTLE, TIMMY, VANILLA], "hand": [FILLER, FILLER], "library": [FILLER, FILLER] }),
+                    json!({ "library": [FILLER, FILLER] }),
+                );
+                let turtle = s.card(TURTLE).id.clone();
 
                 eat(&mut s, TIMMY, enemy_hero(), TURTLE);
+                s.expect_health(P2, 30 - 3);
+                assert_eq!(activations_of(&s, P1, &turtle).len(), 0);
+                s.expect_refused(|s| eat(s, VANILLA, enemy_hero(), TURTLE));
+                s.expect_in_zone(VANILLA, "field");
+
+                s.end_turn();
+                s.end_turn();
                 eat(&mut s, VANILLA, enemy_hero(), TURTLE);
-                eat(&mut s, POINTMASTER, enemy_hero(), TURTLE);
-
-                s.expect_health(P2, 30 - 3 - 4 - 7);
-                // R683: with only itself left to Tribute, no further activation is listed.
-                let turtle = s.card(TURTLE).id.clone();
-                assert_eq!(activations_of(&s, P1, &turtle).len(), 0);
-            }
-
-            #[test]
-            fn r384_stops_at_activate_unlimited_cap_uses_in_a_turn() {
-                crate::register_all();
-                let mut s = setup(json!({ "field": [TURTLE, TIMMY] }), json!({}));
-                let turtle = s.card(TURTLE).id.clone();
-                let turn = s.state().turn;
-                find_instance_mut(s.state_mut(), &turtle).expect("Turtinator is in the state").memory.insert(
-                    subsystems::ACTIVATIONS_MEMORY_KEY.to_string(),
-                    json!({ "turn": turn, "count": ACTIVATE_UNLIMITED_CAP }),
-                );
-
-                assert_eq!(activations_of(&s, P1, &turtle).len(), 0);
-                s.expect_refused(|s| eat(s, TIMMY, enemy_hero(), TURTLE));
-                s.expect_in_zone(TIMMY, "field");
+                s.expect_health(P2, 30 - 3 - 4);
             }
 
             #[test]

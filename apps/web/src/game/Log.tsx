@@ -466,6 +466,9 @@ function describe(event: GameEvent, view: PlayerView, name: Naming): string | nu
     case "questCompleted":
       // A completed quest has left the view's open quests, so its words are gone with it.
       return capitalised(t("{whose} {card} completed a quest", { whose: name.whose(event.player), card: name.instance(event.instanceId, t("card")) }));
+    case "curveDrawn":
+      // R831003: the curve itself is the board's to show; the line says whose it was.
+      return t("{seat} drew a curve across the board", { seat: name.seat(event.player) });
     case "rolledBack":
       return event.turnsAgo === 1
         ? t("The board went back {n} turn", { n: event.turnsAgo })

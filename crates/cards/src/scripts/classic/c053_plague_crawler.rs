@@ -3,25 +3,20 @@
 //!             Whenever Plague Counters are placed on this, draw {draw}." — 1 token, draw 1
 //!   Radiant: the same text — 2 tokens, draw 2
 //!
-//! The Cry targets another permanent on either side (R81, §6.3; face-down offered by id alone, R177;
-//! fizzles if none). "Whenever Plague Counters are placed on this" triggers once per placement naming
+//! The Cry places on a permanent on either side, itself included, picked in a prompt as it resolves
+//! (patch v0.3.10, #831: "another permanent", a declared target, before; R831016), so placing on itself
+//! wakes its own draw; face-down cards are offered by id alone (R177). "Whenever Plague Counters are placed on this" triggers once per placement naming
 //! it, however many tokens and whoever placed them (removal draws nothing). The condition is the trigger's
 //! `when` (R99), checked again in `run`.
 //! Tuned numbers `tokens` and `draw` (R386) read through `param` on the running face.
 
-use jackioh_engine::effects::{draw, place_plague};
+use jackioh_engine::effects::{choose_target, draw, place_plague};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-053";
 
-/// "another permanent": the top of any unit pile or any backrow card, either side, never this one.
-fn targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(
-        1,
-        1,
-        json!({ "side": "any", "of": ["unit", "backrow"], "excludeSelf": true }),
-    )]
-}
+/// The Cry's resume step: the permanent picked as it resolves.
+const PLACED_STEP: &str = "placed";
 
 /// A placement of Plague Counters on this card: `counterChanged` for `plague` with `placed`, naming it.
 fn placed_on_this(ctx: &mut EffectContext<'_>, event: &GameEvent) -> bool {
@@ -48,11 +43,23 @@ fn draw_on_placement() -> TriggerDef {
 
 pub fn script() -> CardScripts {
     let base = Script {
-        targets: targets(),
-        cry: Some(hook(|ctx| {
-            let amount = param(&*ctx, "tokens");
-            vec![place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+        // "a permanent": the top of any unit pile or any backrow card, either side, this one included
+        // (patch v0.3.10, #831; "another permanent", a declared target, before), so the pick is a prompt
+        // made once this stands on the field (R831016).
+        cry: Some(hook(|_ctx| {
+            vec![choose_target(json_as(json!({
+                "step": PLACED_STEP,
+                "scope": { "side": "any", "of": ["unit", "backrow"] },
+                "prompt": "Plague Crawler: place Plague Counters on a permanent",
+            })))]
         })),
+        resume: IndexMap::from([(
+            PLACED_STEP,
+            hook(|ctx| {
+                let amount = param(&*ctx, "tokens");
+                vec![place_plague(json_as(json!({ "target": { "of": "chosen" }, "amount": amount })))]
+            }),
+        )]),
         triggers: vec![draw_on_placement()],
         ..Script::default()
     };
@@ -65,8 +72,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C #53 — SPEC §8.6 row 53, BUILD M9 Classic row C 53: Cry places plague tokens on another permanent
-// (face-down carries only id, R177); draws on placement on it; tuned numbers read via `param()` (R386).
+// C #53 — SPEC §8.6 row 53, BUILD M9 Classic row C 53: Cry places plague tokens on a permanent picked as
+// it resolves, itself included (R831016; face-down carries only id, R177); draws on placement on it; tuned numbers read via `param()` (R386).
 // Fusing Crawler onto C #27 Pestilent Slime (R77) tests multiplier and trigger sitting on one card.
 #[cfg(test)]
 mod tests {
@@ -89,10 +96,6 @@ mod tests {
     const X: &str = "core-020"; // library filler.
 
     use crate::js;
-
-    fn at(card: &CardInstance) -> Value {
-        json!([{ "pick": "instance", "instanceId": card.id }])
-    }
 
     fn lib(n: usize) -> Vec<&'static str> {
         (0..n).map(|_| X).collect()
@@ -120,27 +123,22 @@ mod tests {
             .count()
     }
 
-    fn plays_of(s: &Scenario, card: &CardInstance, player: PlayerId) -> Vec<ActionBody> {
-        legal_actions(s.state(), player)
-            .into_iter()
-            .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card.id))
-            .collect()
-    }
-
-    /// The cards `legal_actions` offers as the play's target, each once (a play is listed once per zone).
-    fn offered_targets(s: &Scenario, card: &CardInstance, player: PlayerId) -> Vec<String> {
+    /// The permanents the open prompt offers, each once, in its order.
+    fn offered(s: &Scenario) -> Vec<String> {
         let mut ids: IndexSet<String> = IndexSet::new();
-        for play in plays_of(s, card, player) {
-            let ActionBody::Play { targets, .. } = play else {
-                continue;
-            };
-            for target in targets.unwrap_or_default() {
-                if let Selection::Instance { instance_id } = target {
-                    ids.insert(instance_id);
-                }
+        for option in &s.state().pending.as_ref().expect("the Cry's prompt").options {
+            if let Selection::Instance { instance_id } = &option.selection {
+                ids.insert(instance_id.clone());
             }
         }
         ids.into_iter().collect()
+    }
+
+    /// Plays `crawler` and answers its Cry's prompt with `target`: the pick is made as the Cry
+    /// resolves (patch v0.3.10, #831; a declared target before), so the Crawler itself may be it (R831016).
+    fn crawl(s: &mut Scenario, crawler: impl Into<CardRef>, target: &CardInstance) {
+        s.play(crawler, json!({}));
+        s.answer(json!(target.id));
     }
 
     fn crawlers(s: &Scenario, player: PlayerId) -> Vec<CardInstance> {
@@ -159,15 +157,14 @@ mod tests {
         use super::*;
 
         #[test]
-        fn declares_one_target_another_permanent_on_either_side_its_two_numbers_and_one_script_on_both_faces() {
+        fn declares_no_target_a_resume_step_its_two_numbers_and_one_script_on_both_faces() {
             crate::register_all();
             let def = js(&registered_catalog()[ID]);
             assert_eq!(def["id"], CRAWLER);
             let scripts = script();
-            assert_eq!(
-                js(&scripts.base.targets),
-                json!([{ "kind": "target", "min": 1, "max": 1, "filter": { "side": "any", "of": ["unit", "backrow"], "excludeSelf": true } }]),
-            );
+            // The pick is a prompt as the Cry resolves (R831016), not a declared target.
+            assert!(scripts.base.targets.is_empty());
+            assert!(scripts.base.resume.contains_key("placed"));
             assert_eq!(
                 def["params"],
                 json!([
@@ -193,7 +190,7 @@ mod tests {
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR] }, "p2": { "hand": [ANCHOR], "field": [VANILLA] } }));
                 let vanilla = s.card(VANILLA).clone();
 
-                s.play(CRAWLER, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, CRAWLER, &vanilla);
 
                 s.expect_stats(CRAWLER, json!({ "attack": 2, "health": 2 }));
                 assert_eq!(s.card(&vanilla).counters.plague, Some(1));
@@ -210,9 +207,9 @@ mod tests {
                 let (first, second) = two_crawlers(&s);
 
                 let vanilla = s.card(VANILLA).clone();
-                s.play(&first, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, &first, &vanilla);
                 let mana_well = s.card(MANA_WELL).clone();
-                s.play(&second, json!({ "targets": at(&mana_well) }));
+                crawl(&mut s, &second, &mana_well);
 
                 assert_eq!(s.card(VANILLA).counters.plague, Some(1));
                 assert_eq!(s.card(MANA_WELL).counters.plague, Some(1));
@@ -227,7 +224,7 @@ mod tests {
                 }));
 
                 let menace = s.card(MENACE).clone();
-                s.play(CRAWLER, json!({ "targets": at(&menace) }));
+                crawl(&mut s, CRAWLER, &menace);
 
                 let kinds: Vec<Value> = js(&s.stats(MENACE).keywords)
                     .as_array()
@@ -241,22 +238,22 @@ mod tests {
             }
 
             #[test]
-            fn another_it_never_offers_itself_and_legal_actions_offers_every_other_permanent() {
+            fn r831016_its_prompt_offers_every_permanent_itself_included_and_on_itself_it_draws_1() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [CRAWLER, ANCHOR], "field": [VANILLA] },
+                    "p1": { "hand": [CRAWLER, ANCHOR], "field": [VANILLA], "library": lib(3) },
                     "p2": { "hand": [ANCHOR], "field": [MENACE], "backrow": [MANA_WELL] },
                 }));
                 let crawler = s.card(CRAWLER).clone();
 
-                let offered = offered_targets(&s, &crawler, P1);
+                s.play(&crawler, json!({}));
 
-                assert!(!offered.contains(&crawler.id));
                 let want: IndexSet<String> =
-                    [VANILLA, MENACE, MANA_WELL].iter().map(|def| s.card(*def).id.clone()).collect();
-                assert_eq!(offered.into_iter().collect::<IndexSet<String>>(), want);
-                let own = at(&crawler);
-                s.expect_refused(move |s| s.play(&crawler, json!({ "targets": own })));
+                    [CRAWLER, VANILLA, MENACE, MANA_WELL].iter().map(|def| s.card(*def).id.clone()).collect();
+                assert_eq!(offered(&s).into_iter().collect::<IndexSet<String>>(), want);
+                s.answer(json!(crawler.id));
+                assert_eq!(s.card(&crawler).counters.plague, Some(1));
+                assert_eq!(draws_by(s.last_events(), P1), 1);
             }
 
             #[test]
@@ -270,28 +267,29 @@ mod tests {
                 let top = s.card(FIENDER).clone();
 
                 let crawler = s.card(CRAWLER).clone();
-                assert_eq!(offered_targets(&s, &crawler, P1), vec![top.id.clone()]);
-                let dormant_target = at(&dormant);
-                s.expect_refused(move |s| s.play(CRAWLER, json!({ "targets": dormant_target })));
+                s.play(&crawler, json!({}));
+                assert_eq!(offered(&s), vec![crawler.id.clone(), top.id.clone()]);
+                let dormant_id = dormant.id.clone();
+                s.expect_refused(move |s| s.answer(json!(dormant_id)));
 
-                s.play(CRAWLER, json!({ "targets": at(&top) }));
+                s.answer(json!(top.id));
                 assert_eq!(s.card(&top).counters.plague, Some(1));
                 assert!(s.card(&dormant).counters.plague.is_none());
             }
 
             #[test]
-            fn with_no_other_permanent_on_the_field_it_enters_anyway_and_places_nothing() {
+            fn r831016_with_no_other_permanent_on_the_field_it_offers_itself_alone() {
                 crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR] }, "p2": { "hand": [ANCHOR] } }));
+                let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, ANCHOR], "library": lib(2) }, "p2": { "hand": [ANCHOR] } }));
                 let crawler = s.card(CRAWLER).clone();
-                assert!(!plays_of(&s, &crawler, P1).is_empty());
-                assert!(offered_targets(&s, &crawler, P1).is_empty());
 
                 s.play(&crawler, json!({}));
 
                 s.expect_in_zone(&crawler, "field");
-                assert_eq!(placements(&s), json!([]));
-                assert_eq!(draws_by(s.events(), P1), 0);
+                assert_eq!(offered(&s), vec![crawler.id.clone()]);
+                s.answer(json!(crawler.id));
+                assert_eq!(placements(&s), json!([{ "id": crawler.id, "value": 1, "placed": 1 }]));
+                assert_eq!(draws_by(s.events(), P1), 1);
             }
 
             #[test]
@@ -304,10 +302,11 @@ mod tests {
                 let trap = s.card(UNLICENSED).clone();
 
                 let crawler = s.card(CRAWLER).clone();
-                assert_eq!(offered_targets(&s, &crawler, P1), vec![trap.id.clone()]);
+                s.play(&crawler, json!({}));
+                assert_eq!(offered(&s), vec![crawler.id.clone(), trap.id.clone()]);
                 assert!(!js(&s.view(P1)).to_string().contains(UNLICENSED));
 
-                s.play(CRAWLER, json!({ "targets": at(&trap) }));
+                s.answer(json!(trap.id));
 
                 assert_eq!(s.card(&trap).counters.plague, Some(1));
                 assert_ne!(s.card(&trap).face_up, Some(true));
@@ -321,12 +320,14 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, CRAWLER, ANCHOR], "library": lib(3) }, "p2": { "hand": [ANCHOR] } }));
                 let (first, second) = two_crawlers(&s);
+                // The first one alone on the field may only place on itself (R831016), and draws for it.
                 s.play(&first, json!({}));
-                assert_eq!(draws_by(s.events(), P1), 0);
+                s.answer(json!(first.id));
+                assert_eq!(draws_by(s.events(), P1), 1);
 
-                s.play(&second, json!({ "targets": at(&first) }));
+                crawl(&mut s, &second, &first);
 
-                assert_eq!(s.card(&first).counters.plague, Some(1));
+                assert_eq!(s.card(&first).counters.plague, Some(2));
                 assert_eq!(draws_by(s.last_events(), P1), 1);
             }
 
@@ -343,7 +344,7 @@ mod tests {
                 };
 
                 let theirs = crawlers(&s, P2)[0].clone();
-                s.play(&theirs, json!({ "targets": at(&mine) }));
+                crawl(&mut s, &theirs, &mine);
 
                 assert_eq!(draws_by(s.last_events(), P1), 1);
                 assert_eq!(draws_by(s.last_events(), P2), 0);
@@ -359,7 +360,7 @@ mod tests {
                 let on_field = s.unit(P1, 1).expect("a Crawler on the field");
                 let radiant_one = s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER).expect("a Crawler in hand");
 
-                s.play(&radiant_one, json!({ "targets": at(&on_field) }));
+                crawl(&mut s, &radiant_one, &on_field);
 
                 assert_eq!(s.card(&on_field).counters.plague, Some(2));
                 assert_eq!(placements(&s), json!([{ "id": on_field.id, "value": 2, "placed": 2 }]));
@@ -384,7 +385,7 @@ mod tests {
                 s.end_turn();
 
                 let theirs = crawlers(&s, P2)[0].clone();
-                s.play(&theirs, json!({ "targets": at(&slime) }));
+                crawl(&mut s, &theirs, &slime);
 
                 assert_eq!(s.card(&slime).counters.plague, Some(2));
                 let on_slime: Vec<Value> = placements(&s)
@@ -399,7 +400,7 @@ mod tests {
             }
 
             #[test]
-            fn its_own_cry_draws_it_nothing_the_placement_is_on_another_permanent() {
+            fn its_own_cry_on_another_permanent_draws_it_nothing() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [CRAWLER, ANCHOR], "field": [VANILLA], "library": lib(3) },
@@ -407,7 +408,7 @@ mod tests {
                 }));
 
                 let vanilla = s.card(VANILLA).clone();
-                s.play(CRAWLER, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, CRAWLER, &vanilla);
 
                 assert_eq!(draws_by(s.events(), P1), 0);
             }
@@ -424,7 +425,7 @@ mod tests {
                 let mine = s.unit(P1, 1).expect("p1's Crawler is on the field");
 
                 let theirs = crawlers(&s, P2)[0].clone();
-                s.play(&theirs, json!({ "targets": at(&mine) }));
+                crawl(&mut s, &theirs, &mine);
 
                 assert_eq!(s.hand(P1).len(), 10);
                 assert_eq!(s.last_events().iter().filter(|event| matches!(event, GameEvent::Burned { .. })).count(), 1);
@@ -437,7 +438,7 @@ mod tests {
                 let on_field = s.unit(P1, 1).expect("a Crawler on the field");
                 let in_hand = s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER).expect("a Crawler in hand");
 
-                s.play(&in_hand, json!({ "targets": at(&on_field) }));
+                crawl(&mut s, &in_hand, &on_field);
 
                 assert_eq!(
                     s.last_events()
@@ -477,11 +478,11 @@ mod tests {
                 step_param(s.card_mut(&first), "draw", 1);
 
                 let vanilla = s.card(VANILLA).clone();
-                s.play(&first, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, &first, &vanilla);
                 assert_eq!(s.card(VANILLA).counters.plague, Some(2));
                 assert_eq!(placements(&s), json!([{ "id": vanilla.id, "value": 2, "placed": 2 }]));
 
-                s.play(&second, json!({ "targets": at(&first) }));
+                crawl(&mut s, &second, &first);
                 assert_eq!(draws_by(s.last_events(), P1), 2);
             }
         }
@@ -498,7 +499,7 @@ mod tests {
                 }));
                 let vanilla = s.card(VANILLA).clone();
 
-                s.play(CRAWLER, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, CRAWLER, &vanilla);
 
                 s.expect_stats(CRAWLER, json!({ "attack": 4, "health": 4 }));
                 assert_eq!(placements(&s), json!([{ "id": vanilla.id, "value": 2, "placed": 2 }]));
@@ -514,7 +515,7 @@ mod tests {
                 let on_field = s.unit(P1, 1).expect("a Crawler on the field");
 
                 let in_hand = s.hand(P1).into_iter().find(|card| card.def_id == CRAWLER).expect("a Crawler in hand");
-                s.play(&in_hand, json!({ "targets": at(&on_field) }));
+                crawl(&mut s, &in_hand, &on_field);
 
                 assert_eq!(draws_by(s.last_events(), P1), 2);
             }
@@ -528,7 +529,7 @@ mod tests {
                 }));
                 let trap = s.card(UNLICENSED).clone();
 
-                s.play(CRAWLER, json!({ "targets": at(&trap) }));
+                crawl(&mut s, CRAWLER, &trap);
 
                 assert_eq!(s.card(&trap).counters.plague, Some(2));
                 assert!(!js(&s.view(P1)).to_string().contains(UNLICENSED));
@@ -549,10 +550,10 @@ mod tests {
                 step_param(s.card_mut(&radiant_one), "draw", -1);
 
                 let vanilla = s.card(VANILLA).clone();
-                s.play(&radiant_one, json!({ "targets": at(&vanilla) }));
+                crawl(&mut s, &radiant_one, &vanilla);
                 assert_eq!(placements(&s), json!([{ "id": vanilla.id, "value": 1, "placed": 1 }]));
 
-                s.play(&base_one, json!({ "targets": at(&radiant_one) }));
+                crawl(&mut s, &base_one, &radiant_one);
                 assert_eq!(draws_by(s.last_events(), P1), 1);
             }
         }

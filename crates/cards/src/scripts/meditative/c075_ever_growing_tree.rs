@@ -1,23 +1,38 @@
 //! M #75 Ever Growing Tree (SPEC §8.8 row 75, R1087): (4) Field Spell, Legendary.
 //!
-//! Base:    "Activate: Fuse a random Field Spell into this."
-//! Radiant: "Activate: Fuse a random Radiant Field Spell into this."
-//! Engine: Activate (R384, once a turn). `fuse_random_into` with the Tree as the kept instance
-//! (R77, R102): one random non-token Field Spell of every set, never this card or an ingredient
-//! already in it (R387); on the Radiant face the pick goes in on its Radiant face (R469). A Cry
+//! Base:    "Activate: Choose 1 of 2 random Field Spells. Fuse it into this."
+//! Radiant: "Activate: Choose 1 of 2 random Radiant Field Spells. Fuse it into this."
+//! Engine: Activate (R384, once a turn). A Discover of two (`discover_from_catalog`, R831012; the
+//! Activate fused one random Field Spell until patch v0.3.10, #831) over the non-token Field Spells of
+//! every set, never this card or an ingredient already in it (R387), then `fuse_cards` of the one
+//! chosen with the Tree as the kept instance (R77, R102), its cost kept; on the Radiant face the pick
+//! goes in on its Radiant face (R469). With no Field Spell to offer nothing happens. A Cry
 //! never runs, auras and turn lines run, fused Activates share the Tree's count, and a fused
 //! keyword applies at once (R1087).
 
-use jackioh_engine::effects::fuse_random_into;
+use jackioh_engine::effects::fuse_cards;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-075";
 
+/// Patch v0.3.10 (#831): "Choose 1 of 2 random Field Spells", a Discover of two (R831012).
+const TREE_OFFERS: i32 = 2;
+
+/// The resume step the choice re-enters (§10.6).
+const PICKED: &str = "picked";
+
+/// C+ #31 Fusion Lab's shape: one Activate, once a turn, fusing a Field Spell into self (R77, R102),
+/// never this card or an ingredient already in it (R387), the Tree's cost kept; on the Radiant face the
+/// pick goes in on its Radiant face (R469). The two on offer are random; the one fused is chosen.
 fn tree(radiant: bool) -> Script {
-    // C+ #31 Fusion Lab's shape: one Activate, once a turn, fusing a random card into self.
+    let prompt = if radiant {
+        "Ever Growing Tree: choose a Radiant Field Spell to fuse into it"
+    } else {
+        "Ever Growing Tree: choose a Field Spell to fuse into it"
+    };
     let grow = ActivationDecl {
         id: "grow".to_string(),
-        label: "Fuse a random Field Spell into this".to_string(),
+        label: "Fuse one of 2 random Field Spells into this".to_string(),
         uses: ActivationUses::Count(1),
         cost: None,
         targets: vec![],
@@ -25,15 +40,30 @@ fn tree(radiant: bool) -> Script {
         can_activate: None,
         has: None,
         run: hook(move |_ctx| {
-            vec![fuse_random_into(json_as(json!({
-                "into": { "target": { "of": "self" } },
+            vec![discover_from_catalog(json_as(json!({
+                "step": PICKED,
+                "count": TREE_OFFERS,
                 "query": { "type": "Field Spell" },
-                "radiant": radiant,
+                "prompt": prompt,
             })))]
         }),
     };
     Script {
         activations: vec![grow],
+        resume: IndexMap::from([(
+            PICKED,
+            hook(move |ctx| {
+                let picked = chosen_options(ctx).into_iter().next();
+                let (Some(picked), Some(me)) = (picked, ctx.self_.as_ref()) else {
+                    return vec![];
+                };
+                let mut args = json!({ "defIds": [picked], "targetInstanceId": me.id, "keepCost": true });
+                if radiant {
+                    args["radiantIngredients"] = json!(true);
+                }
+                vec![fuse_cards(json_as(args))]
+            }),
+        )]),
         ..Script::default()
     }
 }
@@ -46,8 +76,8 @@ pub fn script() -> CardScripts {
 }
 
 // M #75 Ever Growing Tree — SPEC §8.8 row 75, BUILD M10 row M 75: "Activate, once a turn in your
-// main phase: one random non-token Field Spell (never itself or one already fused in) is fused
-// into it, its aura and turn lines working from then on, its Cry never running; a fused Activate
+// main phase: the non-token Field Spell you choose of two random ones (never itself or one already
+// fused in, R831012) is fused into it, its aura and turn lines working from then on, its Cry never running; a fused Activate
 // shares the Tree's once-a-turn use; a fused keyword applies at once (R1087); the fused definition
 // survives a JSON round trip (R468); radiant the Field Spell goes in on its Radiant face (R469)".
 #[cfg(test)]
@@ -118,6 +148,30 @@ mod tests {
         keywords.iter().any(|keyword| keyword.kind() == kind)
     }
 
+    /// Activates the Tree and takes the first Field Spell it offers (a choice of two, R831012); the
+    /// pick, by def id.
+    fn grow(s: &mut Scenario, tree: &str) -> String {
+        s.activate(tree, json!({ "ability": "grow" }));
+        let pick = offered(s).into_iter().next().expect("a Field Spell on offer");
+        s.answer(json!(pick));
+        pick
+    }
+
+    /// The def ids the open Discover offers.
+    fn offered(s: &Scenario) -> Vec<String> {
+        s.state()
+            .pending
+            .as_ref()
+            .expect("the Tree's choice")
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Mode { option } => Some(option.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
     fn fused(s: &Scenario) -> bool {
         s.events()
             .iter()
@@ -140,7 +194,7 @@ mod tests {
                 }));
                 s.play(TREE, json!({}));
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
 
                 assert!(fused(&s));
                 let parts = fused_parts(&s);
@@ -153,6 +207,39 @@ mod tests {
             }
 
             #[test]
+            fn r831012_it_offers_two_different_field_spells_and_fuses_the_one_chosen() {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": "tree-choose",
+                    "p1": { "hand": [FILLER], "backrow": [TREE], "library": filler(3) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let tree = s.card(TREE).id.clone();
+                s.activate(tree.as_str(), json!({}));
+                let options = offered(&s);
+                assert_eq!(options.len(), 2, "{options:?}");
+                assert_ne!(options[0], options[1]);
+                for option in &options {
+                    assert_ne!(option, TREE);
+                    assert_eq!(def_of(Some(s.state()), option).type_, CardType::FieldSpell);
+                }
+                // The view shows the choice to its controller only (§6.3 Discover).
+                assert_eq!(crate::js(&s.view(PlayerId::P2))["pending"]["forYou"], json!(false));
+                s.answer(json!(options[1]));
+                assert_eq!(parts_of(&s, &tree)[0], options[1]);
+            }
+
+            #[test]
+            fn r831012_with_no_field_spell_to_offer_nothing_happens() {
+                let mut s = narrowed("tree-empty", &[]);
+                let tree = s.card(TREE).id.clone();
+                s.activate(tree.as_str(), json!({}));
+                assert!(s.state().pending.is_none());
+                assert!(!fused(&s));
+                assert_eq!(s.card(&tree).def_id, TREE);
+            }
+
+            #[test]
             fn r1087_r468_the_fused_definition_survives_a_json_round_trip() {
                 crate::register_all();
                 let mut s = scenario(json!({
@@ -161,7 +248,7 @@ mod tests {
                     "p2": { "hand": [FILLER], "library": filler(4) },
                 }));
                 s.play(TREE, json!({}));
-                s.activate(TREE, json!({}));
+                grow(&mut s, TREE);
                 let before = fused_parts(&s);
 
                 let state = round_trip(s.state());
@@ -183,7 +270,7 @@ mod tests {
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({})));
                 // Back on its controller's turn: once, then refused.
                 s.end_turn();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 assert!(fused(&s));
                 s.expect_refused(|s| s.activate(tree.as_str(), json!({})));
             }
@@ -193,10 +280,10 @@ mod tests {
                 // Two Field Spells besides the Tree: the second activation must take the other one.
                 let mut s = narrowed("tree-twice", &[MANA_WELL, GOING_LONG]);
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 s.end_turn();
                 s.end_turn();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 // The second fusion nests the first composite: flatten it.
                 let mut parts = Vec::new();
                 let mut todo = parts_of(&s, &tree);
@@ -218,7 +305,7 @@ mod tests {
                 let mut s = narrowed("tree-aura", &[WEAPONS]);
                 assert_eq!(s.stats(VANILLA).attack, 4);
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], WEAPONS);
                 assert_eq!(
                     s.stats(VANILLA).attack,
@@ -235,7 +322,7 @@ mod tests {
                 // Mana Well: "Start of turn: Gain 1 mana."
                 let mut s = narrowed("tree-turn-line", &[MANA_WELL]);
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], MANA_WELL);
                 s.end_turn();
                 s.end_turn();
@@ -251,7 +338,7 @@ mod tests {
                 let hand = s.hand(P1).len();
                 let library = s.pile(P1, "library").len();
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], ANTI_ONESHOT);
                 assert_eq!(s.hand(P1).len(), hand, "no card drawn");
                 assert_eq!(s.pile(P1, "library").len(), library);
@@ -268,7 +355,7 @@ mod tests {
                 // The Power to Thrive: "Activate: Choose one: heal, draw or gain mana."
                 let mut s = narrowed("tree-shared", &[THRIVE]);
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({ "ability": "grow" }));
+                grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], THRIVE);
                 // The Tree's use is spent, so the fused Activate is refused this turn.
                 s.expect_refused(|s| {
@@ -296,7 +383,7 @@ mod tests {
                 let _preview = preview_sets(&[SetName::Meditative]);
                 let mut s = narrowed("tree-keyword", &[WARAXE]);
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
                 assert_eq!(parts_of(&s, &tree)[0], WARAXE);
                 assert!(
                     has_keyword(&s.stats(tree.as_str()).keywords, KeywordKind::AnimatedOnYourTurn),
@@ -329,7 +416,7 @@ mod tests {
                 }));
                 s.play(TREE, json!({}));
                 let tree = s.card(TREE).id.clone();
-                s.activate(tree.as_str(), json!({}));
+                grow(&mut s, tree.as_str());
 
                 assert!(fused(&s));
                 // R469's mark: the pick went in Radiant.

@@ -317,7 +317,7 @@ mod r14_rotation_m3_t7 {
     }
 
     #[test]
-    fn r14_bounces_a_card_whose_destination_is_locked_to_its_owners_hand() {
+    fn r14_r831000_a_card_whose_destination_is_locked_rotates_into_it() {
         let mut state = game("rotate-locked");
         let crossing = put(
             &mut state,
@@ -340,21 +340,23 @@ mod r14_rotation_m3_t7 {
 
         let (events, result) = rotate(&mut state, "right", json!({}));
 
-        assert_eq!(where_is(&state, &crossing), "hand");
-        assert!(state.players.p1.hand.iter().any(|c| c.id == crossing.id));
-        assert!(card_at(&state, slot(PlayerId::P2, Row::Units, 5)).is_none());
-        assert_eq!(result.bounced, ids(&[&crossing]));
-        assert!(result.crossed.is_empty());
+        // Patch v0.3.10 (#831): the Lock evicts nothing and stops no rotation; it was bounced before.
         assert_eq!(
-            of_type(&events, GameEventType::Bounced),
-            vec![json!({ "type": "bounced", "instanceId": crossing.id, "defId": plain().id, "owner": "p1" })]
+            card_at(&state, slot(PlayerId::P2, Row::Units, 5)).map(|card| card.id.clone()),
+            Some(crossing.id.clone())
         );
-        assert!(of_type(&events, GameEventType::ControlChanged).is_empty());
-        // It left the field, so it resets on the way to the hand (R78), and costs its printed price.
+        assert!(result.bounced.is_empty());
+        assert_eq!(result.crossed, ids(&[&crossing]));
+        assert!(of_type(&events, GameEventType::Bounced).is_empty());
+        assert_eq!(of_type(&events, GameEventType::ControlChanged).len(), 1);
+        // It never left the field, so its damage and buffs come along (R14); the zone stays Locked.
         let it = live(&state, &crossing);
-        assert_eq!(it.damage, 0);
-        assert_eq!(it.buffs, AttackHealth { attack: 0, health: 0 });
-        assert!(it.cost_override.is_none());
+        assert_eq!(it.damage, 1);
+        assert_eq!(it.buffs, AttackHealth { attack: 2, health: 2 });
+        assert!(jackioh_engine::zones::is_locked(
+            &state,
+            slot(PlayerId::P2, Row::Units, 5)
+        ));
 
         assert_eq!(where_is(&state, &staying), "p1 units 2");
     }
@@ -551,7 +553,9 @@ mod r14_rotation_m3_t7 {
     }
 
     #[test]
-    fn r11_a_unit_token_bounced_by_a_locked_destination_ceases_to_exist() {
+    fn r11_a_unit_token_a_radiant_crossing_bounces_ceases_to_exist() {
+        // A Locked destination bounced it before patch v0.3.10; now only the Radiant face's crossing
+        // bounces (R831000).
         let mut state = game("rotate-token-bounce");
         let token = put(
             &mut state,
@@ -559,9 +563,8 @@ mod r14_rotation_m3_t7 {
             slot(PlayerId::P1, Row::Units, 5),
             Default::default(),
         );
-        lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 5));
 
-        let (events, result) = rotate(&mut state, "right", json!({}));
+        let (events, result) = rotate(&mut state, "right", json!({ "radiant": true }));
 
         assert_eq!(result.bounced, ids(&[&token]));
         assert_eq!(

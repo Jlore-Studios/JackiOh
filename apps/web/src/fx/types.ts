@@ -158,7 +158,8 @@ export type FxRecipe =
   | "chaos"
   | "brand"
   | "rewind"
-  | "armor";
+  | "armor"
+  | "curve";
 
 export type FxDescriptor = { readonly recipe: FxRecipe };
 

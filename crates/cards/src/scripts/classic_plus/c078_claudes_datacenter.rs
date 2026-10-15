@@ -1,4 +1,4 @@
-//! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (2) Field Spell, Legendary.
+//! C+ #78 Claude's Datacenter (SPEC §8.7 row 78, B7). (3) Field Spell, Legendary.
 //!   Base:    "End of Turn: Add a random AI generated card to your hand. It costs (0)."
 //!   Radiant: "… random Radiant AI generated card …"
 //!   Engine:  "Its controller's end of turn (R62). The pool is the ten AI generated cards (T-AI-1 to
@@ -95,11 +95,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_2_legendary_field_spell_with_no_tunable_count() {
+        fn is_a_3_legendary_field_spell_with_no_tunable_count() {
             crate::register_all();
             let def = crate::card_def(super::super::ID);
             assert_eq!(def.type_, CardType::FieldSpell);
-            assert_eq!(js(&def.cost), json!(2));
+            assert_eq!(js(&def.cost), json!(3));
             assert_eq!(def.rarity, Rarity::Legendary);
             assert!(def.params.is_none());
             let scripts = super::super::script();

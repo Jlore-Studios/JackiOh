@@ -1,14 +1,17 @@
 //! M #53 Prestige (SPEC §8.8 row 53): (1) Spell, Common.
 //!
-//! Base:    "De-Radiant a Radiant Unit or face-up backrow card on either side, or a Radiant card
-//! in your hand. Add {cards|AI generated card|AI generated cards} to your hand."
-//! Radiant: "De-Radiant every enemy card: every Radiant card of the opponent's field, hand and
-//! deck. Add {cards|AI generated card|AI generated cards} to your hand."
+//! Base:    "De-Radiant a Radiant card on the field or in your hand. The next card you play this turn
+//! becomes Radiant."
+//! Radiant: "De-Radiant every enemy card on the field. The next card you play this turn becomes
+//! Radiant."
 //! Engine: MD-D6 — De-Radiant is Make Radiant reversed (`clearRadiant`), §5.2's exception: the face
 //! swaps back while damage, buffs and tuning stay. The base face clears the chosen card, if any
-//! (R90 already allows the play with nothing to choose, MD-D7); the Radiant face clears every
-//! Radiant card of the opponent's field, hand and library, never the graveyard (MD-D8). Both faces
-//! then add {cards} AI generated cards (the R1421 AI pool).
+//! (R90 already allows the play with nothing to choose, MD-D7): a Radiant Unit or face-up backrow card
+//! on either side, or a Radiant card in your hand; the Radiant face clears every Radiant card of the
+//! opponent's field (MD-D8). Both faces then add a this-turn `radiantNextPlay` modifier (R831005): the
+//! next card its player plays, a cast included (R70), becomes Radiant as it is played (§10.5 step 3)
+//! and spends it. Patch v0.3.10 (#831): both faces added AI generated cards instead (R1421), and the
+//! Radiant face cleared the opponent's hand and deck too.
 
 use jackioh_engine::prelude::*;
 
@@ -55,45 +58,38 @@ fn target_checks() -> IndexMap<&'static str, TargetCheck> {
     )])
 }
 
-/// Add {cards} AI generated cards to your hand.
-fn add_ai(ctx: &EffectContext<'_>, radiant: bool) -> Effect {
-    add_random_from_catalog(json_as(json!({
-        "query": { "tags": ["AI"] },
-        "count": param(ctx, "cards"),
-        "radiant": radiant,
+/// R831005 (patch v0.3.10): "The next card you play this turn becomes Radiant", a this-turn modifier its
+/// next play spends (it added AI generated cards before).
+fn next_play(ctx: &EffectContext<'_>) -> Effect {
+    add_player_modifier(json_as(json!({
+        "mod": {
+            "kind": "radiantNextPlay",
+            "expiry": { "until": "thisTurn", "turn": ctx.state.turn },
+        },
     })))
 }
 
-fn prestige(radiant: bool) -> Script {
+fn prestige() -> Script {
     Script {
         targets: targets(),
         target_checks: target_checks(),
-        cry: Some(hook(move |ctx| {
-            vec![clear_radiant(RadiantTarget::default()), add_ai(ctx, radiant)]
-        })),
+        cry: Some(hook(|ctx| vec![clear_radiant(RadiantTarget::default()), next_play(ctx)])),
         ..Script::default()
     }
 }
 
-fn prestige_radiant(radiant: bool) -> Script {
+fn prestige_radiant() -> Script {
     Script {
-        cry: Some(hook(move |ctx| {
-            // MD-D8: every Radiant card of the opponent's field, hand and library — never the
-            // graveyard, whose cards De-Radiant cannot reach.
+        cry: Some(hook(|ctx| {
+            // MD-D8: every Radiant card of the opponent's field (patch v0.3.10: no longer their hand
+            // and deck).
             let enemy = opponent_of(ctx.controller);
             let mut effects: Vec<Effect> = permanents_on_field(ctx.state, enemy)
                 .iter()
                 .filter(|card| card.controller == enemy && card.radiant)
                 .map(|card| clear_radiant(json_as(json!({ "instanceId": card.id }))))
                 .collect();
-            for card in [OffFieldZone::Hand, OffFieldZone::Library]
-                .into_iter()
-                .flat_map(|zone| zone_cards(ctx.state, enemy, zone))
-                .filter(|card| card.radiant)
-            {
-                effects.push(clear_radiant(json_as(json!({ "instanceId": card.id }))));
-            }
-            effects.push(add_ai(ctx, radiant));
+            effects.push(next_play(ctx));
             effects
         })),
         ..Script::default()
@@ -102,15 +98,15 @@ fn prestige_radiant(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: prestige(false),
-        radiant: prestige_radiant(true),
+        base: prestige(),
+        radiant: prestige_radiant(),
     }
 }
 
 // M #53 Prestige — SPEC §8.8 row 53, BUILD M10 row M 53: "De-Radiant a Radiant Unit or face-up
 // backrow card on either side, or a Radiant card in your hand (MD-D6, R90); the Radiant face
-// De-Radiants every enemy card of the opponent's field, hand and library, never the graveyard
-// (MD-D8); both faces add {cards} AI generated card(s) (R1421), a Radiant one off the Radiant face".
+// De-Radiants every enemy card of the opponent's field (MD-D8); both faces make the next card you play
+// this turn Radiant, a cast included, once (R831005)".
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,19 +150,47 @@ mod tests {
         live.buffs = AttackHealth { attack: 1, health: 0 };
     }
 
-    /// The AI generated cards in p1's hand.
-    fn ai_cards(s: &Scenario) -> Vec<CardInstance> {
-        s.hand("p1")
-            .into_iter()
-            .filter(|card| crate::card_def(&card.def_id).tags.contains(&Tag::Ai))
-            .collect()
+    /// Whether p1 holds a live `radiantNextPlay` modifier (R831005).
+    fn next_play_radiant(s: &Scenario) -> bool {
+        s.state().players.p1.mods.iter().any(|modifier| matches!(modifier.kind, ModifierKind::RadiantNextPlay))
+    }
+
+    /// Plays the first `def_id` in p1's hand (a Unit into its leftmost open zone) and says whether it
+    /// arrived Radiant.
+    fn play_one(s: &mut Scenario, def_id: &str) -> bool {
+        let card = s.hand("p1").into_iter().find(|card| card.def_id == def_id).expect("the card in hand");
+        s.play(&card.id, json!({}));
+        s.card(&card.id).radiant
+    }
+
+    /// Runs `effects` as p1's on a hand-built sink at the state's rng cursor, settling after.
+    fn by_hand(s: &mut Scenario, effects: Vec<Effect>) -> Vec<GameEvent> {
+        let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
+        let mut events: Vec<GameEvent> = Vec::new();
+        {
+            let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+            {
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        controller: Some(PlayerId::P1),
+                        ..HookOptions::default()
+                    },
+                );
+                apply_effects(&effects, &mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        s.state_mut().rng_cursor = rng.cursor();
+        events
     }
 
     mod m53_prestige {
         use super::*;
 
         #[test]
-        fn deradiants_the_chosen_unit_keeping_damage_and_buffs_then_adds_an_ai_card() {
+        fn deradiants_the_chosen_unit_keeping_damage_and_buffs_then_makes_the_next_play_radiant() {
             let mut s = casting("prestige-base", false);
             let unit = must_unit(&s, "p1", 1);
             mark(&mut s, &unit);
@@ -180,9 +204,7 @@ mod tests {
             assert_eq!(cleared.buffs, AttackHealth { attack: 1, health: 0 });
             // The other side's Radiant unit stands Radiant still.
             assert!(must_unit(&s, "p2", 1).radiant);
-            let added = ai_cards(&s);
-            assert_eq!(added.len(), 1);
-            assert!(!added[0].radiant);
+            assert!(next_play_radiant(&s));
         }
 
         #[test]
@@ -212,22 +234,69 @@ mod tests {
                 .find(|card| card.id == held.id)
                 .expect("still in hand");
             assert!(!cleared.radiant);
-            assert_eq!(ai_cards(&s).len(), 1);
+            assert!(next_play_radiant(&s));
         }
 
         #[test]
-        fn r1103_with_no_radiant_card_the_play_is_legal_and_only_adds() {
+        fn r1103_with_no_radiant_card_the_play_is_legal_and_only_makes_the_next_play_radiant() {
             let mut s = casting("prestige-empty", false);
             // Nothing is Radiant anywhere: no target, but the play stays legal (R90).
             for unit in [must_unit(&s, "p1", 1), must_unit(&s, "p2", 1)] {
                 s.card_mut(&unit.id).radiant = false;
             }
             s.play(PRESTIGE, json!({}));
-            assert_eq!(ai_cards(&s).len(), 1);
+            assert!(next_play_radiant(&s));
         }
 
         #[test]
-        fn r1104_radiant_clears_field_hand_deck_not_graveyard() {
+        fn r831005_the_next_card_you_play_this_turn_becomes_radiant_and_only_that_one() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "prestige-next",
+                "p1": { "mana": 10, "hand": [PRESTIGE, VANILLA, VANILLA, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            s.play(PRESTIGE, json!({}));
+            assert!(play_one(&mut s, VANILLA), "the next play is made Radiant");
+            assert!(!next_play_radiant(&s), "and it spent the modifier");
+            assert!(!play_one(&mut s, VANILLA), "the one after is not");
+        }
+
+        #[test]
+        fn r831005_r70_a_cast_is_the_next_play_too() {
+            let mut s = casting("prestige-cast", false);
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
+            let events = by_hand(&mut s, vec![jackioh_engine::effects::cast_new(json_as(json!({ "def": FILLER })))]);
+            assert!(events.iter().any(|event| matches!(event, GameEvent::RadiantSet { def_id, .. } if def_id == FILLER)));
+            assert!(!next_play_radiant(&s));
+        }
+
+        #[test]
+        fn r831005_unused_it_ends_with_the_turn() {
+            crate::register_all();
+            let mut s = scenario(json!({
+                "seed": "prestige-expiry",
+                "p1": { "mana": 10, "hand": [PRESTIGE, VANILLA, FILLER], "library": filler(4) },
+                "p2": { "hand": [FILLER], "library": filler(4) },
+            }));
+            s.play(PRESTIGE, json!({}));
+            s.end_turn().end_turn();
+            assert!(!next_play_radiant(&s));
+            assert!(!play_one(&mut s, VANILLA));
+        }
+
+        #[test]
+        fn r831005_your_view_names_the_modifier_on_a_badge() {
+            let mut s = casting("prestige-badge", false);
+            let unit = must_unit(&s, "p1", 1);
+            s.play(PRESTIGE, pick(&unit.id));
+            let mine = serde_json::to_string(&s.view(PlayerId::P1)).expect("the view serialises");
+            assert!(mine.contains("The next card you play becomes Radiant"));
+        }
+
+        #[test]
+        fn r1104_radiant_clears_the_enemy_field_only_not_their_hand_deck_or_graveyard() {
             let mut s = casting("prestige-radiant", true);
             // A Radiant card in the opponent's hand and library, and one in their graveyard.
             fn radiant_off_field(s: &mut Scenario, zone: Zone) -> CardInstance {
@@ -242,17 +311,15 @@ mod tests {
             let grave = radiant_off_field(&mut s, Zone::Graveyard { player: PlayerId::P2 });
             s.state_mut().players.p2.graveyard.push(grave);
             s.play(PRESTIGE, json!({}));
-            // Every enemy card is De-Radianted: the opponent's field, hand and library.
+            // Every enemy card on the field is De-Radianted (patch v0.3.10: the field alone).
             assert!(!must_unit(&s, "p2", 1).radiant);
-            assert!(s.hand("p2").iter().all(|card| !card.radiant));
-            assert!(s.pile("p2", "library").iter().all(|card| !card.radiant));
+            assert!(s.hand("p2").iter().any(|card| card.radiant));
+            assert!(s.pile("p2", "library").iter().any(|card| card.radiant));
             // Never the graveyard (MD-D8).
             assert!(s.pile("p2", "graveyard").iter().all(|card| card.radiant));
             // Your own Radiant unit stands Radiant still.
             assert!(must_unit(&s, "p1", 1).radiant);
-            let added = ai_cards(&s);
-            assert_eq!(added.len(), 1);
-            assert!(added[0].radiant);
+            assert!(next_play_radiant(&s));
         }
 
         /// Me and Mr Token (Core #15): (1) Unit, "Cry: Summon a Rush Token" (Radiant: three).
@@ -295,7 +362,7 @@ mod tests {
             let field_spell = s.backrow("p2", 1).expect("the Field Spell");
             s.play(PRESTIGE, pick(&field_spell.id));
             assert!(!s.card(&field_spell.id).radiant);
-            assert_eq!(ai_cards(&s).len(), 1);
+            assert!(next_play_radiant(&s));
         }
 
         #[test]
@@ -339,7 +406,7 @@ mod tests {
                 "seed": "prestige-base-text",
                 "p1": {
                     "mana": 10,
-                    "hand": [PRESTIGE, { "def": MR_TOKEN, "radiant": true }, FILLER],
+                    "hand": [PRESTIGE, { "def": MR_TOKEN, "radiant": true }, FILLER, FILLER],
                     "library": filler(4),
                 },
                 "p2": { "hand": [FILLER], "library": filler(4) },
@@ -350,6 +417,8 @@ mod tests {
                 .find(|card| card.def_id == MR_TOKEN)
                 .expect("Mr Token");
             s.play(PRESTIGE, pick(&held.id));
+            // A Stockpile spends the next play's Radiant (R831005), so Mr Token is played as it stands.
+            play_one(&mut s, FILLER);
             // Played now, it runs its base Cry: one Rush Token, not the Radiant face's three.
             s.play(&held.id, json!({ "zone": 1 }));
             let p1_units = (1..=UNIT_ZONES)
@@ -360,34 +429,13 @@ mod tests {
         }
 
         #[test]
-        fn r1421_the_added_card_is_one_of_the_ten_ai_cards_hidden_from_the_opponent() {
-            for n in 0..8 {
-                let mut s = casting(&format!("prestige-pool-{n}"), false);
-                let unit = must_unit(&s, "p1", 1);
-                s.play(PRESTIGE, pick(&unit.id));
-                let added = ai_cards(&s);
-                assert_eq!(added.len(), 1);
-                let def = crate::card_def(&added[0].def_id);
-                assert!(def.token, "an AI generated card is a token (R1421)");
-                assert!(
-                    added[0].def_id.starts_with("classicplus-t-ai-"),
-                    "{}",
-                    added[0].def_id
-                );
-                // The opponent never reads which.
-                let seen = serde_json::to_string(&s.view(PlayerId::P2)).expect("the view serialises");
-                assert!(!seen.contains(&added[0].def_id), "p2 reads {}", added[0].def_id);
-            }
-        }
-
-        #[test]
         fn r440_deradianted_is_hidden_in_a_hand_and_public_on_the_field() {
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "prestige-hidden",
                 "p1": {
                     "mana": 10,
-                    "hand": [PRESTIGE, { "def": PRESTIGE }, { "def": VANILLA, "radiant": true }],
+                    "hand": [PRESTIGE, { "def": PRESTIGE }, { "def": VANILLA, "radiant": true }, FILLER],
                     "field": [{ "def": VANILLA, "radiant": true }],
                     "library": filler(4),
                 },
@@ -416,21 +464,14 @@ mod tests {
                 json!("hidden"),
                 "a hand card's stays hidden"
             );
+            // A Stockpile spends the next play's Radiant (R831005), so the second Prestige is base too.
+            play_one(&mut s, FILLER);
             let unit = must_unit(&s, "p1", 1);
             s.play(PRESTIGE, pick(&unit.id));
-            // The view keeps the earlier action's events too: the new one comes last.
+            // The view keeps the earlier actions' events too: the new one comes last.
             let seen = deradianted(&s);
             assert_eq!(seen.len(), 2);
             assert_eq!(seen[1]["instanceId"], json!(unit.id), "a field card's is public");
-        }
-
-        #[test]
-        fn r386_cards_reads_through_param() {
-            let mut s = casting("prestige-param", false);
-            step_param(s.card_mut(PRESTIGE), "cards", 1);
-            let unit = must_unit(&s, "p1", 1);
-            s.play(PRESTIGE, pick(&unit.id));
-            assert_eq!(ai_cards(&s).len(), 2);
         }
 
         #[test]
@@ -453,26 +494,11 @@ mod tests {
         }
 
         #[test]
-        fn the_radiant_face_adds_a_radiant_ai_card() {
-            let mut s = casting("prestige-radiant-ai", true);
+        fn r831005_the_radiant_face_makes_the_next_play_radiant_too() {
+            let mut s = casting("prestige-radiant-next", true);
             s.play(PRESTIGE, json!({}));
-            let added = ai_cards(&s);
-            assert_eq!(added.len(), 1);
-            assert!(added[0].radiant);
-        }
-
-        #[test]
-        fn adds_a_radiant_ai_card_off_the_radiant_face() {
-            let mut s = casting("prestige-ai", false);
-            let unit = must_unit(&s, "p2", 1);
-            s.play(
-                PRESTIGE,
-                json!({ "targets": [{ "pick": "instance", "instanceId": unit.id }] }),
-            );
-            let added = ai_cards(&s);
-            assert_eq!(added.len(), 1);
-            // The base face adds it un-Radianted.
-            assert!(!added[0].radiant);
+            assert!(next_play_radiant(&s));
+            assert!(play_one(&mut s, FILLER));
         }
     }
 }

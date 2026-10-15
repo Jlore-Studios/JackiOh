@@ -1,10 +1,10 @@
 //! Meditative #39.1 Auspicious Rock (SPEC §8.8 row 39.1). (0) Spell, CN, Token (printed Rare).
 //!
-//!   Base:    "Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%)
-//!            or Red Jade (10%)." — life 2
+//!   Base:    "Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (75%)
+//!            or Red Jade (5%)." — life 2
 //!   Radiant: "Lucky 2
-//!            Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (70%)
-//!            or Red Jade (10%)." — life 2, Lucky 2
+//!            Lose {life} health. Add one of these to your hand at random: Dud (20%), Jade (75%)
+//!            or Red Jade (5%)." — life 2, Lucky 2
 //!
 //! Engine: `lose_health` on your hero (R18: no pipeline, no Armor, so nothing stops it), then one
 //! weighted roll (ME-WEIGHTED-ROLL: `add_rolled` over `AUSPICIOUS_ROCK_ODDS`, R960, MD-C1). The
@@ -46,7 +46,7 @@ pub fn script() -> CardScripts {
 // Meditative #39.1 Auspicious Rock — SPEC §8.8 row 39.1, BUILD M10 row M 39.1: "Your hero loses 2
 // health (R18: Armor and a hero immunity do not stop it), then one roll by `AUSPICIOUS_ROCK_ODDS`
 // adds a base Dud, Jade or Red Jade to your hand uncast (MD-C1), the hand cap burning it; over many
-// seeds the odds hold at 20, 70 and 10; M 40's Luck joins in MB11; life reads through `param();
+// seeds the odds hold at 20, 75 and 5; M 40's Luck joins in MB11; life reads through `param();
 // radiant Lucky 2: three rolls keeping the best (Dud < Jade < Red Jade)".
 #[cfg(test)]
 mod tests {
@@ -177,13 +177,13 @@ mod tests {
     }
 
     #[test]
-    fn r960_over_many_seeds_the_odds_hold_at_20_70_and_10() {
+    fn r960_over_many_seeds_the_odds_hold_at_20_75_5() {
         crate::register_all();
         let odds: Vec<(&str, i32)> = AUSPICIOUS_ROCK_ODDS
             .iter()
             .map(|row| (row.def_id, row.percent))
             .collect();
-        assert_eq!(odds, vec![(DUD, 20), (JADE, 70), (RED_JADE, 10)]);
+        assert_eq!(odds, vec![(DUD, 20), (JADE, 75), (RED_JADE, 5)]);
         const ROLLS: usize = 600;
         let mut counts = [0usize; 3];
         for n in 0..ROLLS {

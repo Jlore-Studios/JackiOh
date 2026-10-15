@@ -159,7 +159,8 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [FILLER], "field": [UNAN] },
-                    "p2": { "hand": [VITAL_KILL, FILLER], "field": [HEAVY] },
+                    // The Radiant face, which leaves the turn going (patch v0.3.10).
+                    "p2": { "hand": [{ "def": VITAL_KILL, "radiant": true }, FILLER], "field": [HEAVY] },
                 }));
                 s.end_turn();
                 s.play(

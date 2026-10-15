@@ -158,6 +158,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
     predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
     scriptFailed: { type: "scriptFailed", player: "p1", instanceId: unit, defId: "custom-fixture", message: "cry failed on line 3: boom" },
+    curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
   };
 }
 

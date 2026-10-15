@@ -10,11 +10,13 @@
 //!          Auspicious Rocks and one random AI generated card — then the market opens with the card's
 //!          `yuan`. Nothing else in a market draws from the rng, so every simulation of it (R185) and
 //!          every replay sees the same lots.
-//!   deal   each answer is one deal (R1000): a lot bought arrives in the caster's hand on its base face
-//!          at its printed cost, hidden per zone (R97), and the market reopens (R113) with its price
-//!          taken off; on the Radiant face a barter exiles a hand card, in public, and adds its price to
-//!          the yuan (R1001); Leave closes it, and the yuan left is lost. With nothing to buy or barter
-//!          the market closes on its own.
+//!   deal   each answer is one deal (R1000): a lot bought arrives in the caster's hand at its printed
+//!          cost, hidden per zone (R97), and the market reopens (R113) with its price taken off. Every
+//!          lot is sold on either face (patch v0.3.10, R831002): its base face at its price, or its
+//!          Radiant face at its Radiant price (`YUAN_RADIANT_MULTIPLIER` times as much). On the Radiant
+//!          face a barter exiles a hand card, in public, and adds its price to the yuan (R1001); Leave
+//!          closes it, and the yuan left is lost. With nothing to buy or barter the market closes on its
+//!          own.
 //!
 //! Only lots the yuan covers are offered, none while the hand is full, so neither `legal_actions`'
 //! plain answer walk nor a random answer (R452) ever names an answer the reducer refuses. The stall,
@@ -47,6 +49,8 @@ pub const MARKET_DEAL_STEP: &str = "deal";
 pub const MARKET_YUAN_PARAM: &str = "yuan";
 /// Leave's option key, a `none` pick as `choose_cell`'s Done is.
 pub const MARKET_LEAVE_KEY: &str = "none";
+/// R831002: the suffix a lot's option carries when it sells the lot's Radiant face.
+pub const MARKET_RADIANT_SUFFIX: &str = ":radiant";
 
 /// One shelf of the stall: a random draw from a catalog pool, or copies of one named card.
 #[derive(Clone, Debug)]
@@ -96,10 +100,11 @@ fn hand_has_room(state: &GameState, player: PlayerId) -> bool {
     (state.players[player].hand.len() as i32) < crate::query::hand_cap_of(state, player)
 }
 
-/// R1000, R1001: the market's options for `player`, in this order: one per lot the yuan covers
-/// (distinct ids in the order they were rolled, none while the hand is full), then on a barter
-/// market one per hand card (its price written negative, as it adds to the yuan), then Leave. With
-/// no lot and no barter there is nothing to do, and no option at all.
+/// R1000, R1001, R831002: the market's options for `player`, in this order: for each lot (distinct
+/// ids in the order they were rolled, none while the hand is full) its base face, then its Radiant
+/// face, each while the yuan covers its price; then on a barter market one per hand card (its price
+/// written negative, as it adds to the yuan), then Leave. With no lot and no barter there is nothing
+/// to do, and no option at all.
 fn market_options(
     state: &GameState,
     player: PlayerId,
@@ -118,23 +123,30 @@ fn market_options(
             let Some(def) = find_def(Some(state), id) else {
                 continue;
             };
-            let price = yuan_price(def, false);
-            if price > yuan {
-                continue;
-            }
             let copies = stall.iter().filter(|other| *other == id).count();
             let label = if copies > 1 {
                 format!("{} ×{copies}", def.name)
             } else {
                 def.name.clone()
             };
-            options.push(PromptOption {
-                key: format!("mode:{id}"),
-                label,
-                selection: Selection::Mode { option: id.clone() },
-                cost: Some(price),
-                radiant: None,
-            });
+            for radiant in [false, true] {
+                let price = yuan_price(def, radiant);
+                if price > yuan {
+                    continue;
+                }
+                let option = if radiant {
+                    format!("{id}{MARKET_RADIANT_SUFFIX}")
+                } else {
+                    id.clone()
+                };
+                options.push(PromptOption {
+                    key: format!("mode:{option}"),
+                    label: label.clone(),
+                    selection: Selection::Mode { option },
+                    cost: Some(price),
+                    radiant: radiant.then_some(true),
+                });
+            }
         }
     }
     if barter {
@@ -254,11 +266,15 @@ pub fn night_market_script(shelves: &[MarketShelf]) -> NightMarketScript {
         let player = ctx.controller;
         match ctx.targets.first() {
             Some(Selection::Mode { option }) => {
-                let Some(at) = stall.iter().position(|id| id == option) else {
+                // R831002: the lot's Radiant face, or its base face.
+                let (lot, radiant) = match option.strip_suffix(MARKET_RADIANT_SUFFIX) {
+                    Some(lot) => (lot, true),
+                    None => (option.as_str(), false),
+                };
+                let Some(at) = stall.iter().position(|id| id == lot) else {
                     return vec![];
                 };
-                let Some(price) = find_def(Some(&*ctx.state), option).map(|def| yuan_price(def, false))
-                else {
+                let Some(price) = find_def(Some(&*ctx.state), lot).map(|def| yuan_price(def, radiant)) else {
                     return vec![];
                 };
                 if price > yuan || !hand_has_room(ctx.state, player) {
@@ -267,7 +283,7 @@ pub fn night_market_script(shelves: &[MarketShelf]) -> NightMarketScript {
                 let mut rest = stall.clone();
                 rest.remove(at);
                 vec![
-                    crate::effects::add_to_hand(json_as(json!({ "defId": option }))),
+                    crate::effects::add_to_hand(json_as(json!({ "defId": lot, "radiant": radiant }))),
                     open_market(rest, yuan - price, barter),
                 ]
             }

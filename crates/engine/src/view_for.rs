@@ -811,6 +811,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::QuickstrikerDamage => {
             "Your cards gain \"Combo X: X damage to the enemy hero\"".to_string()
         }
+        // R831005: Meditative #53 Prestige.
+        ModifierKind::RadiantNextPlay => "The next card you play becomes Radiant".to_string(),
         // B5 E10, R456: how much of the turn is left.
         ModifierKind::TurnEnds { actions_left, .. } => {
             if *actions_left == 0 {
@@ -1179,8 +1181,12 @@ fn option_view(state: &GameState, viewer: PlayerId, option: &PromptOption) -> Pe
             base
         }
         Selection::Mode { option } => {
-            // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id.
-            if let Some(def) = find_def_in(state, option) {
+            // §6.3 Discover offers definitions, as `mode` options whose string is a catalog def id; a
+            // night market's Radiant lot names its card with a suffix (R831002).
+            let id = option
+                .strip_suffix(crate::subsystems::MARKET_RADIANT_SUFFIX)
+                .unwrap_or(option);
+            if let Some(def) = find_def_in(state, id) {
                 base.def_id = Some(def.id.clone());
             }
             base
@@ -1905,7 +1911,9 @@ fn redact_event(
         // are public once they happen.
         | GameEventType::SecretChosen
         | GameEventType::SecretRevealed
-        | GameEventType::Predicted => event.clone(),
+        | GameEventType::Predicted
+        // R831003: the curve is board positions only.
+        | GameEventType::CurveDrawn => event.clone(),
 
         // ---- Patch v0.2.0 (docs/classic-sets.md B3, B5) ----
 

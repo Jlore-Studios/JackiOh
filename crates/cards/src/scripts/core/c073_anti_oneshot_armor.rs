@@ -40,8 +40,8 @@ pub fn script() -> CardScripts {
 
 // #73 Anti-oneshot Armor — SPEC §8.3, BUILD M4-T4: "A 12 hit becomes 5 (radiant 3), per instance,
 // hero only; Cry draws 1 (radiant 2, R275)", plus R18's "lose health bypasses the cap".
-// The 12-damage hit is a radiant core-002 Bigot (12/2): a `field` setup fires no Cry (R1), so the
-// attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
+// The 12-damage hit is a radiant core-002 Bigot set to 12/2 (`statsOverride`; it prints 8/2 since patch
+// v0.3.10): a `field` setup fires no Cry (R1), so the attack is a bare 12-damage instance. R18's "lose 5 health" is read against the RADIANT cap of 3:
 // 5 fits under the base cap of 5, so only the radiant face can tell a clamp from a bypass.
 #[cfg(test)]
 mod tests {
@@ -81,7 +81,7 @@ mod tests {
                 "seed": "core-073-cap-12",
                 "active": "p2",
                 "p1": { "backrow": ["core-073"], "hand": ["core-005"] },
-                "p2": { "field": [{ "def": "core-002", "radiant": true }], "hand": ["core-005"] },
+                "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
             let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
             s.expect_stats(&bigot, json!({ "attack": 12 }));
@@ -100,8 +100,8 @@ mod tests {
                 "p1": { "backrow": ["core-073"], "hand": ["core-005"] },
                 "p2": {
                     "field": [
-                        { "def": "core-002", "radiant": true },
-                        { "def": "core-002", "radiant": true },
+                        { "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } },
+                        { "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } },
                     ],
                     "hand": ["core-005"],
                 },
@@ -122,7 +122,7 @@ mod tests {
                 "active": "p2",
                 // core-019 Midrange Menace is 9/9 with Taunt, so it is the only legal target anyway.
                 "p1": { "field": ["core-019"], "backrow": ["core-073"], "hand": ["core-005"] },
-                "p2": { "field": [{ "def": "core-002", "radiant": true }], "hand": ["core-005"] },
+                "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
             let menace = s.unit(P1, 1).expect("setup: Midrange Menace in p1's lane 1");
             let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
@@ -140,7 +140,7 @@ mod tests {
                 "seed": "core-073-armor-order",
                 "active": "p2",
                 "p1": { "backrow": ["core-073"], "hand": ["core-005"], "armor": 10 },
-                "p2": { "field": [{ "def": "core-002", "radiant": true }], "hand": ["core-005"] },
+                "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
             let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
 
@@ -196,7 +196,7 @@ mod tests {
                 "seed": "core-073-radiant-cap",
                 "active": "p2",
                 "p1": { "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
-                "p2": { "field": [{ "def": "core-002", "radiant": true }], "hand": ["core-005"] },
+                "p2": { "field": [{ "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } }], "hand": ["core-005"] },
             }));
             let bigot = s.unit(P2, 1).expect("setup: a radiant Bigot in p2's lane 1");
             assert_eq!(s.backrow(P1, 1).map(|card| card.radiant), Some(true));
@@ -215,8 +215,8 @@ mod tests {
                 "p1": { "field": ["core-019"], "backrow": [{ "def": "core-073", "radiant": true }], "hand": ["core-005"] },
                 "p2": {
                     "field": [
-                        { "def": "core-002", "radiant": true },
-                        { "def": "core-002", "radiant": true },
+                        { "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } },
+                        { "def": "core-002", "radiant": true, "statsOverride": { "attack": 12, "health": 2 } },
                     ],
                     "hand": ["core-005"],
                 },

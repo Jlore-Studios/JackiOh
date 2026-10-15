@@ -38,7 +38,7 @@ pub fn script() -> CardScripts {
 }
 
 // C #55 Book of Wildfire — SPEC §8.6 row 55, BUILD M9 Classic row C 55: targeted hit on any unit or hero
-// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a Book;
+// (§4.4); nothing names it, so C #23 and C #29 never make it (R381); C #4 Palantir answers it as a (1) Cost Spell;
 // tuned damage reads through `param()` (R386). At the end of its owner's turn in hand, it swaps to a
 // random other non-token Book on the same face, keeping the swap (R671).
 #[cfg(test)]
@@ -57,8 +57,7 @@ mod tests {
     const TOP_LOSER: &str = "classicplus-019-1"; // Radiant: Immune to Spells
     const SOLARIUS: &str = "classicplus-038"; // Spell Damage +2
     const FILLER: &str = "core-005"; // a hand card, so a turn never auto-ends (§2.5)
-    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a Book, you may Tribute this to steal it.
-    const VITAL_KILL: &str = "classic-029"; // Radiant: … Add a Book of Flame to your hand.
+    const PALANTIR: &str = "classic-004"; // Base: when your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself.
     const BOOK_OF_FLAME: &str = "classic-016";
 
     use crate::js;
@@ -173,10 +172,11 @@ mod tests {
         }
 
         #[test]
-        fn r381_nothing_names_it_c_23_and_c_29_name_book_of_flame_c_16_never_book_of_wildfire() {
+        fn r381_nothing_names_it_c_23_names_book_of_flame_c_16_never_book_of_wildfire() {
             crate::register_all();
             assert_eq!(js(&crate::card_def("classic-023"))["refs"], json!(["classic-016"]));
-            assert_eq!(js(&crate::card_def("classic-029"))["refs"], json!(["classic-016"]));
+            // C #29 named C #16 too until patch v0.3.10 (#831).
+            assert!(js(&crate::card_def("classic-029")).get("refs").is_none());
             assert_eq!(crate::card_def("classic-016").name, "Book of Flame");
             assert_eq!(crate::card_def(ID).name, "Book of Wildfire");
         }
@@ -276,28 +276,19 @@ mod tests {
             }
 
             #[test]
-            fn c_4_palantirs_base_face_answers_it_as_a_book_tributed_at_once_with_no_prompt_and_steals_this() {
+            fn r831001_c_4_palantirs_base_face_steals_this_with_no_prompt_and_casts_it_at_your_hero() {
                 crate::register_all();
                 let mut s = scenario(json!({ "p1": { "hand": [WILDFIRE, FILLER] }, "p2": { "backrow": [PALANTIR], "hand": [FILLER] } }));
                 let wildfire = s.card(WILDFIRE).clone();
                 s.play(&wildfire, json!({ "targets": [hero("p2")] }));
                 assert!(s.state().pending.is_none());
                 s.expect_in_zone(PALANTIR, "graveyard");
+                // Cast by p2, its random hit is aimed at p2's opponent (R656): p1 has no Unit, so p1's hero.
                 assert!(matches_object(
                     &js(s.card(&wildfire.id)),
-                    &json!({ "owner": "p2", "zone": { "z": "hand", "player": "p2" } }),
+                    &json!({ "owner": "p2", "zone": { "z": "graveyard", "player": "p2" } }),
                 ));
-                s.expect_health(P2, 30);
-            }
-
-            #[test]
-            fn r381_c_29s_radiant_face_adds_a_book_of_flame_never_this_card() {
-                crate::register_all();
-                let mut s = scenario(json!({ "p1": { "hand": [{ "def": VITAL_KILL, "radiant": true }, FILLER] } }));
-                s.play(VITAL_KILL, json!({ "targets": [hero("p2")] }));
-                let added: Vec<String> =
-                    s.hand(P1).into_iter().map(|card| card.def_id).filter(|def_id| def_id != FILLER).collect();
-                assert_eq!(added, vec![BOOK_OF_FLAME]);
+                s.expect_health(P2, 30).expect_health(P1, 26);
             }
 
             #[test]

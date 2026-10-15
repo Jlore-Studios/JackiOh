@@ -758,18 +758,24 @@ mod r177_make_radiant_on_a_hidden_card_that_is_already_radiant {
 mod r177_eugenics_radiant_roll_over_a_hidden_library {
     use super::*;
 
-    /// p1's library is eight 4-mana 7/7s. Eugenics exiles 7 at random, and with this seed the card left
-    /// is library[5]; each remaining library card then has a 30% chance to become Radiant (§8 #42),
-    /// and with this seed that card's roll comes up. The two games differ only in whether that one
-    /// library card, which neither player can read (§9.1), was Radiant already.
+    /// p1's library is seven (1) Stockpiles and, at library[5], a 4-mana 7/7. Eugenics exiles every
+    /// card that costs (2) or less (§8 #42, R831014), so the 7/7 is the card left; the Radiant face then
+    /// makes each remaining library card Radiant (a 100% roll). The two games differ only in whether
+    /// that one library card, which neither player can read (§9.1), was Radiant already.
     fn eugenics_game(left_card_radiant: bool) -> Scenario {
         let library: Vec<Value> = (0..8)
-            .map(|at| json!({ "def": SEVEN_SEVEN, "radiant": left_card_radiant && at == 5 }))
+            .map(|at| {
+                if at == 5 {
+                    json!({ "def": SEVEN_SEVEN, "radiant": left_card_radiant })
+                } else {
+                    json!(STOCKPILE)
+                }
+            })
             .collect();
         let mut s = scenario(json!({
             // Arbitrary seed: no pool or random roll decides this test (audited under #848).
             "seed": "r5-eugenics-7",
-            "p1": { "hand": [EUGENICS, STOCKPILE], "mana": 10, "library": library },
+            "p1": { "hand": [{ "def": EUGENICS, "radiant": true }, STOCKPILE], "mana": 10, "library": library },
             "p2": { "hand": [STOCKPILE], "library": [STOCKPILE] },
         }));
         s.play(EUGENICS, json!({}));
@@ -793,7 +799,7 @@ mod r177_eugenics_radiant_roll_over_a_hidden_library {
         assert_eq!(faces(&base), vec![true]);
         assert_eq!(faces(&radiant), vec![true]);
 
-        // "Each remaining library card has a 30% chance" (§8 #42): the already-Radiant card is rolled
+        // "Each card left in your deck becomes Radiant" (§8 #42): the already-Radiant card is rolled
         // like any other, and a success on a card nobody may read is cued whether or not its flag
         // changed (R177). A cue for the changed cards only lets both seats count the Radiant ones.
         indistinguishable(PlayerId::P2, &base, &radiant);

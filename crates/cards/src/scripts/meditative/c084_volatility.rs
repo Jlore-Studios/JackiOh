@@ -1,15 +1,22 @@
-//! M #84 Volatility (SPEC §8.8 row 84): (1) Unit, Common, 3/3 → 6/6.
+//! M #84 Volatility (SPEC §8.8 row 84): (1) Unit, Common, 1/1 → 2/2.
 //!
-//! Base:    "Buffs and Nerfs are twice as effective on this."
-//! Radiant: "Buffs are three times as effective on this."
+//! Base:    "Cry: Buff this.\nBuffs and Nerfs are twice as effective on this."
+//! Radiant: "Cry: Buff this.\nBuffs are three times as effective on this."
 //! Engine: NEW: ME-TUNEMULT (R1160) — a static flag `tuneMultiplier`, read off the card's running
 //! face wherever it is (field, hand, deck), by which each Buff or Nerf application on this card is
 //! scaled: still one application and one draw, with the change N times as large. "Twice" and
-//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier.
+//! "three times" are kept out of `params`, so a Buff can never raise its own multiplier. Patch v0.3.10
+//! (#831) made it 1/1 and gave both faces "Cry: Buff this": one Upgrade of itself, which its own
+//! multiplier then doubles (triples on the Radiant face).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-084";
+
+/// Patch v0.3.10 (#831): "Cry: Buff this", one Buff on itself, which its own multiplier scales.
+fn buff_this() -> Hook {
+    hook(|_ctx| vec![upgrade(json_as(json!({ "target": { "of": "self" } })))])
+}
 
 pub fn script() -> CardScripts {
     CardScripts {
@@ -21,6 +28,7 @@ pub fn script() -> CardScripts {
                 }),
                 ..StaticFlags::default()
             }),
+            cry: Some(buff_this()),
             ..Script::default()
         },
         radiant: Script {
@@ -31,6 +39,7 @@ pub fn script() -> CardScripts {
                 }),
                 ..StaticFlags::default()
             }),
+            cry: Some(buff_this()),
             ..Script::default()
         },
     }
@@ -40,7 +49,7 @@ pub fn script() -> CardScripts {
 // is doubled (MD-E7): a cost row of two steps (never below (0)), a stat split of twice the total,
 // two keywords, X +2; a Nerf likewise doubled, never removing a harmful keyword; still one
 // `upgraded` or `degraded` event; in hand and deck too; a +2/+2 stat buff and KY's Constant are not
-// doubled; radiant 6/6, Buffs tripled and Nerfs normal".
+// doubled; radiant 6/6, Buffs tripled and Nerfs normal". Patch v0.3.10: 1/1 → 2/2, and its Cry Buffs it.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,7 +205,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_a_1_3_3_common_unit_radiant_6_6_with_no_params() {
+        fn is_a_1_1_1_common_unit_radiant_2_2_with_no_params() {
             let def = crate::card_def(ID);
             assert_eq!(def.id, VOLATILITY);
             assert_eq!(def.cost, CardCost::Fixed(1));
@@ -210,7 +219,7 @@ mod tests {
                     def.radiant.attack,
                     def.radiant.health
                 ],
-                [Some(3), Some(3), Some(6), Some(6)]
+                [Some(1), Some(1), Some(2), Some(2)]
             );
             assert!(def.params.is_none() || def.params.as_ref().is_some_and(Vec::is_empty));
         }
@@ -320,7 +329,7 @@ mod tests {
                 {
                     assert_eq!(attack + health, 2 * TUNE_STAT_TOTAL);
                     let view = s.stats(id.as_str());
-                    assert_eq!((view.attack, view.health), (3 + attack, 3 + health));
+                    assert_eq!((view.attack, view.health), (1 + attack, 1 + health));
                     seen = true;
                 }
             }
@@ -449,13 +458,13 @@ mod tests {
                     "health": 2,
                 })))],
             );
-            s.expect_stats(id.as_str(), json!({ "attack": 5, "health": 5 }));
+            s.expect_stats(id.as_str(), json!({ "attack": 3, "health": 3 }));
         }
 
         #[test]
         fn r1160_kys_constant_is_not_doubled() {
-            // KY's Constant sets a random number on a hand card to 3: Volatility's only number
-            // not already 3 is its cost (1), set to (3) outright, not moved twice as far.
+            // KY's Constant sets a random number on a hand card to 3: Volatility's numbers are its
+            // cost (1) and its 1/1 (patch v0.3.10), and the one picked goes to 3 outright, not twice as far.
             crate::register_all();
             let mut s = scenario(json!({
                 "seed": "vol-constant",
@@ -467,7 +476,13 @@ mod tests {
                 KY_CONSTANT,
                 json!({ "targets": [{ "pick": "instance", "instanceId": id }] }),
             );
-            assert_eq!(cost_now(s.state(), s.card(id.as_str())), 3);
+            let card = s.card(id.as_str()).clone();
+            let Some(stats) = jackioh_engine::current_stats(s.state(), &card) else {
+                panic!("Volatility has stats");
+            };
+            let mut numbers = vec![cost_now(s.state(), &card), stats.attack, stats.health];
+            numbers.sort();
+            assert_eq!(numbers, vec![1, 1, 3]);
         }
 
         #[test]
@@ -494,9 +509,9 @@ mod tests {
         }
 
         #[test]
-        fn radiant_is_6_6() {
+        fn radiant_is_2_2() {
             let (mut s, id) = volatile("vol-radiant-stats", "field", true, &[]);
-            s.expect_stats(id.as_str(), json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(id.as_str(), json!({ "attack": 2, "health": 2 }));
         }
 
         #[test]
@@ -540,6 +555,51 @@ mod tests {
                 }
             }
             assert!(tripled > 0);
+        }
+
+        /// The one `upgraded` event the Cry of a Volatility played from hand makes, over `seeds`, and
+        /// each stat split it drew.
+        fn cried(radiant: bool) -> (usize, Vec<i32>) {
+            let mut stat_totals = Vec::new();
+            let mut cries = 0;
+            for seed in 1..=20 {
+                crate::register_all();
+                let mut s = scenario(json!({
+                    "seed": format!("vol-cry-{radiant}-{seed}"),
+                    "p1": { "hand": [{ "def": VOLATILITY, "radiant": radiant }, FILLER], "library": filler(3) },
+                    "p2": { "hand": [FILLER], "library": filler(4) },
+                }));
+                let id = s.card(VOLATILITY).id.clone();
+                s.play(VOLATILITY, json!({}));
+                let ups = upgrades(s.events());
+                assert_eq!(ups.len(), 1, "one Buff, on itself");
+                let GameEvent::Upgraded { instance_id, change, .. } = &ups[0] else {
+                    unreachable!("upgrades() keeps upgraded events")
+                };
+                assert_eq!(instance_id, &id);
+                cries += 1;
+                if let TuningChange::Stats { attack, health } = change {
+                    stat_totals.push(attack + health);
+                    s.expect_stats(id.as_str(), json!({ "attack": (if radiant { 2 } else { 1 }) + attack, "health": (if radiant { 2 } else { 1 }) + health }));
+                }
+            }
+            (cries, stat_totals)
+        }
+
+        #[test]
+        fn its_cry_buffs_it_once_and_the_buff_is_doubled() {
+            let (cries, totals) = cried(false);
+            assert_eq!(cries, 20);
+            assert!(!totals.is_empty(), "the stat row was drawn");
+            assert!(totals.iter().all(|total| *total == 2 * TUNE_STAT_TOTAL), "{totals:?}");
+        }
+
+        #[test]
+        fn radiant_its_cry_buffs_it_once_and_the_buff_is_tripled() {
+            let (cries, totals) = cried(true);
+            assert_eq!(cries, 20);
+            assert!(!totals.is_empty(), "the stat row was drawn");
+            assert!(totals.iter().all(|total| *total == 3 * TUNE_STAT_TOTAL), "{totals:?}");
         }
     }
 }

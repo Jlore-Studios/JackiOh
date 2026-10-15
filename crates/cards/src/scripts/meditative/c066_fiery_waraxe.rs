@@ -1,7 +1,8 @@
 //! M #66 Fiery Waraxe (SPEC §8.8 row 66): (2) Field Spell, Common, 3/2 → 6/4.
-//!   Base:    "Animated on your turn"
-//!   Radiant: "Animated on your turn, Pierce"
-//! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only.
+//!   Base:    "Animated on your turn, First Strike"
+//!   Radiant: "Animated on your turn, Pierce, First Strike"
+//! Engine: "Animated on your turn" (R383, R1062) as C+ #12.8 Frostspatula; keywords only
+//! (First Strike on both faces since patch v0.3.10).
 
 use jackioh_engine::prelude::*;
 

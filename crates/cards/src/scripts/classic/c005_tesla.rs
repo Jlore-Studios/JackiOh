@@ -1,6 +1,6 @@
 //! C #5 Tesla (SPEC §8.6 row 5). Field Trap, cost 2, Epic, 1/4 → 2/8 (its unit face). Both faces:
-//! "Animated, Lifesteal. Activates when your opponent summons a Unit: Deal {damage} damage to it. Then
-//! summon this as a Unit in Defense Position." Damage 4 base, 8 Radiant.
+//! "Animated, Lifesteal. Reveals when your opponent summons a Unit: Deal {damage} damage to it. Then
+//! summon this as a Unit in Defense Position. Later Units are not hit." Damage 4 base, 8 Radiant.
 //!
 //! It answers each Unit summoned on the opponent's side (§6.3 Summon); a steal across (R171) or an
 //! animating card (R383) was not summoned and leaves it set. A played Unit is answered after it resolves
@@ -11,8 +11,10 @@
 //! Defense Position (Animated, B3.1, R383): its own lane when open, else the leftmost open, unlocked,
 //! unreserved zone (R64); with none open it stays face-up in its backrow zone. A Field Trap is never
 //! consumed. Face-down it is hidden until it first fires (R33). The condition lives in `when` (R99).
+//! It zaps only the Unit that reveals it (R831007, patch v0.3.10, #831): the first firing remembers
+//! `revealed`, and the trigger answers nothing after that, wherever the card stands.
 
-use jackioh_engine::effects::{animate, damage};
+use jackioh_engine::effects::{animate, damage, remember};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-005";
@@ -45,16 +47,26 @@ fn arrival(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     }
 }
 
+/// What Tesla keeps once it has revealed: it zaps only the Unit that revealed it (patch v0.3.10, #831).
+const REVEALED: &str = "revealed";
+
+fn has_revealed(ctx: &EffectContext<'_>) -> bool {
+    recalled(ctx, REVEALED) == Some(Value::Bool(true))
+}
+
 fn zap() -> TriggerDef {
     TriggerDef::new("tesla-zap", &[GameEventType::Summoned, GameEventType::CardResolved], |ctx, event| {
         let Some(target) = arrival(ctx, event) else {
             return vec![];
         };
+        if has_revealed(ctx) {
+            return vec![];
+        }
         // R781001: a Field Trap can't target an Immutable Unit in play, so Tesla still fires and
         // animates but deals it nothing.
         let state: &GameState = &*ctx.state;
         let shielded = find_instance(state, &target).is_some_and(|unit| immutable_bars(state, ctx.live_self(), unit));
-        let mut effects = Vec::new();
+        let mut effects = vec![remember(json_as(json!({ "key": REVEALED, "value": true })))];
         if !shielded {
             effects.push(damage(json_as(json!({
                 "to": { "of": "instance", "instanceId": target },
@@ -64,7 +76,7 @@ fn zap() -> TriggerDef {
         effects.push(animate(json_as(json!({ "position": "DEF" }))));
         effects
     })
-    .with_when(|ctx, event| arrival(ctx, event).is_some())
+    .with_when(|ctx, event| !has_revealed(ctx) && arrival(ctx, event).is_some())
 }
 
 pub fn script() -> CardScripts {
@@ -102,7 +114,7 @@ mod tests {
     const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
-    const FEELINGS: &str = "classic-032"; // (0) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
+    const FEELINGS: &str = "classic-032"; // (1) Steal an enemy permanent in a lane where you control a (1) Cost Unit.
     const FILLER: &str = "core-010";
 
     use crate::js;
@@ -208,15 +220,16 @@ mod tests {
             }
 
             #[test]
-            fn r17_the_played_unit_s_cry_happens_first_its_token_is_answered_then_the_unit_itself() {
+            fn r17_r831007_the_played_unit_s_cry_happens_first_its_token_reveals_it_and_is_the_only_one_hit() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [TOKEN_MAN, FILLER] }), json!({}), false);
                 let man = s.card(TOKEN_MAN).clone();
 
                 s.play(&man, json!({ "zone": 1 }));
 
-                assert_eq!(count(s.events(), "trapFired"), 2);
-                // The Cry's token is hit first (its summon), the played Unit only once the play has resolved.
+                assert_eq!(count(s.events(), "trapFired"), 1);
+                // The Cry's token is hit (its summon reveals Tesla); the played Unit, answered once the play
+                // has resolved, is a later Unit and is not hit.
                 let token = s.events().iter().find_map(|event| match event {
                     GameEvent::Summoned { def_id, instance_id, .. } if def_id == "core-t-rush" => Some(instance_id.clone()),
                     _ => None,
@@ -232,26 +245,25 @@ mod tests {
                         _ => None,
                     })
                     .collect();
-                assert_eq!(hits, vec![token, man.id.clone()]);
-                s.expect_in_zone(&man, "graveyard");
-                assert!(s.unit(P2, 1).is_none());
-                assert!(s.unit(P2, 2).is_none());
-                // Both hits heal: 4 into the 3/3 token and 4 into the 1/1.
-                s.expect_health(P1, 28);
+                assert_eq!(hits, vec![token]);
+                s.expect_in_zone(&man, "field");
+                // The one hit heals: 4 into the 3/3 token.
+                s.expect_health(P1, 24);
             }
 
             #[test]
-            fn s6_3_a_recruit_s_arrivals_are_summons_too_each_is_answered() {
+            fn s6_3_r831007_a_recruit_s_arrivals_are_summons_too_the_first_reveals_it_and_alone_is_hit() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [CALL, FILLER], "library": [TIMMY, TIMMY, VANILLA, MENACE] }), json!({}), false);
 
                 s.play(CALL, json!({}));
 
-                // Call to Arms recruits the three (1) Cost Units (Timmy, Timmy, Vanilla), never the (3) Menace.
-                assert_eq!(count(s.events(), "trapFired"), 3);
+                // Call to Arms recruits the three (1) Cost Units (Timmy, Timmy, Vanilla), never the (3) Menace;
+                // the first one's summon reveals Tesla, and the other two are later Units.
+                assert_eq!(count(s.events(), "trapFired"), 1);
                 let graveyard = s.pile(P2, "graveyard");
-                assert_eq!(graveyard.iter().filter(|card| card.def_id == TIMMY).count(), 2);
-                assert_eq!(graveyard.iter().filter(|card| card.def_id == VANILLA).count(), 1);
+                assert_eq!(graveyard.iter().filter(|card| card.def_id == TIMMY).count(), 1);
+                assert_eq!(graveyard.iter().filter(|card| card.def_id == VANILLA).count(), 0);
             }
 
             #[test]
@@ -341,7 +353,7 @@ mod tests {
             }
 
             #[test]
-            fn r383_no_open_unit_zone_it_stays_face_up_in_its_backrow_zone_and_keeps_firing() {
+            fn r383_r831007_no_open_unit_zone_it_stays_face_up_in_its_backrow_zone_and_hits_no_later_unit() {
                 crate::register_all();
                 let full = vec![VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
                 let mut s = setup(json!({ "hand": [TIMMY, TIMMY, FILLER] }), json!({ "field": full }), false);
@@ -359,7 +371,8 @@ mod tests {
                 };
                 s.play(&second, json!({ "zone": 2 }));
 
-                assert_eq!(count(s.events(), "trapFired"), 2);
+                assert_eq!(count(s.events(), "trapFired"), 1);
+                s.expect_in_zone(&second, "field");
             }
 
             #[test]
@@ -380,7 +393,7 @@ mod tests {
             }
 
             #[test]
-            fn never_consumed_already_a_unit_it_fires_again_and_stays_put_still_in_defense() {
+            fn r831007_once_it_has_revealed_a_unit_played_after_it_is_not_hit_and_tesla_stays_put_in_defense() {
                 crate::register_all();
                 let mut s = setup(json!({ "hand": [VANILLA, TIMMY, FILLER] }), json!({}), false);
 
@@ -390,9 +403,19 @@ mod tests {
                 let tesla = s.card(TESLA).clone();
                 assert!(matches_object(&js(&tesla.zone), &json!({ "z": "field", "row": "units", "lane": 3 })));
                 assert_eq!(s.stats(&tesla).position, Position::Def);
-                assert_eq!(count(s.events(), "trapFired"), 2);
+                assert_eq!(count(s.events(), "trapFired"), 1);
                 assert_eq!(count(s.events(), "animated"), 1);
-                s.expect_in_zone(TIMMY, "graveyard");
+                s.expect_in_zone(VANILLA, "graveyard");
+                s.expect_in_zone(TIMMY, "field");
+                // Nor on a later turn.
+                s.end_turn();
+                s.end_turn();
+                let Some(later) = s.hand(P2).into_iter().find(|card| card.def_id == VANILLA) else {
+                    panic!("p2 drew a Vanilla");
+                };
+                s.play(&later, json!({ "zone": 4 }));
+                s.expect_in_zone(&later, "field");
+                assert_eq!(count(s.events(), "trapFired"), 1);
             }
 
             #[test]

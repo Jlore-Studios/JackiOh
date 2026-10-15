@@ -1,9 +1,9 @@
-//! C #4 Palantir (SPEC §8.6 row 4). Field Spell, cost 1, Legendary.
+//! C #4 Palantir (SPEC §8.6 row 4). Field Spell, cost 2, Legendary.
 //!   Base:    "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.
-//!             When your opponent plays a Book, Tribute this to steal it."
+//!             When your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself."
 //!   Radiant: "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.
-//!             When your opponent plays a Spell, steal it. Once the Spells this has stolen cost
-//!             ({threshold}) or more in total, Tribute this."
+//!             When your opponent plays a (1) Cost Spell, steal it and cast it yourself. Once this has
+//!             stolen {threshold|Spell|Spells}, Tribute this."
 //!
 //! The Aura is a draw limit (§2.4, B5 E3) on the opponent, on every turn, the start-of-turn draw
 //! included: a draw past the limit does not happen at all (no card moves, no fatigue, nothing is cast
@@ -12,45 +12,45 @@
 //!
 //! The steal answers the opponent's announce (`cardAnnounced`, §10.5 step 3a) as a Counter (§6.3, B5
 //! E1, R448): the card is cancelled before it moves and goes to your hand as your own card (B5 E2, the
-//! Steal off the field: its owner changes, §3.2, R12; a full hand burns it into your graveyard, R317). A
-//! cast is a play and is answered too (R70).
-//!   - Base: only a Spell with the Book tag, and "Tribute this to steal it" is a price paid without
-//!     asking (no "you may", balance patch 1): Palantir sacrifices itself, then counters the Book into
-//!     your hand. Palantir is not a Trap, so it answers after the traps the announce woke (§10.3), and
-//!     the paused play waits on `state.work` meanwhile (R113).
-//!   - Radiant: every opponent Spell, with no question. Each one's own cost as it stands out of play
-//!     (R65: its override or printed cost plus its cost changes, no player discounts, an X Spell 0,
-//!     R396) is added to `memory.stolenCost`, and once that total reaches ({threshold}) Palantir
-//!     Tributes itself — never before.
+//! Steal off the field: its owner changes, §3.2, R12; a full hand burns it into your graveyard, R317),
+//! and then you cast it (R831001): a cast by Palantir's controller (R70), every choice made at random
+//! and each target aimed in your favour (R452, R656), after which it goes to your graveyard as your
+//! card. A cast is a play and is answered too (R70). The Spells it answers are the (1) Cost ones, their
+//! own cost as they stand out of play (R65: an X Spell counts 0, R396), Books or not.
+//!   - Base: "Tribute this to steal it" is a price paid without asking (no "you may", balance patch 1):
+//!     Palantir sacrifices itself, then counters the Spell and casts it. Palantir is not a Trap, so it
+//!     answers after the traps the announce woke (§10.3), and the paused play waits on `state.work`
+//!     meanwhile (R113).
+//!   - Radiant: every such Spell, with no question, counted in `memory.stolen`; once it has stolen
+//!     ({threshold}) Palantir Tributes itself — never before.
+//!
+//! Patch v0.3.10 (#831): it cost (1) and answered only Books (the Radiant face every Spell, until the
+//! costs it had stolen reached (2)), and it kept the stolen card in your hand.
 
-use jackioh_engine::effects::{counter_play, remember, sacrifice};
+use jackioh_engine::effects::{cast, counter_play, remember, sacrifice};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-004";
 
-/// Where the Radiant face keeps the cost it has stolen so far.
-const STOLEN_COST: &str = "stolenCost";
+/// Where the Radiant face counts the Spells it has stolen so far.
+const STOLEN: &str = "stolen";
 
-/// The opponent's announced Spell (a Book only, on the base face), or None. TS handed back the
-/// `cardAnnounced` event itself (`type Announced`); its one use is the announced card's instance id,
-/// which is what this answers.
-fn answered(ctx: &EffectContext<'_>, event: &GameEvent, books_only: bool) -> Option<String> {
-    let GameEvent::CardAnnounced { player, instance_id, def_id, card_type, .. } = event else {
+/// Patch v0.3.10 (#831): the Spells it answers are the (1) Cost ones (R65: a card's own cost as it
+/// stands out of play, an X Spell 0), Books or not.
+const STOLEN_COST: i32 = 1;
+
+/// The opponent's announced (1) Cost Spell, or None: the announced card's instance id, which is what
+/// this answers.
+fn answered(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
+    let GameEvent::CardAnnounced { player, instance_id, card_type, .. } = event else {
         return None;
     };
     if *player == ctx.controller || *card_type != CardType::Spell {
         return None;
     }
-    // MD-B15, R923: a granted Book tag counts — read the announced card itself when it still
-    // exists, else its definition's tags.
-    if books_only {
-        let is_book = match find_instance(&*ctx.state, instance_id) {
-            Some(card) => tags_of(&*ctx.state, card).contains(&Tag::Book),
-            None => def_of(Some(&*ctx.state), def_id).tags.contains(&Tag::Book),
-        };
-        if !is_book {
-            return None;
-        }
+    let cost = find_instance(&*ctx.state, instance_id).and_then(|card| own_cost(&*ctx.state, card));
+    if cost != Some(STOLEN_COST) {
+        return None;
     }
     Some(instance_id.clone())
 }
@@ -65,55 +65,59 @@ fn draw_limit() -> DrawLimitHook {
     })
 }
 
-/// Base: "Tribute this to steal it" — no question, the price is paid to steal.
-fn steal_book() -> TriggerDef {
-    TriggerDef::new("palantir-book", &[GameEventType::CardAnnounced], |ctx, event| {
-        let Some(book) = answered(ctx, event, true) else {
-            return vec![];
-        };
-        vec![
-            sacrifice(json_as(json!({ "target": { "of": "self" } }))),
-            counter_play(json_as(json!({ "to": "thief", "target": { "of": "instance", "instanceId": book } }))),
-        ]
-    })
-    .with_when(|ctx, event| answered(ctx, event, true).is_some())
+/// "Steal it and cast it yourself": countered into your hand, then cast by you, every choice at
+/// random but aimed in your favour (R831001, R452, R656).
+fn steal_and_cast(spell: &str) -> Vec<Effect> {
+    let card = json!({ "of": "instance", "instanceId": spell });
+    vec![
+        counter_play(json_as(json!({ "to": "thief", "target": card.clone() }))),
+        cast(json_as(json!({ "target": card, "random": true, "targetEnemies": true }))),
+    ]
 }
 
-/// Radiant: steal every Spell, count what it cost, and Tribute this at the threshold.
-fn steal_spells() -> TriggerDef {
-    TriggerDef::new("palantir-spell", &[GameEventType::CardAnnounced], |ctx, event| {
-        let Some(spell) = answered(ctx, event, false) else {
+/// Base: "Tribute this to steal it" — no question, the price is paid to steal.
+fn steal_one() -> TriggerDef {
+    TriggerDef::new("palantir-steal", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(spell) = answered(ctx, event) else {
             return vec![];
         };
-        let cost = match find_instance(&*ctx.state, &spell) {
-            None => 0,
-            Some(card) => own_cost(&*ctx.state, card).unwrap_or(0),
-        };
-        let before = recalled(ctx, STOLEN_COST);
-        // TS `typeof before === "number" ? before : 0`.
-        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + cost.max(0);
-        let steal = counter_play(json_as(json!({ "to": "thief", "target": { "of": "instance", "instanceId": spell } })));
-        let kept = remember(json_as(json!({ "key": STOLEN_COST, "value": total })));
-        if total >= param(&*ctx, "threshold") {
-            vec![steal, kept, sacrifice(json_as(json!({ "target": { "of": "self" } })))]
-        } else {
-            vec![steal, kept]
-        }
+        let mut effects = vec![sacrifice(json_as(json!({ "target": { "of": "self" } })))];
+        effects.extend(steal_and_cast(&spell));
+        effects
     })
-    .with_when(|ctx, event| answered(ctx, event, false).is_some())
+    .with_when(|ctx, event| answered(ctx, event).is_some())
+}
+
+/// Radiant: steal each one, count them, and Tribute this once it has stolen {threshold}.
+fn steal_some() -> TriggerDef {
+    TriggerDef::new("palantir-spells", &[GameEventType::CardAnnounced], |ctx, event| {
+        let Some(spell) = answered(ctx, event) else {
+            return vec![];
+        };
+        let before = recalled(ctx, STOLEN);
+        // The count so far, 0 before the first steal.
+        let total = before.as_ref().and_then(Value::as_f64).map_or(0, |n| n as i32) + 1;
+        let mut effects = steal_and_cast(&spell);
+        effects.push(remember(json_as(json!({ "key": STOLEN, "value": total }))));
+        if total >= param(&*ctx, "threshold") {
+            effects.push(sacrifice(json_as(json!({ "target": { "of": "self" } }))));
+        }
+        effects
+    })
+    .with_when(|ctx, event| answered(ctx, event).is_some())
 }
 
 pub fn script() -> CardScripts {
     let limit = draw_limit();
     let base = Script {
         draw_limit: Some(limit.clone()),
-        triggers: vec![steal_book()],
+        triggers: vec![steal_one()],
         ..Script::default()
     };
 
     let radiant = Script {
         draw_limit: Some(limit),
-        triggers: vec![steal_spells()],
+        triggers: vec![steal_some()],
         ..Script::default()
     };
 
@@ -123,20 +127,18 @@ pub fn script() -> CardScripts {
 // C #4 Palantir — SPEC §8.6 row 4, BUILD M9 Classic row C 4: "Aura: the opponent's draws beyond 1 in a
 // turn, on either player's turn and the start-of-turn draw included, do not happen at all: no card
 // moves, no fatigue, nothing is cast on draw (§2.4); a draw made earlier that turn counts; with another
-// limit the lowest holds; lifted when Palantir leaves; the opponent playing a Book (a Spell tagged
-// Book, a cast included, R70) opens the announce window (§10.5), where the base face steals with no
-// "you may" (balance patch 1, mandatory): Palantir is Tributed and the Book is countered (never
-// played: no spell script, not counted as played, its mana spent) and moves to your hand as your
-// card (its owner changes, R12), burned into your graveyard at a full hand (R317); there is no pass,
-// so no prompt opens; a non-Book Spell opens no prompt either; every event naming the stolen Book
-// follows R97, judged where it sits now; the resolved steal survives a JSON round trip and replays;
-// radiant: every opponent Spell is countered and stolen with no prompt, its own cost (R65 out of
-// play: an X Spell 0) added to `memory.stolenCost`, and Palantir Tributes itself once that total
-// reaches 2, not before; its tuned numbers (draw limit, never below 1; radiant threshold) read
-// through `param()` (R386)".
+// limit the lowest holds; lifted when Palantir leaves; the opponent playing a (1) Cost Spell (a cast
+// included, R70) opens the announce window (§10.5), where the base face steals with no "you may":
+// Palantir is Tributed, the Spell is countered (never played by them: not counted, its mana spent)
+// and you cast it, every choice at random and aimed your way (R831001), the card ending in your
+// graveyard as yours; no prompt opens; another Spell opens no prompt either; the resolved steal
+// survives a JSON round trip and replays; radiant: every such Spell is stolen and cast with no
+// prompt, and Palantir Tributes itself once it has stolen 3, not before; its tuned numbers (draw
+// limit, never below 1; radiant threshold) read through `param()` (R386)".
 //
-// Palantir sits face-up in p1's backrow; p2, the opponent, is active and plays or draws. The Book is
-// C #24 Book of Knowledge ("Draw 3"), whose resolution shows in p2's draws.
+// Palantir sits face-up in p1's backrow; p2, the opponent, is active and plays or draws. The (1) Cost
+// Spells are C #24 Book of Knowledge ("Draw 3") and #5 Stockpile ("Draw 2. Heal your hero 2."), whose
+// resolution shows in whoever's draws.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,17 +149,18 @@ mod tests {
 
     const PALANTIR: &str = "classic-004";
     const BOOK: &str = "classic-024"; // (1) Spell, Book: Draw 3.
+    const FLAME: &str = "classic-016"; // (1) Spell, Book: Trample. Deal 4 damage (a declared target).
+    const VIRUS: &str = "core-090-1"; // (1) Spell token: Pierce. Cast on draw: take 1 damage; copies.
     const STOCKPILE: &str = "core-005"; // (1) Spell: Draw 2. Heal your hero 2.
     const REPLENISH: &str = "core-010"; // (0) Spell.
     const DIVIDEND: &str = "core-024"; // (X) Spell.
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw.
     const VANILLA: &str = "core-008";
     const TIMMY: &str = "core-011";
-    const RECYCLE: &str = "core-039"; // (0) Spell: Exile this.
     const TWINSPELL: &str = "core-079"; // (2) Field Spell.
     const CALL: &str = "core-069"; // (2) Spell: Recruit 3.
     const COUNTERSPELL: &str = "classic-017"; // Trap: counters the opponent's Spell.
-    const AUCTIONEER: &str = "classic-038"; // Field Trap: from its reveal on, each play draws its controller 1.
+    const GAMBIT: &str = "classic-052"; // Trap: reveals at a lethal hit on your hero; redirects it, heals 10, draws 3.
 
     const DECK: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
 
@@ -174,12 +177,17 @@ mod tests {
                 json!({
                     "hand": [TIMMY],
                     "backrow": [{ "def": PALANTIR, "radiant": radiant_face, "faceUp": true, "lane": 1 }],
-                    "library": [VANILLA, VANILLA],
+                    "library": DECK,
                 }),
                 p1,
             ),
             "p2": merged(json!({ "hand": [BOOK, STOCKPILE, VANILLA], "library": DECK }), p2),
         }))
+    }
+
+    /// Stockpile with (1) more on its cost: a draw Spell Palantir does not steal, for the Aura's tests.
+    fn dear_stockpile() -> Value {
+        json!({ "def": STOCKPILE, "costMod": 1 })
     }
 
     fn count(events: &[GameEvent], event_type: &str) -> usize {
@@ -193,8 +201,14 @@ mod tests {
             .count()
     }
 
-    fn stolen_cost(s: &Scenario, palantir: &CardInstance) -> Option<Value> {
-        s.card(palantir).memory.get("stolenCost").cloned()
+    fn stolen(s: &Scenario, palantir: &CardInstance) -> Option<Value> {
+        s.card(palantir).memory.get("stolen").cloned()
+    }
+
+    /// Whether the card lies in p1's graveyard, p1 its owner.
+    fn in_your_graveyard(s: &Scenario, card: &CardInstance) -> bool {
+        matches_object(&js(&s.card(&card.id).zone), &json!({ "z": "graveyard", "player": "p1" }))
+            && s.card(&card.id).owner == P1
     }
 
     mod c_n4_palantir {
@@ -215,7 +229,7 @@ mod tests {
             #[test]
             fn s2_4_the_opponent_s_draws_beyond_1_in_a_turn_do_not_happen_at_all() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -230,7 +244,7 @@ mod tests {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [TIMMY], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA, VANILLA] },
-                    "p2": { "hand": [STOCKPILE, VANILLA], "library": DECK },
+                    "p2": { "hand": [dear_stockpile(), VANILLA], "library": DECK },
                 }));
 
                 s.end_turn();
@@ -247,7 +261,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(
                     json!({}),
-                    json!({ "hand": [STOCKPILE, VANILLA], "library": [VANILLA, { "def": HINDER, "radiant": true }, VANILLA] }),
+                    json!({ "hand": [dear_stockpile(), VANILLA], "library": [VANILLA, { "def": HINDER, "radiant": true }, VANILLA] }),
                     false,
                 );
                 let hinder = s.card(HINDER).clone();
@@ -261,7 +275,7 @@ mod tests {
             #[test]
             fn s2_4_a_stopped_draw_from_an_empty_deck_deals_no_fatigue() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({ "library": [VANILLA] }), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA], "library": [VANILLA] }), false);
 
                 s.play(STOCKPILE, json!({}));
 
@@ -273,34 +287,27 @@ mod tests {
             #[test]
             fn s2_4_it_holds_on_its_controller_s_turn_too_the_opponent_s_off_turn_draw_counts_and_a_second_is_stopped() {
                 crate::register_all();
-                // p2's C #38 Jackiestan Auctioneer reveals on p1's 3rd play; from then on each play makes p2
-                // draw 1, on p1's own turn. The first such draw happens, the second is past the limit.
+                // p1's Book of Flame would take p2 from 3 to 0, so p2's C #52 Final Gambit reveals on p1's
+                // turn and draws p2 3: the first draw happens, the other two are past the limit.
                 let mut s = scenario(json!({
                     "p1": {
-                        "hand": [RECYCLE, RECYCLE, RECYCLE, RECYCLE, RECYCLE, TIMMY],
+                        "hand": [FLAME, TIMMY],
                         "backrow": [{ "def": PALANTIR, "faceUp": true, "lane": 1 }],
                         "library": [VANILLA],
                     },
                     "p2": {
                         "hand": [VANILLA],
-                        "backrow": [{ "def": AUCTIONEER, "faceUp": false, "lane": 2 }],
+                        "backrow": [{ "def": GAMBIT, "faceUp": false, "lane": 2 }],
                         "library": [VANILLA, VANILLA, VANILLA],
+                        "health": 3,
                     },
                 }));
-                let recycles = |s: &Scenario| -> Vec<String> {
-                    s.hand(P1).into_iter().filter(|card| card.def_id == RECYCLE).map(|card| card.id).collect()
-                };
 
-                for id in recycles(&s).into_iter().take(4) {
-                    s.play(&id, json!({}));
-                }
+                s.play(FLAME, json!({ "targets": [{ "pick": "hero", "player": "p2" }] }));
+
+                assert_eq!(s.state().active, P1);
                 assert_eq!(draws_by(s.events(), P2), 1);
-
-                let next = recycles(&s).into_iter().next().unwrap_or_else(|| RECYCLE.to_string());
-                s.play(&next, json!({}));
-
-                assert_eq!(draws_by(s.events(), P2), 1);
-                assert_eq!(count(s.last_events(), "drawLimited"), 1);
+                assert_eq!(count(s.last_events(), "drawLimited"), 2);
                 assert_eq!(s.pile(P2, "library").len(), 2);
             }
 
@@ -325,7 +332,7 @@ mod tests {
                         { "def": PALANTIR, "faceUp": true, "lane": 1 },
                         { "def": PALANTIR, "faceUp": true, "lane": 2 },
                     ] }),
-                    json!({}),
+                    json!({ "hand": [dear_stockpile(), VANILLA] }),
                     false,
                 );
                 // A Degrade moves a limit toward more draws: this one allows 2, the other still 1.
@@ -342,7 +349,7 @@ mod tests {
             #[test]
             fn r386_a_degrade_of_the_limit_lets_the_opponent_draw_2_a_turn() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
                 step_param(s.card_mut(PALANTIR), "drawLimit", 1);
 
                 s.play(STOCKPILE, json!({}));
@@ -353,7 +360,7 @@ mod tests {
             #[test]
             fn r386_an_upgrade_never_takes_the_limit_below_1() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
+                let mut s = setup(json!({}), json!({ "hand": [dear_stockpile(), VANILLA] }), false);
                 step_param(s.card_mut(PALANTIR), "drawLimit", -1);
 
                 s.play(STOCKPILE, json!({}));
@@ -373,138 +380,106 @@ mod tests {
             }
         }
 
-        mod base_the_book_steal {
+        mod base_the_steal {
             use super::*;
 
             #[test]
-            fn r448_the_opponent_s_book_opens_no_prompt_the_steal_resolves_during_the_opponent_s_turn() {
+            fn r448_r831001_the_opponent_s_1_cost_spell_opens_no_prompt_it_is_countered_and_you_cast_it() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-
-                s.play(BOOK, json!({}));
-
-                assert!(s.state().pending.is_none());
-                assert_eq!(count(s.events(), "promptOpened"), 0);
-                s.expect_events(json!(["cardAnnounced", "countered"]));
-                assert_eq!(count(s.events(), "cardPlayed"), 0);
-            }
-
-            #[test]
-            fn r12_palantir_is_tributed_and_the_book_is_countered_into_your_hand_as_your_card() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
-                let book = s.card(BOOK).clone();
-                let palantir = s.card(PALANTIR).clone();
-
-                s.play(&book, json!({}));
-
-                s.expect_in_zone(&palantir, "graveyard");
-                let taken = s.card(&book.id).clone();
-                assert!(matches_object(&js(&taken.zone), &json!({ "z": "hand", "player": "p1" })));
-                assert_eq!(taken.owner, P1);
-                // Never played: its script did not run, it is not counted, and its mana stays spent.
-                assert_eq!(draws_by(s.events(), P2), 0);
-                assert_eq!(count(s.events(), "cardPlayed"), 0);
-                assert_eq!(s.state().players.p2.turn_log.cards_played, 0);
-                s.expect_mana(P2, 3);
-                s.expect_events(json!(["countered"]));
-            }
-
-            #[test]
-            fn r923_a_granted_book_is_stolen() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
-                // Stockpile is no Book — until it is granted the tag.
                 let stockpile = s.card(STOCKPILE).clone();
-                find_instance_mut(s.state_mut(), &stockpile.id).expect("the spell").granted_tags =
-                    Some(vec![Tag::Book]);
                 let palantir = s.card(PALANTIR).clone();
 
                 s.play(&stockpile, json!({}));
 
-                // Stolen like a Book: Palantir is tributed and the spell is countered into your
-                // hand as your card, never played.
+                assert!(s.state().pending.is_none());
+                assert_eq!(count(s.events(), "promptOpened"), 0);
                 s.expect_in_zone(&palantir, "graveyard");
-                let taken = s.card(&stockpile.id).clone();
-                assert!(matches_object(&js(&taken.zone), &json!({ "z": "hand", "player": "p1" })));
-                assert_eq!(taken.owner, P1);
-                assert_eq!(count(s.events(), "cardPlayed"), 0);
+                // Countered for them (never their play), then cast by you: you draw 2 and heal 2.
+                assert_eq!(count(s.events(), "countered"), 1);
+                assert_eq!(s.state().players.p2.turn_log.cards_played, 0);
+                assert_eq!(draws_by(s.events(), P2), 0);
+                assert_eq!(draws_by(s.events(), P1), 2);
+                s.expect_health(P1, 32);
+                s.expect_mana(P2, 3);
+                assert!(s.events().iter().any(|event| matches!(
+                    event,
+                    GameEvent::CardPlayed { player: P1, instance_id, .. } if *instance_id == stockpile.id
+                )));
+                assert!(in_your_graveyard(&s, &stockpile));
             }
 
             #[test]
-            fn r317_with_a_full_hand_the_stolen_book_burns_into_your_graveyard() {
+            fn r831001_a_book_is_stolen_as_any_1_cost_spell_and_you_draw_its_3() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({}), false);
+                let book = s.card(BOOK).clone();
+
+                s.play(&book, json!({}));
+
+                assert_eq!(draws_by(s.events(), P1), 3);
+                assert_eq!(draws_by(s.events(), P2), 0);
+                assert!(in_your_graveyard(&s, &book));
+            }
+
+            #[test]
+            fn r831001_r656_a_stolen_damage_spell_is_aimed_at_your_opponent() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({ "hand": [FLAME, VANILLA] }), false);
+
+                // They aim it at your hero; stolen, it is yours, aimed at their side (R656).
+                s.play(FLAME, json!({ "targets": [{ "pick": "hero", "player": "p1" }] }));
+
+                s.expect_health(P1, 30);
+                s.expect_health(P2, 26);
+            }
+
+            #[test]
+            fn r65_r396_a_0_cost_spell_an_x_spell_and_a_2_cost_spell_are_not_stolen() {
+                crate::register_all();
+                let mut s = setup(json!({}), json!({ "hand": [REPLENISH, DIVIDEND, CALL, VANILLA], "mana": 9 }), false);
+                let palantir = s.card(PALANTIR).clone();
+
+                s.play(REPLENISH, json!({}));
+                s.play(DIVIDEND, json!({ "x": 1, "modes": ["mana"] }));
+                s.play(CALL, json!({}));
+
+                s.expect_in_zone(&palantir, "field");
+                assert_eq!(count(s.events(), "countered"), 0);
+                assert!(s.state().pending.is_none());
+            }
+
+            #[test]
+            fn r317_with_a_full_hand_the_stolen_spell_burns_into_your_graveyard_and_you_still_cast_it() {
                 crate::register_all();
                 let ten = vec![VANILLA; 10];
                 let mut s = setup(json!({ "hand": ten }), json!({}), false);
-                let book = s.card(BOOK).clone();
+                let stockpile = s.card(STOCKPILE).clone();
 
-                s.play(&book, json!({}));
+                s.play(&stockpile, json!({}));
 
                 assert_eq!(s.hand(P1).len(), 10);
-                let graveyard: Vec<String> = s.pile(P1, "graveyard").into_iter().map(|card| card.id).collect();
-                assert!(graveyard.contains(&book.id));
-                assert_eq!(s.card(&book.id).owner, P1);
+                assert!(in_your_graveyard(&s, &stockpile));
+                // Cast from your graveyard, where the steal left it: you heal 2.
+                s.expect_health(P1, 32);
             }
 
             #[test]
-            fn no_you_may_there_is_no_pass_so_the_book_never_resolves_while_palantir_stands() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
-                let palantir = s.card(PALANTIR).clone();
-                let book = s.card(BOOK).clone();
-
-                s.play(BOOK, json!({}));
-
-                s.expect_in_zone(&palantir, "graveyard");
-                assert_eq!(count(s.events(), "cardPlayed"), 0);
-                let taken = s.card(&book.id).clone();
-                assert!(matches_object(&js(&taken.zone), &json!({ "z": "hand", "player": "p1" })));
-            }
-
-            #[test]
-            fn a_non_book_spell_opens_no_prompt() {
-                crate::register_all();
-                let mut s = setup(json!({}), json!({}), false);
-
-                s.play(STOCKPILE, json!({}));
-
-                assert!(s.state().pending.is_none());
-                assert_eq!(count(s.events(), "promptOpened"), 0);
-            }
-
-            #[test]
-            fn r97_every_event_naming_the_stolen_book_is_judged_where_it_sits_now_your_hand_hidden_from_the_opponent() {
+            fn r97_the_stolen_spell_is_cast_in_the_open_and_both_seats_read_it_in_your_graveyard() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 let book = s.card(BOOK).clone();
 
                 s.play(&book, json!({}));
 
-                // The announce and the counter named the Book; now it is in p1's hand, so p2's view names it
-                // nowhere, while p1 reads it. The `stolen` event is left out: the engine shows it to whoever
-                // could read the card where it was taken from (the resolving zone, public), which is its own
-                // reading of hidden information for steals and differs from this row's "judged where it sits
-                // now" (reported to the lead).
-                let named = |text: &str| -> bool {
-                    text.contains(&format!("\"{}\"", book.id)) || text.contains(&format!("\"{BOOK}\""))
-                };
-                assert!(s
-                    .events()
-                    .iter()
-                    .filter(|event| event.event_type() != GameEventType::Stolen)
-                    .any(|event| named(&js(event).to_string())));
-                let mut board = js(&s.view(P2));
-                let events = board
-                    .as_object_mut()
-                    .and_then(|view| view.remove("events"))
-                    .unwrap_or(Value::Null);
-                assert!(!named(&board.to_string()));
-                let shown = events.as_array().cloned().unwrap_or_default();
-                assert!(!shown
-                    .iter()
-                    .filter(|event| event["type"] != "stolen")
-                    .any(|event| named(&event.to_string())));
-                assert!(named(&js(&s.view(P1))["you"]["hand"].to_string()));
+                for viewer in [P1, P2] {
+                    let graveyard = if viewer == P1 {
+                        js(&s.view(viewer))["you"]["graveyard"].clone()
+                    } else {
+                        js(&s.view(viewer))["opponent"]["graveyard"].clone()
+                    };
+                    assert!(graveyard.to_string().contains(BOOK), "{viewer:?}");
+                }
             }
 
             #[test]
@@ -526,7 +501,7 @@ mod tests {
             }
 
             #[test]
-            fn s9_3_the_resolved_steal_survives_a_json_round_trip_with_the_book_in_your_hand() {
+            fn s9_3_the_resolved_steal_survives_a_json_round_trip_with_the_spell_in_your_graveyard() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
                 let book = s.card(BOOK).clone();
@@ -535,56 +510,51 @@ mod tests {
                 let revived: GameState = serde_json::from_value(js(&done)).expect("the state round-trips");
                 assert_eq!(revived, done);
                 assert!(revived.pending.is_none());
-
-                let result = reduce(
-                    &revived,
-                    &json_as::<Action>(json!({
-                        "type": "answer",
-                        "playerId": "p1",
-                        "choiceId": "",
-                        "selection": [],
-                        "nonce": "palantir-round-trip",
-                    })),
-                );
-
-                assert_eq!(result.error.as_deref(), Some("no prompt is open"));
-                assert!(result.state.players.p1.hand.iter().any(|card| card.id == book.id));
+                assert!(revived.players.p1.graveyard.iter().any(|card| card.id == book.id));
             }
         }
 
-        mod radiant_every_spell {
+        mod radiant_up_to_3_spells {
             use super::*;
 
             #[test]
-            fn steals_every_opponent_spell_with_no_prompt() {
+            fn r831001_steals_and_casts_each_opponent_1_cost_spell_with_no_prompt() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
                 let spell = s.card(STOCKPILE).clone();
+                let palantir = s.card(PALANTIR).clone();
 
                 s.play(&spell, json!({}));
 
                 assert!(s.state().pending.is_none());
-                assert!(matches_object(&js(&s.card(&spell.id).zone), &json!({ "z": "hand", "player": "p1" })));
-                assert_eq!(s.card(&spell.id).owner, P1);
+                assert!(in_your_graveyard(&s, &spell));
                 assert_eq!(draws_by(s.events(), P2), 0);
+                assert_eq!(draws_by(s.events(), P1), 2);
+                s.expect_in_zone(&palantir, "field");
+                assert_eq!(stolen(&s, &palantir), Some(json!(1)));
             }
 
             #[test]
-            fn counts_what_it_stole_and_tributes_itself_once_the_total_reaches_2_not_before() {
+            fn counts_what_it_stole_and_tributes_itself_once_it_has_stolen_3_not_before() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({ "hand": [STOCKPILE, BOOK, VANILLA] }), true);
+                let mut s = setup(json!({}), json!({ "hand": [STOCKPILE, BOOK, STOCKPILE, VANILLA] }), true);
                 let palantir = s.card(PALANTIR).clone();
 
-                s.play(STOCKPILE, json!({}));
+                let first = s.hand(P2).into_iter().find(|card| card.def_id == STOCKPILE).expect("a Stockpile");
+                s.play(&first, json!({}));
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(stolen_cost(&s, &palantir), Some(json!(1)));
-
                 s.play(BOOK, json!({}));
+                s.expect_in_zone(&palantir, "field");
+                assert_eq!(stolen(&s, &palantir), Some(json!(2)));
+
+                let second = s.hand(P2).into_iter().find(|card| card.def_id == STOCKPILE).expect("a Stockpile");
+                s.play(&second, json!({}));
                 s.expect_in_zone(&palantir, "graveyard");
+                assert!(in_your_graveyard(&s, &second));
             }
 
             #[test]
-            fn r65_r396_a_0_cost_spell_and_an_x_spell_add_nothing_to_the_total() {
+            fn r65_r396_a_0_cost_spell_and_an_x_spell_are_not_stolen() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({ "hand": [REPLENISH, DIVIDEND, VANILLA] }), true);
                 let palantir = s.card(PALANTIR).clone();
@@ -593,21 +563,27 @@ mod tests {
                 s.play(DIVIDEND, json!({ "x": 1, "modes": ["mana"] }));
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(stolen_cost(&s, &palantir).unwrap_or(json!(0)), json!(0));
+                assert!(stolen(&s, &palantir).is_none());
             }
 
             #[test]
-            fn r386_an_upgrade_of_its_threshold_lets_it_steal_3_before_it_goes() {
+            fn r386_an_upgrade_of_its_threshold_lets_it_steal_4_before_it_goes() {
                 crate::register_all();
-                let mut s = setup(json!({}), json!({ "hand": [STOCKPILE, BOOK, VANILLA] }), true);
+                let mut s = setup(json!({}), json!({ "hand": [STOCKPILE, BOOK, STOCKPILE, VANILLA] }), true);
                 let palantir = s.card(PALANTIR).clone();
                 step_param(s.card_mut(&palantir.id), "threshold", 1);
 
-                s.play(STOCKPILE, json!({}));
-                s.play(BOOK, json!({}));
+                for _ in 0..3 {
+                    let next = s
+                        .hand(P2)
+                        .into_iter()
+                        .find(|card| card.def_id == STOCKPILE || card.def_id == BOOK)
+                        .expect("a (1) Cost Spell");
+                    s.play(&next, json!({}));
+                }
 
                 s.expect_in_zone(&palantir, "field");
-                assert_eq!(stolen_cost(&s, &palantir), Some(json!(2)));
+                assert_eq!(stolen(&s, &palantir), Some(json!(3)));
             }
 
             #[test]
@@ -622,11 +598,11 @@ mod tests {
                 s.expect_in_zone(TWINSPELL, "field");
                 s.expect_in_zone(VANILLA, "field");
                 assert_eq!(count(s.events(), "countered"), 0);
-                assert!(stolen_cost(&s, &palantir).is_none());
+                assert!(stolen(&s, &palantir).is_none());
             }
 
             #[test]
-            fn r70_a_spell_cast_by_an_effect_is_stolen_too_a_cast_on_draw_card_goes_to_your_hand_as_yours() {
+            fn r70_a_1_cost_spell_cast_on_draw_is_stolen_too_and_cast_by_you() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": {
@@ -634,52 +610,53 @@ mod tests {
                         "backrow": [{ "def": PALANTIR, "radiant": true, "faceUp": true }],
                         "library": [VANILLA, VANILLA],
                     },
-                    "p2": { "hand": [VANILLA], "library": [{ "def": HINDER, "radiant": true }, VANILLA] },
+                    "p2": { "hand": [VANILLA], "library": [VIRUS, VANILLA] },
                 }));
-                let hinder = s.card(HINDER).clone();
+                let virus = s.card(VIRUS).clone();
 
                 s.end_turn();
 
+                // p2 drew the CN-Virus and its cast on draw was stolen: you take its 1, not them.
                 assert_eq!(s.state().active, P2);
-                assert!(matches_object(&js(&s.card(&hinder).zone), &json!({ "z": "hand", "player": "p1" })));
-                assert_eq!(s.card(&hinder).owner, P1);
-                assert_eq!(count(s.events(), "cardResolved"), 0);
-                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
+                s.expect_health(P1, 29);
+                s.expect_health(P2, 30);
+                assert!(in_your_graveyard(&s, &virus));
             }
 
             #[test]
-            fn r448_a_spell_a_trap_has_already_countered_is_not_stolen_and_adds_nothing_to_the_total() {
+            fn r448_a_spell_a_trap_has_already_countered_is_not_stolen_and_adds_nothing() {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "backrow": [
                         { "def": PALANTIR, "radiant": true, "faceUp": true, "lane": 1 },
                         { "def": COUNTERSPELL, "faceUp": false, "lane": 2 },
                     ] }),
-                    json!({ "hand": [CALL, VANILLA] }),
+                    json!({}),
                     false,
                 );
                 let palantir = s.card(PALANTIR).clone();
-                let call = s.card(CALL).clone();
+                let stockpile = s.card(STOCKPILE).clone();
 
-                s.play(&call, json!({}));
+                s.play(&stockpile, json!({}));
 
-                assert!(matches_object(&js(&s.card(&call).zone), &json!({ "z": "graveyard", "player": "p2" })));
-                assert_eq!(s.card(&call).owner, P2);
+                assert!(matches_object(&js(&s.card(&stockpile).zone), &json!({ "z": "graveyard", "player": "p2" })));
+                assert_eq!(s.card(&stockpile).owner, P2);
                 s.expect_in_zone(&palantir, "field");
-                assert!(stolen_cost(&s, &palantir).is_none());
+                assert!(stolen(&s, &palantir).is_none());
             }
 
             #[test]
-            fn r386_a_degrade_of_its_threshold_makes_it_tribute_itself_after_1() {
+            fn r386_a_degrade_of_its_threshold_makes_it_tribute_itself_after_2() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
                 let palantir = s.card(PALANTIR).clone();
                 step_param(s.card_mut(&palantir.id), "threshold", -1);
 
                 s.play(STOCKPILE, json!({}));
+                s.expect_in_zone(&palantir, "field");
+                s.play(BOOK, json!({}));
 
                 s.expect_in_zone(&palantir, "graveyard");
-                assert!(matches_object(&js(&s.card(STOCKPILE).zone), &json!({ "z": "hand", "player": "p1" })));
             }
 
             #[test]

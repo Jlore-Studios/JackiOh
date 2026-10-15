@@ -11,6 +11,7 @@ import { fillParams, type ActionBody, type PlayerView } from "@jackioh/shared";
 
 import { CARD_SETTINGS_DEFAULTS, INSPECT_HOVER, closeInspect, writeCardSettings } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/constants.ts";
+import { setMarkOf } from "../cards/setMark.ts";
 import type { Interaction } from "./actions.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import Prompt from "./Prompt.tsx";
@@ -193,6 +194,50 @@ describe("card options are card faces", () => {
   });
 });
 
+describe("R831004: #82 KY's Trial's first Discover offers sets", () => {
+  /** The chooser's view as `viewFor` builds it: each option a set, keyed `mode:<set>`, labelled with it. */
+  const SETS = ["Core", "Classic+", "Meditative"] as const;
+
+  function setView(): PlayerView {
+    return baseView({
+      you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-002" })] }),
+      opponent: emptySide("p2", { hand: { count: 3 } }),
+      pending: pendingFor(
+        "mode",
+        SETS.map((set) => ({ key: `mode:${set}`, label: set })),
+        { prompt: "KY's Trial: Discover a set" },
+      ),
+    });
+  }
+
+  it("R831004 draws each set's mark beside its name, and picking one answers with that set", () => {
+    const onAction = vi.fn();
+    renderPrompt(setView(), onAction);
+    for (const set of SETS) {
+      const option = screen.getByTestId(`prompt-option-mode:${set}`);
+      expect(option).toHaveAttribute("data-set", set);
+      expect(option.querySelector("img.prompt-set-mark")?.getAttribute("src")).toBe(setMarkOf(set).src);
+      expect(option.textContent).toContain(set);
+    }
+    fireEvent.click(screen.getByTestId("prompt-option-mode:Classic+"));
+    expect(onAction).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "answer", selection: [{ pick: "mode", option: "Classic+" }] }),
+    );
+  });
+
+  it("R831004 an option that names no set draws no mark", () => {
+    renderPrompt(
+      baseView({
+        you: emptySide("p1", { hand: [card({ instanceId: "h1", defId: "core-002" })] }),
+        opponent: emptySide("p2", { hand: { count: 3 } }),
+        pending: pendingFor("mode", [{ key: "mode:left", label: "Left" }, { key: "mode:right", label: "Right" }], { prompt: "Choose" }),
+      }),
+    );
+    expect(screen.getByTestId("prompt-option-mode:left").querySelector("img.prompt-set-mark")).toBeNull();
+    expect(screen.getByTestId("prompt-option-mode:left")).not.toHaveAttribute("data-set");
+  });
+});
+
 describe("R247: #82 KY's Trial's Discover offers numbers", () => {
   /**
    * The chooser's view exactly as `viewFor` builds it for #82 (the "R247 …" test beside its script,
@@ -208,7 +253,7 @@ describe("R247: #82 KY's Trial's Discover offers numbers", () => {
       pending: pendingFor(
         "discover",
         NUMBERS.map((n) => ({ key: `mode:${n}`, label: n })),
-        { prompt: "KY's Trial: Discover a number from 1 to 100" },
+        { prompt: "KY's Trial: Discover a number" },
       ),
     });
   }

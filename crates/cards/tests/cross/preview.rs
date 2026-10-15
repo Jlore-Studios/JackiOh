@@ -1834,7 +1834,7 @@ mod c_74_twice_forward_previews_the_plays_it_has_counted_to_its_controller_alone
 }
 
 // =============================================================================================
-// C #59 Plague Doctor: N, every Plague Counter on the field (and the Radiant face's own placement)
+// C #59 Plague Doctor: N, every Plague Counter on the field and its Cry's own placement
 // =============================================================================================
 
 mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
@@ -1894,8 +1894,9 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     }
 
     #[test]
-    fn r280_base_in_hand_it_previews_6_and_its_cry_then_deals_exactly_that() {
-        in_hand_previews_the_hit(FaceKind::Base, 6);
+    fn r280_base_in_hand_it_previews_7_and_its_cry_then_deals_exactly_that() {
+        // 6 on the field and the 1 its Cry places (patch v0.3.10, #831).
+        in_hand_previews_the_hit(FaceKind::Base, 7);
     }
 
     #[test]
@@ -1921,30 +1922,31 @@ mod c_59_plague_doctor_previews_n_the_hit_its_cry_deals_r280 {
     }
 
     #[test]
-    fn r280_base_on_the_field_it_previews_the_tokens_there_now_for_both_seats() {
+    fn r280_base_on_the_field_it_previews_the_tokens_there_now_plus_the_1_another_cry_would_place_for_both_seats()
+     {
         jackioh_cards::register_all();
         let s = scenario(json!({
             "p1": { "field": [{ "def": PLAGUE_DOCTOR, "counters": { "plague": 1 } }], "hand": [RAPID_REPLENISH] },
             "p2": { "field": [{ "def": MENACE, "counters": { "plague": 2 } }], "hand": [STOCKPILE] },
         }));
-        assert_eq!(value_of(&s.view(PlayerId::P1).you.units[0]), 3);
-        assert_eq!(value_of(&s.view(PlayerId::P2).opponent.units[0]), 3);
+        assert_eq!(value_of(&s.view(PlayerId::P1).you.units[0]), 4);
+        assert_eq!(value_of(&s.view(PlayerId::P2).opponent.units[0]), 4);
     }
 
     #[test]
-    fn r280_an_empty_field_previews_0_on_the_base_face_and_the_cry_then_deals_nothing_r63() {
+    fn r280_an_empty_field_previews_1_on_the_base_face_its_own_placement_and_the_cry_then_deals_that() {
         jackioh_cards::register_all();
         let mut s = scenario(
             json!({ "p1": { "hand": [PLAGUE_DOCTOR, RAPID_REPLENISH] }, "p2": { "hand": [STOCKPILE] } }),
         );
         assert_eq!(
             value_of(&hand_card(&s.view(PlayerId::P1), &s.card(PLAGUE_DOCTOR).id)),
-            0
+            1
         );
 
         s.play(PLAGUE_DOCTOR, json!({ "targets": [at_enemy_hero()] }));
 
-        assert_eq!(hits_on(&s, PlayerId::P2), Vec::<i32>::new());
+        assert_eq!(hits_on(&s, PlayerId::P2), vec![1]);
     }
 
     #[test]

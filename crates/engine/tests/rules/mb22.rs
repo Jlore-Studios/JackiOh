@@ -3,7 +3,7 @@
 //! - R1200 (ME-RANDOMTARGETS): while a Mayor acts, declared targets, `target` prompts and attack
 //!   targets are drawn at random; hand picks, modes and Tributes stay choices.
 //! - R1201: the Radiant Mayor's Lucky 1 rolls its controller's draws again.
-//! - R1202 (ME-ATTACKSUMMON): Windfast's replacement — a Unit from hand makes the attack, bounced
+//! - R1202, R831006 (ME-ATTACKSUMMON): Windfast's replacement — a random Unit from hand makes the attack, bounced
 //!   afterwards on the base face.
 //! - R1203 (ME-ATTACKSUMMON): Windfurious Prime's rider — joiners attack first.
 //! - R1204 (ME-LETHALGUARD): §4.4 step 4a opens for Units too; `redirect: "self"` sends the hit to
@@ -14,7 +14,7 @@ use jackioh_engine::testkit::*;
 
 use super::fixtures::harness::{in_hand, put, set_library, sink_for, slot};
 use super::fixtures::mb22 as fx;
-use super::fixtures::mb22::{act, act_result, answer_with, playing, recorder, replays_to};
+use super::fixtures::mb22::{act, act_result, playing, recorder, replays_to};
 
 fn play_action(player: PlayerId, instance_id: &str) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": player })
@@ -356,7 +356,7 @@ fn r1201_lucky_keeps_the_aimed_side_the_opponent_rolls_once() {
 // R1202: a Unit from hand makes the attack
 // ---------------------------------------------------------------------------
 
-/// Hands cleared to exactly these Units: the vanilla hands would ask a pick of their own.
+/// Hands cleared to exactly these Units: the vanilla hands would hold Units of their own.
 fn clear_hands(state: &mut GameState) {
     state.players[P1].hand.clear();
     state.players[P2].hand.clear();
@@ -400,34 +400,32 @@ fn r1202_a_unit_from_hand_makes_the_attack_and_is_bounced() {
 }
 
 #[test]
-fn r1202_several_units_ask_one_asks_nothing() {
-    let mut state = playing("mb22-pick");
-    let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
-    clear_hands(&mut state);
-    let first = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
-    in_hand(&mut state, &fx::wall.id, P1, 1);
+fn r1202_r831006_several_units_ask_nothing_a_random_one_makes_the_attack_and_seeds_reach_each() {
+    // Patch v0.3.10: the Unit is the match rng's, not the controller's pick.
+    let mut seen: Vec<String> = Vec::new();
+    for n in 0..12 {
+        let mut state = playing(&format!("mb22-pick-{n}"));
+        let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
+        clear_hands(&mut state);
+        let ally = in_hand(&mut state, &fx::ally.id, P1, 1).remove(0);
+        let wall = in_hand(&mut state, &fx::wall.id, P1, 1).remove(0);
 
-    let result = act_result(&state, attack_action(P1, &windfast.id, "hero-p2"));
-    assert!(result.error.is_none(), "{:?}", result.error);
-    let pending = result.state.pending.clone().expect("the hand pick");
-    assert_eq!(pending.kind, PromptKind::Hand);
-    let result = answer_with(
-        &result.state,
-        json!([{ "pick": "instance", "instanceId": first.id }]),
-    );
-    let declared = declared_attacks(&result.events);
-    assert_eq!(declared.len(), 1);
-    assert_eq!(declared[0].0, first.id);
-    assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
-    assert!(
-        result.state.players[P1]
-            .hand
-            .iter()
-            .any(|card| card.id == first.id),
-        "the pick went home too"
-    );
+        let result = act_result(&state, attack_action(P1, &windfast.id, "hero-p2"));
+        assert!(result.error.is_none(), "{:?}", result.error);
+        assert!(result.state.pending.is_none(), "no hand pick opens");
+        let declared = declared_attacks(&result.events);
+        assert_eq!(declared.len(), 1);
+        assert!([ally.id.as_str(), wall.id.as_str()].contains(&declared[0].0.as_str()));
+        assert_eq!(result.state.players[P2].hero.health, HERO_HEALTH - 1);
+        let name = if declared[0].0 == ally.id { "ally" } else { "wall" };
+        if !seen.iter().any(|already| already == name) {
+            seen.push(name.to_string());
+        }
+    }
+    seen.sort();
+    assert_eq!(seen, vec!["ally".to_string(), "wall".to_string()]);
 
-    // One Unit is no prompt (R129).
+    // One Unit is no prompt and draws no random number (R129).
     let mut state = playing("mb22-no-pick");
     let windfast = put(&mut state, &fx::windfast.id, slot(P1, Row::Units, 1), json!({}));
     clear_hands(&mut state);

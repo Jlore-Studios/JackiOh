@@ -480,9 +480,10 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
     }
 
     #[test]
-    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_10_exile_classic_plus_22_blood_moon_and_meditative_64_68()
+    fn s8_67_base_asks_for_a_1_cost_trap_every_core_trap_but_85_classic_63_crop_dusting_classic_plus_22_blood_moon_and_meditative_64_68()
      {
         register();
+        // Classic #10 Exile costs (2) and #63 Crop Dusting (1) since patch v0.3.10.
         assert_eq!(
             ids(catalog.query(&q(json!({ "type": TRAP_TYPES, "cost": 1 })))),
             strings(&[
@@ -491,7 +492,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "core-060",
                 "core-071",
                 "core-096",
-                "classic-010",
+                "classic-063",
                 "classicplus-022",
                 "meditative-064",
                 "meditative-068",
@@ -897,12 +898,12 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
         // the release (v0.3.5) it holds §8.8's Meditative #36 CN Peptides (Lucky 1 on its Radiant
         // face) and #86 Mayor Medinamogger (Lucky 1 on its Radiant face) beside the earlier sets' eight,
         // and #102 Catboy Maid SSR+ (Lucky 1), which joins from the day its catalog entry lands. #65
-        // Keymaster Keenus printed Lucky 1 among its every keyword until patch v0.3.7 (R1084, R781004).
+        // Keymaster Keenus printed Lucky 1 among its every keyword until patch v0.3.7 (R1084, R781004),
+        // and Core #42 Eugenics its Radiant face's Lucky 1 until patch v0.3.10 (R831014).
         assert_eq!(luck_based(), q(json!({ "luckBased": true })));
         let mut pool = strings(&[
             "core-004",
             "core-023",
-            "core-042",
             "classic-065",
             "classicplus-025",
             "classicplus-053",
@@ -952,15 +953,16 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     ];
 
     /// The Meditative set's printed 1/1 Units (§8.8: #51 Devin Bot, #65 Keymaster Keenus, #67 Sentient
-    /// Cat Ears, #82 Medina Outfitter, #88 The True Sheep, #91 Windfast, #93 Growing Felinor and #101
-    /// Gachaholic; none of its tokens prints 1/1), which the pool takes once the set is open: since
-    /// the release (v0.3.5, R1420). §8.8's #102 Catboy Maid SSR+ is a 1/1 too, and joins from the day
-    /// its catalog entry lands.
+    /// Cat Ears, #82 Medina Outfitter, #84 Volatility (1/1 since patch v0.3.10), #88 The True Sheep, #91
+    /// Windfast, #93 Growing Felinor and #101 Gachaholic; none of its tokens prints 1/1), which the pool
+    /// takes once the set is open: since the release (v0.3.5, R1420). §8.8's #102 Catboy Maid SSR+ is a
+    /// 1/1 too, and joins from the day its catalog entry lands.
     const MEDITATIVE_ONE_ONES: &[&str] = &[
         "meditative-051",
         "meditative-065",
         "meditative-067",
         "meditative-082",
+        "meditative-084",
         "meditative-088",
         "meditative-091",
         "meditative-093",

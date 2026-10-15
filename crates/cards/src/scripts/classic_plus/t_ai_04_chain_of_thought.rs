@@ -58,7 +58,7 @@ mod tests {
     const ADAPTIVE_UI: &str = "core-074"; // (X) Spell
     const HINDER: &str = "core-021"; // (0) Spell, cast on draw; the base face discards 1 at random with no prompt (R431, R682)
     const VANILLA: &str = "core-008"; // (1) Unit, the spare in hand
-    const PALANTIR: &str = "classic-004"; // (1) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: "Aura: Your opponent can't draw more than 1 card each turn."
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -182,7 +182,8 @@ mod tests {
             fn r457_a_draw_the_draw_limit_stops_ends_the_chain_it_is_tried_once_and_not_again() {
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": { "hand": [CHAIN, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
+                    // At (2), so Palantir (which steals a (1) Cost Spell) lets it resolve.
+                    "p1": { "hand": [{ "def": CHAIN, "costMod": 1 }, VANILLA], "library": [TIMMY, TIMMY, TIMMY] },
                     "p2": { "hand": [VANILLA], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [VANILLA] },
                 }));
                 s.play(CHAIN, json!({}));

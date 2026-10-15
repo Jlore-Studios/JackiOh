@@ -1,8 +1,8 @@
 // BUILD M9-T12 `29-animated-trap.cy.ts`: P2's Tesla animates during P1's turn (R383).
-// #77 Professor Curvature triggers it; #8 Mr. Vanilla and #11 Tempo Timmy test later triggers,
-// while #62 Friend of Felinors fills the unit row.
+// #77 Professor Curvature triggers it; #8 Mr. Vanilla arrives later and is not hit (R831007), and
+// #11 Tempo Timmy triggers it while #62 Friend of Felinors fills the unit row.
 // Read each seat's DOM only (CLAUDE.md rule 7): P1 cannot identify a set Tesla (R33), and Lifesteal
-// can heal beyond 30 (R19). An animated Tesla remains in place on later triggers (R383).
+// can heal beyond 30 (R19). An animated Tesla remains in place (R383).
 
 import { seedFor } from "../../support/config.ts";
 import {
@@ -41,7 +41,7 @@ function setTesla(): Cypress.Chainable<string> {
 }
 
 describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and becomes a Unit", () => {
-  it("R383: Tesla hits the arrival after its Cry, then animates in Defense; a later arrival is hit again", () => {
+  it("R383 R831007: Tesla hits the arrival after its Cry, then animates in Defense; a later arrival is not hit", () => {
     cy.seedGame({ seed: SEED, a: "03-plays-a", b: "29-tesla-b" });
 
     cy.advanceToTurn(2);
@@ -88,10 +88,11 @@ describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and b
         cy.advanceToTurn(5);
         ensureSeat("p1");
         cy.handCardByName("Mr. Vanilla").then((vanilla) => {
-          cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 2 }, expectAnimating: "trapFired" });
-          cy.get(ts(cardId(vanilla))).should("not.exist");
-          cy.get(ts(graveyardCountId("you"))).should("have.text", "2");
-          cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH + 2 * TESLA_DAMAGE)).should("exist");
+          cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 2 } });
+          // R831007: Tesla zaps only the Unit that revealed it (patch v0.3.10).
+          cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(vanilla))).should("exist");
+          cy.get(ts(graveyardCountId("you"))).should("have.text", "1");
+          cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH + TESLA_DAMAGE)).should("exist");
           // R383: an animated Tesla neither moves nor changes position.
           cy.get(ts(zoneId("opponent", "units", TESLA_LANE))).find(ts(cardId(tesla))).should("exist");
           cy.get(ts(cardId(tesla))).should("have.attr", "data-position", "DEF");

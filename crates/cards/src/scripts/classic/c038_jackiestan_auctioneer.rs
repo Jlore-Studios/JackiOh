@@ -1,15 +1,15 @@
 //! C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit face).
 //!   Both faces: "Animated
-//!                Reveals when the cards a player has played in a turn reach {plays}: Summon this as a
-//!                Unit.
-//!                Once this has revealed: Whenever a player plays a card, draw {draw} and deal {damage}
-//!                damage to the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
+//!                Reveals when the cards you have played in a turn reach {plays}.
+//!                Once this has revealed: Whenever you play a card, draw {draw} and deal {damage} damage to
+//!                the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //!
-//! R395: face-down only the reveal condition is live. It answers the `cardPlayed` that takes any player's
-//! per-turn count (already counting the play under way; a cast counts, R70; a countered card was never played,
+//! R395: face-down only the reveal condition is live. It answers the `cardPlayed` that takes its
+//! controller's per-turn count (only its controller's plays since patch v0.3.10, #831; any player's before) (already counting the play under way; a cast counts, R70; a countered card was never played,
 //! R448) to {plays}, then animates (Animated, B3.1, R383) in Attack Position into its own lane, else the
 //! leftmost open, unlocked, unreserved zone (R64), summoning sick; with none it stays face-up in the backrow.
-//! From the next play on (a permanent never answers its own arrival, R119) every play draws {draw} and hits the
+//! From its controller's next play on (a permanent never answers its own arrival, R119) every one of their
+//! plays draws {draw} and hits the
 //! enemy hero once for {damage} ("each enemy hero" is the multiplayer phrasing, R45), animated or not; a later
 //! firing animates it once a unit zone opens (B3.1 rule 4) and a Unit stays put (R383).
 //! One trigger carries both texts, so one event is never answered by both the reveal and the "whenever" (R395);
@@ -33,11 +33,16 @@ fn has_activated(ctx: &EffectContext) -> bool {
     recalled(ctx, ACTIVATED).and_then(|value| value.as_bool()) == Some(true)
 }
 
-/// The answer this play gets: "activate" (the {plays}th play of a turn), "sale" (once activated), or none.
+/// The answer this play gets: "activate" (its controller's {plays}th play of a turn), "sale" (once
+/// activated), or none.
 fn answer(ctx: &EffectContext, event: &GameEvent) -> Option<Answer> {
     let GameEvent::CardPlayed { player, .. } = event else {
         return None;
     };
+    // Only its controller's plays count and sell (patch v0.3.10, #831).
+    if *player != ctx.controller {
+        return None;
+    }
     let reached = cards_played_this_turn(ctx.state, *player) == param(ctx, "plays");
     if has_activated(ctx) {
         return Some(Answer::Sale);
@@ -123,19 +128,20 @@ mod tests {
         json!({ "def": AUCTION, "radiant": radiant_face, "faceUp": false, "lane": lane })
     }
 
-    /// p1 sets the Auctioneer; p2 is active with four (0) Cost Spells to play. `p2` and `p1` override each
-    /// side's setup (`json!({})` for none).
-    fn setup(p2: Value, p1: Value, radiant_face: bool) -> Scenario {
+    /// p1 sets the Auctioneer and is active with four (0) Cost Spells to play; p2 holds a Unit. `mine`
+    /// and `theirs` override each side's setup (`json!({})` for none).
+    fn setup(mine: Value, theirs: Value, radiant_face: bool) -> Scenario {
         scenario(json!({
-            "active": "p2",
+            "active": "p1",
             "p1": spread(
-                json!({ "hand": [VANILLA], "backrow": [set_auction(radiant_face, 2)], "library": [TIMMY, TIMMY, TIMMY, TIMMY] }),
-                p1,
+                json!({
+                    "hand": [FILLER, FILLER, FILLER, FILLER, VANILLA],
+                    "backrow": [set_auction(radiant_face, 2)],
+                    "library": [TIMMY, TIMMY, TIMMY, TIMMY],
+                }),
+                mine,
             ),
-            "p2": spread(
-                json!({ "hand": [FILLER, FILLER, FILLER, FILLER, VANILLA], "library": [VANILLA, VANILLA] }),
-                p2,
-            ),
+            "p2": spread(json!({ "hand": [VANILLA], "library": [VANILLA, VANILLA] }), theirs),
         }))
     }
 
@@ -189,11 +195,11 @@ mod tests {
             use super::*;
 
             #[test]
-            fn r395_face_down_only_the_reveal_condition_is_live_a_players_1st_and_2nd_plays_do_nothing() {
+            fn r395_face_down_only_the_reveal_condition_is_live_your_1st_and_2nd_plays_do_nothing() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                play_fillers(&mut s, 2, P2);
+                play_fillers(&mut s, 2, P1);
 
                 assert_eq!(count(s.events(), "trapFired"), 0);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
@@ -201,11 +207,11 @@ mod tests {
             }
 
             #[test]
-            fn r395_the_3rd_play_of_a_turn_sets_it_off_it_animates_in_attack_position_into_its_own_lane_summoning_sick() {
+            fn r395_your_3rd_play_of_a_turn_sets_it_off_it_animates_in_attack_position_into_its_own_lane_summoning_sick() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                play_fillers(&mut s, 3, P2);
+                play_fillers(&mut s, 3, P1);
 
                 let auction = s.card(AUCTION).clone();
                 assert!(matches_object(&js(&auction.zone), &json!({ "z": "field", "row": "units", "lane": 2 })));
@@ -219,18 +225,18 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                play_fillers(&mut s, 3, P2);
+                play_fillers(&mut s, 3, P1);
 
                 assert_eq!(draws_by(s.events(), "p1"), 0);
                 s.expect_health(P2, 30);
             }
 
             #[test]
-            fn r395_from_the_next_play_on_any_players_play_you_draw_1_and_deal_2_to_the_enemy_hero() {
+            fn r395_from_your_next_play_on_you_draw_1_and_deal_2_to_the_enemy_hero() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
 
-                play_fillers(&mut s, 4, P2);
+                play_fillers(&mut s, 4, P1);
 
                 assert_eq!(draws_by(s.last_events(), "p1"), 1);
                 s.expect_health(P2, 28);
@@ -245,23 +251,31 @@ mod tests {
             }
 
             #[test]
-            fn its_own_controllers_plays_count_and_answer_too() {
+            fn r395_your_opponents_plays_never_count_nor_answer() {
+                // Patch v0.3.10 (#831): only its controller's plays reveal it and sell.
                 crate::register_all();
                 let mut s = scenario(json!({
-                    "p1": {
-                        "hand": [FILLER, FILLER, FILLER, FILLER, VANILLA],
-                        "backrow": [set_auction(false, 2)],
-                        "library": [TIMMY, TIMMY],
-                    },
-                    "p2": { "hand": [VANILLA] },
+                    "active": "p2",
+                    "p1": { "hand": [VANILLA], "backrow": [set_auction(false, 2)], "library": [TIMMY, TIMMY] },
+                    "p2": { "hand": [FILLER, FILLER, FILLER, FILLER, VANILLA], "library": [VANILLA, VANILLA] },
                 }));
 
-                play_fillers(&mut s, 3, P1);
-                assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
-                play_fillers(&mut s, 1, P1);
+                play_fillers(&mut s, 4, P2);
 
-                assert_eq!(draws_by(s.last_events(), "p1"), 1);
-                s.expect_health(P2, 28);
+                assert_eq!(count(s.events(), "trapFired"), 0);
+                assert_eq!(s.card(AUCTION).face_up, Some(false));
+                assert_eq!(draws_by(s.events(), "p1"), 0);
+
+                // Revealed by its controller, it still never answers the opponent's play.
+                let mut t = setup(json!({}), json!({ "hand": [FILLER, VANILLA] }), false);
+                play_fillers(&mut t, 3, P1);
+                assert!(matches_object(&zone_of(&t, AUCTION), &json!({ "row": "units" })));
+                t.end_turn();
+                let drawn = draws_by(t.events(), "p1");
+                play_fillers(&mut t, 1, P2);
+                assert_eq!(draws_by(t.events(), "p1"), drawn);
+                t.expect_health(P1, 30);
+                t.expect_health(P2, 30);
             }
 
             #[test]
@@ -273,7 +287,7 @@ mod tests {
                     false,
                 );
 
-                let first = fillers(&s, P2).first().map(|card| card.id.clone()).unwrap_or_else(|| FILLER.to_string());
+                let first = fillers(&s, P1).first().map(|card| card.id.clone()).unwrap_or_else(|| FILLER.to_string());
                 s.play(&first, json!({}));
                 // Stockpile is the 2nd play; its first draw casts Hinder, the 3rd.
                 s.play(STOCKPILE, json!({}));
@@ -287,11 +301,11 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(
                     json!({ "hand": [FILLER, FILLER, STOCKPILE, VANILLA] }),
-                    json!({ "backrow": [set_auction(false, 2), { "def": COUNTER, "faceUp": false, "lane": 4 }] }),
+                    json!({ "backrow": [{ "def": COUNTER, "faceUp": false, "lane": 4 }] }),
                     false,
                 );
 
-                play_fillers(&mut s, 2, P2);
+                play_fillers(&mut s, 2, P1);
                 s.play(STOCKPILE, json!({}));
 
                 assert_eq!(count(s.events(), "countered"), 1);
@@ -299,16 +313,14 @@ mod tests {
             }
 
             #[test]
-            fn the_count_is_per_player_per_turn_plays_across_two_turns_never_add_up() {
+            fn the_count_is_per_turn_plays_across_two_turns_never_add_up() {
                 crate::register_all();
-                let mut s = scenario(json!({
-                    "p1": { "hand": [FILLER, FILLER, VANILLA], "backrow": [set_auction(false, 2)], "library": [TIMMY, TIMMY] },
-                    "p2": { "hand": [FILLER, VANILLA], "library": [VANILLA] },
-                }));
+                let mut s = setup(json!({ "hand": [FILLER, FILLER, FILLER, VANILLA] }), json!({}), false);
 
                 play_fillers(&mut s, 2, P1);
                 s.end_turn();
-                play_fillers(&mut s, 1, P2);
+                s.end_turn();
+                play_fillers(&mut s, 1, P1);
 
                 assert_eq!(count(s.events(), "trapFired"), 0);
             }
@@ -317,9 +329,9 @@ mod tests {
             fn r383_no_open_unit_zone_it_stays_face_up_in_the_backrow_and_still_sells() {
                 crate::register_all();
                 let full = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
-                let mut s = setup(json!({}), json!({ "field": full }), false);
+                let mut s = setup(json!({ "field": full }), json!({}), false);
 
-                play_fillers(&mut s, 4, P2);
+                play_fillers(&mut s, 4, P1);
 
                 let auction = s.card(AUCTION).clone();
                 assert!(matches_object(&js(&auction.zone), &json!({ "z": "field", "row": "backrow", "lane": 2 })));
@@ -332,12 +344,12 @@ mod tests {
             fn r383_its_own_lanes_unit_zone_taken_it_animates_into_the_leftmost_open_one() {
                 crate::register_all();
                 let mut s = setup(
-                    json!({}),
                     json!({ "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 1 }] }),
+                    json!({}),
                     false,
                 );
 
-                play_fillers(&mut s, 3, P2);
+                play_fillers(&mut s, 3, P1);
 
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "z": "field", "row": "units", "lane": 3 })));
             }
@@ -349,15 +361,19 @@ mod tests {
                 // p1's lane 2 (its own firing on that play finds the row still full); the next play's firing
                 // animates it into that zone.
                 let full = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
-                let mut s = setup(json!({ "hand": [FILLER, FILLER, FILLER, FILLER, HIT_JOB] }), json!({ "field": full }), false);
-                play_fillers(&mut s, 3, P2);
+                let mut s = setup(
+                    json!({ "hand": [FILLER, FILLER, FILLER, FILLER, HIT_JOB], "field": full, "mana": 9 }),
+                    json!({}),
+                    false,
+                );
+                play_fillers(&mut s, 3, P1);
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "backrow", "lane": 2 })));
                 let doomed = s.unit(P1, 2).expect("fixture").id.clone();
 
                 s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": doomed }] }));
                 s.expect_in_zone(&doomed, "graveyard");
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "backrow", "lane": 2 })));
-                play_fillers(&mut s, 1, P2);
+                play_fillers(&mut s, 1, P1);
 
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "z": "field", "row": "units", "lane": 2 })));
                 assert_eq!(count(s.events(), "animated"), 1);
@@ -366,9 +382,10 @@ mod tests {
             #[test]
             fn r383_animated_it_is_a_unit_for_every_rule_and_keeps_its_trigger() {
                 crate::register_all();
-                let mut s = setup(json!({ "field": [MENACE] }), json!({}), false);
-                play_fillers(&mut s, 3, P2);
+                let mut s = setup(json!({}), json!({ "field": [MENACE] }), false);
+                play_fillers(&mut s, 3, P1);
                 let auction = s.card(AUCTION).id.clone();
+                s.end_turn();
 
                 s.attack(MENACE, &auction);
 
@@ -379,7 +396,7 @@ mod tests {
             fn r33_the_opponents_view_never_names_it_while_face_down() {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), false);
-                play_fillers(&mut s, 2, P2);
+                play_fillers(&mut s, 2, P1);
                 assert!(!serde_json::to_string(&s.view(P2)).expect("a view serialises").contains(AUCTION));
             }
 
@@ -389,9 +406,9 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), false);
                 step_param(s.card_mut(AUCTION), "plays", 1);
 
-                play_fillers(&mut s, 3, P2);
+                play_fillers(&mut s, 3, P1);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
-                play_fillers(&mut s, 1, P2);
+                play_fillers(&mut s, 1, P1);
 
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
             }
@@ -403,7 +420,7 @@ mod tests {
                 step_param(s.card_mut(AUCTION), "draw", 1);
                 step_param(s.card_mut(AUCTION), "damage", 1);
 
-                play_fillers(&mut s, 4, P2);
+                play_fillers(&mut s, 4, P1);
 
                 assert_eq!(draws_by(s.last_events(), "p1"), 2);
                 s.expect_health(P2, 27);
@@ -418,7 +435,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
 
-                play_fillers(&mut s, 2, P2);
+                play_fillers(&mut s, 2, P1);
 
                 s.expect_stats(AUCTION, json!({ "attack": 8, "health": 8, "maxHealth": 8 }));
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
@@ -430,7 +447,7 @@ mod tests {
                 crate::register_all();
                 let mut s = setup(json!({}), json!({}), true);
 
-                play_fillers(&mut s, 3, P2);
+                play_fillers(&mut s, 3, P1);
 
                 assert_eq!(draws_by(s.last_events(), "p1"), 1);
                 s.expect_health(P2, 26);
@@ -442,9 +459,9 @@ mod tests {
                 let mut s = setup(json!({}), json!({}), true);
                 step_param(s.card_mut(AUCTION), "plays", -1);
 
-                play_fillers(&mut s, 1, P2);
+                play_fillers(&mut s, 1, P1);
                 assert_eq!(s.card(AUCTION).face_up, Some(false));
-                play_fillers(&mut s, 1, P2);
+                play_fillers(&mut s, 1, P1);
 
                 assert!(matches_object(&zone_of(&s, AUCTION), &json!({ "row": "units" })));
             }

@@ -23,7 +23,7 @@ use super::support::{
 };
 
 const PUNISH: &str = "classic-020"; // Field Spell; Activate: deal 2 damage, or a discard, or a delayed destroy
-const TURTINATOR: &str = "classic-021"; // Unit 5/4; Activate ♾️: Tribute a Unit, deal its Attack to any target
+const TURTINATOR: &str = "classic-021"; // Unit 5/4; Activate (once a turn): Tribute a Unit, deal its Attack to any target
 const HEROIC: &str = "core-098";
 
 /// A test-only Field Spell token whose one ability costs (3): the price `sourceCost` orders by.
@@ -69,11 +69,43 @@ fn pricey() -> Script {
     }
 }
 
-/// A token, so no deck, pool or determinization ever deals it; registered for this file only.
+/// C #21 Turtinator as it was before patch v0.3.10 (#831) made its Activate once a turn: the same card
+/// with an Activate ♾️, which no shipped Tribute card has now. A token, like `PRICEY`.
+const TURTINATOR_INFINITE: &str = "ai-test-turtinator-infinite";
+
+fn turtinator_infinite_def() -> CardDef {
+    let mut def = serde_json::to_value(&jackioh_cards::CATALOG[TURTINATOR]).expect("a definition is JSON");
+    def["id"] = json!(TURTINATOR_INFINITE);
+    def["index"] = json!("ai-test-2");
+    def["name"] = json!("Turtinator, Activate ♾️ (AI test)");
+    def["rarity"] = json!("Token");
+    def["token"] = json!(true);
+    for face in ["base", "radiant"] {
+        let text = def[face]["text"]
+            .as_str()
+            .unwrap_or_default()
+            .replace("Activate:", "Activate ♾️:");
+        def[face]["text"] = json!(text);
+    }
+    json_as(def)
+}
+
+fn turtinator_infinite() -> CardScripts {
+    let mut scripts = jackioh_cards::scripts_of()[TURTINATOR].clone();
+    for face in [&mut scripts.base, &mut scripts.radiant] {
+        for decl in &mut face.activations {
+            decl.uses = ActivationUses::Unlimited;
+        }
+    }
+    scripts
+}
+
+/// Tokens, so no deck, pool or determinization ever deals them; registered for this file only.
 fn install_pricey() {
     register_cards();
     let mut catalog = (*jackioh_cards::CATALOG).clone();
     catalog.insert(PRICEY.to_string(), pricey_def());
+    catalog.insert(TURTINATOR_INFINITE.to_string(), turtinator_infinite_def());
     register_catalog_as(catalog, jackioh_cards::catalog_version());
     let mut scripts = jackioh_cards::scripts_of();
     scripts.insert(
@@ -83,6 +115,7 @@ fn install_pricey() {
             radiant: pricey(),
         },
     );
+    scripts.insert(TURTINATOR_INFINITE.to_string(), turtinator_infinite());
     register_scripts(scripts);
 }
 
@@ -252,14 +285,15 @@ mod b3_2_activations_are_first_class_candidates {
     fn b3_2_an_activate_infinite_ability_is_used_again_in_the_same_turn_while_each_use_is_good_and_the_turn_still_ends()
      {
         install_pricey();
-        // Two Pointmasters (7/1, First Strike) face Turtinator, Gary the Gambler and Jewelosco Scarab
+        // Two Pointmasters (7/1, First Strike) face an Activate ♾️ Turtinator (Turtinator's Activate is
+        // once a turn since patch v0.3.10), Gary the Gambler and Jewelosco Scarab
         // (both 1/1). A 1/1 attacking a Pointmaster dies to First Strike first; tributing it to
         // Turtinator pings one dead. Two uses, then the turn ends. Both libraries hold cards, so no
         // fatigue race (R82's auto-ended turns of an empty side) makes throwing Turtinator away a win.
         let run = run_puzzle(
             "activate-infinite",
             json!({
-                "p1": { "field": [TURTINATOR, "core-004", "core-007"], "library": ["core-053", "core-030", "core-037"] },
+                "p1": { "field": [TURTINATOR_INFINITE, "core-004", "core-007"], "library": ["core-053", "core-030", "core-037"] },
                 "p2": { "field": ["core-020", "core-020"], "hand": ["core-005"], "library": ["core-053", "core-030", "core-037"] },
             }),
         );
@@ -292,7 +326,11 @@ mod b3_2_activations_are_first_class_candidates {
             "{}",
             trace(&run.turn)
         );
-        assert!(on_field(&run.end, AI, TURTINATOR), "{}", trace(&run.turn));
+        assert!(
+            on_field(&run.end, AI, TURTINATOR_INFINITE),
+            "{}",
+            trace(&run.turn)
+        );
     }
 }
 

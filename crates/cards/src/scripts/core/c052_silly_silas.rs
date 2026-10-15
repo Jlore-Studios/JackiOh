@@ -4,7 +4,8 @@
 //!            (3.1); cards crossing sides change control"
 //!   Radiant: "Cards that would move to the opponent are bounced to their controller's hand costing 0
 //!            instead" — §8 Conventions: the cell restates only what happens to a crossing card, so
-//!            the direction choice and the rotation itself are kept.
+//!            the direction choice and the rotation itself are kept. Patch v0.3.10 (#831) shortened the
+//!            printed Radiant text; the effect is the same.
 //!
 //! The direction is a play-time choice, not a prompt: R81 names this card ("a declared `direction`
 //! pick [travels] in `modes`"), and §10.6 says no Core card opens a `direction` prompt. So the script
@@ -19,8 +20,9 @@
 //!     field, so R78's reset never runs and damage travels (R14);
 //!   * a crossing card enters its new side summoning sick (R171); `controller` changes and `owner`
 //!     does not, a bounce aside (R12, R747), and a face-down trap is read by its new controller (R33);
-//!   * a Locked or Reborn-reserved destination bounces the card to its controller's hand (R14, R88,
-//!     R747): the hand cap applies (R4) and a unit token ceases to exist (R11);
+//!   * a Reborn-reserved destination bounces the card to its controller's hand (R14, R88, R747): the
+//!     hand cap applies (R4) and a unit token ceases to exist (R11); a Locked one takes the card
+//!     (R831000, patch v0.3.10; it bounced it before);
 //!   * radiant turns an OUTBOUND crossing into that bounce at `cost_override: 0` (R65); cards crossing
 //!     onto this side still cross and change control (R14, R171).
 
@@ -76,7 +78,8 @@ pub fn script() -> CardScripts {
 
 // #52 Silly Silas (SPEC §8.3, §3.1's rotation-topology ruling, §3.2, §6.3 Rotate; R4, R11, R12,
 // R14, R33, R78, R81, R88). BUILD M4-T4 row 52: "Rotate both rings either direction, control changes
-// on crossing, damage travels, Silas moves too; Locked destination bounces; radiant bounces crossing
+// on crossing, damage travels, Silas moves too; a Locked destination takes the card (R831000, patch
+// v0.3.10; it bounced it before); radiant bounces crossing
 // cards to their owner's hand at cost 0 (R14)". The ring, from p1's seat (§3.1): p1 lanes 1→5, then
 // p2 lanes 5→1, back to p1 lane 1; "right" is one step forward along it, "left" one back.
 #[cfg(test)]
@@ -250,11 +253,11 @@ mod tests {
         }
     }
 
-    mod n52_silly_silas_a_locked_destination_r14_r88 {
+    mod n52_silly_silas_a_locked_destination_r14_r831000 {
         use super::*;
 
         #[test]
-        fn r14_bounces_the_card_to_its_controller_s_hand_instead_reset_per_r78() {
+        fn r14_r831000_the_card_rotates_into_the_locked_zone_its_damage_and_position_kept() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-053", "lane": 5, "damage": 2, "position": "DEF" }] },
@@ -265,18 +268,17 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
-            s.expect_in_zone(&reno, "hand");
+            // Patch v0.3.10 (#831): the Lock no longer stops the rotation; it bounced the card before.
+            assert_eq!(unit_at(&s, P2, 5).id, reno);
+            assert_eq!(s.card(&reno).controller, P2);
             assert_eq!(s.card(&reno).owner, P1);
-            // R78: leaving the field resets damage, position and controller; the base bounce is not free.
-            assert_eq!(s.card(&reno).damage, 0);
-            assert!(s.card(&reno).cost_override.is_none());
-            s.expect_events(json!(["rotated", "bounced"]));
-            // Silas still rotated: the bounce is one zone's outcome, not a cancelled rotation.
+            assert_eq!(s.card(&reno).damage, 2);
+            s.expect_events(json!(["rotated", "controlChanged"]));
             assert_eq!(unit_at(&s, P1, 2).def_id, "core-052");
         }
 
         #[test]
-        fn r11_r88_a_unit_token_bounced_off_a_locked_destination_ceases_to_exist() {
+        fn r831000_a_unit_token_rotates_into_a_locked_zone_too() {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": ["core-052"], "field": [{ "def": "core-t-felinor", "lane": 5 }] },
@@ -286,7 +288,8 @@ mod tests {
 
             s.play("core-052", json!({ "zone": 1, "modes": ["right"] }));
 
-            s.expect_in_zone(&felinor, "gone");
+            s.expect_in_zone(&felinor, "field");
+            assert_eq!(unit_at(&s, P2, 5).id, felinor);
         }
     }
 

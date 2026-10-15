@@ -57,10 +57,10 @@ use crate::config::{
 use crate::script::{
     ActivationDecl, AttackMod, AttackModArgs, AttackModHook, AuraEntry, AuraHook, CardScripts,
     ConditionContext, ConditionHook, EchoXHook, Effect, EffectApply, EffectContext, EffectPart, EngineSink,
-    FlagOrCount, Hook, HookArgs, PlagueMultiplierHook, QuestBook, Script, SetStat, SetStatHook, StatMod,
-    StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook, TriggerRun, TuneMultiplier,
-    WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook, read_hook, target_check,
-    would_counter_hook,
+    FlagOrCount, Hook, HookArgs, ModeAllowedHook, PlagueMultiplierHook, QuestBook, Script, SetStat,
+    SetStatHook, StatMod, StaticFlags, TargetCheck, TributeWhenHook, TriggerDef, TriggerExtraHook,
+    TriggerRun, TuneMultiplier, WouldCounterHook, attack_mod_hook, aura_hook, condition_hook, hook,
+    mode_allowed_hook, read_hook, target_check, would_counter_hook,
 };
 use crate::state::{CardInstance, GameState, Grant, find_instance, find_instance_mut, new_instance};
 use crate::wire::{
@@ -1170,6 +1170,7 @@ fn combine_objects(records: &[Script]) -> Script {
         static_flags: combine_static_flags(records),
         targets: concat(records.iter().map(|s| s.targets.clone())),
         modes: concat(records.iter().map(|s| s.modes.clone())),
+        mode_allowed: fused_mode_allowed(records),
         // R865: a fusion keeps its ingredients' declared modes secret when any of them did.
         secret_modes: records.iter().any(|s| s.secret_modes),
         condition_met: None,
@@ -1199,6 +1200,21 @@ fn combine_objects(records: &[Script]) -> Script {
         turn_hook_extra: None,
         cry_death_extra: None,
     }
+}
+
+/// R831008: a fusion allows a mode option only when every ingredient's check allows it; a check
+/// allows every option it does not know (Meditative #98 Showdown's reads only its `lane-N`).
+fn fused_mode_allowed(records: &[Script]) -> Option<ModeAllowedHook> {
+    let checks: Vec<ModeAllowedHook> = records
+        .iter()
+        .filter_map(|record| record.mode_allowed.clone())
+        .collect();
+    if checks.is_empty() {
+        return None;
+    }
+    Some(mode_allowed_hook(move |state, player, option| {
+        checks.iter().all(|check| check(state, player, option))
+    }))
 }
 
 /// MD-D4, R1120: a fusion carries every ingredient's combat-only attack modifiers — attacks added,

@@ -669,7 +669,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
   it("R384 Activate, Activate 2 and Activate ♾️ are one term each, with the colon; a trap's \"Activates when\" is not", () => {
     expect(termsOf(played("classic-007"))).toContainEqual({ text: "Activate:", term: "Activate" });
     expect(termsOf(played("classicplus-076-1", "radiant"))).toContainEqual({ text: "Activate 2:", term: "Activate" });
-    expect(termsOf(played("classic-021"))).toContainEqual({ text: "Activate ♾️:", term: "Activate" });
+    expect(termsOf(played("classic-015"))).toContainEqual({ text: "Activate ♾️:", term: "Activate" });
     expect(termsOf("Activate ♾: deal 1")).toEqual([{ text: "Activate ♾:", term: "Activate" }]);
     expect(termsIn(played("classic-010"))).not.toContain("Activate");
     expect(termsIn("Once this has activated: draw 1")).not.toContain("Activate");

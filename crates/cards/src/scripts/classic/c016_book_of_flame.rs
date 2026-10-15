@@ -1,6 +1,6 @@
 //! C #16 Book of Flame (SPEC §8.6 row 16). (1) Spell, Book, Epic.
-//!   Base:    "Deal {damage} damage." — damage 4
-//!   Radiant: "Deal {damage} damage." — damage 8
+//!   Base:    "Trample\nDeal {damage} damage." — damage 4
+//!   Radiant: "Trample\nDeal {damage} damage." — damage 8
 //!   Engine:  "One targeted hit ("deal N damage" with no target named is targeted, as #68 Twisted
 //!            Sorcerer's is). This is the Book of Flame that C #23 Devil's Pact and C #29 Book of
 //!            Vital Kill name; C #55 Book of Wildfire is a different card with its own name (R381).
@@ -9,6 +9,8 @@
 //! §8's Conventions: "target" is any unit or hero on either side, and a bare `target` declaration is
 //! units only (R90), so the heroes are named. The pick travels in the play action (R81). The hit is
 //! one §4.4 instance, so Armor, Divine Shield, the anti-oneshot cap and Indestructible all apply.
+//! Trample (patch v0.3.10) is printed on the Spell, as on C #83 Flame Lance: a Unit's excess goes on
+//! to its hero (§4.4 step 9).
 //! The amount is the declared `damage` (R386), read through `param`; both faces run this one script.
 
 use jackioh_engine::prelude::*;
@@ -99,11 +101,11 @@ mod tests {
     }
 
     #[test]
-    fn r279_r381_c_23_devil_s_pact_and_c_29_book_of_vital_kill_name_this_card_and_no_entry_names_book_of_wildfire_for_it() {
+    fn r279_r381_c_23_devil_s_pact_names_this_card_and_no_entry_names_book_of_wildfire_for_it() {
+        // C #29 Book of Vital Kill named it too until patch v0.3.10 (#831) took its Radiant add away.
         assert!(refs_of("classic-023").contains(&BOOK.to_string()));
-        assert!(refs_of("classic-029").contains(&BOOK.to_string()));
+        assert!(!refs_of("classic-029").contains(&BOOK.to_string()));
         assert!(!refs_of("classic-023").contains(&"classic-055".to_string()));
-        assert!(!refs_of("classic-029").contains(&"classic-055".to_string()));
     }
 
     mod base {

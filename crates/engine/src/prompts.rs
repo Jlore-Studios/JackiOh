@@ -569,8 +569,6 @@ fn answer_owned(
         "fuse:onto" => Some(crate::effects::fuse::answer_fuse_onto(sink, answer)),
         // `cryTrigger.TRIGGER_CRY_HOOK`: a Cry a trigger fires.
         "@triggerCry" => Some(crate::cry_trigger::answer_cry_prompt(sink, answer)),
-        // `attackSummon.ATTACK_SUMMON_HOOK`: Windfast's hand pick.
-        "@attackSummon" => Some(crate::attack_summon::answer_pick(sink, answer)),
         _ => None,
     }
 }

@@ -127,7 +127,7 @@ mod tests {
     const VANILLA: &str = "core-008";
     const FILLER: &str = "core-010"; // (0) Spell Rapid Replenish.
     const TUTOR: &str = "core-051"; // (1) Spell: opens a type prompt as it resolves.
-    const MUTATE: &str = "classic-078"; // (1) Field Spell: Radiant fuses an enemy permanent onto a card of yours of its type.
+    const EXPERIMENT: &str = "core-085"; // (2) Trap: fuses the opponent's played permanent onto one of yours of its type.
     const MANA_WELL: &str = "core-006"; // (3) Field Spell.
 
     use crate::js;
@@ -425,8 +425,8 @@ mod tests {
                 s.answer(json!("damage"));
                 s.answer(json!([{ "pick": "hero", "player": "p2" }]));
 
-                // Efficiency Dividend's damage mode deals X = 3, and the cast paid nothing for its X.
-                s.expect_health(P2, 27);
+                // Efficiency Dividend's damage mode deals X+1 = 4, and the cast paid nothing for its X.
+                s.expect_health(P2, 26);
                 s.expect_mana(P1, 3);
             }
         }
@@ -501,17 +501,18 @@ mod tests {
             fn r102_a_fuse_that_keeps_it_still_lets_it_cast_the_spell_its_own_cry_remembered() {
                 crate::register_all();
                 let mut s = setup(
-                    json!({ "hand": [SCEPTER, STOCKPILE, FILLER], "backrow": [{ "def": MUTATE, "radiant": true }] }),
+                    json!({ "hand": [SCEPTER, STOCKPILE, FILLER], "backrow": [{ "def": EXPERIMENT, "faceUp": false, "lane": 1 }] }),
                     false,
-                    json!({ "backrow": [{ "def": MANA_WELL, "counters": { "plague": 1 } }] }),
+                    json!({ "hand": [MANA_WELL, FILLER] }),
                 );
                 let scepter = s.card(SCEPTER).id.clone();
                 let targets = pick(s.card(STOCKPILE));
                 s.play(SCEPTER, json!({ "zone": 2, "targets": targets }));
-                // Radiant Mutate Spell fuses the enemy Mana Well onto a Field Spell of yours you pick: this one.
-                let well = pick(s.card(MANA_WELL));
-                s.activate(MUTATE, json!({ "targets": well }));
-                s.answer(json!(scepter));
+                s.end_turn();
+                // C #85 Unlicensed Experimentation fuses the opponent's Mana Well onto your one Field Spell:
+                // this one.
+                s.play(MANA_WELL, json!({ "zone": 3 }));
+                s.end_turn();
                 let fused = s.card(&scepter).clone();
                 assert_eq!(js(&fused_id_parts(Some(s.state()), &fused.def_id)), json!([MANA_WELL, SCEPTER]));
                 // R77: what its Cry remembered moved with its text, to the place that text now runs at.

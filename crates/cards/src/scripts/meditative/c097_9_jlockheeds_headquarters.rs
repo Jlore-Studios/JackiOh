@@ -1,5 +1,5 @@
 //! M #97.9 Jlockheed's Headquarters (SPEC §8.8 row 97.9, R1261). (4) Unit, Jlockeed, Token (printed
-//! Mythic), 0/20 → 0/50.
+//! Mythic), 0/20 → 0/40.
 //!   Base:    "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
 //!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
 //!   Engine:  "Activate (R384; Activate 2 on the Radiant face). C+ #2 Groom Shroom's fill: each empty,
@@ -70,8 +70,8 @@ pub fn script() -> CardScripts {
 // M 97.9 Jlockheed's Headquarters — SPEC §8.8 row 97.9, BUILD M10 row M 97.9: "Tribute 5, Indestructible,
 // Can't attack; Activate, once a turn: each empty, unlocked unit zone of yours, left to right, gets a
 // random non-token Jlockeed Unit (MD-F17, R1261), with no Cry; a full or Locked board summons nothing and
-// draws nothing; radiant 0/50, Activate 2 (a second use fills what the first left empty), and the Units are
-// Radiant".
+// draws nothing; radiant 0/40 (0/50 before patch v0.3.10), Activate 2 (a second use fills what the
+// first left empty), and the Units are Radiant".
 //
 // The Jlockeed Units of the sets that ship are Jlockeed Shredder-10 (Core #13), Jlockheed's Lobbyist
 // (C+ #48), Jlockheed's J15 Fighter (C+ #51) and Tatches the Totem (M #87, every tribe), the Meditative
@@ -144,7 +144,7 @@ mod tests {
                 js(&def.radiant.attack),
                 js(&def.radiant.health)
             ],
-            [json!(0), json!(20), json!(0), json!(50)]
+            [json!(0), json!(20), json!(0), json!(40)]
         );
         let keywords = json!([{ "kind": "Indestructible" }, { "kind": "Can't attack" }]);
         assert_eq!(js(&def.base.keywords), keywords);
@@ -306,7 +306,7 @@ mod tests {
         #[test]
         fn r1261_activate_2_fills_what_the_first_left_empty_with_radiant_units() {
             let mut s = setup("hq-radiant", true, &[]);
-            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 50 }));
+            s.expect_stats(ID, json!({ "attack": 0, "maxHealth": 40 }));
             lock_zone(s.state_mut(), slot(4));
             s.activate(ID, json!({}));
             let first = summoned(&s);

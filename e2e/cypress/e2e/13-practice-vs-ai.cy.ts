@@ -44,8 +44,15 @@ import {
 import { expectLastTurnGif, spyOnDownloads, stepForwardAndBack } from "../../support/replays.ts";
 import type { Action, Lane, PlayerId } from "../../support/types.ts";
 
-/** BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. */
+/** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
 const SEED = seedFor("13-practice-t");
+
+/**
+ * BUILD M8 seed keeps the Easy game alive for four human turns despite R635's cost-bucket deal. Patch
+ * v0.3.10's costs dealt `SEED`'s Easy game a deck that kills the passive human on turn 7, so this game
+ * has its own: on `13-practice-z` the human lives until turn 11.
+ */
+const EASY_SEED = seedFor("13-practice-z");
 
 /** The Hard seed yields an observable first AI turn. */
 const HARD_SEED = `${seedFor("13-practice")}:hard`;
@@ -343,7 +350,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   });
 
   it("B40 an Easy game seated p2: the AI thinks and plays, human turns end cleanly, the log replays, and a concede is a Loss", () => {
-    visitPractice(practiceUrl(SEED, "easy", "p2"));
+    visitPractice(practiceUrl(EASY_SEED, "easy", "p2"));
 
     cy.get(ts(PRACTICE_HUD), { timeout: BOOT_TIMEOUT })
       .should("have.attr", "data-difficulty", "easy")
@@ -421,7 +428,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     practiceHandle()
       .then((handle) => handle.snapshot())
       .then((debug) => {
-        expect(debug.seed, "the URL's seed reached the core").to.eq(SEED);
+        expect(debug.seed, "the URL's seed reached the core").to.eq(EASY_SEED);
         expect(debug.difficulty).to.eq("easy");
         expect(debug.humanSeat).to.eq("p2");
         expect(debug.log.at(-1), "the game ended on the human's concede").to.include({ type: "concede", playerId: "p2" });

@@ -197,6 +197,8 @@ export const GAME_EVENT_TYPES = [
   "secretRevealed",
   "predicted",
   "scriptFailed",
+  // #831's patch (C+ #62 KY's Papaya, R831003).
+  "curveDrawn",
 ] as const satisfies readonly GameEventType[];
 
 /**

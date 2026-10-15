@@ -1,7 +1,7 @@
 //! M #55 Dragon Fruit (SPEC §8.8 row 55): (2) Spell, CN, Fruit, Rare.
 //!   Base:    "Add {cards|random Prime card|random Prime cards} to your hand." — cards 1
 //!   Radiant: "Add {cards|random Radiant Prime card|random Radiant Prime cards} to your hand."
-//! Engine: the Prime pool (R1421): Prime-tagged tokens (C+ #38.1, C+ #46.1, M #45.1, M #91.1),
+//! Engine: the Prime pool (R1421): Prime-tagged tokens (C+ #38.1, C+ #46.1, M #45.1, M #49.1, M #91.1),
 //!   via `add_random_from_catalog` with a Prime tag query (R382's pool takes its tokens);
 //!   repeats allowed (R60); a full hand burns; hidden (R97). A Fruit, it joins Fruit pools (R382).
 
@@ -95,6 +95,18 @@ mod tests {
         }
         assert!(seen.contains(PRIME_ONE));
         assert!(seen.contains(PRIME_TWO));
+    }
+
+    #[test]
+    fn r1421_yilegpt_unleashed_is_a_prime_pool_card() {
+        // Patch v0.3.10 (#831): M #49.1 YileGPT Unleashed, the token M #49's Death puts in the deck,
+        // is a Prime, so the pool this Fruit, M #31's Radiant face and M #95 draw from holds it.
+        crate::register_all();
+        let ids: Vec<String> = crate::query::query(&json_as(json!({ "tags": ["Prime"] })))
+            .iter()
+            .map(|def| def.id.clone())
+            .collect();
+        assert!(ids.contains(&"meditative-049-1".to_string()), "{ids:?}");
     }
 
     #[test]

@@ -1,14 +1,16 @@
-//! M #91 Windfast (SPEC §8.8 row 91): (1) Unit, Epic, Catalyst, 1/1 → 2/2, Windfury on both faces.
+//! M #91 Windfast (SPEC §8.8 row 91): (1) Unit, Epic, Catalyst, 1/1 → 2/2, Rush and Windfury on both
+//! faces.
 //!
-//! Base:    "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand
-//!            to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a
+//! Base:    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to
+//!            make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a
 //!            Windfurious Prime into your deck."
-//! Radiant: "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand
-//!            to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+//! Radiant: "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to
+//!            make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
 //! Engine: `tribute` 1, `attack_from_hand` on both faces, `bounce_attacker` on the base face only
-//! (ME-ATTACKSUMMON, R1202); a `death` hook shuffling in `meditative-091-1` — Radiant on the Radiant
-//! face. Tribute and Windfury are catalog data; the aura it brings ("a declared attack keeps its
-//! window; a forced one stays forced") is the engine's.
+//! (ME-ATTACKSUMMON, R1202, R831006: the Unit the match rng's since patch v0.3.10, the controller's
+//! pick before); a `death` hook shuffling in `meditative-091-1` — Radiant on the Radiant face. Tribute,
+//! Rush and Windfury are catalog data; the aura it brings ("a declared attack keeps its window; a
+//! forced one stays forced") is the engine's.
 
 use jackioh_engine::effects::shuffle_into;
 use jackioh_engine::prelude::*;
@@ -44,8 +46,9 @@ pub fn script() -> CardScripts {
 }
 
 // M #91 Windfast — SPEC §8.8 row 91, BUILD M10 row M 91: "Tribute 1 and melee only, Windfury on both
-// faces; whenever it would attack, declared or forced, its controller summons a Unit from their
-// hand that makes that attack on the same target as a forced attack (Covers R1202), with its own
+// faces, Rush since patch v0.3.10; whenever it would attack, declared or forced, a random Unit of its
+// controller's hand is summoned and makes that attack on the same target as a forced attack (Covers
+// R1202, R831006), with its own
 // trap window (a declared attack keeps its window; a forced one stays forced); the base face
 // bounces the summoned Unit if it survives the attack; with no Unit in hand or no open zone
 // Windfast attacks itself; each of Windfury's two attacks summons its own; Death shuffles a
@@ -75,7 +78,7 @@ mod tests {
             use super::*;
 
             #[test]
-            fn is_an_epic_catalyst_1_cost_1_1_with_tribute_1_and_windfury() {
+            fn is_an_epic_catalyst_1_cost_1_1_with_tribute_1_rush_and_windfury() {
                 crate::register_all();
                 let def = crate::card_def(ID);
                 assert_eq!(def.cost, CardCost::Fixed(1));
@@ -89,7 +92,7 @@ mod tests {
                 assert!(def.radiant.keywords.contains(&Keyword::Windfury));
                 assert_eq!(
                     def.base.text,
-                    "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead. Bounce it afterwards if it survives.\nDeath: Shuffle a Windfurious Prime into your deck."
                 );
                 assert_eq!(def.refs, Some(vec![PRIME.to_string()]));
                 let all = registered_scripts();
@@ -150,19 +153,28 @@ mod tests {
             }
 
             #[test]
-            fn r1202_several_units_ask_which_one() {
+            fn r831006_several_units_ask_nothing_a_random_one_makes_the_attack() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [UNIT, OTHER, FILLER], "field": [WINDFAST] },
                     "p2": { "hand": [FILLER] },
                 }));
                 s.attack(WINDFAST, "hero");
-                let pending = s.state().pending.clone().expect("the hand pick");
-                assert_eq!(pending.kind, PromptKind::Hand);
-                s.answer(json!([UNIT]));
-                s.expect_health(P2, HERO_HEALTH - 3);
+                assert!(s.state().pending.is_none(), "no hand pick opens");
+                // One of the two made the attack and went home: both are in hand again.
+                assert!(s.state().players[P2].hero.health < HERO_HEALTH);
                 s.expect_in_zone(UNIT, "hand");
                 s.expect_in_zone(OTHER, "hand");
+            }
+
+            #[test]
+            fn rush_and_windfury_on_both_faces() {
+                crate::register_all();
+                let def = crate::card_def(ID);
+                for face in [&def.base, &def.radiant] {
+                    let kinds: Vec<String> = face.keywords.iter().map(|keyword| keyword.kind().to_string()).collect();
+                    assert_eq!(kinds, ["Rush", "Windfury"]);
+                }
             }
 
             #[test]
@@ -204,7 +216,7 @@ mod tests {
                 let def = crate::card_def(ID);
                 assert_eq!(
                     def.radiant.text,
-                    "Tribute 1, Windfury\nWhen this would attack, summon a Unit of your choice from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
+                    "Tribute 1, Rush, Windfury\nWhen this would attack, summon a random Unit from your hand to make that attack instead.\nDeath: Shuffle a Radiant Windfurious Prime into your deck."
                 );
                 let all = registered_scripts();
                 let flags = all[ID].radiant.static_flags.as_ref().expect("flags");

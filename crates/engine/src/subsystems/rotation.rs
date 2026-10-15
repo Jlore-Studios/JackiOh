@@ -45,7 +45,7 @@ pub struct RotationResult {
     /// Cards whose controller changed because their new zone is on the other side (R12). Each one has
     /// entered its new side on this turn (R171).
     pub crossed: Vec<String>,
-    /// Cards sent to their controller's hand: a Locked destination, or the radiant bounce (R14).
+    /// Cards sent to their controller's hand: a reserved destination, or the radiant bounce (R14).
     pub bounced: Vec<String>,
 }
 
@@ -66,11 +66,12 @@ fn contents_of(state: &GameState, slot: &ZoneSlot) -> Vec<CardInstance> {
         .collect()
 }
 
-/// Whether a destination can take a rotating card. A Locked zone never accepts one (#52's
-/// card-specific override of R688, R14) and
-/// a zone reserved for a dying Reborn unit counts as occupied for every other card (§3.2, R64).
+/// Whether a destination can take a rotating card. A Locked zone accepts one (R831000, patch v0.3.10:
+/// a rotation moves what is on the field, which R688's Lock does not stop, as it evicts nothing; it
+/// refused one before, #52's card-specific override of R688), while a zone reserved for a dying
+/// Reborn unit counts as occupied for every other card (§3.2, R64).
 fn can_accept(state: &GameState, slot: &ZoneSlot) -> bool {
-    !crate::zones::is_locked(state, slot) && !crate::zones::is_reserved(state, slot)
+    !crate::zones::is_reserved(state, slot)
 }
 
 /// Put a zone's cards down in their new zone. A pile is rebuilt from the bottom up so the card that
@@ -168,7 +169,7 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
         // #52 radiant: cards that would move to the opponent bounce to their controller's hand costing 0
         // instead (R747) — the ones the rotating player would lose, those leaving their side ("your" is the
         // controller, §8 Conventions). A card crossing onto the rotating player's side crosses and changes
-        // control like any other (R14, R171). A Locked destination bounces an outbound card anyway.
+        // control like any other (R14, R171).
         if radiant && crosses && entry.from.player == args.perspective {
             for card in &entry.cards {
                 bounce_home(sink, card, Some(0));
@@ -177,7 +178,8 @@ pub fn rotate_rings(sink: &mut EngineSink<'_>, args: &RotationArgs) -> RotationR
             continue;
         }
 
-        // R14: a card whose destination is Locked is bounced to its controller's hand instead.
+        // R14, R88: a card whose destination is reserved is bounced to its controller's hand instead; a
+        // Locked one takes it (R831000).
         if !can_accept(sink.state, &entry.to) {
             for card in &entry.cards {
                 bounce_home(sink, card, None);

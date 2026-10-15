@@ -30,9 +30,10 @@ pub fn script() -> CardScripts {
 // draw limit stopping the rest (§2.4); the drawn cards are never named in the opponent's view;
 // radiant: draw 6; its tuned number (draw) reads through `param()` (R386)".
 //
-// The steal case puts C #4 Palantir in the opponent's backrow: the base face steals a Book with
-// no "you may" (balance patch 1, mandatory), so the Book never resolves while Palantir stands.
-// (The draw-limit half, B5 E3, is proved in C #4's own test file.)
+// The steal case puts C #4 Palantir in the opponent's backrow: the base face steals a (1) Cost Spell
+// with no "you may" (balance patch 1, mandatory) and casts it itself (patch v0.3.10, R831001), so the
+// Book draws its 3 for the opponent and never for you while Palantir stands. (The draw-limit half,
+// B5 E3, is proved in C #4's own test file.)
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,11 +146,11 @@ mod tests {
             }
 
             #[test]
-            fn palantir_s_base_face_steals_a_book_with_no_prompt_tributed_at_once_nothing_resolves() {
+            fn r831001_palantir_s_base_face_steals_the_book_with_no_prompt_and_its_3_draws_are_the_opponent_s() {
                 crate::register_all();
                 let mut s = scenario(json!({
                     "p1": { "hand": [BOOK], "library": [A, B, C] },
-                    "p2": { "hand": [FILLER], "backrow": [{ "def": PALANTIR, "faceUp": true }] },
+                    "p2": { "hand": [FILLER], "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [D, E, F] },
                 }));
                 let book = s.card(BOOK).clone();
 
@@ -157,9 +158,11 @@ mod tests {
                 s.play(BOOK, json!({}));
                 assert!(s.state().pending.is_none());
                 s.expect_in_zone(PALANTIR, "graveyard");
+                // Cast by its new owner, it ends in their graveyard and draws them 3.
                 let stolen = s.card(book.id.as_str());
                 assert_eq!(stolen.owner, P2);
-                assert_eq!(stolen.zone, Zone::Hand { player: P2 });
+                assert_eq!(stolen.zone, Zone::Graveyard { player: P2 });
+                assert_eq!(hand_defs(&s, P2), [FILLER, D, E, F]);
                 assert_eq!(s.pile(P1, "library").len(), 3);
                 assert_eq!(hand_defs(&s, P1), Vec::<String>::new());
             }

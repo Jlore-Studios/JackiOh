@@ -300,7 +300,7 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h3", modes: ["board"] });
   });
 
-  it("#24 Efficiency Dividend's options say X on its base face and 2X, 4X and X on its Radiant face (§8 #24)", () => {
+  it("#24 Efficiency Dividend's options say X+1, 4X and X on its base face and 2X+1, 8X and X+1 on its Radiant face (§8 #24)", () => {
     const modes = ["damage", "heal", "mana"];
     const pickerFor = (radiant: boolean): void => {
       const view = viewWith({
@@ -314,14 +314,15 @@ describe("R81 inline pickers submit a play with no PendingChoice at all", () => 
     };
 
     pickerFor(false);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by twice X.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal X plus 1 damage.");
+    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
+    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
     cleanup();
 
     pickerFor(true);
-    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X damage.");
-    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by four times X.");
-    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X mana next turn.");
+    expect(screen.getByTestId("prompt-option-damage")).toHaveTextContent("Deal twice X plus 1 damage.");
+    expect(screen.getByTestId("prompt-option-heal")).toHaveTextContent("Heal a target by eight times X.");
+    expect(screen.getByTestId("prompt-option-mana")).toHaveTextContent("Gain X plus 1 mana next turn.");
   });
 
   it("an option no card text covers is its own word, capitalised", () => {

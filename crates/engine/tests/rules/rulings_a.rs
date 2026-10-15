@@ -1101,7 +1101,7 @@ mod spec_11_rulings_r1_r42_m3_gate {
     }
 
     #[test]
-    fn r14_rotates_two_independent_rings_bounces_a_locked_destination_and_carries_damage_and_buffs() {
+    fn r14_r831000_rotates_two_independent_rings_into_a_locked_destination_and_carries_damage_and_buffs() {
         assert_eq!(ROTATION_RING, "two-rings");
         assert_eq!(ROTATION_ROWS.to_vec(), vec![UNITS, BACKROW]);
 
@@ -1147,9 +1147,9 @@ mod spec_11_rulings_r1_r42_m3_gate {
             backrow_card.id
         );
 
-        // A Locked destination bounces the card to its owner's hand instead.
+        // A Locked destination takes the card (R831000; it bounced it before patch v0.3.10).
         let mut locked = game("r14b");
-        let blocked = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
+        let entering = put(&mut locked, BODY, slot(P1, UNITS, 2), json!({}));
         lock_zone(&mut locked, slot(P1, UNITS, 3));
         let locked_result = {
             let mut sink = sink_for(&mut locked);
@@ -1158,8 +1158,15 @@ mod spec_11_rulings_r1_r42_m3_gate {
                 &json_as(json!({ "direction": "right", "perspective": "p1" })),
             )
         };
-        assert_eq!(locked_result.bounced, vec![blocked.id.clone()]);
-        assert!(ids(&locked.players.p1.hand).contains(&blocked.id));
+        assert!(locked_result.bounced.is_empty());
+        assert_eq!(
+            must(
+                card_at(&locked, slot(P1, UNITS, 3)),
+                "the card in the Locked zone"
+            )
+            .id,
+            entering.id
+        );
 
         // #52 radiant: a card that would cross bounces to its owner's hand at cost 0 (R12, R14).
         let mut radiant = game("r14c");

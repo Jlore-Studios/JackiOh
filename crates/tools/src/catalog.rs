@@ -211,8 +211,9 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Felinor => 11 + meditative(11),
         Tag::Ky => 9 + meditative(6),
         Tag::Cn => 7 + meditative(33),
-        // Meditative #55 Dragon Fruit.
-        Tag::Fruit => 15 + meditative(1),
+        // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; C+ #61 Bauble Bubble lost it in
+        // patch v0.3.10 (#831).
+        Tag::Fruit => 14 + meditative(2),
         // Meditative #95 Call to Chaos (Meditative Edition).
         Tag::CallToChaos => 2 + meditative(1),
         Tag::Quickdraw => 5 + meditative(5),
@@ -222,9 +223,11 @@ fn expected_tag_count(tag: Tag) -> usize {
         Tag::Pancake => 10,
         Tag::Ai => 10,
         Tag::Plague => 17 + meditative(2),
-        Tag::Catalyst => 2 + meditative(2),
-        Tag::Prime => 2 + meditative(2),
-        Tag::Acclaimed => 2 + meditative(4),
+        // Meditative #45, #49 (patch v0.3.10, #831) and #91; their Primes #45.1, #49.1 and #91.1.
+        Tag::Catalyst => 2 + meditative(3),
+        Tag::Prime => 2 + meditative(3),
+        // Meditative #49 and #49.1; #49.2 and #49.3 lost it in patch v0.3.10 (#831).
+        Tag::Acclaimed => 2 + meditative(2),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         Tag::Wincon => meditative(2),
         Tag::Token => 50 + meditative(30),

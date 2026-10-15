@@ -32,7 +32,7 @@
 // card uses it as that term, in every case and inflection the cards print ("exile it", "exiled",
 // "steal it", "Locked", "Tributes", "Buffs and Nerfs"), each such spelling an alias below. A word
 // spelled like a term that names something else stays plain, listed in PLAIN_SPELLINGS: the exile
-// pile ("your exile", Lizard's Breath's "Exile," pile) and a Plague Counter called "counter". A
+// pile ("your exile", Lizard's Breath's "Exile," pile). A
 // §6.1 keyword bolds as the keyword a card has, so "you stack onto this" stays plain. Card types,
 // zones, stats, positions, rarities and the §6.3 rows rules.test.ts keeps rules-only (Summon, Draw,
 // Discard, Destroy, Damage, Heal, Add to hand, Shuffle into) stay plain, as Hearthstone prints them. rules.test.ts fails on
@@ -326,7 +326,8 @@ export const GLOSSARY: Readonly<Record<GlossaryTermId, GlossaryEntry>> = {
 /**
  * R910000: spellings that hold a term's word but name something else, so the tokenizer prints them
  * plain: the exile pile, which reads like Exile ("your exile", "from exile", Lizard's Breath's
- * "Exile," among its piles), and a Plague Counter called "counter" (Corpse Plantation).
+ * "Exile," among its piles). Corpse Plantation's "each counter" and "1 counter" went with its old
+ * text (patch v0.3.10), which now names its Plague Counters in full.
  */
 export const PLAIN_SPELLINGS: readonly string[] = [
   "your exile",
@@ -335,8 +336,6 @@ export const PLAIN_SPELLINGS: readonly string[] = [
   "graveyard and exile",
   "graveyard or exile",
   "Exile, deal",
-  "each counter",
-  "1 counter",
 ];
 
 /** The terms whose `rule` states their spec row's ruling instead of its Rule column (see the header). */

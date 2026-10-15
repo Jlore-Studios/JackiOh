@@ -1,5 +1,5 @@
 //! C+ #12.8 Frostspatula (SPEC §8.7 row 12.8, R409): (2) Field Spell, Pancake, Token (printed Legendary),
-//! 10/3 → 20/6.
+//! 7/3 → 14/6.
 //!   Base:    "Animated on your turn, Rush. Death: Summon a copy of every Unit this destroyed."
 //!   Radiant: "… and make them Radiant."
 //! Animated on your turn and Rush are catalog keywords the engine runs (B3.1, R383). It remembers each
@@ -116,7 +116,8 @@ pub fn script() -> CardScripts {
 // unit zone it stays in the backrow; […]; it remembers each Unit it killed (R42) as `{ defId, radiant }`,
 // and its Death, as a Unit or destroyed in the backrow (§4.5), summons a fresh copy of each for you,
 // tokens included, until your board is full, the originals staying in their owners' graveyards (R409);
-// `animated` and `deanimated` are public; radiant 20/6 and the copies are Radiant".
+// `animated` and `deanimated` are public; radiant 14/6 and the copies are Radiant" (10/3 and 20/6
+// before patch v0.3.10).
 
 /// `describe("C+ #12.8 Frostspatula")`.
 #[cfg(test)]
@@ -184,7 +185,7 @@ mod tests {
             assert_eq!(js(&s.view(P1))["you"]["reserved"]["backrow"][1], json!(true));
             assert_eq!(count_of(s.events(), GameEventType::Animated), 1);
             assert!(s.view(P2).events.iter().any(|event| event.event_type() == GameEventType::Animated));
-            s.expect_stats(SPATULA, json!({ "attack": 10, "health": 3 }));
+            s.expect_stats(SPATULA, json!({ "attack": 7, "health": 3 }));
         }
 
         /// R383 with its lane's unit zone taken it goes to the leftmost open one; with none it stays in the backrow
@@ -285,7 +286,7 @@ mod tests {
         fn r409_r572_tokens_included_and_a_kill_in_the_same_pass_as_its_own_death_counts() {
             let mut s = played(false, 1, json!({}), json!({ "field": [RUSH] }));
             let id = spatula_id(&s);
-            s.attack(SPATULA, RUSH); // 10 kills the 3/3; the 3/3 kills the 10/3
+            s.attack(SPATULA, RUSH); // 7 kills the 3/3; the 3/3 kills the 7/3
             // A token that dies as a Unit ceases to exist (R11).
             s.expect_in_zone(&id, "gone");
             assert_eq!(s.unit(P1, 1).map(|card| card.def_id).as_deref(), Some(RUSH));
@@ -332,7 +333,7 @@ mod tests {
             s.end_turn().end_turn();
             assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(spatula_id(&s)));
             s.attack(SPATULA, "hero");
-            s.expect_health(P2, HERO_HEALTH - 10);
+            s.expect_health(P2, HERO_HEALTH - 7);
         }
 
         /// §2.2 R383 it returns after your end-of-turn steps, and animates after your mana refresh, before your draw
@@ -377,12 +378,12 @@ mod tests {
             let mut s = played(false, 2, json!({ "hand": [{ "def": SPATULA }, SURGERY, FILLER] }), json!({}));
             let id = spatula_id(&s);
             s.play(SURGERY, json!({ "targets": at_instance(&id) }));
-            s.expect_stats(SPATULA, json!({ "attack": 13, "maxHealth": 6 }));
+            s.expect_stats(SPATULA, json!({ "attack": 10, "maxHealth": 6 }));
             s.end_turn();
             assert_eq!(s.backrow(P1, 2).map(|card| card.id), Some(spatula_id(&s)));
             s.end_turn();
             assert_eq!(s.unit(P1, 2).map(|card| card.id), Some(spatula_id(&s)));
-            s.expect_stats(SPATULA, json!({ "attack": 13, "maxHealth": 6 }));
+            s.expect_stats(SPATULA, json!({ "attack": 10, "maxHealth": 6 }));
         }
 
         /// R383 on the opponent's turn an 'all Units' destroy skips it in the backrow
@@ -441,11 +442,11 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// 20/6, and the copies are Radiant
+        /// 14/6, and the copies are Radiant
         #[test]
-        fn twenty_6_and_the_copies_are_radiant() {
+        fn fourteen_6_and_the_copies_are_radiant() {
             let mut s = played(true, 1, json!({}), json!({ "hand": [MAGIC_JAMMED, FILLER] }));
-            s.expect_stats(SPATULA, json!({ "attack": 20, "health": 6 }));
+            s.expect_stats(SPATULA, json!({ "attack": 14, "health": 6 }));
             s.attack(SPATULA, TOKENS);
             s.end_turn();
             let id = spatula_id(&s);

@@ -1,4 +1,4 @@
-//! C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Fruit, Rare.
+//! C+ #61 Bauble Bubble (SPEC §8.7 row 61). (1) Field Spell, Rare (no Fruit tag since patch v0.3.10).
 //!   Base:    "Death: Add {cards|Stockpile|Stockpiles} to your hand. Each costs (0)." — cards 2
 //!   Radiant: "Death: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs (0)."
 //!   Engine:  "A Death on a backrow card (§4.5): it fires when the card goes from the field to a
@@ -98,11 +98,12 @@ mod tests {
     }
 
     #[test]
-    fn is_a_1_field_spell_fruit_naming_stockpile() {
+    fn is_a_1_field_spell_with_no_tag_naming_stockpile() {
         crate::register_all();
         let def = crate::card_def(super::ID);
         assert_eq!(def.type_, CardType::FieldSpell);
-        assert_eq!(def.tags, vec![Tag::Fruit]);
+        // Patch v0.3.10 (#831) took its Fruit tag away.
+        assert!(def.tags.is_empty());
         assert_eq!(def.refs, Some(vec![STOCKPILE.to_string()]));
     }
 

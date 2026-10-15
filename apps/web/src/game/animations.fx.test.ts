@@ -175,6 +175,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
+  curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
 };
 
 function longStream(rounds: number): GameEvent[] {
@@ -301,6 +302,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   predicted: null,
   // #915 (R915004): the card's fade is the notice; no effect decorates it.
   scriptFailed: null,
+  // #831's patch (R831003): KY's Papaya's curve runs from cell to cell across the board.
+  curveDrawn: "curve",
 };
 
 /** Every member of S1's `FxRecipe`. */
@@ -339,6 +342,7 @@ const FX_RECIPES = [
   "brand",
   "rewind",
   "armor",
+  "curve",
 ];
 
 /** The pre-task table's `animation`, `durationMs` and `testid` per row, which S4 keeps byte for byte. */
@@ -422,13 +426,14 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
   predicted: ["jk-badge-fade", 400, "hero-<side>"],
   scriptFailed: ["jk-badge-fade", 400, "card-<instanceId>"],
+  curveDrawn: ["jk-curve-drawn", 700, "board"],
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 57 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363) and Feng Shui (R983) carry fx with the listed recipe and the other 19 carry none", () => {
+  it("B1 exactly the 58 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983) and KY's Papaya's curve (R831003) carry fx with the listed recipe and the other 19 carry none", () => {
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, ANIMATIONS[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(57);
+    expect(GAME_EVENT_TYPES.filter((t) => ANIMATIONS[t].fx !== undefined)).toHaveLength(58);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", () => {

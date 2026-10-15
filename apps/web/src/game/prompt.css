@@ -215,6 +215,15 @@
   background: var(--primary-face-hover);
 }
 
+/* R831004: a set's mark beside its name (#82 KY's Trial's first Discover), the glyph a card's frame
+   carries (R503). */
+.prompt-set-mark {
+  width: 2rem;
+  height: 2rem;
+  margin: 0 auto 0.25rem;
+  display: block;
+}
+
 .prompt-card-name {
   font-weight: 650;
   overflow-wrap: break-word;

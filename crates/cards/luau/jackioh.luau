@@ -758,6 +758,7 @@ zones: {ExileZone}?,
 player: PlayerSpec?,
 parity: CostParity?,
 cost: number?,
+maxCost: number?,
 exemptXCost: boolean?,
 }
 
@@ -1378,9 +1379,13 @@ player: PlayerId,
 instanceId: string | nil,
 defId: string,
 message: string,
+} | {
+["type"]: "curveDrawn",
+player: PlayerId,
+cells: {ZoneRef},
 }
 
-export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed"
+export type GameEventType = "cardPlayed" | "cardResolved" | "summoned" | "damage" | "healthLost" | "healed" | "divineShieldLost" | "destroyed" | "enteredGraveyard" | "exiled" | "bounced" | "burned" | "fatigue" | "libraryOverflow" | "discarded" | "drawn" | "addedToHand" | "shuffledIn" | "buffed" | "keywordGranted" | "counterChanged" | "costChanged" | "modifierChanged" | "radiantSet" | "transformed" | "fused" | "positionSwitched" | "controlChanged" | "rotated" | "swapped" | "locked" | "trapFired" | "attackDeclared" | "attackCancelled" | "manaChanged" | "turnStarted" | "turnEnded" | "turnAutoEnded" | "promptOpened" | "promptAnswered" | "drawOffered" | "drawAnswered" | "emoted" | "gameOver" | "cardAnnounced" | "countered" | "stolen" | "unlocked" | "activated" | "animated" | "deanimated" | "crumbled" | "degraded" | "upgraded" | "numberChanged" | "redirected" | "healthSet" | "questProgressed" | "questCompleted" | "rolledBack" | "chaosRolled" | "flickered" | "drawLimited" | "turnCutShort" | "marked" | "glitched" | "fengShui" | "translated" | "discardPrevented" | "deradianted" | "manaSpent" | "damageAbsorbed" | "jadeChanged" | "secretChosen" | "secretRevealed" | "predicted" | "scriptFailed" | "curveDrawn"
 
 export type GameOverReason = "hero-death" | "both-heroes-dead" | "concede" | "draw-accepted" | "turn-cap" | "disconnect" | "match-ceiling" | "voided" | "alt-win" | "won-by-effect"
 
@@ -1730,6 +1735,9 @@ amount: number,
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "quickstrikerDamage",
+} | {
+expiry: ModifierExpiry,
+["kind"]: "radiantNextPlay",
 } | {
 expiry: ModifierExpiry,
 ["kind"]: "costRule",
@@ -2424,6 +2432,12 @@ player: PlayerId,
 }
 
 export type ZoneName = "hand" | "library" | "graveyard" | "exile" | "field" | "resolving" | "gone"
+
+export type ZoneRef = {
+player: PlayerId,
+row: Row,
+lane: number,
+}
 
 export type ZoneScope = {
 side: ScopeSide?,

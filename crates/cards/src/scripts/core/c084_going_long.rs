@@ -51,7 +51,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GOING_LONG: &str = "core-084"; // Field Spell, Quickdraw, cost 2 embiggen 4
-    const BIGOT: &str = "core-002"; // 6/1
+    const BIGOT: &str = "core-002"; // set to 6/1 by `six_one()` (it prints 4/1 since patch v0.3.10)
     const POINTMASTER: &str = "core-020"; // 7/2
     const POSTDOC: &str = "core-061"; // 2/4
     const TRUE_STRIKE: &str = "core-044"; // Spell, 1 — "Deal 4 damage to a target, ignoring Armor"
@@ -60,6 +60,11 @@ mod tests {
     const MENACE: &str = "core-019";
     const TIMMY: &str = "core-011";
     const SCARAB: &str = "core-007"; // 1/1, no Taunt — a body of p1's so §2.5 never auto-ends the turn
+
+    /// Bigot at the 6/1 these hits are measured with.
+    fn six_one() -> Value {
+        json!({ "def": BIGOT, "statsOverride": { "attack": 6, "health": 1 } })
+    }
 
     /// `extra` with the spare hand `[STOCKPILE, TIMMY]` and library `[MENACE, TIMMY]` set.
     fn spare(extra: Value) -> Value {
@@ -103,7 +108,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
-                "p2": spare(json!({ "field": [BIGOT] })),
+                "p2": spare(json!({ "field": [six_one()] })),
             }));
             let key = if embiggen { "paidArmor" } else { "armor" };
             let moved = if upgrade {
@@ -147,7 +152,7 @@ mod tests {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
-                "p2": { "field": [BIGOT], "hand": [STOCKPILE] },
+                "p2": { "field": [six_one()], "hand": [STOCKPILE] },
             }));
 
             s.attack(BIGOT, "hero");
@@ -188,7 +193,7 @@ mod tests {
         fn your_hero_the_armor_protects_its_controller_only() {
             crate::register_all();
             let mut s = scenario(json!({
-                "p1": { "backrow": [GOING_LONG], "field": [BIGOT], "hand": [STOCKPILE] },
+                "p1": { "backrow": [GOING_LONG], "field": [six_one()], "hand": [STOCKPILE] },
                 "p2": { "hand": [STOCKPILE] },
             }));
 
@@ -203,7 +208,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
-                "p2": spare(json!({ "field": [BIGOT] })),
+                "p2": spare(json!({ "field": [six_one()] })),
             }));
 
             s.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));
@@ -221,7 +226,7 @@ mod tests {
             crate::register_all();
             let mut s = scenario(json!({
                 "p1": { "hand": [GOING_LONG, STOCKPILE], "field": [SCARAB], "library": [MENACE, TIMMY] },
-                "p2": spare(json!({ "field": [BIGOT] })),
+                "p2": spare(json!({ "field": [six_one()] })),
             }));
 
             s.play(GOING_LONG, json!({ "zone": 1 }));
@@ -257,7 +262,7 @@ mod tests {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE] },
-                "p2": { "field": [BIGOT, BIGOT], "hand": [MAGIC_JAMMED, STOCKPILE] },
+                "p2": { "field": [six_one(), six_one()], "hand": [MAGIC_JAMMED, STOCKPILE] },
             }));
             let going_long = s.backrow(P1, 1).expect("Going Long in the backrow");
             let first = s.unit(P2, 1).expect("the first Bigot");
@@ -283,7 +288,7 @@ mod tests {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": { "backrow": [{ "def": GOING_LONG, "radiant": true }], "hand": [STOCKPILE] },
-                "p2": { "field": [BIGOT], "hand": [STOCKPILE] },
+                "p2": { "field": [six_one()], "hand": [STOCKPILE] },
             }));
 
             assert_eq!(shown_armor(&s, P1), 4);
@@ -303,7 +308,7 @@ mod tests {
                     "field": [SCARAB],
                     "library": [MENACE, TIMMY],
                 },
-                "p2": spare(json!({ "field": [BIGOT] })),
+                "p2": spare(json!({ "field": [six_one()] })),
             }));
 
             s.play(GOING_LONG, json!({ "zone": 1, "embiggen": true }));

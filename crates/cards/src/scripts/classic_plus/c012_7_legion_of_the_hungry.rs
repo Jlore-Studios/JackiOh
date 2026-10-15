@@ -1,7 +1,8 @@
-//! C+ #12.7 Legion of the Hungry (SPEC §8.7 row 12.7, R408): (2) Field Spell, Pancake, Token (printed Legendary).
-//!   Base:    "Cry: Exile {cards} random cards from your deck. Summon the Units among them."
+//! C+ #12.7 Legion of the Hungry (SPEC §8.7 row 12.7, R408): (2) Spell, Pancake, Token (printed Legendary),
+//! a Field Spell until patch v0.3.10 (#831), whose text was its Cry.
+//!   Base:    "Exile {cards} random cards from your deck. Summon the Units among them."
 //!   Radiant: "… Summon the Units among them and make them Radiant."
-//! R408's Cry reading. Five different cards (R60), all of them if fewer; the Units among them are
+//! R408's reading, now the Spell's resolution (the script's `cry`, as every Spell's). Five different cards (R60), all of them if fewer; the Units among them are
 //! summoned out of exile in the order they were exiled (no Cry, R1), per R64, until the board is full,
 //! the rest staying exiled; a unit-token card exiled from a deck has ceased to exist (R11).
 
@@ -22,8 +23,8 @@ fn each_of(f: impl Fn(&str) -> Effect + Send + Sync + 'static) -> ForEachCardEac
 fn legion(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // maxi-tail: the picks are drawn as the Cry resolves; nothing in this list can pause between
-            // them.
+            // R408's reading, the Spell's resolution (a Field Spell's Cry until patch v0.3.10, #831).
+            // maxi-tail: the picks are drawn as it resolves; nothing in this list can pause between them.
             let library = zone_cards(ctx.state, ctx.controller, OffFieldZone::Library);
             let shuffled = ctx.rng.shuffle(&library);
             let count = param(&*ctx, "cards").max(0) as usize;
@@ -64,8 +65,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-// C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Field Spell
-// whose unlabelled text is its Cry (R408): exiles 5 different random cards of your deck (all if fewer,
+// C+ #12.7 Legion of the Hungry — SPEC §8.7 row 12.7, R408, BUILD M9 Classic+ row C+ 12.7: "Spell
+// (patch v0.3.10; a Field Spell whose unlabelled text was its Cry before, R408): exiles 5 different random cards of your deck (all if fewer,
 // R60), then summons the Units among them out of exile into your leftmost open zones, no Cry (R1),
 // until your board is full, the rest staying exiled; an empty deck does nothing and draws nothing
 // (R129); the exiles are public and the deck's order stays hidden (R97); the card count reads through
@@ -198,7 +199,9 @@ mod tests {
             let cursor = s.state().rng_cursor;
             s.play(LEGION, json!({}));
             assert_eq!(s.state().rng_cursor, cursor);
-            assert_eq!(s.backrow(P1, 1).map(|card| card.def_id), Some(LEGION.to_string()));
+            // A Spell since patch v0.3.10: it goes to the graveyard, no backrow card.
+            assert!(s.backrow(P1, 1).is_none());
+            s.expect_in_zone(LEGION, "graveyard");
         }
 
         #[test]

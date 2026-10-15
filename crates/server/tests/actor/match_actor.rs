@@ -2112,7 +2112,8 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
         advance(SECOND).await;
 
         // p1's turn 2: the two 4/4s trade, so p1's lies in its graveyard; the Plantation (2) takes the
-        // turn's mana, and its Activate places 2 Plague Counters on it.
+        // turn's mana, its Cry places 2 Plague Counters on it, and its Activate arms one play from the
+        // graveyard (patch v0.3.10, R831015).
         let trade = legal_of(&h.p1)
             .into_iter()
             .find(|action| {

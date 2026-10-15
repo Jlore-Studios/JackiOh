@@ -476,26 +476,6 @@ pub fn playing(seed: &str) -> GameState {
     state
 }
 
-/// Answer the one open prompt with these selections, whoever it belongs to.
-pub fn answer_with(state: &GameState, selection: Value) -> ReduceResult {
-    let Some(pending) = state.pending.as_ref() else {
-        panic!("expected a prompt to be open");
-    };
-    let result = act_result(
-        state,
-        json!({
-            "type": "answer",
-            "choiceId": pending.id,
-            "selection": selection,
-            "playerId": pending.player_id,
-        }),
-    );
-    if let Some(error) = &result.error {
-        panic!("{error}");
-    }
-    result
-}
-
 /// §9.3: the live game and its replay agree. `start` is the state the log was played from; the log is
 /// folded again from a clone of it, action by action through `reduce`, and the two end states hash
 /// the same (`replay.hashState`).

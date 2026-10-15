@@ -121,6 +121,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   // Meditative batch 17 (MB17).
   deradianted: 400,
   manaSpent: 150,
+  // Patch v0.3.10 (C+ #62 KY's Papaya, R831003).
+  curveDrawn: 700,
 };
 
 /* ------------------------------------------------------------------------------------------- *
@@ -231,6 +233,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
   predicted: { type: "predicted", player: "p2", secretId: "secret-1", guess: "attack", outcome: "won" },
   scriptFailed: { type: "scriptFailed", player: "p1", instanceId: "u1", defId: "custom-fixture", message: "cry failed on line 3: boom" },
+  curveDrawn: { type: "curveDrawn", player: "p1", cells: [{ player: "p1", row: "backrow", lane: 1 }, { player: "p2", row: "units", lane: 3 }] },
 };
 
 const ALL_SAMPLES: GameEvent[] = GAME_EVENT_TYPES.map((t) => SAMPLES[t]);
@@ -301,7 +304,7 @@ describe("ANIMATIONS covers every event type", () => {
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
     // pair of eyes on it, so it moves only when a type is deliberately added there.
-    expect(rows).toHaveLength(77);
+    expect(rows).toHaveLength(78);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -401,6 +404,17 @@ function faceUpBackrowIds(view: PlayerView): string[] {
     slot !== null && slot.faceDown === false ? [slot.instanceId] : [],
   );
 }
+
+describe("R831003 KY's Papaya's curve", () => {
+  it("R831003 curveDrawn draws the curve across the board", () => {
+    const row = ANIMATIONS.curveDrawn;
+    expect(row.animation).toBe("jk-curve-drawn");
+    expect(row.durationMs).toBe(700);
+    expect(row.fx).toEqual({ recipe: "curve" });
+    expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
+    expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
 
 describe("target resolution", () => {
   const view: PlayerView = fullBoardView();

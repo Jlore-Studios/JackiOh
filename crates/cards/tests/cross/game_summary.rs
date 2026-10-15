@@ -225,6 +225,15 @@ mod summarize_game_over_real_cards_s9_11 {
                                 replaced_plays += 1;
                             }
                         }
+                        // A Death the play's own Tribute set off can discard the hand the card still stands in
+                        // (§10.5 step 2), before any announce: the card was never played.
+                        GameEvent::Discarded { instance_id, .. } => {
+                            if let Some((seat, at)) = open_play(&plays, instance_id)
+                                && !plays[seat][at].announced
+                            {
+                                plays[seat].remove(at);
+                            }
+                        }
                         GameEvent::Countered {
                             instance_id,
                             player: countered,
@@ -412,5 +421,134 @@ mod summarize_game_over_real_cards_s9_11 {
         assert!(draw_casts > 0);
         assert!(burns > 0);
         assert!(pawn_games < GAMES / 2);
+    }
+}
+
+mod r831001_a_stolen_cast_is_no_play {
+    use super::*;
+
+    const BOOK: &str = "classic-024"; // (1) Spell, Book: Draw 3.
+    const PALANTIR: &str = "classic-004"; // (2) Field Spell: steals the opponent's (1) Cost Spell and casts it.
+
+    fn act(state: &GameState, log: &mut Vec<Action>, body: Value) -> GameState {
+        let mut action = body;
+        action["nonce"] = json!(format!("palantir-summary-{}", log.len()));
+        let action: Action = json_as(action);
+        let result = reduce(state, &action);
+        if let Some(error) = result.error {
+            panic!("{error}");
+        }
+        log.push(action);
+        result.state
+    }
+
+    fn first_of(state: &GameState, player: PlayerId, def_id: &str) -> Option<String> {
+        state.players[player]
+            .hand
+            .iter()
+            .find(|card| card.def_id == def_id)
+            .map(|card| card.id.clone())
+    }
+
+    fn end_turn(state: GameState, log: &mut Vec<Action>, player: PlayerId) -> GameState {
+        // R82: a turn with nothing left to do has ended by itself.
+        if state.active != player || state.result.is_some() {
+            return state;
+        }
+        act(&state, log, json!({ "type": "endTurn", "playerId": player }))
+    }
+
+    /// p1 plays the Book on its second turn into p2's Palantir, and concedes; the game's record, or
+    /// `None` when the seed does not deal the two cards in time.
+    fn game(seed: &str, decks: &(Vec<String>, Vec<String>)) -> Option<(Vec<Action>, String)> {
+        let mut state = begin_game(&create_game(&CreateGameOptions {
+            seed: seed.to_string(),
+            decks: decks.clone(),
+            ..CreateGameOptions::default()
+        }))
+        .state;
+        first_of(&state, PlayerId::P2, PALANTIR)?;
+        let mut log: Vec<Action> = Vec::new();
+        for player in [PlayerId::P1, PlayerId::P2] {
+            let keep: Vec<String> = state.players[player]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect();
+            state = act(
+                &state,
+                &mut log,
+                json!({ "type": "mulligan", "keep": keep, "playerId": player }),
+            );
+        }
+        state = end_turn(state, &mut log, PlayerId::P1);
+        // p2's turn: The Coin, then Palantir with the 2 mana.
+        let coin = first_of(&state, PlayerId::P2, COIN_DEF_ID)?;
+        state = act(
+            &state,
+            &mut log,
+            json!({ "type": "play", "instanceId": coin, "playerId": "p2" }),
+        );
+        let palantir = first_of(&state, PlayerId::P2, PALANTIR)?;
+        state = act(
+            &state,
+            &mut log,
+            json!({ "type": "play", "instanceId": palantir, "zone": { "row": "backrow", "lane": 1 }, "playerId": "p2" }),
+        );
+        state = end_turn(state, &mut log, PlayerId::P2);
+        let book = first_of(&state, PlayerId::P1, BOOK)?;
+        state = act(
+            &state,
+            &mut log,
+            json!({ "type": "play", "instanceId": book, "playerId": "p1" }),
+        );
+        // Countered, stolen and cast by p2: it ends in p2's graveyard.
+        assert!(
+            state.players.p2.graveyard.iter().any(|card| card.id == book),
+            "{seed}"
+        );
+        state = act(&state, &mut log, json!({ "type": "concede", "playerId": "p1" }));
+        assert!(state.result.is_some());
+        Some((log, book))
+    }
+
+    #[test]
+    fn r376_r831001_the_spell_palantir_steals_and_casts_is_neither_seat_s_play() {
+        register_all();
+        // Both decks are the Book or Palantir and nineteen Units of (3) or more, which neither seat plays.
+        let units: Vec<String> = pool()
+            .into_iter()
+            .filter(|id| {
+                CATALOG.get(id).is_some_and(|def| {
+                    def.type_ == CardType::Unit && matches!(def.cost, CardCost::Fixed(cost) if cost >= 3)
+                })
+            })
+            .take(DECK_SIZE as usize - 1)
+            .collect();
+        let deck = |first: &str| -> Vec<String> {
+            std::iter::once(first.to_string())
+                .chain(units.iter().cloned())
+                .collect()
+        };
+        let decks = (deck(BOOK), deck(PALANTIR));
+        let found = (0..300).find_map(|n| {
+            let seed = format!("summary-palantir-{n}");
+            game(&seed, &decks).map(|(log, _)| (seed, log))
+        });
+        let Some((seed, log)) = found else {
+            panic!("a seed below 300 deals the Book and Palantir in time");
+        };
+
+        let Some(summary) = summarize_game(&FoldArgs {
+            seed,
+            decks,
+            log,
+            ..FoldArgs::default()
+        }) else {
+            panic!("a finished game has a summary");
+        };
+        // p1's play was countered, so it is none (R448); p2 cast it, which is no play either.
+        assert!(summary.seats.p1.played.is_empty());
+        assert_eq!(summary.seats.p2.played, [COIN_DEF_ID, PALANTIR]);
     }
 }

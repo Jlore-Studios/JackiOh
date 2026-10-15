@@ -68,7 +68,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const CHARGER: &str = "classic-069";
-    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on another permanent.
+    const CRAWLER: &str = "classic-053"; // (1) Unit: Cry: place 1 Plague Counter on a permanent (a prompt).
     const MUTATE: &str = "classic-078"; // (1) Field Spell: Activate ♾️: remove a Plague Counter from a permanent …
     const VANILLA: &str = "core-008"; // (1) Unit 4/4.
     const FLOOD: &str = "core-017"; // (4) Spell: Bounce all Units.
@@ -163,8 +163,9 @@ mod tests {
             let mut s = scenario(json!({ "p1": { "hand": [CRAWLER, FILLER], "field": [CHARGER] }, "p2": { "hand": [FILLER] } }));
             assert_eq!(kinds(&s, CHARGER), vec!["Charge"]);
 
-            let targets = at(s.card(CHARGER));
-            s.play(CRAWLER, json!({ "targets": targets }));
+            let charger = s.card(CHARGER).id.clone();
+            s.play(CRAWLER, json!({}));
+            s.answer(json!(charger));
 
             s.expect_stats(CHARGER, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, CHARGER), vec!["Charge", "First Strike"]);
@@ -174,22 +175,24 @@ mod tests {
         #[test]
         fn both_follow_the_tokens_as_they_go_c_n78_mutate_spells_removals_take_the_bonus_then_first_strike() {
             let mut s = scenario(json!({
-                "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [MUTATE] },
+                // The Radiant Mutate Spell: Activate ♾️ since patch v0.3.10, so it removes twice in a turn.
+                "p1": { "hand": [FILLER], "field": [{ "def": CHARGER, "counters": { "plague": 2 } }], "backrow": [{ "def": MUTATE, "radiant": true }] },
                 "p2": { "hand": [FILLER], "health": 30 },
             }));
             let charger = s.card(CHARGER).clone();
             s.expect_stats(&charger, json!({ "attack": 8 }));
 
-            // Each removal comes before the forced attack it buys, which here can only be at the hero.
+            // Each removal comes before the two forced attacks it buys (the Radiant face's), which here
+            // can only be at the hero.
             s.activate(MUTATE, json!({ "targets": at(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 6 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge", "First Strike"]);
-            s.expect_health(P2, 24);
+            s.expect_health(P2, 18);
 
             s.activate(MUTATE, json!({ "targets": at(&charger) }));
             s.expect_stats(&charger, json!({ "attack": 4 }));
             assert_eq!(kinds(&s, &charger.id), vec!["Charge"]);
-            s.expect_health(P2, 20);
+            s.expect_health(P2, 10);
         }
 
         /// R78 they are gone when it leaves: bounced to hand and played again, it is a plain 4/2

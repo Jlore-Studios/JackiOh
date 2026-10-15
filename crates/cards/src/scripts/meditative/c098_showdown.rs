@@ -1,11 +1,13 @@
-//! M #98 Showdown (SPEC §8.8 row 98): (2) Spell, Rare — the designer's first #28.
+//! M #98 Showdown (SPEC §8.8 row 98): (1) Spell, Rare — the designer's first #28.
 //!
-//! Base:    "Choose a lane. Lock every other lane until the start of your next turn."
+//! Base:    "Choose an empty lane. Lock every other lane until the start of your next turn."
 //! Radiant: the same, plus " This turn, after you put a card into that lane, cast Book of Buff on
 //!           it."
 //! Engine:
 //! - **The lane** is a play-time choice of five modes (`lane-1` … `lane-5`, R81), random under a
-//!   random cast.
+//!   random cast. Only an empty lane is offered, all four of its zones empty (`mode_allowed`,
+//!   `lane_is_empty`, R831008): with none the card is not offered and its play is refused, and a
+//!   cast picks among the empty lanes, resolving into nothing when there is none.
 //! - **The Cry** Locks every zone of the four other lanes, both sides and both rows, that is not
 //!   already Locked (Lock, §6.3; R688: plays refused, summons still landing), then arms a delayed
 //!   effect at the start of the caster's next turn (R62's delayed stage) that unlocks exactly those
@@ -38,6 +40,12 @@ const BOOK_STEP: &str = "book";
 
 fn lane_of(option: &str) -> Option<i32> {
     option.strip_prefix(LANE_PREFIX)?.parse().ok()
+}
+
+/// R831008: a lane option may be chosen only while that lane is empty; an option that names no lane
+/// is not this card's to judge (a fusion asks every ingredient's check).
+fn empty_lane_only(state: &GameState, _player: PlayerId, option: &str) -> bool {
+    lane_of(option).is_none_or(|lane| lane_is_empty(state, lane))
 }
 
 fn zone_value(player: PlayerId, row: Row, lane: i32) -> Value {
@@ -106,8 +114,12 @@ fn showdown(radiant: bool) -> Script {
             kind: PromptKind::Mode,
             options: (1..=5).map(|lane| format!("{LANE_PREFIX}{lane}")).collect(),
         }],
+        mode_allowed: Some(mode_allowed_hook(empty_lane_only)),
         cry: Some(hook(move |ctx| {
-            let lane = chosen_options(ctx).iter().find_map(|option| lane_of(option)).unwrap_or(1);
+            // R831008: a cast made with no empty lane chose none, and does nothing.
+            let Some(lane) = chosen_options(ctx).iter().find_map(|option| lane_of(option)) else {
+                return vec![];
+            };
             let mut effects: Vec<Effect> = Vec::new();
             let mut zones: Vec<Value> = Vec::new();
             for player in [PlayerId::P1, PlayerId::P2] {
@@ -199,6 +211,20 @@ mod tests {
 
     fn locked(s: &Scenario, player: PlayerId, row: Row, lane: i32) -> bool {
         is_locked(s.state(), ZoneSlot { player, row, lane })
+    }
+
+    /// The lanes `legalActions` offers p1's Showdown for, in order.
+    fn offered_lanes(s: &Scenario) -> Vec<String> {
+        let showdown = s.card(SHOWDOWN).id.clone();
+        legal_actions(s.state(), P1)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Play { instance_id, modes, .. } if instance_id == showdown => {
+                    modes.and_then(|modes| modes.first().cloned())
+                }
+                _ => None,
+            })
+            .collect()
     }
 
     #[test]
@@ -354,5 +380,123 @@ mod tests {
         s.play(FIENDER, json!({ "zone": 2 }));
         assert_eq!(s.unit(P1, 2).expect("the pile's top").def_id, FIENDER);
         assert_eq!(s.pile(P1, "graveyard").into_iter().filter(|card| card.def_id == BOOK).count(), 1);
+    }
+
+    mod r831008_only_an_empty_lane {
+        use super::*;
+
+        const PALANTIR: &str = "classic-004"; // C #4: steals a (1) Spell and casts it at random.
+        const TRAP: &str = "core-096"; // My Pawn, a Trap, set face down.
+
+        /// p1 (Showdown on the Radiant face on `radiant`) faces p2's Vanillas in lanes 2 and 3 and a
+        /// face-down Trap in p2's backrow lane 5, so lanes 1 and 4 are the empty ones.
+        fn crowded(radiant: bool) -> Scenario {
+            crate::register_all();
+            scenario(json!({
+                "seed": "showdown-empty",
+                "p1": {
+                    "mana": 10,
+                    "hand": [{ "def": SHOWDOWN, "radiant": radiant }, FILLER],
+                    "library": library(),
+                },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 }],
+                    "backrow": [{ "def": TRAP, "lane": 5 }],
+                    "library": library(),
+                },
+            }))
+        }
+
+        #[test]
+        fn r831008_legal_actions_offer_only_the_lanes_with_all_four_zones_empty() {
+            for radiant in [false, true] {
+                let s = crowded(radiant);
+                assert_eq!(offered_lanes(&s), vec!["lane-1", "lane-4"], "radiant {radiant}");
+            }
+        }
+
+        #[test]
+        fn r831008_a_taken_lane_is_refused_an_enemy_unit_or_a_face_down_card_alike() {
+            for radiant in [false, true] {
+                let mut s = crowded(radiant);
+                for lane in ["lane-2", "lane-3", "lane-5"] {
+                    s.expect_refused(|s| s.play(SHOWDOWN, json!({ "modes": [lane] })));
+                }
+                s.play(SHOWDOWN, json!({ "modes": ["lane-4"] }));
+                assert!(!locked(&s, P1, Row::Units, 4), "the chosen lane stays open");
+                assert!(locked(&s, P2, Row::Units, 2), "a taken lane is Locked");
+            }
+        }
+
+        #[test]
+        fn r831008_with_no_empty_lane_showdown_cannot_be_played() {
+            crate::register_all();
+            for radiant in [false, true] {
+                let mut s = scenario(json!({
+                    "seed": "showdown-full",
+                    "p1": {
+                        "mana": 10,
+                        "hand": [{ "def": SHOWDOWN, "radiant": radiant }, FILLER],
+                        "field": [{ "def": VANILLA, "lane": 1 }, { "def": VANILLA, "lane": 3 }],
+                        "library": library(),
+                    },
+                    "p2": {
+                        "hand": [FILLER],
+                        "field": [{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 4 }],
+                        "backrow": [{ "def": TRAP, "lane": 5 }],
+                        "library": library(),
+                    },
+                }));
+                assert!(offered_lanes(&s).is_empty(), "radiant {radiant}: no lane is offered");
+                for lane in 1..=5 {
+                    s.expect_refused(|s| s.play(SHOWDOWN, json!({ "modes": [format!("lane-{lane}")] })));
+                }
+            }
+        }
+
+        #[test]
+        fn r831008_a_random_cast_picks_only_an_empty_lane() {
+            crate::register_all();
+            // The Radiant Palantir (which stays on the field: it Tributes itself only at its third
+            // steal) sits in p1's backrow lane 1 and p2's Vanillas hold lanes 2, 3 and 5: lane 4 is
+            // the only empty one, so whatever the seed, the cast Palantir makes picks it.
+            for seed in ["showdown-cast-a", "showdown-cast-b", "showdown-cast-c", "showdown-cast-d"] {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "active": "p2",
+                    "p1": {
+                        "hand": [FILLER],
+                        "backrow": [{ "def": PALANTIR, "radiant": true, "faceUp": true, "lane": 1 }],
+                        "library": library(),
+                    },
+                    "p2": {
+                        "mana": 10,
+                        "hand": [{ "def": SHOWDOWN }, FILLER],
+                        "field": [
+                            { "def": VANILLA, "lane": 2 },
+                            { "def": VANILLA, "lane": 3 },
+                            { "def": VANILLA, "lane": 5 },
+                        ],
+                        "library": library(),
+                    },
+                }));
+                s.play(SHOWDOWN, json!({ "modes": ["lane-4"] }));
+                for player in [P1, P2] {
+                    for row in [Row::Units, Row::Backrow] {
+                        for lane in 1..=5 {
+                            assert_eq!(locked(&s, player, row, lane), lane != 4, "{seed}: lane {lane} {row:?} of {player:?}");
+                        }
+                    }
+                }
+            }
+        }
+
+        #[test]
+        fn r831008_lane_is_empty_reads_both_sides_and_both_rows() {
+            let s = crowded(false);
+            let empty: Vec<i32> = (1..=5).filter(|lane| lane_is_empty(s.state(), *lane)).collect();
+            assert_eq!(empty, vec![1, 4]);
+        }
     }
 }

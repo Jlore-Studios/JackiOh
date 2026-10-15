@@ -1,4 +1,4 @@
-//! M #80 Aluneth (SPEC §8.8 row 80). (3) Field Spell, tags Quickdraw, Legendary.
+//! M #80 Aluneth (SPEC §8.8 row 80). (2) Field Spell, tags Quickdraw, Legendary.
 //!
 //! Base:    "Indestructible, Untributable, Immutable\nEnd of turn: Draw 3."
 //! Radiant: "Indestructible, Immutable\nActivate: Exile this.\nEnd of turn: Draw 3."

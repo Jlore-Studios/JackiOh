@@ -1,4 +1,4 @@
-//! M #38 H1B Printer (SPEC §8.8 row 38): (2) Field Spell, CN, KY, Rare.
+//! M #38 H1B Printer (SPEC §8.8 row 38): (3) Field Spell, CN, KY, Rare.
 //!
 //! Base:    "Start of turn: Add a random Radiant KY or CN card to your hand."
 //! Radiant: "Start of turn: Add a random Radiant KY or CN card to your hand. It costs (0)."

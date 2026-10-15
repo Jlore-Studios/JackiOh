@@ -47,7 +47,7 @@ fn r9_draws_the_mulligan_replacements_before_shuffling_the_returned_cards_back_i
 }
 
 #[test]
-fn r14_rotates_two_independent_rings_bounces_a_locked_destination_and_carries_damage_and_buffs() {
+fn r14_rotates_two_independent_rings_into_a_locked_destination_and_carries_damage_and_buffs() {
     assert_eq!(json_of(config::ROTATION_RING), json!("two-rings"));
 }
 
