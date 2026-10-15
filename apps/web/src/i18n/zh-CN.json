@@ -2829,6 +2829,7 @@
   "To the end": "跳到结尾",
   "Step": "步骤",
   "Step {step} of {steps} · Turn {turn}": "第 {step} 步，共 {steps} 步 · 第 {turn} 回合",
+  "Step {step} of {steps} · Round {round}": "第 {step} 步，共 {steps} 步 · 第 {round} 轮",
   "1 turn": "1 回合",
   "{turns} turns": "{turns} 回合",
   "Replays": "回放",

@@ -8,6 +8,9 @@
 // The catalog comes from `GET /api/catalog`, as on the match screen, so cards wear their names; the
 // provider is always rendered, `null` included, so its arrival never remounts the board.
 //
+// A finished game's result panel offers "Watch the replay" (#965, §13.9): the route then swaps the
+// board for `DuosReplay.tsx`, which reads the server's replay once, and "back" returns to the result.
+//
 // The route reads the bearer from the tab's session itself (S8 gives it only the match id); the
 // gate in main.tsx has already let a signed-in, active account through, and keys the route by the
 // provider session, so a new session opens a new socket.
@@ -27,6 +30,7 @@ import { useCatalogLookup } from "../together/catalog.ts";
 import { DUOS_CLOCK_TICK_MS } from "./config.ts";
 import { DuosChromeContext, type DuosChrome } from "./context.ts";
 import { DuosBoard } from "./DuosBoard.tsx";
+import DuosReplay from "./DuosReplay.tsx";
 import { duelOf } from "./seats.ts";
 import { useDuosMatch, type DuosClockReading, type DuosConnection } from "./socket.ts";
 import { duosTestid } from "./testids.ts";
@@ -92,6 +96,8 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
   const match = useDuosMatch({ matchId });
   // `GET /api/catalog`, once; with none the board shows def ids, never a guessed name.
   const lookup = useCatalogLookup();
+  // #965: the result panel's replay is open. Held above the early returns, which a hook may not follow.
+  const [watching, setWatching] = useState(false);
 
   // BUILD M5-T3's `window.__jackioh` outside production: the own duel's view-derived state, which is
   // what the shared Cypress commands read (`cy.keepMulligans` waits on it), and a dispatch of a duel
@@ -161,6 +167,9 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
       onLeave: () => {
         navigate(paths.together);
       },
+      onWatchReplay: () => {
+        setWatching(true);
+      },
     }),
     // `locale`: the words are drawn in the reader's language, and follow a switch (#711).
     [match.connection, match.clock, match.teammate, matchId, locale],
@@ -189,6 +198,19 @@ export function DuosRoute({ matchId }: { matchId: string }): ReactElement {
           </span>
         </p>
       </Loading>
+    );
+  }
+
+  if (watching && view.result !== null) {
+    return (
+      <CatalogContext.Provider value={lookup}>
+        <DuosReplay
+          matchId={matchId}
+          onLeave={() => {
+            setWatching(false);
+          }}
+        />
+      </CatalogContext.Provider>
     );
   }
 

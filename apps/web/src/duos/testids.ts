@@ -41,11 +41,14 @@ export const duosTestid = {
   result: "duos-result",
   resultBack: "duos-result-back",
   resultBoard: "duos-result-board",
+  resultReplay: "duos-result-replay",
   // The route's own: before the first view, and its clock and connection line.
   connecting: "duos-connecting",
   refused: "duos-refused",
   connection: "duos-connection",
   clock: "duos-clock",
+  // The co-op replay's own (#965): its root; its controls carry the replay player's ids (replayTestid).
+  replay: "duos-replay",
   // `/dev/duos` (B65): the seat switcher.
   devSeat: (seat: DuosSeat): string => `duos-dev-seat-${seat}`,
 } as const;
