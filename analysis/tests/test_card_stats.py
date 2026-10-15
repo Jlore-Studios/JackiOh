@@ -425,10 +425,17 @@ def test_load_generations_names_the_file_and_line_it_cannot_read(tmp_path):
         load_generations(tmp_path)
 
 
+def _wins_of(wins, games):
+    """A pass as generation.json writes it, "wins/games", or None for games not played: since
+    generation 9 a candidate plays no games against random (R732001)."""
+    return None if pd.isna(wins) else f"{wins}/{games}"
+
+
 def test_load_generations_reads_this_repository_and_finds_the_generation_main_holds():
     main = json.loads((REPO_ROOT / "crates" / "ai" / "generation.json").read_text(encoding="utf-8"))
     generations = load_generations(REPO_ROOT)
     row = generations[generations["generation"] == main["generation"]].iloc[0]
     assert row["lane"] == main["lane"]
-    assert f"{row['vs_random_wins']}/{row['vs_random_games']}" == main["vsRandom"]
+    assert _wins_of(row["vs_random_wins"], row["vs_random_games"]) == main["vsRandom"]
+    assert _wins_of(row["vs_parent_wins"], row["vs_parent_games"]) == main.get("vsParent")
     assert generations["generation"].is_monotonic_increasing and generations["generation"].is_unique

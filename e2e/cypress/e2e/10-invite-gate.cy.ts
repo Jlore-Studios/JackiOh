@@ -178,7 +178,15 @@ describe("10 invite gate — a pending account", () => {
     }
 
     visitAs(pendingToken(), routes.deckbuilder());
-    cy.location("pathname").should("eq", routes.invite());
+    // The redirect is the gate's own read of /api/auth/me (net/gate.ts), which the requests above
+    // just answered as pending. When it never comes, say which panel held the page: still checking
+    // (the read never answered), the gate's error (it failed), or no app at all.
+    cy.window().should((win) => {
+      const shown = win.document.body.innerText.replace(/\s+/gu, " ").slice(0, 400);
+      expect(win.location.pathname, `the gate sends a pending account to /invite; the page shows: ${shown}`).to.eq(
+        routes.invite(),
+      );
+    });
 
     visitAs(pendingToken(), routes.invite());
     cy.location("pathname").should("eq", routes.invite());
