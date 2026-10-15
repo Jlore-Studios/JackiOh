@@ -30,7 +30,7 @@
 //! - `beforeEach(harness.reset)` is the first line of every generated test (`both_stores!`).
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use indexmap::{IndexMap, IndexSet};
@@ -181,11 +181,11 @@ enum Ends {
     Memory {
         /// The fake's tables, which `reset` empties (`store.reset()`).
         data: Arc<tokio::sync::Mutex<FakeData>>,
-        /// The two pieces of database state `app.redeem_invite_code` reads and the port cannot:
-        /// the managed-auth verification flag and the redemption switch. Held here so the
-        /// contract drives both stores through one pair of harness methods.
+        /// The piece of database state `app.redeem_invite_code` reads and the port cannot: the
+        /// managed-auth verification flag. Held here so the contract drives both stores through
+        /// one harness method. The redemption switch needs no hook here: the fake flips it
+        /// through the store method under test, exactly as Postgres does.
         unverified: Arc<std::sync::Mutex<IndexSet<String>>>,
-        redemption_enabled: Arc<AtomicBool>,
         next_user: AtomicU32,
     },
     Postgres {
@@ -201,7 +201,6 @@ impl StoreHarness {
 
     pub fn memory() -> StoreHarness {
         let unverified = Arc::new(std::sync::Mutex::new(IndexSet::<String>::new()));
-        let redemption_enabled = Arc::new(AtomicBool::new(true));
         let redemption = RedemptionSettings {
             email_verified: {
                 let unverified = Arc::clone(&unverified);
@@ -211,10 +210,6 @@ impl StoreHarness {
                         .expect("the unverified profiles")
                         .contains(profile_id)
                 })
-            },
-            enabled: {
-                let enabled = Arc::clone(&redemption_enabled);
-                Arc::new(move || enabled.load(Ordering::SeqCst))
             },
             ..fake::default_redemption_settings()
         };
@@ -236,7 +231,6 @@ impl StoreHarness {
             ends: Ends::Memory {
                 data,
                 unverified,
-                redemption_enabled,
                 next_user: AtomicU32::new(1),
             },
         }
@@ -275,13 +269,14 @@ impl StoreHarness {
             Ends::Memory {
                 data,
                 unverified,
-                redemption_enabled,
                 next_user,
             } => {
                 data.lock().await.reset();
                 unverified.lock().expect("the unverified profiles").clear();
-                redemption_enabled.store(true, Ordering::SeqCst);
                 next_user.store(1, Ordering::SeqCst);
+                // `app.settings` is not truncated in Postgres either, so the switch is put back
+                // through the store method under test, exactly as the Postgres arm does by hand.
+                q!(self, t => t.redemption_set_enabled(true));
             }
             Ends::Postgres { admin } => {
                 sqlx::raw_sql(TRUNCATE)
@@ -359,12 +354,13 @@ impl StoreHarness {
     }
 
     /// §9.4's database-side redemption switch — `app.settings.redemption_enabled` in Postgres, the
-    /// `RedemptionSettings.enabled` hook in memory. `reset()` puts it back to true.
+    /// `RedemptionSettings.enabled` hook in memory, both flipped through the store method under
+    /// test. `reset()` puts it back to true.
     pub async fn set_redemption_enabled(&self, enabled: bool) {
         match &self.ends {
-            Ends::Memory {
-                redemption_enabled, ..
-            } => redemption_enabled.store(enabled, Ordering::SeqCst),
+            Ends::Memory { .. } => {
+                q!(self, t => t.redemption_set_enabled(enabled));
+            }
             Ends::Postgres { admin } => {
                 sqlx::query(REDEMPTION_ENABLED_SQL)
                     .bind(enabled)
@@ -1169,6 +1165,43 @@ mod codes {
         assert!(!q!(harness, t => t.codes_claim(&expired.id, harness.now())));
     }
 
+    /// The operator's lever onto step 5 (`Tx::codes_revoke_by_hash`, issue #887): revoking a live
+    /// code marks it revoked, and it then redeems exactly as an exhausted one — `invalid_code`
+    /// with one attempt and `uses` unchanged, the account still pending. Revoking again, or an
+    /// unknown hash, answers false and changes nothing.
+    async fn revokes_a_code_by_hash_idempotently(harness: &StoreHarness) {
+        let row = code(harness, json!({}));
+        q!(harness, t => t.codes_insert(&row));
+        assert!(q!(harness, t => t.codes_revoke_by_hash(&row.code_hash)));
+        assert!(must(q!(harness, t => t.codes_find_by_hash(&row.code_hash)), "the code").revoked);
+
+        let profile = pending_profile(harness, None).await;
+        let input: RedeemInviteCodeInput = from(json!({
+            "profileId": profile.id,
+            "codeHash": row.code_hash,
+            "ipHash": "ip-revoked",
+        }));
+        assert_eq!(lit(&q!(harness, t => t.redeem(&input))), "invalid_code");
+        assert_eq!(
+            must(q!(harness, t => t.codes_find_by_hash(&row.code_hash)), "the code").uses,
+            0
+        );
+        assert_eq!(
+            q!(harness, t => t.codes_count_attempts_by_profile(&profile.id, harness.now() - 60_000)),
+            1
+        );
+        assert_eq!(
+            j(&must(
+                q!(harness, t => t.profiles_get_by_id(&profile.id)),
+                "the profile"
+            ))["status"],
+            "pending"
+        );
+
+        assert!(!q!(harness, t => t.codes_revoke_by_hash(&row.code_hash)));
+        assert!(!q!(harness, t => t.codes_revoke_by_hash("no-such-hash")));
+    }
+
     /// §9.4 steps 2-4 and the circuit breaker read exactly these three counters.
     async fn counts_attempts_by_profile_by_ip_hash_and_by_failure(harness: &StoreHarness) {
         let profile = pending_profile(harness, None).await;
@@ -1296,6 +1329,7 @@ mod codes {
         round_trips_a_code_by_its_hash,
         claims_a_single_use_code_exactly_once,
         refuses_a_revoked_or_expired_code,
+        revokes_a_code_by_hash_idempotently,
         counts_attempts_by_profile_by_ip_hash_and_by_failure,
         lists_one_ip_hash_behind_six_accounts_and_not_six_hashes_behind_one_account_each,
     );
@@ -1536,6 +1570,40 @@ mod redeem {
         );
     }
 
+    /// Banning is the operator's lever onto step 1 (issue #887): a banned profile redeems
+    /// `not_pending` with no attempt logged, and unbanning restores it to active.
+    async fn bans_and_unbans_a_profile(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        q!(harness, t => t.profiles_set_status(&profile.id, status("banned")));
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code_hash().as_str()), "ip").await,
+            "not_pending"
+        );
+        assert_eq!(attempts(harness, &profile.id).await, 0);
+
+        q!(harness, t => t.profiles_set_status(&profile.id, status("active")));
+        assert_eq!(status_of(harness, &profile.id).await, "active");
+    }
+
+    /// The operator's lever onto the database-side switch itself (`Tx::redemption_set_enabled`,
+    /// issue #887): flipping it off answers `circuit_open` while it is off and restoring it lets
+    /// the same code redeem, with the previous value round-tripping false, false, true.
+    async fn answers_circuit_open_from_the_store_method_and_restores(harness: &StoreHarness) {
+        let profile = pending_profile(harness, None).await;
+        let code = mint(harness, json!({})).await;
+        assert!(q!(harness, t => t.redemption_set_enabled(false)));
+        assert!(!q!(harness, t => t.redemption_set_enabled(false)));
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "circuit_open"
+        );
+        assert!(!q!(harness, t => t.redemption_set_enabled(true)));
+        assert_eq!(
+            redeem_with(harness, &profile.id, Some(code.code_hash.as_str()), "ip").await,
+            "ok"
+        );
+    }
+
     /// §9.4 step 6 again, from the other side: "Two concurrent callers cannot both win the last
     /// use" (ports.ts). One code, two accounts, one activation.
     async fn lets_a_single_use_code_activate_exactly_one_account(harness: &StoreHarness) {
@@ -1582,6 +1650,8 @@ mod redeem {
         rate_limits_a_profile_past_its_hourly_attempts_and_logs_nothing_more,
         rate_limits_an_ip_hash_past_its_hourly_attempts,
         refuses_every_redemption_while_the_database_s_redemption_switch_is_off,
+        bans_and_unbans_a_profile,
+        answers_circuit_open_from_the_store_method_and_restores,
         lets_a_single_use_code_activate_exactly_one_account,
         spends_a_multi_use_code_once_per_account_until_it_is_exhausted,
     );

@@ -94,6 +94,20 @@ target/release/jackioh-server                   # 4. serve (the default subcomma
   days the table is kept), with its account and attempt counts. It is read-only and advisory: nothing
   is banned or disabled, since a campus or a carrier's NAT puts many honest players behind one hash,
   and a hash is printed shortened to `INVITE_CLUSTER_HASH_PREFIX_LEN` characters.
+- **Moderation.** `moderate ban <profile-id>` / `moderate unban <profile-id>` ban an account and
+  restore it through `profiles_set_status`: a banned account's next Active request answers
+  `account_banned` and its `/ws/match` socket is refused, while the running actor is untouched
+  and the reaper owns the in-flight game (the account-deletion posture, so a ban lands at once
+  even mid-match). `moderate revoke-code <CODE>` revokes an invite code by its hash, which then
+  redeems exactly as an exhausted one. `moderate redemption off` / `moderate redemption on`
+  pause and resume redemption through §9.4's database-side circuit breaker, touching no account
+  or session. Each lever is idempotent and prints what changed (`banned <id>`, `already banned
+  <id>`, `revoked <CODE>`, `redemption paused`, …); an unknown profile or code is refused
+  without writing anything, and a pending account is never unbanned — that would skip the
+  invite gate and R111's launch grant, so ban pending accounts only to stop abuse. Like
+  `mint-code` it reads the whole environment, because a `CODE_PEPPER` that differs from the
+  running server's revokes a hash redemption will never look up. Stdout is the audit trail:
+  the CLI has no log pipeline, so the line it prints is the record of the lever.
 - **Seasons.** `season-start --dry-run` walks R609's season open and soft reset and rolls it back,
   printing the report; without the flag it commits. Re-running is safe.
 
@@ -120,7 +134,7 @@ placeholders (`app::load_server_env`).
 | `RENDER_GIT_COMMIT` | no | set by Render; `GET /api/catalog` reports it as `x-deployed-commit` |
 | `LADDER_BOTS` | no | `on` seats a ladder bot against a ranked ticket of any mode left alone past its fallback time (a Conquest ticket's in a series, R641000), and keeps the bot pool (R1453, R1454, R1452); off unless `on` (unset or `off`), and any other value refuses the boot. The bots decide in this process, so turning it on wants a host with room for the AI's search, such as a paid Render instance |
 
-`mint-code` and `seed-accounts` read the same environment (`seed-accounts` also
+`mint-code`, `moderate` and `seed-accounts` read the same environment (`seed-accounts` also
 `SEED_ACCOUNTS_PROJECT` and `SEED_ACCOUNTS_PASSWORD`); `stats-cards`, `stats-import`, `stats-export`,
 `balance-watch` (without `--file`), `timing-backfill` and `timing-fit` read `DATABASE_URL`. The client's half is `VITE_*` (`apps/web/.env.example`); `env.rs`'s
 `PUBLIC_ENV_VARS` and `SERVER_ONLY_ENV_VARS` are disjoint by design.

@@ -1110,6 +1110,26 @@ pub fn codes_claim(f: &mut FakeTx<'_>, code_id: &str, now: i64) -> Result<bool, 
     Ok(true)
 }
 
+/// The operator's lever onto §9.4 step 5: marks the code carrying `code_hash` revoked, so the
+/// next redemption rejects it exactly as an exhausted one. True when a live row was newly
+/// revoked; false for an unknown hash or a row already revoked.
+pub fn codes_revoke_by_hash(f: &mut FakeTx<'_>, code_hash: &str) -> Result<bool, StoreError> {
+    call(f, "codes.revokeByHash")?;
+    let Some(row) = f
+        .tables()
+        .codes
+        .iter_mut()
+        .find(|code| code.code_hash == code_hash)
+    else {
+        return Ok(false);
+    };
+    if row.revoked {
+        return Ok(false);
+    }
+    row.revoked = true;
+    Ok(true)
+}
+
 /// §9.4 step 4: the attempt is logged either way. Written by `redeem`.
 pub fn codes_log_attempt(f: &mut FakeTx<'_>, attempt: &CodeAttempt) -> Result<(), StoreError> {
     call(f, "codes.logAttempt")?;
@@ -1181,6 +1201,16 @@ pub fn codes_invite_clusters(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Invit
             attempts,
         })
         .collect())
+}
+
+/// The operator's lever onto §9.4's database-side kill switch: flips the `enabled` hook the
+/// SQL function's `app.settings.redemption_enabled` read stands in for, and answers the previous
+/// value, so the caller prints what changed.
+pub fn redemption_set_enabled(f: &mut FakeTx<'_>, enabled: bool) -> Result<bool, StoreError> {
+    call(f, "redemption.setEnabled")?;
+    let previous = (f.guard.redemption.enabled)();
+    f.guard.redemption.enabled = Arc::new(move || enabled);
+    Ok(previous)
 }
 
 /// §9.4: the server-side circuit breaker's input — system-wide failures in a window (R106).
