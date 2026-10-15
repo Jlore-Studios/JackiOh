@@ -481,6 +481,35 @@ pub const AI_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 /// The greedy baseline's mulligan, frozen with GREEDY_EVAL for the same reason.
 pub const GREEDY_MULLIGAN: AiMulligan = AiMulligan { keep_max_cost: 3 };
 
+/// `AI_MULLIGAN_CURVE`'s shape (#993).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiMulliganCurve {
+    /// The switch: false makes the AI's mulligan `mulligan_keep_shaped` exactly, as before #993.
+    pub on: bool,
+    /// A card costing at most this is a first-turn play. The mana bonus (R181) does not raise it: the
+    /// cap is on the cheapest bodies, so a Hard seat's two-drops are not capped.
+    pub first_turn_max_cost: i32,
+    /// The most first-turn plays the mulligan keeps; the rest go back for a later turn's play.
+    pub max_first_turn: usize,
+    /// An early play costs at most this turn's crystals: the turn's number, plus the seat's mana
+    /// bonus (R181) and its copies of The Coin (`OPENING_COINS`, R244).
+    pub early_turn: i32,
+    /// A hand without an early play keeps at most this many of its cheap cards, the cheapest, so the
+    /// redraw digs for one.
+    pub keep_without_early: usize,
+}
+
+/// #993: the curve the AI's mulligan keeps its cheap cards to (`mulligan_keep_curved`). The greedy
+/// baseline's mulligan never reads it.
+pub const AI_MULLIGAN_CURVE: AiMulliganCurve = AiMulliganCurve {
+    on: true,
+    first_turn_max_cost: 1,
+    max_first_turn: 2,
+    early_turn: 2,
+    keep_without_early: 1,
+};
+
 /// `AI_DETERMINIZE`'s shape.
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

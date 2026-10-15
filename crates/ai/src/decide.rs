@@ -32,11 +32,11 @@ use jackioh_engine::{
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_EVAL, AI_MULLIGAN, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
+use crate::config::{AI_EVAL, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::lethal::find_lethal;
 use crate::match_::replacements_for;
-use crate::mulligan::mulligan_keep_shaped;
+use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, beam_search, score_line};
@@ -271,7 +271,7 @@ fn plan(
 
     // 3. The mulligan: its own, at once, whether or not the other seat has answered (R265).
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
-        let keep = mulligan_keep_shaped(&public, seat, AI_MULLIGAN.keep_max_cost);
+        let keep = mulligan_keep_curved(&public, seat, AI_MULLIGAN.keep_max_cost, &AI_MULLIGAN_CURVE);
         return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
