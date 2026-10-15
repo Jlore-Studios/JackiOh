@@ -153,6 +153,9 @@ last turn" (the last step, its turn's GIF already being made). A practice result
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a
 match result loads its first page to learn the replay's length (`OpenedReplay`, `openOnlineMatchReplay`).
 The GIF code still loads on demand, never in the main bundle.
+A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
+`GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
+with the player's controls, a round standing for a turn; it is never in `/replays`.
 
 ```
 src/replay/
@@ -253,6 +256,8 @@ duos/CoopPanel.tsx       create a co-op room (difficulty, a deck or a random one
 duos/DuosBoard.tsx       Game.tsx for the own duel, the life strip (both teams' own HP and pools, a
                          spent seat's bar giving way to its pool), the pass control, the portal, the
                          teammate strip and the ping wheel
+duos/DuosReplay.tsx      a finished co-op game's replay (#965): the server's steps read once, stepped on
+                         DuosBoard's `replay` mode (nothing live) with the replay player's controls
 ```
 
 The landing page offers Play together beside Play online. The replays list and the replay player offer
