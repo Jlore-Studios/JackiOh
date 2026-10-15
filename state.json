@@ -6666,9 +6666,12 @@
     "951": {
       "action": "review",
       "asks": [],
+      "ci_fixes": 1,
       "ci_reruns": {
         "22b506b7ecaf0a225bf8e509c34c6423da8e9ee9": 1
       },
+      "ci_run_id": 38657108594,
+      "ci_sha": "22b506b7ecaf0a225bf8e509c34c6423da8e9ee9",
       "cleared": {
         "at": "2026-10-15T00:10:08Z",
         "by": "`muse` (medium), `claude` (strong)",
@@ -6682,14 +6685,16 @@
       "forced": false,
       "interruptions": 0,
       "issue": 861,
-      "kind": "review",
+      "kind": "revise",
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-10-14T23:56:42Z",
+      "queued_at": "2026-10-15T00:10:51Z",
+      "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38657981278",
       "self_check_findings": [],
+      "source": "ci",
       "started_at": "2026-10-15T00:06:06Z",
       "stop_requested": false,
       "taken_asks": [],
