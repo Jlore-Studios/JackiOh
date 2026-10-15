@@ -584,3 +584,131 @@ mod me_market_the_ai_answers_a_night_market {
         assert!(offered, "one of the market's own deals: {picked:?} of {keys:?}");
     }
 }
+
+/// #891: a prompt the other seat holds inside a simulation (`simulate`'s auto-answers, the opponent's
+/// reply) gets its answerer's best of its first AI_SEARCH.max_auto_answer_options answers, scored
+/// from the answerer's own seat, not the first one legal_actions lists. The greedy baseline keeps
+/// the first (`simulate_first_answers`), so the gates' yardstick stays put.
+mod auto_answers_the_answerers_best {
+    use super::*;
+
+    /// `state` with the AI's turn waiting for its End turn once nothing is left in it (R345), so an
+    /// answer that leaves the AI with nothing to do is scored mid-turn, not after a whole reply.
+    fn waiting(state: &GameState) -> GameState {
+        act_with_nonce(
+            state,
+            AI,
+            &ActionBody::SetAutoEndTurn { enabled: false },
+            "auto-answer-waits",
+        )
+    }
+
+    /// Pickle is the AI's only card, against a hand of three and a library of three.
+    fn pickle_turn() -> (GameState, ActionBody) {
+        install();
+        let state = waiting(
+            scenario(json!({
+                "seed": "auto-answer-pickle",
+                "p1": { "hand": [PICKLE], "library": ["core-053", "core-030", "core-037"] },
+                "p2": { "hand": ["core-005", "core-011", "core-035"], "library": ["core-053", "core-030", "core-037"] },
+            }))
+            .state(),
+        );
+        let play = legal_actions(&state, AI)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { .. }))
+            .unwrap_or_else(|| panic!("Pickle's play is not legal"));
+        (state, play)
+    }
+
+    /// The opponent's mode prompt carrying `options`, opened for the AI's card on the AI's turn.
+    fn their_mode(seed: &str, options: &[String]) -> GameState {
+        let effect = effects::choose_mode(json_as(json!({
+            "step": "their-mode",
+            "options": options,
+            "by": "enemy",
+        })));
+        let state = waiting(&asked(seed, effect, json!({}), AI));
+        assert_eq!(state.active, AI);
+        assert_eq!(
+            state.pending.as_ref().map(|pending| pending.player_id),
+            Some(HUMAN)
+        );
+        state
+    }
+
+    /// Pickle's questions list "discard" first, which costs the opponent a card in hand, as "you draw"
+    /// hands the AI one; exiling the bottom of their library costs them nothing they hold.
+    #[test]
+    fn simulate_answers_each_question_of_pickle_with_the_opponents_best_choice_not_its_first() {
+        let (state, play) = pickle_turn();
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let after = match simulate(&state, AI, &play, &counter) {
+            Some(Ok(next)) => next,
+            other => panic!("Pickle's play was refused: {other:?}"),
+        };
+        assert!(after.pending.is_none());
+        assert!(in_graveyard(&after, AI, PICKLE));
+        assert_eq!(after.players[HUMAN].hand.len(), 3);
+        assert!(after.players[HUMAN].library.is_empty());
+        assert!(after.players[AI].hand.is_empty());
+        // One node for the play, then each of the three questions tries its three answers (or as
+        // many as AI_SEARCH.max_auto_answer_options lets it).
+        let tried = (AI_SEARCH.max_auto_answer_options as usize).min(3);
+        assert_eq!(counter.used(), 1 + 3 * tried);
+        assert_eq!(counter.sim_errors(), 0);
+
+        let again = simulate(&state, AI, &play, &create_node_counter(AI_BUDGET.nodes, None));
+        assert_eq!(
+            again.map(|step| step.map(|next| hash_state(&next))),
+            Some(Ok(hash_state(&after)))
+        );
+    }
+
+    #[test]
+    fn the_greedy_baselines_simulation_still_takes_the_first_answer_to_each_question_of_pickle() {
+        let (state, play) = pickle_turn();
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let after = match simulate_first_answers(&state, AI, &play, &counter) {
+            Some(Ok(next)) => next,
+            other => panic!("Pickle's play was refused: {other:?}"),
+        };
+        // "discard" three times: the hand is gone and the library whole.
+        assert!(after.players[HUMAN].hand.is_empty());
+        assert_eq!(after.players[HUMAN].library.len(), 3);
+        assert_eq!(counter.used(), 1 + 3);
+        assert_eq!(counter.sim_errors(), 0);
+    }
+
+    /// "chooser-hurt", listed first, hits the chooser; "owner-hurt" hits the AI, whose card it is.
+    #[test]
+    fn the_opponents_reply_answers_its_prompt_with_its_best_choice_not_its_first() {
+        let options = ["chooser-hurt".to_string(), "owner-hurt".to_string()];
+        let state = their_mode("auto-answer-reply", &options);
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI))
+            .unwrap_or_else(|| panic!("the reply ran out of nodes"));
+        assert!(after.pending.is_none());
+        assert!(after.players[AI].hero.health < state.players[AI].hero.health);
+        assert_eq!(after.players[HUMAN].hero.health, state.players[HUMAN].hero.health);
+        assert_eq!(counter.used(), options.len());
+    }
+
+    /// "owner-hurt" comes after AI_SEARCH.max_auto_answer_options other answers, so it is never
+    /// tried: the opponent takes the first answer that spares it, one node per answer tried.
+    #[test]
+    fn only_the_first_max_auto_answer_options_answers_of_a_prompt_are_tried() {
+        let tried = AI_SEARCH.max_auto_answer_options as usize;
+        let mut options = vec!["chooser-hurt".to_string()];
+        options.extend((1..tried).map(|n| format!("nothing-{n}")));
+        options.push("owner-hurt".to_string());
+        let state = their_mode("auto-answer-cap", &options);
+        let counter = create_node_counter(AI_BUDGET.nodes, None);
+        let after = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI))
+            .unwrap_or_else(|| panic!("the reply ran out of nodes"));
+        assert!(after.pending.is_none());
+        assert_eq!(after.players[AI].hero.health, state.players[AI].hero.health);
+        assert_eq!(after.players[HUMAN].hero.health, state.players[HUMAN].hero.health);
+        assert_eq!(counter.used(), tried);
+    }
+}
