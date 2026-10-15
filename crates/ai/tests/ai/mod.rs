@@ -16,6 +16,7 @@ pub mod evaluate_v020;
 pub mod match_refusal;
 pub mod observe;
 pub mod observe_instance_data;
+pub mod position_model;
 pub mod prompts_v020;
 pub mod puzzles;
 pub mod ranged_flying;
