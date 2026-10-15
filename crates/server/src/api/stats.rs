@@ -1,7 +1,11 @@
 //! Public card and player statistics page API (SPEC §9.11, R654).
+//!
+//! R978000: the card figures are read off a patch's records once and kept for
+//! `CARD_STATS_CACHE_TTL_SECONDS`, one report per patch, `?source=` and `?pilot=` (`KeptReports`), and
+//! both card routes read the kept reports.
 
-use std::cmp::Ordering;
-use std::sync::Arc;
+use std::cmp::{Ordering, Reverse};
+use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
 use axum::http::{HeaderValue, StatusCode, header};
@@ -9,6 +13,7 @@ use axum::response::Response;
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
+use tokio::sync::OnceCell;
 
 use jackioh_engine::wire::stats::{
     CardStats, CardStatsFilter, CardStatsReport, GameMode, GameRecord, GameSource, PilotFilter, SourceFilter,
@@ -18,14 +23,18 @@ use jackioh_engine::{CardCost, CardDef, PLAYER_IDS, Pilot, Winner};
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
-use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, now_ms, ok_of, to_json};
+use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, to_json};
 use crate::app::App;
 use crate::config::{
-    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CURVE_TOP, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
-    PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
+    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
+    CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
+    PUBLIC_STATS_MIN_LIVE_GAMES,
 };
 use crate::db::store::{GameRecordQuery, PlayerStatsListOptions};
 use crate::env::js_number;
+
+/// Unit conversion, not configuration.
+const MS_PER_SECOND: i64 = 1000;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -52,6 +61,36 @@ pub enum PublicStatsSource {
     Provisional,
     Live,
     Dev,
+}
+
+impl PublicStatsSource {
+    /// The label the cards response shows beside the source.
+    pub fn label(self) -> &'static str {
+        match self {
+            PublicStatsSource::Provisional => "AI games + live games (provisional)",
+            PublicStatsSource::Live => "Live games",
+            PublicStatsSource::Dev => "AI development games",
+        }
+    }
+}
+
+/// `?source=` as `get_cards` reads it below R654's gate: both sources unless the query names one
+/// (`live`, or `dev`/`ai`). At or above the gate the live games count whatever it says.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum SourceParam {
+    Default,
+    Live,
+    Dev,
+}
+
+impl SourceParam {
+    fn parse(raw: Option<&str>) -> SourceParam {
+        match raw.map(|value| value.trim().to_lowercase()).as_deref() {
+            Some("live") => SourceParam::Live,
+            Some("dev") | Some("ai") => SourceParam::Dev,
+            _ => SourceParam::Default,
+        }
+    }
 }
 
 /// Which seats the public figures count (R807000): merged counts every counted seat, human and
@@ -337,6 +376,244 @@ fn public_report(
     }
 }
 
+/// A turn's or a co-played card's games and wins.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct Count {
+    games: i64,
+    wins: i64,
+}
+
+/// One card's drill-down over a patch's counted records (`get_card`).
+struct CardDrill {
+    /// Games by the turn the card was played on, in turn order.
+    by_turn: Vec<(i32, Count)>,
+    /// The cards that shared its deck, most games first (ties in the order first met), at most
+    /// `CARD_STATS_CO_PLAYED_TOP`.
+    co_played: Vec<(String, Count)>,
+}
+
+/// R978000: one patch's public figures for one `?source=` and `?pilot=`, read off its records once.
+struct PatchReport {
+    /// The patch's live games, tutorials aside: R654's gate counts them.
+    live_games: i64,
+    /// Which records the figures count, as the gate and `?source=` chose them.
+    source: PublicStatsSource,
+    report: CardStatsReport,
+    /// Each card's drill-down over the same records, by card id. Only the current patch's report
+    /// for the default source has them: it is the one `get_card` reads them from.
+    drills: IndexMap<String, CardDrill>,
+}
+
+/// What a kept report was computed from: the patch, `?source=` and `?pilot=`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct ReportKey {
+    patch: String,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+}
+
+/// A kept report, filled by the first request that asks for it; the others wait on it.
+type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
+
+/// R978000: the computed per-patch reports, each with when it was first asked for, the one kept
+/// longest ago first. One per `App`, so a deploy or a test starts with none. The lock is never held
+/// across a computation.
+#[derive(Default)]
+pub struct KeptReports {
+    entries: Mutex<IndexMap<ReportKey, (i64, KeptCell)>>,
+}
+
+impl KeptReports {
+    /// The cell for `key`: the one made less than `CARD_STATS_CACHE_TTL_SECONDS` before `now`, or a
+    /// new empty one, dropping the oldest to stay within `CARD_STATS_KEPT_REPORTS`.
+    fn cell(&self, key: ReportKey, now: i64) -> KeptCell {
+        let mut entries = lock(&self.entries);
+        entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND);
+        if let Some((_, cell)) = entries.get(&key) {
+            return Arc::clone(cell);
+        }
+        while entries.len() >= CARD_STATS_KEPT_REPORTS {
+            entries.shift_remove_index(0);
+        }
+        let cell: KeptCell = Arc::new(OnceCell::new());
+        entries.insert(key, (now, Arc::clone(&cell)));
+        cell
+    }
+}
+
+/// A card's games by the turn it was played on, and with each card that shared its deck, while
+/// `card_drills` counts.
+type DrillTallies<'a> = (IndexMap<i32, Count>, IndexMap<&'a str, Count>);
+
+/// R1451, amended by R807000: every card's drill-down over `records`, counting the seats
+/// `public_report` counts (`seat_counted`). One pass gives each card what counting it alone gave, in
+/// the same order.
+fn card_drills(records: &[GameRecord], live_pilot: PilotFilter) -> IndexMap<String, CardDrill> {
+    let mut tallies: IndexMap<&str, DrillTallies> = IndexMap::new();
+    for record in records {
+        for seat in PLAYER_IDS {
+            if !seat_counted(record.source, record.pilots[seat], live_pilot) {
+                continue;
+            }
+            let summary = &record.game.seats[seat];
+            let won = record.game.winner == Winner::from(seat);
+            let distinct: IndexSet<&str> = summary.deck.iter().map(String::as_str).collect();
+            for &card_id in &distinct {
+                let (turn_tallies, co_played_tallies) = tallies.entry(card_id).or_default();
+
+                let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
+                if let Some(played_turns) = summary
+                    .played_turns
+                    .as_ref()
+                    .filter(|turns| turns.len() == summary.played.len())
+                {
+                    for (index, played) in summary.played.iter().enumerate() {
+                        if played == card_id
+                            && let Some(turn) = played_turns.get(index).copied()
+                            && turn > 0
+                        {
+                            turns_played_in_game.insert(turn);
+                        }
+                    }
+                }
+                for turn in turns_played_in_game {
+                    let tally = turn_tallies.entry(turn).or_default();
+                    tally.games += 1;
+                    if won {
+                        tally.wins += 1;
+                    }
+                }
+
+                for &other_id in &distinct {
+                    if other_id == card_id {
+                        continue;
+                    }
+                    let tally = co_played_tallies.entry(other_id).or_default();
+                    tally.games += 1;
+                    if won {
+                        tally.wins += 1;
+                    }
+                }
+            }
+        }
+    }
+    tallies
+        .into_iter()
+        .map(|(card_id, (turn_tallies, co_played_tallies))| {
+            let mut by_turn: Vec<(i32, Count)> = turn_tallies.into_iter().collect();
+            by_turn.sort_by_key(|(turn, _)| *turn);
+            let mut co_played: Vec<(&str, Count)> = co_played_tallies.into_iter().collect();
+            // Stable, so ties keep the order they were first met in.
+            co_played.sort_by_key(|(_, tally)| Reverse(tally.games));
+            co_played.truncate(CARD_STATS_CO_PLAYED_TOP);
+            let co_played = co_played
+                .into_iter()
+                .map(|(id, tally)| (id.to_string(), tally))
+                .collect();
+            (card_id.to_string(), CardDrill { by_turn, co_played })
+        })
+        .collect()
+}
+
+/// R978000: `patch`'s figures for `source_param` and `live_pilot`, read off `patch_records` (R654's
+/// gate and `?source=` choose which records count). With `with_drills`, each card's drill-down too.
+fn patch_report(
+    patch_records: &[GameRecord],
+    patch: &str,
+    source_param: SourceParam,
+    live_pilot: PilotFilter,
+    with_drills: bool,
+) -> PatchReport {
+    let live_records: Vec<GameRecord> = patch_records
+        .iter()
+        .filter(|record| record.source == GameSource::Live && !is_tutorial(record))
+        .cloned()
+        .collect();
+    let live_games = live_records.len() as i64;
+
+    // R654 publication gate.
+    let cleared = live_games >= PUBLIC_STATS_MIN_LIVE_GAMES;
+
+    let (source, records_to_count): (PublicStatsSource, Vec<GameRecord>) = if cleared {
+        // When cleared, strictly ignore AI development games (no toggle to bring them back)
+        (PublicStatsSource::Live, live_records)
+    } else if source_param == SourceParam::Live {
+        (PublicStatsSource::Live, live_records)
+    } else if source_param == SourceParam::Dev {
+        let dev: Vec<GameRecord> = patch_records
+            .iter()
+            .filter(|record| record.source == GameSource::Dev && !is_tutorial(record))
+            .cloned()
+            .collect();
+        (PublicStatsSource::Dev, dev)
+    } else {
+        let all: Vec<GameRecord> = patch_records
+            .iter()
+            .filter(|record| !is_tutorial(record))
+            .cloned()
+            .collect();
+        (PublicStatsSource::Provisional, all)
+    };
+
+    let report = public_report(
+        &records_to_count,
+        match source {
+            PublicStatsSource::Live => SourceFilter::Live,
+            PublicStatsSource::Dev => SourceFilter::Dev,
+            PublicStatsSource::Provisional => SourceFilter::All,
+        },
+        patch,
+        live_pilot,
+    );
+    let drills = if with_drills {
+        card_drills(&records_to_count, live_pilot)
+    } else {
+        IndexMap::new()
+    };
+    PatchReport {
+        live_games,
+        source,
+        report,
+        drills,
+    }
+}
+
+/// R978000: `patch`'s report for `source` and `pilot`, as kept: computed from the patch's records
+/// when none was made in the last `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss
+/// it together. A patch the server does not know (neither in `versions` nor the current one) is
+/// computed on every request and never kept, so made-up `?patch=` values push no kept report out.
+async fn kept_report(
+    app: &App,
+    versions: &[String],
+    patch: &str,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+) -> Result<Arc<PatchReport>, ApiError> {
+    let current = patch == app.catalog.version;
+    let compute = || async move {
+        let records = records_for(app, SourceFilter::All, patch).await?;
+        let with_drills = current && source == SourceParam::Default;
+        Ok::<_, ApiError>(Arc::new(patch_report(
+            &records,
+            patch,
+            source,
+            pilot.filter(),
+            with_drills,
+        )))
+    };
+    if !current && !versions.iter().any(|version| version == patch) {
+        return compute().await;
+    }
+    let key = ReportKey {
+        patch: patch.to_string(),
+        source,
+        pilot,
+    };
+    let cell = app.card_stats.cell(key, now_ms());
+    let kept = cell.get_or_try_init(compute).await?;
+    Ok(Arc::clone(kept))
+}
+
 /// GET /api/stats/cards: public card win rates. R654's gate: AI games pad the stats until the
 /// patch has logged 1000 live games, then live games only. Below 20 games `hasEnoughGames` is false.
 /// R1451, amended by R807000: a ladder bot's game counts toward the gate like any live game, and
@@ -347,63 +624,20 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     let versions = load_patch_versions().await;
     let current_patch = app.catalog.version.clone();
     let requested_patch = query_trimmed(&req, "patch").unwrap_or(current_patch);
-    let source_param = req.query.get("source").map(|value| value.trim().to_lowercase());
+    let source_param = SourceParam::parse(req.query.get("source").map(String::as_str));
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
-    let live_pilot = pilot.filter();
-
     let patch_index = versions.iter().position(|version| *version == requested_patch);
     let previous_patch = match patch_index {
         Some(index) if index > 0 => versions.get(index - 1).cloned(),
         _ => None,
     };
 
-    let patch_records = records_for(app, SourceFilter::All, &requested_patch).await?;
-
-    let live_records: Vec<GameRecord> = patch_records
-        .iter()
-        .filter(|record| record.source == GameSource::Live && !is_tutorial(record))
-        .cloned()
-        .collect();
-    let live_games_count = live_records.len() as i64;
-
-    // R654 publication gate.
+    // R978000: the patch's figures as kept.
+    let kept = kept_report(app, &versions, &requested_patch, source_param, pilot).await?;
+    let live_games_count = kept.live_games;
     let cleared = live_games_count >= PUBLIC_STATS_MIN_LIVE_GAMES;
-
-    let (source, source_label, records_to_count): (PublicStatsSource, &str, Vec<GameRecord>) = if cleared {
-        // When cleared, strictly ignore AI development games (no toggle to bring them back)
-        (PublicStatsSource::Live, "Live games", live_records)
-    } else if source_param.as_deref() == Some("live") {
-        (PublicStatsSource::Live, "Live games", live_records)
-    } else if matches!(source_param.as_deref(), Some("dev") | Some("ai")) {
-        let dev: Vec<GameRecord> = patch_records
-            .iter()
-            .filter(|record| record.source == GameSource::Dev && !is_tutorial(record))
-            .cloned()
-            .collect();
-        (PublicStatsSource::Dev, "AI development games", dev)
-    } else {
-        let all: Vec<GameRecord> = patch_records
-            .iter()
-            .filter(|record| !is_tutorial(record))
-            .cloned()
-            .collect();
-        (
-            PublicStatsSource::Provisional,
-            "AI games + live games (provisional)",
-            all,
-        )
-    };
-
-    let report = public_report(
-        &records_to_count,
-        match source {
-            PublicStatsSource::Live => SourceFilter::Live,
-            PublicStatsSource::Dev => SourceFilter::Dev,
-            PublicStatsSource::Provisional => SourceFilter::All,
-        },
-        &requested_patch,
-        live_pilot,
-    );
+    let source = kept.source;
+    let report = &kept.report;
 
     let stats_map: IndexMap<&str, _> = report
         .cards
@@ -536,7 +770,7 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
             min_live_games: PUBLIC_STATS_MIN_LIVE_GAMES,
         },
         source,
-        source_label: source_label.to_string(),
+        source_label: source.label().to_string(),
         pilot,
         pilot_label: pilot.label().to_string(),
         min_sample: CARD_STATS_MIN_SAMPLE,
@@ -556,13 +790,6 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
-/// A turn's or a co-played card's games and wins.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct Count {
-    games: i64,
-    wins: i64,
-}
-
 /// GET /api/stats/cards/:id: win rate by cleared patch and by turn played, and co-played cards.
 pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let card_id = req.params.get("id").cloned().unwrap_or_default();
@@ -579,20 +806,15 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     };
 
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
-    let live_pilot = pilot.filter();
 
+    // R978000: each patch's history and the current patch's drill-down read the kept reports.
     let versions = load_patch_versions().await;
     let mut patch_history: Vec<PatchRate> = Vec::new();
 
     for version in &versions {
-        let records: Vec<GameRecord> = records_for(app, SourceFilter::Live, version)
-            .await?
-            .into_iter()
-            .filter(|record| !is_tutorial(record))
-            .collect();
-        if records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
-            let report = public_report(&records, SourceFilter::Live, version, live_pilot);
-            let stat = report.cards.iter().find(|stat| stat.card == card_id);
+        let kept = kept_report(app, &versions, version, SourceParam::Default, pilot).await?;
+        if kept.live_games >= PUBLIC_STATS_MIN_LIVE_GAMES {
+            let stat = kept.report.cards.iter().find(|stat| stat.card == card_id);
             patch_history.push(PatchRate {
                 patch: version.clone(),
                 games: stat.map(|stat| tally_of(&stat.in_deck).0).unwrap_or(0),
@@ -601,72 +823,12 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         }
     }
 
-    let current_patch = app.catalog.version.clone();
-    let all_records = records_for(app, SourceFilter::All, &current_patch).await?;
-    let live_records: Vec<&GameRecord> = all_records
-        .iter()
-        .filter(|record| record.source == GameSource::Live && !is_tutorial(record))
-        .collect();
-    let records_to_count: Vec<&GameRecord> = if live_records.len() as i64 >= PUBLIC_STATS_MIN_LIVE_GAMES {
-        live_records
-    } else {
-        all_records.iter().filter(|record| !is_tutorial(record)).collect()
-    };
+    let current = kept_report(app, &versions, &app.catalog.version, SourceParam::Default, pilot).await?;
+    let drill = current.drills.get(&card_id);
 
-    let mut turn_tallies: IndexMap<i32, Count> = IndexMap::new();
-    let mut co_played_tallies: IndexMap<String, Count> = IndexMap::new();
-
-    for record in &records_to_count {
-        for seat in PLAYER_IDS {
-            // R1451, amended by R807000: as `public_report` counts them.
-            if !seat_counted(record.source, record.pilots[seat], live_pilot) {
-                continue;
-            }
-            let summary = &record.game.seats[seat];
-            if !summary.deck.contains(&card_id) {
-                continue;
-            }
-
-            let won = record.game.winner == Winner::from(seat);
-
-            let mut turns_played_in_game: IndexSet<i32> = IndexSet::new();
-            if let Some(played_turns) = summary
-                .played_turns
-                .as_ref()
-                .filter(|turns| turns.len() == summary.played.len())
-            {
-                for (index, played) in summary.played.iter().enumerate() {
-                    if *played == card_id
-                        && let Some(turn) = played_turns.get(index).copied()
-                        && turn > 0
-                    {
-                        turns_played_in_game.insert(turn);
-                    }
-                }
-            }
-            for turn in turns_played_in_game {
-                let tally = turn_tallies.entry(turn).or_default();
-                tally.games += 1;
-                if won {
-                    tally.wins += 1;
-                }
-            }
-
-            let distinct: IndexSet<&String> = summary.deck.iter().collect();
-            for other_id in distinct {
-                if *other_id == card_id {
-                    continue;
-                }
-                let tally = co_played_tallies.entry(other_id.clone()).or_default();
-                tally.games += 1;
-                if won {
-                    tally.wins += 1;
-                }
-            }
-        }
-    }
-
-    let mut by_turn: Vec<TurnRate> = turn_tallies
+    let by_turn: Vec<TurnRate> = drill
+        .map(|drill| drill.by_turn.as_slice())
+        .unwrap_or_default()
         .iter()
         .map(|(turn, tally)| TurnRate {
             turn: *turn,
@@ -678,9 +840,10 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             },
         })
         .collect();
-    by_turn.sort_by_key(|a| a.turn);
 
-    let mut co_played: Vec<CoPlayedRate> = co_played_tallies
+    let co_played: Vec<CoPlayedRate> = drill
+        .map(|drill| drill.co_played.as_slice())
+        .unwrap_or_default()
         .iter()
         .map(|(id, tally)| CoPlayedRate {
             id: id.clone(),
@@ -698,8 +861,6 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
             },
         })
         .collect();
-    co_played.sort_by_key(|rate| std::cmp::Reverse(rate.games));
-    co_played.truncate(10);
 
     let body = CardDrillDownResponse {
         card: DrillDownCard {

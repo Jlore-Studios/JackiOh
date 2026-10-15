@@ -62,6 +62,9 @@ pub struct App {
     pub breaker: Mutex<api::codes::BreakerState>,
     /// R768: the opened replays and the replay routes' own allowance, held here for the same reason.
     pub replays: api::replays::Replays,
+    /// SPEC §11 R978000: the public card statistics' computed per-patch reports, held here for the
+    /// limiter's reason.
+    pub card_stats: api::stats::KeptReports,
     /// SPEC §11 R897000: when each queued profile was last heard from. One per app, so parallel
     /// tests never share presence.
     pub queue_presence: api::queue::QueuePresence,
@@ -744,6 +747,7 @@ pub async fn build(env: Env) -> anyhow::Result<Arc<App>> {
         catalog,
         breaker: Mutex::new(api::codes::create_breaker_state()),
         replays: api::replays::Replays::default(),
+        card_stats: api::stats::KeptReports::default(),
         queue_presence: api::queue::QueuePresence::new(),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         social: crate::social::Social::default(),
