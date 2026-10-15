@@ -18,9 +18,9 @@ use jackioh_ai::{
     line_status, play_match, ready_gap, redact, search_signature, simulate,
 };
 use jackioh_engine::testkit::{
-    ActionBody, ActionType, CardInstance, GameState, IndexMap, PLAYER_IDS, PlayerId, Row, Value, Winner,
-    ZoneChoice, attacks_per_turn, create_rng, find_instance, json, json_as, legal_actions, opponent_of,
-    seat_to_act, unit_view,
+    ActionBody, ActionType, CardInstance, DuosLife, GameState, IndexMap, PLAYER_IDS, PlayerId, Row, Value,
+    Winner, ZoneChoice, attacks_per_turn, create_rng, find_instance, json, json_as, legal_actions,
+    opponent_of, seat_to_act, unit_view,
 };
 
 use super::support::{
@@ -456,5 +456,43 @@ mod the_positions_the_search_merges {
         assert_eq!(twice.players[HUMAN].hero.health, 10);
         // Both swings are spent: nothing left to count, the gap is the hero's health.
         assert_eq!(ready_gap(&twice, AI), 10.0);
+    }
+}
+
+mod duos_life_r964000 {
+    use super::*;
+
+    /// `state` with p2 a Duos seat at its health and a full 20 pool, `spent` or not.
+    fn with_pool(state: &GameState, spent: bool) -> GameState {
+        let mut out = state.clone();
+        out.players[HUMAN].duos = Some(DuosLife {
+            pool: 20,
+            pool_cap: 20,
+            spent,
+        });
+        out
+    }
+
+    #[test]
+    fn r964000_ready_gap_measures_against_own_hp_and_the_pool_in_a_duos_duel() {
+        register_cards();
+        let state = scenario(json!({
+            "seed": "lethal-duos",
+            "active": AI,
+            "turn": 9,
+            "p1": { "field": ["core-020", "core-008", "core-011"] },
+            "p2": { "health": 20 },
+        }))
+        .state()
+        .clone();
+        // Pointmaster 7, Mr. Vanilla 4 and Tempo Timmy 3: 14 at the face.
+        assert_eq!(ready_gap(&state, AI), 6.0, "a 1v1 hero at 20");
+        assert_eq!(
+            ready_gap(&with_pool(&state, false), AI),
+            26.0,
+            "20 own HP and a 20 pool"
+        );
+        // Spent: the hero's health is the pool.
+        assert_eq!(ready_gap(&with_pool(&state, true), AI), 6.0);
     }
 }

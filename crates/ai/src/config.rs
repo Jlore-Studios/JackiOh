@@ -217,7 +217,8 @@ pub struct EvalWeights {
     pub win: f64,
     /// result "draw".
     pub drawn: f64,
-    /// heroValue(h) = h <= 0 ? −win : heroHealth × sqrt(h × HERO_HEALTH).
+    /// heroValue(h) = h <= 0 ? −win : heroHealth × sqrt(h × start): h the hero's `effective_life`, start
+    /// its `starting_life` (R964000).
     pub hero_health: f64,
     /// Per point of the enemy hero's health, on top of its concave value: damage to the enemy hero
     /// shortens the race by the same amount whatever its health, and a draw at the turn cap is no win.
@@ -281,7 +282,7 @@ pub struct EvalWeights {
     pub owed_mana: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
-    /// When faceThreat(enemy) >= the seat's hero health.
+    /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000).
     pub lethal_threat: f64,
     pub pressure_per_damage: f64,
     pub lethal_pressure: f64,
