@@ -13420,9 +13420,9 @@
     ],
     "idle_since": "2026-10-15T15:20:19Z",
     "last_run": "2026-10-15T15:20:19Z",
-    "provider": "claude-3",
+    "provider": null,
     "requested": false,
-    "run_id": "38759307110",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
