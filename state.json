@@ -7282,6 +7282,13 @@
     "991": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T20:01:49Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Fails easy rules 2, 3 and 7: it touches apps/web, e2e and a spec note, and needs a new Cypress spec. Rule 1 (11 files) fails as well. Nothing in it is engine, AI or migration work, so it is not hard."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
