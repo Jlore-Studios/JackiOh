@@ -20,7 +20,9 @@ let base = "";
 
 /** Where the throwaway repo lives: the checkout's own ignored `.cache/`, not the machine's shared temp
  * directory, and with git's background upkeep off, so nothing but this file touches it while it runs
- * (#1016: on main at 67811e0 a `git add` found the repo's object store gone mid-test). */
+ * (#1016: on main at 67811e0 a `git add` failed mid-test because, from git 2.54, the first case's
+ * commits start a detached repack whose prune-packed removed the objects/xx directory the add had
+ * just made). */
 const SCRATCH = join(ROOT, ".cache");
 
 function git(...args: string[]): string {
