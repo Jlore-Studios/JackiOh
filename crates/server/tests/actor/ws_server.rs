@@ -11,6 +11,9 @@
 //! one, so the actor's first `view` frame names the seat (`viewer: "p1"`). The client is a small
 //! hand-rolled RFC 6455 client over a `TcpStream`.
 //! Surface contract: docs/v0.3.0/SURFACE.md §2, §11.2, §11.3.
+//!
+//! `the_graceful_shutdown` serves through `app::serve_until` instead: SIGTERM (and Ctrl-C) drains
+//! instead of cutting (#861).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -698,5 +701,146 @@ mod banned_profiles_are_refused_the_match_socket {
             .await
             .open();
         assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+}
+
+mod the_graceful_shutdown {
+    //! SIGTERM (and Ctrl-C) drains instead of cutting (#861): an in-flight request finishes, every
+    //! match socket gets close frame 1001, the background loops stop, and the process exits 0
+    //! inside the drain bound — or the drain stops waiting at the bound for a socket that never
+    //! answers the close.
+    use super::*;
+
+    use jackioh_server::app::{serve_until, shutdown_signal};
+    use jackioh_server::config::SHUTDOWN_DRAIN_SECONDS;
+
+    use crate::support::deps::record_logs;
+
+    /// One raw HTTP request, left open for its answer.
+    async fn request(port: u16, path: &str) -> TcpStream {
+        let mut stream = TcpStream::connect(("127.0.0.1", port))
+            .await
+            .expect("the listener accepts");
+        stream
+            .write_all(
+                format!("GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n")
+                    .as_bytes(),
+            )
+            .await
+            .expect("the request is written");
+        stream
+    }
+
+    /// The request's status, once the server answers and closes.
+    async fn status_of(mut stream: TcpStream) -> u16 {
+        let mut raw = Vec::new();
+        tokio::time::timeout(READ_TIMEOUT, stream.read_to_end(&mut raw))
+            .await
+            .expect("the server answers the request")
+            .expect("the request's bytes read");
+        String::from_utf8_lossy(&raw)
+            .split_whitespace()
+            .nth(1)
+            .and_then(|code| code.parse().ok())
+            .unwrap_or(0)
+    }
+
+    #[tokio::test]
+    async fn a_sigterm_lets_the_request_in_flight_finish_closes_every_socket_with_1001_stops_the_loops_and_returns()
+     {
+        let _serial = SERIAL.lock().await;
+        let logs = record_logs();
+        let shutdown = shutdown_signal().expect("the shutdown signal installs");
+        let drain = Duration::from_secs(u64::try_from(SHUTDOWN_DRAIN_SECONDS).unwrap_or(0));
+        let (app, tokens) = seed_matches(1).await;
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let port = listener.local_addr().expect("a bound address").port();
+        let server = tokio::spawn(serve_until(Arc::clone(&app), listener, shutdown, drain));
+        let mut client = open(port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        assert_eq!(client.first_view().await["viewer"], "p1");
+
+        // Hold the fake store's lock so the readiness probe's `ping` cannot answer: the request
+        // below is in flight while SIGTERM arrives.
+        let tables = fake(&app);
+        let guard = tables.lock().await;
+        let inflight = request(port, "/readyz").await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let started = std::time::Instant::now();
+        tokio::process::Command::new("sh")
+            .arg("-c")
+            .arg(format!("kill -TERM {}", std::process::id()))
+            .status()
+            .await
+            .expect("the kill runs");
+        let deadline = tokio::time::Instant::now() + READ_TIMEOUT;
+        while logs.named("server.draining").is_empty() {
+            assert!(tokio::time::Instant::now() < deadline, "the drain starts");
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        drop(guard);
+        assert_eq!(status_of(inflight).await, 200);
+        assert_eq!(client.close_code().await, 1001);
+        client.send_frame(0x8, &1000u16.to_be_bytes()).await;
+        tokio::time::timeout(drain, server)
+            .await
+            .expect("serve_until ends inside the drain")
+            .expect("serve_until's task ends")
+            .expect("serve_until answers Ok");
+        assert!(started.elapsed() < drain, "the drain ends inside its bound");
+        let stopped: Vec<String> = logs
+            .named("loop.stopped")
+            .iter()
+            .map(|entry| entry.data["loop"].as_str().unwrap_or("").to_string())
+            .collect();
+        assert_eq!(
+            stopped,
+            vec![
+                "matchmaker".to_string(),
+                "series.sweeper".to_string(),
+                "matches.reaper".to_string(),
+                "retention.purge".to_string(),
+            ]
+        );
+        let halted = logs.named("server.stopped");
+        assert_eq!(halted.len(), 1);
+        assert_eq!(halted[0].data["matches"], json!(1));
+        assert!(logs.named("server.drain_timed_out").is_empty());
+    }
+
+    #[tokio::test]
+    async fn stops_waiting_at_the_drain_bound_for_a_socket_that_never_answers_the_close() {
+        let _serial = SERIAL.lock().await;
+        let logs = record_logs();
+        let (stop, waiting) = tokio::sync::oneshot::channel::<()>();
+        let drain = Duration::from_millis(500);
+        let (app, tokens) = seed_matches(1).await;
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("a free port");
+        let port = listener.local_addr().expect("a bound address").port();
+        let server = tokio::spawn(serve_until(
+            Arc::clone(&app),
+            listener,
+            async move {
+                let _ = waiting.await;
+            },
+            drain,
+        ));
+        let mut client = open(port, &query("match-1", &tokens[0]), &[WS_SUBPROTOCOL])
+            .await
+            .open();
+        assert_eq!(client.first_view().await["viewer"], "p1");
+
+        let started = std::time::Instant::now();
+        stop.send(()).expect("serve_until waits for the shutdown");
+        tokio::time::timeout(READ_TIMEOUT, server)
+            .await
+            .expect("serve_until ends")
+            .expect("serve_until's task ends")
+            .expect("serve_until answers Ok");
+        assert!(started.elapsed() >= drain, "the drain waits out its bound");
+        assert_eq!(client.close_code().await, 1001);
+        assert_eq!(logs.named("server.drain_timed_out").len(), 1);
+        assert!(logs.named("server.stopped").is_empty());
     }
 }

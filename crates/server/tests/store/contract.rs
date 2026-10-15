@@ -6046,3 +6046,13 @@ mod tx {
         returns_the_callback_s_value,
     );
 }
+
+mod ping {
+    use super::*;
+
+    async fn answers_while_the_store_is_up(harness: &StoreHarness) {
+        harness.db.ping().await.expect("the store answers");
+    }
+
+    both_stores!(answers_while_the_store_is_up);
+}
