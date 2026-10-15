@@ -2264,7 +2264,14 @@
     padding: 0 5px 0 3px;
   }
 
-  /* The compact rank line only, cut with an ellipsis instead of squeezing the controls. */
+  /* The compact rank line only, in smaller type, filling the rail beside its buttons and wrapping
+     there rather than cut: both seats' names and ranks stay on the screen. Back keeps to its own
+     width so the line gets the rest, and a long name gives way at its own ellipsis (username.css)
+     instead of running out of the rail. */
+  .board-rail .screen-nav {
+    flex-grow: 0;
+  }
+
   .match-ranks__full {
     display: none;
   }
@@ -2274,9 +2281,20 @@
   }
 
   .match-ranks {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex: 1 1 0;
+    font-size: 0.85em;
+    line-height: 1.2;
+  }
+
+  .match-ranks .username {
+    max-width: 100%;
+  }
+
+  /* An online match's status line says only "Online match · Connected" while all is well, which a
+     phone has no room for: it steps aside then, and is back the moment the connection is anything
+     else, with Reconnect now. */
+  .board .control-bar .board-status:has(> [data-testid="match-status"][data-connection="open"]) {
+    display: none;
   }
 }
 
@@ -2339,6 +2357,31 @@
      squeezed to 16px, and the offer and its Accept and Decline spilled out over End turn. */
   .board .control-bar:has(> .board-notices > :not(:empty)) {
     flex-wrap: wrap;
+  }
+
+  /* And while it holds a rail (an online match's Back, chat and ranks; a replay's or a watch's way
+     back): squeezed into the one row, the rail took End turn's width and still stood 130px tall,
+     its buttons stacked in a 16px column and its rank line cut to nothing. It takes a row of its
+     own above the controls, as does a status line, and End turn's housing grows from nothing, so
+     the controls still share the one row under them. */
+  .board .control-bar:has(> .board-rail) {
+    flex-wrap: wrap;
+  }
+
+  .board .control-bar:has(> .board-rail) > .board-status {
+    flex: 1 1 100%;
+  }
+
+  .board .control-bar:has(> .board-rail) .turn-mechanism {
+    flex-basis: 0;
+  }
+
+  /* The cards come down by the rail's row (the budget above, less `--board-rail-phone-h`: the rail's
+     44px buttons, its padding and a gap), so the board still ends on the screen. `:where` leaves
+     duos.css's own budget, for its taller rail, the stronger rule. */
+  .board:where(:has(> .control-bar > .board-rail)) {
+    --board-rail-phone-h: 62px;
+    --card-h: clamp(44px, calc((100cqh - 312px - var(--board-rail-phone-h)) / 5.24), 90px);
   }
 
   .board .control-bar .control {
@@ -2546,6 +2589,41 @@
     order: 2;
     padding-inline: 6px;
     white-space: nowrap;
+  }
+
+  /* A rail tops the column: Back and chat fill its width, so the rank line takes a line of its own
+     under them. Under the opponent's hand the column had no height for it, and the opponent's backs
+     were drawn over Back and chat, so the column gives up a row and a half: the empty notices pill
+     leaves (as from the row of a phone held upright), the language button steps aside (the gear's
+     Gameplay tab holds Language, #785) so the gear joins the log's row, and the turn plate says its
+     two lines on one. */
+  .match-ranks {
+    flex-basis: 100%;
+  }
+
+  .board .control-bar:has(> .board-rail) .board-notices:not(:has(> :not(:empty))) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .board .control-bar:has(> .board-rail) .language-button--game {
+    display: none;
+  }
+
+  .board .control-bar:has(> .board-rail) [data-testid="settings-open-game"] {
+    order: 3;
+  }
+
+  .board .control-bar:has(> .board-rail) .turn-plate {
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: baseline;
+    column-gap: 8px;
   }
 
   .turn-plate {

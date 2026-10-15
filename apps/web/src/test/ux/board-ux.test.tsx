@@ -500,6 +500,60 @@ describe("#785 a phone held upright keeps the control bar to one row", () => {
   });
 });
 
+// #990: an online match's rail (Back, chat, the ranks) on a phone
+
+describe("#990 an online match's rail on a phone", () => {
+  it("#990 board.css gives a rail a row of its own above the controls, End turn's housing room in the row under it, and the cards the rail's height", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (max-width: 600px) {");
+    const portrait = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    // An online match's rail squeezed End turn to its 44px floor and stood the controls 130px tall.
+    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\)\s*\{\s*flex-wrap:\s*wrap;/);
+    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) > \.board-status\s*\{\s*flex:\s*1 1 100%;/);
+    expect(portrait).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-mechanism\s*\{\s*flex-basis:\s*0;/);
+    // `:where`, so duos.css's own budget for its taller rail still wins.
+    const budget = portrait.match(/\.board:where\(:has\(> \.control-bar > \.board-rail\)\)\s*\{([^}]*)\}/);
+    expect(budget).not.toBeNull();
+    expect(budget?.[1]).toMatch(/--card-h:[^;]*var\(--board-rail-phone-h\)/);
+  });
+
+  it("#990 board.css shows the compact rank line wrapping beside the rail's buttons, not cut, and steps the connected status aside", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (max-width: 600px), (orientation: landscape) and (max-height: 500px)");
+    const phones = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    expect(text).toMatch(/\n\.match-ranks__short\s*\{\s*display:\s*none;/);
+    expect(phones).toMatch(/\.match-ranks__full\s*\{\s*display:\s*none;/);
+    expect(phones).toMatch(/\.match-ranks__short\s*\{\s*display:\s*inline;/);
+    // A one-line ellipsis showed "Ranked · Max…" in the rail and cut the opponent's name and both ranks.
+    const line = phones.match(/\n {2}\.match-ranks\s*\{([^}]*)\}/);
+    expect(line).not.toBeNull();
+    expect(line?.[1]).toMatch(/flex:\s*1 1 0;/);
+    expect(line?.[1]).not.toMatch(/white-space:\s*nowrap|text-overflow/);
+    expect(phones).toMatch(/\.board \.control-bar \.board-status:has\(> \[data-testid="match-status"\]\[data-connection="open"\]\)\s*\{\s*display:\s*none;/);
+  });
+
+  it("#990 board.css makes room for the rail under the opponent's hand on a phone held landscape", () => {
+    const text = css("board.css");
+    const start = text.indexOf("@media (orientation: landscape) and (max-height: 500px) {");
+    const landscape = text.slice(start, text.indexOf("@media", start + 1));
+
+    expect(start).toBeGreaterThan(-1);
+    expect(landscape).toMatch(/\.match-ranks\s*\{\s*flex-basis:\s*100%;/);
+    // Hidden the visually-hidden way, so the notices' live region still announces.
+    const empty = landscape.match(/\.board \.control-bar:has\(> \.board-rail\) \.board-notices:not\(:has\(> :not\(:empty\)\)\)\s*\{([^}]*)\}/);
+    expect(empty).not.toBeNull();
+    expect(empty?.[1]).toMatch(/position:\s*absolute;/);
+    expect(empty?.[1]).not.toMatch(/display:\s*none/);
+    expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.language-button--game\s*\{\s*display:\s*none;/);
+    expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \[data-testid="settings-open-game"\]\s*\{\s*order:\s*3;/);
+    expect(landscape).toMatch(/\.board \.control-bar:has\(> \.board-rail\) \.turn-plate\s*\{[^}]*flex-flow:\s*row wrap;/);
+  });
+});
+
 // B44: which route opened a picker, for the phone's slim bar
 
 describe("B44 the picker says which route opened it", () => {
