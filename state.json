@@ -6577,6 +6577,13 @@
     "962": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T14:36:39Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure whether a spawn allow-list counts as engine rules, but it decides reducer legality in crates/engine/src/ and ships with a cross-crate client plus spec change, so hard holds"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
