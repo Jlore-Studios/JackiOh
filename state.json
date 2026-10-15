@@ -6656,8 +6656,14 @@
     "what": "build #831 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-15T14:15:04Z",
-    "notes": [],
+    "at": "2026-10-15T14:21:37Z",
+    "notes": [
+      "#961 needs a plan",
+      "#962 needs a plan",
+      "#964 needs a plan",
+      "#965 needs a plan",
+      "started a night run, as a lane was free: #962 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
