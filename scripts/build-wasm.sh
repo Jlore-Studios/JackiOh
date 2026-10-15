@@ -181,8 +181,12 @@ if command -v rustup >/dev/null 2>&1; then
   fi
 fi
 
-# emsdk, cloned and installed once into .cache/emsdk.
+# emsdk, cloned and installed once into .cache/emsdk. A .cache/emsdk without the `emsdk` script is
+# no clone, only what a build cache gave back of one: Vercel's restores every node_modules it saved,
+# and an installed emsdk holds two (its Node's and emscripten's), so a deploy found those alone and
+# `git clone` refused the non-empty directory. Only this script writes there, so it starts over.
 if [ ! -x "$EMSDK_DIR/emsdk" ]; then
+  rm -rf "$EMSDK_DIR"
   echo "build-wasm: cloning emsdk $EMSDK_VERSION into $EMSDK_DIR"
   git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$EMSDK_DIR"
 fi
