@@ -1457,6 +1457,16 @@
   background: rgb(24 14 8 / 48%);
 }
 
+/* The online match's rank line: desktop shows the full words, phones the compact span (below). */
+.match-ranks {
+  min-width: 0;
+  margin: 0;
+}
+
+.match-ranks__short {
+  display: none;
+}
+
 .board-read-only,
 .board .game-error {
   max-width: none;
@@ -2252,6 +2262,21 @@
 
   .hand-you > .pile {
     padding: 0 5px 0 3px;
+  }
+
+  /* The compact rank line only, cut with an ellipsis instead of squeezing the controls. */
+  .match-ranks__full {
+    display: none;
+  }
+
+  .match-ranks__short {
+    display: inline;
+  }
+
+  .match-ranks {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
