@@ -7463,18 +7463,29 @@
     "996": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-15T19:28:21Z",
       "issue": 990,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "On a phone held upright the online board rail still shares the one nowrap control row with End turn, so the change shortens the rank text but leaves End turn and the controls squeezed. The new nowrap/ellipsis line in that narrow rail also cuts off the opponent's name and both ranks, so the issue is not fixed while the PR closes it.",
+          "evidence": "At max-width 600px, `.board .control-bar { flex-wrap: nowrap }` (board.css:2333-2335). `.board-rail` is a control-bar child with `flex: 1 1 100%; min-width: 0` (board.css:1428-1431; Board.tsx:659), and no phone rule moves it to its own row (no `.board-rail`, `:has` or `order` rule for it in any phone block). Flex shrink is weighted by basis, so the 100%-basis rail takes most of the row and End turn drops to the 58px min-width of `.turn-mechanism` (board.css:2357-2360). Practice passes no `boardRail`, so there End turn gets all the leftover width; that difference is independent of the rank text. Inside a rail roughly 80-150px wide, the rail's \u2190 Back and Chat buttons (44px min-height, board.css:2086-2094) wrap onto separate rows, and the new one-line `.match-ranks` (~50 characters) shows only about 'Ranked \u00b7 Max\u2026'. The opponent's name and both ranks are clipped away. No rendering was done to show otherwise.",
+          "severity": "blocking",
+          "where": "apps/web/src/game/board.css:2276"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-10-15T20:05:23Z",
+      "queued_at": "2026-10-15T20:20:12Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38800389236",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-15T20:15:46Z",
       "stop_requested": false,
       "taken_asks": [],
