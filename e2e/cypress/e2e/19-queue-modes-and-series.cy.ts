@@ -247,6 +247,11 @@ function expectDealtFrom(hand: readonly string[], deck: readonly string[], other
 
 function openLobby(account: E2EAccount, mode: QueueMode): void {
   cy.visitAs(account, routes.play());
+  // The lobby's mode chips, or what the page shows instead when they never come.
+  cy.get("body", { timeout: timeouts.view }).should(($body) => {
+    const shown = $body.find(ts(playModeId(mode))).length > 0;
+    expect(shown, `the lobby's ${mode} chip; the page shows: ${$body.text().replace(/\s+/gu, " ").slice(0, 400)}`).to.eq(true);
+  });
   cy.get(ts(playModeId(mode)), { timeout: timeouts.view }).check();
   cy.get(ts(playModeId(mode))).should("be.checked");
 }
