@@ -185,7 +185,7 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
 /// holds it to). Changing either page's text changes its date and so this, and every account is
 /// asked to agree again.
-pub const TERMS_VERSION: &str = "2026-10-13/2026-10-15";
+pub const TERMS_VERSION: &str = "2026-10-15/2026-10-15";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).

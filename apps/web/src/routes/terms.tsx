@@ -10,7 +10,7 @@ import { MIN_ACCOUNT_AGE_YEARS } from "@jackioh/server-config";
 
 import { DEFAULT_LOCALE, formatDay, t, useLocale } from "../i18n/i18n.ts";
 import { paths } from "../net/navigate.ts";
-import { CONTACT_URL } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -21,7 +21,7 @@ export const termsTestid = {
   updated: "terms-updated",
 } as const;
 
-export const TERMS_LAST_UPDATED = "2026-10-13";
+export const TERMS_LAST_UPDATED = "2026-10-15";
 
 export default function TermsRoute(): ReactElement {
   const locale = useLocale();
@@ -99,7 +99,7 @@ export default function TermsRoute(): ReactElement {
         <section aria-labelledby="terms-contact">
           <h3 id="terms-contact">Contact</h3>
           <p>
-            Questions about these terms: <a href={CONTACT_URL}>contact us on GitHub</a>.
+            Questions about these terms, or a legal notice: email <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>.
           </p>
         </section>
       </article>

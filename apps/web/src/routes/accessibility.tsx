@@ -3,7 +3,7 @@
 import type { ReactElement } from "react";
 
 import { formatDay, t } from "../i18n/i18n.ts";
-import { CONTACT_URL } from "./SiteFooter.tsx";
+import { CONTACT_EMAIL, CONTACT_URL } from "./SiteFooter.tsx";
 import { BackLink } from "./nav.tsx";
 
 import "../auth/tavern.css";
@@ -78,7 +78,7 @@ export default function AccessibilityRoute(): ReactElement {
           <h3 id="a11y-help">{t("Report an issue")}</h3>
           <p>
             {helpBefore}
-            <a href={CONTACT_URL}>{t("contact us on GitHub")}</a>
+            <a href={CONTACT_URL}>{CONTACT_EMAIL}</a>
             {helpAfter}
           </p>
         </section>
