@@ -46,7 +46,7 @@ mod tests {
     const MENACE: &str = "core-019"; // (3) Unit
     const DIVIDEND: &str = "core-024"; // (X) Spell
     const CN_VIRUS: &str = "core-090-1"; // (1) Spell, Cast on draw
-    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1.
+    const HINDER: &str = "core-021"; // (0) Spell, Cast on draw: … Discard 1 random card.
     const VANILLA: &str = "core-008"; // (1) Unit
 
     use crate::scenario;

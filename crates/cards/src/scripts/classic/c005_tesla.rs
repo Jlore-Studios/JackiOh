@@ -34,7 +34,7 @@ mod tests {
     const TIMMY: &str = "core-011"; // (1) 3/3.
     const MENACE: &str = "core-019"; // (3) 9/9 Taunt.
     const TOKEN_MAN: &str = "core-015"; // (1) 1/1, Cry: Summon a Rush Token (3/3).
-    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 (1) Cost or less Units.
+    const CALL: &str = "core-069"; // (2) Spell: Recruit 3 Units of (1) Cost or less.
     const DEFENDER: &str = "core-003"; // (1) 1/1 Taunt, Divine Shield, Reborn.
     const HIT_JOB: &str = "core-016"; // (3) Destroy target Unit.
     const FEELINGS: &str = "classic-032"; // (0) Steal an enemy permanent in a lane where you control a (1) Cost Unit.

@@ -1,8 +1,8 @@
 //! M #2 Rampaging Rhino (SPEC §8.8 row 2, R59, R63, R174, R212, R386, R682, R780, R800): (2) Unit, Common,
 //! 5/9 → 11/20.
 //!
-//! Base:    "Whenever this takes damage, discard {discards|card|cards}."
-//! Radiant: "Trample\nWhenever this takes damage, discard {discards|card|cards}."
+//! Base:    "Whenever this takes damage, discard {discards|random card|random cards}."
+//! Radiant: "Trample\nWhenever this takes damage, discard {discards|random card|random cards}."
 //! Engine: a trigger on `damage` aimed at this card, as Core #91 Fed Fauci's, returning
 //! `discard_random { count: discards, player: self }`. Every damage instance is one discard, and each hit
 //! of a sweep is its own (R59). A hit Armor or a cap took whole, or a Divine Shield took, emits no

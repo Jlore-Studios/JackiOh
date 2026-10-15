@@ -1,7 +1,7 @@
 //! M #24 Polymorph (SPEC §8.8 row 24, §3.1, §7, R11, R23, R81, R691): (3) Spell, Common.
 //!
 //! Base:    "Transform a Unit into a Sheep Token."
-//! Radiant: "Transform a Unit and the Units next to it into Sheep Tokens."
+//! Radiant: "Transform a Unit and the Units adjacent to it into Sheep Tokens."
 //! Engine: a declared target, any Unit on either side (R81), then `transform` of it into a Sheep Token
 //! (Core #41 Sheepish's verb): in place, no Cry (R691); an Immutable Unit in play is no target (R781001), and one beside the target is left alone (R23). The Radiant
 //! face first lists the Units next to the target, on the target's side and row (§3.1), and transforms

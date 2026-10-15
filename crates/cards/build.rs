@@ -25,6 +25,24 @@
 //! It also compiles the catalog version in: the `version` of the last entry of
 //! `patches/patches.json` (the newest shipped patch), as `JACKIOH_CATALOG_VERSION`.
 //!
+//! `$OUT_DIR/catalog.json` is `catalog.json` with the whitespace between its tokens taken out, which
+//! `lib.rs`'s `catalog_json()` compiles in: the same JSON, keys in the same order, without the
+//! indentation, which cost the browser's module about 2.7 KB gzipped against #442 L12's cap
+//! (`apps/web/src/wasm/size.test.ts`).
+//!
+//! R767000: and every other shipped version, for the replays of games played on it.
+//! `$OUT_DIR/history.json` holds `{ order, patches, versions }`: `order` is every shipped version,
+//! oldest first; each of `versions` is one shipped version but the newest, with the catalog ids its
+//! snapshot (`patches/<version>.json`) lacks (`absent`) and, for each id whose entry differs from
+//! `catalog.json`'s, an index into `patches` (`changed`). Each patch is `{ set, unset }`: the
+//! snapshot's top-level keys whose value differs, with that value, and the keys only `catalog.json`'s
+//! entry has. An id the catalog no longer has is not carried. `src/history.rs` reads it.
+//!
+//! The browser's module (a `wasm32` target) carries only the versions from `BROWSER_CARRIED_FROM` on:
+//! it folds only practice games, and a practice game folds on a carried version only with the setup
+//! it was dealt, which the worker keeps from the builds that carry this. The server and the tools
+//! carry every version, for the online games the retention purge has not taken yet.
+//!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
 #![allow(clippy::disallowed_methods)]
@@ -51,6 +69,13 @@ struct CardFile {
     source: ScriptSource,
 }
 
+/// R767000: the oldest version the browser's module carries (the header). The worker kept no setup
+/// before v0.3.7b's builds, so the browser needs no version before v0.3.7b; v0.3.7, the one before it,
+/// is carried as well so that the browser carries a version from its first build and its tests fold
+/// through one. Carrying every version would add about 30 KB to the gzipped module, against #442
+/// L12's cap (`apps/web/src/wasm/size.test.ts`).
+const BROWSER_CARRIED_FROM: &str = "v0.3.7";
+
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let scripts_dir = manifest.join("src").join("scripts");
@@ -63,6 +88,8 @@ fn main() {
     println!("cargo:rerun-if-changed={}", scripts_dir.display());
     let win_rates_path = manifest.join("data").join("win_rates.json");
     println!("cargo:rerun-if-changed={}", win_rates_path.display());
+    let patches_dir = manifest.join("patches");
+    println!("cargo:rerun-if-changed={}", patches_dir.display());
 
     let catalog_ids = read_catalog_ids(&catalog_path);
     let version = read_catalog_version(&patches_path);
@@ -118,6 +145,118 @@ fn main() {
 
     let out = out_dir.join("registry.rs");
     std::fs::write(&out, render(&files, &by_id)).expect("write registry.rs");
+    let catalog_text =
+        std::fs::read_to_string(&catalog_path).unwrap_or_else(|e| panic!("{}: {e}", catalog_path.display()));
+    std::fs::write(out_dir.join("catalog.json"), compact_json(&catalog_text)).expect("write catalog.json");
+    let catalog = read_json(&catalog_path);
+    let catalog = catalog
+        .as_object()
+        .unwrap_or_else(|| panic!("{}: not a JSON object", catalog_path.display()));
+    let browser = std::env::var("CARGO_CFG_TARGET_ARCH").is_ok_and(|arch| arch == "wasm32");
+    let history = history_json(&patches_dir, catalog, browser.then_some(BROWSER_CARRIED_FROM));
+    std::fs::write(out_dir.join("history.json"), history).expect("write history.json");
+}
+
+/// `json` without the whitespace outside its strings (the header): every other character kept, in
+/// order, so it parses to the same value with its keys in the same order.
+fn compact_json(json: &str) -> String {
+    let mut out = String::with_capacity(json.len());
+    let (mut in_string, mut escaped) = (false, false);
+    for c in json.chars() {
+        if in_string {
+            out.push(c);
+            if escaped {
+                escaped = false;
+            } else if c == '\\' {
+                escaped = true;
+            } else if c == '"' {
+                in_string = false;
+            }
+        } else if c == '"' {
+            in_string = true;
+            out.push(c);
+        } else if !matches!(c, ' ' | '\n' | '\r' | '\t') {
+            out.push(c);
+        }
+    }
+    out
+}
+
+/// A JSON file, parsed; one that cannot be read or parsed fails the build, naming it.
+fn read_json(path: &Path) -> serde_json::Value {
+    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    serde_json::from_str(&text).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+}
+
+/// R767000: `$OUT_DIR/history.json` (the header): every shipped version but the newest, or with
+/// `from` those from `from` on, as its snapshot differs from `catalog`.
+fn history_json(
+    patches_dir: &Path,
+    catalog: &serde_json::Map<String, serde_json::Value>,
+    from: Option<&str>,
+) -> String {
+    let list = patches_dir.join("patches.json");
+    let versions: Vec<String> = read_json(&list)
+        .as_array()
+        .unwrap_or_else(|| panic!("{}: not a JSON array", list.display()))
+        .iter()
+        .map(|patch| {
+            patch
+                .get("version")
+                .and_then(|version| version.as_str())
+                .unwrap_or_else(|| panic!("{}: an entry with no string \"version\"", list.display()))
+                .to_string()
+        })
+        .collect();
+    let mut patches: Vec<serde_json::Value> = Vec::new();
+    let mut seen: BTreeMap<String, usize> = BTreeMap::new();
+    let mut carried: Vec<serde_json::Value> = Vec::new();
+    let first = from.map_or(0, |from| {
+        versions
+            .iter()
+            .position(|version| version == from)
+            .unwrap_or_else(|| panic!("BROWSER_CARRIED_FROM {from} is not in {}", list.display()))
+    });
+    for version in versions.iter().take(versions.len().saturating_sub(1)).skip(first) {
+        let path = patches_dir.join(format!("{version}.json"));
+        let snapshot = read_json(&path);
+        let snapshot = snapshot
+            .as_object()
+            .unwrap_or_else(|| panic!("{}: not a JSON object", path.display()));
+        let absent: Vec<&String> = catalog.keys().filter(|id| !snapshot.contains_key(*id)).collect();
+        let mut changed = serde_json::Map::new();
+        for (id, old) in snapshot {
+            let Some(now) = catalog.get(id) else {
+                continue;
+            };
+            if old == now {
+                continue;
+            }
+            let patch = def_patch(old, now)
+                .unwrap_or_else(|| panic!("{}: \"{id}\" is not a JSON object", path.display()));
+            let at = *seen.entry(patch.to_string()).or_insert(patches.len());
+            if at == patches.len() {
+                patches.push(patch);
+            }
+            changed.insert(id.clone(), serde_json::Value::from(at));
+        }
+        carried.push(serde_json::json!({ "version": version, "absent": absent, "changed": changed }));
+    }
+    serde_json::json!({ "order": versions, "patches": patches, "versions": carried }).to_string()
+}
+
+/// R767000: what turns `now`'s entry back into `old`'s: `old`'s top-level keys whose value differs
+/// or is missing, with `old`'s value (`set`), and the keys only `now` has (`unset`). `None` when
+/// either is not an object.
+fn def_patch(old: &serde_json::Value, now: &serde_json::Value) -> Option<serde_json::Value> {
+    let (old, now) = (old.as_object()?, now.as_object()?);
+    let set: serde_json::Map<String, serde_json::Value> = old
+        .iter()
+        .filter(|(key, value)| now.get(*key) != Some(*value))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    let unset: Vec<&String> = now.keys().filter(|key| !old.contains_key(*key)).collect();
+    Some(serde_json::json!({ "set": set, "unset": unset }))
 }
 
 /// The catalog's ids, in `catalog.json`'s order.

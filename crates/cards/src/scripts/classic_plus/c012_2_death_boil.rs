@@ -1,6 +1,6 @@
 //! C+ #12.2 Death Boil (SPEC §8.7 row 12.2): (1) Spell, Pancake, Token (printed Legendary).
-//!   Both faces: "Choose a Unit or hero. If it's an enemy, deal {amount} damage to it. If it's yours,
-//!   heal it {amount}." — 6, Radiant 12.
+//!   Both faces: "Deal {amount} damage to an enemy or heal an ally {amount}." — 6, Radiant 12. The
+//!   chosen target is any Unit or hero, as the Grapes' (#911 gave the three one sentence).
 //! Which clause applies is read at resolution from who controls the target; the damage is one §4.4
 //! instance (Spell Damage raises it), the heal a Heal (a hero past 30, a unit up to its max, R19).
 

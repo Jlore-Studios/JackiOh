@@ -1,5 +1,5 @@
 //! C #23 Devil's Pact (SPEC §8.6 row 23). Field Spell, cost 2, Rare.
-//!   Base:    "Cry: Discard {discards|card|cards}.
+//!   Base:    "Cry: Discard {discards|random card|random cards}.
 //!             Activate: This turn, each card you play is replaced by a Book of Flame."
 //!   Radiant: the same with a Radiant Book of Flame. Discards: 666 base (the whole hand, the joke), 6 Radiant.
 //!

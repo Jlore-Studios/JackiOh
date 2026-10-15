@@ -178,7 +178,7 @@ mod tests {
 
             #[test]
             fn r1087_a_fused_aura_works_from_then_on() {
-                // Jlockeed's Weapons: "Aura: Your Units have +4 attack, Rush and First Strike."
+                // Jlockeed's Weapons: "Aura: Your Units have +4 Attack, Rush and First Strike."
                 let mut s = narrowed("tree-aura", &[WEAPONS]);
                 assert_eq!(s.stats(VANILLA).attack, 4);
                 let tree = s.card(TREE).id.clone();

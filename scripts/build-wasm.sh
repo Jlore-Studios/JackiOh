@@ -113,6 +113,7 @@ export interface JackiohWasmModule {
   _init(): void;
   _catalog(): number;
   _catalog_version(): number;
+  _carried_versions(): number;
   _create_game(args: number): number;
   _begin_game(state: number): number;
   _reduce(state: number, action: number): number;

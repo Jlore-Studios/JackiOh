@@ -19,7 +19,8 @@
 //! with part 1's reason in `details.reason`.
 //!
 //! The fold is the actor's rebuild's (`registry.rs`): the row's seed, frozen decks, last boards and
-//! Glitch boards, its log, and the dealt seats of an All Random match (R433). It is held to the final
+//! Glitch boards, its log, and the dealt seats of an All Random match (R433), under the catalog
+//! version the match was played on when this build carries it (R767000). It is held to the final
 //! hash the result recorded (migration 0035). A match that ended before 0035, or that the reaper
 //! resolved (R112), has none, so its fold is held to its results row instead: the same winner, reason
 //! and turn count, and then to the hash of the state it ends on.
@@ -275,15 +276,15 @@ fn rules_changed() -> ReplayOpen {
     }
 }
 
-/// R768: the match's log folded once and checked, as the actor's rebuild folds it.
+/// R768: the match's log folded once and checked, as the actor's rebuild folds it, under the catalog
+/// version it was played on (R767000).
 fn open_uncached(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) -> ReplayOpen {
     let row = &replay.row;
     // Refused before anything is folded, the legacy check's fold included.
-    if row.catalog_version != jackioh_cards::catalog_version() {
-        return ReplayOpen::Refused {
-            reason: ReplayRefusal::EarlierPatch,
-        };
-    }
+    let shipped = match engine::catalog_for(&row.catalog_version) {
+        Ok(shipped) => shipped,
+        Err(reason) => return ReplayOpen::Refused { reason },
+    };
     let (last_boards, glitch_boards) = last_boards_of(row);
     let args = engine::fold_args(
         &row.seed,
@@ -294,23 +295,25 @@ fn open_uncached(replay: &ReplayRow, log: Vec<Action>, mode: Option<QueueMode>) 
         dealt_for(mode),
     );
     let opened = catch_unwind(AssertUnwindSafe(|| {
-        let final_hash = match &row.final_hash {
-            Some(final_hash) => final_hash.clone(),
-            None => {
-                let folded = engine::fold(&args);
-                if !ends_as_recorded(&folded.state, &replay.result) {
-                    return rules_changed();
+        engine::with_shipped(shipped, || {
+            let final_hash = match &row.final_hash {
+                Some(final_hash) => final_hash.clone(),
+                None => {
+                    let folded = engine::fold(&args);
+                    if !ends_as_recorded(&folded.state, &replay.result) {
+                        return rules_changed();
+                    }
+                    engine::hash_state(&folded.state)
                 }
-                engine::hash_state(&folded.state)
-            }
-        };
-        engine::replay_open(
-            &args,
-            &ReplayRecord {
-                catalog_version: row.catalog_version.clone(),
-                final_hash,
-            },
-        )
+            };
+            engine::replay_open(
+                &args,
+                &ReplayRecord {
+                    catalog_version: row.catalog_version.clone(),
+                    final_hash,
+                },
+            )
+        })
     }));
     opened.unwrap_or_else(|payload| {
         // A setup `create_game` refuses: the frozen decks no longer pass this build's checks.
@@ -519,12 +522,15 @@ pub async fn get_replay(app: &Arc<App>, req: Req) -> ApiResult {
     if from >= total {
         return Err(bad_request(format!("no step {from}: this replay has {total}")));
     }
-    let (seat, run) = seat_run(
-        checkpoints,
-        home_seat(&replay, &profile.id),
-        from,
-        count.min(REPLAY_PAGE_STEPS),
-    );
+    // R767000: the walk to `from` reduces past a kept state, so under the catalog the fold read.
+    let (seat, run) = engine::under_checkpoints(checkpoints, || {
+        seat_run(
+            checkpoints,
+            home_seat(&replay, &profile.id),
+            from,
+            count.min(REPLAY_PAGE_STEPS),
+        )
+    });
     let page = engine::replay_page(checkpoints, seat, from, run);
     ok_of(&ReplaySteps {
         match_id: replay.row.id.clone(),

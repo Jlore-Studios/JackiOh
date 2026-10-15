@@ -1,6 +1,6 @@
 //! C #26 Rapid Draw (SPEC §8.6 row 26). (0) Spell, Common.
-//!   Base:    "Draw {draw}. Then discard {discard|card|cards}." — draw 4, discard 4
-//!   Radiant: "Draw {draw}. Then discard {discard|card|cards}." — draw 5, discard 4
+//!   Base:    "Draw {draw}. Then discard {discard|random card|random cards}." — draw 4, discard 4
+//!   Radiant: "Draw {draw}. Then discard {discard|random card|random cards}." — draw 5, discard 4
 //!   Engine:  "Four draws (Radiant five; the hand cap applies, R4), then 4 random discards (R682;
 //!            fewer in hand, all of them). Tunes: draw 4 ↑; discard 4 ↓."
 //!

@@ -251,11 +251,12 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_writes_a_count_with_the_words_that_agree_with_it_so_the_text_reads_right_at_every_value() {
-        let pickle = card_def("classic-008"); // Pickle: "they discard {discard|card|cards}"
-        assert!(pickle.base.text.contains("{discard|card|cards}"));
-        assert!(fill_params(&pickle, FaceKind::Base, None).contains("they discard 1 card,"));
-        assert!(fill_params(&pickle, FaceKind::Radiant, None).contains("they discard 2 cards,"));
-        assert!(filled_with(&pickle, FaceKind::Base, "discard", 3).contains("they discard 3 cards,"));
+        // Pickle: "they discard {discard|random card|random cards}" (#911 says the discard is random).
+        let pickle = card_def("classic-008");
+        assert!(pickle.base.text.contains("{discard|random card|random cards}"));
+        assert!(fill_params(&pickle, FaceKind::Base, None).contains("they discard 1 random card,"));
+        assert!(fill_params(&pickle, FaceKind::Radiant, None).contains("they discard 2 random cards,"));
+        assert!(filled_with(&pickle, FaceKind::Base, "discard", 3).contains("they discard 3 random cards,"));
         assert_eq!(
             serde_json::to_value(param_placeholders("Draw {draw|card|cards}, then {damage}."))
                 .expect("placeholders serialise"),

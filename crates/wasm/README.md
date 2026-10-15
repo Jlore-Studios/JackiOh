@@ -23,6 +23,7 @@ when the `emcc` link produces a program, and a `cdylib` link produces a bare `.w
 | --- | --- |
 | `init()` | installs the panic hook and calls `jackioh_cards::register_all()` |
 | `catalog()`, `catalog_version()` | the compiled-in catalog and its version |
+| `carried_versions()` | R767000: the older shipped versions it carries for replays, oldest first (from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM`) |
 | `create_game(args)`, `begin_game(state)`, `reduce(state, action)` | a `GameState`, then `ReduceResult`s (`{ state, events, error? }`) |
 | `legal_actions(state, player)`, `view_for(state, player)`, `seat_to_act(state)` | as the engine's |
 | `hash_state(state)`, `fold(args)` | the state hash, and a log folded (`{ state, errors }`) |

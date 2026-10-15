@@ -46,11 +46,13 @@ trap backrow. This file binds every agent, not only Claude.
    take `jackioh-luau`, the AI does not), `mlua` (`jackioh-luau`'s) and, behind a `ts` feature (the
    engine's, and `jackioh-luau`'s own, off by default), `ts-rs`; its `clippy.toml` bans what would break
    purity, tests included. The only statics are the catalog and the script registry, `OnceLock`s set once
-   by `jackioh_cards::register_all()`, and `jackioh-luau`'s thread-local VM, which holds compiled chunks and
-   no game state (#442 L8). A Luau script is kept pure by its host: the sandbox (L5), the integer boundary
-   every value crosses (L6) and the build-time lint (L6, L7), all in `crates/luau/README.md`. Data reaches a
-   pure crate only at compile time (`include_str!`, `crates/cards/build.rs`); tooling that needs the disk or
-   a clock goes in `crates/tools`.
+   by `jackioh_cards::register_all()` (the older shipped catalogs a replay folds under among them, each
+   built once on first use), `jackioh-luau`'s thread-local VM, which holds compiled chunks and no game
+   state (#442 L8), and the engine's thread-local naming the shipped catalog a replay is folding under, set
+   for that one call and put back after it (R767000). A Luau script is kept pure by its host: the sandbox
+   (L5), the integer boundary every value crosses (L6) and the build-time lint (L6, L7), all in
+   `crates/luau/README.md`. Data reaches a pure crate only at compile time (`include_str!`,
+   `crates/cards/build.rs`); tooling that needs the disk or a clock goes in `crates/tools`.
 5. Card scripts return effects and never mutate state. A `.luau` script calls `J`
    (`local J = require("@jackioh")`, typed by `crates/cards/luau/jackioh.luau`): one function per verb of
    the engine's effects module, under the same name, each returning its effect as data that the host builds
@@ -80,6 +82,10 @@ trap backrow. This file binds every agent, not only Claude.
     files or more; **medium** for the rest. Torn between two, take the harder. The bot never changes your
     label, so a wrong easy reaches a weak model: when you cannot judge it, leave it off and the planner rates
     it.
+12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
+    or has not run, and none calls a failure pre-existing or environmental without a link to the same check
+    failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
+    red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
 
 Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber.
 
@@ -145,7 +151,7 @@ pnpm --dir apps/web exec vitest run src/game/animations.test.ts     # one web te
 ```
 # Cypress; the root `pnpm install` covers e2e/
 E2E=1 pnpm --dir apps/web dev                  # http://localhost:5173, serves /dev/hotseat
-E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38
+E2E=1 cargo run --release -p jackioh-server    # :8787 + /ws/match; needed for networked specs 05, 06, 09, 10, 18, 19, 20, 26, 27, 35, 37, 38, 39
 cargo build --release -p jackioh-tools         # target/release/jackioh, whose `replay` specs 01 and 13 fold the browser's log with
 cd e2e && pnpm exec cypress run --spec cypress/e2e/01-hotseat-full-game.cy.ts
 pnpm --dir e2e test:component                  # component/pixel specs, no server needed

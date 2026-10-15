@@ -39,6 +39,7 @@
 import { CATALOG_VERSION } from "@jackioh/cards";
 import {
   beginGame,
+  carriedVersions,
   createGame,
   createRng,
   hashState,
@@ -63,12 +64,13 @@ import { DEFAULT_PORTRAIT, newestShippedSet, opponentOf, type Action, type Actio
 import { PRACTICE_AI_CLOCK_MS, PRACTICE_REPLAYS_CACHED, PRACTICE_REPLAYS_KEPT } from "./config.ts";
 import { lessonById } from "../tutorial/lessons.ts";
 import { presetById } from "./decks.ts";
-import type { PracticeReplay, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
+import type { PracticeReplay, PracticeReplaySetup, PracticeSave, PracticeSaveStore } from "./saveStore.ts";
 import type {
   LastBoardCard,
   PracticeDebug,
   PracticeDeckChoice,
   PracticeReplayListing,
+  PracticeReplaySummary,
   PracticeRequest,
   PracticeResponse,
   PracticeSnapshot,
@@ -114,6 +116,8 @@ type PracticeGame = {
   error: string | null;
   /** R768: its end has been kept (or passed over), so it is kept once. */
   kept: boolean;
+  /** R768000: the number and step count it was kept under, once kept. */
+  keptAs?: Pick<PracticeReplaySummary, "game" | "steps">;
 };
 
 /** R188: the action types the AI never takes on its own, even as a fallback. */
@@ -287,6 +291,7 @@ function snapshotOf(game: PracticeGame): PracticeSnapshot {
     aiToAct: aiToAct(game.state, aiSeatNow(game)),
     error: game.error,
     ...(keepsBoard ? { lastBoard: lastBoardFor(game.state, human) } : {}),
+    ...(game.keptAs === undefined ? {} : { replay: { ...game.keptAs } }),
   };
 }
 
@@ -333,9 +338,13 @@ function resumeGame(save: PracticeSave | null, asked: PracticeStartConfig): Prac
   return game;
 }
 
-/** R768: the setup `startGame` deals from the kept config, as a resume does, and the log. */
+/**
+ * R768: the kept game's setup and its log. R767000: the setup it kept, else (a game kept before
+ * setups were, on this build's catalog only) the setup `startGame` deals from the kept config, as a
+ * resume does.
+ */
 function foldInputOf(replay: PracticeReplay): FoldInput {
-  const dealt = startGame(replay.config);
+  const dealt = replay.setup ?? startGame(replay.config);
   return {
     seed: replay.config.seed,
     decks: dealt.decks,
@@ -344,6 +353,14 @@ function foldInputOf(replay: PracticeReplay): FoldInput {
     ...(dealt.dealt === undefined ? {} : { dealt: dealt.dealt }),
     log: replay.log,
   };
+}
+
+/**
+ * R767000: whether this build can fold a kept game: one played on its own catalog version, or on a
+ * version it carries when the game kept its setup (dealing it again would read this build's catalog).
+ */
+function foldable(replay: PracticeReplay): boolean {
+  return replay.catalog === CATALOG_VERSION || (replay.setup !== undefined && carriedVersions().includes(replay.catalog));
 }
 
 /**
@@ -421,6 +438,14 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     const replay: PracticeReplay = {
       catalog: CATALOG_VERSION,
       config: JSON.parse(JSON.stringify(active.config)) as PracticeStartConfig,
+      setup: JSON.parse(
+        JSON.stringify({
+          decks: active.decks,
+          handicaps: active.handicaps,
+          ...(active.lastBoards === undefined ? {} : { lastBoards: active.lastBoards }),
+          ...(active.dealt === undefined ? {} : { dealt: active.dealt }),
+        }),
+      ) as PracticeReplaySetup,
       log: JSON.parse(JSON.stringify(active.log)) as Action[],
       hash: hashState(active.state),
       endSeat,
@@ -434,6 +459,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       },
     };
     saves.writeReplays([...kept, replay].slice(-PRACTICE_REPLAYS_KEPT));
+    active.keptAs = { game: replay.summary.game, steps: replay.summary.steps };
   }
 
   /** R768: a kept game folded once and checked against its catalog and hash; held by its number. */
@@ -447,7 +473,7 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
       return held;
     }
     let open: ReplayOpen;
-    if (replay.catalog !== CATALOG_VERSION) {
+    if (!foldable(replay)) {
       // Refused before any deck is dealt: another catalog may lack a preset the config names.
       open = { kind: "refused", reason: "earlier_patch" };
     } else {
@@ -472,10 +498,13 @@ export function createPracticeCore(env: PracticeCoreEnv): PracticeCore {
     if (game !== null && game.state.result === null) throw new Error("replays are not available while a practice game is in progress");
   }
 
-  /** R768: no kept game is folded to be listed; one unopened is listed unavailable only for its catalog. */
+  /**
+   * R768: no kept game is folded to be listed; one unopened is listed unavailable only when this build
+   * cannot fold its catalog version (R767000).
+   */
   function listReplays(): PracticeReplayListing[] {
     return [...(env.saves?.readReplays() ?? [])].reverse().map((replay) => {
-      const verdict = replay.catalog === CATALOG_VERSION ? (verdicts.get(replay.summary.game) ?? null) : "earlier_patch";
+      const verdict = foldable(replay) ? (verdicts.get(replay.summary.game) ?? null) : "earlier_patch";
       return {
         ...replay.summary,
         portraits: { ...replay.summary.portraits },

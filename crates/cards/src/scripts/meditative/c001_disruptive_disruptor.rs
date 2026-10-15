@@ -1,6 +1,6 @@
 //! M #1 Disruptive Disruptor (SPEC §8.8 row 1, BUILD M10 row M 1). (2) Field Spell, Common.
 //!   Base:    "Aura: You can't be forced to discard cards during your opponent's turn."
-//!   Radiant: the Aura, plus "Cry: Draw {draw|card|cards} and gain {mana} mana." (1, 2)
+//!   Radiant: the Aura, plus "Cry: Draw {draw} and gain {mana} mana." (1, 2)
 //!
 //! The Aura is a discard guard (R800): a pure-read hook beside `draw_limit` (R457), read off the cards
 //! acting on the field while it is not the guarded player's turn. An effect's discard (`discard`,

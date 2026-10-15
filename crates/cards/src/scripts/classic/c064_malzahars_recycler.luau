@@ -1,7 +1,7 @@
 --!strict
 local J = require("@jackioh")
 
--- "End of turn: Discard 2 cards." — random (R682).
+-- "End of turn: Discard 2 random cards." — random (R682).
 local END_OF_TURN_DISCARDS = 2
 
 local function end_of_turn(ctx: J.EffectContext)

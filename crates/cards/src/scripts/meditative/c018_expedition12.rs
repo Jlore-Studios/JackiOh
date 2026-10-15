@@ -1,6 +1,6 @@
 //! Meditative #18 Expedition12 (SPEC §8.8 row 18). (1) Spell, Quickdraw, Epic.
-//!   Base:    "Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
-//!   Radiant: "Echo 1. Lose all mana next turn. Choose a card in your hand. It becomes Radiant."
+//!   Base:    "Lose all mana next turn. Make a card in your hand Radiant."
+//!   Radiant: "Echo 1. Lose all mana next turn. Make a card in your hand Radiant."
 //!
 //! ME-TURN's lost refresh (R844) and a declared hand pick (R81, as C+ #41's): your other
 //! non-Radiant hand cards, made Radiant (§5.2). With no other non-Radiant hand card the pick has

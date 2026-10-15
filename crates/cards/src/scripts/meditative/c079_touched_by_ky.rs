@@ -1,7 +1,7 @@
 //! M #79 Touched by KY (SPEC §8.8 row 79): (3) Unit, KY, Legendary, 4/4 → 8/8.
 //!
-//! Base:    "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}."
-//! Radiant: "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw|card|cards}. Each
+//! Base:    "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}."
+//! Radiant: "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}. Each
 //!          becomes Radiant."
 //! Engine:
 //! - **The hand size** (ME-HANDCAP, R1143): `set_hand_cap` sets this player's hand cap to `handSize`

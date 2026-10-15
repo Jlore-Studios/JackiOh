@@ -1,7 +1,8 @@
 //! ME-GRANT (docs/meditative-set.md M5, MD-D13): granted Death abilities, held as plain data.
 //!
 //! Meditative #58 and #59 grant the Unit they summon a Death ability — #58's "Death: Add {books}
-//! random Book cards to your hand", #59's "Death: Fuse a random Book and AI card". The grant is a
+//! random Books to your hand", #59's "Death: Fuse a random Book and a random AI generated card and
+//! add the result to your hand". The grant is a
 //! hook the granting card registers beside its faces (`Script.grants`, keyed `<key>`); the
 //! instance carries only the name, the face it was granted on and the numbers it was granted with
 //! (`CardInstance.grants`). A closure never enters state, so state stays JSON and replays exactly,

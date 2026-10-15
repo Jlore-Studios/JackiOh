@@ -330,6 +330,13 @@ pub extern "C" fn catalog_version() -> *mut c_char {
     out(Ok(jackioh_cards::catalog_version().to_string()))
 }
 
+/// R767000: the shipped versions this module carries for replays, oldest first: in the browser,
+/// those from `crates/cards/build.rs`'s `BROWSER_CARRIED_FROM` on.
+#[unsafe(no_mangle)]
+pub extern "C" fn carried_versions() -> *mut c_char {
+    out(to_json(&jackioh_cards::carried_versions()))
+}
+
 // ---------------------------------------------------------------------------------------------
 // The engine (SURFACE §6.1)
 // ---------------------------------------------------------------------------------------------
@@ -418,8 +425,9 @@ pub extern "C" fn fold(args_json: *const c_char) -> *mut c_char {
     })
 }
 
-/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, but only on this build's catalog
-/// version: a game of another is refused as `earlier_patch` before its decks are read.
+/// R768: `ReplayOpen`. The setup is checked as `fold` checks it, under the catalog the game was
+/// played on (R767000): this build's own or one it carries. A game of any other version is refused as
+/// `earlier_patch` before its decks are read.
 #[unsafe(no_mangle)]
 pub extern "C" fn replay_open(args_json: *const c_char, record_json: *const c_char) -> *mut c_char {
     boundary(|| {
@@ -428,9 +436,9 @@ pub extern "C" fn replay_open(args_json: *const c_char, record_json: *const c_ch
             arg("replayOpen: the record", record_json)?,
         )?;
         let build = jackioh_cards::catalog_version();
-        if record.catalog_version == build {
+        if let Ok(shipped) = engine::catalog_for(&record.catalog_version, build) {
             let setup: CreateGameArgs = parse("replayOpen", arg("replayOpen", args_json)?)?;
-            check_setup(&setup)?;
+            engine::with_shipped(shipped, || check_setup(&setup))?;
         }
         let args: FoldArgs = parse("replayOpen", arg("replayOpen", args_json)?)?;
         to_json(&engine::replay_open(&args, &record, build))

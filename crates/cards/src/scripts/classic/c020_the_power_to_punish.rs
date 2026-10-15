@@ -1,7 +1,7 @@
 //! C #20 The Power to Punish (SPEC §8.6 row 20). Field Spell, cost 2, Rare.
-//!   Base:    "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards};
+//!   Base:    "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
 //!             or choose a Unit, which is destroyed at the start of your next turn."
-//!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|card|cards};
+//!   Radiant: "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards};
 //!             or all enemy Units are destroyed at the start of your next turn."
 //!
 //! Activate (R384): once per turn, and not a play. The mode and its targets travel in the `activate`

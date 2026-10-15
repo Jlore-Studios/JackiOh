@@ -4,7 +4,7 @@
 //! Base:    "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a
 //!          Journey Complete into your deck."
 //! Radiant: "Choose up to {cards|card|cards} in your hand to go on a journey: exile them and shuffle a
-//!          Radiant Journey Complete into your deck. Draw {draw|card|cards}."
+//!          Radiant Journey Complete into your deck. Draw {draw}."
 //! Engine: as the Spell resolves, a `pick` prompt of up to `cards` cards of your hand (`choose_pick`,
 //! the chooser's alone, §10.8; `cards` tunes, so it is a resolution prompt, R386). Its step exiles each
 //! picked card in the order picked, hand order (R221) (a unit-token card ceases to exist instead, R11),

@@ -40,8 +40,8 @@ use serde::{Deserialize, Serialize};
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     Action, ActionBody, CreateGameOptions, DECK_SIZE, GameResult, GameState, GameSummary, LastBoardEntry,
-    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, Rng, SetName,
-    newest_shipped_set,
+    Phase, PlayerId, PlayerView, ReplayCheckpoints, ReplayOpen, ReplayPage, ReplayRecord, ReplayRefusal, Rng,
+    SetName, ShippedCatalog, newest_shipped_set,
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
@@ -163,6 +163,25 @@ pub fn hash_state(state: &EngineState) -> String {
 pub fn replay_open(args: &FoldArgs, record: &ReplayRecord) -> ReplayOpen {
     registered();
     jackioh_engine::replay_open(args, record, jackioh_cards::catalog_version())
+}
+
+/// R767000: the catalog a game played on `played_on` folds under: `None` for this build's own,
+/// the shipped one it carries, or `earlier_patch`.
+pub fn catalog_for(played_on: &str) -> Result<Option<&'static ShippedCatalog>, ReplayRefusal> {
+    registered();
+    jackioh_engine::catalog_for(played_on, jackioh_cards::catalog_version())
+}
+
+/// R767000: `run` on this thread under `shipped` (`None`: this build's own catalog), for that call.
+pub fn with_shipped<T>(shipped: Option<&'static ShippedCatalog>, run: impl FnOnce() -> T) -> T {
+    registered();
+    jackioh_engine::with_shipped(shipped, run)
+}
+
+/// R767000: `run` under the catalog an opened replay's checkpoints were folded under.
+pub fn under_checkpoints<T>(checkpoints: &ReplayCheckpoints, run: impl FnOnce() -> T) -> T {
+    registered();
+    jackioh_engine::under_checkpoints(checkpoints, run)
 }
 
 /// R768: steps `[from, from + count)` of an opened replay, each `view_for(state_k, seat)`.

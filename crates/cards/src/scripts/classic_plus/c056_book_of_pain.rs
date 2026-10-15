@@ -1,5 +1,5 @@
 //! C+ #56 Book of Pain (SPEC §8.7 row 56). (1) Spell, Book, Epic.
-//!   Base:    "Your opponent discards {discards|card|cards}." — discards 2
+//!   Base:    "Your opponent discards {discards|random card|random cards}." — discards 2
 //!   Radiant: the same text, discards 4.
 //!   Engine:  "Random from their hand (R682): no prompt opens; fewer cards → all they have, none →
 //!            nothing; a discarded unit-token card ceases to exist (R11). Tunes: discards 2 ↑."

@@ -1,9 +1,9 @@
 //! M #58 Permanent Underclassman (SPEC §8.8 row 58): (2) Unit, Human, Common, 3/3 → 6/6.
 //!
-//! Base:    "Cry: Summon a random (1) Unit. It gains "Death: Add {books|random Book card|random Book
-//! cards} to your hand.""
-//! Radiant: "Cry: Summon a random Radiant (1) Unit. It gains "Death: Add {books|random Radiant Book
-//! card|random Radiant Book cards} to your hand."" (the granted Death quoted in its sentence, R1445)
+//! Base:    "Cry: Summon a random (1) Cost Unit. It gains "Death: Add {books|random Book|random Books}
+//! to your hand.""
+//! Radiant: "Cry: Summon a random Radiant (1) Cost Unit. It gains "Death: Add {books|random Radiant
+//! Book|random Radiant Books} to your hand."" (the granted Death quoted in its sentence, R1445)
 //! Engine: ME-GRANT (docs/meditative-set.md M5, MD-D13) — the summoned Unit is granted
 //! `meditative-058#bookDeath` with the face's numbers, as plain data naming the hook this file
 //! registers beside its faces; `grants::death_hook_of` runs it after the Unit's own Death, for the

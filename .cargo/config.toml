@@ -17,6 +17,6 @@ rustflags = [
   "-C", "link-args=-sENVIRONMENT=web,worker,node",
   "-C", "link-args=-sALLOW_MEMORY_GROWTH=1",
   "-C", "link-args=-sDYNAMIC_EXECUTION=0",
-  "-C", "link-args=-sEXPORTED_FUNCTIONS=_main,_init,_catalog,_catalog_version,_create_game,_begin_game,_reduce,_legal_actions,_view_for,_seat_to_act,_hash_state,_fold,_replay_open,_replay_page,_last_board_for,_seat_played_by,_find_instance,_deal_emote_hand,_preview_sets,_ai_to_act,_ai_decide,_build_ai_deck,_choose_action,_constants,_craft_preview,_engine_tables,_validator,_jackioh_free,_jackioh_last_error",
+  "-C", "link-args=-sEXPORTED_FUNCTIONS=_main,_init,_catalog,_catalog_version,_carried_versions,_create_game,_begin_game,_reduce,_legal_actions,_view_for,_seat_to_act,_hash_state,_fold,_replay_open,_replay_page,_last_board_for,_seat_played_by,_find_instance,_deal_emote_hand,_preview_sets,_ai_to_act,_ai_decide,_build_ai_deck,_choose_action,_constants,_craft_preview,_engine_tables,_validator,_jackioh_free,_jackioh_last_error",
   "-C", "link-args=-sEXPORTED_RUNTIME_METHODS=UTF8ToString,stringToNewUTF8",
 ]

@@ -2,12 +2,10 @@
 //! 20/20 → 40/40.
 //!
 //!   Base:    "Can't attack, Indestructible, Immutable
-//!            End of turn: Allure every enemy Unit. At the start of your next turn they join your
-//!            side, or die of heartbreak if you have no room.
+//!            End of turn: Allure every enemy Unit.
 //!            You summon this when your Jade Counter reaches 5."
 //!   Radiant: "Indestructible, Immutable
-//!            End of turn: Allure every enemy Unit. At the start of your next turn they join your
-//!            side, or die of heartbreak if you have no room.
+//!            End of turn: Allure every enemy Unit.
 //!            Your Jade Beauties become Radiant when your Jade Counter reaches 10."
 //!
 //! Engine: a Unit token that ME-JADE summons (no Cry). Indestructible (R46). Immutable (R23): no
