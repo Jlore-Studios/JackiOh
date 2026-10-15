@@ -40,7 +40,7 @@ use jackioh_server::config::{
     RATING_DEVIATION_START, RATING_VOLATILITY_START, SERIES_MAX_GAMES, SERIES_PICK_SECONDS,
     SERIES_SWEEP_INTERVAL_SECONDS,
 };
-use jackioh_server::db::fake::FakeData;
+use jackioh_server::db::fake::{CallOutcome, FakeData, FakeTables};
 use jackioh_server::db::store::{Db, MatchSeat, StoreError};
 use jackioh_server::ranked::glicko2::{Glicko, rate_game};
 use serde::Serialize;
@@ -1215,5 +1215,42 @@ mod r333_the_pick_clock {
         advance(10 * SWEEP_MS).await;
         flush().await;
         assert!(sweeper.await.is_err_and(|stopped| stopped.is_cancelled()));
+    }
+}
+
+// R890000 — a match seat is claimed atomically (§9.5)
+
+/// R890000, the series half: a game whose seat is taken mid-start is voided and reported as not
+/// started, so the next transition retries with the same game id.
+mod r890000_a_seat_taken_mid_start {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r890000_seat_taken_voids_the_game_and_reports_not_started() {
+        let h = harness_at_1000().await;
+        // A queue match seats alice between the game's start and its flags.
+        fake(&h.app).lock().await.before_call = Some(Arc::new(|method: &str, tables: &mut FakeTables| {
+            if method == "profiles.setInMatch"
+                && let Some(row) = tables.profiles.iter_mut().find(|row| row.id == ALICE)
+                && row.in_match_id.is_none()
+            {
+                row.in_match_id = Some("r89-elsewhere".to_string());
+            }
+            CallOutcome::Proceed
+        }));
+
+        pick_both(&h, [0, 0]).await;
+        fake(&h.app).lock().await.before_call = None;
+
+        // A game that never started: no match row, the series still names it, alice keeps the
+        // game she found and bob was never seated.
+        assert_eq!(match_row(&h.app, FIRST_MATCH).await, Value::Null);
+        assert!(started(&h).await.is_empty());
+        let series = row(&h).await;
+        assert_eq!(series["status"], "playing");
+        assert_eq!(series["nextMatchId"], FIRST_MATCH);
+        assert_eq!(profile(&h.app, ALICE).await["inMatchId"], json!("r89-elsewhere"));
+        assert_eq!(profile(&h.app, BOB).await["inMatchId"], Value::Null);
+        assert!(h.logs.has("series.seat_taken"));
     }
 }
