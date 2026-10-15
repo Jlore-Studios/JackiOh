@@ -17,24 +17,7 @@ use jackioh_engine::view_for::view_for;
 use super::fixtures::combat::plain;
 use super::fixtures::field::{doom, listener, playing};
 use super::fixtures::harness::{put, slot};
-
-/// `toMatchObject`: every key `expected` names holds the same value in `actual` (objects and arrays
-/// recursively, as vitest reads them).
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(have), Value::Object(want)) => want
-            .iter()
-            .all(|(key, value)| have.get(key).is_some_and(|got| matches_object(got, value))),
-        (Value::Array(have), Value::Array(want)) => {
-            have.len() == want.len()
-                && have
-                    .iter()
-                    .zip(want)
-                    .all(|(got, value)| matches_object(got, value))
-        }
-        _ => actual == expected,
-    }
-}
+use crate::rules::fixtures::harness::matches_object;
 
 /// The card under `id` as it stands in the state now (TS read the live object).
 fn live<'a>(state: &'a GameState, id: &str) -> &'a CardInstance {

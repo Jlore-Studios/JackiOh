@@ -10,9 +10,9 @@
 // face-down zone; the client's also admits `null`, an empty zone, as TypeScript's always did).
 //
 // THE HELPERS ARE HAND-KEPT. The runtime values the client imports (`keywordKey`, `fillParams`,
-// `readCodeInput`, `emoteGate`, `parseAim`, the stats formatters, …) are the TypeScript sources the
-// server's Rust port was made from, kept here as the client's own (`./catalog.ts`, `./codes.ts`,
-// `./emotes.ts`, `./aim.ts`, `./stats.ts`). The server's copies are `crates/engine/src/wire/*.rs`;
+// `readCodeInput`, `emoteGate`, `parseAim`, …) are the TypeScript sources the server's Rust port
+// was made from, kept here as the client's own (`./catalog.ts`, `./codes.ts`, `./emotes.ts`,
+// `./aim.ts`). The server's copies are `crates/engine/src/wire/*.rs`;
 // both read `crates/engine/tests/fixtures/code-input-cases.json` (`./codes.test.ts`), so the reading
 // of a typed code cannot drift between them.
 
@@ -212,7 +212,6 @@ export {
   PARAM_PLACEHOLDER,
   PLAYER_IDS,
   SHIPPED_SETS,
-  armorOf,
   fillParams,
   hasKeyword,
   keywordKey,
@@ -225,4 +224,3 @@ export {
 export * from "./codes.ts";
 export * from "./emotes.ts";
 export * from "./aim.ts";
-export * from "./stats.ts";

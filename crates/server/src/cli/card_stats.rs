@@ -18,7 +18,7 @@
 //! the same the AI's development run prints its own games with, so a pre-release run and the live
 //! games after it compare figure for figure: run both with the same `--patch`.
 
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use serde::Serialize;
 
 use jackioh_engine::wire::{
@@ -26,6 +26,7 @@ use jackioh_engine::wire::{
     PilotFilter, SOURCE_FILTERS, SourceFilter, card_stats, format_card_stats,
 };
 
+use crate::cli::{connect_one, database_url};
 use crate::db::store::{Db, GameRecordQuery, StoreError};
 use crate::env::quoted;
 
@@ -162,20 +163,12 @@ pub fn render_card_stats(
 /// TS `main()`: `stats-cards`'s arguments after the subcommand (`main.rs`).
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
     let options = parse_card_stats_args(&args)?;
-    let connection_string = std::env::var("DATABASE_URL").unwrap_or_default();
-    if connection_string.is_empty() {
-        bail!("DATABASE_URL is not set (see docs/architecture.md, env-var contract).");
-    }
+    let connection_string = database_url()?;
 
     // The catalog's names come from the compiled-in catalog (TS read it with `loadCatalog()`).
     let catalog = &*jackioh_cards::CATALOG;
     // One connection: this process runs one read and exits.
-    let pool = sqlx::postgres::PgPoolOptions::new()
-        .max_connections(1)
-        .connect(&connection_string)
-        .await
-        .map_err(|error| anyhow!("{error}"))?;
-    let db = Db::Pg(pool);
+    let db = connect_one(&connection_string).await?;
     let outcome = card_stats_report(&db, &options).await;
     db.close().await;
     let report = outcome?;

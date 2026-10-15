@@ -13,6 +13,7 @@ use jackioh_engine::{
 use super::fixtures::combat::plain;
 use super::fixtures::harness::{events_of_type, new_game, put, slot};
 use super::fixtures::scripts::mana_well;
+use crate::rules::fixtures::harness::json_of;
 
 /// TS `sinkFor(state)` (fixtures/harness.ts): the state, a fresh event list and an rng at the state's
 /// cursor, as `reduce` starts one. A sink borrows all three, so they live here and `sink()` lends them
@@ -84,10 +85,6 @@ fn live<'a>(state: &'a GameState, card: &CardInstance) -> &'a CardInstance {
     find_instance(state, &card.id).unwrap_or_else(|| panic!("{} is nowhere", card.id))
 }
 
-fn json_of<T: serde::Serialize>(value: &T) -> Value {
-    serde_json::to_value(value).expect("serialises")
-}
-
 /// `eventsOfType(events, "counterChanged").map((e) => e.value)`.
 fn counter_values(events: &[GameEvent]) -> Vec<i32> {
     events_of_type(events, GameEventType::CounterChanged)
@@ -136,7 +133,7 @@ mod plague_s6_3_plague_counter_m3_t1 {
         assert_eq!(live(sink.state, &unit).counters.plague, Some(7));
         // R471: every gain is a placement, reported with how many tokens it put there.
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::CounterChanged)),
+            json_of(events_of_type(&sink.events, GameEventType::CounterChanged)),
             json!([
                 { "type": "counterChanged", "instanceId": unit.id, "counter": "plague", "value": 1, "placed": 1 },
                 { "type": "counterChanged", "instanceId": unit.id, "counter": "plague", "value": 2, "placed": 1 },
@@ -299,7 +296,7 @@ mod lock_s3_2_m3_t1 {
         assert!(is_locked(sink.state, slot(P2, Units, 2)));
         assert!(!is_open(sink.state, slot(P2, Units, 2)));
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::Locked)),
+            json_of(events_of_type(&sink.events, GameEventType::Locked)),
             json!([{ "type": "locked", "player": "p2", "row": "units", "lane": 2 }])
         );
 
@@ -386,7 +383,7 @@ mod lock_s3_2_m3_t1 {
         );
 
         assert_eq!(
-            json_of(&events_of_type(&sink.events, GameEventType::Locked)),
+            json_of(events_of_type(&sink.events, GameEventType::Locked)),
             json!([{ "type": "locked", "player": "p1", "row": "units", "lane": 1 }])
         );
         assert_eq!(

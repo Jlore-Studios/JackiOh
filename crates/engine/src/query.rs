@@ -34,7 +34,7 @@ use serde_json::Value;
 
 use crate::config::HAND_CAP;
 use crate::damage::DamageTarget;
-use crate::layers::{face_of, unit_has};
+use crate::layers::{AuraTable, face_of, unit_has};
 use crate::script::{EffectContext, FlagOrCount, StaticFlags};
 use crate::state::{CardInstance, FaceUpRecord, GameState, ModifierKind, PlayRecord, find_instance};
 use crate::wire::{AttackHealth, CardType, GameEvent, KeywordKind, PlayerId, Row, Tag, Zone, opponent_of};
@@ -369,13 +369,6 @@ pub fn last_face_up_played(state: &GameState, player: PlayerId) -> Option<FaceUp
         .and_then(|log| log.last_face_up_play.clone())
 }
 
-/// B5 E1, R448: whether the play a `cardAnnounced` names can still be countered — its window is open
-/// and no Counter has cancelled it yet. A response that asks before it counters (Classic #4 Palantir)
-/// reads this; the engine already offers a cancelled announce to no trap and runs no trigger on it.
-pub fn play_still_announced(state: &GameState, instance_id: &str) -> bool {
-    crate::announce::is_announce_live(state, instance_id)
-}
-
 // ---------------------------------------------------------------------------
 // v0.2.0 readers: the Classic #1–#45 cards (card-specific, the cards-classic-a workstream)
 // ---------------------------------------------------------------------------
@@ -496,23 +489,11 @@ pub fn fusable_permanents_of(state: &GameState, player: PlayerId, except: Option
 }
 
 /// Whether any card acting for this player carries the picked static flag — the active units and
-/// the face-up backrow tops, as `damage.rs`'s `acting_texts_of` walks them (a face-down Trap's text
-/// is in nobody's use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28,
-/// MD-D29, R1125, R1127).
+/// the face-up backrow tops, `damage.rs`'s `acting_texts_of` (a face-down Trap's text is in nobody's
+/// use until it fires, R33). What the Pareto judge and the emote gate ask (MD-D28, MD-D29, R1125,
+/// R1127).
 pub fn acting_with_flag(state: &GameState, player: PlayerId, pick: fn(&StaticFlags) -> Option<bool>) -> bool {
-    let mut acting: Vec<CardInstance> = active_units_of(state, player).into_iter().cloned().collect();
-    for slot in slots_of(player, Row::Backrow) {
-        let Some(card) = card_at(state, slot) else {
-            continue;
-        };
-        let card_type = crate::faces::card_type_of(state, card);
-        let face_down =
-            (card_type == CardType::Trap || card_type == CardType::FieldTrap) && card.face_up != Some(true);
-        if !face_down {
-            acting.push(card.clone());
-        }
-    }
-    acting
+    crate::damage::acting_texts_of(state, player)
         .iter()
         .any(|card| pick(&crate::scripts::flags_of(state, card)) == Some(true))
 }
@@ -574,7 +555,12 @@ pub fn base_stats_of(state: &GameState, card: &CardInstance) -> AttackHealth {
 /// R1220: whether this card carries Untributable — no Tribute cost may take it, and every Sacrifice
 /// of it does nothing. Read through the layers so auras apply, as the sacrifice sites do.
 pub fn is_untributable(state: &GameState, card: &CardInstance) -> bool {
-    crate::layers::unit_has(state, card, KeywordKind::Untributable)
+    is_untributable_in(&AuraTable::per_read(state), card)
+}
+
+/// `is_untributable` read through a sweep's `AuraTable` (#892).
+pub fn is_untributable_in(auras: &AuraTable<'_>, card: &CardInstance) -> bool {
+    auras.unit_has(card, KeywordKind::Untributable)
 }
 
 /// R1225: whether this player borrowed mana this turn — at least one spend went past their current

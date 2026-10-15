@@ -10,6 +10,7 @@
 // or face.
 
 import type { PlayerId, Row } from "./catalog.ts";
+import { isRecord } from "./json.ts";
 
 export type AimEnd =
   | { at: "hero"; player: PlayerId }
@@ -18,9 +19,6 @@ export type AimEnd =
 
 /** An in-progress aim; `target` is null off a valid landing spot. */
 export type Aim = { source: AimEnd; target: AimEnd | null };
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isPlayerId = (value: unknown): value is PlayerId => value === "p1" || value === "p2";
 

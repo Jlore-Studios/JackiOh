@@ -30,17 +30,12 @@ const NEVER_CHOOSE: &[&str] = &[
     "ceilingReached",
 ];
 
-/// A token by flag or by tag.
-fn is_token(def: &CardDef) -> bool {
-    def.token || def.tags.iter().any(|tag| tag.as_str() == "Token")
-}
-
 /// Every deckable id (tokens filtered out), in catalog order. The catalog is registered first.
 fn deckable_pool() -> Vec<String> {
     jackioh_cards::register_all();
     jackioh_cards::CATALOG
         .iter()
-        .filter(|(_, def)| !is_token(def))
+        .filter(|(_, def)| !def.is_token())
         .map(|(id, _)| id.clone())
         .collect()
 }
@@ -223,7 +218,7 @@ mod all_randoms_deal_r258_src_match_engine_real_ts {
             for card_id in deck {
                 let def = jackioh_cards::CATALOG.get(card_id);
                 assert!(def.is_some(), "{card_id}");
-                assert!(!def.is_some_and(is_token), "{card_id}");
+                assert!(!def.is_some_and(CardDef::is_token), "{card_id}");
             }
         }
         // The dealt pair is a game the engine starts, exactly as the match row will hand it over.

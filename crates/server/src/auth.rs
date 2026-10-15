@@ -61,8 +61,6 @@ pub struct Session {
     pub user: AuthUser,
 }
 
-pub type AuthSession = Session;
-
 /// R1443: the provider's session for a username sign-in, as the browser gets it: never the address.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PasswordGrant {

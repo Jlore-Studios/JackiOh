@@ -20,7 +20,7 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
-use crate::rules::fixtures::harness::{in_hand, new_game, put, slot};
+use crate::rules::fixtures::harness::{in_hand, matches_object, new_game, put, slot};
 
 // Fixtures
 
@@ -354,24 +354,6 @@ fn glows<T: serde::Serialize>(card: Option<&T>) -> bool {
             assert_eq!(flag, &json!(true));
             true
         }
-    }
-}
-
-/// Every key `expected` names is in `actual` with a matching value (objects by subset, arrays
-/// element by element and of the same length).
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, want)| actual.get(key).is_some_and(|got| matches_object(got, want))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(got, want)| matches_object(got, want))
-        }
-        _ => actual == expected,
     }
 }
 

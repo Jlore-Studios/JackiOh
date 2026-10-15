@@ -93,8 +93,6 @@ pub const EMOTE_IDS: &[EmoteId] = EmoteId::ALL;
 
 /// TS's `(typeof VOICE_EMOTE_IDS)[number]`: one of the voice lines (`is_voice_emote` tells).
 pub type VoiceEmoteId = EmoteId;
-/// TS's `(typeof EMOJI_EMOTE_IDS)[number]`: one of the emoji (`!is_voice_emote`).
-pub type EmojiEmoteId = EmoteId;
 
 /// TS `isEmoteId(value: unknown)`: a string that is one of the pool's ids.
 pub fn is_emote_id(value: &Value) -> bool {
@@ -360,19 +358,6 @@ pub fn emote_gate(sent_at: &[i64], now: i64) -> EmoteGate {
         retry_after_ms: None,
         sent_at: kept,
     }
-}
-
-/// The emote a seat sends, as the server relays it to the opponent (R643).
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "ts",
-    derive(ts_rs::TS),
-    ts(export, export_to = "../../../apps/web/src/wire/generated/")
-)]
-#[serde(rename_all = "camelCase")]
-pub struct EmoteRelay {
-    pub from: PlayerId,
-    pub emote: EmoteId,
 }
 
 // Emotes and hero portraits (SPEC §9.4 D5, §9.5, §10.10, R641–R643, R1340, R1341).

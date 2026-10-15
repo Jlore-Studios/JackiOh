@@ -92,7 +92,7 @@ earlier set, and the unban lane (`training/unban.md`) only removes entries.
 
 `play_match(&MatchConfig, &mut MatchHooks) -> MatchRecord` plays one whole game between two
 controllers (the AI, `greedy_action` or `random_action`, §10.7's random policy) and returns its log,
-hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate`, `AI_GATE`) are
+hash and bookkeeping; `play_ai_turn` plays one AI turn out. The gates (`run_gate_games`, `AI_GATE`) are
 three matchups whose subject alternates seats, every game folded back to its hash. A run of n games
 needs `gate_needed(matchup, n)` wins (the rule spec §9.9 proposes); only wins count.
 

@@ -2221,19 +2221,6 @@ fn cast_x_chosen(
 // Step 6 — Echo (§10.5 step 6, R30)
 // ---------------------------------------------------------------------------
 
-/// An option's key, built from the selection and never from its label (§10.6, R177): what the client sends back.
-fn key_of(selection: &Selection) -> String {
-    match selection {
-        Selection::Instance { instance_id } => format!("instance:{instance_id}"),
-        Selection::Hero { player } => format!("hero:{player}"),
-        Selection::Zone { player, row, lane } => format!("zone:{player}:{row}:{lane}"),
-        Selection::Mode { option } => format!("mode:{option}"),
-        // ME-CRAFT (R880): a recipe names its definition, as its prompt's option key does.
-        Selection::Craft { recipe } => crate::subsystems::craft::craft_id(recipe),
-        Selection::None => "none".to_string(),
-    }
-}
-
 fn label_of(selection: &Selection, chooser: PlayerId) -> String {
     match selection {
         Selection::Instance { instance_id } => instance_id.clone(),
@@ -2396,7 +2383,7 @@ fn ask_repeat_targets(
         let offered: Vec<PromptOption> = options
             .iter()
             .map(|selection| PromptOption {
-                key: key_of(selection),
+                key: crate::prompts::option_key(selection),
                 label: label_of(selection, run.player),
                 selection: selection.clone(),
                 cost: None,

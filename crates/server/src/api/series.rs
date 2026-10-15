@@ -632,24 +632,6 @@ pub async fn run_sweeper(app: Arc<App>) {
     }
 }
 
-/// The sweeper task's stop handle.
-pub struct SeriesSweeper {
-    handle: tokio::task::JoinHandle<()>,
-}
-
-impl SeriesSweeper {
-    pub fn stop(&self) {
-        self.handle.abort();
-    }
-}
-
-/// `run_sweeper` on its own task, with a handle to stop it.
-pub fn start_series_sweeper(app: Arc<App>) -> SeriesSweeper {
-    SeriesSweeper {
-        handle: tokio::spawn(run_sweeper(app)),
-    }
-}
-
 // Routes
 
 /// One answer for a missing series and one the caller is not in, so an id reveals nothing.

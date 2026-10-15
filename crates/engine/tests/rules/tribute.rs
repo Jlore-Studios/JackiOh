@@ -17,7 +17,9 @@ use jackioh_engine::effects::{damage, sacrifice};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::harness::{events_of_type, in_hand, new_game, put, sink_for, slot};
+use crate::rules::fixtures::harness::{
+    events_of_type, in_hand, matches_object, new_game, put, sink_for, slot,
+};
 
 // Fixtures.
 
@@ -371,23 +373,6 @@ fn of_type(events: &[GameEvent], kind: GameEventType) -> Value {
             .map(|event| serde_json::to_value(event).expect("an event serialises"))
             .collect(),
     )
-}
-
-/// Every key of `expected` is in `actual` with a matching value.
-fn matches_object(actual: &Value, expected: &Value) -> bool {
-    match (actual, expected) {
-        (Value::Object(actual), Value::Object(expected)) => expected
-            .iter()
-            .all(|(key, value)| actual.get(key).is_some_and(|found| matches_object(found, value))),
-        (Value::Array(actual), Value::Array(expected)) => {
-            actual.len() == expected.len()
-                && actual
-                    .iter()
-                    .zip(expected)
-                    .all(|(found, value)| matches_object(found, value))
-        }
-        _ => actual == expected,
-    }
 }
 
 fn top(pile: &Option<Pile>) -> Option<&CardInstance> {

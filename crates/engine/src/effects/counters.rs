@@ -5,20 +5,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::targets::{PlayerSpec, TargetSpec, player_of, resolve_target};
-use crate::damage::DamageTarget;
+use super::targets::{PlayerSpec, TargetSpec, instance_of, player_of};
 use crate::plague::{place_plague_on, plague_on, remove_plague};
 use crate::script::{Effect, EffectContext};
-use crate::state::CardInstance;
 use crate::wire::{GameEvent, Row};
 use crate::zones::{ZoneSlot, is_locked, lock_zone, row_size, slot_of, unlock_zone};
-
-fn instance_of(ctx: &EffectContext<'_>, spec: &TargetSpec) -> Option<CardInstance> {
-    match resolve_target(ctx, spec) {
-        Some(DamageTarget::Unit { instance }) => Some(instance),
-        _ => None,
-    }
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
