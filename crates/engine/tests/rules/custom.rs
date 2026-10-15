@@ -1,6 +1,7 @@
-//! R915000–R915006: custom cards in the engine (#915, #917, SPEC §12, `custom.rs`). The engine depends
-//! on no Luau host, so these tests lend it a Rust one (`FixtureHost`) that answers a fixture script per
-//! custom id; the card kit's own tests are `crates/luau/tests/kit.rs`.
+//! R915000–R915006: custom cards in the engine (#915, #917, SPEC §12, `custom.rs`), and R962000: a
+//! sandbox game spawns its own (#962, `sandbox.rs`). The engine depends on no Luau host, so these tests
+//! lend it a Rust one (`FixtureHost`) that answers a fixture script per custom id; the card kit's own
+//! tests are `crates/luau/tests/kit.rs`.
 
 use std::rc::Rc;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ use jackioh_engine::{
 };
 
 use crate::rules::fixtures::catalog::{vanilla_catalog, vanilla_deck};
+use crate::rules::fixtures::combat::{self, combat_catalog, spikey_pillow};
 
 const DRAWER: &str = "custom-drawer";
 const FAILER: &str = "custom-failer";
@@ -527,4 +529,175 @@ fn r915006_a_log_with_a_custom_card_s_play_folds_to_the_live_hash_under_the_same
             .expect("a custom game survives JSON");
         assert_eq!(hash_state(&roundtrip), hash_state(&live));
     });
+}
+
+// ---------------------------------------------------------------------------------------------
+// R962000: a sandbox game spawns the custom cards it carries
+// ---------------------------------------------------------------------------------------------
+
+/// The vanilla units and the combat fixtures, among them Spikey Pillow, whose aura takes 2 attack off
+/// its controller's units.
+fn sandbox_setup() {
+    register_catalog(combat_catalog(vanilla_catalog(40, 1)));
+    register_scripts(combat::scripts());
+}
+
+/// A sandbox game (R923000's flag, which the scenario has no option for) carrying `cards`, with
+/// `p1_field` on P1's field and none of the cards dealt.
+fn sandbox_board(cards: &[&str], p1_field: Value) -> Scenario {
+    let customs: Vec<CustomCard> = cards.iter().map(|id| custom(id)).collect();
+    let mut s = scenario(json!({
+        "custom": customs,
+        "p1": { "hand": ["fx-1"], "field": p1_field, "library": ["fx-2", "fx-3", "fx-4"] },
+        "p2": { "hand": ["fx-5"], "library": ["fx-6"] },
+    }));
+    s.state_mut().sandbox = Some(true);
+    s
+}
+
+fn spawn_into(def_id: &str, to: Value) -> ActionBody {
+    ActionBody::Sandbox {
+        op: json_as(json!({ "kind": "spawn", "player": "p1", "defId": def_id, "to": to })),
+    }
+}
+
+/// The error a spawn of `def_id` into P1's hand is refused with, the state left as it was.
+fn refused_spawn(state: &GameState, def_id: &str) -> String {
+    let action = Action::new(spawn_into(def_id, json!({ "zone": "hand" })), P1, "refused");
+    let out = reduce(state, &action);
+    assert_eq!(&out.state, state, "a refusal leaves the state as it was");
+    out.error
+        .unwrap_or_else(|| panic!("{action:?} should have been refused"))
+}
+
+#[test]
+fn r962000_a_sandbox_game_spawns_a_custom_card_it_carries_into_every_zone_placed_not_played() {
+    sandbox_setup();
+    with_custom_scripts(Rc::new(FixtureHost), || {
+        let mut s = sandbox_board(&[DRAWER], json!([spikey_pillow.id]));
+        let played = s.state().counters.played;
+
+        // On the field: summoned, its Cry not run (no draw), sick as any summon, under the auras.
+        s.act(
+            spawn_into(DRAWER, json!({ "zone": "field", "row": "units", "lane": 2 })),
+            P1,
+            "spawn onto the field",
+        );
+        let unit = s.unit(P1, 2).expect("the custom card in lane 2");
+        assert_eq!(unit.def_id, DRAWER);
+        assert_eq!(unit.summoned_turn, Some(s.state().turn));
+        let stats = s.stats(&unit);
+        assert_eq!(
+            (stats.attack, stats.health),
+            (0, 3),
+            "its own 2/3, less the 2 attack Spikey Pillow's aura takes"
+        );
+        assert!(stats.keywords.contains(&Keyword::Taunt));
+        let events = s.last_events();
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::Summoned { def_id, lane: 2, .. } if def_id == DRAWER)
+            )
+        );
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::Drawn { .. })),
+            "no Cry: {events:?}"
+        );
+        assert_eq!(s.hand(P1).len(), 1);
+
+        // Into the hand, the graveyard and on top of the library.
+        s.act(
+            spawn_into(DRAWER, json!({ "zone": "hand" })),
+            P1,
+            "spawn into the hand",
+        );
+        assert_eq!(
+            s.hand(P1).last().map(|card| card.def_id.clone()),
+            Some(DRAWER.to_string())
+        );
+        s.act(
+            spawn_into(DRAWER, json!({ "zone": "graveyard" })),
+            P1,
+            "spawn into the graveyard",
+        );
+        assert_eq!(
+            s.state().players[P1]
+                .graveyard
+                .last()
+                .map(|card| card.def_id.as_str()),
+            Some(DRAWER)
+        );
+        s.act(
+            spawn_into(DRAWER, json!({ "zone": "libraryTop" })),
+            P1,
+            "spawn on top of the library",
+        );
+        assert_eq!(
+            s.state().players[P1]
+                .library
+                .first()
+                .map(|card| card.def_id.as_str()),
+            Some(DRAWER)
+        );
+        assert_eq!(s.state().counters.played, played, "no play is counted");
+    });
+}
+
+#[test]
+fn r962000_a_spawned_custom_card_plays_as_the_dealt_one_its_script_and_its_failure_included() {
+    sandbox_setup();
+    with_custom_scripts(Rc::new(FixtureHost), || {
+        let mut s = sandbox_board(&[DRAWER, FAILER], json!([]));
+        s.act(
+            spawn_into(DRAWER, json!({ "zone": "hand" })),
+            P1,
+            "spawn the drawer",
+        );
+        s.play(DRAWER, json!({ "zone": 1 }));
+        assert_eq!(s.hand(P1).len(), 2, "the filler and the Cry's draw");
+        assert_eq!(s.unit(P1, 1).map(|card| card.def_id), Some(DRAWER.to_string()));
+
+        s.act(
+            spawn_into(FAILER, json!({ "zone": "hand" })),
+            P1,
+            "spawn the failer",
+        );
+        s.play(FAILER, json!({ "zone": 3 }));
+        assert!(
+            s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::ScriptFailed { def_id, .. } if def_id == FAILER)),
+            "a failure is said as R915004 says it"
+        );
+    });
+}
+
+#[test]
+fn r962000_a_custom_card_the_game_does_not_carry_is_refused_and_no_tool_is_listed() {
+    sandbox_setup();
+    let s = sandbox_board(&[DRAWER], json!([]));
+    assert_eq!(
+        refused_spawn(s.state(), FAILER),
+        "there is no card \"custom-failer\" to spawn",
+        "a well-formed custom id the game was not given"
+    );
+    assert_eq!(
+        refused_spawn(s.state(), "custom-"),
+        "there is no card \"custom-\" to spawn"
+    );
+    for player in PLAYER_IDS {
+        assert!(
+            legal_actions(s.state(), player)
+                .iter()
+                .all(|body| !matches!(body, ActionBody::Sandbox { .. })),
+            "legalActions lists no tool for {player}"
+        );
+    }
+    let plain = scenario(board(&[DRAWER]));
+    assert_eq!(
+        refused_spawn(plain.state(), DRAWER),
+        "the sandbox's tools work only in a sandbox game"
+    );
 }
