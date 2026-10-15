@@ -6718,12 +6718,6 @@
           "claude": "strong",
           "muse": "medium"
         }
-      },
-      "wip": {
-        "at": "2026-10-15T01:09:04Z",
-        "provider": "claude-3",
-        "sha": "b775a5abed4f68ef832088c63b54e2f12849bca4",
-        "start": "22b506b7ecaf0a225bf8e509c34c6423da8e9ee9"
       }
     },
     "952": {
