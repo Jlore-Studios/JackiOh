@@ -428,6 +428,13 @@
     "1025": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T23:58:16Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 9 (stands alone): I could not check open PRs for same-file clashes with no GitHub access, so medium at least \u2014 and engine, spec-ruling and multi-crate scope already fail the easy rule"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
