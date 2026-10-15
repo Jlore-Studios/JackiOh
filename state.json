@@ -6876,6 +6876,13 @@
     "978": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-15T17:45:11Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 3 fails: it adds ruling R978000 and edits spec \u00a79.11, 11-rulings.md and INDEX.md; the code is one crate, about 350 lines"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
