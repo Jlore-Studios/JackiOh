@@ -92,8 +92,11 @@ describe("R979000 a card in hand that cannot be played says why", () => {
     render(<Game view={reasonView()} legal={LEGAL} onAction={onAction} />);
     expect(screen.queryByTestId("attack-reason")).toBeNull();
 
-    // c1 stays clickable for its reason though `legal` offers it no play (R979000's highlight).
-    expect(el("hand-card-c1")).toHaveAttribute("data-legal", "true");
+    // c1 stays greyed out, as `legal` offers it no play (`data-legal` mirrors `legalActions`, which
+    // e2e reads), but its click still reaches the board for its reason.
+    expect(el("hand-card-c1")).toHaveAttribute("data-legal", "false");
+    expect(el("hand-card-c1")).not.toHaveAttribute("data-glow");
+    expect(el("hand-card-c2")).toHaveAttribute("data-legal", "true");
     fireEvent.click(el("hand-card-c1"));
     expect(el("attack-reason")).toHaveTextContent(REASON);
     expect(onAction).not.toHaveBeenCalled();

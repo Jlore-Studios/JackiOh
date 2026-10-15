@@ -30,6 +30,10 @@
 //! card's weight by `win_rate_weight`, read off the compiled win-rate table. No strength, the default,
 //! multiplies every weight by exactly 1.0.
 //!
+//! The unban lane's shaping (R976000): `shape` multiplies each card's weight by `shaped_weight`, the
+//! dealt-quality table the lane's records measured (`shadow_ban.rs`). It is off unless a caller sets
+//! it, whatever `banned` holds, and no caller sets it. It adds no rng draw.
+//!
 //! Port of `packages/ai/src/deck.ts` (SURFACE §9: `build_ai_deck(&mut Rng, i32, &AiDeckOptions)`). TS
 //! threw on a bad request; this panics with the same message.
 
@@ -166,6 +170,11 @@ pub struct AiDeckOptions {
     /// exactly the deck the seed always dealt, and the lean takes no rng draw.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strength: Option<f64>,
+    /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
+    /// (`shadow_ban.rs`). Off by default, whatever `banned` holds; no caller sets it, so practice, the
+    /// quality gates and both seats of an arena or a promotion deal unshaped.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub shape: bool,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -741,22 +750,9 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .filter(|strength| strength.is_finite())
         .unwrap_or(0.0)
         .clamp(0.0, 1.0);
-    // The unban lane's deck shaping (shadow_ban.rs): exactly the seat an arena or a promotion deals
-    // for this AI — `banned` set to this AI's own SHADOW_BAN_IDS under a handicap's `mana_cap`, no
-    // `include` or `boost` — gets its weights multiplied by the dealt-quality the lane's records
-    // measured. A seat under any other options (the parent's own list, a human's none, a test's or
-    // the sweep's own) deals as before. The mana cap is what keeps "a human's none" honest once the
-    // ban list is empty: a player's random deck passes `banned: []` with no cap, which an empty
-    // SHADOW_BAN_IDS would otherwise set-match like this AI's own.
-    let shape = options.include.is_none()
-        && options.boost.is_none()
-        && options.mana_cap.is_some()
-        && options.banned.as_ref().is_some_and(|listed| {
-            listed.len() == SHADOW_BAN_IDS.len()
-                && SHADOW_BAN_IDS
-                    .iter()
-                    .all(|id| listed.iter().any(|entry| entry == id))
-        });
+    // R976000: the unban lane's deck shaping (shadow_ban.rs) only when the caller asks for it, never
+    // because a ban list matches this AI's own, so a gate's two seats are dealt by one rule.
+    let shape = options.shape;
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {

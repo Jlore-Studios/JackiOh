@@ -837,15 +837,6 @@ export function highlightFor(
     }
   }
 
-  // R979000: a hand card the view says cannot be played stays clickable, never glowing (as a
-  // switchPosition-only unit is), so the click that reads its `playReason` reaches `onClickTarget`.
-  // The engine's words decide; the client works nothing out (CLAUDE.md rule 7).
-  if (Array.isArray(view.you.hand)) {
-    for (const card of view.you.hand) {
-      if (card.playReason !== undefined) legalIds.add(testid.handCard(card.instanceId));
-    }
-  }
-
   // With a prompt open `legalActions` offers only that prompt's answers (§10.7), so the board
   // would otherwise go entirely grey; the prompt's own options say which cells may be clicked.
   for (const where of pendingHighlight(view, view.pending)) {

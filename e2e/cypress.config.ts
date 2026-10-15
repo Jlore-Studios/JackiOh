@@ -1,9 +1,12 @@
 // BUILD M8: Cypress runs against apps/web in `E2E=1` mode (the hotseat route plus a test server
 // with fixture accounts). Seventeen specs, every one seeded, no fixed waits.
 
+import { resolve } from "node:path";
+
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "cypress";
 import { jackiohAliases } from "../apps/web/vite.config.ts";
+import { pinChrome } from "./support/chrome-pin.ts";
 import { registerTasks } from "./support/tasks/index.ts";
 
 export default defineConfig({
@@ -52,8 +55,12 @@ export default defineConfig({
       player1: process.env.E2E_PLAYER1 ?? "",
       player2: process.env.E2E_PLAYER2 ?? "",
     },
-    setupNodeEvents(on, config) {
+    async setupNodeEvents(on, config) {
       registerTasks(on, config);
+      // Chrome 155's network service dies under Cypress's DevTools interception, dropping the page's
+      // requests and sockets mid-spec; on CI `chrome` is then Chrome for Testing 154 instead
+      // (support/chrome-pin.ts). Any other Chrome is launched exactly as found.
+      config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       // E2E_WINDOW_SIZE=W,H launches the browser at that window size. Headless Chrome's default
       // window crops a `capture: "viewport"` shot taller than about 633 px, so a run that must show a
       // whole 1280x720 or 390x844 screen (spec 25's `--expose shots=1`) passes a larger one. Unset,

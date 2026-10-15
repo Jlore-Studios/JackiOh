@@ -13,8 +13,9 @@
 //! game `2d − 1` (the candidate p1) and game `2d` (the candidate p2). Those deals are the lane's
 //! hold-out set (R850001): named for the committed AI, read only by it, and never a screen's (`arena`
 //! refuses their base). Each seat's deck is `build_ai_deck` over every set that ships minus its own
-//! AI's shadow ban (R186), with no handicap (Easy both, R180). The games run on rayon's pool
-//! (`RAYON_NUM_THREADS` is respected); no result depends on the thread count.
+//! AI's shadow ban (R186), with no handicap (Easy both, R180), both seats by that one rule and
+//! neither shaped (R976000). The games run on rayon's pool (`RAYON_NUM_THREADS` is respected); no
+//! result depends on the thread count.
 //!
 //! It promotes when:
 //!
@@ -637,9 +638,9 @@ fn report(
         record.shadow_ban, record.parent_shadow_ban
     ));
     out.push_str(&format!(
-        "{seeds} Each seat's deck is built from every set that ships minus its own AI's shadow ban, \
-         with no handicap. A draw is not a win, nor is a game without a result. No game is played \
-         against random (R732001).\n\n"
+        "{seeds} Each seat's deck is built by one rule, from every set that ships minus its own AI's \
+         shadow ban, with no handicap and no shaping (R976000). A draw is not a win, nor is a game \
+         without a result. No game is played against random (R732001).\n\n"
     ));
     if !failures.is_empty() {
         out.push_str("Fails:\n\n");

@@ -14,7 +14,7 @@ enforces rules and never sees hidden information.** In practice:
 - Legality comes from the engine's `legalActions`, never from the client. `game/actions.ts`
   filters that array; it contains no cost check, no keyword check and no zone check. Anything
   whose `data-testid` is not in the returned `Highlight.legal` renders greyed out and fires
-  nothing on click.
+  nothing on click (a hand card the view gives a `playReason` shows that reason, R979000).
 - `EngineState` is opaque (`game/engine.ts`). The client passes it back to the port and cannot
   read a field off it, which is how "never sees hidden information" is enforced by the compiler
   rather than by discipline. Under it is the WASM module's `GameState` JSON, which no component

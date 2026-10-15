@@ -93,7 +93,7 @@ export function isSelected(highlight: Highlight | undefined, testId: string | un
   return (highlight ?? NO_HIGHLIGHT).selected.has(testId);
 }
 
-/** `data-legal` is the only gate on firing `onClick`; see the drag note below. */
+/** `data-legal` is the only gate on firing `onClick` but R979000's reason; see the drag note below. */
 export function legalAttr(legal: boolean): "true" | "false" {
   return legal ? "true" : "false";
 }
@@ -299,9 +299,12 @@ export default function Card(props: CardProps): ReactElement {
   const selected = isSelected(props.highlight, testId);
   const clickable = target !== null && target !== undefined;
   const animatingEvent = testId === undefined ? undefined : props.animating?.get(testId);
+  // R979000: a card in your hand the view says cannot be played stays greyed out, as `legal` offers
+  // it nothing, but its click still reaches the board, which shows `playReason` and sends nothing.
+  const explains = card?.playReason !== undefined;
 
   function fire(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void {
-    if (!clickable || !legal) return;
+    if (!clickable || !(legal || explains)) return;
     event.stopPropagation();
     props.onClick?.(target);
   }
