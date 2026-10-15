@@ -710,3 +710,155 @@ mod r654_public_card_and_player_stats {
         assert_eq!(rows(&found), vec![json!([alice_id, "Alicia", 1000])]);
     }
 }
+
+mod r978000_kept_card_stats {
+    use super::*;
+    use std::time::Duration;
+
+    /// The cache's time to live, in milliseconds.
+    fn ttl_ms() -> u64 {
+        u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("the TTL is not negative") * 1000
+    }
+
+    /// A live game on `patch` (the current one when `None`) whose first seat plays `p1_deck`.
+    fn live_game(id: &str, p1_deck: Vec<&'static str>, patch: Option<&str>) -> Value {
+        make_game_record(
+            id,
+            RecordOptions {
+                source: Some("live"),
+                patch: patch.map(str::to_string),
+                p1_deck: Some(p1_deck),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// The games of the card `card` in a cards response, 0 when it is not listed.
+    fn games_of(data: &Value, card: &str) -> Value {
+        find(&data["cards"], "id", &json!(card))
+            .map(|stat| stat["games"].clone())
+            .unwrap_or(json!(0))
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r978000_card_stats_are_kept_for_the_ttl_then_computed_again() {
+        let app = test_app().await;
+        insert_records(
+            &app,
+            vec![live_game("kept-1", vec!["core-001", "core-002"], None)],
+        )
+        .await;
+
+        let (status, headers, first) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            cache_control(&headers),
+            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
+        assert_eq!(first["totalGames"], json!(1));
+        assert_eq!(first["gate"]["liveGames"], json!(1));
+        assert_eq!(games_of(&first, "core-001"), json!(1));
+
+        // A record inserted within the TTL is not in what the server kept.
+        insert_records(
+            &app,
+            vec![live_game("kept-2", vec!["core-001", "core-002"], None)],
+        )
+        .await;
+        let (_, _, again) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(again, first);
+        // The filters are applied to the kept report, not kept apart.
+        let (_, _, core_only) = get_public(&app, "/api/stats/cards?set=Core").await;
+        assert_eq!(core_only["totalGames"], json!(1));
+        // Another pilot is another report: it is read off the records as they stand.
+        let (_, _, humans) = get_public(&app, "/api/stats/cards?pilot=human").await;
+        assert_eq!(humans["totalGames"], json!(2));
+
+        tokio::time::advance(Duration::from_millis(ttl_ms() - 1)).await;
+        let (_, _, within) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(within, first);
+
+        tokio::time::advance(Duration::from_millis(1)).await;
+        let (_, _, after) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(after["totalGames"], json!(2));
+        assert_eq!(after["gate"]["liveGames"], json!(2));
+        assert_eq!(games_of(&after, "core-001"), json!(2));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r978000_card_drill_downs_share_the_kept_reports_across_cards() {
+        let app = test_app().await;
+        let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
+        let records: Vec<Value> = (0..gate)
+            .map(|i| live_game(&format!("kept-drill-{i}"), vec!["core-001", "core-002"], None))
+            .collect();
+        insert_records(&app, records).await;
+        let patch = json!(current_patch());
+
+        let (status, _, first) = get_public(&app, "/api/stats/cards/core-001").await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            find(&first["patches"], "patch", &patch).expect("the current patch cleared the gate")["games"],
+            json!(gate)
+        );
+
+        // A game inserted within the TTL is in neither card's page: the second card reads what the
+        // first one's page kept.
+        insert_records(
+            &app,
+            vec![live_game("kept-drill-late", vec!["core-002", "core-005"], None)],
+        )
+        .await;
+        let (_, _, kept) = get_public(&app, "/api/stats/cards/core-002").await;
+        assert_eq!(
+            find(&kept["patches"], "patch", &patch).expect("the current patch is listed")["games"],
+            json!(gate)
+        );
+        assert_eq!(
+            find(&kept["coPlayed"], "id", &json!("core-001")).expect("core-001 shared its deck")["games"],
+            json!(gate)
+        );
+        assert!(find(&kept["coPlayed"], "id", &json!("core-005")).is_none());
+        assert!(find(&kept["byTurn"], "turn", &json!(1)).is_none());
+
+        tokio::time::advance(Duration::from_millis(ttl_ms())).await;
+        let (_, _, after) = get_public(&app, "/api/stats/cards/core-002").await;
+        assert_eq!(
+            find(&after["patches"], "patch", &patch).expect("the current patch is listed")["games"],
+            json!(gate + 1)
+        );
+        assert_eq!(
+            find(&after["coPlayed"], "id", &json!("core-005")).expect("core-005 shared its deck")["games"],
+            json!(1)
+        );
+        assert_eq!(
+            find(&after["byTurn"], "turn", &json!(1)).expect("core-002 was played on turn 1")["games"],
+            json!(1)
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r978000_a_patch_the_server_does_not_ship_is_never_kept() {
+        let app = test_app().await;
+        let patch = "v0.0.0-not-shipped";
+        insert_records(
+            &app,
+            vec![live_game("kept-odd-1", vec!["core-001", "core-002"], Some(patch))],
+        )
+        .await;
+
+        let path = format!("/api/stats/cards?patch={patch}");
+        let (status, _, first) = get_public(&app, &path).await;
+        assert_eq!(status, 200);
+        assert_eq!(first["patch"], json!(patch));
+        assert_eq!(first["totalGames"], json!(1));
+
+        insert_records(
+            &app,
+            vec![live_game("kept-odd-2", vec!["core-001", "core-002"], Some(patch))],
+        )
+        .await;
+        let (_, _, second) = get_public(&app, &path).await;
+        assert_eq!(second["totalGames"], json!(2));
+    }
+}

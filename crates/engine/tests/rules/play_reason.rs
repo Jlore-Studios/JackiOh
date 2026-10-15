@@ -184,6 +184,45 @@ mod r979000_an_unplayable_hand_card_says_why {
     }
 
     #[test]
+    fn r979000_the_first_refusal_in_the_order_is_said() {
+        // A banned card the purse cannot meet either says the ban, not its price.
+        let mut state = playing("r979000-order-ban");
+        put(
+            &mut state,
+            &lobbyist().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json_as(json!({ "radiant": true })),
+        );
+        state.players.p1.mana.current = 0;
+        let three = hand_card(&mut state, &three_spell().id, PlayerId::P1);
+
+        assert!(has_no_plays(&state, PlayerId::P1, &three.id));
+        assert_eq!(
+            reason_of(&state, PlayerId::P1, &three.id),
+            Some("you can't play (3)+ Cost cards now".to_string())
+        );
+
+        // A unit the purse cannot meet on a full row says its price, not the row.
+        let mut state = playing("r979000-order-price");
+        for lane in 1..=5 {
+            put(
+                &mut state,
+                &grave_unit().id,
+                slot(PlayerId::P1, Row::Units, lane),
+                json!({}),
+            );
+        }
+        state.players.p1.mana.current = 1;
+        let sixth = hand_card(&mut state, &grave_unit().id, PlayerId::P1);
+
+        assert!(has_no_plays(&state, PlayerId::P1, &sixth.id));
+        assert_eq!(
+            reason_of(&state, PlayerId::P1, &sixth.id),
+            Some("grave-unit (pipeline B) costs 2, more than your mana".to_string())
+        );
+    }
+
+    #[test]
     fn r979000_playable_opponent_and_inactive_hands_carry_no_reason() {
         let mut state = playing("r979000-absent");
         put(

@@ -1867,9 +1867,10 @@ pub fn offered_play_costs(state: &GameState, player: PlayerId, card: &CardInstan
 /// refusal below fires — an Equip with no host on a board with open zones, or a targeting cost the
 /// hand cannot pay, says nothing rather than the wrong thing.
 ///
-/// The order is ban, price, zone, Tribute, choices: what §10.5 meets first is said first, with the
-/// ban (a price rule read after the price, R455) ahead of the price it forbids at, since a banned
-/// card is refused at every price it could be played at.
+/// The order is ban, price, zone, Tribute, choices: the cost first, since a card its player cannot
+/// pay for is refused whatever the board holds, and within it the ban (R455) ahead of the price, as
+/// `validate_play` reads them, since a banned card is refused at every price it could be played at;
+/// then §10.5 step 1's own order, the zone, the Tribute and what the card declares.
 pub fn why_hand_card_unplayable(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped as it stamps
     // them, and every one forbidden (R455) — the listing left none out for this reason.
