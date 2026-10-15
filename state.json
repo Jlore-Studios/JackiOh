@@ -6910,6 +6910,7 @@
     "979": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-15T17:20:39Z",
         "difficulty": "medium",
