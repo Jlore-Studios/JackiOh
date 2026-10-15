@@ -6376,7 +6376,7 @@
       "merged": true
     },
     "958": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "died": 0,
       "difficulty": "medium",
@@ -6385,17 +6385,17 @@
       "forced": false,
       "interruptions": 0,
       "issue": 890,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-10-15T06:23:17Z",
       "round_tier": "medium",
-      "run_id": "38690229717",
+      "run_id": "38695240512",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-10-15T06:04:43Z",
+      "started_at": "2026-10-15T06:55:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -6488,9 +6488,9 @@
     "reason": "the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
   },
   "last_run": {
-    "at": "2026-10-15T06:44:13Z",
-    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38694139231",
-    "what": "suggestions on muse"
+    "at": "2026-10-15T06:55:58Z",
+    "url": "https://github.com/Jlore-Studios/JackiOh/actions/runs/38695240512",
+    "what": "review #958 on claude-7"
   },
   "last_sweep": {
     "at": "2026-10-15T06:55:06Z",
