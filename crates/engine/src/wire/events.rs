@@ -1223,8 +1223,8 @@ mod tests {
         assert_eq!(over.event_type().as_str(), "gameOver");
         // Meditative added ten to the 66: `translated` (R1301), `discardPrevented` (R800), `emoted`
         // (R1127), `fengShui` (R983), `jadeChanged` (R961), the three secret events (R860, R864),
-        // `deradianted` (R1102) and `manaSpent` (R1109).
-        assert_eq!(GAME_EVENT_TYPES.len(), 76);
+        // `deradianted` (R1102) and `manaSpent` (R1109); custom cards one, `scriptFailed` (R915004).
+        assert_eq!(GAME_EVENT_TYPES.len(), 77);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
