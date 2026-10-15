@@ -237,6 +237,21 @@ pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 pub const LOOP_RESTART_DELAY_SECONDS: i64 = 5;
 
 // ---------------------------------------------------------------------------------------------
+// The probes and the shutdown (`api/health.rs`, `app::serve_until`). Not in SPEC, and no R-row (#861).
+// ---------------------------------------------------------------------------------------------
+
+/// How long `GET /readyz` waits for the store to answer `select 1` before it answers 503. The
+/// pool retries a refused connection until its 10 s checkout timeout (`POOL_ACQUIRE_TIMEOUT_MS`,
+/// `db/pg.rs`). Without this bound, a dead database would hold the probe instead of failing it.
+pub const READINESS_PROBE_TIMEOUT_MS: i64 = 2_000;
+/// How long `app::serve_until`'s drain may run after SIGTERM or Ctrl-C before it stops waiting
+/// and still exits 0. Under the 30 s that Render (and `docker stop -t 30` in
+/// `tests/deploy/rehearse.sh`) waits between SIGTERM and SIGKILL.
+pub const SHUTDOWN_DRAIN_SECONDS: i64 = 20;
+/// How often the drain checks whether every match socket has finished.
+pub const SHUTDOWN_SOCKETS_POLL_MS: i64 = 50;
+
+// ---------------------------------------------------------------------------------------------
 // Online replays (R768, issue #510). A page of steps is the engine's `REPLAY_PAGE_STEPS`. PUBLIC:
 // the client reads the list's page and the routes' allowance.
 // ---------------------------------------------------------------------------------------------

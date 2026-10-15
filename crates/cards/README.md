@@ -290,6 +290,10 @@ ruling's list are updated.
 cargo test -p jackioh-cards                     # every card and cross-card test
 cargo test -p jackioh-cards c043                # card 043 of every set that has one
 cargo test -p jackioh-cards classic_plus::      # one set's cards
+cargo test -p jackioh-cards --lib -- --skip scripts::classic:: --skip scripts::classic_plus:: --skip scripts::meditative::  # one binary, CI's four shards (#882): Core's skips the other sets, so it runs every unit test outside them too
+cargo test -p jackioh-cards --lib -- scripts::classic::  # CI shard (#882)
+cargo test -p jackioh-cards --lib -- scripts::classic_plus::  # CI shard (#882)
+cargo test -p jackioh-cards --lib -- scripts::meditative::  # CI shard (#882)
 cargo test -p jackioh-cards --test cards        # the cross-card tests only
 cargo clippy -p jackioh-cards --all-targets -- -D warnings
 luau-analyze --mode=strict crates/cards/src/scripts/*/*.luau   # the strict type check, where Luau 0.740's CLI is installed
