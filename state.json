@@ -6816,6 +6816,14 @@
           "muse": "medium"
         }
       }
+    },
+    "956": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-14T23:52:47Z",
+      "issue": 892,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "3f1c8c912dc8c985",
