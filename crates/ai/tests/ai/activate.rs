@@ -81,7 +81,10 @@ fn turtinator_infinite_def() -> CardDef {
     def["rarity"] = json!("Token");
     def["token"] = json!(true);
     for face in ["base", "radiant"] {
-        let text = def[face]["text"].as_str().unwrap_or_default().replace("Activate:", "Activate ♾️:");
+        let text = def[face]["text"]
+            .as_str()
+            .unwrap_or_default()
+            .replace("Activate:", "Activate ♾️:");
         def[face]["text"] = json!(text);
     }
     json_as(def)
@@ -323,7 +326,11 @@ mod b3_2_activations_are_first_class_candidates {
             "{}",
             trace(&run.turn)
         );
-        assert!(on_field(&run.end, AI, TURTINATOR_INFINITE), "{}", trace(&run.turn));
+        assert!(
+            on_field(&run.end, AI, TURTINATOR_INFINITE),
+            "{}",
+            trace(&run.turn)
+        );
     }
 }
 
