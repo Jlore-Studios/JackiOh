@@ -7370,7 +7370,9 @@
     },
     "993": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:6200542325"
+      ],
       "died": 1,
       "difficulty_by": {
         "at": "2026-10-15T20:39:29Z",
@@ -7408,9 +7410,7 @@
       ],
       "strikes": 1,
       "suggestion": true,
-      "taken_asks": [
-        "c:6200542325"
-      ]
+      "taken_asks": []
     },
     "994": {
       "action": "build",
