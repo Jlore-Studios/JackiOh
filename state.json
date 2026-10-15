@@ -6774,11 +6774,9 @@
         "1ba3ee373c04be110abf12aa2d66530dcd9e71d2": 1
       },
       "cleared": {
-        "at": "2026-10-15T05:00:20Z",
-        "by": "`claude` (strong)",
-        "carried_from": "ba55321877eafb1bb4d8bb9b92beccf9547c8e9a",
-        "resolved_by": "`muse` (medium)",
-        "sha": "2f4a5938f2bd57363a272d242f4aa2c38f950ecd"
+        "at": "2026-10-15T05:30:05Z",
+        "by": "`muse` (medium), `claude` (strong)",
+        "sha": "d8a3fea7168d1a298b75dbe098845c322d73941d"
       },
       "cross_rounds": 0,
       "died": 0,
