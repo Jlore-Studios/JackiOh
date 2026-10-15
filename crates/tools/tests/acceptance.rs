@@ -235,6 +235,7 @@ const RUST_GROUPS: &[(&str, &[&str])] = &[
     ("rust_ai", &["jackioh-ai"]),
     ("rust_ai_slow_a", &["jackioh-ai"]),
     ("rust_ai_slow_b", &["jackioh-ai"]),
+    ("rust_luau", &["jackioh-luau"]),
     ("rust_tools_wasm", &[]),
 ];
 

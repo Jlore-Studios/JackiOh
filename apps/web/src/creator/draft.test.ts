@@ -43,6 +43,22 @@ describe("R915010 the builder and the code view are two views of one card", () =
     expect(withView(undone, "builder").view).toBe("builder");
   });
 
+  it("a card as the server writes it back, its empty lists dropped and its keys in serde's order, is not unsaved", () => {
+    const draft = { ...newDraft(), id: "custom-0123456789abcdef0123456789abcdef", version: 1 };
+    const { name, type, cost, rarity, attack, health, text } = draft.frame;
+    const model = draft.model as unknown as Record<string, unknown>;
+    const echoed: CustomCard = {
+      id: "custom-0123456789abcdef0123456789abcdef",
+      version: 1,
+      // No `keywords: []` or `params: []`, which `CustomFrame` skips; the builder's keys reversed.
+      frame: { text, health, attack, rarity, cost, type, name },
+      source: draft.source,
+      builder: Object.fromEntries(Object.entries(model).reverse()),
+    };
+    expect(isDirty(draft, echoed)).toBe(false);
+    expect(isDirty(withFrame(draft, { ...draft.frame, cost: draft.frame.cost + 1 }), echoed)).toBe(true);
+  });
+
   it("R915010 a card written in code opens in the code view, and the builder says it cannot show it", () => {
     const card: CustomCard = {
       id: "custom-0123456789abcdef0123456789abcdef",

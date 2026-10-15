@@ -3,7 +3,7 @@
 // hold a condition; a Unit may also have an aura and an Activate. Each amount is one of the card's
 // numbers, whose Radiant value the numbers table sets.
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 
 import { CUSTOM_COST_MAX, CUSTOM_KEYWORDS, CUSTOM_PARAM_MAX } from "@jackioh/engine/config";
 import type { CardType } from "@jackioh/shared";
@@ -105,6 +105,9 @@ function NumberInput({
   max?: number;
   onChange: (value: number) => void;
 }): ReactElement {
+  // An emptied field stays empty until the next digit, so clearing it and typing 2 gives 2, not 0
+  // and then 20; leaving it shows the card's number again.
+  const [draft, setDraft] = useState<string | null>(null);
   return (
     <input
       type="number"
@@ -113,11 +116,17 @@ function NumberInput({
       aria-label={label}
       min={min}
       max={max}
-      value={value}
+      value={draft ?? String(value)}
       onChange={(event) => {
         const parsed = Number.parseInt(event.target.value, 10);
-        onChange(Number.isFinite(parsed) ? parsed : 0);
+        if (Number.isFinite(parsed)) {
+          setDraft(null);
+          onChange(parsed);
+        } else {
+          setDraft(event.target.value);
+        }
       }}
+      onBlur={() => setDraft(null)}
     />
   );
 }

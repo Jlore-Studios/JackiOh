@@ -227,6 +227,16 @@
   box-shadow: inset 3px 0 0 var(--selected);
 }
 
+/* The row in words, for a reader only (DeckWorkshop.tsx's DeckRow). */
+.ws-row-words {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .ws-row-name {
   overflow: hidden;
   color: var(--text);
