@@ -40,9 +40,9 @@ use serde_json::{Value, json};
 
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_TUNING_SERIES, AiDeckOptions, AiOptions, GREEDY_EVAL,
-    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SeatController, binomial_tail,
-    build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games, greedy_action,
-    play_match, run_gate_games,
+    GateGame, GateReport, MatchConfig, MatchHooks, Matchup, SHADOW_BAN, SearchBudget, SeatController,
+    binomial_tail, build_ai_deck, candidate_actions, decide, game_config, gate_needed, gate_shard_games,
+    greedy_action, play_match, run_gate_games,
 };
 use jackioh_engine::config::{AI_DIFFICULTY, HUMAN_HANDICAP};
 use jackioh_engine::rng::Rng;
@@ -837,13 +837,16 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
 // (AI_GATE.perfSmokeGames of them, AI_GATE.perfFullGames with `--full`). Two hand-built wide boards
 // are timed too, the worst case: five units a side and a hand of X-cost and targeted spells beside
 // a Lava Golem, at Hard's seven crystals and Easy's four.
+//
+// The shadow-ban sweep times a decision its own clock found slow again with this yardstick and this
+// timer, at its own budget and limit (R977000, `sweep.rs`'s `still_slow`).
 
 /// One decision's timing.
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-struct Timing {
+pub(crate) struct Timing {
     /// The decision's cost on the development machine: its smallest ratio to the yardstick, in ms.
-    ms: f64,
+    pub(crate) ms: f64,
     /// The fastest run as this machine timed it, for the report.
     raw_ms: f64,
     nodes: i64,
@@ -925,7 +928,7 @@ fn wide_state(name: &str, setup: &Value) -> GameState {
 }
 
 /// The yardstick: a fixed piece of engine work, random-policy games played through `reduce`.
-fn yardstick_ms() -> Result<f64> {
+pub(crate) fn yardstick_ms() -> Result<f64> {
     let random = parse_matchup("ai-vs-random")?;
     let started = Instant::now();
     for n in 1..=AI_GATE.calibration_games {
@@ -942,12 +945,18 @@ fn yardstick_ms() -> Result<f64> {
     Ok(started.elapsed().as_secs_f64() * MS_PER_SECOND)
 }
 
-/// Up to AI_GATE.perfRepeats runs of one decision, each timed right after the yardstick, stopping at
-/// the first under AI_GATE.maxDecisionMs: the smallest ratio, in the development machine's ms, with
-/// the node count.
-fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Timing> {
+/// Up to AI_GATE.perfRepeats runs of one decision at `budget` on a clone of `rng`, each timed right
+/// after the yardstick, stopping at the first under `limit_ms`: the smallest ratio, in the development
+/// machine's ms, with the node count. It is the perf gate's (AI_BUDGET, AI_GATE.maxDecisionMs) and the
+/// sweep's for a decision its clock found slow (AI_GATE_BUDGET, AI_SWEEP.decisionMs, R977000).
+pub(crate) fn time_decision(
+    state: &GameState,
+    seat: PlayerId,
+    rng: &Rng,
+    budget: SearchBudget,
+    limit_ms: f64,
+) -> Result<Timing> {
     let reference = AI_GATE.calibration_ref_ms;
-    let limit = AI_GATE.max_decision_ms;
     let mut ratio = f64::INFINITY;
     let mut raw_ms = f64::INFINITY;
     let mut nodes: i64 = 0;
@@ -956,8 +965,8 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
         let unit = yardstick_ms()?;
         let started = Instant::now();
         let mut options = AiOptions {
-            rng: Rng::new(rng_seed, 0),
-            budget: AI_BUDGET,
+            rng: rng.clone(),
+            budget,
             should_stop: None,
         };
         let decision = decide(state, seat, &mut options);
@@ -970,7 +979,7 @@ fn time_decision(state: &GameState, seat: PlayerId, rng_seed: &str) -> Result<Ti
         reason = decision
             .as_ref()
             .map_or_else(|| "none".to_string(), |decision| literal(&decision.reason));
-        if ratio * reference < limit {
+        if ratio * reference < limit_ms {
             break;
         }
     }
@@ -1017,7 +1026,8 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
         match decision_states(&played) {
             Ok(states) => {
                 for (game, seat, state) in states {
-                    match time_decision(&state, seat, &format!("perf:{game}:{}", state.turn)) {
+                    let rng = Rng::new(&format!("perf:{game}:{}", state.turn), 0);
+                    match time_decision(&state, seat, &rng, AI_BUDGET, limit) {
                         Ok(timing) => timed.push(Timed {
                             game,
                             turn: state.turn,
@@ -1063,7 +1073,8 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
                 "perf: {name}: {candidates} candidates, not more than {WIDE_MIN_CANDIDATES}"
             ));
         }
-        match time_decision(&state, PlayerId::P1, &format!("perf:{name}")) {
+        let rng = Rng::new(&format!("perf:{name}"), 0);
+        match time_decision(&state, PlayerId::P1, &rng, AI_BUDGET, limit) {
             Ok(timing) => {
                 let line = serde_json::to_string(&timing).unwrap_or_default();
                 println!("[gate perf] {name}: {line}");
