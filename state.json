@@ -13362,7 +13362,7 @@
         "why": "closed unbuilt by a person (completed)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-10-15T14:47:27Z",
     "last_run": "2026-10-15T07:51:59Z",
     "provider": null,
     "requested": false,
