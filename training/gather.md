@@ -23,8 +23,8 @@ AI-against-AI figures for every card beside its live games, whether or not anyon
   that does not finish (the action limit, a panic) files nothing.
 
 The lane keeps `~/training-out/gather/cursor-<patch>`, the number of the next game of that patch, so a
-patch's games are played once each and a new patch starts again at 1. It stops a patch at
-`TRAIN_GATHER_PATCH_GAMES` games and idles until `main` ships another.
+patch's games are played once each and a new patch starts again at 1. It plays a patch without end,
+until `main` ships another.
 
 ## What it never does
 
