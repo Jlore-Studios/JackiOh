@@ -55,26 +55,26 @@
 /* The summary fits a phone screen without scrolling: sign-out sits tight under the record with
    a one-line note, and the rare options stack only once "Manage sign-in & account" is opened. */
 
-.tavern.app-shell .account-screen .account-session {
+.tavern.app-shell.account-screen .account-session {
   gap: 8px;
   padding-top: 8px;
 }
 
-.tavern.app-shell .account-screen .account-session > p {
+.tavern.app-shell.account-screen .account-session > p {
   font-size: 14px;
 }
 
-.tavern.app-shell .account-screen .account-manage {
+.tavern.app-shell.account-screen .account-manage {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.tavern.app-shell .account-screen .account-manage__toggle {
+.tavern.app-shell.account-screen .account-manage__toggle {
   width: 100%;
 }
 
-.tavern.app-shell .account-screen .account-manage__body {
+.tavern.app-shell.account-screen .account-manage__body {
   display: flex;
   flex-direction: column;
   gap: 8px;
