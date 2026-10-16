@@ -1965,9 +1965,7 @@
       "started_at": "2026-10-16T20:59:30Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:6224063048"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 1
     },
     "1081": {
