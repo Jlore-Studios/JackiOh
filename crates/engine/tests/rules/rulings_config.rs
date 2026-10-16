@@ -52,13 +52,12 @@ fn r14_rotates_two_independent_rings_into_a_locked_destination_and_carries_damag
 }
 
 #[test]
-fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repeats_one_on_a_unit() {
+fn r21_r781005_r1025000_draws_random_keywords_from_the_sixteen_entry_pool_and_never_repeats_one_on_a_unit() {
     let pool = json_of(config::RANDOM_KEYWORD_POOL);
     assert_eq!(
         pool,
         json!([
             "Taunt",
-            "Armor 1",
             "Rush",
             "Charge",
             "First Strike",
@@ -71,7 +70,6 @@ fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repe
             "Cleave",
             "Indestructible",
             "Deft",
-            "Spell Damage 1",
             "Lifesteal",
             "Pierce",
             "Trample"
@@ -83,7 +81,7 @@ fn r21_r781005_draws_random_keywords_from_the_eighteen_entry_pool_and_never_repe
         .iter()
         .map(|entry| entry.as_str().expect("a keyword is a string").to_string())
         .collect();
-    assert_eq!(entries.len(), 18);
+    assert_eq!(entries.len(), 16);
 }
 
 #[test]

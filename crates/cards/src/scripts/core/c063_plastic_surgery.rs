@@ -78,8 +78,8 @@ mod tests {
     const TIMMY: &str = "core-011"; // 3/3 with Rush and First Strike, both in the pool
     const MENACE: &str = "core-019"; // 9/9 with Taunt, in the pool
 
-    /// R21's pool as keyword KINDS ("Armor 1" and "Spell Damage 1" are numbered, §6.1). Read from the
-    /// engine's pool, so this test never restates the keywords (SPEC §6.1, R781005).
+    /// R21's pool as keyword KINDS. Read from the engine's pool, so this test never restates the
+    /// keywords (SPEC §6.1, R781005, R1025000).
     fn pool_kinds() -> Vec<&'static str> {
         random_pool_keywords().iter().map(|keyword| keyword.kind().as_str()).collect()
     }

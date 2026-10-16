@@ -47,12 +47,11 @@ mod config_constants_build_s2 {
     }
 
     #[test]
-    fn r21_r781005_random_keyword_pool_is_the_designers_eighteen_combat_keywords_in_order() {
+    fn r21_r781005_r1025000_random_keyword_pool_is_the_designers_sixteen_combat_keywords_in_order() {
         assert_eq!(
             RANDOM_KEYWORD_POOL.to_vec(),
             vec![
                 "Taunt",
-                "Armor 1",
                 "Rush",
                 "Charge",
                 "First Strike",
@@ -65,7 +64,6 @@ mod config_constants_build_s2 {
                 "Cleave",
                 "Indestructible",
                 "Deft",
-                "Spell Damage 1",
                 "Lifesteal",
                 "Pierce",
                 "Trample",
