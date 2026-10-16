@@ -7381,8 +7381,10 @@
     "what": "build #1047 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-10-16T12:35:00Z",
-    "notes": [],
+    "at": "2026-10-16T12:40:48Z",
+    "notes": [
+      "#1055: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
