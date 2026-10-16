@@ -7290,8 +7290,14 @@
     "what": "revise #1053 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-16T12:14:31Z",
-    "notes": [],
+    "at": "2026-10-16T12:20:16Z",
+    "notes": [
+      "#1047 needs a plan",
+      "#1048 needs a plan",
+      "#1049 needs a plan",
+      "#1050 needs a plan",
+      "started a night run, as a lane was free: #1048 (medium) is queued to build, for `muse`: plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
