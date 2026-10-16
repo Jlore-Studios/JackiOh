@@ -10,8 +10,8 @@ use jackioh_engine::testkit::*;
 use super::fixtures::combat::cleaver;
 use super::fixtures::harness::{events_of_type, new_game, put, sink_for, slot};
 use super::fixtures::keywords_783::{
-    cloaked_bolt, first_striker, flyer, flying_taunter, grunt, quake, ranged, ranged_cleaver, ranged_striker,
-    ranged_trampler, register_keywords_783, sniper,
+    cloaked_bolt, cloaked_field, first_striker, flyer, flying_stacker, flying_taunter, grunt, quake, ranged,
+    ranged_cleaver, ranged_striker, ranged_trampler, register_keywords_783, sniper,
 };
 use super::fixtures::prompt_harness::{act, cast_now};
 
@@ -389,5 +389,269 @@ mod r783003_flying_lands {
         let (refused, _) = declare(&mut plain, &walker.id, &bird.id);
         assert_eq!(refused, None);
         assert_eq!(damage_on(&plain, &walker.id), 2);
+    }
+}
+
+mod r1081000_flying_backrow {
+    use super::*;
+    use jackioh_engine::subsystems::audit::{AuditArgs, audit_targets};
+    use jackioh_engine::subsystems::quests::{QuestDef, quest_progress_of};
+
+    /// A `def_id` card in `player`'s hand, with mana to play it.
+    fn in_hand_with_mana(state: &mut GameState, def_id: &str, player: PlayerId) -> CardInstance {
+        let card = new_instance(state, def_id, player, Zone::Hand { player });
+        state.players[player].hand.push(card.clone());
+        state.players[player].mana.current = 10;
+        card
+    }
+
+    /// The refusal a play of `id` into `zone` meets, or `""`.
+    fn play_refusal(state: &GameState, id: &str, zone: Value) -> String {
+        let action: Action = json_as(json!({
+            "type": "play",
+            "instanceId": id,
+            "zone": zone,
+            "playerId": "p1",
+            "nonce": format!("r1081000-{id}"),
+        }));
+        reduce(state, &action).error.unwrap_or_default()
+    }
+
+    fn unit_zone(lane: i32) -> ZoneChoice {
+        ZoneChoice {
+            row: Row::Units,
+            lane,
+        }
+    }
+
+    fn backrow_zone(lane: i32) -> ZoneChoice {
+        ZoneChoice {
+            row: Row::Backrow,
+            lane,
+        }
+    }
+
+    #[test]
+    fn r1081000_flying_unit_lists_open_backrow_zones() {
+        let mut state = board("r1081000-zones");
+        let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
+        let zones = legal_zones_for(&state, P1, &bird, &[]);
+        // An empty board: every unit lane and every backrow lane.
+        for lane in 1..=5 {
+            assert!(zones.contains(&unit_zone(lane)), "unit lane {lane} offered");
+            assert!(zones.contains(&backrow_zone(lane)), "backrow lane {lane} offered");
+        }
+        // A Unit that cannot fly is offered its unit lanes only.
+        let plain = in_hand_with_mana(&mut state, &grunt().id, P1);
+        let plain_zones = legal_zones_for(&state, P1, &plain, &[]);
+        assert!(!plain_zones.is_empty());
+        assert!(plain_zones.iter().all(|zone| zone.row == Row::Units));
+    }
+
+    #[test]
+    fn r1081000_flying_unit_plays_into_empty_backrow_and_acts() {
+        let mut state = board("r1081000-stand");
+        // A Unit that cannot fly is still refused the backrow.
+        let plain = in_hand_with_mana(&mut state, &grunt().id, P1);
+        assert!(
+            play_refusal(&state, &plain.id, json!({ "row": "backrow", "lane": 1 }))
+                .contains("played on top of")
+        );
+        let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 1), json!({}));
+        let target = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        // It attacks from the backrow.
+        let (refused, _) = declare(&mut state, &wing.id, &target.id);
+        assert_eq!(refused, None);
+        assert_eq!(damage_on(&state, &target.id), 2);
+
+        // Played from hand with `zone: { row: backrow }`, it stands there.
+        let mut played = board("r1081000-played");
+        let bird = in_hand_with_mana(&mut played, &flyer().id, P1);
+        let next = act(
+            &played,
+            json!({
+                "type": "play",
+                "instanceId": bird.id,
+                "zone": { "row": "backrow", "lane": 2 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        let stood = live(&next, &bird.id);
+        assert!(
+            matches!(
+                stood.zone,
+                Zone::Field {
+                    row: Row::Backrow,
+                    lane: 2,
+                    ..
+                }
+            ),
+            "the flyer stands in backrow lane 2"
+        );
+        // It counts among its controller's Units.
+        assert!(active_units_of(&next, P1).iter().any(|unit| unit.id == bird.id));
+        // Its backrow entry carries the Unit it is, with its live attack.
+        let view = view_for(&next, P1);
+        let BackrowView::Public(entry) = view.you.backrow[1].as_ref().expect("a public card") else {
+            panic!("the backrow flyer is public");
+        };
+        let unit = entry.unit.as_ref().expect("the entry carries its unit");
+        assert_eq!(unit.instance_id, bird.id);
+        assert_eq!(unit.attack, 2);
+        assert_eq!(unit.position, Position::Atk);
+        assert!(
+            unit.keywords
+                .iter()
+                .any(|keyword| keyword.kind() == KeywordKind::Flying)
+        );
+
+        // In Attack Position it is attacked only by Flying or Ranged.
+        let mut fought = next;
+        let walker = put(&mut fought, &grunt().id, slot(P2, Row::Units, 1), json!({}));
+        let archer = put(&mut fought, &ranged().id, slot(P2, Row::Units, 2), json!({}));
+        let (refused, _) = declare(&mut fought, &walker.id, &bird.id);
+        assert!(refused.is_some_and(|refusal| refusal.contains("Flying or Ranged")));
+        let (refused, _) = declare(&mut fought, &archer.id, &bird.id);
+        assert_eq!(refused, None);
+        assert_eq!(damage_on(&fought, &bird.id), 2);
+    }
+
+    #[test]
+    fn r1081000_flying_stack_lists_every_zone() {
+        let mut state = board("r1081000-stack");
+        let _blocker = put(&mut state, &grunt().id, slot(P1, Row::Units, 1), json!({}));
+        let flag = put(
+            &mut state,
+            &cloaked_field().id,
+            slot(P1, Row::Backrow, 1),
+            json!({}),
+        );
+        // Flying with Stack is offered the occupied zones of either row.
+        let stacker = in_hand_with_mana(&mut state, &flying_stacker().id, P1);
+        let zones = legal_zones_for(&state, P1, &stacker, &[]);
+        assert!(zones.contains(&unit_zone(1)), "the occupied unit zone is offered");
+        assert!(
+            zones.contains(&backrow_zone(1)),
+            "the occupied backrow zone is offered"
+        );
+        // Plain Flying is refused both: neither zone is open.
+        let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
+        assert!(play_refusal(&state, &bird.id, json!({ "row": "units", "lane": 1 })).contains("not open"));
+        assert!(play_refusal(&state, &bird.id, json!({ "row": "backrow", "lane": 1 })).contains("not open"));
+        // Played onto the occupied backrow zone, the Stack flyer tops it as a pile.
+        let next = act(
+            &state,
+            json!({
+                "type": "play",
+                "instanceId": stacker.id,
+                "zone": { "row": "backrow", "lane": 1 },
+                "playerId": "p1",
+            }),
+            None,
+        );
+        assert_eq!(
+            card_at(&next, slot(P1, Row::Backrow, 1)).map(|card| card.id.clone()),
+            Some(stacker.id.clone())
+        );
+        assert_eq!(
+            beneath_at(&next, slot(P1, Row::Backrow, 1))
+                .iter()
+                .map(|card| card.id.clone())
+                .collect::<Vec<_>>(),
+            vec![flag.id.clone()]
+        );
+        assert!(
+            active_units_of(&next, P1)
+                .iter()
+                .any(|unit| unit.id == stacker.id)
+        );
+    }
+
+    #[test]
+    fn r1081000_backrow_flyer_in_defense_lands() {
+        let mut state = board("r1081000-defense");
+        let walker = put(&mut state, &grunt().id, slot(P1, Row::Units, 1), json!({}));
+        let wall = put(
+            &mut state,
+            &flying_taunter().id,
+            slot(P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let other = put(&mut state, &grunt().id, slot(P2, Row::Units, 2), json!({}));
+        // Landed: anything may attack it, and its Taunt binds every attacker.
+        set_position(&mut state, &wall.id, Position::Def);
+        assert_eq!(attack_targets(&state, &walker.id), vec![wall.id.clone()]);
+        assert_eq!(attack_refusal(&state, &walker.id, &wall.id), "");
+        assert!(attack_refusal(&state, &walker.id, &other.id).contains("Taunt"));
+        let (refused, _) = declare(&mut state, &walker.id, &wall.id);
+        assert_eq!(refused, None);
+    }
+
+    #[test]
+    fn r1081000_locked_and_reserved_backrow_refuse_it() {
+        let mut state = board("r1081000-locked");
+        lock_zone(&mut state, slot(P1, Row::Backrow, 1));
+        reserve_zone(&mut state, slot(P1, Row::Backrow, 2));
+        let bird = in_hand_with_mana(&mut state, &flyer().id, P1);
+        let zones = legal_zones_for(&state, P1, &bird, &[]);
+        assert!(!zones.contains(&backrow_zone(1)), "a Locked lane is not offered");
+        assert!(
+            !zones.contains(&backrow_zone(2)),
+            "a reserved lane is not offered"
+        );
+        assert!(zones.contains(&backrow_zone(3)), "other backrow lanes are");
+        assert!(play_refusal(&state, &bird.id, json!({ "row": "backrow", "lane": 1 })).contains("not open"));
+        assert!(play_refusal(&state, &bird.id, json!({ "row": "backrow", "lane": 2 })).contains("not open"));
+        // Stack waives occupancy only: a Locked or reserved zone stays refused for it too.
+        let stacker = in_hand_with_mana(&mut state, &flying_stacker().id, P1);
+        let stacked = legal_zones_for(&state, P1, &stacker, &[]);
+        assert!(!stacked.contains(&backrow_zone(1)));
+        assert!(!stacked.contains(&backrow_zone(2)));
+    }
+
+    #[test]
+    fn r1081000_no_double_count() {
+        let mut state = board("r1081000-once");
+        let bird = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
+        // One backrow flyer is one permanent.
+        let quest: QuestDef = json_as(json!({
+            "id": "q",
+            "text": "q",
+            "goal": { "kind": "permanentsControlled", "count": 9 },
+            "rewards": [],
+        }));
+        assert_eq!(quest_progress_of(&state, &bird, &quest), 1);
+        // One entry among the acting units, feeding every guard off that list.
+        assert_eq!(
+            active_units_of(&state, P1)
+                .iter()
+                .filter(|unit| unit.id == bird.id)
+                .count(),
+            1
+        );
+        // One card in the Audit's scan.
+        let targets = audit_targets(
+            &state,
+            AuditArgs {
+                controller: P1,
+                active: P1,
+                loc: 1,
+                more: false,
+                enemy_only: false,
+            },
+        );
+        assert_eq!(targets.iter().filter(|card| card.id == bird.id).count(), 1);
+        // One listing on the view: a public backrow entry carrying its unit, and no unit-row entry.
+        let view = view_for(&state, P1);
+        assert!(view.you.units.iter().all(|unit| unit.is_none()));
+        let BackrowView::Public(entry) = view.you.backrow[1].as_ref().expect("a public card") else {
+            panic!("the backrow flyer is public");
+        };
+        assert_eq!(entry.instance_id, bird.id);
+        assert_eq!(
+            entry.unit.as_ref().map(|unit| unit.instance_id.as_str()),
+            Some(bird.id.as_str())
+        );
     }
 }

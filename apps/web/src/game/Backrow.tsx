@@ -78,6 +78,36 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
   }
 
   const testId = testid.card(entry.instanceId);
+  // R1081000: a Unit standing in the backrow is drawn as the minion it is — the unit block the view
+  // carries — with the same switch, target, highlight and click wiring a unit-zone minion has
+  // (Zone.tsx). Anything else keeps the backrow face below.
+  if (entry.type === "Unit" && entry.unit !== undefined && entry.unit !== null) {
+    const unit = entry.unit;
+    return (
+      <>
+        <Card
+          testId={testId}
+          card={entry}
+          unit={unit}
+          switchTarget
+          type={entry.type}
+          owner={entry.owner}
+          controller={entry.controller}
+          counters={entry.counters}
+          unrevealed={entry.unrevealed === true}
+          revealAt={entry.revealAt}
+          className="card-backrow"
+          touchHold={props.touchHold}
+          target={{ on: "unit", instanceId: unit.instanceId, side: props.side, lane: props.lane }}
+          highlight={props.highlight}
+          animating={props.animating}
+          onClick={props.onClick}
+          pops={props.pops?.get(testId)}
+        />
+        <PileDepth buried={buried} top={top} />
+      </>
+    );
+  }
   return (
     <>
       <Card

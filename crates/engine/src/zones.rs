@@ -639,22 +639,42 @@ pub fn place_on_field(
         // R446: a Unit enters a backrow zone only on top of a carrier, which stays beneath it and keeps
         // acting there. A move that sets a whole zone down (`zone_contents`: a rotation, a board swap)
         // puts the carrier down first and its Unit back on it, whatever the carrier's text says by then.
-        let Some(top) = state.players[slot.player]
+        //
+        // R1081000: a Unit with Flying (read as `play_choices` reads it) may also stand in the zone
+        // itself — an empty slot lands as `Backrow`; an occupied one only with `stack` and no carried
+        // Unit standing there, as a Stack pile. A carrier still takes it as a carrier first, so a play
+        // onto one lands carried, never standing.
+        let flies = crate::layers::unit_has(state, instance, crate::wire::KeywordKind::Flying);
+        match state.players[slot.player]
             .backrow
             .get(index)
             .and_then(Option::as_ref)
-        else {
-            return false;
-        };
-        if carried_at(state, slot).is_some() {
-            return false;
+        {
+            None => {
+                if !flies {
+                    return false;
+                }
+                Landing::Backrow
+            }
+            Some(top) => {
+                if carried_at(state, slot).is_some() {
+                    return false;
+                }
+                if is_carrier(state, top) {
+                    // R653: the first Unit to stand on a carrier that fuses its Unit is the one it
+                    // takes this stay.
+                    let stamp =
+                        flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_none();
+                    Landing::Carried { stamp }
+                } else if flies && stack {
+                    Landing::Backrow
+                } else if !flies && stack {
+                    Landing::Carried { stamp: false }
+                } else {
+                    return false;
+                }
+            }
         }
-        if !is_carrier(state, top) && !stack {
-            return false;
-        }
-        // R653: the first Unit to stand on a carrier that fuses its Unit is the one it takes this stay.
-        let stamp = flags_of(state, top).fuses_carried == Some(true) && stacked_onto(top).is_none();
-        Landing::Carried { stamp }
     } else {
         // B5 E21: a Stack card may top an occupied backrow zone as it may a unit zone; the card beneath
         // goes dormant (§3.2). A zone carrying a Unit takes nothing more (R446).
@@ -737,7 +757,7 @@ pub fn place_beneath_top(state: &mut GameState, instance: &mut CardInstance, slo
 }
 
 /// R227: whether a card placed in this row lands face-down — a Trap or a Field Trap in a backrow
-/// (§3.2, R33). A Field Spell lands face-up, and a Unit never reaches the backrow.
+/// (§3.2, R33). A Field Spell lands face-up, and a Unit standing in the backrow (R1081000) face-up too.
 pub fn lands_face_down(state: &GameState, instance: &CardInstance, row: Row) -> bool {
     if row != Row::Backrow {
         return false;
@@ -1453,7 +1473,9 @@ pub fn move_to_zone(
 }
 
 /// Every unit that acts for this player: each unit zone's top card in lane order (§3.2), then the
-/// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446).
+/// Units its carriers hold, in backrow lane order — a carried Unit is a Unit for every rule (R446) —
+/// then the Units standing in its backrow zones, in backrow lane order: a Flying Unit there is a Unit
+/// for every rule too (R1081000).
 pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     // Read straight off the rows, not through `slots_of` and `card_at`: the auras ask for this on every
     // unit read (`layers::aura_sources`), so it builds nothing it does not return (#188).
@@ -1469,6 +1491,20 @@ pub fn active_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance
         }
     }
     units.extend(side.carried.iter().flatten().filter_map(Option::as_ref));
+    // R1081000: a Flying Unit standing in a backrow zone. Face-down cards read as Traps
+    // (`card_type_of`), so pairing the Unit read with `is_face_down` keeps a set Cloaked Unit out, as
+    // the `cloaked` tests hold.
+    for lane in 1..=BACKROW_ZONES {
+        let top = lane_index(lane)
+            .and_then(|index| side.backrow.get(index))
+            .and_then(Option::as_ref);
+        if let Some(top) = top
+            && card_type_of(state, top) == CardType::Unit
+            && !crate::preview::is_face_down(state, top)
+        {
+            units.push(top);
+        }
+    }
     units
 }
 

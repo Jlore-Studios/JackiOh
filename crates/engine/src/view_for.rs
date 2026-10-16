@@ -658,7 +658,12 @@ fn plague_tokens_on(card: &CardInstance) -> i32 {
 /// occupied and what the card in it costs (R351, a deliberate reveal), and nothing more, so not even
 /// the controller's name travels with it. The cost is the one the controller's own view shows, so
 /// both players read the same number.
-fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId) -> Option<BackrowView> {
+fn backrow_view(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    card: Option<&CardInstance>,
+    viewer: PlayerId,
+) -> Option<BackrowView> {
     let card = card?;
     // B5 E19, R471: Plague Counters are public wherever they sit, a face-down card's included; B5 E21: a
     // backrow pile shows how many cards lie under its top, as a unit pile does (R13, R447).
@@ -731,6 +736,13 @@ fn backrow_view(state: &GameState, card: Option<&CardInstance>, viewer: PlayerId
         // unit prop, so the flag travels here as it does on a unit view.
         vanilla: if card.vanilla { Some(true) } else { None },
         buried,
+        // R1081000: a Unit standing in the backrow rides as the minion it is — the same Unit-face,
+        // not-face-down tops `active_units_of` counts, so the two cannot disagree.
+        unit: if card_type_of(state, card) == CardType::Unit && !is_face_down(state, card) {
+            unit_view_of(state, auras, std::slice::from_ref(card), viewer)
+        } else {
+            None
+        },
     }))
 }
 
@@ -1126,7 +1138,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         backrow: side
             .backrow
             .iter()
-            .map(|card| backrow_view(state, card.as_ref(), viewer))
+            .map(|card| backrow_view(state, auras, card.as_ref(), viewer))
             .collect(),
         carried: carried_view(state, auras, player, viewer),
         hand_cap: side.hand_cap,

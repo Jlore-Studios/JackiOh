@@ -274,6 +274,18 @@ pub fn stacker() -> CardDef {
     unit(7857, "stacker", 1, 1, 1, json!([{ "kind": "Stack" }]))
 }
 
+/// A Flying 2/2 with Stack (R1081000: offered every zone of its side).
+pub fn flying_stacker() -> CardDef {
+    unit(
+        7868,
+        "flying-stacker",
+        1,
+        2,
+        2,
+        json!([{ "kind": "Flying" }, { "kind": "Stack" }]),
+    )
+}
+
 /// A Crater Spell, on which Crater does nothing: 1 to the enemy hero.
 pub fn crater_spell() -> CardDef {
     def(7858, "crater-spell", "Spell", 1, json!([{ "kind": "Crater" }]))
@@ -374,6 +386,7 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         recruiter(),
         flicker_all(),
         stacker(),
+        flying_stacker(),
         crater_spell(),
         crater_field(),
         flashback_spell(),
@@ -428,6 +441,7 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
         crater_reborn(),
         crater_cloaked(),
         stacker(),
+        flying_stacker(),
         crater_field(),
     ] {
         table.insert(card.id, both(Script::default()));
