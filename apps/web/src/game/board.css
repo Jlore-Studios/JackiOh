@@ -1164,6 +1164,34 @@
   background: var(--grade);
 }
 
+/* R90 (#992): the viewer's own hand card whose listed plays were cut (Card.tsx): an ellipsis pill
+   at the top of the face, clear of the cost gem (top left) and R667's badge (top right). Its words
+   are its tooltip, its inspect note and the hidden text. */
+.choices-truncated-badge {
+  position: absolute;
+  z-index: 4;
+  top: 3%;
+  left: 50%;
+  translate: -50% 0;
+  padding: 0 6px;
+  border: 1px solid var(--line-bright);
+  border-radius: 999px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 0.85em;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.choices-truncated-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .buried-badge {
   position: absolute;
   top: 2px;
