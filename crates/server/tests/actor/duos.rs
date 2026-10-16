@@ -31,11 +31,13 @@ use jackioh_engine::config::{
     DECK_SIZE, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, Difficulty, UNIT_ZONES, duos_ai_team,
 };
 use jackioh_engine::wire::DuosSeat;
+use jackioh_server::actor::guard::FLOOD_WINDOW_MS;
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
 use jackioh_server::app::{App, now_ms, router};
 use jackioh_server::config::{
     DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS, DUOS_MULLIGAN_CLOCK_MS, DUOS_ROUND_CLOCK_MS,
-    MATCH_CEILING_MS, MAX_SAVED_DECKS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
+    MALFORMED_FRAMES_PER_WINDOW, MATCH_ACTIONS_PER_SECOND, MATCH_CEILING_MS, MAX_SAVED_DECKS,
+    PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_THRESHOLD, REJECTION_ALERT_WINDOW_MS,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -43,7 +45,7 @@ use jackioh_server::duos::registry;
 use jackioh_server::duos::store::DuosActionRow;
 
 use super::ws_server::encode_query;
-use crate::support::deps::{add_user, call, empty_test_app};
+use crate::support::deps::{add_user, call, empty_test_app, record_logs};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -71,6 +73,8 @@ const CLOSE_NOT_FOUND: u16 = 4404;
 const SAVED_AT: i64 = 1_700_000_000_000;
 /// A close frame that carried no code.
 const NO_STATUS: u16 = 1005;
+/// RFC 6455's policy violation: what a socket past its malformed budget is closed with (R835002).
+const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
 // ---------------------------------------------------------------------------------------------
 // Time and numbers
@@ -1897,5 +1901,180 @@ mod r1047000_the_ceiling {
         assert_eq!(view["view"]["result"], draw, "{view}");
         assert_eq!(h.live(&h.host).await, Value::Null);
         assert_eq!(h.live(&h.guest).await, Value::Null);
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R835000, R835002 — the 1v1 socket's abuse guards, on the co-op socket
+// ---------------------------------------------------------------------------------------------
+
+mod r835000_r835002_the_abuse_guards {
+    use super::*;
+
+    /// §9.8's alert, one name for both modes.
+    const UNUSUAL: &str = "match.rejections.unusual";
+
+    /// Sends the one action a co-op seat is always refused (B10: a duel concede) and answers the
+    /// code it was refused with: the reducer's `illegal_action`, or `rate_limited` past the flood
+    /// limit.
+    async fn refuse(client: &WsClient, nonce: &str) -> String {
+        let answer = act(client, nonce, duel(json!({ "type": "concede" }))).await;
+        assert_eq!(answer["type"], "error", "{nonce}: {answer}");
+        let code = answer["code"].as_str().expect("an error code").to_string();
+        assert!(
+            code == "illegal_action" || code == "rate_limited",
+            "{nonce}: {answer}"
+        );
+        code
+    }
+
+    /// `refusals` refusals that never trip the flood limit: the clock moves a flood window on
+    /// before every `MATCH_ACTIONS_PER_SECOND`th. Every one is the reducer's.
+    async fn refuse_unflooded(client: &WsClient, prefix: &str, refusals: usize) {
+        for i in 0..refusals {
+            if i > 0 && i % MATCH_ACTIONS_PER_SECOND == 0 {
+                tokio::time::sleep(ms(FLOOD_WINDOW_MS)).await;
+            }
+            let code = refuse(client, &format!("{prefix}-{i}")).await;
+            assert_eq!(code, "illegal_action", "{prefix}-{i}");
+        }
+    }
+
+    /// A match with both people seated and the AI's mulligans answered.
+    async fn seated() -> (Duos, WsClient, WsClient) {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        (h, a1, a2)
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835000_the_refusal_past_the_threshold_alerts_once_and_the_threshold_stays_silent() {
+        let logs = record_logs();
+        let (h, a1, _a2) = seated().await;
+
+        // The threshold itself is not past it.
+        refuse_unflooded(&a1, "under", REJECTION_ALERT_THRESHOLD).await;
+        assert!(logs.named(UNUSUAL).is_empty(), "{:?}", logs.entries());
+
+        // One more is.
+        tokio::time::sleep(ms(FLOOD_WINDOW_MS)).await;
+        assert_eq!(refuse(&a1, "over").await, "illegal_action");
+        let alerts = logs.named(UNUSUAL);
+        assert_eq!(alerts.len(), 1, "{:?}", logs.entries());
+        assert_eq!(alerts[0].level, "alert");
+        assert_eq!(
+            alerts[0].data["data"],
+            json!({
+                "profileId": h.host.id,
+                "matchId": h.match_id,
+                "rejected": REJECTION_ALERT_THRESHOLD + 1,
+                "windowMs": REJECTION_ALERT_WINDOW_MS,
+            })
+        );
+
+        // Once per match per seat: more refusals raise no second one.
+        tokio::time::sleep(ms(FLOOD_WINDOW_MS)).await;
+        for i in 0..MATCH_ACTIONS_PER_SECOND {
+            refuse(&a1, &format!("again-{i}")).await;
+        }
+        assert_eq!(logs.named(UNUSUAL).len(), 1, "{:?}", logs.entries());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835000_r137_a_flooding_co_op_seat_is_rate_limited_and_its_flood_refusals_count() {
+        let logs = record_logs();
+        let (h, a1, a2) = seated().await;
+
+        // All at one instant: the first window's worth reaches the reducer, the rest are refused by
+        // the flood limit, and the alert counts both kinds.
+        let refusals = REJECTION_ALERT_THRESHOLD + 1;
+        let mut codes = Vec::new();
+        for i in 0..refusals {
+            codes.push(refuse(&a1, &format!("flood-{i}")).await);
+        }
+        for (i, code) in codes.iter().enumerate() {
+            let expected = if i < MATCH_ACTIONS_PER_SECOND {
+                "illegal_action"
+            } else {
+                "rate_limited"
+            };
+            assert_eq!(code, expected, "refusal {i}: {codes:?}");
+        }
+        let alerts = logs.named(UNUSUAL);
+        assert_eq!(alerts.len(), 1, "{:?}", logs.entries());
+        assert_eq!(alerts[0].data["data"]["profileId"], json!(h.host.id));
+        assert_eq!(alerts[0].data["data"]["rejected"], json!(refusals));
+        assert!(
+            a1.close_code().is_none(),
+            "§9.8: the flood does not drop the socket"
+        );
+
+        // R137: the seat's window is its own: the teammate's refusal is the reducer's.
+        assert_eq!(refuse(&a2, "teammate").await, "illegal_action");
+        assert_eq!(logs.named(UNUSUAL).len(), 1, "{:?}", logs.entries());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835000_refusals_spread_past_the_window_never_alert() {
+        let logs = record_logs();
+        let (_h, a1, _a2) = seated().await;
+
+        refuse_unflooded(&a1, "early", REJECTION_ALERT_THRESHOLD).await;
+        tokio::time::sleep(ms(REJECTION_ALERT_WINDOW_MS + FLOOD_WINDOW_MS)).await;
+        refuse_unflooded(&a1, "late", REJECTION_ALERT_THRESHOLD).await;
+
+        assert!(logs.named(UNUSUAL).is_empty(), "{:?}", logs.entries());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835002_malformed_frames_past_the_budget_close_a_co_op_socket_before_its_hello() {
+        let h = duos("easy").await;
+
+        // The budget itself is answered and no more: the hello after it is still heard.
+        let guest = h.served.connect(DUOS_PATH, &h.guest.token).await;
+        for _ in 0..MALFORMED_FRAMES_PER_WINDOW {
+            guest.send_text("not json").await;
+        }
+        guest.send_json(hello(&h.match_id)).await;
+        let view = guest.wait_for(0, PROMPTLY, |frame| frame["type"] == "view").await;
+        assert!(view.is_some(), "{:?}", guest.frames());
+        assert_eq!(guest.of_type("error").len(), MALFORMED_FRAMES_PER_WINDOW);
+
+        // One more frame than the budget closes the socket, each answered first.
+        let host = h.served.connect(DUOS_PATH, &h.host.token).await;
+        for _ in 0..=MALFORMED_FRAMES_PER_WINDOW {
+            host.send_text("not json").await;
+        }
+        assert_eq!(host.wait_closed(PROMPTLY).await, Some(CLOSE_POLICY_VIOLATED));
+        let errors = host.of_type("error");
+        assert_eq!(errors.len(), MALFORMED_FRAMES_PER_WINDOW + 1, "{errors:?}");
+        assert!(
+            errors.iter().all(|error| error["code"] == "malformed"),
+            "{errors:?}"
+        );
+        assert!(host.of_type("view").is_empty(), "{:?}", host.frames());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r835002_malformed_frames_past_the_budget_close_a_co_op_socket_after_its_hello() {
+        let (_h, a1, a2) = seated().await;
+        let from = a1.received();
+
+        for _ in 0..=MALFORMED_FRAMES_PER_WINDOW {
+            a1.send_text("not json").await;
+        }
+        assert_eq!(a1.wait_closed(PROMPTLY).await, Some(CLOSE_POLICY_VIOLATED));
+        let errors = a1.of_type_since(from, "error");
+        assert_eq!(errors.len(), MALFORMED_FRAMES_PER_WINDOW + 1, "{errors:?}");
+        assert!(
+            errors.iter().all(|error| error["code"] == "malformed"),
+            "{errors:?}"
+        );
+
+        // The teammate's seat is untouched.
+        settle().await;
+        assert!(a2.close_code().is_none());
     }
 }

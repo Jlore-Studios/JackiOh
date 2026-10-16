@@ -33,6 +33,9 @@
 //!    rebuilt actor plays on as the match began.
 //!  - A `hello` repeated while one for the same socket is still queued is absorbed by it (§9.1, as
 //!    R835001 has a 1v1 socket's): a flood costs one view push, not one per frame.
+//!  - Each person's seat keeps the 1v1 seat's guards (`actor::guard::SeatGuard`; R137, R835000,
+//!    R835002): the action flood window, the malformed-frame budget and the count of refusals that
+//!    raises `match.rejections.unusual`. Only a person's own refusals count; the AI's never do.
 //!  - Pings are relayed to the teammate's socket only, rate-limited, and never logged, folded or
 //!    viewed (B39).
 //!
@@ -56,6 +59,7 @@ use jackioh_engine::{Rng, mulligan_owed};
 
 use crate::actor::clock::{Timer, after};
 use crate::actor::contracts::{SocketHandlers, one_tx};
+use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{SERVER_NONCE_PREFIX, SocketErrorCode};
 use crate::actor::registry::panic_text;
 use crate::actor::ws_server::Socket;
@@ -63,9 +67,8 @@ use crate::app::{App, now_ms};
 use crate::bots::seat::r188_forbidden;
 use crate::config::{
     BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS,
-    DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MALFORMED_FRAMES_PER_WINDOW,
-    MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_WINDOW_MS,
+    DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS,
 };
 use crate::db::store::StoreError;
 use crate::duos::ceiling_at;
@@ -80,12 +83,6 @@ use crate::duos::store::{DuosActionRow, DuosMatch, action_json, seat_of_logged};
 /// The people's seats: the room's host and guest (S6). Their sockets, graces and AI takeovers are
 /// indexed in this order.
 pub const HUMAN_SEATS: [DuosSeat; 2] = [DuosSeat::A1, DuosSeat::A2];
-
-/// §9.8: the action flood limit is counted over this window (as the 1v1 actor's).
-const FLOOD_WINDOW_MS: i64 = 1000;
-
-/// RFC 6455's policy violation: a seat past `MALFORMED_FRAMES_PER_WINDOW` (R835002).
-const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
 /// RFC 6455's normal closure and "going away".
 const CLOSE_NORMAL: u16 = 1000;
@@ -434,10 +431,9 @@ struct Core {
     ai_busy: [bool; 4],
     /// By `DUOS_SEATS`: where each seat's AI stream stands. A rebuilt actor starts them again.
     ai_cursor: [u32; 4],
-    /// By `HUMAN_SEATS`: §9.8's per-seat action window (R137).
-    recent_actions: [VecDeque<i64>; 2],
-    /// By `HUMAN_SEATS`: R835002's malformed frames.
-    malformed_at: [VecDeque<i64>; 2],
+    /// By `HUMAN_SEATS`: the 1v1 seat's guards (`actor::guard`): §9.8's per-seat action window
+    /// (R137), R835000's refusals and R835002's malformed frames.
+    guards: [SeatGuard; 2],
     /// By `HUMAN_SEATS`: B39's ping window.
     pings: [VecDeque<i64>; 2],
     /// By `HUMAN_SEATS` (R835001's rule): the socket generation whose Hello is queued and unrun, so
@@ -528,8 +524,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         forced: [None, None, None, None],
         ai_busy: [false; 4],
         ai_cursor: [0; 4],
-        recent_actions: [VecDeque::new(), VecDeque::new()],
-        malformed_at: [VecDeque::new(), VecDeque::new()],
+        guards: [SeatGuard::default(), SeatGuard::default()],
         pings: [VecDeque::new(), VecDeque::new()],
         hello_pending: [None, None],
         socket_generation: [0, 0],
@@ -997,16 +992,7 @@ impl DuosActor {
         match message {
             Err(malformed) => {
                 tracing::warn!(event = "duos.frame.malformed", matchId = %self.match_id_str(), seat = %seat, reason = %malformed.reason);
-                let now = now_ms();
-                let recent = &mut core.malformed_at[index];
-                while recent
-                    .front()
-                    .is_some_and(|at| *at <= now - REJECTION_ALERT_WINDOW_MS)
-                {
-                    recent.pop_front();
-                }
-                recent.push_back(now);
-                let over = recent.len() > MALFORMED_FRAMES_PER_WINDOW;
+                let over = core.guards[index].note_malformed(now_ms());
                 self.send(
                     &core,
                     seat,
@@ -1032,13 +1018,11 @@ impl DuosActor {
             Ok(DuosClientMessage::Ping { ping, target }) => self.relay_ping(&mut core, seat, ping, target),
             Ok(DuosClientMessage::Action { nonce, body }) => {
                 let now = now_ms();
-                let recent = &mut core.recent_actions[index];
-                while recent.front().is_some_and(|at| *at <= now - FLOOD_WINDOW_MS) {
-                    recent.pop_front();
-                }
-                if recent.len() >= MATCH_ACTIONS_PER_SECOND {
+                if !core.guards[index].action_allowed(now) {
                     // §9.8: the overflow is refused; the socket stays open.
                     tracing::warn!(event = "duos.action.flooded", matchId = %self.match_id_str(), seat = %seat);
+                    // R835000: a flood refusal counts toward the seat's unusual-rejection alert.
+                    self.note_rejection(&mut core, index, now);
                     self.send(
                         &core,
                         seat,
@@ -1050,9 +1034,17 @@ impl DuosActor {
                     );
                     return;
                 }
-                recent.push_back(now);
                 self.enqueue(Task::Action { seat, nonce, body });
             }
+        }
+    }
+
+    /// R835000: counts one refused action of the person at `index`, and raises
+    /// `match.rejections.unusual` the first time their window crosses the threshold.
+    fn note_rejection(&self, core: &mut Core, index: usize, now: i64) {
+        if let Some(rejected) = core.guards[index].note_rejection(now) {
+            let profile_id = [&self.shared.row.a1, &self.shared.row.a2][index];
+            alert_unusual_rejections(self.match_id_str(), profile_id, rejected);
         }
     }
 
@@ -1139,6 +1131,14 @@ impl DuosActor {
         if let Some(reason) = &result.error {
             let reason = reason.to_string();
             tracing::warn!(event = "duos.action.rejected", matchId = %self.match_id_str(), seat = %seat, reason = %reason);
+            // R835000: a person's own refusal counts; the AI's moves and the ceiling carry server
+            // nonces (R270) and never do.
+            if let Some(index) = human(seat)
+                && !nonce.starts_with(SERVER_NONCE_PREFIX)
+            {
+                let mut core = self.lock();
+                self.note_rejection(&mut core, index, now_ms());
+            }
             return error_message(SocketErrorCode::IllegalAction, &reason, Some(&nonce));
         }
 
