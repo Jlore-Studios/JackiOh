@@ -8,7 +8,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
     ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, ZoneChoice,
     ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance, has_keyword,
-    is_locked, legal_actions, row_size, subsystems, takes_strike_back, unit_view,
+    is_locked, legal_actions, pierces, row_size, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -115,7 +115,7 @@ fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> 
 
 /// Tier 1: an attack on a unit it kills and survives, read from the layers. Divine Shield or
 /// Indestructible on the target means no kill; a Ranged attacker survives any target that is not
-/// Ranged (R783000).
+/// Ranged (R783000). Either side's hit skips the other's Armor when it pierces (§4.4 step 2, R346).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
     let a = unit_view(state, attacker);
     let t = unit_view(state, target);
@@ -124,7 +124,11 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     {
         return false;
     }
-    let dealt = (a.attack - t.armor).max(0);
+    let dealt = if pierces(state, Some(attacker), None) {
+        a.attack
+    } else {
+        (a.attack - t.armor).max(0)
+    };
     if dealt <= 0 {
         return false;
     }
@@ -146,7 +150,11 @@ fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardI
     {
         return true;
     }
-    let taken = (t.attack - a.armor).max(0);
+    let taken = if pierces(state, Some(target), None) {
+        t.attack
+    } else {
+        (t.attack - a.armor).max(0)
+    };
     if taken <= 0 {
         return true;
     }

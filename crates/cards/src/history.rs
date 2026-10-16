@@ -16,7 +16,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::core::c050_k_pop_fanatic;
-use crate::scripts::meditative::{c097_2_wishing_well, c097_8_prison};
+use crate::scripts::meditative::{c074_montana_giant, c097_2_wishing_well, c097_8_prison};
 use crate::{CATALOG, REGISTRY, catalog_json};
 
 /// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
@@ -25,9 +25,11 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (`docs/ADDING_CARDS.md` §3). A replay of a game on that version, or on one before it back to the
 /// previous kept script, folds under the kept one; every other card runs the build's own. The first
 /// kept are #1034's: Wishing Well and Prison rolled without their controller's Luck (R987) through
-/// v0.3.7b. A card patch before them that changed a script's behaviour kept none, and a game it alters
-/// is refused by its final hash. K-Pop Fanatic's plain steal is kept beside them: it marked its target
+/// v0.3.7b, and #1039's: Montaña Giant read a full hand as `HAND_CAP` cards, not its player's hand cap
+/// (R1143), through v0.3.7b. K-Pop Fanatic's plain steal is kept beside them: it marked its target
 /// purple and left one it had no room for with the opponent through v0.3.7b, before it Allured (R1045000).
+/// A card patch before them that changed a script's behaviour kept none, and a game it alters is refused
+/// by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c097_2_wishing_well::ID,
@@ -35,6 +37,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c097_2_wishing_well::script_v0_3_7b,
     ),
     (c097_8_prison::ID, "v0.3.7b", c097_8_prison::script_v0_3_7b),
+    (
+        c074_montana_giant::ID,
+        "v0.3.7b",
+        c074_montana_giant::script_v0_3_7b,
+    ),
     (
         c050_k_pop_fanatic::ID,
         "v0.3.7b",
