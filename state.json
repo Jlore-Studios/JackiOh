@@ -1569,10 +1569,8 @@
       "run_id": "38926062589",
       "started_at": "2026-10-16T15:42:56Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-6` (claude, opus) rejected it: `crates/cards/src/scripts/classic_plus/c052_jlockeeds_permanent_defense_contract.rs:37`: After this change, a stored replay of a game played on a carried shipped"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 1
     },
