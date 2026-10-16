@@ -934,6 +934,13 @@
     "1050": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T12:43:09Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 7 fails outright (a new Cypress spec) and rule 2 too (e2e/ and apps/web); no engine, AI, migration or cross-crate design keeps it below hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
