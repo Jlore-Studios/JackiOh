@@ -30,7 +30,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::IndexSet;
 use jackioh_engine::{
     Action, ActionBody, CardInstance, GameState, KeywordKind, PlayerId, Selection, UnitView, effective_life,
-    find_instance, has_keyword, legal_actions, reduce, subsystems, takes_strike_back, unit_view,
+    find_instance, has_keyword, legal_actions, pierces, reduce, subsystems, takes_strike_back, unit_view,
 };
 
 use crate::candidates::candidate_actions_in;
@@ -45,14 +45,18 @@ struct Side {
     indestructible: bool,
     first_strike: bool,
     poisonous: bool,
+    /// R346: its hits skip §4.4 step 2, the Armor.
+    pierce: bool,
 }
 
-fn side_of(view: UnitView) -> Side {
+fn side_of(state: &GameState, unit: &CardInstance) -> Side {
+    let view = unit_view(state, unit);
     Side {
         shield: has_keyword(&view.keywords, KeywordKind::DivineShield),
         indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
         first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        pierce: pierces(state, Some(unit), None),
         view,
     }
 }
@@ -64,7 +68,8 @@ struct Blow {
     pops_shield: bool,
 }
 
-/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills.
+/// §4.4 steps 1, 2, 4 and 7 for one blow: what `from` deals to `to`, and whether it kills. Step 2's
+/// Armor is skipped when `from` pierces (R346).
 fn blow(from: &Side, to: &Side) -> Blow {
     let amount = from.view.attack;
     if amount <= 0 {
@@ -88,7 +93,11 @@ fn blow(from: &Side, to: &Side) -> Blow {
             pops_shield: false,
         };
     }
-    let dealt = (amount - to.view.armor).max(0);
+    let dealt = if from.pierce {
+        amount
+    } else {
+        (amount - to.view.armor).max(0)
+    };
     let kills = dealt >= to.view.health || (from.poisonous && dealt > 0);
     Blow {
         dealt,
@@ -105,8 +114,8 @@ fn trade_value(state: &GameState, attacker: &CardInstance, target_id: &str) -> f
     let Some(target) = find_instance(state, target_id) else {
         return f64::NEG_INFINITY;
     };
-    let a = side_of(unit_view(state, attacker));
-    let t = side_of(unit_view(state, target));
+    let a = side_of(state, attacker);
+    let t = side_of(state, target);
     let out = blow(&a, &t);
     let mut kills = out.kills;
     let mut dies = takes_strike_back(state, attacker, target) && blow(&t, &a).kills;
@@ -159,8 +168,9 @@ fn ranked_attacks(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> Ve
             continue;
         };
         let value = if *target_id == hero {
+            let pierce = pierces(state, Some(attacker), None);
             let damage =
-                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, false);
+                subsystems::projected_hero_damage(state, seat, unit_view(state, attacker).attack, pierce);
             reply_face_value(state, seat, damage)
         } else {
             trade_value(state, attacker, target_id)
