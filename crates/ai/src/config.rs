@@ -456,6 +456,9 @@ pub struct AiReply {
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
     pub known_plays: i32,
+    /// Activations of cards the seat can see on the field that one reply step tries, those aimed at the
+    /// seat's hero first, then at a card it controls (reply.rs `aim_of`).
+    pub visible_activations: i32,
     /// The opponent's value per point of damage its attack would deal the seat's hero.
     pub face_per_damage: f64,
     /// Per point an attack deals a unit it does not kill.
@@ -467,6 +470,7 @@ pub const AI_REPLY: AiReply = AiReply {
     max_steps: 12,
     reserve_steps: 5,
     known_plays: 8,
+    visible_activations: 4,
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
 };
