@@ -19,7 +19,7 @@ use serde_json::{Value, json};
 use tokio::time::Instant;
 
 use jackioh_server::app::App;
-use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+use jackioh_server::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH, WS_IDLE_TIMEOUT_SECONDS};
 use jackioh_server::db::store::StartMatchInput;
 
 use super::duos::{Account, PROMPTLY, Served, WsClient, account, api, ms, serve, settle, uuid};
@@ -33,6 +33,8 @@ const WATCH_PATH: &str = "/ws/watch";
 const BEFORE_THE_PLAYERS_ACT: Duration = Duration::from_secs(5);
 /// How late past `SPECTATE_DELAY_MS` a delayed view may still arrive.
 const DELAY_SLACK: Duration = Duration::from_secs(1);
+/// How far either side of `WS_IDLE_TIMEOUT_SECONDS` the hello gate's deadline is looked for.
+const IDLE_SLACK: Duration = Duration::from_secs(1);
 
 fn count<T>(value: T) -> usize
 where
@@ -591,5 +593,35 @@ mod b50_b46_a_watch_ends_when_its_leave_does {
                 assert_eq!(watcher_counts(socket), vec![json!(1)], "{:?}", socket.messages());
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R835002 — the gate before the hello
+// ---------------------------------------------------------------------------------------------
+
+mod r835002_the_hello_gate {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r835002_a_watch_socket_that_sends_no_hello_is_refused_after_the_idle_timeout() {
+        let w = world(false).await;
+        let idle = Duration::from_secs(u64::try_from(WS_IDLE_TIMEOUT_SECONDS).expect("a span"));
+
+        // Signed in, and then silent: the pings it answers keep it alive, the deadline does not.
+        let client = w.served.connect(WATCH_PATH, &w.watcher.token).await;
+        assert_eq!(client.wait_closed(idle - IDLE_SLACK).await, None);
+        assert_eq!(client.wait_closed(IDLE_SLACK * 2).await, Some(4403));
+
+        assert!(
+            client
+                .of_type("error")
+                .iter()
+                .any(|frame| frame["code"] == "forbidden"),
+            "{:?}",
+            client.frames()
+        );
+        assert!(client.of_type("view").is_empty(), "{:?}", client.frames());
+        assert_eq!(w.app.matches.watcher_count(&w.match_id), 0);
     }
 }

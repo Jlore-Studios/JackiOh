@@ -36,7 +36,6 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 use std::time::Duration;
 
 use indexmap::IndexMap;
-use serde_json::json;
 use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
@@ -51,6 +50,7 @@ use crate::actor::contracts::{
     SocketHandlers, VoidMatchInput, one_tx,
 };
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot};
+use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
     ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
     ack_message, aim_relay_message, clock_message, emote_relay_message, encode, error_message,
@@ -58,7 +58,6 @@ use crate::actor::protocol::{
 };
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
-use crate::api::http::log_alert;
 use crate::api::rematch::{RematchStakes, STAKE_NORMAL, offer_for_bot};
 use crate::app::now_ms;
 use crate::bots::persona::{AiEmote, EmotePersona};
@@ -66,23 +65,13 @@ use crate::bots::seat::{self, BotJob, BotMove, fallback_action, never_played};
 use crate::bots::signals::{RematchPlan, aim_lead_ms, idles_turn, rematch_plan};
 use crate::config::{
     AI_EMOTE, AIM_RELAY_INTERVAL_MS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_REMATCH_FIT,
-    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MALFORMED_FRAMES_PER_WINDOW,
-    MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
-    MATCH_SERVER_ACTION_RETRY_MS, MATCH_VOIDED_CLOSE_CODE, REJECTION_ALERT_THRESHOLD,
-    REJECTION_ALERT_WINDOW_MS,
+    BOT_STRENGTHS, BOT_TIMEOUT_FIT, BOT_WRITE_RETRY_MS, MATCH_RECORD_RESULT_ATTEMPTS,
+    MATCH_RECORD_RESULT_BACKOFF_MS, MATCH_SERVER_ACTION_RETRY_MS, MATCH_VOIDED_CLOSE_CODE,
 };
 use crate::db::store::{BotRow, MatchActionRow, MatchClocks, MatchRow, MatchSeat, MatchStatus, StoreError};
 use crate::ranked::ladder::RankTier;
 
 const PLAYERS: [PlayerId; 2] = PLAYER_IDS;
-
-/// §9.8: the action flood limit, measured over this window.
-const FLOOD_WINDOW_MS: i64 = 1000;
-
-/// R835002 (CLAUDE.md rule 9: the malformed budget itself is `MALFORMED_FRAMES_PER_WINDOW` in
-/// `config.rs`; this close code is wire vocabulary, not a tuned number): RFC 6455's policy
-/// violation, sent when a seat's malformed frames cross the budget.
-const CLOSE_POLICY_VIOLATED: u16 = 1008;
 
 /// R639000: a bot home's rematch answer on its way (`Core::bot_rematch_replying`), taken off when
 /// the task that sends it ends.
@@ -271,17 +260,9 @@ struct Core {
     sockets: PerPlayer<Option<Socket>>,
     /// R744: which accounts (keyed by home, like `sockets`) have had a socket on this actor.
     attached_once: PerPlayer<bool>,
-    /// One window per seat; see `flood_exceeded`.
-    recent_actions: PerPlayer<VecDeque<i64>>,
-    /// R835000: one window per seat of refused actions (reducer refusals plus flood rejections),
-    /// pruned to `REJECTION_ALERT_WINDOW_MS`; crossing `REJECTION_ALERT_THRESHOLD` raises
-    /// `match.rejections.unusual` once per match per seat (§9.8).
-    rejections: PerPlayer<VecDeque<i64>>,
-    /// R835000: whether the seat's alert has already gone this match.
-    rejection_alerted: PerPlayer<bool>,
-    /// R835002: one window per seat of malformed frames, pruned to `REJECTION_ALERT_WINDOW_MS`;
-    /// past `MALFORMED_FRAMES_PER_WINDOW` the seat's socket is closed.
-    malformed_at: PerPlayer<VecDeque<i64>>,
+    /// R137, R835000, R835002: each seat's abuse guard (`actor::guard`), by home seat: its action
+    /// flood window, its refusals toward the unusual-rejection alert and its malformed frames.
+    guards: PerPlayer<SeatGuard>,
     /// R835001: the socket generation each seat's queued-but-unrun Hello belongs to (`None` when
     /// none is queued). A repeat for the same home and generation is absorbed; a Hello from a
     /// newer generation always enqueues.
@@ -520,10 +501,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         sockets: PerPlayer::new(None, None),
         // R1452: a bot's seat is never away, so R744's grace never starts for it.
         attached_once: PerPlayer::new(bots.p1.is_some(), bots.p2.is_some()),
-        recent_actions: PerPlayer::new(VecDeque::new(), VecDeque::new()),
-        rejections: PerPlayer::new(VecDeque::new(), VecDeque::new()),
-        rejection_alerted: PerPlayer::new(false, false),
-        malformed_at: PerPlayer::new(VecDeque::new(), VecDeque::new()),
+        guards: PerPlayer::new(SeatGuard::default(), SeatGuard::default()),
         hello_pending: PerPlayer::new(None, None),
         socket_generation: PerPlayer::new(0, 0),
         emote_history: PerPlayer::new(Vec::new(), Vec::new()),
@@ -1334,15 +1312,7 @@ impl MatchActor {
                 self.note_rejection(&mut core, home, now_ms())
             };
             if let Some((profile_id, rejected)) = alert {
-                log_alert(
-                    "match.rejections.unusual",
-                    json!({
-                        "profileId": profile_id,
-                        "matchId": self.match_id_str(),
-                        "rejected": rejected,
-                        "windowMs": REJECTION_ALERT_WINDOW_MS,
-                    }),
-                );
+                alert_unusual_rejections(self.match_id_str(), &profile_id, rejected);
             }
             return error_message(SocketErrorCode::IllegalAction, reason, Some(&nonce));
         }
@@ -1722,16 +1692,7 @@ impl MatchActor {
                 // not a stale client, so its socket is closed after the usual answer. The guard is
                 // dropped first: the socket's close handler re-locks the actor (`attach` closes a
                 // replaced socket the same way).
-                let now = now_ms();
-                let recent = &mut core.malformed_at[home];
-                while recent
-                    .front()
-                    .is_some_and(|at| *at <= now - REJECTION_ALERT_WINDOW_MS)
-                {
-                    recent.pop_front();
-                }
-                recent.push_back(now);
-                let over = recent.len() > MALFORMED_FRAMES_PER_WINDOW;
+                let over = core.guards[home].note_malformed(now_ms());
                 self.send_to_home(
                     &core,
                     home,
@@ -1760,7 +1721,7 @@ impl MatchActor {
             Ok(ClientMessage::Aim(aim)) => self.receive_aim(&mut core, player, aim.aim),
             Ok(ClientMessage::Action(action)) => {
                 let now = now_ms();
-                if flood_exceeded(&mut core, home, now) {
+                if !core.guards[home].action_allowed(now) {
                     // §9.8: reject the overflow; the socket stays open.
                     tracing::warn!(event = "match.action.flooded", matchId = %self.match_id_str(), player = %player);
                     // R835000: a flood rejection counts toward the seat's unusual-rejection alert.
@@ -1775,15 +1736,7 @@ impl MatchActor {
                         ),
                     );
                     if let Some((profile_id, rejected)) = alert {
-                        log_alert(
-                            "match.rejections.unusual",
-                            json!({
-                                "profileId": profile_id,
-                                "matchId": self.match_id_str(),
-                                "rejected": rejected,
-                                "windowMs": REJECTION_ALERT_WINDOW_MS,
-                            }),
-                        );
+                        alert_unusual_rejections(self.match_id_str(), &profile_id, rejected);
                     }
                     return;
                 }
@@ -2127,28 +2080,6 @@ impl WeakMatchActor {
     }
 }
 
-/// §9.8's action flood limit, `MATCH_ACTIONS_PER_SECOND` from `crate::config` (R109), held as one
-/// window *per seat*.
-///
-/// SPEC §11 R137 settles the scope of the counter: "Per seat, not per match." §9.8 says
-/// "per-match rate limit in the actor" and R109 says "5 actions per second per match", but one
-/// shared per-match counter lets a flooding player spend the *opponent's* budget and have the
-/// victim's legitimate clicks refused, "turning an anti-abuse limit into the abuse". So R137 gives
-/// each socket the allowance R109 names and makes the match's aggregate ceiling twice it, which is
-/// also the per-socket reading `docs/architecture.md` §5.1 step 1 asks for ("rate-limit the
-/// socket"). R157 applies the same reasoning to §9.8's per-account half in `api/http.rs`.
-fn flood_exceeded(core: &mut Core, player: PlayerId, now: i64) -> bool {
-    let recent = &mut core.recent_actions[player];
-    while recent.front().is_some_and(|at| *at <= now - FLOOD_WINDOW_MS) {
-        recent.pop_front();
-    }
-    if recent.len() >= MATCH_ACTIONS_PER_SECOND {
-        return true;
-    }
-    recent.push_back(now);
-    false
-}
-
 impl MatchActor {
     /// R835000: counts one refused action for `home` (a reducer refusal or a flood rejection) and
     /// answers the alert's payload the first time the seat's window crosses
@@ -2157,26 +2088,14 @@ impl MatchActor {
     /// `REJECTION_ALERT_WINDOW_MS` first, so old refusals fall out and the crossing is strictly
     /// over the threshold.
     fn note_rejection(&self, core: &mut Core, home: PlayerId, now: i64) -> Option<(String, usize)> {
-        let recent = &mut core.rejections[home];
-        while recent
-            .front()
-            .is_some_and(|at| *at <= now - REJECTION_ALERT_WINDOW_MS)
-        {
-            recent.pop_front();
-        }
-        recent.push_back(now);
-        if recent.len() > REJECTION_ALERT_THRESHOLD && !core.rejection_alerted[home] {
-            core.rejection_alerted[home] = true;
-            let (first, second) = self.seats();
-            let profile_id = [first, second]
-                .into_iter()
-                .find(|seat| seat.player == home)
-                .map(|seat| seat.profile_id.clone())
-                .unwrap_or_default();
-            Some((profile_id, recent.len()))
-        } else {
-            None
-        }
+        let rejected = core.guards[home].note_rejection(now)?;
+        let (first, second) = self.seats();
+        let profile_id = [first, second]
+            .into_iter()
+            .find(|seat| seat.player == home)
+            .map(|seat| seat.profile_id.clone())
+            .unwrap_or_default();
+        Some((profile_id, rejected))
     }
 }
 

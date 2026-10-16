@@ -5,6 +5,7 @@
 pub mod clock;
 pub mod contracts;
 pub mod engine;
+pub mod guard;
 pub mod match_actor;
 pub mod protocol;
 pub mod registry;

@@ -44,7 +44,7 @@ use jackioh_engine::LeanPick;
 
 use crate::api::collection::caller_profile;
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, freeze_choice, read_mode_choice,
 };
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req, bad_request, json};
 use crate::api::series::start_series;
@@ -245,16 +245,9 @@ async fn enqueue_ticket(
     choice: &ModeChoiceInput,
     seed: Option<String>,
 ) -> Result<Ticket, ApiError> {
-    // §9.5: "asserts the account is active and not in a match". `AuthLevel::Active` did the first
-    // half (§9.4's gate, in the router); this is the second.
-    if profile.in_match_id.is_some() {
-        return Err(ApiError::new(
-            ApiErrorCode::AlreadyInMatch,
-            "finish your current match first",
-        ));
-    }
-    // R264: between the games of a series a profile is in no match, and still not free to queue.
-    assert_not_in_series(app, &profile.id).await?;
+    // §9.5's "not in a match or a series": a 1v1 match, a series not over (R264) or a live co-op
+    // match (R1065000). `AuthLevel::Active` did the account half (§9.4's gate, in the router).
+    assert_free_to_play(app, &profile.id).await?;
     {
         let mut tx = app
             .db
@@ -470,7 +463,7 @@ async fn start_paired_series(app: &App, a: &Ticket, b: &Ticket, match_id: &str) 
             ranked: true,
         };
         // One transaction, so the series row and `start_series`'s stale-ticket cancels land together: a
-        // half-landed 'picking' row would hold both players out of the queue (assert_not_in_series)
+        // half-landed 'picking' row would hold both players out of the queue (assert_free_to_play)
         // until the pick deadline ran out (R333).
         let mut tx = app
             .db
@@ -738,8 +731,9 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
     }
 
     // §9.5's "not in a match" holds at pairing too: a ticket left open while its owner joined a room
-    // match must not become a second match, nor (R264) while they are in a series. One read each for
-    // the sweep; `taken` covers the pairs this sweep makes.
+    // match must not become a second match, nor (R264) while they are in a series, nor (R1065000)
+    // while a live co-op match holds them. One read each for the sweep; `taken` covers the pairs this
+    // sweep makes.
     let owners: Vec<String> = open.iter().map(|ticket| ticket.profile_id.clone()).collect();
     let mut busy: IndexSet<String> = tx
         .profiles_get_many(&owners)
@@ -758,6 +752,12 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
         .flat_map(|series| [series.sides.0.profile_id, series.sides.1.profile_id])
         .collect();
     busy.extend(in_series.iter().cloned());
+    // R1065000: nor while a live co-op match holds them, which sets no in-match flag.
+    let in_duos = tx
+        .presence_in_duos(&owners)
+        .await
+        .map_err(|error| ApiError::internal(error.to_string()))?;
+    busy.extend(in_duos.into_keys());
     tx.commit()
         .await
         .map_err(|error| ApiError::internal(error.to_string()))?;
