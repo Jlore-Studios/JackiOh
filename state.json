@@ -8160,8 +8160,12 @@
     "what": "revise #1033 on muse"
   },
   "last_sweep": {
-    "at": "2026-10-16T01:42:08Z",
-    "notes": [],
+    "at": "2026-10-16T01:48:02Z",
+    "notes": [
+      "#1034 needs a plan",
+      "#1035 needs a plan",
+      "#1036 needs a plan"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
