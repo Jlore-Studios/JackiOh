@@ -1103,30 +1103,26 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-16T12:30:18Z",
+      "feedback_since": "2026-10-16T12:50:26Z",
       "forced": false,
       "interruptions": 0,
       "issue": 1048,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "A1.1's acceptance cell was narrowed from \"Every term is defined\" to \"Every \u00a76.1 row and \u00a76.3 verb is defined\". That drops the mechanics-sheet terms that are not \u00a76.1 rows or \u00a76.3 verbs, which weakens the check. The widening also leaves out \u00a76.2, although the issue's acceptance asks for every keyword \u00a76.1\u2013\u00a76.3 print.",
-          "evidence": "spec/06-keywords.md: \u00a76.2 'Triggers and timing words' (lines 62\u201385) has rows for Cry, Death, Aura, Combo X, Echo X, Activate, Cast on draw, Quickdraw, Fatigue, Start/End of turn, and newer ones that are in no list REVIEW.md checks: Start of Game, Once per Turn, Trigger multiplier, After this is attacked, Replacement, Hand and deck triggers, Attack summon. Mechanics-sheet terms such as Card Type, Piles, Spell, Trap, Backrow, Radiant, Cry, Death and Aura are not \u00a76.1 rows or \u00a76.3 verbs. Under the new acceptance sentence, an auditor who finds one of them undefined still passes A1.1, whereas under the old 'Every term' wording it failed. Issue #1048's acceptance says 'A1.1 covers every keyword \u00a76.1\u2013\u00a76.3 print today', and its stated risk is 'widening each check's universe without weakening its acceptance'. The fix: make acceptance cover every listed term plus every \u00a76.1 and \u00a76.2 row and \u00a76.3 verb, and add \u00a76.2 to the method.",
-          "severity": "blocking",
-          "where": "REVIEW.md:24"
-        }
-      ],
+      "last_findings": [],
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-10-16T12:49:33Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "38903277878",
       "self_check_findings": [],
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-10-16T12:50:26Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 2,
       "votes": {
         "approvals": [
           "muse"
