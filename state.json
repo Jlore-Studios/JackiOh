@@ -1390,6 +1390,13 @@
     "1064": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T15:16:17Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 3 fails for certain: it amends R835000 and R835002 and regenerates spec/INDEX.md, across 12 files"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
