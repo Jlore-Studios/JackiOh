@@ -1220,6 +1220,11 @@
       "taken_asks": []
     },
     "1060": {
+      "cleared": {
+        "at": "2026-10-16T13:33:54Z",
+        "by": "`claude` (strong)",
+        "sha": "27e75cdcb247e173c91ff5ba3b94862d1e36b68d"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T12:39:42Z",
