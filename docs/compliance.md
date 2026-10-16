@@ -103,3 +103,13 @@ read them at least weekly.
    `moderate ban <sender-profile-id>` (each report prints the line). A ban lands at once: the
    account's next request, chat included, answers `account_banned`.
 3. Nothing marks a report done: the next run lists it again until its message is purged.
+
+## 7. What the card statistics keep (R1044000, R1044001)
+
+Each finished match leaves a game record (`game_records`, R376), which names no account: both
+decklists, opening hands, draws and plays, and the result. As it is written it is added into the
+card statistics' totals (`record_totals`, `card_totals`, `decklist_totals`), counts with no single
+game in them. The retention loop empties a record's detail `GAME_RECORD_RAW_RETENTION_DAYS` (7) after
+it was written and keeps only its id, source, mode, patch and time, so the same game is not counted
+twice; the totals are kept as long as the statistics are. The Privacy Policy's "for as long as the
+statistics are kept" covers both, so this changed none of its words.

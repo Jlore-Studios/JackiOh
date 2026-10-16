@@ -268,8 +268,11 @@ login and opens no pull request. Each cycle:
    the lane's games are neither the gate's nor a person's `dev` run's. The file `cursor-<patch>` in
    `~/training-out/gather/` holds the next `n`: no game of a patch is played twice, and a new patch
    starts at 1.
-   A patch has no cap: the lane plays it until `main` ships another, about 4,000 games a day, which is
-   some 7 MB a day in Postgres.
+   A patch has no cap: the lane plays it until `main` ships another, about 4,000 games a day. In
+   Postgres each game is folded into the card statistics' totals as it loads, which grow with the
+   cards and not the games, and its detail is kept `GAME_RECORD_RAW_RETENTION_DAYS` (7), so a week of
+   the lane's games, some 50 MB, is all the detail held (R1044000, R1044001). The files here keep
+   every game's detail.
 4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
    the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
    holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, from every game
@@ -348,7 +351,7 @@ never edits `crates/server`, and a promotion does not wait for it.
 | What | Where |
 |---|---|
 | Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
-| The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL` | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` |
+| The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
 | The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
 | The gather lane's next game number for a patch, and that patch's card figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `cards-<patch>.json` |
 | The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |

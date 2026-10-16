@@ -225,6 +225,11 @@ pub const MATCH_ACTION_RETENTION_DAYS: i64 = 90;
 /// `match_signals`, migration 0029) is kept after the match ended. Longer than the log, so the
 /// think-time fits (`jackioh-server timing-fit`) have a year of games to draw on.
 pub const PLAY_TELEMETRY_RETENTION_DAYS: i64 = 365;
+/// R1044001: days a game record's detail (both decklists, hands, draws and plays) is kept after it
+/// was written. Every card figure reads the totals the record was folded into as it was written
+/// (R1044000), so the detail serves only `stats-export` and the analysis notebooks; the record's id,
+/// source, mode, patch and time stay, so a second write of the same game is still refused.
+pub const GAME_RECORD_RAW_RETENTION_DAYS: i64 = 7;
 /// How often the retention purge runs. It also runs once at boot, since a free instance sleeps.
 pub const RETENTION_PURGE_INTERVAL_SECONDS: i64 = 3600;
 
@@ -809,6 +814,12 @@ pub const CARD_STATS_KEPT_REPORTS: usize = 256;
 /// SPEC §11 R654: how many co-played cards a card's drill-down (`GET /api/stats/cards/:id`) lists,
 /// most games first.
 pub const CARD_STATS_CO_PLAYED_TOP: usize = 10;
+
+/// R1044000: how many game records one transaction folds into the totals, both when `stats-import`
+/// writes a run's file and when `stats-fold` (or the retention loop) folds the records written
+/// before the totals. A batch rewrites each card row it touches once, so a bigger one rewrites
+/// fewer rows per record; 500 keeps a transaction to a few seconds of the box's day of games.
+pub const STATS_FOLD_BATCH_RECORDS: usize = 500;
 
 /// Cache-Control max-age in seconds for public player statistics endpoints.
 pub const PLAYER_STATS_CACHE_TTL_SECONDS: i64 = 60;
