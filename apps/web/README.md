@@ -148,7 +148,8 @@ board up through `window.__jackioh`, waiting for animations, the viewports and t
 for work on what a player sees, and nothing else.
 
 Replays (SPEC §9.3, §9.9, R768, R768000) open from three places: `/replays` (`routes/replays.tsx`) lists
-the practice games kept on the device and, signed in, the account's online games a page at a time; the
+the practice games kept on the device and, signed in, the account's online games a page at a time (an account
+that owes the age check or the terms meets the consent screen there first, R970000); the
 practice result dialog and an online match's result panel offer "Watch the replay" (step 0) and "Share the
 last turn" (the last step, its turn's GIF already being made). A practice result reads the kept game from
 the worker's final snapshot (`replay`) and asks its pages through the practice controller's queue; a

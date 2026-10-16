@@ -5858,7 +5858,8 @@ pub async fn player_stats_list_public(
 // and reporter). An id that is not a UUID names no row, as everywhere in this file.
 
 use crate::db::store::{
-    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, FriendshipRow,
+    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow,
+    FriendRequestRow, FriendshipRow,
 };
 
 /// `public.challenges`' columns, in `challenge_of`'s order.
@@ -6799,6 +6800,36 @@ pub async fn chat_purge(t: &mut PgTx<'_>, before: i64) -> Result<i64, StoreError
     .await
     .map_err(db_error)?;
     Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+/// The operator's read (`moderate chat-reports`), so as no profile: service_role reads every row.
+pub async fn chat_reports_all(t: &mut PgTx<'_>) -> Result<Vec<ChatReportListing>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select r.id as report_id, r.reporter, r.reason, r.created_at as reported_at,
+                m.id, m.from_profile, m.to_profile, m.body, m.created_at, m.read_at
+           from public.chat_reports r
+           join public.chat_messages m on m.id = r.message_id
+          order by r.created_at, r.id",
+    )
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            let message = chat_message_of(row)?;
+            Ok(ChatReportListing {
+                report: ChatReportRow {
+                    id: uuid_text(row, "report_id")?,
+                    message_id: message.id.clone(),
+                    reporter: uuid_text(row, "reporter")?,
+                    reason: get(row, "reason")?,
+                    created_at: ms_of(get(row, "reported_at")?),
+                },
+                message,
+            })
+        })
+        .collect()
 }
 // ---- end Social ----
 

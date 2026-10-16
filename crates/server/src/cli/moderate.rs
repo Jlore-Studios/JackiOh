@@ -1,11 +1,13 @@
 //! Operator levers onto the server's abuse controls (SPEC §9.4): ban an account, revoke an
-//! invite code, pause redemption.
+//! invite code, pause redemption; and the one read that feeds them, the chat reports players file
+//! (B53, #970).
 //!
 //! ```text
 //! jackioh-server moderate ban <profile-id>
 //! jackioh-server moderate unban <profile-id>
 //! jackioh-server moderate revoke-code <CODE>
 //! jackioh-server moderate redemption <on|off>
+//! jackioh-server moderate chat-reports
 //! ```
 //!
 //! The server enforces every abuse control and, until this tool, nothing invoked any of them:
@@ -30,14 +32,21 @@
 //! Like `mint-code`, banning a never-activated account then unbanning it leaves it active without
 //! R111's launch collection (the trigger only sees `pending → active`): operators ban pending
 //! accounts only to stop abuse.
+//!
+//! `chat-reports` writes nothing. It prints every report the store holds, oldest first: when, the
+//! reason, the reporter, the sender and the message as stored (masked by the word filter). A
+//! report lives as long as its message, `CHAT_RETENTION_DAYS` after it was sent, so a report
+//! unread by then is gone; `docs/compliance.md` §6 is the routine.
 
 use anyhow::{anyhow, bail};
 use indexmap::IndexMap;
 
 use crate::api::crypto::{canonical_invite_code, hashes_for_pepper};
 use crate::cli::connect_one;
-use crate::db::store::{Db, ProfileStatus};
+use crate::config::CHAT_RETENTION_DAYS;
+use crate::db::store::{ChatReportListing, Db, ProfileStatus};
 use crate::env::{load_env, quoted};
+use crate::social::iso;
 
 const USAGE: &str = "Usage: jackioh-server moderate <command> [arguments]
        (from a checkout: cargo run --release -p jackioh-server -- moderate <command> [arguments])
@@ -50,6 +59,8 @@ const USAGE: &str = "Usage: jackioh-server moderate <command> [arguments]
   redemption <on|off>   Pause (off) or resume (on) redemption through §9.4's
                         database-side circuit breaker. Pausing touches no account
                         or session. Idempotent.
+  chat-reports          List every chat report held, oldest first: when, the reason,
+                        the reporter, the sender and the message. Changes nothing.
 
 Prints what changed. An unknown profile or code is refused without writing anything.";
 
@@ -59,6 +70,7 @@ pub enum ModerateCommand {
     Unban { profile_id: String },
     RevokeCode { code: String },
     Redemption { enabled: bool },
+    ChatReports,
 }
 
 /// The verb and its arguments after `moderate` (`main.rs`), refusing anything else with the usage.
@@ -111,6 +123,12 @@ pub fn parse_moderate_args(argv: &[String]) -> anyhow::Result<ModerateCommand> {
                     quoted(state)
                 ),
             }
+        }
+        "chat-reports" => {
+            if !rest.is_empty() {
+                bail!("chat-reports takes no arguments.\n\n{USAGE}");
+            }
+            Ok(ModerateCommand::ChatReports)
         }
         _ => bail!("Unrecognised moderate command {}.\n\n{USAGE}", quoted(verb)),
     }
@@ -194,6 +212,42 @@ pub async fn set_redemption(db: &Db, enabled: bool) -> anyhow::Result<String> {
     })
 }
 
+/// B53, #970: every chat report the store holds, oldest first, as the lines `chat-reports` prints:
+/// per report, when and why, who reported whom, and the message (`{:?}`, so a newline in it stays on
+/// its line). Writes nothing.
+pub async fn chat_reports(db: &Db) -> anyhow::Result<String> {
+    let mut tx = db.begin(None).await?;
+    let reports = tx.chat_reports_all().await?;
+    tx.commit().await?;
+    if reports.is_empty() {
+        return Ok(format!(
+            "no chat reports (each is kept until its message is {CHAT_RETENTION_DAYS} days old)"
+        ));
+    }
+    let lines: Vec<String> = reports.iter().map(report_lines).collect();
+    Ok(format!(
+        "{} chat report(s), oldest first (each kept until its message is {CHAT_RETENTION_DAYS} days old):\n\n{}",
+        reports.len(),
+        lines.join("\n\n")
+    ))
+}
+
+fn report_lines(listing: &ChatReportListing) -> String {
+    let ChatReportListing { report, message } = listing;
+    format!(
+        "{}  report {}  reason {:?}\n  reporter {}\n  sender   {}  (ban with: moderate ban {})\n  message  {} sent {}: {:?}",
+        iso(report.created_at),
+        report.id,
+        report.reason,
+        report.reporter,
+        message.from_profile,
+        message.from_profile,
+        message.id,
+        iso(message.created_at),
+        message.body,
+    )
+}
+
 /// `moderate`'s arguments after the subcommand (`main.rs`): parse, read the environment, run one
 /// lever over one connection, print what changed, close.
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
@@ -208,6 +262,7 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         ModerateCommand::Unban { profile_id } => unban_profile(&db, profile_id).await,
         ModerateCommand::RevokeCode { code } => revoke_code(&db, &env.code_pepper, code).await,
         ModerateCommand::Redemption { enabled } => set_redemption(&db, *enabled).await,
+        ModerateCommand::ChatReports => chat_reports(&db).await,
     };
     db.close().await;
     let line = outcome?;

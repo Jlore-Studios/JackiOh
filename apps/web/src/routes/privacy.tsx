@@ -17,9 +17,12 @@
 // unfriends or blocks the other, B46, B52), who may watch a game you play (B50: your friends, and your
 // opponent's) and Duos co-op (migration 0039, SPEC S6: the teammate's view, B23; its moves kept
 // `MATCH_ACTION_RETENTION_DAYS`; either account's deletion takes the whole co-op game, refused while
-// one is live). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
+// one is live), custom cards (migration 0037, R915008: private to their owner, gone with the account)
+// and the presence heartbeat every signed-in session sends once its account owes no agreement
+// (R970002). The minimum age is `MIN_ACCOUNT_AGE_YEARS`, the owner's to
 // choose. Change the date on the page whenever the text changes: with the terms' date it makes up
-// `TERMS_VERSION`, so every account is asked to agree again.
+// `TERMS_VERSION`, so every account is asked to agree again (a second change on one day gives the
+// version a letter, R970001; `privacy.test.tsx` fails on any change to the words until it moves).
 
 import type { ReactElement } from "react";
 
@@ -113,6 +116,15 @@ export default function PrivacyRoute(): ReactElement {
               lessons you finish while signed in.
             </li>
             <li>
+              Your custom cards: each one&rsquo;s name, type, cost, rarity, stats, keywords, text and numbers,
+              its script, the creator&rsquo;s own model of it, how many times you saved it, and when it was made
+              and last saved. Only you can see them.
+            </li>
+            <li>
+              While you are signed in, the last time your browser told us you were online, once you have agreed
+              to the Terms and this policy. We keep only the latest, and only your friends see it.
+            </li>
+            <li>
               A summary of each online match you finish, kept for card statistics: its mode, the cards each
               player&rsquo;s deck held, the ones each player started with, drew and played, who went first and
               who won. The summary itself names no account.
@@ -125,9 +137,9 @@ export default function PrivacyRoute(): ReactElement {
             </li>
             <li>
               If you use Play together: the friends you add, the friend requests you send and receive, the
-              players you block, the last time your browser told us you were online, the challenges you send
-              and receive, your chat messages with friends and any you report (with the reason you give), the
-              replays you share with a friend, and whether you let friends watch your games.
+              players you block, the challenges you send and receive, your chat messages with friends and any
+              you report (with the reason you give), the replays you share with a friend, and whether you let
+              friends watch your games.
             </li>
             <li>
               If you play co-op (Duos) with a friend: the co-op rooms you make or join (the room&rsquo;s code, who
@@ -152,7 +164,8 @@ export default function PrivacyRoute(): ReactElement {
             <li>To run online matches, keep score, and set your rating.</li>
             <li>To see how often each card wins, so the cards can be balanced.</li>
             <li>To make the computer opponents play at a human pace.</li>
-            <li>To save your decks and tutorial progress so they follow your account.</li>
+            <li>To save your decks, custom cards and tutorial progress so they follow your account.</li>
+            <li>To show your friends when you are online.</li>
             <li>To stop invite-code guessing and other abuse.</li>
             <li>To keep the site running and fix problems.</li>
           </ul>
@@ -235,7 +248,10 @@ export default function PrivacyRoute(): ReactElement {
         <section aria-labelledby="privacy-keep">
           <h3 id="privacy-keep">How long we keep it</h3>
           <ul>
-            <li>Your account and game data, your age check and the terms you agreed to: until you delete your account.</li>
+            <li>
+              Your account and game data, your custom cards, your age check and the terms you agreed to: until you
+              delete your account, or, for a custom card, until you delete it.
+            </li>
             <li>Invite-code attempt records: {CODE_ATTEMPT_RETENTION_DAYS} days.</li>
             <li>
               The move-by-move record of a finished match, co-op games included: {MATCH_ACTION_RETENTION_DAYS}{" "}
@@ -278,8 +294,9 @@ export default function PrivacyRoute(): ReactElement {
           <h3 id="privacy-choices">Deleting your account or getting a copy</h3>
           <p>
             You can delete your account yourself: sign in, open your Account page, and choose &ldquo;Delete my
-            account&rdquo;. That deletes your sign-in, your decks, trios and cards, your tutorial progress, the
-            records of how you played, and the record of your age check and of the terms you agreed to.
+            account&rdquo;. That deletes your sign-in, your decks, trios and cards, your custom cards, your
+            tutorial progress, the records of how you played, and the record of your age check and of the terms
+            you agreed to.
             Finished matches and their results stay in the other player&rsquo;s history, with your account
             removed from them. Co-op games are different: deleting either teammate&rsquo;s account deletes the
             whole co-op game, its moves and its result, for both of you. You can&rsquo;t delete your account

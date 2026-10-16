@@ -3768,7 +3768,8 @@ pub fn ranked_bot_games_since(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<Rate
 
 use crate::config::CHAT_MAX_CHARS;
 use crate::db::store::{
-    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportRow, FriendRequestRow, FriendshipRow,
+    BlockRow, ChallengeRow, ChallengeState, ChatMessageRow, ChatReportListing, ChatReportRow,
+    FriendRequestRow, FriendshipRow,
 };
 
 /// The tables migration 0038 adds, and `profiles.allow_spectators`, which `Profile` does not carry:
@@ -4439,6 +4440,27 @@ pub fn chat_purge(f: &mut FakeTx<'_>, before: i64) -> Result<i64, StoreError> {
     keep_only(&mut social.chat_messages, |row| !gone.contains(&row.id));
     keep_only(&mut social.chat_reports, |row| !gone.contains(&row.message_id));
     Ok(gone.len() as i64)
+}
+
+pub fn chat_reports_all(f: &mut FakeTx<'_>) -> Result<Vec<ChatReportListing>, StoreError> {
+    call(f, "chat.reportsAll")?;
+    let social = &f.tables().social;
+    let mut listed: Vec<ChatReportListing> = social
+        .chat_reports
+        .iter()
+        .filter_map(|report| {
+            let message = social
+                .chat_messages
+                .iter()
+                .find(|message| message.id == report.message_id)?;
+            Some(ChatReportListing {
+                report: report.clone(),
+                message: message.clone(),
+            })
+        })
+        .collect();
+    listed.sort_by(|a, b| (a.report.created_at, &a.report.id).cmp(&(b.report.created_at, &b.report.id)));
+    Ok(listed)
 }
 // ---- end Social ----
 // ---- Social: watching and shared replays (#939, #940) ----

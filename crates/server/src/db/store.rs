@@ -2530,6 +2530,14 @@ pub struct ChatReportRow {
     pub created_at: i64,
 }
 
+/// B53, #970: a stored report and the message it reports, as `moderate chat-reports` lists it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatReportListing {
+    pub report: ChatReportRow,
+    pub message: ChatMessageRow,
+}
+
 impl Tx<'_> {
     // friends (B43–B45)
 
@@ -2795,6 +2803,12 @@ impl Tx<'_> {
     /// many messages went.
     pub async fn chat_purge(&mut self, before: i64) -> StoreResult<i64> {
         dispatch!(self, chat_purge(before))
+    }
+
+    /// B53, #970: every report the store holds, each with its message, oldest report first, the
+    /// report's id breaking a tie. A report lasts as long as its message (`chat_purge`).
+    pub async fn chat_reports_all(&mut self) -> StoreResult<Vec<ChatReportListing>> {
+        dispatch!(self, chat_reports_all())
     }
 }
 // ---- end Social ----

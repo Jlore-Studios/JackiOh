@@ -184,8 +184,10 @@ pub const BIRTH_YEAR_EARLIEST: i32 = 1900;
 /// "Last updated" date, then the privacy policy's (`TERMS_LAST_UPDATED` in
 /// `apps/web/src/routes/terms.tsx` and `PRIVACY_LAST_UPDATED` in `privacy.tsx`, which a web test
 /// holds it to). Changing either page's text changes its date and so this, and every account is
-/// asked to agree again.
-pub const TERMS_VERSION: &str = "2026-10-15/2026-10-15";
+/// asked to agree again. R970001: a second change on a day the page already changed keeps its date
+/// and gives its half a letter (`2026-10-15b`, then `c`); `privacy.test.tsx` holds each version to
+/// the words of both pages, so a change to them fails until this moves.
+pub const TERMS_VERSION: &str = "2026-10-15b/2026-10-15b";
 
 // ---------------------------------------------------------------------------------------------
 // Redemption rate limits (§9.4).
