@@ -240,6 +240,41 @@ pub fn shipped_override() -> Option<&'static [crate::catalog::ShippedCatalog]> {
     SHIPPED_OVERRIDE.with(Cell::get)
 }
 
+/// #1035: one thread's registry overrides (`thread_overrides`), for another thread to take
+/// (`install`), so work a test hands to a blocking pool reads the test's own cards. Each is the
+/// leaked `&'static` the override already holds: nothing is copied.
+#[derive(Clone, Copy)]
+pub struct ThreadOverrides {
+    catalog: Option<&'static CardDefs>,
+    catalog_version: Option<&'static str>,
+    scripts: Option<&'static IndexMap<String, CardScripts>>,
+    win_rates: Option<&'static crate::win_rates::WinRateTable>,
+    shipped: Option<&'static [crate::catalog::ShippedCatalog]>,
+}
+
+impl ThreadOverrides {
+    /// Sets these overrides on the calling thread in place of its own; one absent is cleared, as
+    /// `clear_overrides` clears it.
+    pub fn install(self) {
+        CATALOG_OVERRIDE.with(|cell| cell.set(self.catalog));
+        CATALOG_VERSION_OVERRIDE.with(|cell| cell.set(self.catalog_version));
+        SCRIPTS_OVERRIDE.with(|cell| cell.set(self.scripts));
+        WIN_RATES_OVERRIDE.with(|cell| cell.set(self.win_rates));
+        SHIPPED_OVERRIDE.with(|cell| cell.set(self.shipped));
+    }
+}
+
+/// #1035: the calling thread's registry overrides (`ThreadOverrides`).
+pub fn thread_overrides() -> ThreadOverrides {
+    ThreadOverrides {
+        catalog: catalog_override(),
+        catalog_version: catalog_version_override(),
+        scripts: scripts_override(),
+        win_rates: win_rates_override(),
+        shipped: shipped_override(),
+    }
+}
+
 /// Back to the production registries (`jackioh_cards::register_all()`'s) for this thread: TS's
 /// `registerAll()` after a fixture registration.
 pub fn clear_overrides() {

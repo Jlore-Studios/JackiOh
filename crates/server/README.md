@@ -50,7 +50,9 @@ tx.commit().await?`.
 decks with `jackioh_ai::build_ai_deck` (R258), leaning a seat's deck on the set its player picked,
 "newest" being the newest set that ships (`deal_random_deck(seed, lean_of(lean))`, R1372, R924000); it calls
 `jackioh_cards::register_all()` first. A ladder bot's moves come from `jackioh_ai::decide_styled`
-(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). The
+(`bots/seat.rs`), run on the blocking pool so no search holds up the runtime (R1452). Every whole-log
+fold on an async path (a rebuild's three, a replay's opening, the reaper's, a game record's and `timing-backfill`'s) runs there too,
+one job per call, through `actor::engine::off_runtime`, its thread set up by `App::engine_thread` (#1035). The
 deck and trio rules are `jackioh_engine::validator`, the same module the client runs through WASM;
 no rule is restated here. A co-op match calls the engine's Duos functions (`duos_create`,
 `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`,
