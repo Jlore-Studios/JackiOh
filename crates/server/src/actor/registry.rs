@@ -275,7 +275,7 @@ impl Registry {
             Arc::clone(app),
             MatchActorInput {
                 match_row,
-                state: Some(state),
+                state,
                 log: Vec::new(),
                 on_voided: Some(Registry::on_voided(app, &match_id)),
                 telemetry: None,
@@ -318,33 +318,48 @@ impl Registry {
             glitch_boards,
             dealt.clone(),
         );
-        let folded = std::panic::catch_unwind(AssertUnwindSafe(|| engine::fold(&args)))
-            .map_err(|payload| RebuildError::Internal(panic_text(payload)))?;
-        // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A match
-        // already finished has none left to write, and is not replayed twice. A replay that panics
-        // costs the telemetry alone: the actor records afresh from the match's creation.
-        let replayed = (match_row.status == MatchStatus::Live).then(|| {
-            std::panic::catch_unwind(AssertUnwindSafe(|| telemetry::replay(&match_row, &log, dealt).0))
-        });
+        let live = match_row.status == MatchStatus::Live;
+        let has_bot = bots.p1.is_some() || bots.p2.is_some();
+        let (row, rows) = (match_row.clone(), log.clone());
+        // #1035: the three folds in one job off the runtime, as Duos's rebuild folds: a long log is a
+        // long fold. A panic in the first is the rebuild's internal error.
+        let (folded, replayed, bot_turns) = engine::off_runtime(app.engine_thread, move || {
+            let folded = engine::fold(&args);
+            // R1442: the play telemetry the log holds, so a rebuilt actor's think times carry on. A
+            // match already finished has none left to write, and is not replayed twice.
+            let replayed = live.then(|| {
+                std::panic::catch_unwind(AssertUnwindSafe(|| {
+                    telemetry::replay(&row, &rows, dealt.clone()).0
+                }))
+                .map_err(panic_text)
+            });
+            // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again.
+            let bot_turns = (has_bot && live).then(|| {
+                std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(&row, &rows, dealt)))
+                    .map_err(panic_text)
+            });
+            (folded, replayed, bot_turns)
+        })
+        .await
+        .map_err(RebuildError::Internal)?;
+        // R1442: a replay that panics costs the telemetry alone: the actor records afresh from the
+        // match's creation.
         let telemetry = match replayed {
             Some(Ok(recorder)) => Some(recorder),
-            Some(Err(payload)) => {
-                tracing::warn!(event = "telemetry.replay_failed", matchId = %match_id, message = %panic_text(payload));
+            Some(Err(message)) => {
+                tracing::warn!(event = "telemetry.replay_failed", matchId = %match_id, message = %message);
                 None
             }
             None => None,
         };
-        // R639000: where each bot's turn stands, so a restart mid-turn does not begin it again. A
-        // fold that panics costs that alone: the bot reads its next move as its turn's first.
-        let has_bot = bots.p1.is_some() || bots.p2.is_some();
-        let bot_moved_turn = if has_bot && match_row.status == MatchStatus::Live {
-            std::panic::catch_unwind(AssertUnwindSafe(|| bot_moved_turns(&match_row, &log, dealt_for(mode))))
-                .unwrap_or_else(|payload| {
-                    tracing::warn!(event = "bot.turns.replay_failed", matchId = %match_id, message = %panic_text(payload));
-                    PerPlayer::new(None, None)
-                })
-        } else {
-            PerPlayer::new(None, None)
+        // R639000: a fold that panics costs that alone: the bot reads its next move as its turn's first.
+        let bot_moved_turn = match bot_turns {
+            Some(Ok(moved)) => moved,
+            Some(Err(message)) => {
+                tracing::warn!(event = "bot.turns.replay_failed", matchId = %match_id, message = %message);
+                PerPlayer::new(None, None)
+            }
+            None => PerPlayer::new(None, None),
         };
         if !folded.errors.is_empty() {
             // An action the engine once accepted and now refuses is a determinism break: the log no
@@ -358,7 +373,7 @@ impl Registry {
             Arc::clone(app),
             MatchActorInput {
                 match_row,
-                state: Some(folded.state),
+                state: folded.state,
                 log,
                 on_voided: Some(Registry::on_voided(app, match_id)),
                 telemetry,

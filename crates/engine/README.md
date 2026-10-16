@@ -144,7 +144,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override, the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I4 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848) and the test seams (`seams.rs`). Every test crate enables it as a dev-dependency |
 | `ts` | off | the ts-rs derives above |
 
 ## Tests
