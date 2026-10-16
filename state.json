@@ -7542,7 +7542,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-10-15T23:15:09Z",
+      "feedback_since": "2026-10-16T00:20:33Z",
       "forced": false,
       "interruptions": 0,
       "issue": 979,
@@ -7555,14 +7555,14 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "38828861384",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-10-16T00:20:33Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
