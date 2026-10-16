@@ -15385,11 +15385,11 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-10-16T16:31:03Z",
-    "last_run": "2026-10-16T16:31:03Z",
-    "provider": "claude-1",
+    "idle_since": "2026-10-16T15:56:51Z",
+    "last_run": "2026-10-16T14:04:23Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38932491215",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
