@@ -857,20 +857,30 @@
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
-          "claude"
+          "muse"
         ],
-        "builder": "claude",
+        "builder": "muse",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/cards/src/history.rs",
+            "spec/INDEX.md",
+            "spec/rulings/R767000.md"
+          ],
+          "from": "47974bcd813eb3c654d6fdd9a55b5d52a1d29461",
+          "main": "5820b33cef1bec75ec00ca789cd500f9c84019fc"
+        },
         "rejections": [],
         "reviews": [
           {
-            "family": "claude",
-            "run": "38861451505",
-            "tier": "strong"
+            "family": "muse",
+            "run": "38870584568",
+            "tier": "medium"
           }
         ],
-        "sha": "47974bcd813eb3c654d6fdd9a55b5d52a1d29461",
+        "sha": "718086d66e1e8008a994f9a8b26016ea64325ad2",
         "tiers": {
-          "claude": "strong"
+          "muse": "medium"
         }
       }
     },
