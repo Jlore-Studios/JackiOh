@@ -15610,11 +15610,11 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": null,
-    "last_run": "2026-10-16T05:41:09Z",
-    "provider": "claude-4",
+    "idle_since": "2026-10-16T04:54:56Z",
+    "last_run": "2026-10-16T02:32:48Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38857004789",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
