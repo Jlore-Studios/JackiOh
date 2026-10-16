@@ -28,12 +28,12 @@ use std::rc::Rc;
 use indexmap::IndexSet;
 use jackioh_engine::{
     ActionBody, AttackTarget, CardInstance, ExertionKind, GameState, Phase, PlayerId, active_units_of,
-    attacks_per_turn, can_attack, effective_life, has_exertion, legal_actions, unit_view,
+    attacks_per_turn, can_attack, effective_life, find_instance, has_exertion, legal_actions, unit_view,
 };
 
 use crate::candidates::candidate_actions;
 use crate::config::AI_SEARCH;
-use crate::evaluate::damage_past_taunts;
+use crate::evaluate::{damage_past_taunts, deft_in_defense};
 use crate::simulate::{LineStatus, create_sub_counter, line_status, search_signature, simulate};
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -66,12 +66,25 @@ enum Verdict {
     Dead,
 }
 
-/// The actions the solver tries from a position: no position switches, and never ending the turn.
+/// The actions the solver tries from a position: never ending the turn, and no position switch but
+/// a Deft unit's to Attack while its attack is unspent (`deft_ready_switch`).
 fn lethal_moves(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     candidate_actions(state, seat)
         .into_iter()
-        .filter(|action| !matches!(action, ActionBody::SwitchPosition { .. } | ActionBody::EndTurn))
+        .filter(|action| match action {
+            ActionBody::EndTurn => false,
+            ActionBody::SwitchPosition { instance_id } => deft_ready_switch(state, instance_id),
+            _ => true,
+        })
         .collect()
+}
+
+/// R49: whether `instance_id` is a Deft unit in Defense Position whose attack is unspent. Its switch
+/// to Attack spends only the switch's exertion, so it can still attack this turn.
+pub(crate) fn deft_ready_switch(state: &GameState, instance_id: &str) -> bool {
+    find_instance(state, instance_id).is_some_and(|unit| {
+        deft_in_defense(&unit_view(state, unit)) && has_exertion(state, unit, ExertionKind::Attack)
+    })
 }
 
 fn push_moves(stack: &mut Vec<Frame>, state: Rc<GameState>, line: Rc<Vec<ActionBody>>, seat: PlayerId) {
@@ -317,13 +330,14 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter) -> 
     Walk::Exhausted
 }
 
-/// The lethal solver on dets[0]: candidate_actions minus switchPosition and endTurn, lines at most
-/// AI_SEARCH.lethalMaxDepth long, a visited set keyed on `search_signature`. A depth-first walk in
-/// move order gets AI_SEARCH.lethalQuickNodes; if it neither found a lethal nor searched the whole
-/// tree, a best-first walk by `ready_gap` gets the rest (the header says why). A line is lethal when
-/// simulate leaves state.result.winner === seat, and it is returned only if replaying it (equality
-/// with legal_actions at each step) also wins on every other determinization; otherwise the
-/// search continues. Spends at most `limit` nodes of `counter`.
+/// The lethal solver on dets[0]: `lethal_moves` (candidate_actions minus endTurn and every
+/// switchPosition but a Deft unit's to Attack), lines at most AI_SEARCH.lethalMaxDepth long, a
+/// visited set keyed on `search_signature`. A depth-first walk in move order gets
+/// AI_SEARCH.lethalQuickNodes; if it neither found a lethal nor searched the whole tree, a best-first
+/// walk by `ready_gap` gets the rest (the header says why). A line is lethal when simulate leaves
+/// state.result.winner === seat, and it is returned only if replaying it (equality with legal_actions
+/// at each step) also wins on every other determinization; otherwise the search continues. Spends at
+/// most `limit` nodes of `counter`.
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,

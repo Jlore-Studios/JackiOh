@@ -12,7 +12,10 @@
 //!      AI_REPLY.visible_activations, those aimed at the seat's hero first, and uses the one its own
 //!      evaluation likes best if that beats standing still.
 //!   3. Otherwise it is a static trader: of every attack it may declare, it takes the one with the
-//!      best value read off the layers (lethal, a kill it survives, a trade up, the face).
+//!      best value read off the layers (lethal, a kill it survives, a trade up, the face). First, a
+//!      unit of its with Deft in Defense Position, its switch and its attack unspent, is switched to
+//!      Attack on trial (R49: it can still attack): the switch is kept when the best attack after it
+//!      is one of the unit's own, and otherwise the unit stays in Defense.
 //!   4. When none is worth doing it ends its turn.
 //!
 //! It plays none of the cards it held unseen, because those are samples: a guessed hand would add
@@ -36,6 +39,7 @@ use jackioh_engine::{
 use crate::candidates::candidate_actions_in;
 use crate::config::{AI_EVAL, AI_REPLY, AI_SEARCH};
 use crate::evaluate::{NextSwing, evaluate, unit_worth};
+use crate::lethal::deft_ready_switch;
 use crate::simulate::{LineStatus, best_auto_answer, line_status, simulate, static_score, surcharge_nodes};
 use crate::types::NodeCounter;
 
@@ -210,7 +214,7 @@ fn reduce_for(
     }
 }
 
-/// `known_play`'s and `visible_activation`'s answer: TS's `GameState | null | undefined`.
+/// `known_play`'s, `visible_activation`'s and `deft_switch`'s answer: TS's `GameState | null | undefined`.
 enum Known {
     /// The counter refused a node (TS `null`).
     Cut,
@@ -339,6 +343,34 @@ fn visible_activation(
     best_try(state, seat.opponent(), &tries, counter)
 }
 
+/// Step 3, R49: the opponent's Deft units in Defense Position may switch to Attack and still attack.
+/// Each one whose switch `legal` lists and whose attack is unspent (`deft_ready_switch`), in
+/// legal_actions order, is switched on trial, one node; the first whose best-ranked attack after the
+/// switch is one of its own keeps the switch. Otherwise every such unit stays in Defense.
+fn deft_switch(state: &GameState, seat: PlayerId, legal: &[ActionBody], counter: &dyn NodeCounter) -> Known {
+    let opp = seat.opponent();
+    for action in legal {
+        let ActionBody::SwitchPosition { instance_id } = action else {
+            continue;
+        };
+        if !deft_ready_switch(state, instance_id) {
+            continue;
+        }
+        if !counter.take() {
+            return Known::Cut;
+        }
+        let Some(switched) = reduce_for(state, opp, action, counter) else {
+            continue;
+        };
+        let after = legal_actions(&switched, opp);
+        let best = ranked_attacks(&switched, seat, &after).into_iter().next();
+        if matches!(&best, Some(ActionBody::Attack { attacker_id, .. }) if attacker_id == instance_id) {
+            return Known::Played(Box::new(switched));
+        }
+    }
+    Known::Nothing
+}
+
 /// The ids of the cards the opponent holds unseen: its hand and its library, as sampled.
 pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
     let side = &state.players[seat.opponent()];
@@ -387,7 +419,7 @@ pub fn simulate_reply(
         }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
-        // activations and the static trader's attack list.
+        // activations, the Deft switches and the static trader's attack list.
         let legal = legal_actions(&current, opp);
         match known_play(&current, seat, &legal, hidden, counter) {
             Known::Cut => return None,
@@ -401,6 +433,14 @@ pub fn simulate_reply(
             Known::Cut => return None,
             Known::Played(played) => {
                 current = *played;
+                continue;
+            }
+            Known::Nothing => {}
+        }
+        match deft_switch(&current, seat, &legal, counter) {
+            Known::Cut => return None,
+            Known::Played(switched) => {
+                current = *switched;
                 continue;
             }
             Known::Nothing => {}

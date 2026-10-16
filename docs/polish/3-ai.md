@@ -484,7 +484,8 @@ export function faceThreat(state: GameState, attacker: PlayerId): number;
   - `side(p)` = `heroValue(health)` + `heroArmor × heroArmorOf(state, p)`
     + Σ over `activeUnitsOf(state, p)` of `unitWorth` = `attack × v.attack + health × v.health + armorPoint × v.armor + Σ keyword[k]`
     (`v = unitView(state, u)`; a unit with "Can't attack" contributes no attack term, and a unit in
-    Defense Position contributes `defenseAttackShare` of it; `Armor` and `Can't attack` are not in
+    Defense Position contributes `defenseAttackShare` of it, unless it has Deft and `deftDefenseAttacks`
+    is on (R49: it can switch back and still attack); `Armor` and `Can't attack` are not in
     the keyword map). A Defense-Position unit then gives back `(1 − positionGrants) × (keyword.Taunt + armorPoint)`:
     the position's Taunt and Armor +1 are worth the damage they stop, which `faceThreat` and the reply
     already count, not a printed keyword's worth
@@ -576,8 +577,9 @@ export function staticScore(state: GameState, seat: PlayerId, rootTurn: number):
 
 ```ts
 /**
- * Over dets[0] with explicit frontiers (no recursion): candidateActions minus switchPosition and
- * endTurn, depth ≤ AI_SEARCH.lethalMaxDepth, visited-set keyed on a cheap signature (enemy hero
+ * Over dets[0] with explicit frontiers (no recursion): candidateActions minus endTurn and every
+ * switchPosition but a Deft unit's to Attack while its attack is unspent (R49), depth ≤
+ * AI_SEARCH.lethalMaxDepth, visited-set keyed on a cheap signature (enemy hero
  * health + each unit's id/damage/exertion/position + hand ids + mana). First depth-first in move
  * order for AI_SEARCH.lethalQuickNodes nodes; if that walk neither found a lethal nor searched the
  * whole tree, best-first by `readyGap` on the rest (each expansion tries its first
@@ -691,7 +693,9 @@ The rule, one step at a time, each step one `reduce` (one node):
    `facePerDamage` per point of `projectedHeroDamage`; one on a unit is worth the target's
    `unitWorth` if it dies (First Strike deciding who strikes first, Divine Shield popped for its
    keyword weight, Poisonous killing), `chipPerDamage` per point otherwise, less the attacker's own
-   `unitWorth` if it dies.
+   `unitWorth` if it dies. First, a Deft unit of its in Defense Position, its switch and its attack
+   unspent, is switched to Attack on trial (one node, R49), and the switch is kept when the best
+   attack afterwards is its own.
 4. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than

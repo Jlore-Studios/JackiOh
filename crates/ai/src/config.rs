@@ -236,8 +236,13 @@ pub struct EvalWeights {
     /// Per point of unitView.attack.
     pub attack: f64,
     /// The share of a Defense-Position unit's attack that counts (§4.1: it cannot attack until a
-    /// switch spends its exertion, but it still strikes back in full).
+    /// switch spends its exertion, but it still strikes back in full). A Deft unit's switch spends no
+    /// attack (R49), so with `deft_defense_attacks` it keeps its whole attack.
     pub defense_attack_share: f64,
+    /// Whether a Deft unit in Defense Position (R49: it can switch to Attack and attack in the same
+    /// turn) keeps its whole attack in `unit_worth` and counts as an attacker in `face_threat`. Off, it
+    /// is read as any Defense-Position unit is, as the frozen baseline did.
+    pub deft_defense_attacks: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -308,6 +313,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
+    deft_defense_attacks: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -385,6 +391,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     hero_armor: 0.6,
     attack: 1.2,
     defense_attack_share: 0.5,
+    // The baseline is frozen: it read a Deft unit in Defense Position as one that cannot attack.
+    deft_defense_attacks: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
