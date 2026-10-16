@@ -459,6 +459,13 @@
     "1027": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T00:08:29Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "line 7 needs a unit test with no judging by eye, but 'fits on a phone screen without scrolling' is layout judged by eye (never-easy visual polish)"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "muse",
