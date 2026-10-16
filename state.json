@@ -1072,6 +1072,13 @@
     "1055": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T13:27:08Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 7 fails: three of the four files are Cypress specs (one e2e, two component), and rule 2 fails because the change spans crates/tools and e2e/"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-3",
