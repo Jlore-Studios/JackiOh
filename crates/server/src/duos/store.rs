@@ -238,6 +238,12 @@ impl Tx<'_> {
         duos_dispatch!(self, rooms_reap(unjoined_before, joined_before))
     }
 
+    /// R890000, R1047002: how many of `host`'s rooms nobody has joined and whose expiry is after `at`,
+    /// the advisory half of `MAX_OPEN_ROOMS_PER_HOST` as the 1v1 rooms' `rooms_count_open_by_host` is.
+    pub async fn duos_rooms_count_open_by_host(&mut self, host: &str, at: i64) -> StoreResult<i64> {
+        duos_dispatch!(self, rooms_count_open_by_host(host, at))
+    }
+
     pub async fn duos_matches_create(&mut self, row: &DuosMatch) -> StoreResult<()> {
         duos_dispatch!(self, matches_create(row))
     }
@@ -499,6 +505,23 @@ mod pg {
         Ok(done.rows_affected())
     }
 
+    pub async fn rooms_count_open_by_host(t: &mut PgTx<'_>, host: &str, at: i64) -> Result<i64, StoreError> {
+        run_as(t, Some(host)).await?;
+        if !is_uuid(host) {
+            return Ok(0);
+        }
+        let row = sqlx::query(
+            "select count(*)::bigint as n from public.duos_rooms
+              where host = $1::uuid and guest is null
+                and expires_at > to_timestamp($2::double precision / 1000.0)",
+        )
+        .bind(host)
+        .bind(at)
+        .fetch_one(&mut **t)
+        .await?;
+        Ok(row.try_get::<i64, _>("n")?)
+    }
+
     pub async fn matches_create(t: &mut PgTx<'_>, row: &DuosMatch) -> Result<(), StoreError> {
         run_as(t, None).await?;
         sqlx::query(
@@ -751,6 +774,15 @@ mod fake {
             Some(_) => room.expires_at > joined_before,
         });
         Ok((before - tables.rooms.len()) as u64)
+    }
+
+    pub fn rooms_count_open_by_host(f: &mut FakeTx<'_>, host: &str, at: i64) -> Result<i64, StoreError> {
+        let tables = call(f, "duos.rooms.countOpenByHost")?;
+        Ok(tables
+            .rooms
+            .iter()
+            .filter(|room| room.host == host && room.guest.is_none() && room.expires_at > at)
+            .count() as i64)
     }
 
     pub fn matches_create(f: &mut FakeTx<'_>, row: &DuosMatch) -> Result<(), StoreError> {

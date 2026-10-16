@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::{DuosActionBody, DuosSeat};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MAX_SAVED_DECKS,
-    REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
+    CODE_ALPHABET, DUOS_ROOM_TTL_MS, MATCH_ACTION_RETENTION_DAYS, MATCH_CEILING_MS, MAX_OPEN_ROOMS_PER_HOST,
+    MAX_SAVED_DECKS, REPLAY_REQUESTS_PER_MINUTE, ROOM_CODE_LENGTH,
 };
 use jackioh_server::db::fake::FakeData;
 use jackioh_server::db::store::{CollectionEntry, Db};
@@ -330,6 +330,12 @@ async fn copied(
 
 fn refusal_reason(body: &Value) -> &Value {
     &body["error"]["details"]["reason"]
+}
+
+/// What the engine's ceiling ends a co-op game as, and so what the sweep writes for a match it ends
+/// (R1047000, R1047001).
+fn ceiling_draw() -> Value {
+    json!({ "outcome": "draw", "winner": null, "reason": "ceiling" })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -976,5 +982,127 @@ mod a_deck_with_a_custom_card_r915005 {
         // Control: the guest dealt at random joins the same room.
         let (status, joined) = join(&t.app, &t.guest, &code).await;
         assert_eq!(status, 200, "{joined}");
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1047000, R1047001 — the ceiling and the sweep's end of a match no actor can be folded back for
+// ---------------------------------------------------------------------------------------------
+
+mod r1047000_r1047001_the_sweep {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn r1047000_a_match_rebuilt_past_its_ceiling_ends_as_a_ceiling_draw_as_it_arms() {
+        let t = three().await;
+        let (_, match_id) = t.started().await;
+        registry(&t.app).stop(&match_id).await;
+        advance(millis(MATCH_CEILING_MS)).await;
+
+        jackioh_server::duos::sweep(&t.app).await.expect("the sweep");
+        let actor = registry(&t.app).get(&match_id).expect("the rebuilt actor");
+        actor.idle().await;
+
+        assert!(actor.is_finished(), "ended as it armed");
+        let (row, log) = stored(&t.app, &match_id).await;
+        assert_eq!(row.result, Some(ceiling_draw()));
+        assert!(row.ended_at.is_some(), "{row:?}");
+        let last = log.last().expect("the ceiling is logged");
+        assert_eq!(last.action["seat"], "a1", "{:?}", last.action);
+        assert_eq!(
+            last.action["body"],
+            json!({ "kind": "duel", "body": { "type": "ceilingReached" } }),
+            "{:?}",
+            last.action
+        );
+        assert_eq!(last.nonce, format!("srv-ceiling-{}", last.seq));
+        assert!(live(&t.app, &t.host).await.is_null());
+        assert!(live(&t.app, &t.guest).await.is_null());
+        assert_eq!(replay(&t.app, &t.host, &match_id).await.0, 200);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r1047001_a_match_that_cannot_be_folded_back_is_retried_until_its_ceiling_then_ended_and_both_people_freed()
+     {
+        let t = three().await;
+        let (_, match_id) = t.started().await;
+        registry(&t.app).stop(&match_id).await;
+        // A row the fold cannot read: the match can no longer be folded back.
+        let (_, log) = stored(&t.app, &match_id).await;
+        let unreadable = DuosActionRow {
+            match_id: match_id.clone(),
+            seq: i64::try_from(log.len()).expect("a seq") + 1,
+            nonce: "unreadable".into(),
+            action: json!({ "seat": "a1" }),
+            at: now_ms(),
+        };
+        store!(&t.app, tx => tx.duos_actions_append(&unreadable).await.expect("duos.actions.append"));
+
+        jackioh_server::duos::sweep(&t.app).await.expect("the sweep");
+
+        assert_eq!(
+            live(&t.app, &t.host).await,
+            json!(match_id),
+            "before its ceiling it is left alone"
+        );
+        assert!(
+            registry(&t.app).get(&match_id).is_none(),
+            "no actor could be built"
+        );
+        assert!(stored(&t.app, &match_id).await.0.ended_at.is_none());
+
+        advance(millis(MATCH_CEILING_MS)).await;
+        jackioh_server::duos::sweep(&t.app).await.expect("the sweep");
+
+        let (row, _) = stored(&t.app, &match_id).await;
+        assert_eq!(row.result, Some(ceiling_draw()));
+        assert!(row.ended_at.is_some(), "{row:?}");
+        assert!(live(&t.app, &t.host).await.is_null());
+        assert!(live(&t.app, &t.guest).await.is_null());
+        for who in [&t.host, &t.guest] {
+            let (status, body) = create(&t.app, who, json!({ "difficulty": "easy", "random": true })).await;
+            assert_eq!(status, 201, "{body}");
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// R1047002 — a host's open co-op rooms are bounded
+// ---------------------------------------------------------------------------------------------
+
+mod r1047002_the_room_cap {
+    use super::*;
+
+    #[tokio::test]
+    async fn r1047002_a_hosts_fourth_open_co_op_room_is_409_conflict_and_a_deleted_one_frees_its_place() {
+        let t = three().await;
+        let mut codes = Vec::new();
+        for _ in 0..MAX_OPEN_ROOMS_PER_HOST {
+            codes.push(room(&t.app, &t.host).await);
+        }
+
+        let (status, body) = create(&t.app, &t.host, json!({ "difficulty": "easy", "random": true })).await;
+
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "conflict"), "{body}");
+        assert_eq!(
+            fake(&t.app).lock().await.tables.duos.rooms.len(),
+            codes.len(),
+            "no room was made"
+        );
+        let (status, body) = create(&t.app, &t.guest, json!({ "difficulty": "easy", "random": true })).await;
+        assert_eq!(status, 201, "the cap is each host's own: {body}");
+
+        let (status, body) = api(
+            &t.app,
+            "DELETE",
+            &format!("/api/duos/rooms/{}", codes[0]),
+            &t.host.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+        let (status, body) = create(&t.app, &t.host, json!({ "difficulty": "easy", "random": true })).await;
+        assert_eq!(status, 201, "{body}");
     }
 }

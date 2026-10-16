@@ -7605,8 +7605,52 @@ mod duos {
         assert_eq!(kept.result, Some(result));
     }
 
+    /// R890000, R1047002: a host's open co-op rooms are the unjoined, unexpired ones, counted by
+    /// host; a claimed room and a lapsed one are not, and a malformed id holds none.
+    async fn r1047002_open_co_op_rooms_are_counted_by_host(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let now = harness.now();
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            0
+        );
+
+        for (code, owner, made, expires) in [
+            ("DUOSLM", &host.id, now, now + 600_000),
+            ("DUOSNP", &host.id, now, now + 600_000),
+            ("DUOSQR", &host.id, now - 700_000, now - 100_000),
+            ("DUOSTV", &guest.id, now, now + 600_000),
+        ] {
+            assert!(q!(harness, t => t.duos_rooms_create(&room(code, owner, made, expires))));
+        }
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            2
+        );
+
+        let choice = DuosChoice::Random { lean: None };
+        must(
+            q!(harness, t => t.duos_rooms_claim("DUOSNP", &guest.id, &choice, &id(), now)),
+            "the claim",
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&host.id, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host(&guest.id, now)),
+            1
+        );
+        assert_eq!(
+            q!(harness, t => t.duos_rooms_count_open_by_host("not-a-uuid", now)),
+            0
+        );
+    }
+
     both_stores!(
         s6_rooms_are_claimed_once_and_reaped,
+        r1047002_open_co_op_rooms_are_counted_by_host,
         s6_matches_finish_once_and_the_log_is_append_only,
         s6_a_deleted_profile_takes_its_rooms_and_matches,
         s6_the_purge_takes_the_logs_of_matches_that_ended_before_the_cutoff,
