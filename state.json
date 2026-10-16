@@ -925,6 +925,7 @@
     "1050": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-16T12:43:09Z",
         "difficulty": "medium",
