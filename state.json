@@ -1381,6 +1381,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-16T14:37:37Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38917259062",
       "self_check_findings": [],
       "started_at": "2026-10-16T14:38:08Z",
