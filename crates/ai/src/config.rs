@@ -475,6 +475,26 @@ pub const AI_REPLY: AiReply = AiReply {
     chip_per_damage: 0.3,
 };
 
+/// `AI_SECOND_REPLY`'s shape (#1058).
+#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AiSecondReply {
+    /// The switch: false scores a line after the opponent's one reply, exactly as before #1058.
+    pub on: bool,
+    /// Cards on either side's field or backrow over which no second reply is played: every play they
+    /// watch is judged against the player's other cards, so the extra turn cost seconds a decision.
+    pub slow_def_ids: &'static [&'static str],
+}
+
+/// #1058: whether `reply_score` lets the opponent reply twice (reply.rs `simulate_second_reply`): at
+/// the seat's next decision the seat ends its turn without acting and the opponent replies again, so a
+/// threat left on the board is priced over two of its turns. Off on `main` until the improve lane
+/// promotes it.
+pub const AI_SECOND_REPLY: AiSecondReply = AiSecondReply {
+    on: true,
+    slow_def_ids: &["meditative-071", "meditative-071-1"],
+};
+
 /// `AI_MULLIGAN`'s shape, and `GREEDY_MULLIGAN`'s (the same one field).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
