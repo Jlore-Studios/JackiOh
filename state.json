@@ -2133,6 +2133,13 @@
     "1086": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T23:24:57Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "the hard line 'the AI's search (crates/ai/src/)': only evaluate.rs and config.rs change, but every eval shift re-plays the seeded AI fixtures, which is AI work by rule 11"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
