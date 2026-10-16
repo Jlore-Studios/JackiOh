@@ -1396,6 +1396,13 @@
     "1065": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T15:00:16Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails easy on a new ruling and spec edits (rule 3) and ~15 files; not hard: server only, no engine, AI, store or migration change"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
