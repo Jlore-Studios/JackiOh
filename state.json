@@ -351,21 +351,26 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "pending_request": false,
       "planned_at": "2026-10-15T23:49:35Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 1032,
       "provider": "claude-4",
+      "question": "",
       "queued_at": "2026-10-15T23:01:01Z",
       "requested_by": "MaxGoetzmann",
+      "round_tier": "strong",
       "run_id": "38825915157",
       "started_at": "2026-10-15T23:50:33Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [
         "c:6204053824"
-      ]
+      ],
+      "verdict_rounds": 1
     },
     "1014": {
       "action": "build",
