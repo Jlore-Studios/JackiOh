@@ -1338,6 +1338,13 @@
     "1063": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T14:52:04Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
