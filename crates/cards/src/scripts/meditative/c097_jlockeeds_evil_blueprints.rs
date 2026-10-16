@@ -8,7 +8,8 @@
 //!            your hand, Radiant on the Radiant face, the hand cap burning it (§2.4)."
 //!
 //! The nine are token cards, in no other pool but C+ #23's (R382), offered uniformly without replacement
-//! (R60).
+//! (R60). The prompt names the card as the catalog the game runs under does (`def_of`), so a replay of
+//! an older version asks in that version's words (R767000).
 
 use jackioh_engine::effects::{add_to_hand, chosen_options, discover_from_catalog};
 use jackioh_engine::prelude::*;
@@ -36,12 +37,13 @@ const PICKED: &str = "picked";
 
 fn blueprints(radiant: bool) -> Script {
     Script {
-        cry: Some(hook(|_ctx| {
+        cry: Some(hook(|ctx| {
+            let name = &def_of(Some(&*ctx.state), ID).name;
             vec![discover_from_catalog(json_as(json!({
                 "step": PICKED,
                 "count": OPTIONS,
                 "query": { "defId": BUILDINGS, "withTokens": true },
-                "prompt": "Jlockeed's Evil Blueprints: Discover a building",
+                "prompt": format!("{name}: Discover a building"),
             })))]
         })),
         resume: IndexMap::from([(
@@ -232,6 +234,24 @@ mod tests {
                 .iter()
                 .any(|e| matches!(e, GameEvent::Burned { def_id, .. } if def_id == &picked));
             assert!(burned, "card was burned per §2.4 and R11");
+        }
+
+        #[test]
+        fn r767000_the_prompt_names_the_card_as_the_version_the_game_runs_under_does() {
+            crate::register_all();
+            let prompt = || {
+                let mut s = setup("bp-prompt", false);
+                s.play(ID, json!({}));
+                open_pending(s.state()).prompt.clone()
+            };
+            assert_eq!(prompt(), "Jlockeed's Evil Blueprints: Discover a building");
+            // v0.3.7 printed the name with the faction spelled the designer's way (patch v0.3.Y, #1067).
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let named = &shipped.defs()[ID].name;
+            assert_ne!(*named, crate::card_def(ID).name);
+            jackioh_engine::with_shipped(Some(shipped), || {
+                assert_eq!(prompt(), format!("{named}: Discover a building"));
+            });
         }
     }
 

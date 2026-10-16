@@ -11,7 +11,9 @@
 //! `forRestOfGame` (B5 E28, R458) re-enters `delayed` at each of the caster's turn starts with no `self`
 //! (R127), so the numbers are read through `param` as the Spell resolves and carried in the entry's
 //! data (R594). The pool leaves this card out by its def id, which the re-entry carries (R387); the price
-//! lands only on a card that reached the hand (§2.4, R4).
+//! lands only on a card that reached the hand (§2.4, R4). The badge is the face as the catalog the game
+//! runs under prints it (`def_of`), so a replay of an older version badges it in that version's words
+//! (R767000).
 
 use jackioh_engine::effects::{add_random_from_catalog, for_rest_of_game};
 use jackioh_engine::prelude::*;
@@ -34,7 +36,7 @@ fn contract(radiant: bool) -> Script {
             let numbers: IndexMap<String, i32> =
                 IndexMap::from([("cards".to_string(), cards), ("discount".to_string(), discount)]);
             let face = if radiant { FaceKind::Radiant } else { FaceKind::Base };
-            let label = fill_params(&crate::card_def(ID), face, Some(&numbers));
+            let label = fill_params(def_of(Some(&*ctx.state), ID), face, Some(&numbers));
             vec![for_rest_of_game(json_as(json!({
                 "step": "contract",
                 "label": label,
@@ -171,6 +173,32 @@ mod tests {
             assert_eq!(theirs, vec![label.to_string()]);
             let mine: Vec<String> = s.view(PlayerId::P1).you.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(mine, vec![label.to_string()]);
+        }
+
+        #[test]
+        fn r767000_a_game_on_an_older_version_badges_it_in_that_version_s_words() {
+            crate::register_all();
+            // v0.3.7 printed the face with the faction spelled the designer's way (patch v0.3.Y, #1067).
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            let one = IndexMap::from([("cards".to_string(), 1)]);
+            let printed = fill_params(&shipped.defs()[CONTRACT], FaceKind::Base, Some(&one));
+            assert_ne!(printed, fill_params(&crate::card_def(CONTRACT), FaceKind::Base, Some(&one)));
+            jackioh_engine::with_shipped(Some(shipped), || {
+                let mut s = signed(false, None, None, None);
+                play_all(&mut s);
+                let labels: Vec<&String> = s
+                    .state()
+                    .players
+                    .p1
+                    .mods
+                    .iter()
+                    .filter_map(|m| match &m.kind {
+                        ModifierKind::StartOfTurnEffect { label, .. } => Some(label),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(labels, vec![&printed]);
+            });
         }
 
         #[test]
