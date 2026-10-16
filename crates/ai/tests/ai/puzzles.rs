@@ -250,6 +250,37 @@ mod tactics_b18 {
         );
         assert!(in_graveyard(&run.end, HUMAN, "core-019"), "{}", trace(&run.turn));
     }
+
+    /// #1062: five Tempo Timmys and four Burns (C #36) with no mana, into an empty board. Each Burn
+    /// offers the AI's five units and its hero before the enemy hero, so the 24 plays at its own side
+    /// came first and no Burn at the enemy was among any root's AI_BUDGET.root_branching candidates or
+    /// any deeper step's branching ones: the AI swung for 15 and ended its turn. It attacks first, and
+    /// burns the face below the root for 8 more.
+    #[test]
+    fn five_attacks_then_four_burns_to_the_face_past_twenty_four_plays_at_its_own_side() {
+        let run = puzzle(
+            "burn-face-below-root",
+            json!({
+                "p1": {
+                    "hand": ["classic-036", "classic-036", "classic-036", "classic-036"],
+                    "mana": 0,
+                    "field": ["core-011", "core-011", "core-011", "core-011", "core-011"],
+                    "library": ["core-008", "core-011"],
+                },
+                "p2": { "library": ["core-008", "core-011"] },
+            }),
+        );
+        assert_eq!(
+            run.turn
+                .decisions
+                .first()
+                .map(|decision| decision.action.action_type()),
+            Some(ActionType::Attack),
+            "{}",
+            trace(&run.turn)
+        );
+        assert!(run.end.players[HUMAN].hero.health <= 7, "{}", trace(&run.turn));
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
