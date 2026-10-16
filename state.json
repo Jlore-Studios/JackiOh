@@ -935,7 +935,9 @@
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
+      "pr": 1051,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-10-16T04:40:37Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
@@ -946,7 +948,7 @@
       "taken_asks": [
         "c:6208220427"
       ],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "1041": {
       "cleared": {
