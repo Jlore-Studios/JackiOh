@@ -12,7 +12,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { fillParams, type CardDef } from "@jackioh/shared";
 
-import { CardFace } from "./CardFace.tsx";
+import { CardFace, faceText } from "./CardFace.tsx";
+import { Extended } from "./inspect/Extended.tsx";
 import { faceModel } from "./model.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { markedText, radiantMarks } from "./radiantDiff.ts";
@@ -136,11 +137,13 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
     for (const card of DEFS) {
       // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
       const expected = marks(fillParams(card, "base"), fillParams(card, "radiant"));
-      // Inside the catalog, so the names its refs link are references and nest with the marks.
+      // Inside the catalog, so the names its refs link are references and nest with the marks. A face
+      // that prints a short form prints its whole text, marks and all, in its extended description (#1017).
+      const face = faceModel({ defId: card.id, def: card, radiant: true });
       const { container, unmount } = render(
         createElement(CardDefsProvider, {
           defs: CATALOG,
-          children: createElement(CardFace, { face: faceModel({ defId: card.id, def: card, radiant: true }), layout: "full" }),
+          children: faceText(face).short === null ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
         }),
       );
       // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one

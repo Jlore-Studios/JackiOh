@@ -1,10 +1,8 @@
 //! C+ #73.1 Classic Golem (SPEC §8.7 row 73.1, B7). (4) Unit, Token (printed Legendary). 10/10 → 20/20.
-//!   Base:    "Rush, First Strike, Trample / After this attacks a Unit, it transforms into a random
-//!            Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack again
-//!            this turn."
-//!   Radiant: "Rush, Trample, Divine Shield / After this attacks a Unit, it transforms into a random
-//!            Radiant Classic or Classic+ Unit. If this destroyed that Unit, the new Unit may attack
-//!            again this turn."
+//!   Base:    "Rush, First Strike, Trample / After attacking a Unit, this transforms into a random
+//!            Classic or Classic+ Unit. If the Unit died, the new one may attack again."
+//!   Radiant: "Rush, Trample, Divine Shield / After attacking a Unit, this transforms into a random
+//!            Radiant Classic or Classic+ Unit. If the Unit died, the new one may attack again."
 //!
 //! R424: the transform follows the combat of an attack the Golem declared on a Unit (not a forced one,
 //! R53), so its own stats fight (§4.4); a Golem that left the field transforms into nothing. The new

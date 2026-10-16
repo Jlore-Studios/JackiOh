@@ -1,8 +1,7 @@
 //! C #43 Plague Nuke (SPEC §8.6 row 43). (3) Spell, Epic.
 //!   Base:    "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them." — 1
-//!   Radiant: "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon,
-//!            under your control, each of those Units that had a Plague Counter from its owner's
-//!            graveyard." — 1
+//!   Radiant: "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon
+//!            each that had one from its owner's graveyard, under your control." — 1
 //!   Engine:  "Count the tokens on every unit first, destroy all (one state check, §4.5), then the
 //!            temporary mana. An Indestructible unit survives, but its tokens count ("on them" is every
 //!            Unit the Spell hit). Radiant: after that check, each non-token unit card that had a token

@@ -1,9 +1,9 @@
 //! Meditative #22 Mind Games (SPEC §8.8 row 22, BUILD M10 row M 22): (2) Spell, Epic.
-//!   Base:    "Choose one in secret: Greed, Attack or Defend. At the start of your next turn, gain
-//!            its reward. Greed: Gain {mana} mana and draw {draw} cards. Attack: Deal {damage}
-//!            damage to each enemy. Defend: Heal your hero and each of your Units {heal}. They gain
-//!            +{armor} Armor. Add a Fortify Mind to your opponent's hand."
-//!   Radiant: the same, ending "Add a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
+//!   Base:    "Choose Greed, Attack or Defend in secret. Gain its reward at your next turn's start. Add
+//!            a Fortify Mind to your opponent's hand. Greed: Gain {mana} mana and draw {draw}. Attack:
+//!            Deal {damage} damage to each enemy. Defend: Heal your hero and each of your Units {heal}.
+//!            They gain +{armor} Armor."
+//!   Radiant: the same, with "Add a Fortify Mind to your opponent's hand. It costs ({fortifyCost})."
 //! The mode is declared with the play (R81) and kept secret (R860, R865): filed as a secret record
 //! on the caster by `keep_secret`, never carried on an event. The reward is the caster's `next`
 //! start-of-turn delayed effect (R861): after the refresh, before the triggers and the draw. A play

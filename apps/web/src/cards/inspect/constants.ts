@@ -20,6 +20,8 @@ export const PREVIEW_MARGIN_PX = 8;
 export const PREVIEW_MAX_VIEWPORT_SHARE = 0.8;
 /** The glossary column beside the preview card. Mirrors `.inspect-hover .inspect-glossary`'s width. */
 export const PREVIEW_GLOSSARY_WIDTH_PX = 240;
+/** Issue #1017: the extended description on the preview card's left. Mirrors `.inspect-hover .inspect-extended`. */
+export const PREVIEW_EXTENDED_WIDTH_PX = 280;
 /** Space between the preview card and its glossary. Mirrors `.inspect-hover`'s `gap`. */
 export const PREVIEW_GLOSSARY_GAP_PX = 10;
 /**

@@ -1,8 +1,8 @@
 //! C #38 Jackiestan Auctioneer (SPEC §8.6 row 38). Field Trap, Human, cost 2, Rare, 4/4 → 8/8 (its unit face).
 //!   Both faces: "Animated
-//!                Reveals when the cards you have played in a turn reach {plays}.
-//!                Once this has revealed: Whenever you play a card, draw {draw} and deal {damage} damage to
-//!                the enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
+//!                Reveals when you have played {plays|card|cards} in a turn.
+//!                Then, whenever you play a card, draw {draw} and deal {damage} damage to the
+//!                enemy hero." — plays 3 on the base face and 2 on the Radiant, damage 2 and 4.
 //!
 //! R395: face-down only the reveal condition is live. It answers the `cardPlayed` that takes its
 //! controller's per-turn count (only its controller's plays since patch v0.3.10, #831; any player's before) (already counting the play under way; a cast counts, R70; a countered card was never played,

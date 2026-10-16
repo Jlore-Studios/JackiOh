@@ -1,12 +1,11 @@
 //! M #45 Knowledge Breaker (SPEC §8.8 row 45): (1) Unit, CN, KY, Catalyst, Legendary, 1/3 → 2/6.
 //!
-//! Base:    "Cry: Nerf every other CN or KY card on the field, in each hand and in each deck.
-//!           Aura: Your Units have Cloaked.
+//! Base:    "Cry: Nerf all other CN and KY cards on the field, in hands and decks.
+//!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Knowledge Breaker Prime into your deck."
 //! Radiant: "Divine Shield
-//!           Cry: Nerf every other CN or KY card on the field, in each hand and in each deck
-//!           {times|time|times}.
-//!           Aura: Your Units have Cloaked.
+//!           Cry: Nerf all other CN and KY cards on the field, in hands and decks {times|time|times}.
+//!           Aura: Your Units are Cloaked.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //! Engine:
 //! - Cry: `degrade` over every other CN or KY card on fields, hands and decks, `times`.

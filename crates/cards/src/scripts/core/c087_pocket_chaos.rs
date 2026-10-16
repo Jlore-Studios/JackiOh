@@ -1,10 +1,9 @@
 //! #87 Pocket Chaos (SPEC §8.4, §10.6, R4, R11, R12, R33, R73, R81, R88).
 //!
-//! (4). Base: "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket
-//! Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost
-//! would be (0). Exile this." Radiant: "… Then you may add a Pocket Chaos …" (§8's cell "You may
-//! skip adding it"; the gift is priced, R742). The radiant cell restates only the gift clause, so the
-//! Choose one and the exile are kept (§8 Conventions).
+//! (4). Base: "Choose one: Swap hero health, boards or decks. Add a Pocket Chaos with (1) less base
+//! cost to your opponent's hand, unless that's (0). Exile this." Radiant: "… You may add a Pocket
+//! Chaos …" (§8's cell "You may skip adding it"; the gift is priced, R742). The radiant cell restates
+//! only the gift clause, so the Choose one and the exile are kept (§8 Conventions).
 //!
 //! BOTH choices are declared play choices, not prompts (R81 names #87; §10.6: a card's own play
 //! choices travel in the `play` action). `Script.modes` lists a `ModeDecl` per choice and a play must

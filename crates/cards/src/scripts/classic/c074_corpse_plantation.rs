@@ -1,7 +1,7 @@
 //! C #74 Corpse Plantation (SPEC §8.6 row 74). (2) Field Spell, Epic.
 //!   Base:    "Cry: Place {tokens|Plague Counter|Plague Counters} on this.
-//!             Activate: You may play a Unit from your graveyard, paying with Plague Counters as mana. You
-//!             must spend at least 1 Plague Counter." — 2 tokens; Radiant: 4.
+//!             Activate: Play a Unit from your graveyard, spending at least 1 Plague Counter as mana."
+//!             — 2 tokens; Radiant: 4.
 //!   Engine:  Play from graveyard (§6.3) for a Unit, armed by the Activate. Token payment spends at least 1
 //!            counter, rest in mana; (0) cost cannot use it; choices as from hand; R65 player discounts apply.
 //!

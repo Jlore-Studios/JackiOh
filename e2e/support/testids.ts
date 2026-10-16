@@ -493,6 +493,7 @@ export const INSPECT_FACE_BASE = "inspect-face-base";
 export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
 export const INSPECT_GLOSSARY = "inspect-glossary";
 export const INSPECT_PRINTED = "inspect-printed";
+export const INSPECT_EXTENDED = "inspect-extended";
 export const INSPECT_REFS = "inspect-refs";
 export const INSPECT_FLAVOUR = "inspect-flavour";
 export const INSPECT_ARTIST = "inspect-artist";

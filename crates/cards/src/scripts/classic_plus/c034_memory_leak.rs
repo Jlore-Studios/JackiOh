@@ -1,5 +1,5 @@
 //! C+ #34 Memory Leak (SPEC §8.7 row 34): (3) Field Spell, Epic.
-//!   Base:    Choose one: "At the end of your turn, Lock a random zone on your opponent's side"; or
+//!   Base:    Choose one: "End of turn: Lock a random enemy zone"; or
 //!            "After your opponent plays a Unit or Field Spell, Lock its zone."
 //!   Radiant: both, no choice.
 //! The mode is declared with the play (R81) and remembered on the instance (`memory.mode`). "A random

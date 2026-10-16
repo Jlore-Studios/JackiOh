@@ -1,7 +1,7 @@
 //! C+ #62 KY's Papaya (SPEC §8.7 row 62, R422, R831003; BUILD M9 row C+ 62). (1) Spell, Fruit, KY, Epic.
-//!   Base:    "Discover 1 to 4 cells, each among 3 random cells in different lanes; the curve y = ax³ +
-//!             bx² + cx + d goes through them, … Exile every card on the curve."
-//!   Radiant: "… Exile every enemy card on the curve."
+//!   Base:    "Discover 1 to 4 cells, each from 3 random cells in different lanes. Exile every card on
+//!             the cubic curve through them (x = lane, y = row)."
+//!   Radiant: "… Exile every enemy card on the cubic curve through them (x = lane, y = row)."
 //!
 //! The curve is the engine's (E32): the player Discovers 1 to 4 cells in different lanes, each among
 //! `PAPAYA_OFFERS` random cells of the lanes not used yet, then "done" (patch v0.3.10, R831003; it chose

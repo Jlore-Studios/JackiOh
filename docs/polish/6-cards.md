@@ -639,7 +639,9 @@ so the other cards do not re-render.
   `contextmenu`, `dragstart`, `dragover` and `drop`. React bubbles portal events through the
   React tree, so without this a click on "Close" would reach `Zone` or `Card` `onClick`.
 - `inspect-hover` is `position: fixed` with `pointer-events: none` and `aria-hidden="true"`. It
-  holds `[data-testid=inspect-face] > CardFace` at `PREVIEW_HEIGHT_PX` and, beside it,
+  holds `[data-testid=inspect-face] > CardFace` at `PREVIEW_HEIGHT_PX` (on the face's left, in one
+  `.inspect-facegroup` with it, `inspect-extended`: the whole text of a face that prints less of
+  it, R1017000) and, beside it,
   `Glossary`.
 - `inspect-sheet` is a bottom sheet with `role="dialog"`, `aria-modal="true"` and
   `aria-label={name}`. It holds the face, the glossary and `inspect-close`, with an
@@ -648,7 +650,8 @@ so the other cards do not re-render.
   - `inspect-face-base` and `inspect-face-radiant`, side by side at every width;
   - a meta line: `#<index> · <set> · <rarity> · <type>` plus ` · <tags>` when there are any;
   - `.inspect-rules`, the base text and the radiant clause again at reading size, shown on screens
-    ≤ 560 px wide and for any card whose printed text is tier `xl` or `xxl` (`data-long`), because
+    ≤ 560 px wide and for any card whose printed text is tier `xl` or `xxl`, or whose face prints
+    less than its whole text (`faceText`, R1017000) (`data-long`), because
     two faces side by side on a phone print a long card at about 5 px;
   - the glossary of both faces;
   - the caller's `meta` and `actions`, then `inspect-close`, with an `inspect-scrim` backdrop.
@@ -748,7 +751,7 @@ div.app-shell.app-shell--wide.deckbuilder [deckbuilder]
                                                 draggable (unchanged); + data-owned, aria-label "<name>, <cost> mana
                                                 <type>, <rarity>[, in Deck N][, not in your collection]. Show details",
                                                 click opens CardDetail,
-                                                inspect handlers { hover: false, onLongPress, onContextMenu }
+                                                inspect handlers { hover: faceText(face).less, onLongPress, onContextMenu }
             CardFace (base face, layout full)   aria-hidden
             span.db-held                        "Deck N" when data-in-deck is set (aria-hidden: the label says it)
           button.db-add [db-add-<id>]           "+", aria-label "Add <name> to Deck N", aria-disabled while held;
@@ -940,10 +943,11 @@ The deck builder does the same for its own buttons by scoping every button rule 
   `useFitText` changes nothing without layout (jsdom). In Chrome, for every catalog card and both
   faces, `.card-name` and `.card-text` stay within their boxes, with scroll ≤ client + 1 on both
   axes (Cypress component):
-  - at 270 px wide, no element carries `data-clamped`, but for #98 Heroic Power's printed faces,
-    whose thirteen powers (R752) fit no 270 px box at the reading floor: the detail view prints
-    them whole at reading size, and in play the face is only the rolled power, which fits;
-  - at 170 px wide, only faces whose printed text exceeds 260 characters may carry
+  - no face carries `data-long` at either width: issue #1017 measured the limit (`FACE_TEXT_LIMIT`,
+    6 lines of about 28 characters on a 170 px face) and cut every catalog face under it, and a face
+    no wording can fit prints a short form or clamps (`shortText.ts`), its art whole (R1017000);
+  - at 270 px wide, no element carries `data-clamped`;
+  - at 170 px wide, only a face that prints less than its whole text (`faceText`) may carry
     `data-clamped="true"`, and a clamped rules box stays inside the face at `FIT_FLOOR_PX`.
   - Since the integration QA, the rules text has a reading floor (`FIT_FLOOR_PX`, 9 px): a text
     that would need less first drops its tier's head start, then takes the long layout
@@ -951,7 +955,8 @@ The deck builder does the same for its own buttons by scoping every button rule 
     (`data-longest` as well, #617: the art a strip under the crest and the rules box two thirds of
     the face, which holds Meditative #8's eleven Ascent lines at 270 px and in the inspect views),
     and only then clamps at the floor with an ellipsis (`fit.ts`). Before, the densest cards printed
-    at 6 px in the grid.
+    at 6 px in the grid. Since #1017 a face that prints less than its whole text never takes the
+    long layouts (`long: false`): it clamps at once, and no catalog face reaches them.
 - **B16.** `Card` with `card: null` renders one `.card.card-back` with an empty `textContent`, no
   `data-def-id`, no `data-testid` and no `.card-name`. Hovering or long-pressing it opens nothing
   (jsdom).
@@ -1080,7 +1085,9 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - the card's `db-add-<id>` "+" adds it in one tap and opens nothing; while another deck holds
     the card it is `aria-disabled` and a press is refused as a drag is (L4);
   - hovering a deck tile opens `inspect-hover`, clicking the tile still removes the card, and a
-    right-click, I, the context-menu key or Shift+F10 on it open its detail.
+    right-click, I, the context-menu key or Shift+F10 on it open its detail;
+  - resting a mouse on a pool card opens no preview, but on a card whose face prints less than its
+    whole text (R1017000), whose preview has the whole text on the face's left.
 - **B39.** On `/decks`, `Deckbuilder` with the real catalog has no horizontal overflow at 390×844
   and 1280×720, and shows at least two pool columns at 390 px. At 1280×720 the page does not
   scroll and the pool's own bottom edge is on screen (Cypress component).

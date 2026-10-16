@@ -39,8 +39,10 @@
 // place of the five, its other tags after it; its tags themselves are unchanged.
 //
 // Issue #814: a Summit face given its Ascent level prints its header and only the next Ascent
-// line (shortText.ts). The whole text is the hover preview's; with hover previews off, the rules
-// box's tooltip carries it instead (#912).
+// line (shortText.ts). Issue #1017: a face whose text runs past the measured limit prints a short
+// form, or clamps with "…", and never shrinks its art for it (`faceText`); its whole text stands on
+// the left of its hover preview (inspect/Extended.tsx). With hover previews off, the rules box's
+// tooltip carries it instead (#912).
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -50,7 +52,7 @@ import { CardArt, type ArtShape } from "./art/index.ts";
 import { CardStates } from "./CardStates.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { CHINESE_COMMA, CHINESE_TERMS, chineseKeyword } from "./chinese.ts";
-import { FIT_FLOOR_PX, TIER_SCALE } from "./constants.ts";
+import { FIT_FLOOR_PX, PREVIEW_TEXT_LIMIT, TIER_SCALE } from "./constants.ts";
 import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
@@ -59,7 +61,7 @@ import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./m
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
-import { summitShortText } from "./shortText.ts";
+import { cutText, overLimit, shortFormOf, summitShortText } from "./shortText.ts";
 import { MINUS } from "./tuning.ts";
 
 import "./cards.css";
@@ -133,6 +135,35 @@ function printedText(face: FaceModel, text: string): string {
   return [`${text}${values}`, gainedLine(face), ...face.grants, tuningLine(face)].filter((part) => part !== "").join(" ");
 }
 
+/** What a face's rules box prints (issues #814, #1017). */
+export type RulesBox = {
+  /** The words the rules box prints: the whole text, or a short form ending in "…". */
+  shown: string;
+  /** The short form, when the face prints one (`data-short`). */
+  short: string | null;
+  /** The face prints less than its whole text: its rules box clamps, never shrinking the art. */
+  less: boolean;
+};
+
+/**
+ * What the rules box prints. A Summit in play given its level prints its header and the next Ascent
+ * line; a face printing its catalog text takes its short form (shortText.ts SHORT_FORMS); a face in
+ * play past the hover preview's limit (a fused card, a heavily Buffed one) clamps. Each of these
+ * prints less than its whole text, which the hover preview prints on the face's left.
+ */
+export function faceText(face: FaceModel, ascentLevel?: number | null): RulesBox {
+  const full = face.text.full;
+  const summit = summitShortText(face.defId, full, ascentLevel);
+  // A face in play that prints something other than its catalog text (a #98 Heroic Power's rolled
+  // power, a Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has
+  // no colon to cut at.
+  const form = full === "" || face.printed !== null ? null : shortFormOf(face.defId, face.radiant);
+  const short = summit ?? (form === null ? null : cutText(full, form));
+  const shown = short ?? full;
+  const less = short !== null || form === "clamp" || (face.inPlay && overLimit(printedText(face, shown), PREVIEW_TEXT_LIMIT));
+  return { shown, short, less };
+}
+
 /** R386: the keywords a Buff added ("+") and a Nerf removed (struck "−"), at the foot of the rules box. */
 function TuningKeywords({ face }: { face: FaceModel }): ReactElement | null {
   const tuning = face.tuning;
@@ -201,22 +232,22 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   const textRef = useRef<HTMLSpanElement>(null);
 
   const full = layout === "full";
-  // Issue #814: what the rules box prints — shortened on a Summit face in play, whole elsewhere.
-  // The header is the full text's prefix, so a value after its label ("Ascent level", R280) and
-  // a mark or tuned number inside it keep their offsets; RulesText drops marks outside the
-  // printed words on its own, and a tuned number on a hidden line goes unmarked.
-  const short = summitShortText(face.defId, face.text.full, ascentLevel);
+  // Issues #814, #1017: what the rules box prints — a short form or the whole text. A short form
+  // is the full text's prefix, so a value after its label ("Ascent level", R280) and a mark or tuned
+  // number inside it keep their offsets; RulesText drops marks outside the printed words on its
+  // own, and a tuned number on a hidden line goes unmarked.
+  const { shown, short, less } = faceText(face, ascentLevel);
   // #912: the hover preview shows the whole card, so the native tooltip only stands in for it
   // while hover previews are off, as Card.tsx's root title does (B19).
   const tooltip = settings.hoverPreviews || face.text.full === "" ? undefined : face.text.full;
-  const shown = short ?? face.text.full;
   const printed = printedText(face, shown);
   const names = nameTier(face.name);
   const texts = textTier(printed);
   useFitText(nameRef, face.name);
   // The rules box only exists on a full face; keying on the layout refits it when one appears. Its
-  // floor keeps dense cards readable: the long layout first, then a clamp (fit.ts).
-  useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX });
+  // floor keeps dense cards readable: the long layout first, then a clamp (fit.ts); a face that
+  // prints less than its text clamps at once, its art whole (#1017).
+  useFitText(textRef, full ? printed : "", { floorPx: FIT_FLOOR_PX, long: !less });
 
   const scales = { "--cf-name-scale": String(TIER_SCALE[names]), "--cf-text-scale": String(TIER_SCALE[texts]) } as CSSProperties;
   // R503: the frame's rarity, a token's printed one included.
@@ -293,7 +324,13 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
         <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
 
         {full && (
-          <span className="card-text" ref={textRef} title={tooltip} data-short={short !== null ? "true" : undefined}>
+          <span
+            className="card-text"
+            ref={textRef}
+            title={tooltip}
+            data-short={short !== null ? "true" : undefined}
+            data-less={less ? "true" : undefined}
+          >
             <span className="cf-text-base">
               <RulesText
                 text={shown}

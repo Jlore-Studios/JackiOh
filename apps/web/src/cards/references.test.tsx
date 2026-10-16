@@ -10,7 +10,8 @@ import { CATALOG } from "@jackioh/cards";
 import { fillParams, type CardDef } from "@jackioh/shared";
 
 import { REF_TOOLTIP_TESTID } from "./CardRef.tsx";
-import { CardFace } from "./CardFace.tsx";
+import { CardFace, faceText } from "./CardFace.tsx";
+import { Extended } from "./inspect/Extended.tsx";
 import { REF_HOVER_DELAY_MS } from "./constants.ts";
 import { CardDetail } from "./inspect/CardDetail.tsx";
 import { closeInspect } from "./inspect/store.ts";
@@ -60,9 +61,11 @@ describe("R279 the names a text links", () => {
         // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
         const text = fillParams(card, radiant ? "radiant" : "base");
         const expected = findRefs(text, (card.refs ?? []).map(def)).map((match) => match.id);
+        // A face that prints a short form names them all in its extended description (#1017).
+        const model = face(card.id, radiant);
         const { container, unmount } = render(
           <CardDefsProvider defs={CATALOG}>
-            <CardFace face={face(card.id, radiant)} layout="full" />
+            {faceText(model).short === null ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
           </CardDefsProvider>,
         );
         const shown = [...container.querySelectorAll(".cf-ref")].map((ref) => ref.getAttribute("data-ref"));

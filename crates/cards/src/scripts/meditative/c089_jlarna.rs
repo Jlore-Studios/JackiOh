@@ -1,8 +1,8 @@
 //! M #89 Jlarna (SPEC §8.8 row 89). (4) Field Spell, Rare.
 //!
-//! Base:    "Aura: Credit line {credit}: you can spend mana you don't have, owing up to {credit} at
-//!          once. Pay it back in {instalments|instalment|instalments}, one at the start of each of
-//!          your next turns.\nEnd of turn: If you didn't use your credit line this turn, Tribute this."
+//! Base:    "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in
+//!          {instalments|instalment|instalments}, one each start of turn.\nEnd of turn: Tribute this if
+//!          you didn't use it this turn."
 //! Radiant: the Aura line alone.
 //! Engine:  "The Aura, a credit line paid in 4 (MD-E13, rewritten): while Jlarna acts on its
 //!          controller's field, any mana they spend may go past what they have (R1223) — current mana

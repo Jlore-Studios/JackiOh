@@ -198,9 +198,9 @@ describe("MN09: every Meditative face fits its frame at the inspect view's sizes
       expect(chinese.name, `${def.id}'s Chinese name`).to.not.eq("");
     }
     // The faces the phone sheet may clamp. A card that joins them is not an error, but its text is
-    // long enough that a person should read it once: these were read for #617, and each fits at both
-    // inspect sizes (#8's eleven Ascent lines in the longest layout, cards/fit.ts). No Chinese face
-    // is among them, since a Chinese face prints fewer characters for the same words.
+    // long enough that a person should read it once: these were read for #617, and since #1017 each
+    // prints a short form, its header and "…", with its whole text on its left (R1017000). No Chinese
+    // face is among them, since a Chinese face prints fewer characters for the same words.
     const long = MEDITATIVE.flatMap((def) => FACES.filter((face) => printedLength(def, face) > TEXT_TIER_MAX.xl).map((face) => `${def.id} ${face.label}`));
     expect(long).to.have.members([
       "meditative-008 base",

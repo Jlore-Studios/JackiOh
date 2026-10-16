@@ -1,9 +1,9 @@
 //! C #4 Palantir (SPEC §8.6 row 4). Field Spell, cost 2, Legendary.
-//!   Base:    "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.
-//!             When your opponent plays a (1) Cost Spell, Tribute this to steal it and cast it yourself."
-//!   Radiant: "Aura: Your opponent can't draw more than {drawLimit|card|cards} each turn.
-//!             When your opponent plays a (1) Cost Spell, steal it and cast it yourself. Once this has
-//!             stolen {threshold|Spell|Spells}, Tribute this."
+//!   Base:    "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.
+//!             When your opponent plays a (1) Cost Spell, Tribute this to steal and cast it."
+//!   Radiant: "Aura: Your opponent draws at most {drawLimit|card|cards} a turn.
+//!             When your opponent plays a (1) Cost Spell, steal and cast it. Once it has stolen
+//!             {threshold}, Tribute this."
 //!
 //! The Aura is a draw limit (§2.4, B5 E3) on the opponent, on every turn, the start-of-turn draw
 //! included: a draw past the limit does not happen at all (no card moves, no fatigue, nothing is cast
@@ -17,7 +17,7 @@
 //! and each target aimed in your favour (R452, R656), after which it goes to your graveyard as your
 //! card. A cast is a play and is answered too (R70). The Spells it answers are the (1) Cost ones, their
 //! own cost as they stand out of play (R65: an X Spell counts 0, R396), Books or not.
-//!   - Base: "Tribute this to steal it" is a price paid without asking (no "you may", balance patch 1):
+//!   - Base: "Tribute this to steal and cast it" is a price paid without asking (no "you may", balance patch 1):
 //!     Palantir sacrifices itself, then counters the Spell and casts it. Palantir is not a Trap, so it
 //!     answers after the traps the announce woke (§10.3), and the paused play waits on `state.work`
 //!     meanwhile (R113).
@@ -75,7 +75,7 @@ fn steal_and_cast(spell: &str) -> Vec<Effect> {
     ]
 }
 
-/// Base: "Tribute this to steal it" — no question, the price is paid to steal.
+/// Base: "Tribute this to steal and cast it" — no question, the price is paid to steal.
 fn steal_one() -> TriggerDef {
     TriggerDef::new("palantir-steal", &[GameEventType::CardAnnounced], |ctx, event| {
         let Some(spell) = answered(ctx, event) else {

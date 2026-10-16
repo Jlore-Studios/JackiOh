@@ -59,6 +59,24 @@
   max-height: none;
 }
 
+/* Issue #1017: a face that prints less than its whole text keeps the whole text on its left. The
+   face and the text are one item, so the text stays on the left when the preview opens to the left
+   of its anchor (row-reverse above). */
+.inspect-facegroup {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 10px; /* PREVIEW_GLOSSARY_GAP_PX */
+}
+
+.inspect-hover .inspect-extended {
+  width: 280px; /* PREVIEW_EXTENDED_WIDTH_PX */
+  max-height: 80vh;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 /* R279: the named cards, a column of their own beyond the glossary, one face under another. */
 .inspect-hover .inspect-refs {
   width: 170px; /* PREVIEW_REFS_WIDTH_PX */

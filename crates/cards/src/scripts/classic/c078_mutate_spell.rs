@@ -1,7 +1,7 @@
 //! C #78 Mutate Spell (SPEC §8.6 row 78). (1) Field Spell (R402: the designer wrote Spell), Rare.
-//!   Base:    "Activate: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it. If
-//!            it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy
-//!            {attacks|time|times}." — draw 2, 1 attack
+//!   Base:    "Activate: Remove a Plague Counter from a permanent. If it's an enemy's, exile it; your
+//!            backrow card, draw {draw}; your Unit, it attacks a random enemy {attacks|time|times}."
+//!            — draw 2, 1 attack
 //!   Radiant: "Activate ♾️: …" the same text — draw 4, 2 attacks
 //!   Engine:  "Activate (once a turn) and Activate ♾️ (§6.2, R81, R384; R402 target in action): remove a
 //!            Plague Counter. Forced attack (R53, §4.2); the Radiant's second attack happens only if the
