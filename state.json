@@ -7423,10 +7423,8 @@
     "what": "build #1050 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-10-16T12:40:48Z",
-    "notes": [
-      "#1055: typed it Bug"
-    ],
+    "at": "2026-10-16T12:46:42Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
