@@ -7590,8 +7590,12 @@
     "what": "suggestions on claude-4"
   },
   "last_sweep": {
-    "at": "2026-10-16T13:45:21Z",
-    "notes": [],
+    "at": "2026-10-16T13:51:22Z",
+    "notes": [
+      "#1064: typed it Task",
+      "#1063: typed it Task",
+      "#1062: typed it Task"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "machine_disk": {
