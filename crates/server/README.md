@@ -174,9 +174,9 @@ of `ApiErrorCode` (`api/http.rs`). Each route declares its auth level in `app.rs
 | `POST` | `/api/trios/import` | active | a trio code's decks and trio in one transaction (R340, R341) |
 | `GET`, `POST` | `/api/custom-cards` | active | the caller's custom cards, oldest first, with `limits`; a new one (201), its id minted and at version 1 (R915008) |
 | `GET`, `PUT`, `DELETE` | `/api/custom-cards/:id` | active | one of the caller's cards; a save naming the version it replaces (409 with the current one when another save came first); a delete (R915008) |
-| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000) |
+| `POST`, `DELETE` | `/api/queue` | active | enqueue `{ mode: "bo1", deckId }`, `{ mode: "bo3", trioId }` or `{ mode: "random" }` (R257, R253), or leave; a ticket unheard from for `QUEUE_TICKET_STALE_MS` is cancelled before it can pair (R897000); 409 `already_in_match` in a live match, a series or a co-op match (R264, R1065000) |
 | `GET` | `/api/queue/population` | user | the queue readout: each mode's expected wait and the last hour's games (R640002) |
-| `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264) |
+| `POST` | `/api/rooms`, `/api/rooms/:code/join` | active | a room code in a mode, and its atomic claim (R264); 409 `already_in_match` for a caller in a match, a series or a co-op match, `conflict` for a host in one (R264, R1065000) |
 | `GET`, `POST` | `/api/series/:id`, `/pick`, `/forfeit` | active | a Conquest series as its player may see it, a sealed pick, a forfeit (R330–R336) |
 | `GET` | `/api/matches/:matchId/series`, `/ranks` | active | a match's series; both seats' ranks, each with its `profileId` and `username` (R604, R612, R1436) |
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672) |

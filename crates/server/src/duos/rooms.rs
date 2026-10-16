@@ -12,9 +12,10 @@
 //! the join, the host from the room (or `GET /api/duos/live`).
 //!
 //! A person in a 1v1 match, a Conquest series that is not over or a live co-op match can neither make
-//! nor join a room, and a join is refused while the host is in one (as `assert_host_free` refuses a
-//! 1v1 join). Co-op games are unranked: no rating moves and no results row is written; the result
-//! lives on the match's own row (B40).
+//! nor join a room, and a join is refused while the host is in one: the same `assert_free_to_play`
+//! and `assert_host_free` (`api::decks`, R1065000) every 1v1 door asks. The join's claim cancels both
+//! people's open tickets, as a series' start does. Co-op games are unranked: no rating moves and no
+//! results row is written; the result lives on the match's own row (B40).
 //!
 //! A code is no key past a block (§9.4, §13.9): to an account the host has blocked, or that has
 //! blocked the host, the room answers as an unknown code does, to read and to join. Once joined, a
@@ -43,7 +44,8 @@ use crate::actor::registry::panic_text;
 use crate::api::collection::caller_profile;
 use crate::api::crypto::{is_well_formed_code, normalize_code, random_code};
 use crate::api::decks::{
-    FrozenChoice, ModeChoiceInput, assert_not_in_series, freeze_choice, lean_of, read_mode_choice,
+    FrozenChoice, ModeChoiceInput, assert_free_to_play, assert_host_free, freeze_choice, lean_of,
+    read_mode_choice,
 };
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, json as json_response, lock, ok,
@@ -51,7 +53,6 @@ use crate::api::http::{
 use crate::api::queue::{new_seed, new_uuid, seed_override_of};
 use crate::app::{App, now_ms};
 use crate::config::{DUOS_ROOM_TTL_MS, MAX_OPEN_ROOMS_PER_HOST, ROOM_CODE_LENGTH};
-use crate::db::store::Profile;
 use crate::duos::engine::{self, Pinned};
 use crate::duos::live_match_of;
 use crate::duos::registry::registry;
@@ -146,46 +147,6 @@ async fn freeze(app: &App, profile_id: &str, choice: &ModeChoiceInput) -> Result
     }
 }
 
-/// Not in a 1v1 match, a Conquest series that is not over, or a live co-op match.
-async fn assert_free(app: &App, profile: &Profile) -> Result<(), ApiError> {
-    if profile.in_match_id.is_some() {
-        return Err(ApiError::new(
-            ApiErrorCode::AlreadyInMatch,
-            "finish your current match first",
-        ));
-    }
-    assert_not_in_series(app, &profile.id).await?;
-    if let Some(match_id) = live_match_of(app, &profile.id).await? {
-        return Err(ApiError::with_details(
-            ApiErrorCode::AlreadyInMatch,
-            "Finish your co-op match first.",
-            json!({ "duosMatchId": match_id }),
-        ));
-    }
-    Ok(())
-}
-
-/// The host is still free when the join would start the match (they may have been matched since).
-async fn assert_host_free(app: &App, host: &str) -> Result<(), ApiError> {
-    let (profile, series) = one_tx!(app.db, |t| {
-        let profile = t.profiles_get_by_id(host).await?;
-        let series = t.series_active_for(host).await?;
-        (profile, series)
-    })?;
-    let busy = profile
-        .as_ref()
-        .is_none_or(|profile| profile.in_match_id.is_some())
-        || series.is_some()
-        || live_match_of(app, host).await?.is_some();
-    if busy {
-        return Err(ApiError::new(
-            ApiErrorCode::Conflict,
-            "The host of that room is playing another game right now.",
-        ));
-    }
-    Ok(())
-}
-
 /// S6's 409: the error body every route answers with, under S6's code.
 fn refusal(status: u16, code: &str, message: &str) -> Response {
     json_response(status, json!({ "error": { "code": code, "message": message } }))
@@ -243,7 +204,7 @@ pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let choice = read_choice(&req.body)?;
     // R143: read before any work, so a production caller gets its 400 without a room being made.
     let seed = seed_override_of(app, &req.body)?;
-    assert_free(app, &profile).await?;
+    assert_free_to_play(app, &profile.id).await?;
     let host_choice = freeze(app, &profile.id, &choice).await?;
 
     let now = now_ms();
@@ -350,7 +311,7 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             json!({ "expected": app.catalog.version, "received": catalog_version }),
         ));
     }
-    assert_free(app, &profile).await?;
+    assert_free_to_play(app, &profile.id).await?;
     let guest_choice = freeze(app, &profile.id, &choice).await?;
     assert_host_free(app, &room.host).await?;
 
@@ -401,6 +362,13 @@ pub async fn join(app: &Arc<App>, req: Req) -> ApiResult {
             .await?;
         if claimed.is_some() {
             t.duos_matches_create(&row).await?;
+            // R1065000: a player in a co-op match is in no queue, as one in a series is: a ticket
+            // left open would let the sweep pair them while the match lasts.
+            for profile_id in [&row.a1, &row.a2] {
+                if let Some(stale) = t.tickets_open_for_profile(profile_id).await? {
+                    t.tickets_cancel(&stale.id, now).await?;
+                }
+            }
         }
         claimed
     })?;

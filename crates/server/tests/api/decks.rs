@@ -1,6 +1,6 @@
 //! Saved decks and trios (`crates/server/src/api/decks.rs`, SPEC §9.4, R250–R256) and the
 //! queue-time helpers the queue and the rooms share (`read_mode_choice`, `freeze_choice`,
-//! `assert_not_in_series`; R253, R257, R264).
+//! `assert_free_to_play`; R253, R257, R264).
 //!
 //! Not a test of D1–D4, T1–T3 or L1–L6: those live in the shared validator
 //! (`jackioh_engine::validator`) and are tested there. Here the questions are the endpoints' own:
@@ -33,7 +33,7 @@ use jackioh_engine::validator::{
     DeckDraftInput, check_deck_draft, check_import_room, check_trio_draft, normalize_name, validate_deck,
 };
 use jackioh_engine::wire::emotes::{PORTRAIT_IDS, is_portrait_id};
-use jackioh_server::api::decks::{assert_not_in_series, freeze_choice, read_mode_choice};
+use jackioh_server::api::decks::{assert_free_to_play, freeze_choice, read_mode_choice};
 use jackioh_server::api::http::{ApiError, ApiErrorCode, AuthLevel};
 use jackioh_server::app::{self, App, now_ms};
 use jackioh_server::config::{
@@ -1810,7 +1810,7 @@ mod assert_not_in_series_r264 {
     async fn r264_refuses_a_profile_in_a_series_that_is_not_over_naming_the_series() {
         let ctx = setup().await;
         store!(ctx.app, series_create(&series("picking")));
-        let error = assert_not_in_series(&ctx.app, PROFILE)
+        let error = assert_free_to_play(&ctx.app, PROFILE)
             .await
             .expect_err("in a series");
         assert!(matches!(error.code, ApiErrorCode::AlreadyInMatch));
@@ -1822,6 +1822,6 @@ mod assert_not_in_series_r264 {
     async fn r264_s_control_a_series_that_is_over_holds_nobody() {
         let ctx = setup().await;
         store!(ctx.app, series_create(&series("over")));
-        assert!(assert_not_in_series(&ctx.app, PROFILE).await.is_ok());
+        assert!(assert_free_to_play(&ctx.app, PROFILE).await.is_ok());
     }
 }
