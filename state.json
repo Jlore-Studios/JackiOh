@@ -15494,6 +15494,12 @@
         "number": 1040,
         "title": "Patch v0.3.Y: the game log stays where its reader scrolled, and every line that names a card opens it",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-10-16T04:43:19Z",
+        "number": 1000,
+        "title": "Architecture: the fuzz gate plays custom-card games",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "idle_since": "2026-10-16T02:32:48Z",
