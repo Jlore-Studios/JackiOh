@@ -1,5 +1,8 @@
 // `/account` — who you are signed in as, how you have done, and the way out.
 //
+// LAYOUT: first paint is the summary only (signed-in identity, rank, record, sign out); username
+// change, email change, two-step, and delete mount only inside "Manage sign-in & account" once opened.
+//
 // NO SPEC DRIVES THIS SCREEN. §9.4 gives an account a status, §9.5 a results history and §9.12
 // a visible rank; none of it was reachable from the client, so a player could not see which
 // address they were signed in as, could not see their record, and — the one that actually traps
@@ -29,7 +32,7 @@
 // Only then does this device forget the session, the way signing out does, and load the landing
 // page. A refusal leaves everything as it was and says why.
 
-import { useEffect, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
+import { useEffect, useId, useState, useSyncExternalStore, type FormEvent, type ReactElement } from "react";
 
 import { AUTH_SIGN_OUT_WAIT_SECONDS } from "@jackioh/server-config";
 import {
@@ -67,6 +70,8 @@ export const accountTestid = {
   rank: "account-rank",
   badges: "account-badges",
   leaderboard: "account-leaderboard",
+  manage: "account-manage",
+  manageToggle: "account-manage-toggle",
   record: "account-record",
   winRate: "account-win-rate",
   signOut: "account-sign-out",
@@ -209,6 +214,7 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [rank, setRank] = useState<OwnRankResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [manageOpen, setManageOpen] = useState(false);
 
   useEffect(() => {
     if (pending) return;
@@ -249,10 +255,6 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           <p className="notice" data-testid={accountTestid.error} role="alert">
             {t(error)}
           </p>
-        ) : null}
-
-        {username !== undefined ? (
-          <AccountUsername token={token} own={username} canChange={me?.profile.status === "active"} />
         ) : null}
 
         {pending && me !== undefined ? (
@@ -330,15 +332,19 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
           </>
         ) : null}
 
-        {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
-        <ChangeEmail />
-
-        {/* R665: an authenticator app for this account. */}
-        <TwoStepSettings token={token} />
+        <AccountManage
+          open={manageOpen}
+          onToggle={() => {
+            setManageOpen(!manageOpen);
+          }}
+          token={token}
+          own={username}
+          canChange={me?.profile.status === "active"}
+        />
 
         <div className="account-session">
           <p>
-            {t("Signing out ends this session: this device forgets it, and it is revoked so no copy of it works again. Your account and decks are unaffected.")}
+            {t("Signing out forgets this session on this device and revokes it.")}
           </p>
           <div className="account-actions">
             <button
@@ -352,9 +358,57 @@ export default function AccountRoute({ token, me }: AccountRouteProps): ReactEle
             </button>
           </div>
         </div>
-
-        <DeleteAccount token={token} />
       </section>
+    </div>
+  );
+}
+
+/**
+ * "Manage sign-in & account": the rare and destructive options behind a second click, so the
+ * summary above fits a phone screen. Closed, only the toggle renders: the username field, the
+ * email form, the two-step panel, and the delete confirmation mount only once opened, so they
+ * make no network or focus demands until asked.
+ */
+function AccountManage({
+  open,
+  onToggle,
+  token,
+  own,
+  canChange,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  token: string;
+  own: OwnUsername | undefined;
+  canChange: boolean;
+}): ReactElement {
+  const bodyId = useId();
+  return (
+    <div className="account-manage" data-testid={accountTestid.manage}>
+      <div className="account-actions">
+        <button
+          type="button"
+          className="account-manage__toggle"
+          data-testid={accountTestid.manageToggle}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {t("Manage sign-in & account")}
+        </button>
+      </div>
+      {open ? (
+        <div className="account-manage__body" id={bodyId}>
+          {own !== undefined ? (
+            <AccountUsername token={token} own={own} canChange={canChange} />
+          ) : null}
+          {/* R663: the email change, through the auth provider (it renders nothing signed out). */}
+          <ChangeEmail />
+          {/* R665: an authenticator app for this account. */}
+          <TwoStepSettings token={token} />
+          <DeleteAccount token={token} />
+        </div>
+      ) : null}
     </div>
   );
 }
