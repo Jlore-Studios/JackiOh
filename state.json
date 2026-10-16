@@ -871,11 +871,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-10-16T04:59:01Z",
+        "at": "2026-10-16T05:37:20Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Least sure whether static AI reads are 'the AI's search' or medium; they hold as hard because the rule maps all of crates/ai/src/ there and move order drives the lethal walk."
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule line 5 fails outright: every source edit is in crates/ai/src/ (move order, the reply model, face_threat), which the rule rates hard"
       },
       "failures": 0,
       "forced": false,
