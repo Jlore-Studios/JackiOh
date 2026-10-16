@@ -828,6 +828,14 @@ export const SHARE_FRIEND_ERROR = "share-friend-error";
 export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
 
 export const SETTING_ALLOW_SPECTATORS = "setting-allowSpectators";
+
+// R738, R643: the opponent's aim and the emote layer, mirroring the literals in
+// apps/web/src/game/aim/OpponentAim.tsx and apps/web/src/emotes/ui.tsx.
+export const OPPONENT_AIM = "opponent-aim";
+export const OPPONENT_AIM_ARROW = "opponent-aim-arrow";
+export const EMOTE_BUBBLE = "emote-bubble";
+export const EMOTE_MUTE_MENU = "emote-mute-menu";
+export const EMOTE_MUTE = "emote-mute";
 // #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65): the
 // co-op panel's, the board's (its life strip, teammate strip, portal, pass control and pings), and
 // the slice's own chrome after them.

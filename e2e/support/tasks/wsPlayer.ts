@@ -24,12 +24,16 @@ type Client = {
 export type WsPlayerCommand =
   | { action: "connect"; name: string; url?: string; token?: string; matchId?: string; roomCode?: string; seat?: "p1" | "p2" }
   | { action: "send"; name: string; body: Record<string, unknown> }
+  | { action: "sendFrame"; name: string; frame: CosmeticFrame }
   | { action: "awaitView"; name: string; where?: ViewPredicate }
   | { action: "view"; name: string }
   | { action: "messages"; name: string }
   | { action: "disconnect"; name: string }
   | { action: "concede"; name: string; url?: string; token: string; matchId: string; seat?: "p1" | "p2" }
   | { action: "reset" };
+
+/** R738, R643: a top-level cosmetic frame (an aim or an emote). The server never answers one. */
+export type CosmeticFrame = { type: "aim"; aim: Record<string, unknown> | null } | { type: "emote"; emote: string };
 
 export type ViewPredicate = {
   active?: string;
@@ -222,6 +226,16 @@ async function send(command: Extract<WsPlayerCommand, { action: "send" }>): Prom
   };
 }
 
+/** R738, R643: an aim or an emote goes out as it is, with no nonce, and nothing is awaited. */
+function sendFrame(command: Extract<WsPlayerCommand, { action: "sendFrame" }>): WsPlayerResult {
+  const record = client(command.name);
+  if (record.socket.readyState !== WebSocket.OPEN) {
+    return { ok: false, name: command.name, error: `wsPlayer(${command.name}): the socket is not open` };
+  }
+  record.socket.send(JSON.stringify(command.frame));
+  return { ok: true, name: command.name };
+}
+
 async function awaitView(command: Extract<WsPlayerCommand, { action: "awaitView" }>): Promise<WsPlayerResult> {
   const record = client(command.name);
   const where = command.where ?? {};
@@ -283,6 +297,8 @@ export async function wsPlayer(command: WsPlayerCommand): Promise<WsPlayerResult
         return await connect(command);
       case "send":
         return await send(command);
+      case "sendFrame":
+        return sendFrame(command);
       case "awaitView":
         return await awaitView(command);
       case "view":
