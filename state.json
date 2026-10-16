@@ -1296,6 +1296,9 @@
         }
       }
     },
+    "1062": {
+      "suggestion": true
+    },
     "1066": {
       "action": "review",
       "asks": [],
