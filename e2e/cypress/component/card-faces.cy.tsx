@@ -13,6 +13,9 @@
 //        clamped rules box instead stays inside the face at the reading floor (FIT_FLOOR_PX).
 //        A hero portrait's full-art face (R1017001) has only its name to fit: it carries
 //        data-full-art and prints no rules box.
+//   R1017002  every card the homescreen's hand can deal (`rotationPool`, the widest pool), both
+//        faces, at the fan's widest card (FAN_CARD_MAX_PX): no long layout, no clamp, the name and
+//        text inside their boxes.
 //   §10.10  faces in play (the live card, `faceModel` with `inPlay`): a fused card's text a line
 //        per ingredient, each of #98's thirteen rolled powers on both faces, Call to Chaos's ???, a
 //        Vanilla unit with the keywords it kept — all inside their boxes at 270 and 170 px; and
@@ -47,6 +50,7 @@ import { FIT_FLOOR_PX } from "../../../apps/web/src/cards/constants.ts";
 import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { CatalogContext, lookupFromDefs } from "../../../apps/web/src/game/catalog.ts";
 import Game from "../../../apps/web/src/game/Game.tsx";
+import { FAN_CARD_MAX_PX, rotationPool } from "../../../apps/web/src/routes/landingFan.ts";
 import { baseView, card, emptySide, fullBoardView, fusedDef, pendingFor } from "../../../apps/web/src/test/fixtures.ts";
 
 type CardDef = (typeof CATALOG)[string];
@@ -232,6 +236,33 @@ describe("B15: every catalog face fits its name and rules text at 270 px and 170
         });
       });
     }
+  }
+});
+
+/* ------------------------------------------------------------------------------- R1017002 */
+
+describe("R1017002: every card the homescreen's hand can deal prints whole on a fan card", () => {
+  const FAN_DEFS = rotationPool(true);
+  const fanBox: FitBox = { width: FAN_CARD_MAX_PX, clampAllowed: false };
+
+  for (const face of FACES) {
+    it(`R1017002 every ${face.label} face the fan can deal, at ${FAN_CARD_MAX_PX}px wide, keeps its art's room and its whole text`, () => {
+      const height = heightFor(FAN_CARD_MAX_PX);
+      cy.mount(
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", gap: 8, padding: 8 }}>
+          {FAN_DEFS.map((def) => (
+            <div key={def.id} data-fit-box={def.id} style={{ width: FAN_CARD_MAX_PX, height, flex: "none" }}>
+              <CardFace face={faceModel({ defId: def.id, def, radiant: face.radiant })} layout="full" />
+            </div>
+          ))}
+        </div>,
+      );
+      cy.get("[data-fit-box] > .cf").should("have.length", FAN_DEFS.length);
+      cy.document({ log: false, timeout: SETTLE_TIMEOUT_MS }).should((doc) => {
+        const problems = FAN_DEFS.flatMap((def) => fitProblems(doc, def, fanBox, face.radiant));
+        expect(problems, `R1017002 ${face.label} fan faces at ${String(FAN_CARD_MAX_PX)}px`).to.deep.equal([]);
+      });
+    });
   }
 });
 
