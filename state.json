@@ -1356,6 +1356,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "1065": {
+      "suggestion": true
+    },
     "1066": {
       "action": "review",
       "asks": [],
