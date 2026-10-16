@@ -2,8 +2,10 @@
 //!   Base:    "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, make this Radiant."
 //!   Radiant: "Costs ({discount}) less for each card in your hand.\nEnd of turn: If your hand is full, this gains +{buff}/+{buff}."
 //! Engine: a cost hook as C+ #64 Mulch Muncher's (R65, floor 0), counting the hand itself included
-//!   (MD-D33, R1065); at its controller's end of turn with a full hand the base face makes itself
-//!   Radiant (§5.2) and the Radiant face buffs +8/+8.
+//!   (MD-D33, R1065); at its controller's end of turn with a full hand, its player's hand cap
+//!   (`hand_cap_of`, R1143), the base face makes itself Radiant (§5.2) and the Radiant face buffs +8/+8.
+//!   `script_v0_3_7b` keeps the end of turn that read the default cap for the replays of v0.3.7b and
+//!   before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -26,9 +28,18 @@ fn giant_cost() -> CostHook {
     })
 }
 
-fn giant_end(radiant_face: bool) -> Hook {
+/// Which hand cap "full" reads: `hand_cap_of` today, `default_hand_cap` in the script v0.3.7b kept.
+type CapOf = fn(&GameState, PlayerId) -> i32;
+
+/// R767000: `HAND_CAP` whatever hand size the player has set: what the end of turn read as full
+/// through v0.3.7b (`script_v0_3_7b`).
+fn default_hand_cap(_: &GameState, _: PlayerId) -> i32 {
+    HAND_CAP
+}
+
+fn giant_end(radiant_face: bool, cap_of: CapOf) -> Hook {
     hook(move |ctx| {
-        if zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) < HAND_CAP {
+        if zone_count(ctx.state, ctx.controller, OffFieldZone::Hand) < cap_of(ctx.state, ctx.controller) {
             return vec![];
         }
         if radiant_face {
@@ -40,19 +51,31 @@ fn giant_end(radiant_face: bool) -> Hook {
     })
 }
 
-pub fn script() -> CardScripts {
+/// Both faces, "full" read by `cap_of`.
+fn scripts(cap_of: CapOf) -> CardScripts {
     CardScripts {
         base: Script {
             cost: Some(giant_cost()),
-            end_of_turn: Some(giant_end(false)),
+            end_of_turn: Some(giant_end(false, cap_of)),
             ..Script::default()
         },
         radiant: Script {
             cost: Some(giant_cost()),
-            end_of_turn: Some(giant_end(true)),
+            end_of_turn: Some(giant_end(true, cap_of)),
             ..Script::default()
         },
     }
+}
+
+pub fn script() -> CardScripts {
+    scripts(hand_cap_of)
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, whose end of turn read a full hand
+/// as `HAND_CAP` cards, not its player's hand cap (R1143); `KEPT_SCRIPTS` folds those versions'
+/// replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    scripts(default_hand_cap)
 }
 
 // M #74 Montaña Giant — SPEC §8.8 row 74, BUILD M10 row M 74.
@@ -150,5 +173,40 @@ mod tests {
         step_param(s.card_mut(GIANT), "buff", 1);
         s.end_turn();
         s.expect_stats(GIANT, json!({ "attack": 26, "maxHealth": 26 }));
+    }
+
+    /// The Giant on p1's field (Radiant on `radiant`), `held` cards in p1's hand and p1's hand cap set
+    /// to 12, as Touched by KY's Cry sets it (R1143); then p1 ends the turn.
+    fn end_turn_at_cap_12(radiant: bool, held: usize) -> Scenario {
+        let mut s = scenario(json!({
+            "p1": { "hand": vec![json!(FILLER); held], "field": [{ "def": GIANT, "lane": 1, "radiant": radiant }] },
+            "p2": { "hand": [FILLER] },
+        }));
+        s.state_mut().players[PlayerId::P1].hand_cap = Some(12);
+        s.end_turn();
+        s
+    }
+
+    #[test]
+    fn r1143_with_a_hand_size_of_12_ten_cards_leave_it_base_and_twelve_make_it_radiant() {
+        crate::register_all();
+        assert!(!end_turn_at_cap_12(false, 10).card(GIANT).radiant);
+        assert!(end_turn_at_cap_12(false, 12).card(GIANT).radiant);
+    }
+
+    #[test]
+    fn r1143_with_a_hand_size_of_12_the_radiant_face_gains_nothing_at_ten_cards_and_8_8_at_twelve() {
+        crate::register_all();
+        end_turn_at_cap_12(true, 10).expect_stats(GIANT, json!({ "attack": 16, "maxHealth": 16 }));
+        end_turn_at_cap_12(true, 12).expect_stats(GIANT, json!({ "attack": 24, "maxHealth": 24 }));
+    }
+
+    #[test]
+    fn r1143_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_whose_full_hand_is_10() {
+        crate::register_all();
+        let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+        jackioh_engine::with_shipped(Some(shipped), || {
+            assert!(end_turn_at_cap_12(false, 10).card(GIANT).radiant);
+        });
     }
 }
