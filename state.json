@@ -15876,11 +15876,11 @@
         "why": "rejected by @MaxGoetzmann"
       }
     ],
-    "idle_since": "2026-10-16T21:33:39Z",
-    "last_run": "2026-10-16T21:33:39Z",
-    "provider": "claude-1",
+    "idle_since": "2026-10-16T20:32:52Z",
+    "last_run": "2026-10-16T19:00:13Z",
+    "provider": null,
     "requested": false,
-    "run_id": "38970117846",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
