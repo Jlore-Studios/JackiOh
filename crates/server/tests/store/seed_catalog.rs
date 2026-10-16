@@ -458,8 +458,8 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
             "core-013",
             "core-014",
         ];
-        // R1420: the Meditative set's three, #87 Tatches the Totem, #97 Jlockheed's Evil
-        // Blueprints and its token #97.9 Jlockheed's Headquarters, once it ships.
+        // R1420: the Meditative set's three, #87 Tatches the Totem, #97 Jlockeed's Evil
+        // Blueprints and its token #97.9 Jlockeed's Headquarters, once it ships.
         if set_ships(SetName::Meditative) {
             expected.extend(["meditative-087", "meditative-097", "meditative-097-9"]);
         }

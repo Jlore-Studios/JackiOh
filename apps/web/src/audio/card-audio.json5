@@ -1158,7 +1158,7 @@
     "classicplus-047": { // Jogg's Box
       cast: { voice: "sapi-trickster", text: "What's in the box? Surprise!" },
     },
-    "classicplus-048": { // Jlockheed's Lobbyist
+    "classicplus-048": { // Jlockeed's Lobbyist
       play: { voice: "sapi-bureaucrat", text: "Defense spending is patriotic." },
       attack: { voice: "sapi-bureaucrat", text: "Funding the offensive." },
       death: { voice: "sapi-bureaucrat", text: "Contract, terminated." },
@@ -1171,12 +1171,12 @@
     "classicplus-050": { // Adaptive Growth
       cast: { voice: "sapi-heroine", text: "Grow, adapt, overcome." },
     },
-    "classicplus-051": { // Jlockheed's J15 Fighter
+    "classicplus-051": { // Jlockeed's J15 Fighter
       play: { voice: "sapi-hero", text: "Fox two! Weapons hot!", effect: "jetZoom" },
       attack: { voice: "sapi-hero", text: "Bombs away!", effect: "jetZoom" },
       death: { voice: "sapi-hero", text: "Mayday, mayday!", effect: "explosion" },
     },
-    "classicplus-052": { // Jlockheed's Permanent Defense Contract
+    "classicplus-052": { // Jlockeed's Permanent Defense Contract
       cast: { voice: "sapi-bureaucrat", text: "Sign here. Renews automatically, forever." },
     },
     "classicplus-053": { // Book of Tokens
@@ -1781,7 +1781,7 @@
     "meditative-096-1": { // Journey Complete
       cast: { voice: "elder", text: "You have returned, and shine brighter." },
     },
-    "meditative-097": { // Jlockheed's Evil Blueprints
+    "meditative-097": { // Jlockeed's Evil Blueprints
       cast: { voice: "sapi-villain", text: "Phase one of the master plan." },
     },
     "meditative-097-1": { // Empty Plot
@@ -1824,7 +1824,7 @@
       attack: { voice: "guard", text: "Lockdown!" },
       death: { voice: "guard", text: "Prison break!" },
     },
-    "meditative-097-9": { // Jlockheed's Headquarters
+    "meditative-097-9": { // Jlockeed's Headquarters
       play: { voice: "robot", text: "Headquarters online. Begin the contracts." },
       attack: { voice: "robot", text: "Deploying contractors." },
       death: { voice: "robot", text: "Evacuate the building!" },

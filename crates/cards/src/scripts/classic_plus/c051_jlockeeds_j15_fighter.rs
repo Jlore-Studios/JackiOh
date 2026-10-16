@@ -1,4 +1,4 @@
-//! C+ #51 Jlockheed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
+//! C+ #51 Jlockeed's J15 Fighter (SPEC §8.7 row 51). (3) Unit, Jlockeed, Epic, 7/2 → 14/4.
 //!   Base:    "First Strike, Rush. Can't be in Defense Position. Can't be attacked."
 //!   Radiant: "First Strike, Rush, Divine Shield" and the same.
 //!   Engine:  "Can't be attacked (§6.1, §4.2 step 2): no attack may name it, a forced one included (a
@@ -27,7 +27,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #51 Jlockheed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "First Strike, Rush;
+// C+ #51 Jlockeed's J15 Fighter — SPEC §8.7 row 51, BUILD M9 Classic+ row C+ 51: "First Strike, Rush;
 // cannot be in Defense Position; can't be attacked: never the target of a declared or forced attack (a
 // random-enemy forced attack never draws it), while effects still target it and "all" effects hit it;
 // a Taunt given to it binds no attacker; radiant 14/4 with Divine Shield too".

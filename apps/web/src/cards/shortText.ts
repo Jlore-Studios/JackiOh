@@ -9,7 +9,7 @@
 //   stop: #98 Heroic Power's thirteen powers, Meditative #8 Reach the Summit's eleven levels,
 //   Combo-Index's grades, Mind Games' and Fortify Mind's three choices, and YileGPT Unleashed's list
 //   of Cries; and a few faces that fit, whose last line is a reminder or the designer's flavour
-//   that the click-in carries (Tesla, Jade Beauty, Jlockheed's Evil Blueprints);
+//   that the click-in carries (Tesla, Jade Beauty, Jlockeed's Evil Blueprints);
 // - "colon": up to its first colon, "…" in its place: the three Call to Chaos editions, whose list
 //   must stay whole in the catalog (each roll's label is a clause of it, R436);
 // - "clamp": its whole text, cut by the rules box at its last line with "…": eight faces still about

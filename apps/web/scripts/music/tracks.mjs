@@ -1443,7 +1443,7 @@ const INTRO_CARDS = [
       tonic: "G", mode: "major", bpm: 112,
     },
   },
-  { card: "classicplus-048", name: "Jlockheed's Lobbyist", set: "Classic+", type: "Unit", tags: ["Jlockeed"], rarity: "Legendary" },
+  { card: "classicplus-048", name: "Jlockeed's Lobbyist", set: "Classic+", type: "Unit", tags: ["Jlockeed"], rarity: "Legendary" },
   { card: "classicplus-065-4", name: "Golden Grape", set: "Classic+", type: "Spell", tags: ["Fruit", "Token"], rarity: "Legendary" },
   {
     card: "classicplus-065-5", name: "Mythic Grape", set: "Classic+", type: "Spell", tags: ["Fruit", "Token"], rarity: "Mythic",
@@ -1649,7 +1649,7 @@ const INTRO_CARDS = [
     tune: { palette: { lead: GM.tuba, second: GM.trombone, bass: GM.contrabass, color: GM.dulcimer, style: "march", center: 52 } },
   },
   {
-    card: "meditative-097", name: "Jlockheed's Evil Blueprints", set: "Meditative", type: "Spell", tags: ["Jlockeed"], rarity: "Mythic",
+    card: "meditative-097", name: "Jlockeed's Evil Blueprints", set: "Meditative", type: "Spell", tags: ["Jlockeed"], rarity: "Mythic",
     // Its theme's drafting table: synth brass on the motif in C minor, a sly answer through the raised seventh.
     tune: {
       tonic: "C", mode: "minor", bpm: 112, prog: ["i", ["V+", "i"]],
@@ -1661,7 +1661,7 @@ const INTRO_CARDS = [
     // A cell door: a trombone over string tremolo, a timpani stroke and a bell's clang falling.
     tune: { palette: { lead: GM.trombone, second: GM.tremolo, bass: GM.contrabass, color: GM.bells, style: "dark", center: 60 }, mode: "harmonic" },
   },
-  { card: "meditative-097-9", name: "Jlockheed's Headquarters", set: "Meditative", type: "Unit", tags: ["Jlockeed", "Token"], rarity: "Mythic" },
+  { card: "meditative-097-9", name: "Jlockeed's Headquarters", set: "Meditative", type: "Unit", tags: ["Jlockeed", "Token"], rarity: "Mythic" },
 ];
 
 /* ------------------------------------------------------------------------------------------- *

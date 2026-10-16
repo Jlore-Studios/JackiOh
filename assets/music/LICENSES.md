@@ -109,7 +109,7 @@ attribution is required when they play in the game.
 | `intro-classicplus-046` | `apps/web/public/audio/music/intro-classicplus-046.m4a` | Intro of Classic+ #46 Felinor Flagbearer (Legendary): pizzicato, strings, E harmonic minor, 4/4 at 129 | 4.7 s |
 | `intro-classicplus-046-1` | `apps/web/public/audio/music/intro-classicplus-046-1.m4a` | Intro of Classic+ #46.1 Felinor Flagbearer Prime (token printed Legendary): pizzicato, strings, A major, 4/4 at 149 | 4.2 s |
 | `intro-classicplus-047` | `apps/web/public/audio/music/intro-classicplus-047.m4a` | Intro of Classic+ #47 Jogg's Box (Legendary): music box, strings, cello, G major, 4/4 at 112 | 5.3 s |
-| `intro-classicplus-048` | `apps/web/public/audio/music/intro-classicplus-048.m4a` | Intro of Classic+ #48 Jlockheed's Lobbyist (Legendary): synth brass, strings, contrabass, E minor, 4/4 at 107 | 5.5 s |
+| `intro-classicplus-048` | `apps/web/public/audio/music/intro-classicplus-048.m4a` | Intro of Classic+ #48 Jlockeed's Lobbyist (Legendary): synth brass, strings, contrabass, E minor, 4/4 at 107 | 5.5 s |
 | `intro-classicplus-065-4` | `apps/web/public/audio/music/intro-classicplus-065-4.m4a` | Intro of Classic+ #65.4 Golden Grape (token printed Legendary): marimba, kalimba, double bass, G-flat major, 4/4 at 141 | 4.4 s |
 | `intro-classicplus-065-5` | `apps/web/public/audio/music/intro-classicplus-065-5.m4a` | Intro of Classic+ #65.5 Mythic Grape (token printed Mythic): marimba, kalimba, double bass, D lydian, 4/4 at 112 | 5.3 s |
 | `intro-classicplus-073` | `apps/web/public/audio/music/intro-classicplus-073.m4a` | Intro of Classic+ #73 Call to Chaos (Classic+ Edition) (Legendary): square lead, xylophone, tuba, E harmonic minor, 4/4 at 144 | 4.3 s |
@@ -147,9 +147,9 @@ attribution is required when they play in the game.
 | `intro-meditative-087` | `apps/web/public/audio/music/intro-meditative-087.m4a` | Intro of Meditative #87 Tatches the Totem (Legendary): dulcimer, strings, double bass, G-flat dorian, 3/4 at 134 | 5.0 s |
 | `intro-meditative-095` | `apps/web/public/audio/music/intro-meditative-095.m4a` | Intro of Meditative #95 Call to Chaos (Meditative Edition) (Legendary): dulcimer, xylophone, tuba, D dorian, 4/4 at 140 | 4.4 s |
 | `intro-meditative-095-1` | `apps/web/public/audio/music/intro-meditative-095-1.m4a` | Intro of Meditative #95.1 CN Golem (token printed Legendary): tuba, trombone, contrabass, D dorian, 4/4 at 128 | 4.8 s |
-| `intro-meditative-097` | `apps/web/public/audio/music/intro-meditative-097.m4a` | Intro of Meditative #97 Jlockheed's Evil Blueprints (Mythic): synth brass, strings, contrabass, C minor, 4/4 at 112 | 5.3 s |
+| `intro-meditative-097` | `apps/web/public/audio/music/intro-meditative-097.m4a` | Intro of Meditative #97 Jlockeed's Evil Blueprints (Mythic): synth brass, strings, contrabass, C minor, 4/4 at 112 | 5.3 s |
 | `intro-meditative-097-8` | `apps/web/public/audio/music/intro-meditative-097-8.m4a` | Intro of Meditative #97.8 Prison (token printed Legendary): trombone, string tremolo, contrabass, B-flat harmonic minor, 4/4 at 105 | 5.6 s |
-| `intro-meditative-097-9` | `apps/web/public/audio/music/intro-meditative-097-9.m4a` | Intro of Meditative #97.9 Jlockheed's Headquarters (token printed Mythic): synth brass, strings, contrabass, A-flat dorian, 4/4 at 109 | 5.4 s |
+| `intro-meditative-097-9` | `apps/web/public/audio/music/intro-meditative-097-9.m4a` | Intro of Meditative #97.9 Jlockeed's Headquarters (token printed Mythic): synth brass, strings, contrabass, A-flat dorian, 4/4 at 109 | 5.4 s |
 
 ## Third-party material
 

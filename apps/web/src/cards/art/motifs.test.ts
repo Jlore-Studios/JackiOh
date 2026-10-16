@@ -241,7 +241,7 @@ describe("R503 a card's motif comes from its name", () => {
       ["classic-003", "cross"], // Book of Heal
       ["classic-009", "coins"], // Income Tax
       ["classic-038", "coins"], // Jackiestan Auctioneer
-      ["classicplus-048", "coins"], // Jlockheed's Lobbyist
+      ["classicplus-048", "coins"], // Jlockeed's Lobbyist
       ["classicplus-055", "coins"], // Book of Greed
       ["classicplus-078", "circuits"], // Claude's Datacenter
       ["classicplus-043", "circuits"], // AI Slop

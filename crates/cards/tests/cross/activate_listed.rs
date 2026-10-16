@@ -973,7 +973,7 @@ mod m_n97_6_university {
     }
 }
 
-mod m_n97_9_jlockheeds_headquarters {
+mod m_n97_9_jlockeeds_headquarters {
     use super::*;
 
     #[test]

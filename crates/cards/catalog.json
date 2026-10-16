@@ -9224,7 +9224,7 @@
   "classicplus-048": {
     "id": "classicplus-048",
     "index": "48",
-    "name": "Jlockheed's Lobbyist",
+    "name": "Jlockeed's Lobbyist",
     "set": "Classic+",
     "type": "Unit",
     "tags": [
@@ -9248,13 +9248,13 @@
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockheed card to your hand. It costs ({setCost})."
+      "text": "Can't be in Defense Position.\nDeath: Add a random Jlockeed card to your hand. It costs ({setCost})."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "Death: Add a random Radiant Jlockheed card to your hand. It costs ({setCost})."
+      "text": "Death: Add a random Radiant Jlockeed card to your hand. It costs ({setCost})."
     }
   },
   "classicplus-049": {
@@ -9340,7 +9340,7 @@
   "classicplus-051": {
     "id": "classicplus-051",
     "index": "51",
-    "name": "Jlockheed's J15 Fighter",
+    "name": "Jlockeed's J15 Fighter",
     "set": "Classic+",
     "type": "Unit",
     "tags": [
@@ -9383,7 +9383,7 @@
   "classicplus-052": {
     "id": "classicplus-052",
     "index": "52",
-    "name": "Jlockheed's Permanent Defense Contract",
+    "name": "Jlockeed's Permanent Defense Contract",
     "set": "Classic+",
     "type": "Spell",
     "tags": [
@@ -9414,11 +9414,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "For the rest of the game.\nStart of turn: Add {cards|random Jlockheed card|random Jlockheed cards} to your hand."
+      "text": "For the rest of the game.\nStart of turn: Add {cards|random Jlockeed card|random Jlockeed cards} to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "For the rest of the game.\nStart of turn: Add {cards|random Radiant Jlockheed card|random Radiant Jlockheed cards} to your hand. Each costs ({discount}) less."
+      "text": "For the rest of the game.\nStart of turn: Add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand. Each costs ({discount}) less."
     }
   },
   "classicplus-053": {
@@ -15278,7 +15278,7 @@
   "meditative-097": {
     "id": "meditative-097",
     "index": "97",
-    "name": "Jlockheed's Evil Blueprints",
+    "name": "Jlockeed's Evil Blueprints",
     "set": "Meditative",
     "type": "Spell",
     "tags": [
@@ -15301,11 +15301,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters.\nPiece together the blueprint."
+      "text": "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockeed's Headquarters.\nPiece together the blueprint."
     },
     "radiant": {
       "keywords": [],
-      "text": "Discover a Radiant building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockheed's Headquarters.\nPiece together the Radiant blueprint."
+      "text": "Discover a Radiant building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The Great Wall, Prison or Jlockeed's Headquarters.\nPiece together the Radiant blueprint."
     }
   },
   "meditative-097-1": {
@@ -15693,7 +15693,7 @@
   "meditative-097-9": {
     "id": "meditative-097-9",
     "index": "97.9",
-    "name": "Jlockheed's Headquarters",
+    "name": "Jlockeed's Headquarters",
     "set": "Meditative",
     "type": "Unit",
     "tags": [
@@ -15716,7 +15716,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockheed Units."
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate: Fill your board with random Jlockeed Units."
     },
     "radiant": {
       "attack": 0,
@@ -15729,7 +15729,7 @@
           "kind": "Can't attack"
         }
       ],
-      "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockheed Units."
+      "text": "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockeed Units."
     }
   },
   "meditative-098": {

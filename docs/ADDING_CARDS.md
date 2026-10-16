@@ -170,7 +170,9 @@ shipped version's definitions, rebuilt from the snapshots, and runs its own scri
 that changes what a card's script does, not only a number in its definition, keeps the script it
 replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
 `KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
-refused by their final hash rather than shown wrong.
+refused by their final hash rather than shown wrong. A script that writes its card's words into the
+state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game
+folds under, never `crate::card_def`, the build's: then a patch to those words keeps no script.
 
 `loc` is frozen data since v0.3.0: nothing recomputes it, and a refactor of an existing script leaves it as it is. A new card's comes
 from `cargo jackioh catalog loc crates/cards/src/scripts/<set>/<file>.rs` (its non-blank, non-comment, non-`use` lines above

@@ -202,7 +202,7 @@ fn expected_indices(set: &SetExpectation) -> Vec<String> {
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included — a census, so a tag
 /// that drifts onto or off a card fails here (R278: Jlockeed is Core #13 and #14's and the three
-/// Classic+ Jlockheed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
+/// Classic+ Jlockeed cards'). TS's `Record<Tag, number>`: the `match` is exhaustive over the union.
 /// Each count is Core's, Classic's and Classic+'s, plus the Meditative set's
 /// (docs/meditative-set.md M2's census of its 132 entries), which count once it ships (R1420).
 fn expected_tag_count(tag: Tag) -> usize {

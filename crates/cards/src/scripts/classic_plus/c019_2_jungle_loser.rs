@@ -109,7 +109,7 @@ mod tests {
     const BOT: &str = "classicplus-019-5";
     const TOP: &str = "classicplus-019-1";
     const VANILLA: &str = "core-008"; // 4/4
-    const FIGHTER: &str = "classicplus-051"; // Jlockheed's J15 Fighter: Can't be attacked
+    const FIGHTER: &str = "classicplus-051"; // Jlockeed's J15 Fighter: Can't be attacked
     const MROW: &str = "core-086"; // 1/1, Can't attack; Death: take control of the Unit that destroyed this
     const FILLER: &str = "core-005";
     const DECK: [&str; 6] = [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER];
@@ -273,7 +273,7 @@ mod tests {
             }
 
             #[test]
-            fn s4_2_step_2_a_unit_that_can_t_be_attacked_is_never_drawn_c_n51_jlockheed_s_j15_fighter() {
+            fn s4_2_step_2_a_unit_that_can_t_be_attacked_is_never_drawn_c_n51_jlockeed_s_j15_fighter() {
                 for seed in 1..=6 {
                     let mut s = always(jungle(
                         json!([]),
