@@ -8,7 +8,7 @@ import type {
   CraftVerb,
   Keyword,
 } from "../../wire/index.ts";
-import { CRAFT_MAX_N, CRAFT_VERB_PRICES } from "../../wire/engineConfig.ts";
+import { CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_MAX_N, CRAFT_VERB_PRICES } from "../../wire/engineConfig.ts";
 
 /** ME-CRAFT (Meditative #17, R880–R883): the block editor's pure recipe helpers. Every helper
  * returns a new recipe and leaves its argument alone, so the editor's state stays immutable. */
@@ -53,33 +53,32 @@ export const HAT_LABELS: Record<CraftHatKind, string> = {
   opponentAttacks: "Opponent attacks",
 };
 
-/** The hats a card type may take (R883), for what the palette offers and the canvas keeps. */
-export const HATS_FOR_TYPE: Record<CardType, readonly CraftHatKind[]> = {
-  Unit: ["cry", "death", "startOfTurn", "endOfTurn"],
-  Spell: ["whenCast"],
-  "Field Spell": ["cry", "startOfTurn", "endOfTurn"],
-  Trap: ["opponentPlaysUnit", "opponentPlaysSpell", "opponentAttacks"],
-  "Field Trap": [],
-};
+/** Whether a card type may take a hat: its `CRAFT_HAT_PRICES` row lists the type (R883). */
+export function takesHat(type: CardType, hat: CraftHatKind): boolean {
+  return CRAFT_HAT_PRICES.find((row) => row.hat === hat)?.types.includes(type) === true;
+}
+
+/** Whether a card type may take a keyword (R883): a Unit any, a Spell the `CRAFT_KEYWORD_PRICES`
+ * rows marked `spell`, any other type none. */
+export function takesKeyword(type: CardType, kind: Keyword["kind"]): boolean {
+  if (type === "Unit") return true;
+  return type === "Spell" && CRAFT_KEYWORD_PRICES.find((row) => row.kind === kind)?.spell === true;
+}
 
 function verbTakesN(verb: CraftVerb): boolean {
   return CRAFT_VERB_PRICES.find((row) => row.verb === verb)?.takesN === true;
 }
 
-/** The card's type. Fields its new type cannot hold are cleared; hats it cannot take are dropped. */
+/** The card's type. Fields its new type cannot hold are cleared; hats and keywords it cannot take are dropped. */
 export function setType(recipe: CraftRecipe, type: CardType): CraftRecipe {
-  const allowed = HATS_FOR_TYPE[type] ?? [];
   return {
     ...recipe,
     type,
     attack: type === "Unit" ? recipe.attack : 0,
     health: type === "Unit" ? recipe.health : 1,
-    keywords:
-      type === "Unit" || type === "Spell"
-        ? recipe.keywords.filter((block) => type === "Unit" || block.kind === "Lifesteal" || block.kind === "Pierce")
-        : [],
+    keywords: recipe.keywords.filter((block) => takesKeyword(type, block.kind)),
     echo: type === "Spell" ? recipe.echo : 0,
-    hats: recipe.hats.filter((hat) => allowed.includes(hat.hat)),
+    hats: recipe.hats.filter((hat) => takesHat(type, hat.hat)),
   };
 }
 
