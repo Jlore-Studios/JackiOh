@@ -219,6 +219,8 @@ export const CLOCK_YOU = "clock-you";
 export const CLOCK_OPPONENT = "clock-opponent";
 export const PROMPT_CLOCK = "prompt-clock";
 export const TURN_CLOCK = "turn-clock";
+/** §9.5: the opponent's disconnect grace while its socket is away (apps/web Clock.tsx `GraceLine`). */
+export const GRACE_OPPONENT = "grace-opponent";
 
 // A11: workshop selectors mirror `apps/web/src/game/deckbuilder/testids.ts` (§9.4; R250, R251, R253, R255, R256).
 
