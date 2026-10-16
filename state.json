@@ -1332,6 +1332,13 @@
     "1062": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T15:18:54Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "hard when the work is the AI's search (crates/ai/src/): the fix reorders round_robin in crates/ai/src/candidates.rs, so it holds directly"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
