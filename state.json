@@ -1832,6 +1832,13 @@
     "1076": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T20:46:36Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "rule 1 fails: 12 files across game/, cards/ and i18n, plus new badge CSS (visual polish); everything stays inside apps/web"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
