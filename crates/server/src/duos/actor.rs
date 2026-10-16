@@ -22,6 +22,10 @@
 //!    `(seed, log)` still folds the match exactly. The mulligan clock's expiry keeps each owing
 //!    person's whole hand (§13.2, R268): the AI's own mulligan never answers for a person (it may for a
 //!    seat past its grace, which the AI plays outright).
+//!  - The hard ceiling (§9.5, R1047000) is the one clock the engine does see: `MATCH_CEILING_MS` after
+//!    the row's `created_at`, never stored, the actor sends the engine's own `ceilingReached` as one
+//!    server action, and its `ceiling` draw ends the game and writes the result like any other end.
+//!    A rebuilt actor that arms past the deadline sends it at once, before anyone plays on.
 //!  - A move the AI decided is played only while the AI still plays the seat the way it decided it:
 //!    one decided for a seat past its grace is dropped once its person is back, whatever clock has
 //!    run out for them meanwhile, and the seat decides again (B37, B38).
@@ -60,10 +64,11 @@ use crate::bots::seat::r188_forbidden;
 use crate::config::{
     BOT_DECISION_DEADLINE_MS, BOT_WRITE_RETRY_MS, DISCONNECT_GRACE_MS, DUOS_AI_STEP_DELAY_MS,
     DUOS_MULLIGAN_CLOCK_MS, DUOS_PROMPT_CLOCK_MS, DUOS_ROUND_CLOCK_MS, MALFORMED_FRAMES_PER_WINDOW,
-    MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS, PING_RATE_LIMIT,
-    PING_RATE_WINDOW_MS, REJECTION_ALERT_WINDOW_MS,
+    MATCH_ACTIONS_PER_SECOND, MATCH_RECORD_RESULT_ATTEMPTS, MATCH_RECORD_RESULT_BACKOFF_MS,
+    MATCH_SERVER_ACTION_RETRY_MS, PING_RATE_LIMIT, PING_RATE_WINDOW_MS, REJECTION_ALERT_WINDOW_MS,
 };
 use crate::db::store::StoreError;
+use crate::duos::ceiling_at;
 use crate::duos::engine::{self, Pinned};
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
@@ -323,6 +328,7 @@ enum Expiry {
     Round { round: i32, timer: u64 },
     Prompt { seat: DuosSeat, timer: u64 },
     Grace { seat: DuosSeat, timer: u64 },
+    Ceiling { timer: u64 },
 }
 
 impl Expiry {
@@ -332,6 +338,7 @@ impl Expiry {
             Expiry::Round { .. } => "round",
             Expiry::Prompt { .. } => "prompt",
             Expiry::Grace { .. } => "grace",
+            Expiry::Ceiling { .. } => "ceiling",
         }
     }
 }
@@ -419,6 +426,8 @@ struct Core {
     prompt_clocks: [Option<(String, Countdown)>; 2],
     /// By `HUMAN_SEATS`: the prompt whose clock already ran out.
     prompt_expired: [Option<String>; 2],
+    /// R1047000: the hard ceiling's countdown (from the row), or its retry's.
+    ceiling: Option<Countdown>,
     /// By `DUOS_SEATS` (only a person's is ever set).
     forced: [Option<Forced>; 4],
     /// By `DUOS_SEATS`: a decision is under way for it.
@@ -515,6 +524,7 @@ pub fn create_duos_actor(app: Arc<App>, input: DuosActorInput) -> DuosActor {
         round_expired: None,
         prompt_clocks: [None, None],
         prompt_expired: [None, None],
+        ceiling: None,
         forced: [None, None, None, None],
         ai_busy: [false; 4],
         ai_cursor: [0; 4],
@@ -586,6 +596,7 @@ impl DuosActor {
                 let answer = self.apply(seat, nonce, body).await;
                 let _ = reply.send(answer);
             }
+            Task::Expire(Expiry::Ceiling { timer }) => self.on_ceiling(timer).await,
             Task::Expire(expiry) => self.on_expire(expiry),
             Task::AiMove {
                 seat,
@@ -823,6 +834,8 @@ impl DuosActor {
                         core.forced[slot(seat)] = Some(Forced::AnswerPrompt(choice));
                     }
                 }
+                // `run` hands the ceiling to `on_ceiling`.
+                Expiry::Ceiling { .. } => return,
                 Expiry::Grace { seat, timer } => {
                     let Some(index) = human(seat) else { return };
                     if !armed_by(core.grace[index].as_ref(), timer) {
@@ -851,7 +864,7 @@ impl DuosActor {
     // -----------------------------------------------------------------
 
     async fn on_arm(&self) {
-        let over = {
+        let (over, past_ceiling) = {
             let mut core = self.lock();
             // As R744 has it for a 1v1 match: a person no socket has reached yet is away from now,
             // so a seat nobody opens is the AI's once the grace runs out.
@@ -861,12 +874,70 @@ impl DuosActor {
                 }
             }
             self.sync_clocks(&mut core);
-            core.state.result.is_some()
+            let over = core.state.result.is_some();
+            let live = !over && !core.finished;
+            let left = ceiling_at(&self.shared.row) - now_ms();
+            if live && left > 0 {
+                core.ceiling = Some(self.countdown(left, |timer| Expiry::Ceiling { timer }));
+            }
+            (over, live && left <= 0)
         };
         if over {
             self.on_terminal().await;
+        } else if past_ceiling {
+            // R1047000: folded back past its ceiling, the match ends before anyone plays on.
+            self.reach_ceiling().await;
         } else {
             self.drive_ai();
+        }
+    }
+
+    /// R1047000: the ceiling's countdown ran out (or its retry's did).
+    async fn on_ceiling(&self, timer: u64) {
+        {
+            let mut core = self.lock();
+            if !armed_by(core.ceiling.as_ref(), timer) {
+                return;
+            }
+            core.ceiling = None;
+        }
+        self.reach_ceiling().await;
+    }
+
+    /// R1047000: one `ceilingReached` in duel 0, stamped a1 (R146: the ceiling is no seat's), ends the
+    /// whole game as the duel's draw does (`ceiling`), and `after_change` writes the result. A write
+    /// that could not be logged is tried again `MATCH_SERVER_ACTION_RETRY_MS` later (R776000).
+    async fn reach_ceiling(&self) {
+        let seq = {
+            let core = self.lock();
+            if core.stopped || core.finished || core.state.result.is_some() {
+                return;
+            }
+            core.next_seq
+        };
+        tracing::info!(event = "duos.clock.expired", matchId = %self.match_id_str(), kind = "ceiling");
+        let reply = self
+            .apply(
+                DuosSeat::A1,
+                format!("{SERVER_NONCE_PREFIX}ceiling-{seq}"),
+                DuosActionBody::Duel {
+                    body: ActionBody::CeilingReached,
+                },
+            )
+            .await;
+        if matches!(
+            reply,
+            DuosServerMessage::Error {
+                code: SocketErrorCode::Internal,
+                ..
+            }
+        ) {
+            let mut core = self.lock();
+            if !core.stopped && !core.finished {
+                tracing::warn!(event = "duos.ceiling.retrying", matchId = %self.match_id_str());
+                core.ceiling =
+                    Some(self.countdown(MATCH_SERVER_ACTION_RETRY_MS, |timer| Expiry::Ceiling { timer }));
+            }
         }
     }
 
@@ -1152,6 +1223,7 @@ impl DuosActor {
             core.mulligan = None;
             core.round_clock = None;
             core.prompt_clocks = [None, None];
+            core.ceiling = None;
             core.grace = [None, None];
             core.forced = [None, None, None, None];
             (result, at)
@@ -1551,6 +1623,7 @@ impl DuosActor {
             core.mulligan = None;
             core.round_clock = None;
             core.prompt_clocks = [None, None];
+            core.ceiling = None;
             core.grace = [None, None];
             [core.sockets[0].take(), core.sockets[1].take()]
         };
