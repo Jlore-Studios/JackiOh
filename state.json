@@ -15552,6 +15552,12 @@
         "number": 1000,
         "title": "Architecture: the fuzz gate plays custom-card games",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-10-16T18:58:14Z",
+        "number": 1077,
+        "title": "Patch v0.3.Y: the AI's redacted worlds keep a Rollback's history and a Glitch's boards",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "idle_since": "2026-10-16T16:38:04Z",
