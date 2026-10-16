@@ -2,6 +2,7 @@
 // R432: a cost is "(N) Cost" as a noun and "costs (N)" as a verb.
 // R1320: player-facing text says Nerf and Buff, not Degrade or Upgrade.
 // R781000: Magnetic is Equip; the old word is left only where the past is shown as it was.
+// R278: the faction is Jlockeed; no name or face spells it with an h.
 // The source guards parse strings, templates and JSX, excluding comments and lower-case machine words.
 // `cards/glossary.ts` retains SPEC text and converts it through `inPlayerWords`.
 
@@ -306,5 +307,34 @@ describe("R781000 players read Equip, the keyword Magnetic became", () => {
     expect(found).toEqual([]);
     expect(namesTheRename("Magnetic is now called Equip.")).toBe(true);
     expect(namesTheRename("Play it Magnetic onto a Unit.")).toBe(false);
+  });
+});
+
+/** R278: the faction's old spelling, in any capitalisation. */
+const OLD_JLOCK = /jlockh/i;
+
+describe("R278 the faction is Jlockeed", () => {
+  it("R278 no client text, card, flavour, voice line or Chinese string spells it with an h", () => {
+    const files = sources(SRC);
+    expect(files.length).toBeGreaterThan(100);
+    const client = files
+      .flatMap(wordsIn)
+      .filter(({ text }) => OLD_JLOCK.test(text))
+      .map(({ at, text }) => `${at}: ${JSON.stringify(text)}`);
+    expect(client).toEqual([]);
+    const cards = Object.values(CATALOG).flatMap((card) =>
+      [card.name, card.base.text, card.radiant.text]
+        .filter((text) => OLD_JLOCK.test(text))
+        .map((text) => `${card.id}: ${JSON.stringify(text)}`),
+    );
+    expect(cards).toEqual([]);
+    expect(CATALOG["classicplus-048"]?.name).toBe("Jlockeed's Lobbyist");
+    const flavour = Object.entries(CARD_FLAVOUR).flatMap(([id, entry]) =>
+      entry.flavour !== undefined && OLD_JLOCK.test(entry.flavour) ? [`${id}: ${entry.flavour}`] : [],
+    );
+    expect(flavour).toEqual([]);
+    expect(voiceLineTexts().filter((text) => OLD_JLOCK.test(text))).toEqual([]);
+    const chinese = readFileSync(join(SRC, "i18n/zh-CN.json"), "utf8");
+    expect(OLD_JLOCK.test(chinese)).toBe(false);
   });
 });

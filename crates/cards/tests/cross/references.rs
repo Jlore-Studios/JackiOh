@@ -38,7 +38,7 @@ const DEALT_BY_A_RULE: &[&str] = &[
 
 /// R1420: tokens of a set that has not shipped, landed before the card that names them, by that card's
 /// id. Its part empties the entry: the test fails once the maker is in the catalog (Meditative #97
-/// Jlockheed's Evil Blueprints, issue #542, names the nine buildings; issue #541 lands five first).
+/// Jlockeed's Evil Blueprints, issue #542, names the nine buildings; issue #541 lands five first).
 const MAKER_STILL_TO_COME: &[(&str, &[&str])] = &[];
 
 /// R381 (B2.8): card names that are also rules words. A text using one names that card only when the

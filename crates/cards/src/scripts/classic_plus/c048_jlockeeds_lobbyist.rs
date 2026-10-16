@@ -1,6 +1,6 @@
-//! C+ #48 Jlockheed's Lobbyist (SPEC §8.7 row 48). (1) Unit, Jlockeed, Legendary, 0/3 → 0/6.
-//!   Base:    "Can't be in Defense Position. Death: Add a random Jlockheed card to your hand. It costs (0)."
-//!   Radiant: "Death: Add a random Radiant Jlockheed card to your hand. It costs (0)."
+//! C+ #48 Jlockeed's Lobbyist (SPEC §8.7 row 48). (1) Unit, Jlockeed, Legendary, 0/3 → 0/6.
+//!   Base:    "Can't be in Defense Position. Death: Add a random Jlockeed card to your hand. It costs (0)."
+//!   Radiant: "Death: Add a random Radiant Jlockeed card to your hand. It costs (0)."
 //!   Engine:  "The pool is the non-token cards with the `Jlockeed` tag (#13, #14, C #4, C+ #48, C+ #51,
 //!            C+ #52, M #87, M #97) but this one (R387): #13, #14, C #4, C+ #51, C+ #52, M #87 and M #97;
 //!            `costOverride` 0; the hand
@@ -47,7 +47,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// C+ #48 Jlockheed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense
+// C+ #48 Jlockeed's Lobbyist — SPEC §8.7 row 48, BUILD M9 Classic+ row C+ 48: 0/3, never in Defense
 // Position (a switch is refused, a switch-all leaves it in Attack), never attacks with 0 attack; Death
 // adds a random non-token Jlockeed card costing (0), the pool Core #13, #14, Classic #4, C+ #51, #52
 // (one tag, never itself, R387); a full hand burns it; hidden from the opponent (R97); radiant 0/6.
@@ -65,7 +65,7 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla 4/4
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #51, #52
-    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockheed's Evil Blueprints (§8.8).
+    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8).
     /// Re-pinned for v0.3.5: the Meditative set joins the pool.
     const POOL: [&str; 7] = [
         "classic-004",

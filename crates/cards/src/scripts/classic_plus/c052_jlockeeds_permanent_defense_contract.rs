@@ -1,7 +1,7 @@
-//! C+ #52 Jlockheed's Permanent Defense Contract (SPEC §8.7 row 52). (2) Spell, Jlockeed, Epic.
-//!   Base:    "For the rest of the game: At the start of your turn, add {cards|random Jlockheed card|…}
+//! C+ #52 Jlockeed's Permanent Defense Contract (SPEC §8.7 row 52). (2) Spell, Jlockeed, Epic.
+//!   Base:    "For the rest of the game: At the start of your turn, add {cards|random Jlockeed card|…}
 //!            to your hand." — cards 1
-//!   Radiant: "… add {cards|random Radiant Jlockheed card|…} to your hand. Each costs ({discount}) less."
+//!   Radiant: "… add {cards|random Radiant Jlockeed card|…} to your hand. Each costs ({discount}) less."
 //!            — cards 1, discount 1
 //!   Engine:  "A player effect for the rest of the game (§10.1): a `never`-expiry player modifier on the
 //!            caster that acts at their start of turn, among the start-of-turn triggers (R62). The pool
@@ -72,7 +72,7 @@ mod tests {
     const NETHER: &str = "core-088"; // (4) Spell: destroy all permanents
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51
-    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockheed's Evil Blueprints (§8.8).
+    /// and Meditative #87 Tatches the Totem (all tribes) and #97 Jlockeed's Evil Blueprints (§8.8).
     /// Re-pinned for v0.3.5: the Meditative set joins the pool.
     const POOL: [&str; 7] = [
         "classic-004",
@@ -166,7 +166,7 @@ mod tests {
             assert_eq!(mods.len(), 1);
             assert_eq!(mods[0].expiry, ModifierExpiry::Never);
             // R169: its badge, public to both seats, in the card's own words.
-            let label = "For the rest of the game.\nStart of turn: Add 1 random Jlockheed card to your hand.";
+            let label = "For the rest of the game.\nStart of turn: Add 1 random Jlockeed card to your hand.";
             let theirs: Vec<String> = s.view(PlayerId::P2).opponent.modifiers.iter().map(|m| m.label.clone()).collect();
             assert_eq!(theirs, vec![label.to_string()]);
             let mine: Vec<String> = s.view(PlayerId::P1).you.modifiers.iter().map(|m| m.label.clone()).collect();

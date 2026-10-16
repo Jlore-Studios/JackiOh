@@ -1,0 +1,21 @@
+{
+  "version": "v0.3.Y",
+  "title": "Standardize Jlockeed spelling",
+  "sources": "#1067",
+  "notes": "Patch v0.3.Y (#1067): the five cards spelled Jlockheed print Jlockeed like Core's two, under the one Jlockeed tag (R278). Names and face text only; no number, tag, pool or behavior changes.",
+  "player": {
+    "title": "Standardize Jlockeed spelling",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Five cards spelled Jlockheed now spell it Jlockeed, like Core's two. Nothing plays differently."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "classicplus-048",
+    "classicplus-051",
+    "classicplus-052"
+  ]
+}

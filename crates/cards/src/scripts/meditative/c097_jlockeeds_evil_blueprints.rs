@@ -1,6 +1,6 @@
-//! M #97 Jlockheed's Evil Blueprints (SPEC §8.8 row 97, R1280). (0) Spell, Mythic, Jlockeed.
+//! M #97 Jlockeed's Evil Blueprints (SPEC §8.8 row 97, R1280). (0) Spell, Mythic, Jlockeed.
 //!   Base:    "Discover a building: Empty Plot, Wishing Well, School, Mega Church, Bunker, University, The
-//!            Great Wall, Prison or Jlockheed's Headquarters. Piece together the blueprint."
+//!            Great Wall, Prison or Jlockeed's Headquarters. Piece together the blueprint."
 //!   Radiant: "Discover a Radiant building: … Piece together the Radiant blueprint." (The last line is
 //!            the designer's flavour, which the face hides behind "…", #1017.)
 //!   Engine:  "A Discover (§6.3) of three different buildings drawn uniformly from the nine (M #97.1 to
@@ -41,7 +41,7 @@ fn blueprints(radiant: bool) -> Script {
                 "step": PICKED,
                 "count": OPTIONS,
                 "query": { "defId": BUILDINGS, "withTokens": true },
-                "prompt": "Jlockheed's Evil Blueprints: Discover a building",
+                "prompt": "Jlockeed's Evil Blueprints: Discover a building",
             })))]
         })),
         resume: IndexMap::from([(
@@ -64,7 +64,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// M 97 Jlockheed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
+// M 97 Jlockeed's Evil Blueprints — SPEC §8.8 row 97, BUILD M10 row M 97: "Discovers one of three
 // different buildings out of the nine (M 97.1 to M 97.9), shown to you only (MD-F11), the pick to
 // your hand, the hand cap burning it; every building can be offered, and never a card outside the
 // nine; the opponent sees a prompt and a hidden card; radiant the building is Radiant".

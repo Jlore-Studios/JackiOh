@@ -647,13 +647,13 @@ describe("the set chips (R380: one format, every set)", () => {
 describe("the Jlockeed tag (R278)", () => {
   const REAL: CatalogSnapshot = { version: "core-test", cards: CORE_CATALOG };
 
-  it("R278 offers a Jlockeed chip, and filtering on it keeps Core #13 and #14, Classic #4 and Classic+'s three Jlockheed cards", () => {
+  it("R278 offers a Jlockeed chip, and filtering on it keeps Core #13 and #14, Classic #4 and Classic+'s three Jlockeed cards", () => {
     expect(FILTER_TAGS).toContain("Jlockeed");
     expect(filterTagId("Jlockeed")).toBe("db-filter-tag-jlockeed");
     const kept = visiblePool(REAL, null, { ...DEFAULT_FILTER, ownedOnly: false, tags: new Set<Tag>(["Jlockeed"]) }, DEFAULT_SORT);
     // docs/classic-sets.md B2.4: one faction, one tag, Classic #4 with Classic+ #48, #51 and #52 beside Core's two;
-    // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockheed's Evil Blueprints
-    // (#97.9 Jlockheed's Headquarters is a token, which the pool never offers).
+    // and once the Meditative set ships (R1420), its #87 Tatches the Totem and #97 Jlockeed's Evil Blueprints
+    // (#97.9 Jlockeed's Headquarters is a token, which the pool never offers).
     const meditative = setShips("Meditative") ? ["meditative-087", "meditative-097"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",

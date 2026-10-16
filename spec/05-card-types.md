@@ -69,7 +69,7 @@ Classic and Classic+ (patch v0.2.0) have their own, recorded under [[R381]] (nam
 | C #16, C #55 | Two cards named Book of Flame, one text | C #16 is Book of Flame, the one C #23 names; C #55 is **Book of Wildfire**, a distinct name so nothing names it by accident ([[R381]]) |
 | C #17, C #72 | Two cards named Counterspell | C #72 is **Grand Counterspell** ([[R381]]) |
 | C #10 Exile, C #36 Burn, C #57 Echo, C #30 Recycle | Names that are also rules words | Kept; [[R279]]'s proof treats a rules word as a reference only where `refs` lists the card ([[R381]]) |
-| C+ #48, #51, #52 | "Jlockheed", where Core's #13 and #14 are "Jlockeed" | Names as the designer spelled them; one tag, `Jlockeed`, on all six ([[R278]]): Core's two, Classic #4 Palantir, and the three named left |
+| C+ #48, #51, #52 | Five cards spelling the faction with an h, where Core's #13 and #14 spell "Jlockeed" | Patch v0.3.Y (#1067) spells all five "Jlockeed"; one tag, `Jlockeed`, on all six ([[R278]]): Core's two, Classic #4 Palantir, and the three named left |
 | C #78 Mutate Spell, C+ #60 Doctors Orders, C+ #74 Twice Forward One Step Backwards | Typed Spell, "Unit, Spell" and Trap | Field Spell ([[R402]]), Field Spell ([[R421]]), Field Trap ([[R425]]), as Core #68's type was settled |
 | C+ #12.6 Frozen Wastes | Spell whose text has no label | The text is a Cry ([[R408]]) |
 | C+ #12.7 Legion of the Hungry | Field Spell whose text has no label | The text is a Cry ([[R408]]) |
