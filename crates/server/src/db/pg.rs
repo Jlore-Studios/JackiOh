@@ -3578,6 +3578,39 @@ pub async fn rooms_count_open_by_host(
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
+/// R1075000: the rows `rooms_count_open_by_host` counts, newest first, the code breaking a tie.
+pub async fn rooms_open_by_host(
+    t: &mut PgTx<'_>,
+    host_profile_id: &str,
+    at: i64,
+) -> Result<Vec<Room>, StoreError> {
+    if !is_uuid(host_profile_id) {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        room_columns!(),
+        " from public.matches
+          where p1_profile_id = $1::uuid
+            and status = 'open'
+            and room_code is not null
+            and p2_profile_id is null
+            and ceiling_at > ",
+        ts!("$2"),
+        "
+          order by created_at desc, room_code"
+    ))
+    .bind(host_profile_id)
+    .bind(at)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| RoomRow::read(row).and_then(to_room))
+        .collect()
+}
+
 // ---------------------------------------------------------------------------
 // Tickets (SPEC §9.5's ranked queue)
 // ---------------------------------------------------------------------------
