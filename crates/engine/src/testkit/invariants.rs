@@ -91,10 +91,12 @@ use serde_json::{Map, Value};
 
 use crate::config::WINDFURY_ATTACKS;
 use crate::damage::DamageTarget;
+use crate::duos::{DuosState, duos_view_for};
 use crate::state::{CardInstance, GameState, PendingChoice, find_instance};
 use crate::wire::{
-    ActionBody, CardType, Enchantment, GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView,
-    Selection, TuningChange, ZoneName, has_keyword, opponent_of,
+    ActionBody, CardType, DUOS_DUELS, DUOS_SEATS, DuosActionBody, DuosEvent, DuosSeat, DuosView, Enchantment,
+    GameEvent, KeywordKind, PLAYER_IDS, Phase, PlayerId, PlayerView, Selection, Team, TuningChange, ZoneName,
+    has_keyword, opponent_of,
 };
 
 /// I6 under the 1,000-seed gate: every this-many-th state, setup's and the last always (the monitor
@@ -878,7 +880,7 @@ impl InvariantMonitor {
         self.readied.contains(&card.id) && card.summoned_turn.is_none()
     }
 
-    fn enter(&mut self, id: &str) {
+    pub fn enter(&mut self, id: &str) {
         self.entered.insert(id.to_string(), self.turn);
         let stint = self.stint_of(id) + 1;
         self.stint.insert(id.to_string(), stint);
@@ -1259,5 +1261,346 @@ impl InvariantMonitor {
             }
         }
         found
+    }
+}
+
+/// Redaction checks on a `DuosView` (§13.6, B22, B23):
+/// - enemy `ended` must remain hidden (all `false`)
+/// - enemy `passes_left` must remain hidden (all `0`)
+/// - `concede_offered_by` must belong to the viewer's own team
+pub fn check_duos_view_redaction(view: &DuosView) -> Vec<String> {
+    let mut violations = Vec::new();
+    if view.enemy.ended.iter().any(|&e| e) {
+        violations.push(format!(
+            "I6 duos leak: enemy ended leaked {:?} to {} (§13.6, B22)",
+            view.enemy.ended, view.seat
+        ));
+    }
+    if view.enemy.passes_left.iter().any(|&p| p != 0) {
+        violations.push(format!(
+            "I6 duos leak: enemy passes_left leaked {:?} to {} (§13.6, B22)",
+            view.enemy.passes_left, view.seat
+        ));
+    }
+    if let Some(offer) = view.concede_offered_by
+        && offer.team() != view.seat.team()
+    {
+        violations.push(format!(
+            "I6 duos leak: enemy concede offer from {offer} leaked to {} (§13.6)",
+            view.seat
+        ));
+    }
+    violations
+}
+
+/// Identifies false-positive hidden violations in 1v1 view checks resulting from cards passed
+/// between Duos duels: in 1v1, a card that ceased to exist without being voided reads as public (R97),
+/// while the 1v1 invariant monitor expects non-token vanished cards to be hidden.
+fn is_passed_event_fp(v: &str, duel_state: &GameState, passed: &IndexSet<String>) -> bool {
+    if !v.contains("in the view:") {
+        return false;
+    }
+    if let Some(after_events) = v.split("at view.events[").nth(1)
+        && let Some((idx_str, _)) = after_events.split_once(']')
+        && let Ok(idx) = idx_str.parse::<usize>()
+    {
+        let viewer = if v.contains("p1 is sent") {
+            PlayerId::P1
+        } else if v.contains("p2 is sent") {
+            PlayerId::P2
+        } else {
+            return false;
+        };
+        let view = crate::view_for::view_for(duel_state, viewer);
+        if let Some(event) = view.events.get(idx)
+            && let Ok(s) = serde_json::to_string(event)
+            && passed.iter().any(|p| s.contains(&format!("\"{p}\"")))
+        {
+            return true;
+        }
+    }
+    if v.contains("no pile (it ceased to exist)") {
+        let lineage = lineage_of(duel_state, PlayerId::P1);
+        for passed_id in passed {
+            if v.contains(&format!("\"{passed_id}\"")) {
+                return true;
+            }
+        }
+        for (former, next) in &lineage.next {
+            if v.contains(&format!("\"{former}\"")) {
+                let mut current = next.clone();
+                while let Some(further) = lineage.next.get(&current) {
+                    current = further.clone();
+                }
+                if passed.contains(&current) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// A tamper callback for testing seat redaction on a generated `DuosView`.
+pub type DuosViewTamper = std::sync::Arc<dyn Fn(&mut DuosView) + Send + Sync>;
+
+/// The Duos invariant monitor (#1074): one `InvariantMonitor` per duel fed from `DuosEvent::Duel`
+/// event streams, hidden information checks across both duels, `duos_view_for` seat redaction
+/// checks, and life pool bounds (§13.4).
+pub struct DuosInvariantMonitor {
+    monitors: [InvariantMonitor; DUOS_DUELS],
+    passed: [IndexSet<String>; DUOS_DUELS],
+    pub view_tamper: Option<DuosViewTamper>,
+}
+
+impl Clone for DuosInvariantMonitor {
+    fn clone(&self) -> Self {
+        DuosInvariantMonitor {
+            monitors: self.monitors.clone(),
+            passed: self.passed.clone(),
+            view_tamper: self.view_tamper.clone(),
+        }
+    }
+}
+
+impl std::fmt::Debug for DuosInvariantMonitor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DuosInvariantMonitor")
+            .field("monitors", &self.monitors)
+            .field("passed", &self.passed)
+            .field("view_tamper", &self.view_tamper.as_ref().map(|_| "<tamper fn>"))
+            .finish()
+    }
+}
+
+pub fn create_duos_invariant_monitor(start: &DuosState) -> DuosInvariantMonitor {
+    DuosInvariantMonitor::new(start)
+}
+
+impl DuosInvariantMonitor {
+    pub fn new(start: &DuosState) -> DuosInvariantMonitor {
+        DuosInvariantMonitor {
+            monitors: [
+                InvariantMonitor::new(&start.duels[0]),
+                InvariantMonitor::new(&start.duels[1]),
+            ],
+            passed: [IndexSet::new(), IndexSet::new()],
+            view_tamper: None,
+        }
+    }
+
+    pub fn duel_monitor(&self, duel: usize) -> &InvariantMonitor {
+        &self.monitors[duel]
+    }
+
+    pub fn duel_monitor_mut(&mut self, duel: usize) -> &mut InvariantMonitor {
+        &mut self.monitors[duel]
+    }
+
+    /// I1 and I3 on the state the next Duos action is chosen in.
+    pub fn before(&mut self, state: &DuosState, seat: DuosSeat, action: &DuosActionBody) -> Vec<String> {
+        let duel = seat.duel();
+        let violations = match action {
+            DuosActionBody::Duel { body } => {
+                self.monitors[duel].before(&state.duels[duel], seat.player(), body)
+            }
+            DuosActionBody::Pass { .. } | DuosActionBody::Concede => {
+                self.monitors[duel].before(&state.duels[duel], seat.player(), &ActionBody::EndTurn)
+            }
+        };
+        violations
+            .into_iter()
+            .map(|v| format!("duel {duel}: {v}"))
+            .collect()
+    }
+
+    /// Feeds one action's events into the monitors, asserts I2, I4, I5, and I7 against both duels,
+    /// and checks pool bounds (§13.4) for both teams.
+    pub fn after(&mut self, events: &[DuosEvent], state: &DuosState) -> Vec<String> {
+        let mut found = Vec::new();
+        let mut duel_events: [Vec<GameEvent>; DUOS_DUELS] = [Vec::new(), Vec::new()];
+        for event in events {
+            match event {
+                DuosEvent::Duel { duel, event } => {
+                    let idx = *duel as usize;
+                    if idx < DUOS_DUELS {
+                        duel_events[idx].push(event.clone());
+                    }
+                }
+                DuosEvent::Passed {
+                    from, instance_id, ..
+                } => {
+                    let duel = from.duel();
+                    if duel < DUOS_DUELS {
+                        self.passed[duel].insert(instance_id.clone());
+                    }
+                }
+                _ => {}
+            }
+        }
+        for (duel, duel_events_list) in duel_events.iter().enumerate().take(DUOS_DUELS) {
+            if duel < state.duels.len() {
+                let violations = self.monitors[duel].after(duel_events_list, &state.duels[duel]);
+                found.extend(violations.into_iter().map(|v| format!("duel {duel}: {v}")));
+            }
+        }
+        for &team in Team::ALL {
+            let pool = state.teams[team].pool;
+            let cap = state.teams[team].rules.pool_health;
+            if pool > cap {
+                found.push(format!("pool bound: team {team} pool {pool} > cap {cap} (§13.4)"));
+            }
+            if state.result.is_none() && pool <= 0 {
+                found.push(format!(
+                    "pool bound: live game has team {team} pool {pool} <= 0 (§13.4)"
+                ));
+            }
+        }
+        found
+    }
+
+    /// I6 for all seats: both duels' 1v1 hidden checks, plus `duos_view_for` redaction for each seat.
+    pub fn hidden(&self, state: &DuosState) -> Vec<String> {
+        let mut found = Vec::new();
+        for (duel, monitor) in self.monitors.iter().enumerate() {
+            if duel < state.duels.len() {
+                let violations = monitor.hidden(&state.duels[duel]);
+                for v in violations {
+                    let is_pass_fp = is_passed_event_fp(&v, &state.duels[duel], &self.passed[duel]);
+                    if !is_pass_fp {
+                        found.push(format!("duel {duel}: {v}"));
+                    }
+                }
+            }
+        }
+        for seat in DUOS_SEATS {
+            let checked = catch_unwind(AssertUnwindSafe(|| {
+                let mut view = duos_view_for(state, seat);
+                if let Some(tamper) = &self.view_tamper {
+                    tamper(&mut view);
+                }
+                check_duos_view_redaction(&view)
+            }));
+            match checked {
+                Ok(violations) => {
+                    found.extend(
+                        violations
+                            .into_iter()
+                            .map(|v| format!("duel {} (seat {seat}): {v}", seat.duel())),
+                    );
+                }
+                Err(payload) => {
+                    let message = if let Some(text) = payload.downcast_ref::<&str>() {
+                        (*text).to_string()
+                    } else if let Some(text) = payload.downcast_ref::<String>() {
+                        text.clone()
+                    } else {
+                        "a panic with no message".to_string()
+                    };
+                    found.push(format!(
+                        "duel {} (seat {seat}): I6 duos view threw: duos_view_for: {message} (§13.6)",
+                        seat.duel()
+                    ));
+                }
+            }
+        }
+        found
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::DECK_SIZE;
+    use crate::testkit::scenario::{catalog_override, register_catalog};
+    use crate::wire::{CardDefs, DuosDecks};
+
+    fn test_decks() -> DuosDecks {
+        if catalog_override().is_none() {
+            let defs: CardDefs = serde_json::from_str(include_str!("../../../cards/catalog.json"))
+                .expect("crates/cards/catalog.json parses as CardDefs");
+            register_catalog(defs);
+        }
+        let defs = catalog_override().unwrap();
+        let size = usize::try_from(DECK_SIZE).unwrap();
+        let ids: Vec<String> = defs
+            .iter()
+            .filter(|(_, def)| !def.is_token())
+            .map(|(id, _)| id.clone())
+            .take(size * 4)
+            .collect();
+        DuosDecks {
+            a1: ids[0..size].to_vec(),
+            a2: ids[size..size * 2].to_vec(),
+            b1: ids[size * 2..size * 3].to_vec(),
+            b2: ids[size * 3..size * 4].to_vec(),
+        }
+    }
+
+    #[test]
+    fn duos_monitor_clean_on_fresh_game() {
+        let decks = test_decks();
+        let state = crate::testkit::duos_scenario::duos_scenario("clean-duos-monitor", decks, None);
+        let mut monitor = create_duos_invariant_monitor(&state);
+        assert_eq!(monitor.after(&[], &state), Vec::<String>::new());
+        assert_eq!(monitor.hidden(&state), Vec::<String>::new());
+    }
+
+    #[test]
+    fn check_duos_view_redaction_flags_enemy_ended_and_passes_leak() {
+        let decks = test_decks();
+        let state = crate::testkit::duos_scenario::duos_scenario("redaction-test", decks, None);
+        let mut view = duos_view_for(&state, DuosSeat::A1);
+
+        // Initially clean
+        assert_eq!(check_duos_view_redaction(&view), Vec::<String>::new());
+
+        // Enemy ended leak
+        view.enemy.ended = vec![true, false];
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy ended leaked"));
+
+        // Enemy passes_left leak
+        view.enemy.ended = vec![false, false];
+        view.enemy.passes_left = vec![1, 0];
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy passes_left leaked"));
+
+        // Enemy concede offer leak (offer from B1 leaked to A1)
+        view.enemy.passes_left = vec![0, 0];
+        view.concede_offered_by = Some(DuosSeat::B1);
+        let violations = check_duos_view_redaction(&view);
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].contains("enemy concede offer from b1 leaked to a1"));
+    }
+
+    #[test]
+    fn duos_monitor_flags_pool_bound_overflow() {
+        let decks = test_decks();
+        let mut state = crate::testkit::duos_scenario::duos_scenario("pool-overflow-test", decks, None);
+        let mut monitor = create_duos_invariant_monitor(&state);
+
+        // Clean initially
+        assert_eq!(monitor.after(&[], &state), Vec::<String>::new());
+
+        // Overflow team A pool
+        state.teams.a.pool = 25;
+        let findings = monitor.after(&[], &state);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.contains("pool bound: team a pool 25 > cap 20"))
+        );
+
+        // Reset pool and test live game with pool <= 0
+        state.teams.a.pool = 0;
+        let findings = monitor.after(&[], &state);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.contains("pool bound: live game has team a pool 0 <= 0"))
+        );
     }
 }
