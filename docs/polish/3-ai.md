@@ -521,7 +521,9 @@ The move order is a stable sort by tier, and ties keep `legalActions` order:
 0 an attack on the enemy hero ·
 1 an attack on a unit it kills and survives, read from `unitView` (Divine Shield on the target means no kill) ·
 2 `play` and `activatePower`, round-robin across source instances (every source's first variant,
-then every source's second, …), each round by `effectiveCost` descending ·
+then every source's second, …), each round by `effectiveCost` descending; inside one source the variants
+whose first target is the enemy hero or a card the enemy controls (the enemy hero's first) alternate with
+the rest, enemy first, each group in `legalActions` order (#1062) ·
 3 `answer` ·
 4 any other attack ·
 5 `switchPosition` ·
