@@ -15,7 +15,7 @@ Two audits, run by an agent that does not fix anything, only reports. **Part A**
 
 ## Part A — Spec audit (SPEC.md against the sources and itself)
 
-Inputs: `SPEC.md`, `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `JackiOh_Classic_Cards.md` (the designer's Classic and Classic+ list, patch v0.2.0), `JackiOh_Meditative_Cards.md` (the designer's Meditative list of 2026-10-08, issue #496), `ARCHITECTURE-CCG.md`. The design briefs `docs/classic-sets.md` (Classic/Classic+) and `docs/meditative-set.md` (Meditative) read their lists card by card; where SPEC follows the brief's default over an ambiguous source line, §11's rows (R380–R439 for v0.2.0; the Meditative rulings §8.8 cites, starting R1420) say so, and that difference is intended.
+Inputs: `SPEC.md`, `JackiOh_Mechanics.md`, `JackiOh_Core_Cards.md`, `JackiOh_Classic_Cards.md` (the designer's Classic and Classic+ list, patch v0.2.0), `JackiOh_Meditative_Cards.md` (the designer's Meditative list of 2026-10-08, issue #496), `ARCHITECTURE-CCG.md`. The design briefs `docs/classic-sets.md` (Classic/Classic+) and `docs/meditative-set.md` (Meditative) read their lists card by card; where SPEC follows the brief's default over an ambiguous source line, §11's rows (R380–R439 for v0.2.0; the Meditative rulings §8.8 cites, R1420 among them) say so, and that difference is intended.
 
 ### A1 Completeness against the sources
 
