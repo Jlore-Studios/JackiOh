@@ -1051,3 +1051,109 @@ mod r767000_the_versions {
         clear_overrides();
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// The fold off the runtime (#1035)
+// ---------------------------------------------------------------------------------------------
+
+mod off_the_runtime {
+    use super::*;
+
+    use crate::support::deps::record_logs;
+    use crate::support::engine::{
+        FOLD_GATE_WAIT, FoldGate, TEST_FOLD_GATE, install_gated_test_cards, keep_whole_hand,
+    };
+
+    /// How many seeds `gate_game` tries before it gives up.
+    const SEED_SEARCH: usize = 5_000;
+    /// The log actions a gate game runs: the mulligans, the gate and two more, then a concede.
+    const GATE_ACTIONS: usize = 5;
+
+    /// A game in which p1 plays `TEST_FOLD_GATE` (installed by the caller, `install_gated_test_cards`)
+    /// right after the mulligans, folded here with its gate disarmed.
+    fn gate_game() -> Played {
+        let decks = (fake_deck(&[TEST_FOLD_GATE]), fake_deck(&[]));
+        let seed = (0..SEED_SEARCH)
+            .map(|k| format!("replay-gate-{k}"))
+            .find(|seed| {
+                hand_card(
+                    &past_the_mulligans(&begun_game(seed, decks.clone())),
+                    PlayerId::P1,
+                    TEST_FOLD_GATE,
+                )
+                .is_some()
+            })
+            .expect("a seed that deals the gate to p1");
+        let mut state = begun_game(&seed, decks.clone());
+        let mut log = Vec::new();
+        for (seat, nonce) in [(PlayerId::P1, "mulligan-p1"), (PlayerId::P2, "mulligan-p2")] {
+            let keep = keep_whole_hand(&state, seat, nonce);
+            state = act(&state, &mut log, seat, keep.body);
+        }
+        let card = hand_card(&state, PlayerId::P1, TEST_FOLD_GATE).expect("the gate in hand");
+        state = act(
+            &state,
+            &mut log,
+            PlayerId::P1,
+            from(json!({ "type": "play", "instanceId": card })),
+        );
+        let (last, log) = play_out(state, log, GATE_ACTIONS);
+        Played {
+            seed,
+            decks,
+            log,
+            last,
+        }
+    }
+
+    #[tokio::test]
+    async fn opening_a_replay_folds_off_the_runtime_so_healthz_answers_while_it_folds() {
+        let (gate, release, parked) = FoldGate::new();
+        let (app, tokens) = app_with_players().await;
+        install_gated_test_cards(Arc::clone(&gate));
+        let played = gate_game();
+        seed_finished(&app, Finish::new("m-gate", &played, now_ms()), &played).await;
+        gate.arm();
+
+        let probe = async {
+            tokio::time::timeout(FOLD_GATE_WAIT, parked)
+                .await
+                .expect("the fold parks in time")
+                .expect("the fold reports it parked");
+            let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
+            assert_eq!(status, 200);
+            gate.note("healthz");
+            release.send(()).expect("the fold still waits");
+        };
+        let ((status, body), ()) = tokio::join!(get(&app, "/api/replays/m-gate", &tokens.a), probe);
+
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(
+            gate.order(),
+            vec!["healthz", "fold"],
+            "the fold held the runtime: /healthz waited for it"
+        );
+        assert_eq!(body["steps"][0], step_of(&played, 0, PlayerId::P1));
+    }
+
+    #[tokio::test]
+    async fn a_replay_whose_fold_panics_is_rules_changed_and_says_so() {
+        let (app, tokens) = app_with_players().await;
+        let logs = record_logs();
+        let played = played_game("replay-panics", PLAYED_ACTIONS);
+        let finish = Finish {
+            row: json!({ "decks": [["not-a-card"], ["not-a-card"]] }),
+            ..Finish::new("m-panics", &played, now_ms())
+        };
+        seed_finished(&app, finish, &played).await;
+
+        let (status, body) = get(&app, "/api/replays/m-panics", &tokens.a).await;
+        assert_eq!(status, 422, "{body}");
+        assert_eq!(body["error"]["details"]["reason"], "rules_changed");
+        let panicked = logs.named("replay.open.panicked");
+        assert_eq!(panicked.len(), 1, "{panicked:?}");
+        assert_eq!(panicked[0].data["matchId"], "m-panics");
+        let (status, _headers, _body) = call(&app, "GET", "/healthz", None, Value::Null).await;
+        assert_eq!(status, 200);
+    }
+}

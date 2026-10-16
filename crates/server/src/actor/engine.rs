@@ -35,6 +35,8 @@
 //! registered catalog, so it belongs behind the same `register_all()` as the match itself, and the ai
 //! crate is pure and seeded like the engine: one seed, one deck, in any process.
 
+use std::panic::{AssertUnwindSafe, catch_unwind};
+
 use serde::{Deserialize, Serialize};
 
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
@@ -45,6 +47,8 @@ use jackioh_engine::{
 };
 
 pub use jackioh_engine::{FoldArgs, FoldResult, ReduceResult};
+
+use crate::actor::registry::panic_text;
 
 /// TS's opaque `EngineState` brand: the engine's own state, held only by the actor.
 pub type EngineState = GameState;
@@ -80,6 +84,35 @@ pub struct MatchSnapshot {
 
 fn registered() {
     jackioh_cards::register_all();
+}
+
+/// #1035: what a blocking job's thread runs before its engine call (`App::engine_thread`). It is
+/// called on the async thread that hands the job over, and answers the setup the job runs first, so a
+/// test's thread-local cards go with the job; production's is `registered_thread`.
+pub type EngineThread = fn() -> Box<dyn FnOnce() + Send>;
+
+/// Production's `EngineThread`: the blocking pool's thread reads the registered catalog, as the
+/// runtime's threads do.
+pub fn registered_thread() -> Box<dyn FnOnce() + Send> {
+    Box::new(registered)
+}
+
+/// #1035: `run` on tokio's blocking pool, as Duos's rebuild and the bot seat run theirs: a whole
+/// log's fold on a runtime worker holds every socket, clock and route queued behind it. `thread`'s
+/// setup runs first, then `run` inside `catch_unwind`; `run` sets the engine's per-call thread-locals
+/// (`with_shipped`, R767000). `Err` is a panic's text or the join error's. Nothing in a job logs: a
+/// test records its own thread's log, so the caller logs what comes back.
+pub async fn off_runtime<T: Send + 'static>(
+    thread: EngineThread,
+    run: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, String> {
+    let setup = thread();
+    tokio::task::spawn_blocking(move || {
+        setup();
+        catch_unwind(AssertUnwindSafe(run)).map_err(panic_text)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 /// The `CreateGameArgs` a match is created with: no catalog (the registered one) and no handicaps

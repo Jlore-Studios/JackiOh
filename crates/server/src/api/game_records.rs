@@ -110,20 +110,24 @@ async fn record_live_game_inner(app: &App, match_id: &str) -> Result<Option<Game
         entries.push(serde_json::to_value(&entry.action).map_err(message_of)?);
     }
     let args = fold_args_of(&row, entries).map_err(message_of)?;
-    // The engine panics on decks it refuses; the panic is that error (as `actor::registry` reads it).
-    let summarized = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        jackioh_engine::summarize_game(&args)
-    }))
-    .map_err(crate::actor::registry::panic_text)?;
+    // R677, R1451: each seat is filed under the account that plays it as the game ends, as the
+    // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
+    // game with a bot in it can tell, so only it folds the log again to read the swap. #1035: both
+    // folds in one job off the runtime; the engine panics on decks it refuses, and the panic is that
+    // error.
+    let bot_game = began.0 != began.1;
+    let (summarized, swapped) = engine::off_runtime(app.engine_thread, move || {
+        let summarized = jackioh_engine::summarize_game(&args);
+        let swapped =
+            summarized.is_some() && bot_game && engine::snapshot(&engine::fold(&args).state).seats_swapped;
+        (summarized, swapped)
+    })
+    .await?;
     let Some(game) = summarized else {
         // A fold that does not reach the result is a determinism break (§9.3); say so loudly.
         tracing::error!(event = "game.record.unfinished", matchId = %match_id, actions = actions);
         return Ok(None);
     };
-    // R677, R1451: each seat is filed under the account that plays it as the game ends, as the
-    // result credits it, so after a Glitch's swap a bot's `ai` goes on the seat it ended in. Only a
-    // game with a bot in it can tell, so only it folds the log again to read the swap.
-    let swapped = began.0 != began.1 && engine::snapshot(&engine::fold(&args).state).seats_swapped;
     let pilots = if swapped {
         PerPlayer::new(began.1, began.0)
     } else {
