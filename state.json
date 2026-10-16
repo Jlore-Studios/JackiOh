@@ -782,6 +782,14 @@
         "c:6206150877"
       ]
     },
+    "1037": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-10-16T00:21:08Z",
+      "issue": 1014,
+      "kind": "revise",
+      "self_check_findings": []
+    },
     "148": {
       "asks": [
         "c:5974504575"
