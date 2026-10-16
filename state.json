@@ -1675,18 +1675,29 @@
     "1073": {
       "action": "review",
       "asks": [],
+      "audit_tier": "strong",
+      "cross_rounds": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T15:42:56Z",
       "issue": 1067,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "After this change, a stored replay of a game played on a carried shipped version (v0.3.7, v0.3.7b and earlier) in which a Permanent Defense Contract resolved will fold to a different final hash and be refused as `rules_changed`, and no `KEPT_SCRIPTS` entry keeps the old script. The plan and the PR justify skipping one by saying 'old replays fold under old scripts', which is false.",
+          "evidence": "history.rs:1-5 says a carried version runs 'its scripts the build's own but where one is kept in KEPT_SCRIPTS'. The Contract's modifier label is `fill_params(&crate::card_def(ID), \u2026)`, and `card_def` (lib.rs:87) reads the build's static CATALOG, not the catalog the replay folds under, so an old game now gets the 'Jlockeed' label. That label is a `never`-expiry player modifier field (state.rs:685), so it is still in the final state, and `hash_state` covers it. `replay_open` (replay.rs:918) refuses when `hash_state(&state) != record.final_hash`. The golden re-bless proves the label is hashed: 70 games changed only in `steps[].s` and `steps[].v[]`. classicplus-052 is unclaimed by any pending fragment at the base, so these replays open today and stop opening once this merges. docs/ADDING_CARDS.md \u00a73 says a patch that changes what a script produces keeps the old script in `KEPT_SCRIPTS` under the newest shipped version (v0.3.7b). Evil Blueprints' literal prompt (c097_jlockeeds_evil_blueprints.rs:44) has the same problem for any game that ended with its Discover still open.",
+          "severity": "blocking",
+          "where": "crates/cards/src/scripts/classic_plus/c052_jlockeeds_permanent_defense_contract.rs:37"
+        }
+      ],
       "pending_request": false,
       "provider": "claude-6",
-      "queued_at": "2026-10-16T16:58:42Z",
+      "queued_at": "2026-10-16T17:24:55Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "38938620416",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-10-16T17:18:42Z",
       "stop_requested": false,
       "taken_asks": [],
