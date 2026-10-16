@@ -705,6 +705,13 @@
     "1034": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T02:39:33Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "fails easy rule 5 outright (two card scripts in crates/cards/src/scripts/ and spec/rulings notes change); not hard: no engine, AI or cross-crate design"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
