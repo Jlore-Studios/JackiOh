@@ -547,9 +547,9 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
         if card_param.as_ref().is_some_and(|card| id != card) {
             continue;
         }
+        // A set is its cards' `set` alone: `classic` begins every Classic+ id (`classicplus-…`).
         if let Some(set) = &set_param
             && def.set.as_str().to_lowercase() != *set
-            && !id.to_lowercase().starts_with(set.as_str())
         {
             continue;
         }
