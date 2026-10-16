@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { act, cleanup, render } from "@testing-library/react";
 import { useRef, type ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID, TRIBAL_TAGS } from "@jackioh/engine/config";
@@ -35,6 +35,12 @@ import { termsIn } from "./rules.ts";
 import { SET_MARK_MIN_FACE_PX, setMarkOf } from "./setMark.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 import { SUMMIT_DEF_ID, ascentLevelOf, summitShortText } from "./shortText.ts";
+
+// R1017001: the hero portraits' cards print full art and none of their words. These tests read every
+// face's words, so full art is off here; fullArt.test.tsx covers the full-art faces.
+beforeEach(() => {
+  writeCardSettings({ fullArt: false });
+});
 
 afterEach(() => {
   cleanup();

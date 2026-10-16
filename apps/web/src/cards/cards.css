@@ -795,12 +795,14 @@
 
 /* ------------------------------------------------------------------------------ full art --- */
 
-/* R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole face, over the
-   frame's panel, which shows only as the rarity rim around it. A scrim darkens the top, behind the
-   cost gem and the crest, and the foot, behind the rules box; the rules box is smoked glass with
-   light ink, so the words read over any picture. The name ribbon, the gems, the tags, the type line
-   and the stats sit over the art as on every face. Selectors carry the face's type where the
-   ordinary rule does (a Unit's portrait window), so they outrank it whatever the order. */
+/* R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole face and no words,
+   as Hearthstone's Signature cards do: the cost gem, the name banner at the foot between a Unit's
+   attack and health, and the rarity gem and the set mark under it. The frame's
+   panel shows only as the rarity rim around the art; a scrim darkens the top, behind the cost gem
+   and the crest, and the foot, behind the banner and the stats. CardFace draws no rules box, tags or
+   type line; the whole text is in the hover preview and the detail view. Selectors carry the face's
+   type where the ordinary rule does (a Unit's portrait window), so they outrank it whatever the
+   order. */
 .cf[data-full-art="true"] .cf-art-frame,
 .cf[data-full-art="true"][data-card-type] .cf-art-frame {
   inset: 0;
@@ -824,44 +826,31 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgb(0 0 0 / 0.45),
-    transparent 18%,
-    transparent 44%,
-    rgb(0 0 0 / 0.5) 60%,
-    rgb(0 0 0 / 0.78)
+    rgb(0 0 0 / 0.4),
+    transparent 16%,
+    transparent 58%,
+    rgb(0 0 0 / 0.5) 78%,
+    rgb(0 0 0 / 0.72)
   );
   pointer-events: none;
 }
 
-.cf[data-full-art="true"] .card-text {
-  background: rgb(12 14 22 / 0.6);
-  box-shadow:
-    inset 0 0 0 0.35cqw rgb(255 255 255 / 0.22),
-    0 0.4cqh 1.2cqh rgb(0 0 0 / 0.35);
-  color: #f6eedb;
-  text-shadow: 0 0.15cqh 0.3cqh rgb(0 0 0 / 0.85);
+/* The banner sits low, between a Unit's attack and health (19cqw gems in the bottom corners), the
+   rarity gem under its middle at the foot, and the set mark beside the gem. */
+.cf[data-full-art="true"] .card-name {
+  top: 84.5cqh;
+  left: 19cqw;
+  right: 19cqw;
+  padding: 0 4cqw;
 }
 
-/* A Radiant full-art face's glass is gilded, as its parchment is. */
-.cf[data-full-art="true"][data-radiant-face="true"] .card-text {
-  background: rgb(46 32 6 / 0.62);
-  box-shadow:
-    inset 0 0 0 0.35cqw rgb(255 210 74 / 0.45),
-    0 0.4cqh 1.2cqh rgb(0 0 0 / 0.35);
+.cf[data-full-art="true"] .cf-gem {
+  top: 92.6cqh;
 }
 
-/* The marks the parchment inks dark, in their colours for a dark panel (R277, R280). */
-.cf[data-full-art="true"] .card-text .cf-mark {
-  color: var(--mark-ink-on-dark);
-}
-
-.cf[data-full-art="true"] .card-text .cf-value {
-  color: #9cc8ff;
-}
-
-.cf[data-full-art="true"] .card-text .cf-text-gained {
-  border-top-color: #6fbf6a;
-  color: #9be596;
+.cf[data-full-art="true"] .cf-set {
+  top: 92.3cqh;
+  right: 31cqw;
 }
 
 /* --------------------------------------------------------------------- tags and type line --- */

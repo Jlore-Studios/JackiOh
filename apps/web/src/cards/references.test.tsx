@@ -61,11 +61,11 @@ describe("R279 the names a text links", () => {
         // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
         const text = fillParams(card, radiant ? "radiant" : "base");
         const expected = findRefs(text, (card.refs ?? []).map(def)).map((match) => match.id);
-        // A face that prints a short form names them all in its extended description (#1017).
+        // A face that prints less than its whole text names them all in its extended description (#1017).
         const model = face(card.id, radiant);
         const { container, unmount } = render(
           <CardDefsProvider defs={CATALOG}>
-            {faceText(model).short === null ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
+            {faceText(model).shown === model.text.full ? <CardFace face={model} layout="full" /> : <Extended face={model} />}
           </CardDefsProvider>,
         );
         const shown = [...container.querySelectorAll(".cf-ref")].map((ref) => ref.getAttribute("data-ref"));

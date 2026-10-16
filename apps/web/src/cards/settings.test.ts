@@ -60,17 +60,18 @@ afterEach(() => {
 });
 
 describe("the contract (B28)", () => {
-  it("B28 settings live under jackioh.cards.settings.v1, and both default to on", () => {
+  it("B28 settings live under jackioh.cards.settings.v1, and every one defaults to on", () => {
     expect(CARD_SETTINGS_KEY).toBe("jackioh.cards.settings.v1");
-    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true });
+    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true });
   });
 
-  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay and animatedFoil under visuals, each labelled", () => {
+  it("B28 CARD_SETTINGS_FIELDS puts hoverPreviews under gameplay, and animatedFoil and fullArt (R1017001) under visuals, each labelled", () => {
     const byKey = new Map(CARD_SETTINGS_FIELDS.map((field) => [field.key, field]));
-    expect([...byKey.keys()].sort()).toEqual(["animatedFoil", "hoverPreviews"]);
-    expect(CARD_SETTINGS_FIELDS).toHaveLength(2);
+    expect([...byKey.keys()].sort()).toEqual(["animatedFoil", "fullArt", "hoverPreviews"]);
+    expect(CARD_SETTINGS_FIELDS).toHaveLength(3);
     expect(byKey.get("hoverPreviews")?.section).toBe("gameplay");
     expect(byKey.get("animatedFoil")?.section).toBe("visuals");
+    expect(byKey.get("fullArt")?.section).toBe("visuals");
     for (const field of CARD_SETTINGS_FIELDS) {
       expect(field.label.trim().length, `${field.key} label`).toBeGreaterThan(0);
       expect(field.description.trim().length, `${field.key} description`).toBeGreaterThan(0);
@@ -88,13 +89,13 @@ describe("reading (B28)", () => {
   it("B28 a stored value is what a fresh page reads", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: false, animatedFoil: false }));
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: false });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: false, fullArt: true });
   });
 
   it("B28 a missing key is filled from the defaults", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ animatedFoil: false }));
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
   });
 
   it("B28 invalid JSON reads as the defaults", async () => {
@@ -114,11 +115,11 @@ describe("reading (B28)", () => {
   it("B28 a key holding anything but a boolean is filled from the defaults, and the other key is kept", async () => {
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: "no", animatedFoil: false }));
     let fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
 
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: false, animatedFoil: 0 }));
     fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true });
 
     window.localStorage.setItem(CARD_SETTINGS_KEY, JSON.stringify({ hoverPreviews: null, animatedFoil: "false" }));
     fresh = await freshSettings();
@@ -146,26 +147,32 @@ describe("reading (B28)", () => {
 describe("writing (B28)", () => {
   it("B28 writeCardSettings merges the patch, returns the whole settings, and stores them under the key", () => {
     const next = writeCardSettings({ animatedFoil: false });
-    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false });
+    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
     expect(readCardSettings()).toEqual(next);
     expect(stored()).toMatchObject({ animatedFoil: false });
+  });
+
+  it("B28 R1017001 a written fullArt is what the next page load reads, the other keys kept", async () => {
+    writeCardSettings({ fullArt: false });
+    const fresh = await freshSettings();
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: false });
   });
 
   it("B28 a written value is what the next page load reads", async () => {
     writeCardSettings({ hoverPreviews: false });
     const fresh = await freshSettings();
-    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true });
+    expect(fresh.readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true });
   });
 
   it("B28 an empty patch changes nothing and returns the current settings", () => {
     writeCardSettings({ animatedFoil: false });
-    expect(writeCardSettings({})).toEqual({ hoverPreviews: true, animatedFoil: false });
-    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false });
+    expect(writeCardSettings({})).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
+    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
   });
 
   it("B28 writing never changes CARD_SETTINGS_DEFAULTS", () => {
     writeCardSettings({ hoverPreviews: false, animatedFoil: false });
-    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true });
+    expect(CARD_SETTINGS_DEFAULTS).toEqual({ hoverPreviews: true, animatedFoil: true, fullArt: true });
   });
 
   it("B28 writeCardSettings keeps working in memory when setItem throws", () => {
@@ -174,8 +181,8 @@ describe("writing (B28)", () => {
     expect(() => {
       next = writeCardSettings({ hoverPreviews: false });
     }).not.toThrow();
-    expect(next).toEqual({ hoverPreviews: false, animatedFoil: true });
-    expect(readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true });
+    expect(next).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true });
+    expect(readCardSettings()).toEqual({ hoverPreviews: false, animatedFoil: true, fullArt: true });
   });
 
   it("B28 writeCardSettings keeps working in memory when getItem and setItem both throw", () => {
@@ -184,8 +191,8 @@ describe("writing (B28)", () => {
     expect(() => {
       next = writeCardSettings({ animatedFoil: false });
     }).not.toThrow();
-    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false });
-    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false });
+    expect(next).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
+    expect(readCardSettings()).toEqual({ hoverPreviews: true, animatedFoil: false, fullArt: true });
   });
 });
 

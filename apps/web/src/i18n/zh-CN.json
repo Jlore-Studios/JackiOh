@@ -1623,6 +1623,8 @@
   "All cards": "全部卡牌",
   "Printed": "印刷面",
   "Full text": "全文",
+  "Full-art cards": "全画卡牌",
+  "The heroes' cards show only their art and name; hover or click one to read it. Off shows their text like any card.": "英雄的卡牌只显示卡图和名称；悬停或点击即可阅读。关闭后像其他卡牌一样显示文字。",
   "Mentions": "提及",
   "Copying: {name} (Radiant)": "复制中：{name}（光辉）",
   "Copying: {name}": "复制中：{name}",

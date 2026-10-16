@@ -5,7 +5,7 @@
 
 import { cleanup, render } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef, CardView, UnitView } from "@jackioh/shared";
@@ -23,8 +23,18 @@ import { markedText } from "./radiantDiff.ts";
 import { CardDefsProvider } from "./refContext.tsx";
 import { namesOf } from "./refs.ts";
 import { glossaryFor } from "./rules.ts";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
 
-afterEach(cleanup);
+// R1017001: the hero portraits' cards print full art and none of their words; these tests read the
+// rules box, so full art is off here (fullArt.test.tsx covers it).
+beforeEach(() => {
+  writeCardSettings({ fullArt: false });
+});
+
+afterEach(() => {
+  cleanup();
+  writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
+});
 
 const lookup = lookupFromDefs(CATALOG);
 

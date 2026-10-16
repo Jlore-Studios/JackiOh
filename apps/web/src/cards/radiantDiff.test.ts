@@ -138,12 +138,14 @@ describe("R277 every Radiant face renders its marks gold, bold and underlined", 
       // Each face as it prints, its `{key}` numbers filled in (B3.4 rule 5).
       const expected = marks(fillParams(card, "base"), fillParams(card, "radiant"));
       // Inside the catalog, so the names its refs link are references and nest with the marks. A face
-      // that prints a short form prints its whole text, marks and all, in its extended description (#1017).
+      // that prints less than its whole text (a short form, or full art's none) prints it, marks and
+      // all, in its extended description (#1017, R1017001).
       const face = faceModel({ defId: card.id, def: card, radiant: true });
       const { container, unmount } = render(
         createElement(CardDefsProvider, {
           defs: CATALOG,
-          children: faceText(face).short === null ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
+          children:
+            faceText(face).shown === face.text.full ? createElement(CardFace, { face, layout: "full" }) : createElement(Extended, { face }),
         }),
       );
       // A mark a reference's end splits ("Rush Tokens. Each": the mark runs out of the name) is one

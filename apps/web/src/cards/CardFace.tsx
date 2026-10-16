@@ -44,8 +44,9 @@
 // the left of its hover preview (inspect/Extended.tsx). With hover previews off, the rules box's
 // tooltip carries it instead (#912).
 //
-// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face
-// (`data-full-art`, the art's "full" shape), its words on a smoked-glass rules box (cards.css).
+// R1017001: a hero portrait's card (fullArt.ts) prints its art across the whole full face and no
+// words (`data-full-art`, the art's "full" shape): no rules box, tags or type line, its whole text in
+// the hover preview and the detail view. The Full-art cards setting turns it off.
 
 import { useRef, type CSSProperties, type ReactElement } from "react";
 
@@ -60,7 +61,7 @@ import { nameTier, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
 import { GLITCH_WORDS, isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
-import { isFullArt } from "./fullArt.ts";
+import { showsFullArt } from "./fullArt.ts";
 import { ALL_TRIBES, foilFor, frameRarity, frameTags, type FaceModel } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
 import { setMarkOf } from "./setMark.ts";
@@ -157,6 +158,8 @@ export type RulesBox = {
  */
 export function faceText(face: FaceModel, ascentLevel?: number | null): RulesBox {
   const full = face.text.full;
+  // R1017001: a full-art face prints none of its words.
+  if (showsFullArt(face)) return { shown: "", short: null, less: printedText(face, full) !== "" };
   const summit = summitShortText(face.defId, full, ascentLevel);
   // A face in play that prints something other than its catalog text (a #98 Heroic Power's rolled
   // power, a Vanilla unit's lost text, inPlay.ts) takes no short form; a Call to Chaos's "???" has
@@ -259,8 +262,8 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
   // Glitch is a blank card (glitch.ts): no picture, set mark or tags, its words corrupted, and its
   // blob spilling out over the frame, outside the clipped `.cf-scale`.
   const glitch = isGlitch(face.defId);
-  // R1017001: a hero portrait's card fills its full face with its art.
-  const fullArt = full && !glitch && isFullArt(face.englishName ?? face.name);
+  // R1017001: a hero portrait's card fills its full face with its art, and prints no words.
+  const fullArt = full && showsFullArt(face, settings.fullArt);
 
   return (
     <span
@@ -328,9 +331,11 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
 
         <CardStates face={face} />
 
-        <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
+        {!fullArt && (
+          <span className="card-type">{glitch ? GLITCH_WORDS.type : face.chinese === true ? CHINESE_TERMS.types[face.type] : face.type}</span>
+        )}
 
-        {full && (
+        {full && !fullArt && (
           <span
             className="card-text"
             ref={textRef}
@@ -362,7 +367,7 @@ export function CardFace({ face, layout = "full", className, lazyArt = false, as
           </span>
         )}
 
-        {full && !glitch && face.tags.length > 0 && (
+        {full && !fullArt && !glitch && face.tags.length > 0 && (
           <span className="cf-tags">
             {frameTags(face.tags).map((tag) => (
               <span key={tag} className="cf-tag" data-tag={tag}>
