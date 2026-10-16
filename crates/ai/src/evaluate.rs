@@ -5,19 +5,23 @@
 //! Patch v0.2.0's mechanics through the engine's own readers: a unit the engine bars from attacking
 //! (E35) counts no attack, Spell Damage (E6) and Immune to Spells are worth something, a Brittle count
 //! (B3.3) discounts its card, an Animated backrow card (B3.1) is partly a unit already, and an own hand
-//! card's `costMod` (B3.4, R65) moves its worth. It reads only what the seat may know or what a
+//! card's `costMod` (B3.4, R65) moves its worth. #1086 prices what a side has banked in public state:
+//! Jade steps (R962), the enemy units its delayed effects have marked (R437), extra turns (R846), and
+//! an own Temporary hand card at a discount (R637). It reads only what the seat may know or what a
 //! determinization sampled, and nothing here reads a handicap or a difficulty (R180).
 //!
 //! Port of `packages/ai/src/evaluate.ts`. TS's defaulted arguments (`w = AI_EVAL`, `next = "enemy"`)
 //! are passed explicitly.
 
-use jackioh_engine::config::{DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{
+    DUOS_OWN_HEALTH, FIRST_GRADE, HERO_HEALTH, JADE_ASCEND_AT, JADE_BEAUTY_AT, TURN_CAP_PLAYER_TURNS,
+};
 use jackioh_engine::{
     AttackTarget, CardInstance, GameState, Keyword, KeywordKind, PlayerId, Position, UnitView,
     active_brittle_count, active_units_of, animated_kind_of, attack_restriction, attacks_per_turn,
     backrow_is_public, cannot_attack, card_keywords, credit_lapsing, effective_life, find_def, has_keyword,
-    hero_armor_of, owed_mana_of, own_cost, pierces, query_cost, reset_instance, subsystems,
-    takes_strike_back, unit_view,
+    hero_armor_of, is_temporary_card, owed_mana_of, own_cost, pierces, query_cost, reset_instance,
+    subsystems, takes_strike_back, unit_view,
 };
 use serde::{Deserialize, Serialize};
 
@@ -132,7 +136,8 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
-/// An own hand card. maxi-tail: a Degrade or Upgrade of a hand card's stats is not read here.
+/// An own hand card, a Temporary one (R637) at `temporary_discount` off. maxi-tail: a Degrade or
+/// Upgrade of a hand card's stats is not read here.
 fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f64 {
     let def = find_def(Some(state), &card.def_id);
     let cost = match def {
@@ -145,7 +150,54 @@ fn hand_card_value(state: &GameState, card: &CardInstance, w: &EvalWeights) -> f
     } else {
         w.hand_cost_delta * f64::from(cost_shift(state, card))
     };
-    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift) * brittle_share(card, w)
+    // R637: `is_temporary_card` reads the definition, so a card without one is never asked.
+    let temporary = if def.is_some() && is_temporary_card(state, card) {
+        1.0 - w.temporary_discount
+    } else {
+        1.0
+    };
+    (w.hand_card + w.hand_per_cost * cost.min(w.hand_cost_cap) + radiant - shift)
+        * brittle_share(card, w)
+        * temporary
+}
+
+/// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
+/// It only rises (R961): toward JADE_BEAUTY_AT, then toward JADE_ASCEND_AT, then none.
+fn jade_steps(jade: i32) -> i32 {
+    if jade < JADE_BEAUTY_AT {
+        jade
+    } else if jade < JADE_ASCEND_AT {
+        jade - JADE_BEAUTY_AT
+    } else {
+        0
+    }
+}
+
+/// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (a
+/// mark names its entry by `delayed_id`; an entry `redact` dropped, R185, counts nothing). A mark on a
+/// hand card (R1141), a backrow card or an own unit counts nothing, nor does an unmarked delayed
+/// effect: the shipped ones are as often a cost (/fullsend's exile) as a payoff.
+fn marked_enemy_worth(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
+    let Some(marks) = &state.marks else {
+        return 0.0;
+    };
+    let enemy = active_units_of(state, player.opponent());
+    let mut counted: Vec<&str> = Vec::new();
+    let mut worth = 0.0;
+    for mark in marks {
+        let owned = state
+            .delayed
+            .iter()
+            .any(|entry| entry.id == mark.delayed_id && entry.owner == player);
+        if !owned || counted.contains(&mark.instance_id.as_str()) {
+            continue;
+        }
+        if let Some(unit) = enemy.iter().find(|unit| unit.id == mark.instance_id) {
+            counted.push(mark.instance_id.as_str());
+            worth += unit_worth(state, unit, w);
+        }
+    }
+    worth
 }
 
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor.
@@ -154,7 +206,8 @@ fn hero_side(state: &GameState, player: PlayerId, w: &EvalWeights) -> f64 {
         + w.hero_armor * f64::from(hero_armor_of(state, player))
 }
 
-/// Everything on one side but the hero: the board, the backrow, the hand and the library.
+/// Everything on one side but the hero: the board, what it has banked (a debt, Jade steps, extra
+/// turns, the enemy units it has marked), the backrow, the hand and the library.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -164,6 +217,13 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
+    // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
+    // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
+    value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
+    value += w.extra_turn * f64::from(side.extra_turns.unwrap_or(0));
+    if w.marked_share != 0.0 {
+        value += w.marked_share * marked_enemy_worth(state, player, w);
+    }
     // R1225: on its controller's turn, an unused base-face Jlarna is tributed at end of turn, so it
     // is worth nothing.
     let lapsing: Vec<String> = if state.active == player {
