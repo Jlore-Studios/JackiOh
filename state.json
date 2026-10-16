@@ -2005,6 +2005,11 @@
       "taken_asks": []
     },
     "1082": {
+      "cleared": {
+        "at": "2026-10-16T21:28:41Z",
+        "by": "`claude` (strong)",
+        "sha": "2079f66baedcde38d6ba7a8b5b5ca8a7e2c8be58"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T20:47:47Z",
