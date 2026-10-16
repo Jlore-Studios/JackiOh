@@ -4,14 +4,14 @@
 //!   Engine:  "NEW: a capture (CAPTURE): a trigger on the resolution of a Unit its controller's opponent
 //!            played or cast (R70), in the window #41 Sheepish uses (after the Unit resolves, its Cry
 //!            included, §10.5 step 7, R427), while Prison acts: one `rng.chance`, the Radiant face's
-//!            Lucky 1 rolling again. On a success the Unit, if still on the field on that stay (R174),
-//!            moves from the top of its zone to directly beneath Prison in Prison's pile without leaving
-//!            the field (no R78 reset, its damage kept), dormant (R13), its controller becoming Prison's
-//!            (control only, its owner unchanged, R12; an entry, R171), with a public `controlChanged`
-//!            (how: steal); a card it uncovered on the opponent's side resumes there; several captures
-//!            lie newest first beneath Prison, and when Prison leaves the field the newest resumes under
-//!            Prison's controller (MD-F16). Tunes: chance 50 ↑; Tribute 2 ↓ (never below 1); Lucky 1 ↑,
-//!            on the Radiant face only."
+//!            Lucky 1 and its controller's Luck (R987) rolling it again. On a success the Unit, if still
+//!            on the field on that stay (R174), moves from the top of its zone to directly beneath Prison
+//!            in Prison's pile without leaving the field (no R78 reset, its damage kept), dormant (R13),
+//!            its controller becoming Prison's (control only, its owner unchanged, R12; an entry, R171),
+//!            with a public `controlChanged` (how: steal); a card it uncovered on the opponent's side
+//!            resumes there; several captures lie newest first beneath Prison, and when Prison leaves the
+//!            field the newest resumes under Prison's controller (MD-F16). Tunes: chance 50 ↑; Tribute 2 ↓
+//!            (never below 1); Lucky 1 ↑, on the Radiant face only."
 
 use jackioh_engine::catalog::def_of;
 use jackioh_engine::effects::steal::{CaptureArgs, capture};
@@ -25,8 +25,18 @@ const TRIBUTE_COST: i32 = 2;
 /// Declared `chance` is a percentage.
 const PERCENT: i32 = 100;
 
-/// The face's Lucky X keyword.
+/// Which Lucky the capture rolls with: `lucky_of` today, `printed_lucky_of` in the script v0.3.7b kept.
+type LuckyOf = fn(&EffectContext<'_>) -> i32;
+
+/// §6.1, R1438, R987: Prison's Lucky X, printed (as Nerf and Buff have moved it) plus given
+/// (`lucky_on`), and its controller's Luck.
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
+    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own)) + luck_of(ctx.sink.state, ctx.controller)
+}
+
+/// R767000: the face's printed Lucky X keyword alone: what the capture rolled with through v0.3.7b
+/// (`script_v0_3_7b`).
+fn printed_lucky_of(ctx: &EffectContext<'_>) -> i32 {
     let Some(own) = ctx.self_.as_ref() else {
         return 0;
     };
@@ -37,11 +47,11 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
         .unwrap_or(0)
 }
 
-fn prison_trigger() -> TriggerDef {
+fn prison_trigger(read_lucky: LuckyOf) -> TriggerDef {
     TriggerDef::new(
         "prison-capture",
         &[GameEventType::CardResolved],
-        |ctx, event| {
+        move |ctx, event| {
             let GameEvent::CardResolved {
                 instance_id,
                 permanent,
@@ -54,7 +64,7 @@ fn prison_trigger() -> TriggerDef {
                 return vec![];
             }
             let chance = f64::from(param(&*ctx, "chance")) / f64::from(PERCENT);
-            let lucky = lucky_of(ctx);
+            let lucky = read_lucky(ctx);
             if ctx.rng.lucky(lucky, |rng| rng.chance(chance), |a, b| a || b) {
                 vec![capture(CaptureArgs {
                     instance_id: instance_id.clone(),
@@ -86,15 +96,29 @@ fn prison_trigger() -> TriggerDef {
     })
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
+/// One face: Tribute 2 and the capture, its roll's Lucky read by `read_lucky`.
+fn face(read_lucky: LuckyOf) -> Script {
+    Script {
         static_flags: Some(StaticFlags {
             tribute: Some(TRIBUTE_COST),
             ..StaticFlags::default()
         }),
-        triggers: vec![prison_trigger()],
+        triggers: vec![prison_trigger(read_lucky)],
         ..Script::default()
-    };
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = face(lucky_of);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, whose capture read the printed Lucky
+/// alone, without its controller's Luck (R987) or a given Lucky (R1438); `KEPT_SCRIPTS` folds those
+/// versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    let base = face(printed_lucky_of);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -354,6 +378,93 @@ mod tests {
                     .any(|k| k == &Keyword::Lucky { n: 1 }),
                 "radiant Prison has Lucky 1"
             );
+        }
+    }
+
+    // R987, R1438: the capture rolls once, once more for each Lucky on Prison, printed or given, and once
+    // more for each point of its controller's Luck; a capture draws nothing more, so at chance 100 the
+    // rolls are the whole difference Prison makes to the cursor.
+    mod luck {
+        use super::*;
+
+        const FENG_SHUI: &str = "meditative-040"; // (2) Field Spell: "Aura: You have Luck 1".
+
+        /// The draws Prison's capture takes as p2 plays VANILLA at chance 100: the play's move of the
+        /// rng cursor with Prison on p1's field, less the same play's without it (Gary's control,
+        /// R32). Feng Shui is in `feng_shui`'s backrow, and Prison has Lucky `given` given to it.
+        fn capture_rolls(radiant: bool, feng_shui: Option<PlayerId>, given: i32) -> i64 {
+            let backrow = |player: PlayerId| {
+                if feng_shui == Some(player) {
+                    json!([FENG_SHUI])
+                } else {
+                    json!([])
+                }
+            };
+            let play = |prison: bool| -> i64 {
+                let field = if prison {
+                    json!([{ "def": ID, "radiant": radiant, "lane": 1 }])
+                } else {
+                    json!([])
+                };
+                let mut s = crate::scenario(json!({
+                    "seed": "prison-luck",
+                    "p1": { "field": field, "backrow": backrow(P1), "hand": [FILLER], "library": [SPARE, SPARE] },
+                    "p2": {
+                        "backrow": backrow(P2),
+                        "hand": [VANILLA, FILLER],
+                        "library": [SPARE, SPARE],
+                        "mana": 10
+                    },
+                }));
+                assert_eq!(luck_of(s.state(), P1), i32::from(feng_shui == Some(P1)));
+                if prison {
+                    set_param(s.card_mut(ID), "chance", 100);
+                    if given > 0 {
+                        crate::give_lucky(&mut s, ID, given);
+                    }
+                }
+                s.end_turn(); // P2's turn.
+                let cursor = i64::from(s.state().rng_cursor);
+                s.play(VANILLA, json!({ "zone": 2 }));
+                if prison {
+                    assert!(s.unit(P2, 2).is_none(), "captured at chance 100");
+                }
+                i64::from(s.state().rng_cursor) - cursor
+            };
+            play(true) - play(false)
+        }
+
+        #[test]
+        fn r987_feng_shui_on_prison_s_side_rolls_the_capture_once_more_on_each_face() {
+            crate::register_all();
+            assert_eq!(capture_rolls(false, None, 0), 1);
+            assert_eq!(capture_rolls(false, Some(P1), 0), 2);
+            assert_eq!(capture_rolls(true, None, 0), 2);
+            assert_eq!(capture_rolls(true, Some(P1), 0), 3);
+        }
+
+        #[test]
+        fn r987_feng_shui_on_the_opponent_s_side_adds_no_roll() {
+            crate::register_all();
+            assert_eq!(capture_rolls(false, Some(P2), 0), 1);
+            assert_eq!(capture_rolls(true, Some(P2), 0), 2);
+        }
+
+        #[test]
+        fn r1438_lucky_given_to_prison_rolls_once_more() {
+            crate::register_all();
+            assert_eq!(capture_rolls(false, None, 1), 2);
+            assert_eq!(capture_rolls(true, None, 1), 3);
+        }
+
+        #[test]
+        fn r987_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_without_its_controller_s_luck() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                assert_eq!(capture_rolls(false, Some(P1), 0), 1);
+                assert_eq!(capture_rolls(true, Some(P1), 0), 2);
+            });
         }
     }
 }

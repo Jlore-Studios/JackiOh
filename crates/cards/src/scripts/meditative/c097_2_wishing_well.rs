@@ -2,13 +2,15 @@
 //!   Base:    "Can't attack\nActivate: {chance}% chance to add a random Radiant card to your hand."
 //!   Radiant: "Can't attack, Lucky 1\nActivate: {chance}% chance to add a random Radiant card to your hand."
 //!   Engine:  "Activate (§6.2, R384): its controller, in their main phase, once a turn, the turn it arrives
-//!            included. One `rng.chance`, the Radiant face's Lucky 1 rolling again and keeping a success
-//!            (§6.1 Lucky); a success adds a random non-token card of every set (R380), Radiant, hidden in
-//!            your hand (R97), burned by a full hand (§2.4). Tunes: chance 10 ↑ (Radiant 12, step 2);
-//!            Lucky 1 ↑, on the Radiant face only."
+//!            included. One `rng.chance`, the Radiant face's Lucky 1 and its controller's Luck (R987)
+//!            rolling it again and keeping a success (§6.1 Lucky); a success adds a random non-token card
+//!            of every set (R380), Radiant, hidden in your hand (R97), burned by a full hand (§2.4).
+//!            Tunes: chance 10 ↑ (Radiant 12, step 2); Lucky 1 ↑, on the Radiant face only."
 //!
 //! One script serves both faces: the Radiant face's Lucky 1 is a numbered keyword on the face, read as
-//! Nerf and Buff have moved it, so the base face (no Lucky) rolls once and the Radiant face twice.
+//! Nerf and Buff have moved it, plus any Lucky given to the Well (`lucky_on`, R1438) and its controller's
+//! Luck (R987), so with neither the base face rolls once and the Radiant face twice. `script_v0_3_7b`
+//! keeps the roll without them for the replays of v0.3.7b and before (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -20,8 +22,18 @@ const USES: i32 = 1;
 /// The declared `chance` is a percentage.
 const PERCENT: i32 = 100;
 
-/// The face's Lucky X, as Nerf and Buff have moved it (`effects/fruit.rs`'s `lucky_of` shape).
+/// Which Lucky the wish rolls with: `lucky_of` today, `printed_lucky_of` in the script v0.3.7b kept.
+type LuckyOf = fn(&EffectContext<'_>) -> i32;
+
+/// §6.1, R1438, R987: the Well's Lucky X, printed (as Nerf and Buff have moved it) plus given
+/// (`lucky_on`), and its controller's Luck.
 fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
+    ctx.self_.as_ref().map_or(0, |own| lucky_on(ctx.sink.state, own)) + luck_of(ctx.sink.state, ctx.controller)
+}
+
+/// R767000: the face's printed Lucky X alone, as Nerf and Buff have moved it: what the wish rolled with
+/// through v0.3.7b (`script_v0_3_7b`).
+fn printed_lucky_of(ctx: &EffectContext<'_>) -> i32 {
     let Some(own) = ctx.self_.as_ref() else {
         return 0;
     };
@@ -32,7 +44,7 @@ fn lucky_of(ctx: &EffectContext<'_>) -> i32 {
         .unwrap_or(0)
 }
 
-fn wish() -> ActivationDecl {
+fn wish(read_lucky: LuckyOf) -> ActivationDecl {
     ActivationDecl {
         id: "wish".to_string(),
         label: "Make a wish".to_string(),
@@ -42,9 +54,9 @@ fn wish() -> ActivationDecl {
         modes: vec![],
         can_activate: None,
         has: None,
-        run: hook(|ctx| {
+        run: hook(move |ctx| {
             let chance = f64::from(param(&*ctx, "chance")) / f64::from(PERCENT);
-            let lucky = lucky_of(ctx);
+            let lucky = read_lucky(ctx);
             if ctx.rng.lucky(lucky, |rng| rng.chance(chance), |a, b| a || b) {
                 vec![add_random_from_catalog(json_as(json!({ "radiant": true })))]
             } else {
@@ -54,12 +66,26 @@ fn wish() -> ActivationDecl {
     }
 }
 
-pub fn script() -> CardScripts {
-    let base = Script {
-        activations: vec![wish()],
+/// One face: the Activate, its roll's Lucky read by `read_lucky`.
+fn face(read_lucky: LuckyOf) -> Script {
+    Script {
+        activations: vec![wish(read_lucky)],
         ..Script::default()
-    };
+    }
+}
+
+pub fn script() -> CardScripts {
+    let base = face(lucky_of);
     // The Radiant face's Lucky 1 and 0/12 are catalog data, and its 12% is the declared `chance`.
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
+/// R767000: the scripts v0.3.7b and every version before it ran, whose roll read the printed Lucky
+/// alone, without its controller's Luck (R987) or a given Lucky (R1438); `KEPT_SCRIPTS` folds those
+/// versions' replays under them.
+pub fn script_v0_3_7b() -> CardScripts {
+    let base = face(printed_lucky_of);
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -272,6 +298,87 @@ mod tests {
                     .any(|keyword| keyword.kind() == KeywordKind::Lucky),
                 "the Radiant Well keeps its Lucky"
             );
+        }
+    }
+
+    // R987, R1438: the wish rolls once, once more for each Lucky on the Well, printed or given, and once
+    // more for each point of its controller's Luck. At chance 1 nearly every seed misses, and a miss
+    // draws one `chance` per roll and nothing else.
+    mod luck {
+        use super::*;
+
+        const FENG_SHUI: &str = "meditative-040"; // (2) Field Spell: "Aura: You have Luck 1".
+
+        /// Seeds per count: at chance 1 most of them miss.
+        const LUCK_SEEDS: usize = 20;
+
+        /// The draws one Activate at chance 1 takes wherever it misses (the same at every such seed),
+        /// with Feng Shui in `feng_shui`'s backrow and Lucky `given` given to the Well.
+        fn rolls(radiant: bool, feng_shui: Option<PlayerId>, given: i32) -> u32 {
+            let backrow = |player: PlayerId| {
+                if feng_shui == Some(player) {
+                    json!([FENG_SHUI])
+                } else {
+                    json!([])
+                }
+            };
+            let mut counts = Vec::new();
+            for n in 0..LUCK_SEEDS {
+                let mut s = crate::scenario(json!({
+                    "seed": format!("well-luck-{n}"),
+                    "p1": {
+                        "hand": [FILLER],
+                        "field": [{ "def": ID, "radiant": radiant }],
+                        "backrow": backrow(P1),
+                        "library": [SPARE, SPARE]
+                    },
+                    "p2": { "hand": [FILLER], "backrow": backrow(P2), "library": [SPARE, SPARE] },
+                }));
+                assert_eq!(luck_of(s.state(), P1), i32::from(feng_shui == Some(P1)));
+                set_param(s.card_mut(ID), "chance", 1);
+                if given > 0 {
+                    crate::give_lucky(&mut s, ID, given);
+                }
+                let hand = s.hand(P1).len();
+                let cursor = s.state().rng_cursor;
+                s.activate(ID, json!({}));
+                if s.hand(P1).len() == hand {
+                    counts.push(s.state().rng_cursor - cursor);
+                }
+            }
+            assert!(!counts.is_empty(), "chance 1 misses at some seed");
+            assert!(counts.iter().all(|&count| count == counts[0]), "{counts:?}");
+            counts[0]
+        }
+
+        #[test]
+        fn r987_feng_shui_on_its_controller_s_side_rolls_once_more_on_each_face() {
+            assert_eq!(rolls(false, None, 0), 1);
+            assert_eq!(rolls(false, Some(P1), 0), 2);
+            assert_eq!(rolls(true, None, 0), 2);
+            assert_eq!(rolls(true, Some(P1), 0), 3);
+        }
+
+        #[test]
+        fn r987_feng_shui_on_the_opponent_s_side_adds_no_roll() {
+            assert_eq!(rolls(false, Some(P2), 0), 1);
+            assert_eq!(rolls(true, Some(P2), 0), 2);
+        }
+
+        #[test]
+        fn r1438_lucky_given_to_the_well_rolls_once_more() {
+            assert_eq!(rolls(false, None, 1), 2);
+            assert_eq!(rolls(true, None, 1), 3);
+        }
+
+        #[test]
+        fn r987_r767000_a_game_on_v0_3_7_folds_under_the_kept_script_without_its_controller_s_luck() {
+            crate::register_all();
+            let shipped = crate::shipped_catalog("v0.3.7").expect("v0.3.7 is carried");
+            jackioh_engine::with_shipped(Some(shipped), || {
+                assert_eq!(rolls(false, Some(P1), 0), 1);
+                assert_eq!(rolls(true, Some(P1), 0), 2);
+            });
         }
     }
 }
