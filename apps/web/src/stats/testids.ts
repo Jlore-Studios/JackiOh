@@ -13,6 +13,9 @@ export const statsTestid = {
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
   playersTable: "stats-players-table",
+  playersPager: "stats-players-pager",
+  playersPrev: "stats-players-prev",
+  playersNext: "stats-players-next",
   drillDownModal: "stats-drill-down-modal",
   drillDownClose: "stats-drill-down-close",
 } as const;

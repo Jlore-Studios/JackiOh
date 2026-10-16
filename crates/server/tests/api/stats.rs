@@ -452,6 +452,23 @@ mod r654_public_card_and_player_stats {
     }
 
     #[tokio::test]
+    async fn r654_filters_cards_by_each_shipped_set_alone_so_classic_keeps_classic_plus_out() {
+        let app = test_app().await;
+        for set in jackioh_engine::SHIPPED_SETS {
+            let name = set.as_str();
+            // `+` is a space in a query unless it is encoded.
+            let param = name.to_lowercase().replace('+', "%2B");
+            let prefix = format!("{}-", name.to_lowercase().replace('+', "plus"));
+            let (status, _, data) = get_public(&app, &format!("/api/stats/cards?set={param}")).await;
+            let ids = ids_of(&data);
+            assert_eq!(status, 200, "set={param}");
+            assert!(!ids.is_empty(), "set={param}");
+            assert_eq!(ids, deckable_ids(|def| def["set"] == name), "set={param}");
+            assert!(ids.iter().all(|id| id.starts_with(&prefix)), "set={param}");
+        }
+    }
+
+    #[tokio::test]
     async fn r654_get_api_stats_cards_id_returns_drill_down_with_turn_played_and_co_played_cards() {
         let app = test_app().await;
         let records = (1..=30)
