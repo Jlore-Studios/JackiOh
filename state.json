@@ -1090,6 +1090,8 @@
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-10-16T12:44:17Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "38902675783",
       "self_check_findings": [],
       "started_at": "2026-10-16T12:47:21Z",
