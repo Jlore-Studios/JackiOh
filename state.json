@@ -875,6 +875,13 @@
     "1049": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T12:32:43Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Line 2 (one place) fails: the fix spans crates/server (the set filter and its test) and apps/web (select, debounce, pager), 8 files in all"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
