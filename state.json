@@ -15932,9 +15932,9 @@
     ],
     "idle_since": "2026-10-16T22:24:52Z",
     "last_run": "2026-10-16T21:51:58Z",
-    "provider": "devin",
+    "provider": null,
     "requested": false,
-    "run_id": "38972120277",
+    "run_id": null,
     "taken_asks": []
   },
   "usage": {
