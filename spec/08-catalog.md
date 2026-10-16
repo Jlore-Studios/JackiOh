@@ -86,7 +86,7 @@ A Core row whose card declares numbers (`params`, [[R386]]) ends its Engine cell
 | 47 | Fig of Life | Common | 3 | Spell, Fruit |  | Heal a target 20 | 50 | Any unit or hero (ruling). Tunes: heal 20 ↑ (Radiant 50). |
 | 48 | 5pek Controller | Common | 0 | Spell |  | Switch the position of every unit | Choose: all enemy units, or all units | Does not spend exertion (ruling) |
 | 49 | Snom Bunny Mind Control | Rare | 4 | Spell |  | Steal target enemy permanent | It also becomes Radiant | Steal per 6.3 |
-| 50 | K-Pop Fanatic | Epic | 2 | Unit, Human | 1/1 → 2/2 | Cry: choose an enemy permanent; at the start of your next turn, steal it | Divine Shield; same; the stolen permanent also becomes Radiant | Delayed effect (`state.delayed`) keyed to the target instance; fires even if K-Pop Fanatic died; fizzles if the target left the field ([[R76]]); the radiant rider lands only on a card the steal took ([[R282]]) |
+| 50 | K-Pop Fanatic | Epic | 2 | Unit, Human | 1/1 → 2/2 | Cry: Allure an enemy permanent | Divine Shield; same; the stolen permanent also becomes Radiant | Allure ([[§6.3]], [[R1045000]]): a delayed effect (`state.delayed`) keyed to the target instance, which carries Allure's pink `allure` mark ([[R437]]); fires even if K-Pop Fanatic died; fizzles if the target left the field ([[R76]]); with no open zone in the target's row on your side it is destroyed instead, an Indestructible one staying ([[R46]]); the radiant rider lands only on a card the steal took ([[R282]]). Until #1045 it printed "choose an enemy permanent; at the start of your next turn, steal it", its mark purple and a target with no room staying with the opponent ([[R15]]) |
 
 ### 8.3 Cards #51–80
 
