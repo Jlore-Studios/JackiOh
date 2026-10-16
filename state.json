@@ -1050,6 +1050,13 @@
     "1045": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T06:28:44Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "strong",
+        "why": "fails easy rules 3 and 5 (new ruling R1045000, catalog.json, a card script, a pending fragment, re-blessed golden traces); not hard: nothing in crates/engine/src or crates/ai/src changes, and it is 22 files"
+      },
       "kind": "build",
       "pending_request": false,
       "provider": "claude-6",
