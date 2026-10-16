@@ -2094,6 +2094,13 @@
     "1085": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T23:10:37Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule line 1 fails: about 22 files change, all in crates/server (the seam's new Pinned argument reaches six test files); no engine, AI, spec or migration work, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
