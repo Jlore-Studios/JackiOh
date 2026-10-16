@@ -56,7 +56,9 @@ pub const DUOS_GATE_WIN_FLOOR: f64 = 0.8;
 #[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSearch {
-    /// Plays identical but for `zone` keep the leftmost and rightmost lane only.
+    /// Plays identical but for `zone` keep the lowest lane of each placement (candidates.rs
+    /// `placement_key`: what stands beside the lane or the board's edge, and in the lane's four
+    /// zones), at most this many (#1014). 3 let a Tribute play's sets outgrow the lethal allowance.
     pub zone_variants: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
