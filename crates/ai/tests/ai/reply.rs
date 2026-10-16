@@ -109,6 +109,57 @@ mod simulate_reply {
         assert_eq!(counter.used(), 1);
     }
 
+    /// p2's #45 Deft Duelist (4/3, Charge, Deft).
+    fn duelist_of(state: &GameState) -> CardInstance {
+        active_units_of(state, HUMAN)
+            .into_iter()
+            .find(|unit| unit.def_id == "core-045")
+            .cloned()
+            .expect("Deft Duelist is on p2's field")
+    }
+
+    /// switches a Deft unit out of Defense Position and swings it at the open face
+    #[test]
+    fn switches_a_deft_unit_out_of_defense_position_and_swings_it_at_the_open_face() {
+        // R49: Deft Duelist's switch to Attack spends only its switch, so it still attacks.
+        let state = handed_over(json!({ "p2": { "field": [{ "def": "core-045", "position": "DEF" }] } }));
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(reply.players[AI].hero.health, 26);
+        assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Atk);
+        assert_eq!(reply.active, AI);
+        // The switch, the attack and the endTurn, one node each.
+        assert_eq!(counter.used(), 3);
+    }
+
+    /// leaves a unit without Deft in Defense Position and ends its turn
+    #[test]
+    fn leaves_a_unit_without_deft_in_defense_position_and_ends_its_turn() {
+        let state = handed_over(json!({ "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.active, AI);
+        assert_eq!(counter.used(), 1);
+    }
+
+    /// keeps a Deft unit in Defense Position when no attack after the switch is its own
+    #[test]
+    fn keeps_a_deft_unit_in_defense_position_when_no_attack_after_the_switch_is_its_own() {
+        // The 7/7 in Defense Position has Taunt and 8 Armor: the Duelist's 4 does nothing and it dies, so
+        // the trial switch is dropped.
+        let state = handed_over(json!({
+            "p1": { "field": [{ "def": "core-025", "position": "DEF" }] },
+            "p2": { "field": [{ "def": "core-045", "position": "DEF" }] },
+        }));
+        let counter = create_node_counter(20, None);
+        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI)).expect("a reply");
+        assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Def);
+        assert_eq!(reply.players[AI].hero.health, 30);
+        // The trial switch, then the endTurn.
+        assert_eq!(counter.used(), 2);
+    }
+
     /// B41 trades into a unit worth more than the face damage it gives up
     #[test]
     fn b41_trades_into_a_unit_worth_more_than_the_face_damage_it_gives_up() {
