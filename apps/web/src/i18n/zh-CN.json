@@ -2088,7 +2088,7 @@
   "a target": "一个目标",
   "Marked: stolen at the start of its marker's next turn": "已标记：在标记者的下个回合开始时被偷走",
   "Marked: destroyed at the start of its marker's next turn": "已标记：在标记者的下个回合开始时被消灭",
-  "Marked: joins its marker's side at the start of their next turn, or dies with no room": "已标记：在标记者的下个回合开始时加入其一方，若没有空位则死亡",
+  "Marked: joins its marker's side at the start of their next turn, or is destroyed with no room": "已标记：在标记者的下个回合开始时加入其一方，若没有空位则被消灭",
   "Marked: an effect is waiting on this card": "已标记：有一个效果正等待作用于这张牌",
   "Steal": "偷取",
   "Berserk": "狂暴",

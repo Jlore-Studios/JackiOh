@@ -832,7 +832,7 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
 
   it("R910000 the words #814 named bold mid-sentence, and the exile pile stays plain", () => {
     const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
-      ["Steal", "core-050", "base", "steal"],
+      ["Steal", "core-050", "radiant", "steal"],
       ["Steal", "meditative-076", "base", "steal"],
       ["Exile", "classic-078", "base", "exile"],
       ["Exile", "classic-028", "base", "exiled"],
@@ -892,5 +892,17 @@ describe("R910000: a trigger or verb bolds wherever a card uses it, in every cas
     expect(termsIn("The first Unit you stack onto this is fused into it.")).toEqual(["Fuse"]);
     // The §6.3 rows kept rules-only stay plain, as Hearthstone prints them.
     expect(termsIn("Summon a Unit. Draw 2. Discard 1. Destroy a Trap. Deal 3 damage.")).toEqual([]);
+  });
+});
+
+describe("R1045000: K-Pop Fanatic Allures the enemy permanent it chooses", () => {
+  it("R1045000 both faces of K-Pop Fanatic print Allure, which bolds as the §6.3 verb, and Allure's row names every permanent", () => {
+    for (const face of ["base", "radiant"] as const) {
+      expect(termsOf(played("core-050", face)), `core-050 ${face}`).toContainEqual({ text: "Allure", term: "Allure" });
+    }
+    expect(GLOSSARY.Allure.section).toBe("§6.3");
+    expect(GLOSSARY.Allure.rule).toContain("permanents");
+    // Jade Beauty keeps Allure-ing Units only, as it prints.
+    expect(played("meditative-039-5")).toContain("Allure every enemy Unit.");
   });
 });
