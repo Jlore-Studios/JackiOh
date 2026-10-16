@@ -796,6 +796,9 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "1048": {
+      "suggestion": true
+    },
     "1051": {
       "action": "review",
       "cleared": {
