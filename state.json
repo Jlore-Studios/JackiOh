@@ -1553,6 +1553,13 @@
     "1067": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T15:41:02Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "least sure of the hard band's 'about 40 files or more' line at ~42 touched paths, but every edit is a one-literal spelling swap with no behavior, engine, AI, or migration judgment, so medium's 'a card or catalog change' holds"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
