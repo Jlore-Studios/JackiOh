@@ -1648,6 +1648,26 @@ pub fn rooms_count_open_by_host(
         .count() as i64)
 }
 
+/// R1075000: the rows `rooms_count_open_by_host` counts, newest first, the code breaking a tie.
+pub fn rooms_open_by_host(
+    f: &mut FakeTx<'_>,
+    host_profile_id: &str,
+    at: i64,
+) -> Result<Vec<Room>, StoreError> {
+    call(f, "rooms.openByHost")?;
+    let mut rooms: Vec<Room> = f
+        .tables()
+        .rooms
+        .iter()
+        .filter(|room| {
+            room.host_profile_id == host_profile_id && room.guest_profile_id.is_none() && room.expires_at > at
+        })
+        .cloned()
+        .collect();
+    rooms.sort_by(|a, b| b.created_at.cmp(&a.created_at).then_with(|| a.code.cmp(&b.code)));
+    Ok(rooms)
+}
+
 // ---------------------------------------------------------------------------
 // Tickets (§9.5)
 // ---------------------------------------------------------------------------

@@ -1963,6 +1963,12 @@ impl Tx<'_> {
         dispatch!(self, rooms_count_open_by_host(host_profile_id, at))
     }
 
+    /// R1075000: the host's unclaimed unexpired open rooms, newest first (`created_at`, then the
+    /// code): the rows `rooms_count_open_by_host` counts, so at most `MAX_OPEN_ROOMS_PER_HOST`.
+    pub async fn rooms_open_by_host(&mut self, host_profile_id: &str, at: i64) -> StoreResult<Vec<Room>> {
+        dispatch!(self, rooms_open_by_host(host_profile_id, at))
+    }
+
     // tickets
 
     pub async fn tickets_insert(&mut self, ticket: &Ticket) -> StoreResult<()> {

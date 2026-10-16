@@ -3931,6 +3931,40 @@ mod rooms {
         assert_eq!(q!(harness, t => t.matches_get(&started)), Some(started_row));
     }
 
+    /// R1075000: a host's open rooms are the ones nobody has claimed and whose expiry has not
+    /// passed, newest first; another host's, a claimed one and an expired one are not theirs to list.
+    async fn r1075000_lists_a_host_s_open_rooms_newest_first(harness: &StoreHarness) {
+        let host = active_profile(harness, None).await;
+        let guest = active_profile(harness, None).await;
+        let other = active_profile(harness, None).await;
+        let now = harness.now();
+        for (code, owner, over) in [
+            ("ABC234", &host.id, json!({ "createdAt": now - 2_000 })),
+            ("BCD345", &host.id, json!({ "createdAt": now - 1_000 })),
+            ("CDE456", &host.id, json!({ "expiresAt": now + 1_000 })),
+            ("DEF567", &host.id, json!({})),
+            ("EFG678", &other.id, json!({})),
+        ] {
+            assert!(q!(harness, t => t.rooms_create(&room(harness, code, owner, over.clone()))));
+        }
+        must(
+            q!(harness, t => t.rooms_claim("DEF567", &guest.id, &id(), now)),
+            "the claim",
+        );
+
+        let codes = |rooms: Vec<Room>| -> Vec<String> { rooms.into_iter().map(|room| room.code).collect() };
+        assert_eq!(
+            codes(q!(harness, t => t.rooms_open_by_host(&host.id, now + 60_000))),
+            vec!["BCD345", "ABC234"]
+        );
+        assert_eq!(
+            codes(q!(harness, t => t.rooms_open_by_host(&other.id, now + 60_000))),
+            vec!["EFG678"]
+        );
+        assert!(codes(q!(harness, t => t.rooms_open_by_host(&guest.id, now + 60_000))).is_empty());
+        assert!(codes(q!(harness, t => t.rooms_open_by_host("not-a-uuid", now + 60_000))).is_empty());
+    }
+
     both_stores!(
         r768_reads_a_match_s_seats_in_every_status_an_open_one_included,
         creates_a_room_and_reads_it_back_by_code,
@@ -3942,6 +3976,7 @@ mod rooms {
         becomes_a_live_match_once_the_registry_creates_it,
         r1450_reaps_an_expired_unjoined_room_and_frees_its_code,
         r1450_reaps_a_claimed_room_whose_match_never_started_and_lets_both_players_go,
+        r1075000_lists_a_host_s_open_rooms_newest_first,
     );
 }
 
