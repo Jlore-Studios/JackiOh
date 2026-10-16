@@ -652,9 +652,12 @@
         "resolved_by": "`muse` (medium)",
         "sha": "b83b40ebb9da6f3a4a13b07e40ded747963e1480"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T01:21:11Z",
+      "forced": false,
+      "interruptions": 0,
       "issue": 1025,
       "kind": "revise",
       "last_findings": [],
