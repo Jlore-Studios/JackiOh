@@ -13,6 +13,9 @@
 // B5 E21: a backrow zone may hold a pile, and the view counts the dormant cards under its top
 // (`buried`, a count and never an identity, on a face-up card and on a face-down one alike, read
 // defensively as the cost is). The zone shows the depth beside the card, as a unit pile does.
+//
+// R471: a face-down card's Plague Counters (`plague`) ride its back; its controller reads them off
+// `counters`, as on any face-up card.
 
 import type { ReactElement } from "react";
 
@@ -60,6 +63,8 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
     const cost = "cost" in entry && typeof entry.cost === "number" ? entry.cost : undefined;
     // R437, R33: a marked face-down card's back carries its mark (read through marks.ts, as defensively).
     const marks = marksOf(entry);
+    // R471: Plague Counters are public; read defensively, as the cost is.
+    const plague = "plague" in entry && typeof entry.plague === "number" ? entry.plague : undefined;
     return (
       <>
         <Card
@@ -70,6 +75,7 @@ export default function Backrow(props: BackrowProps): ReactElement | null {
             at: `${props.side}-${String(props.lane)}`,
             ...(cost === undefined ? {} : { cost }),
             ...(marks.length === 0 ? {} : { marks }),
+            ...(plague === undefined ? {} : { plague }),
           }}
         />
         <PileDepth buried={buried} top={null} />

@@ -239,3 +239,81 @@ describe("R372 Combo-Index shows its grade by its letter", () => {
     expect(face.textContent).toContain("Grade {C} (starts at E).");
   });
 });
+
+describe("R471 a face-down card's Plague Counters are public", () => {
+  /** Your own face-down trap with 3 Plague Counters, and the opponent's backs: one with 3, one with none. */
+  function plagueView(): PlayerView {
+    return baseView({
+      you: emptySide("p1", {
+        backrow: [
+          faceUpBackrow("p1", {
+            instanceId: "own-trap",
+            defId: "core-041",
+            type: "Trap",
+            cost: 1,
+            unrevealed: true,
+            counters: { plague: 3 },
+          }),
+          null,
+          null,
+          null,
+          null,
+        ],
+      }),
+      opponent: emptySide("p2", {
+        backrow: [{ faceDown: true, cost: 2, plague: 3 }, { faceDown: true, cost: 1 }, null, null, null],
+      }),
+    });
+  }
+
+  const PLAGUE_LINE = ".inspect-facedown-plague";
+
+  it("R471 a back wears its Plague Counters as the counter badge and says them in its label, still naming nothing", () => {
+    renderBoard(plagueView());
+    const back = backIn("opponent", 1);
+    expect(back.querySelector('[data-counter="plague"]')?.textContent).toBe("3");
+    expect(back.getAttribute("data-facedown-plague")).toBe("3");
+    expect(back.getAttribute("aria-label")).toBe("Face-down trap, (2) Cost, Plague Counters: 3");
+    expect(back.hasAttribute("data-def-id")).toBe(false);
+    expect(back.hasAttribute("data-testid")).toBe(false);
+
+    const bare = backIn("opponent", 2);
+    expect(bare.querySelector('[data-counter="plague"]')).toBeNull();
+    expect(bare.hasAttribute("data-facedown-plague")).toBe(false);
+    expect(bare.getAttribute("aria-label")).toBe("Face-down trap, (1) Cost");
+  });
+
+  it("R471 the player who set the card sees the same count on it", () => {
+    renderBoard(plagueView());
+    const own = screen.getByTestId(testid.card("own-trap"));
+    expect(own.getAttribute("data-unrevealed")).toBe("true");
+    expect(own.querySelector('[data-counter="plague"]')?.textContent).toBe("3");
+  });
+
+  it("R471 the back's hover preview states the count", () => {
+    vi.useFakeTimers();
+    renderBoard(plagueView());
+    hover(backIn("opponent", 1));
+    const line = within(screen.getByTestId(INSPECT_FACE_DOWN)).getByText("Plague Counters: 3");
+    expect(line.matches(PLAGUE_LINE)).toBe(true);
+    expect(line.getAttribute("data-plague")).toBe("3");
+  });
+
+  it("R471 its sheet states the count too", () => {
+    vi.useFakeTimers();
+    renderBoard(plagueView());
+    longPress(backIn("opponent", 1));
+    const sheet = screen.getByTestId(INSPECT_FACE_DOWN);
+    expect(sheet.getAttribute("data-mode")).toBe("sheet");
+    const line = sheet.querySelector(PLAGUE_LINE);
+    expect(line?.textContent).toBe("Plague Counters: 3");
+    expect(line?.getAttribute("data-plague")).toBe("3");
+  });
+
+  it("R471 a back with no Plague Counters states none in its preview", () => {
+    vi.useFakeTimers();
+    renderBoard(plagueView());
+    hover(backIn("opponent", 2));
+    expect(screen.getByTestId(INSPECT_FACE_DOWN).querySelector(PLAGUE_LINE)).toBeNull();
+  });
+});

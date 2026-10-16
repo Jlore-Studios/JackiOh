@@ -35,6 +35,9 @@
 // its button opens the hero's inspect view instead (`emotes/HeroInspect.tsx`, R1330): the portrait
 // large, with the same menu in it. The portrait answers either with a short squash and glint, none
 // under Reduce Motion (R1331). A target is still a target first.
+//
+// R847: a side whose Temporal Rift turn is granted (`SideView.riftExtraTurn`) wears "Rift turn used"
+// on both seats; owed extra turns are the engine's own modifier badge (R846).
 
 import type { ReactElement } from "react";
 
@@ -81,6 +84,10 @@ export type HeroProps = {
 
 /** The portrait's hold has no overlay of its own: it opens the hero's view through Game. */
 const NO_OVERLAY = (): null => null;
+
+/** R847: the badge a side wears once a Temporal Rift has granted it its one extra turn, and its tooltip. */
+export const RIFT_SPENT_LABEL = "Rift turn used";
+export const RIFT_SPENT_NOTE = "Temporal Rift has granted this player's one extra turn this game; another Rift grants none";
 
 /** R1449: the keys that open the inspect view from the portrait's button, a hold's keyboard twin. */
 function isInspectKey(event: { key: string; shiftKey: boolean }): boolean {
@@ -286,6 +293,16 @@ export default function Hero(props: HeroProps): ReactElement {
               {secretBadgeText(secret.choice)}
             </span>
           ))}
+        </span>
+      )}
+
+      {/* R847: the once-a-game Temporal Rift flag, public on both seats. Outside `modifiers-<side>`,
+          whose badges are the view's modifiers (R169). */}
+      {seat.riftExtraTurn === true && (
+        <span className="modifiers rift" data-testid={`rift-spent-${side}`}>
+          <span className="modifier-badge rift-badge" data-rift-extra-turn="true" title={t(RIFT_SPENT_NOTE)}>
+            {t(RIFT_SPENT_LABEL)}
+          </span>
         </span>
       )}
 
