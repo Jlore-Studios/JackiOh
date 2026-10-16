@@ -600,7 +600,25 @@
       "feedback_since": "2026-10-15T23:50:33Z",
       "issue": 1013,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "run": "38825915157",
+            "tier": "strong"
+          }
+        ],
+        "sha": "4b6e1a53ea9a7e4e462fd92c9d4685b0c9264d17",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     },
     "148": {
       "asks": [
