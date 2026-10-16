@@ -294,7 +294,8 @@ export const AI_BUDGET: SearchBudget = {
 /** The quality gates' and the sweep's budget: the browser's own, so both measure the AI that ships. */
 export const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 export const AI_SEARCH = {
-  /** Plays identical but for `zone` keep the leftmost and rightmost lane only. */
+  /** Plays identical but for `zone` keep the lowest lane of each placement (what stands beside the
+   *  lane, or the edge, and in the lane's four zones), at most this many (#1014). */
   zoneVariants: 2,
   /** Opponent prompts auto-answered inside one simulated step before it counts as an error. */
   maxAutoAnswers: 8,
@@ -508,8 +509,9 @@ export function actionKey(action: ActionBody): string;
 
 /**
  * legalActions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
- * `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest and
- * the highest `zone.lane`, AI_SEARCH.zoneVariants), in move order. endTurn, when legal, is last.
+ * `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest lane
+ * of each placement, at most AI_SEARCH.zoneVariants, #1014), in move order. endTurn, when legal, is
+ * last.
  */
 export function candidateActions(state: GameState, seat: PlayerId): ActionBody[];
 ```
@@ -1175,7 +1177,7 @@ AI decisions (slice B1):
 - **B11** (R185): `decide(A, seat, { rng: createRng(k) })` deep-equals `decide(B, seat, { rng: createRng(k) })` for such A and B. Observed on a scenario with swapped hidden hand, face-down trap and libraries.
 - **B12**: `determinize` leaves every card the seat can read untouched (id, defId, zone, radiant, damage, buffs). It gives every hidden card a real non-token Core defId: opponent samples are pairwise distinct and distinct from the opponent's public cards while the pool lasts, and face-down samples are Trap or Field Trap. Its `seed` differs from the match seed. Observed by field comparison.
 - **B13**: `evaluate` orders a won state > any unfinished state > a lost state. More own hero health, a bigger own board, or a smaller enemy board each strictly raise it. An enemy board with `faceThreat` ≥ our health scores lower than the same board plus our Taunt blocker that absorbs it. Observed on `scenario()` states.
-- **B14**: `candidateActions` is `legalActions` minus concede, offerDraw, answerDraw and mulligan. Plays differing only in zone collapse to at most 2 (lowest and highest lane). endTurn is last whenever legal. Observed against `legalActions`.
+- **B14**: `candidateActions` is `legalActions` minus concede, offerDraw, answerDraw and mulligan. Plays differing only in zone keep the lowest lane of each placement, at most `AI_SEARCH.zoneVariants` (2): two lanes are one placement when the seat's zones beside them (or the board's edge) and the lane's four zones hold the same cards, carried Units, pile counts and Locks (#1014). endTurn is last whenever legal. Observed against `legalActions`.
 - **B15**: the same (state, seat, rng seed, budget) gives a deep-equal `Decision` with `stats.nodes <= budget.nodes`, and its `action` is in `legalActions(state, seat)`. A `shouldStop` that is true from the first poll still gives a legal action with `stats.stoppedBy === "clock"` and no throw. Observed by repeated calls and a counting `shouldStop`.
 - **B16**: with one candidate, `decide` returns it with `reason: "forced"`, `stats.nodes === 0` and the rng cursor unchanged. With `aiToAct` false it returns null. Observed on a prompt with one option and on the opponent's turn.
 - **B17**: lethal. Puzzles P1–P6 end the AI's turn (`playAiTurn`) with the enemy hero dead, and the first decision's reason is `"lethal"`. Observed by `state.result.winner`.

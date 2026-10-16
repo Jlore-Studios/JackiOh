@@ -4,11 +4,11 @@
 //!
 //! Port of `packages/ai/src/candidates.ts`.
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::{
-    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, ZoneChoice,
-    canonical, effective_cost, find_instance, has_keyword, legal_actions, subsystems, takes_strike_back,
-    unit_view,
+    ActionBody, ActionType, CardInstance, CostOptions, GameState, KeywordKind, PlayerId, Row, ZoneChoice,
+    ZoneSlot, beneath_at, canonical, card_at, carried_at, effective_cost, find_instance, has_keyword,
+    is_locked, legal_actions, row_size, subsystems, takes_strike_back, unit_view,
 };
 use serde_json::Value;
 
@@ -40,46 +40,74 @@ fn zone_group_key(play: &ActionBody) -> ActionBody {
     }
 }
 
-/// The lane of a play that names a zone (`action.type === "play" && action.zone !== undefined`).
-/// An Equip play fuses where it lands, so it is no zone variant of the plain play (R1086).
-fn play_lane(action: &ActionBody) -> Option<i32> {
+/// The zone a play names (`action.type === "play" && action.zone !== undefined`). An Equip play fuses
+/// where it lands, so it is no zone variant of the plain play (R1086).
+fn play_zone(action: &ActionBody) -> Option<&ZoneChoice> {
     match action {
         ActionBody::Play {
             zone: Some(zone),
             equip,
             ..
-        } if *equip != Some(true) => Some(zone.lane),
+        } if *equip != Some(true) => Some(zone),
         _ => None,
     }
 }
 
-/// AI_SEARCH.zoneVariants: per otherwise-identical play, keep the lowest and the highest lane (or only
-/// the lowest when one variant is asked for). Everything else keeps legal_actions order.
-fn collapse_zones(actions: &[ActionBody]) -> Vec<ActionBody> {
-    let mut lanes: IndexMap<ActionBody, Vec<i32>> = IndexMap::new();
-    for action in actions {
-        let Some(lane) = play_lane(action) else {
-            continue;
-        };
-        lanes.entry(zone_group_key(action)).or_default().push(lane);
+/// One zone of a placement: `|` past the board's edge, else the id of the card acting there (`-` for
+/// none), the Unit a carrier holds there (R446), how many cards lie beneath (R13, R447) and `L` when it
+/// is Locked. `redact` keeps a hidden card's id and `determinize` keeps it in every world, so all of it
+/// is what the seat can read (R185).
+fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
+    if slot.lane < 1 || slot.lane > row_size(slot.row) {
+        return "|".to_string();
     }
+    format!(
+        "{}{}:{}{}",
+        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
+        beneath_at(state, slot).len(),
+        if is_locked(state, slot) { "L" } else { "" },
+    )
+}
+
+/// What a play's lane means to it (#1014): the seat's zones beside it in its row, left then right, or
+/// the board's edge, then the lane's four zones (§3.1): the play's own, the seat's other one, and the
+/// enemy's unit and backrow zones opposite. Two lanes with the same key are the same placement.
+fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
+    let other_row = if zone.row == Row::Units {
+        Row::Backrow
+    } else {
+        Row::Units
+    };
+    let enemy = seat.opponent();
+    [
+        (seat, zone.row, zone.lane - 1),
+        (seat, zone.row, zone.lane + 1),
+        (seat, zone.row, zone.lane),
+        (seat, other_row, zone.lane),
+        (enemy, Row::Units, zone.lane),
+        (enemy, Row::Backrow, zone.lane),
+    ]
+    .into_iter()
+    .map(|(player, row, lane)| zone_part(state, ZoneSlot { player, row, lane }))
+    .collect::<Vec<_>>()
+    .join("/")
+}
+
+/// AI_SEARCH.zone_variants: per otherwise-identical play, keep the first lane of each placement
+/// (`placement_key`), in legal_actions order (lane order), until zone_variants lanes are kept; a lane
+/// whose placement an earlier one has, or past the cap, goes. Everything else keeps legal_actions order.
+fn collapse_zones(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec<ActionBody> {
+    let cap = AI_SEARCH.zone_variants.max(1) as usize;
+    let mut kept: IndexMap<ActionBody, IndexSet<String>> = IndexMap::new();
     actions
         .iter()
         .filter(|action| {
-            let Some(lane) = play_lane(action) else {
+            let Some(zone) = play_zone(action) else {
                 return true;
             };
-            let list = lanes
-                .get(&zone_group_key(action))
-                .map(Vec::as_slice)
-                .unwrap_or(&[]);
-            // TS's `Math.min(...list)`; the list always holds this play's own lane.
-            let low = list.iter().copied().min().unwrap_or(lane);
-            let high = list.iter().copied().max().unwrap_or(lane);
-            if lane == low {
-                return true;
-            }
-            AI_SEARCH.zone_variants >= 2 && lane == high
+            let placements = kept.entry(zone_group_key(action)).or_default();
+            placements.len() < cap && placements.insert(placement_key(state, seat, zone))
         })
         .cloned()
         .collect()
@@ -300,9 +328,9 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
 
 /// The candidates' membership, before their order is fixed: legal_actions(state, seat) minus
 /// AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus `mulligan`, with `play` zone
-/// variants collapsed (per otherwise-identical play keep the lowest and the highest `zone.lane`,
-/// AI_SEARCH.zoneVariants). `candidate_actions` orders this list; a caller that only needs to know
-/// whether an action is among the candidates is spared the ordering's reads of the layers.
+/// variants collapsed (per otherwise-identical play the lowest lane of each placement, at most
+/// AI_SEARCH.zone_variants, `collapse_zones`). `candidate_actions` orders this list; a caller that only
+/// needs to know whether an action is among the candidates is spared the ordering's reads of the layers.
 pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     candidate_pool(state, seat, legal_actions(state, seat))
 }
@@ -318,12 +346,13 @@ pub fn candidate_pool(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>)
         })
         .collect();
     let capped = cap_tribute_sets(state, seat, legal);
-    collapse_zones(&capped)
+    collapse_zones(state, seat, &capped)
 }
 
 /// legal_actions(state, seat) minus AI_SKIPPED_ACTIONS (R84's concede/offerDraw/answerDraw) and minus
-/// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play keep the lowest and
-/// the highest `zone.lane`, AI_SEARCH.zoneVariants), in move order. endTurn, when legal, is last.
+/// `mulligan`, with `play` zone variants collapsed (per otherwise-identical play the lowest lane of each
+/// placement, at most AI_SEARCH.zone_variants, `collapse_zones`), in move order. endTurn, when legal, is
+/// last.
 pub fn candidate_actions(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     candidate_actions_in(state, seat, legal_actions(state, seat))
 }
