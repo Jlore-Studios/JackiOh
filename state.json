@@ -909,6 +909,13 @@
     "1039": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T05:23:07Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 5 fails outright: it changes a card script (crates/cards/src/scripts/) and cites a ruling in spec/ (R1143, R767000 proven_in), so it can never be easy"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
