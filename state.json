@@ -1773,6 +1773,13 @@
     "1075": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T20:39:58Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Fails 'one place': the server, the web and the spec all change and a new ruling R1075000 is added. Not hard: no migration, nothing in crates/engine or crates/ai, and about 16 files."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
