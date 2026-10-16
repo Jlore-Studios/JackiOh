@@ -1617,11 +1617,13 @@
         "by": "`claude` (strong)",
         "sha": "ab15cc2a40362ce814143b2742c7b8d3d9ecdf0d"
       },
+      "closed_at": "2026-10-16T16:00:14Z",
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-10-16T15:01:26Z",
       "issue": 1065,
       "kind": "revise",
+      "merged": true,
       "self_check_findings": [],
       "votes": {
         "approvals": [
