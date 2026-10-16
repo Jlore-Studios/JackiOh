@@ -14,6 +14,7 @@ import { CardFace } from "../cards/CardFace.tsx";
 import { useInspectTrigger } from "../cards/inspect/useInspectTrigger.tsx";
 import { faceModel } from "../cards/model.ts";
 import { readerName } from "../cards/chinese.ts";
+import { useCardSettings } from "../cards/settings.ts";
 import LanguageButton from "../i18n/LanguageButton.tsx";
 import { t } from "../i18n/i18n.ts";
 import { useAccount, type Account } from "../net/gate.ts";
@@ -29,11 +30,12 @@ import { PlayerStatsCard } from "../stats/PlayerStatsCard.tsx";
 import { readPlayerStats, usePlayerStats } from "../stats/store.ts";
 import {
   EVEN,
-  FAN_POOL,
-  ROTATION_POOL,
   dealLandingFan,
+  fanPool,
+  favouringFullArt,
   featureWeight,
   rotateFan,
+  rotationPool,
   type FanFace,
   type RandomSource,
 } from "./landingFan.ts";
@@ -385,11 +387,13 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
   const liveGame = useLiveGame(account);
   const motion = useMotion();
   // R374 deals once per mount; R639 uses all shipped cards after enough games; R704 rotates that pool.
+  // R1017002: from the cards that print whole on a fan card, a hero's full-art card favoured.
   const fullPool = usePlayerStats().games >= ROTATION_MIN_GAMES;
+  const { fullArt } = useCardSettings();
   const [hand, setHand] = useState(() =>
     readPlayerStats().games >= ROTATION_MIN_GAMES
-      ? dealLandingFan(random, ROTATION_POOL, featureWeight)
-      : dealLandingFan(random),
+      ? dealLandingFan(random, rotationPool(fullArt), favouringFullArt(featureWeight, fullArt))
+      : dealLandingFan(random, fanPool(fullArt), favouringFullArt(EVEN, fullArt)),
   );
   const [open, setOpen] = useState<CardDef | null>(null);
   const [held, setHeld] = useState(false);
@@ -404,14 +408,14 @@ export default function LandingRoute({ random = Math.random }: LandingRouteProps
       nextSlot.current += 1;
       setHand((current) =>
         fullPool
-          ? rotateFan(current, at, random, ROTATION_POOL, featureWeight)
-          : rotateFan(current, at, random, FAN_POOL, EVEN),
+          ? rotateFan(current, at, random, rotationPool(fullArt), favouringFullArt(featureWeight, fullArt))
+          : rotateFan(current, at, random, fanPool(fullArt), favouringFullArt(EVEN, fullArt)),
       );
     }, ROTATION_INTERVAL_MS);
     return () => {
       window.clearInterval(timer);
     };
-  }, [fullPool, motion, open, held, random]);
+  }, [fullPool, fullArt, motion, open, held, random]);
 
   return (
     <div

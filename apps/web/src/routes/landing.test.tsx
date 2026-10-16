@@ -10,6 +10,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { landingFanCardTestid, landingTestid } from "../auth/testids.ts";
 import { LONG_PRESS_MS } from "../cards/inspect/constants.ts";
+import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "../cards/settings.ts";
 import { INSPECT_DETAIL, INSPECT_HOVER } from "../cards/inspect/testids.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
@@ -20,12 +21,29 @@ import { PLAYER_STATS_KEY, PLAYER_STATS_VERSION, ROTATION_INTERVAL_MS, ROTATION_
 import { dropPlayerStatsCache } from "../stats/store.ts";
 import { gameBannerTestid } from "./GameBanner.tsx";
 import LandingRoute from "./landing.tsx";
-import { EVEN, FAN_POOL, ROTATION_POOL, dealLandingFan, featureWeight, rotateFan } from "./landingFan.ts";
+import {
+  EVEN,
+  ROTATION_POOL,
+  dealLandingFan,
+  fanPool,
+  favouringFullArt,
+  featureWeight,
+  fitsTheFan,
+  rotateFan,
+  rotationPool,
+  type FanFace,
+  type RandomSource,
+} from "./landingFan.ts";
 import { siteFooterTestid } from "./SiteFooter.tsx";
 
 const { App } = await import("../main.tsx");
 
 const FAN_CARDS = 5;
+
+/** R1017002: the page's deal and swap below R639's threshold, with full art on (the default). */
+const coreDeal = (random: RandomSource): FanFace[] => dealLandingFan(random, fanPool(true), favouringFullArt(EVEN, true));
+const coreSwap = (hand: readonly FanFace[], slot: number, random: RandomSource): FanFace[] =>
+  rotateFan(hand, slot, random, fanPool(true), favouringFullArt(EVEN, true));
 
 /** A stubbed round trip can outrun the 1 s default under load. */
 const SLOW = { timeout: 5_000 } as const;
@@ -321,7 +339,7 @@ describe("B38 the hero", () => {
     render(<LandingRoute random={seeded(38)} />);
     const fan = within(landing()).getByTestId(landingTestid.fan);
     const faces = [0, 1, 2, 3].map((index) => within(fan).getByTestId(landingFanCardTestid(index)));
-    const hand = dealLandingFan(seeded(38));
+    const hand = coreDeal(seeded(38));
 
     for (const [index, face] of faces.entries()) {
       const { def, radiant } = hand[index] ?? { def: undefined, radiant: false };
@@ -342,12 +360,12 @@ describe("B38 the hero", () => {
       [0, 1, 2, 3].map((index) => screen.getByTestId(landingFanCardTestid(index)).getAttribute("data-def-id") ?? "");
     const first = render(<LandingRoute random={seeded(1)} />);
     const hand = shown();
-    expect(hand).toEqual(dealLandingFan(seeded(1)).map(({ def }) => def.id));
+    expect(hand).toEqual(coreDeal(seeded(1)).map(({ def }) => def.id));
     first.rerender(<LandingRoute random={seeded(2)} />);
     expect(shown()).toEqual(hand);
     first.unmount();
     render(<LandingRoute random={seeded(2)} />);
-    expect(shown()).toEqual(dealLandingFan(seeded(2)).map(({ def }) => def.id));
+    expect(shown()).toEqual(coreDeal(seeded(2)).map(({ def }) => def.id));
     expect(shown()).not.toEqual(hand);
   });
 
@@ -417,7 +435,7 @@ describe("R639 the homescreen rotation", () => {
     render(<LandingRoute random={seeded(5)} />);
 
     const mirror = seeded(5);
-    let expected = dealLandingFan(mirror);
+    let expected = coreDeal(mirror);
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
 
     for (const slot of [0, 1, 2, 3, 0]) {
@@ -425,7 +443,7 @@ describe("R639 the homescreen rotation", () => {
       act(() => {
         vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
       });
-      expected = rotateFan(expected, slot, mirror, FAN_POOL, EVEN);
+      expected = coreSwap(expected, slot, mirror);
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
@@ -492,7 +510,7 @@ describe("R639 the homescreen rotation", () => {
     render(<LandingRoute random={seeded(5)} />);
 
     const mirror = seeded(5);
-    let expected = dealLandingFan(mirror, ROTATION_POOL, featureWeight);
+    let expected = dealLandingFan(mirror, rotationPool(true), favouringFullArt(featureWeight, true));
     expect(shownIds()).toEqual(expected.map(({ def }) => def.id));
 
     for (const slot of [0, 1, 2, 3, 0]) {
@@ -500,7 +518,7 @@ describe("R639 the homescreen rotation", () => {
       act(() => {
         vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
       });
-      expected = rotateFan(expected, slot, mirror);
+      expected = rotateFan(expected, slot, mirror, rotationPool(true), favouringFullArt(featureWeight, true));
       const after = shownIds();
       expect(after).toEqual(expected.map(({ def }) => def.id));
       expect(after.filter((id, at) => id !== before[at])).toHaveLength(1);
@@ -525,6 +543,33 @@ describe("R639 the homescreen rotation", () => {
     expect(sets.has("Classic")).toBe(true);
     expect(sets.has("Classic+")).toBe(true);
     expect(sets.has("?")).toBe(false);
+  });
+
+  it("R1017002 across a long visit the fan deals and swaps only cards that print whole on a fan card, full art on or off", () => {
+    vi.useFakeTimers();
+    for (const [games, fullArt] of [
+      [0, true],
+      [ROTATION_MIN_GAMES, true],
+      [ROTATION_MIN_GAMES, false],
+    ] as const) {
+      withGames(games);
+      writeCardSettings({ fullArt });
+      const view = render(<LandingRoute random={seeded(17)} />);
+      const byId = new Map(ROTATION_POOL.map((def) => [def.id, def]));
+      for (let step = 0; step < 40; step += 1) {
+        for (const id of shownIds()) {
+          const def = byId.get(id);
+          expect(def, id).toBeDefined();
+          if (def !== undefined) expect(fitsTheFan(def, fullArt), `${id} with full art ${fullArt ? "on" : "off"}`).toBe(true);
+        }
+        act(() => {
+          vi.advanceTimersByTime(ROTATION_INTERVAL_MS);
+        });
+      }
+      view.unmount();
+      dropPlayerStatsCache();
+    }
+    writeCardSettings({ ...CARD_SETTINGS_DEFAULTS });
   });
 
   it("R639 the hand holds still under reduced motion, while a pointer or focus is on it, and while a card is open", async () => {
