@@ -580,10 +580,13 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
   return found;
 }
 
-/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts and vercel-ignore.test.ts name paths only as data for their throwaway repos. */
+/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts, vercel-ignore.test.ts and
+ * build-wasm-cache.test.ts name paths only as data for their throwaway repos (the last reads only
+ * scripts/build-wasm.sh and Cargo.toml for real, which run web anyway). */
+const DATA_ONLY = ["apps/web/src/net/ci-scope.test.ts", "apps/web/src/net/vercel-ignore.test.ts", "apps/web/src/net/build-wasm-cache.test.ts"];
 const WEB = namedPaths(
   ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
-  (file) => file !== "apps/web/src/net/ci-scope.test.ts" && file !== "apps/web/src/net/vercel-ignore.test.ts",
+  (file) => !DATA_ONLY.includes(file),
 );
 /** What e2e smoke's client build and specs read: e2e/, and the client without its unit tests. */
 const E2E = namedPaths(

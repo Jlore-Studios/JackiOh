@@ -269,7 +269,10 @@ cannot hold a comment, and three things in them are not obvious:
   catalog and serves; `render.yaml` sets no build or start command, and
   `crates/server/tests/deploy/rehearse.sh` fails if it ever does. On Vercel,
   `vercel.json`'s install step installs rustup and the `wasm32-unknown-unknown` target before
-  `pnpm install`, because the web build compiles the WASM module.
+  `pnpm install`, because the web build compiles the WASM module. Vercel's build cache keeps only
+  `node_modules`, so `scripts/build-wasm.sh` keeps the built modules in
+  `node_modules/.cache/jackioh-wasm`, keyed on what they are built from (`crates/wasm/README.md`).
+  A deploy that changes only the client then compiles no Rust (#997).
 
 The SPA rewrite is not boilerplate either: `main.tsx` routes on `window.location.pathname`, so
 `/decks`, `/play` and `/match/<id>` are real URLs a player can open or reload, and without it each
