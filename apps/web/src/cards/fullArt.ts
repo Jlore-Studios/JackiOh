@@ -1,6 +1,6 @@
 // Full-art faces (R1017001, a follow-up to issue #1017): the most iconic cards print their art across
-// the whole face and no words, as Hearthstone's Signature cards do: the cost, the name banner low on
-// the art, the rarity gem and a Unit's attack and health (cards.css, "full art"). Their whole text is
+// the whole face and no words, as Hearthstone's Signature cards do: the cost, the rarity gem opposite
+// it, the name banner at the foot and a Unit's attack and health (cards.css, "full art"). Their whole text is
 // one hover or click away (inspect/Extended.tsx, the detail view's rules). They are the cards the hero
 // portraits are drawn from (R641's roster, `PORTRAITS` in src/wire/emotes.ts): a card that becomes a
 // hero's face becomes a full-art card, by name, as the roster names them, so a portrait the roster

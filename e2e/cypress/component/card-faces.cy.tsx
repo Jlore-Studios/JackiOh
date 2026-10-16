@@ -277,6 +277,7 @@ describe("R503: the set mark, printed rarity and the new families on real faces"
     { id: "classicplus-019-1", why: "a Classic+ token printed Legendary" },
     { id: "classic-038", why: "a Classic Field Trap" },
     { id: "core-093", why: "a short form (a dense rules box ending in …)" },
+    { id: "core-004", why: "a full-art hero card (R1017001: the gem and mark in the top-right corner)" },
   ] as const;
 
   /** What the mark must never cover. */
