@@ -1378,6 +1378,7 @@
     "1063": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-10-16T14:52:04Z",
         "difficulty": "medium",
