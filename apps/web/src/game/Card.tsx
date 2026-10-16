@@ -28,6 +28,12 @@
 // R667: the viewer's own hand card the engine marks `counteredOnPlay` (Classic #87 Plague Chalice
 // would counter it) wears a green, bubbling warning film and says why in its tooltip and inspect note.
 //
+// R90 (#992): the viewer's own hand card the engine marks `choicesTruncated` wears a "⋯" badge and says
+// so in its tooltip and inspect note; the words are informational, since the combinations not listed
+// stay legal, only unlisted.
+//
+// R471: a face-down back wears the Plague Counters its view entry carries, to both players.
+//
 // #991: a card the hovered or selected hand card's preview counts (`Highlight.counted`) wears `data-counted`.
 //
 // R437: a card whose view lists marks (#50 K-Pop Fanatic's pending steal) wears them, on a unit and
@@ -80,6 +86,9 @@ import "./spent.css";
 
 /** #258: what the "can't act yet" badge says in words (spent.css draws it). */
 export const SPENT_NOTE = "No action left this turn";
+
+/** R90 (#992): what a hand card whose listed plays were cut says; informational, never "illegal". */
+export const CHOICES_TRUNCATED_NOTE = "Not every combination of this card's choices is listed; each choice is in at least one listed play";
 
 export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter((part): part is string => typeof part === "string" && part.length > 0).join(" ");
@@ -194,9 +203,10 @@ export type CardProps = {
    * R370: a back in the backrow, a face-down trap. `cost` is what the view says it costs, drawn on
    * the back as a gem; `at` names its zone ("opponent-3"), which keys its inspect overlay since a
    * back has no instance id. Absent for every other back (the opponent's hand). R437: `marks` are
-   * the marks the view puts on the face-down card, which its back carries (R33).
+   * the marks the view puts on the face-down card, which its back carries (R33). R471: `plague` is
+   * the Plague Counters on it, public to both players.
    */
-  faceDown?: { cost?: number; at: string; marks?: readonly CardMark[] };
+  faceDown?: { cost?: number; at: string; marks?: readonly CardMark[]; plague?: number };
   /**
    * R371: the viewer's own face-down trap (`BackrowView.unrevealed`): its face, under a veil and a
    * "Face down" tag, because the other player sees only its back.
@@ -281,16 +291,18 @@ export default function Card(props: CardProps): ReactElement {
             ? { note: t(UNREVEALED_NOTE) }
             : card.counteredOnPlay === true
               ? { note: t(COUNTERED_NOTE) }
-              : {}),
+              : card.choicesTruncated === true
+                ? { note: t(CHOICES_TRUNCATED_NOTE) }
+                : {}),
         }
       : faceDown !== undefined
         ? {
             key: `facedown-${faceDown.at}`,
             render: ({ mode, anchor, close }) =>
               mode === "hover" ? (
-                <FaceDownPreview cost={faceDown.cost} anchor={anchor} />
+                <FaceDownPreview cost={faceDown.cost} plague={faceDown.plague} anchor={anchor} />
               ) : (
-                <FaceDownSheet cost={faceDown.cost} onClose={close} />
+                <FaceDownSheet cost={faceDown.cost} plague={faceDown.plague} onClose={close} />
               ),
           }
         : null;
@@ -368,7 +380,11 @@ export default function Card(props: CardProps): ReactElement {
     }
     // As for any card on the board, a click is the zone's (a target, say) and a resting mouse or a
     // long-press opens the overlay; the label says the same words for a screen reader.
-    const label = t(faceDownLabel(faceDown.cost));
+    // R471: the back's Plague Counters are public, so its label says them too.
+    const label =
+      faceDown.plague === undefined
+        ? t(faceDownLabel(faceDown.cost))
+        : t("{label}, Plague Counters: {count}", { label: t(faceDownLabel(faceDown.cost)), count: faceDown.plague });
     return (
       <>
         <div
@@ -377,6 +393,7 @@ export default function Card(props: CardProps): ReactElement {
           className={cx("card", "card-back", "card-facedown", props.className)}
           data-face-down="true"
           data-facedown-cost={faceDown.cost}
+          data-facedown-plague={faceDown.plague}
           data-marks={faceDown.marks !== undefined && faceDown.marks.length > 0 ? faceDown.marks.map((entry) => entry.mark).join(" ") : undefined}
           role="img"
           aria-label={label}
@@ -386,6 +403,12 @@ export default function Card(props: CardProps): ReactElement {
           {faceDown.cost === undefined ? null : (
             <span className="facedown-cost" data-cost={faceDown.cost} aria-hidden="true">
               {faceDown.cost}
+            </span>
+          )}
+          {faceDown.plague === undefined ? null : (
+            // R471: the badge a face-up card's Plague Counters wear (board.css `.counter-plague`).
+            <span className="counter counter-plague" data-counter="plague" title={t("Plague counters")} aria-hidden="true">
+              {faceDown.plague}
             </span>
           )}
           <CardMarks marks={faceDown.marks ?? []} instanceId={`facedown-${faceDown.at}`} />
@@ -465,6 +488,14 @@ export default function Card(props: CardProps): ReactElement {
         <span className="countered-warning" data-testid={testid.countered(card.instanceId)}>
           <span className="countered-warning-badge" aria-hidden="true" title={t(COUNTERED_NOTE)} />
           <span className="countered-warning-sr">{t(COUNTERED_NOTE)}</span>
+        </span>
+      )}
+      {card.choicesTruncated === true && (
+        // R90 (#992): legalActions lists a slice of this card's choice combinations, every pick among
+        // them. A child of the root, so a click or drag on it reaches the card.
+        <span className="choices-truncated-badge" data-testid={testid.choicesTruncated(card.instanceId)} title={t(CHOICES_TRUNCATED_NOTE)}>
+          <span aria-hidden="true">⋯</span>
+          <span className="choices-truncated-sr">{t(CHOICES_TRUNCATED_NOTE)}</span>
         </span>
       )}
       {position !== undefined && <span className="position-tag">{t(position)}</span>}

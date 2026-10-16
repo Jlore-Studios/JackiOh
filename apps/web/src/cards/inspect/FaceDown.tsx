@@ -1,8 +1,8 @@
 // The inspect overlays of a face-down backrow card (R370): what a resting mouse, a long-press, a tap
 // or Enter opens on a back. There is no face to show, so they show what the view does give — that
-// it is a face-down trap and, since v0.1.1, its cost — and say that only the player who set it can
-// see what it is. They take the one inspect slot like a card's preview and sheet (B23), through
-// `useInspectTrigger`'s `render`.
+// it is a face-down trap and, since v0.1.1, its cost and its Plague Counters (R471) — and say that
+// only the player who set it can see what it is. They take the one inspect slot like a card's
+// preview and sheet (B23), through `useInspectTrigger`'s `render`.
 //
 // - `FaceDownPreview`: fixed beside the back, click-through and hidden from assistive tech, like
 //   HoverPreview; the back itself carries the same words as its label.
@@ -14,14 +14,14 @@ import { createPortal } from "react-dom";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { CardBack } from "../CardBack.tsx";
 import { FACE_ASPECT } from "../constants.ts";
-import { FACE_DOWN_HINT, FACE_DOWN_TITLE, costPhrase } from "../faceDown.ts";
+import { FACE_DOWN_HINT, FACE_DOWN_TITLE, PLAGUE_COUNT_WORDS, costPhrase } from "../faceDown.ts";
 import { FACE_DOWN_PREVIEW_HEIGHT_PX, PREVIEW_GLOSSARY_GAP_PX, PREVIEW_GLOSSARY_WIDTH_PX } from "./constants.ts";
 import { placePreview, type PreviewPrefer, type Rect } from "./placement.ts";
 import { OVERLAY_ROOT_PROPS, useModalOverlay } from "./store.ts";
 import { INSPECT_CLOSE, INSPECT_FACE_DOWN, INSPECT_FACE_DOWN_COST, INSPECT_SCRIM } from "./testids.ts";
 import "./inspect.css";
 
-type FaceDownProps = { cost: number | undefined };
+type FaceDownProps = { cost: number | undefined; plague?: number };
 
 /** The back, large, with its cost gem when the view gives one. */
 function BigBack({ cost }: FaceDownProps): ReactElement {
@@ -38,7 +38,7 @@ function BigBack({ cost }: FaceDownProps): ReactElement {
 }
 
 /** The words beside it: what it is, its cost and who can see it. */
-function Words({ cost }: FaceDownProps): ReactElement {
+function Words({ cost, plague }: FaceDownProps): ReactElement {
   useLocale();
   return (
     <span className="inspect-facedown-words">
@@ -46,6 +46,11 @@ function Words({ cost }: FaceDownProps): ReactElement {
       {cost === undefined ? null : (
         <span className="inspect-facedown-cost" data-testid={INSPECT_FACE_DOWN_COST} data-cost={cost}>
           {t(costPhrase(cost))}
+        </span>
+      )}
+      {plague === undefined ? null : (
+        <span className="inspect-facedown-plague" data-plague={plague}>
+          {t(PLAGUE_COUNT_WORDS, { count: plague })}
         </span>
       )}
       <span className="inspect-facedown-hint">{t(FACE_DOWN_HINT)}</span>
@@ -57,7 +62,7 @@ function viewportSize(): { width: number; height: number } {
   return { width: window.innerWidth, height: window.innerHeight };
 }
 
-export function FaceDownPreview({ cost, anchor, prefer = "beside" }: FaceDownProps & { anchor: Rect; prefer?: PreviewPrefer }): ReactElement {
+export function FaceDownPreview({ cost, plague, anchor, prefer = "beside" }: FaceDownProps & { anchor: Rect; prefer?: PreviewPrefer }): ReactElement {
   const size = {
     width: FACE_DOWN_PREVIEW_HEIGHT_PX * FACE_ASPECT + PREVIEW_GLOSSARY_GAP_PX + PREVIEW_GLOSSARY_WIDTH_PX,
     height: FACE_DOWN_PREVIEW_HEIGHT_PX,
@@ -76,13 +81,13 @@ export function FaceDownPreview({ cost, anchor, prefer = "beside" }: FaceDownPro
       <span className="inspect-facedown-frame" style={{ height: FACE_DOWN_PREVIEW_HEIGHT_PX }}>
         <BigBack cost={cost} />
       </span>
-      <Words cost={cost} />
+      <Words cost={cost} plague={plague} />
     </div>,
     document.body,
   );
 }
 
-export function FaceDownSheet({ cost, onClose }: FaceDownProps & { onClose: () => void }): ReactElement {
+export function FaceDownSheet({ cost, plague, onClose }: FaceDownProps & { onClose: () => void }): ReactElement {
   useLocale();
   const closeButton = useRef<HTMLButtonElement>(null);
   const modal = useModalOverlay(onClose, closeButton);
@@ -102,7 +107,7 @@ export function FaceDownSheet({ cost, onClose }: FaceDownProps & { onClose: () =
           <span className="inspect-facedown-frame inspect-facedown-frame--sheet">
             <BigBack cost={cost} />
           </span>
-          <Words cost={cost} />
+          <Words cost={cost} plague={plague} />
         </div>
         <button ref={closeButton} type="button" className="inspect-close" data-testid={INSPECT_CLOSE} {...modal.dismissProps}>
           {t("Close")}
