@@ -817,6 +817,13 @@
     "1047": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-10-16T12:37:54Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "line 3 fails (three new ruling notes and spec/INDEX.md) and line 1 is near its limit (14 files); server-only with no engine, AI or migration change, so not hard"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
