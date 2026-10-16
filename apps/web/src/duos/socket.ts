@@ -8,7 +8,9 @@
 // renewed it carries the new one.
 //
 // A drop reconnects with `game/net.ts`'s backoff and jitter (R1441); a refusal (4401/4403/4404) and
-// a voided match (4410) do not. Pings are cosmetic (B39): one sent while the socket is down is dropped,
+// a voided match (4410) do not. A woken page (the tab turned visible, the network came back) asks a
+// socket quiet past the server's ping interval for a view with `hello`, and replaces it if nothing
+// answers within `WAKE_PROBE_MS`, as `game/net.ts` does (R1441). Pings are cosmetic (B39): one sent while the socket is down is dropped,
 // and one past the server's own limit (PING_RATE_LIMIT per PING_RATE_WINDOW_MS) is not sent at all,
 // as the server would drop it silently. The seat's own ping is kept beside the relayed ones, so the
 // board marks it for the sender too.
@@ -24,11 +26,16 @@ import {
   RECONNECT_DELAYS_MS,
   RECONNECT_JITTER,
   REFUSAL_CLOSE_CODES,
+  SILENT_SOCKET_MS,
   VOIDED_CLOSE_CODE,
+  WAKE_PROBE_MS,
+  defaultTimers,
   nextNonce,
+  pageWake,
   socketUrlFor,
   type SocketFactory,
   type SocketLike,
+  type Timers,
 } from "../game/net.ts";
 import { matchSocketUrl, serverSocketUrl } from "../net/api.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
@@ -151,6 +158,7 @@ export type DuosSnapshot = {
 export type DuosClient = {
   subscribe: (listener: () => void) => () => void;
   snapshot: () => DuosSnapshot;
+  /** Open the socket now, cutting short a waiting backoff (idempotent while a socket is open or opening). */
   connect: () => void;
   /** One action, under a fresh nonce; the server stamps the seat. */
   send: (body: DuosActionBody) => void;
@@ -172,6 +180,15 @@ export type DuosClientOptions = {
   monotonic?: () => number;
   /** Test seam for a ping's landing time (epoch ms). */
   now?: () => number;
+  /** Test seam. Defaults to `setTimeout` / `clearTimeout`. */
+  timers?: Timers;
+  /**
+   * Test seam for what wakes a sleeping page (R1441): takes the handler, returns the function that
+   * stops listening. Defaults to the tab turning visible and the `online` event.
+   */
+  wake?: (handler: () => void) => () => void;
+  /** Test seam for the reconnect jitter (R1441), a draw in [0, 1). Defaults to `Math.random`. */
+  random?: () => number;
 };
 
 const INITIAL: DuosSnapshot = {
@@ -201,6 +218,9 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   const factory = options.socketFactory ?? browserSocket;
   const monotonic = options.monotonic ?? defaultMonotonic;
   const now = options.now ?? Date.now;
+  const timers = options.timers ?? defaultTimers;
+  const wake = options.wake ?? pageWake;
+  const random = options.random ?? Math.random;
   const tokenOf = options.token ?? sessionToken;
   const base = options.baseUrl ?? duosSocketUrl();
 
@@ -208,7 +228,19 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
   let snapshot: DuosSnapshot = INITIAL;
   let socket: SocketLike | null = null;
   let retry = 0;
-  let pendingRetry: ReturnType<typeof setTimeout> | null = null;
+  let pendingRetry: unknown = null;
+  /** R1441: the monotonic reading at which the open socket was created or last heard from. */
+  let heardAt = 0;
+  /**
+   * R1441: the wall clock at the same instant. The monotonic clock leaves a sleeping machine's time
+   * out on most platforms, so a socket heard just before a laptop slept would read as recent on
+   * waking; the wall clock keeps counting.
+   */
+  let heardWall = 0;
+  /** R1441: the timer of a wake probe still waiting for its answer. */
+  let probe: unknown = null;
+  /** R1441: stops listening for the page waking; null while it is not. */
+  let unwake: (() => void) | null = null;
   let stopped = false;
   /** When this seat's last pings went out, for the server's own limit (B39). */
   let pingTimes: number[] = [];
@@ -228,17 +260,37 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     return [...live, ping].slice(-DUOS_PINGS_KEPT);
   }
 
+  function cancelRetry(): void {
+    if (pendingRetry === null) return;
+    timers.clearTimeout(pendingRetry);
+    pendingRetry = null;
+  }
+
+  function cancelProbe(): void {
+    if (probe === null) return;
+    timers.clearTimeout(probe);
+    probe = null;
+  }
+
+  function hear(): void {
+    heardAt = monotonic();
+    heardWall = now();
+  }
+
+  /** How long the open socket has been quiet: the larger of the two clocks' readings, so a sleep counts. */
+  function silentFor(): number {
+    return Math.max(monotonic() - heardAt, now() - heardWall);
+  }
+
   function scheduleRetry(): void {
     if (stopped || pendingRetry !== null) return;
     const step = RECONNECT_DELAYS_MS[Math.min(retry, RECONNECT_DELAYS_MS.length - 1)] ?? 0;
+    const delay = Math.floor(step * (1 + RECONNECT_JITTER * random()));
     retry += 1;
-    pendingRetry = setTimeout(
-      () => {
-        pendingRetry = null;
-        open();
-      },
-      Math.floor(step * (1 + RECONNECT_JITTER * Math.random())),
-    );
+    pendingRetry = timers.setTimeout(() => {
+      pendingRetry = null;
+      open();
+    }, delay);
   }
 
   function handle(frame: DuosServerFrame): void {
@@ -291,10 +343,12 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       return;
     }
     socket = created;
+    hear();
     if (snapshot.connection !== "reconnecting") patch({ connection: "connecting" });
 
     created.onopen = () => {
       if (socket !== created) return;
+      hear();
       retry = 0;
       patch({ connection: "open" });
       try {
@@ -304,7 +358,10 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       }
     };
     created.onmessage = (event) => {
-      if (socket !== created || typeof event.data !== "string") return;
+      if (socket !== created) return;
+      hear();
+      cancelProbe();
+      if (typeof event.data !== "string") return;
       const frame = parseDuosFrame(event.data);
       if (frame !== null) handle(frame);
     };
@@ -312,6 +369,7 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     created.onclose = (event) => {
       if (socket !== created) return;
       socket = null;
+      cancelProbe();
       if (stopped || event.code === VOIDED_CLOSE_CODE) {
         patch({ connection: "closed" });
         return;
@@ -327,6 +385,55 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
       patch({ connection: "reconnecting" });
       scheduleRetry();
     };
+  }
+
+  /**
+   * R1441: lets go of `stale` without waiting for it (a dead peer never answers a close) and opens
+   * its successor, which sends `hello` as any new socket does. The new socket opens before the old
+   * one is closed, so the server meets the successor first when both reach it.
+   */
+  function replace(stale: SocketLike): void {
+    socket = null;
+    stale.onopen = null;
+    stale.onmessage = null;
+    stale.onerror = null;
+    stale.onclose = null;
+    cancelProbe();
+    patch({ connection: "reconnecting" });
+    open();
+    try {
+      stale.close(1000, "replaced");
+    } catch {
+      // Already gone.
+    }
+  }
+
+  /**
+   * R1441: the page woke (its tab turned visible, the network came back). A phone that changed
+   * networks or a laptop that slept can leave a socket that never reports its own end, and the
+   * browser answers the server's pings without telling the page, so a quiet socket looks the same as
+   * a dead one. A socket heard from lately is left alone. One that is not is asked for a full view
+   * (`hello`, §9.5), and replaced if nothing comes back within `WAKE_PROBE_MS`: a healthy one answers
+   * and is kept, so a tab switch never flashes the teammate's disconnect grace.
+   */
+  function onWake(): void {
+    const current = socket;
+    if (stopped || current === null || probe !== null) return;
+    if (silentFor() <= SILENT_SOCKET_MS) return;
+    if (current.readyState !== OPEN) {
+      replace(current);
+      return;
+    }
+    try {
+      current.send(JSON.stringify({ type: "hello", matchId: options.matchId }));
+    } catch {
+      replace(current);
+      return;
+    }
+    probe = timers.setTimeout(() => {
+      probe = null;
+      if (socket === current) replace(current);
+    }, WAKE_PROBE_MS);
   }
 
   /** The open socket, or null (with the board told why) when an intent cannot go out. */
@@ -345,6 +452,9 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     snapshot: () => snapshot,
     connect: () => {
       stopped = false;
+      // A backoff still waiting is cut short: the socket opens now (the route's Reconnect now).
+      cancelRetry();
+      unwake ??= wake(onWake);
       open();
     },
     send: (body) => {
@@ -379,10 +489,10 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
     },
     close: () => {
       stopped = true;
-      if (pendingRetry !== null) {
-        clearTimeout(pendingRetry);
-        pendingRetry = null;
-      }
+      cancelRetry();
+      cancelProbe();
+      unwake?.();
+      unwake = null;
       const current = socket;
       socket = null;
       if (current !== null) {
@@ -404,9 +514,11 @@ export function createDuosClient(options: DuosClientOptions): DuosClient {
 
 // The hook
 
-export type UseDuosMatchOptions = Omit<DuosClientOptions, "token" | "monotonic" | "now">;
+export type UseDuosMatchOptions = Omit<DuosClientOptions, "token" | "monotonic" | "now" | "timers" | "wake" | "random">;
 
 export type UseDuosMatchResult = DuosSnapshot & {
+  /** Open a socket now rather than at the end of the backoff (the route's Reconnect now). */
+  connect: () => void;
   send: (body: DuosActionBody) => void;
   sendPing: (ping: PingKind, target: PingTarget) => void;
   url: string;
@@ -431,5 +543,5 @@ export function useDuosMatch(options: UseDuosMatchOptions): UseDuosMatchResult {
     };
   }, [client]);
   const snapshot = useSyncExternalStore(client.subscribe, client.snapshot, client.snapshot);
-  return { ...snapshot, send: client.send, sendPing: client.sendPing, url: client.url() };
+  return { ...snapshot, connect: client.connect, send: client.send, sendPing: client.sendPing, url: client.url() };
 }
